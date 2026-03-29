@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=zarf-distro-package-v1alpha1-schema.json
+kind: ZarfDistroPackage
+metadata:
+  name: rancher-rke2
+  version: v1.34.3
+spec:
+  actions:
+    onCreate:
+      before:
+        - description: pull rke2 tar-ball
+          cmd: |-
+            rm -rf   target
+            mkdir -p target
+            echo https://github.com/rancher/rke2/releases/download/###ZARF_PKG_TMPL_RKE2_VERSION###/rke2.linux-arm64.tar.gz
+            curl -L -o ./target/rke2.linux-arm64.tar.gz https://github.com/rancher/rke2/releases/download/###ZARF_PKG_TMPL_RKE2_VERSION###/rke2.linux-arm64.tar.gz
+  distro:
+    binaries:
+      - source: target/rke2.linux-amd64.tar.gz
+        extractPath: bin/rke2
+        target: /var/lib/rancher/rke2/bin/rke2
+        executable: true
+      - source: target/rke2.linux-amd64.tar.gz
+        extractPath: bin/rke2-killall.sh
+        target: /var/lib/rancher/rke2/bin/rke2-killall.sh
+        executable: true
+      - source: target/rke2.linux-amd64.tar.gz
+        extractPath: bin/rke2-uninstall.sh
+        target: /var/lib/rancher/rke2/bin/rke2-uninstall.sh
+        executable: true
+      - source: files/rke2-server.service
+        target: /etc/systemd/system/rke2-server.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/rke2-server.service
+        selector:
+          roles:
+            - controller
+      - source: files/rke2-agent.service
+        target: /etc/systemd/system/rke2-agent.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
+        selector:
+          roles:
+            - worker
+    imageConfig:
+      path: /var/lib/rancher/rke2/agent/images
+      compression: none
+      images:
+        - docker.io/rancher/rke2-runtime:v1.35.2-rke2r1
+        - docker.io/rancher/hardened-kubernetes:v1.35.2-rke2r1-build20260227
+        - docker.io/rancher/hardened-coredns:v1.14.1-build20260206
+        - docker.io/rancher/hardened-cluster-autoscaler:v1.10.3-build20260206
+        - docker.io/rancher/hardened-dns-node-cache:1.26.7-build20260206
+        - docker.io/rancher/hardened-etcd:v3.6.7-k3s1-build20260227
+        - docker.io/rancher/hardened-k8s-metrics-server:v0.8.1-build20260206
+        - docker.io/rancher/hardened-addon-resizer:1.8.23-build20260206
+        - docker.io/rancher/klipper-helm:v0.9.14-build20260210
+        - docker.io/rancher/klipper-lb:v0.4.14
+        - docker.io/rancher/mirrored-pause:3.6
+        - docker.io/rancher/mirrored-ingress-nginx-kube-webhook-certgen:v1.6.7
+        - docker.io/rancher/nginx-ingress-controller:v1.14.3-hardened3
+        - docker.io/rancher/rke2-cloud-provider:v1.35.1-0.20260211145923-50fa2d70c239-build20260211
+        - docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260205

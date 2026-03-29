@@ -1,0 +1,326 @@
+{
+  "$defs": {
+    "OpenSSH": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "configPath": {
+          "type": "string"
+        },
+        "disableMultiplexing": {
+          "type": "boolean"
+        },
+        "keyPath": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/OpenSSHOptions"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "type": "object"
+    },
+    "OpenSSHOptions": {
+      "type": "object"
+    },
+    "ZarfDistroInstallConfig": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "profiles": {
+          "items": {
+            "$ref": "#/$defs/ZarfDistroInstallProfiles"
+          },
+          "type": "array"
+        },
+        "registries": {
+          "items": {
+            "$ref": "#/$defs/ZarfDistroInstallRegistries"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "rke2",
+            "k3s"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroInstallFiles": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "dst": {
+          "type": "string"
+        },
+        "dstDir": {
+          "type": "string"
+        },
+        "group": {
+          "examples": [
+            "root"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "perm": {
+          "type": "string"
+        },
+        "src": {
+          "type": "string"
+        },
+        "user": {
+          "examples": [
+            "root"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroInstallHosts": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "dataDir": {
+          "type": "string"
+        },
+        "environment": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/ZarfDistroInstallFiles"
+          },
+          "type": "array"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "kubeletRootDir": {
+          "type": "string"
+        },
+        "privateAddress": {
+          "type": "string"
+        },
+        "privateInterface": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "controller",
+            "worker"
+          ],
+          "type": "string"
+        },
+        "ssh": {
+          "$ref": "#/$defs/OpenSSH"
+        }
+      },
+      "required": [
+        "role",
+        "hostname",
+        "ssh"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroInstallProfiles": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "engineConfig": {
+          "type": "object"
+        },
+        "kubeletConfig": {
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroInstallRegistries": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "auth": {
+          "$ref": "#/$defs/ZarfDistroInstallRegistryAuth"
+        },
+        "name": {
+          "type": "string"
+        },
+        "proxy": {
+          "$ref": "#/$defs/ZarfDistroInstallRegistryProxy"
+        }
+      },
+      "required": [
+        "name",
+        "proxy"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroInstallRegistryAuth": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "pass": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroInstallRegistryProxy": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroInstallSpec": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/ZarfDistroInstallConfig"
+        },
+        "hosts": {
+          "items": {
+            "$ref": "#/$defs/ZarfDistroInstallHosts"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "config",
+        "hosts"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroMetadata": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/v1alpha1/zarf-distro-install",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "apiVersion": {
+      "enum": [
+        "zarf.dev/v1alpha1"
+      ],
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "ZarfDistroInstall"
+      ],
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ZarfDistroMetadata"
+    },
+    "spec": {
+      "$ref": "#/$defs/ZarfDistroInstallSpec"
+    }
+  },
+  "required": [
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "type": "object"
+}

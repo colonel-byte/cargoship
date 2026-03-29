@@ -1,0 +1,83 @@
+---
+# yaml-language-server: $schema=zarf-distro-install-v1alpha1-schema.json
+kind: ZarfDistroInstall
+metadata:
+  name: rancher-rke2
+spec:
+  config:
+    type: rke2
+    registries:
+      - name: docker.io
+        proxy:
+          url: mirror-docker-hub.example.com
+    profiles:
+      - name: global
+        kubeletConfig:
+          evictionHard:
+            memory.available: "500Mi"
+            nodefs.available: "1Gi"
+            imagefs.available: "100Gi"
+          evictionMinimumReclaim:
+            memory.available: "0Mi"
+            nodefs.available: "500Mi"
+            imagefs.available: "2Gi"
+        engineConfig:
+          profile: cis
+          embedded-registry: true
+          selinux: true
+          private-registry: /etc/rancher/rke2/registries.yaml
+      - name: control-plane
+        engineConfig:
+          node-taint:
+            - CriticalOnly=True:NoExecute
+      - name: infrastructure
+        engineConfig:
+          node-label:
+            - node-role.kubernetes.io/infrastructure="true"
+          node-taint:
+            - InfrastructureOnly=True:NoExecute
+  hosts:
+    - hostname: control-plane-01
+      role: controller
+      profile: control-plane
+      environment:
+        HTTP_PROXY: 10.0.0.1:443
+      ssh:
+        address: 10.0.0.2
+        user: ubuntu
+        keyPath: ~/.ssh/id_rsa
+        configPath: ~/.ssh/config
+        disableMultiplexing: false
+        options:
+          ForwardAgent: true
+          StrictHostkeyChecking: false
+      files:
+        - name: image-bundle
+          src: airgap-images.tgz
+          dstDir: /var/lib/k0s/images/
+          perm: "0600"
+        - name: motd
+          data: |
+            Powered by k0s
+          dst: /etc/motd
+          perm: "0644"
+          user: root
+          group: root
+      privateInterface: eth1
+      privateAddress: 10.0.0.3
+    - hostname: control-plane-02
+      role: controller
+      profile: control-plane
+      environment:
+        HTTP_PROXY: 10.0.0.1:443
+      ssh:
+        address: 10.0.0.3
+        user: ubuntu
+        options:
+          ForwardAgent: true
+          StrictHostkeyChecking: false
+    - hostname: infra-01
+      role: worker
+      profile: infrastructure
+      ssh:
+        address: 10.0.0.4

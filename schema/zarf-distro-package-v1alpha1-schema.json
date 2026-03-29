@@ -1,0 +1,508 @@
+{
+  "$defs": {
+    "SetValue": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "type": "object"
+    },
+    "Shell": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "darwin": {
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ],
+          "type": "string"
+        },
+        "linux": {
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ],
+          "type": "string"
+        },
+        "windows": {
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Variable": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "autoIndent": {
+          "type": "boolean"
+        },
+        "name": {
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "sensitive": {
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfBinaries": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "executable": {
+          "type": "boolean"
+        },
+        "extractPath": {
+          "type": "string"
+        },
+        "selector": {
+          "$ref": "#/$defs/ZarfBinarySelector"
+        },
+        "shasum": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "symlinks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ZarfBinarySelector": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "profiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "roles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentAction": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cmd": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "dir": {
+          "type": "string"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxRetries": {
+          "type": "integer"
+        },
+        "maxTotalSeconds": {
+          "type": "integer"
+        },
+        "mute": {
+          "type": "boolean"
+        },
+        "setValues": {
+          "items": {
+            "$ref": "#/$defs/SetValue"
+          },
+          "type": "array"
+        },
+        "setVariable": {
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "setVariables": {
+          "items": {
+            "$ref": "#/$defs/Variable"
+          },
+          "type": "array"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell"
+        },
+        "template": {
+          "type": "boolean"
+        },
+        "wait": {
+          "$ref": "#/$defs/ZarfComponentActionWait"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionDefaults": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "dir": {
+          "type": "string"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxRetries": {
+          "type": "integer"
+        },
+        "maxTotalSeconds": {
+          "type": "integer"
+        },
+        "mute": {
+          "type": "boolean"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionSet": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "after": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "before": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "defaults": {
+          "$ref": "#/$defs/ZarfComponentActionDefaults"
+        },
+        "onFailure": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "onSuccess": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionWait": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cluster": {
+          "$ref": "#/$defs/ZarfComponentActionWaitCluster"
+        },
+        "network": {
+          "$ref": "#/$defs/ZarfComponentActionWaitNetwork"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionWaitCluster": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "condition": {
+          "examples": [
+            "Ready",
+            "Available"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "examples": [
+            "Pod",
+            "Deployment"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "examples": [
+            "podinfo",
+            "app=podinfo"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfComponentActionWaitNetwork": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "examples": [
+            "localhost:8080",
+            "1.1.1.1"
+          ],
+          "type": "string"
+        },
+        "code": {
+          "examples": [
+            200,
+            404
+          ],
+          "type": "integer"
+        },
+        "protocol": {
+          "enum": [
+            "tcp",
+            "http",
+            "https"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "address"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroActions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "onCreate": {
+          "$ref": "#/$defs/ZarfComponentActionSet"
+        },
+        "onDeploy": {
+          "$ref": "#/$defs/ZarfComponentActionSet"
+        },
+        "onRemove": {
+          "$ref": "#/$defs/ZarfComponentActionSet"
+        },
+        "onUpgrade": {
+          "$ref": "#/$defs/ZarfComponentActionSet"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroImageConfig": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "compression": {
+          "enum": [
+            "none",
+            "gz",
+            "zstd"
+          ],
+          "type": "string"
+        },
+        "images": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroMetadata": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroPackageConfig": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "binaries": {
+          "items": {
+            "$ref": "#/$defs/ZarfBinaries"
+          },
+          "type": "array"
+        },
+        "imageConfig": {
+          "$ref": "#/$defs/ZarfDistroImageConfig"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroPackageSpec": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "actions": {
+          "$ref": "#/$defs/ZarfDistroActions"
+        },
+        "distro": {
+          "$ref": "#/$defs/ZarfDistroPackageConfig"
+        }
+      },
+      "required": [
+        "actions",
+        "distro"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/v1alpha1/zarf-distro-package",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "apiVersion": {
+      "enum": [
+        "zarf.dev/v1alpha1"
+      ],
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "ZarfDistroPackage"
+      ],
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ZarfDistroMetadata"
+    },
+    "spec": {
+      "$ref": "#/$defs/ZarfDistroPackageSpec"
+    }
+  },
+  "required": [
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "type": "object"
+}
