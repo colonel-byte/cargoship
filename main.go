@@ -15,9 +15,30 @@
 package main
 
 import (
-	"github.com/colonel-byte/zarf-distro/src/cmd"
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/colonel-byte/zarf-distro/src/pkg/distro"
+	"github.com/colonel-byte/zarf-distro/src/types"
 )
 
 func main() {
-	cmd.Execute()
+	rootCtx := context.TODO()
+	opt := types.DistroConfig{
+		CreateOpts: types.DistroCreateOptions{
+			SourceDirectory: "schema",
+			Version:         "v1.1.1",
+			CachePath:       "build",
+		},
+	}
+
+	dis, err := distro.New(&opt)
+
+	if err != nil {
+		fmt.Printf("got the following: %v", err)
+		os.Exit(1)
+	}
+
+	dis.Create(rootCtx)
 }

@@ -19,9 +19,22 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/types"
 )
 
+const (
+	ImagesDir = "images"
+)
+
 type Distro struct {
 	cfg    *types.DistroConfig
-	distro v1alpha1.ZarfDistroInstall
-	// tmp is the temporary directory used by the Bundle cleaned up with ClearPaths()
-	tmp string
+	distro v1alpha1.ZarfDistroPackage
+	tmp    string
+}
+
+func New(cfg *types.DistroConfig) (*Distro, error) {
+	dis := Distro{
+		cfg:    cfg,
+		distro: v1alpha1.ZarfDistroPackage{},
+		tmp:    "/tmp",
+	}
+
+	return &dis, nil
 }

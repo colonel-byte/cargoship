@@ -24,6 +24,7 @@ type DistroCreateOptions struct {
 	Output          string
 	Version         string
 	Name            string
+	CachePath       string
 }
 
 type DistroDeployOptions struct {
