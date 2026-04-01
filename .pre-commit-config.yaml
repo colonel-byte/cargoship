@@ -1,0 +1,43 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args:
+          - "--maxkb=1024"
+      - id: check-merge-conflict
+      - id: detect-aws-credentials
+        args:
+          - "--allow-missing-credentials"
+      - id: fix-byte-order-marker
+  - repo: https://github.com/sirosen/texthooks
+    rev: 0.7.1
+    hooks:
+      - id: fix-smartquotes
+  - repo: https://github.com/google/addlicense
+    rev: v1.2.0
+    hooks:
+      - id: addlicense
+        args:
+          - -c
+          - colonel-byte
+          - -l
+          - apache
+          - -y
+          - "2026"
+  - repo: local
+    hooks:
+      - id: goimports
+        name: goimports
+        entry: golangci-lint fmt
+        types:
+          - go
+        language: golang
+        pass_filenames: false
+      - id: lint
+        name: golangci-lint go lint
+        entry: golangci-lint run
+        types:
+          - go
+        language: golang
+        pass_filenames: false
