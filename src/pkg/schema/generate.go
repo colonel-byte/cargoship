@@ -21,11 +21,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
 	"github.com/invopop/jsonschema"
+	strcase "github.com/stoewer/go-strcase"
 )
 
 const (
@@ -74,6 +73,7 @@ func generateV1Alpha1Schema(v any) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
 		IgnoredTypes:   []any{},
+		KeyNamer:       strcase.LowerCamelCase,
 	}
 
 	// AddGoComments breaks if called with an absolute path, so we save the current
@@ -141,14 +141,6 @@ func addYAMLExtensions(data map[string]any) {
 				yamlExtensionRegex: map[string]any{},
 			}
 		}
-		if obj, ok := data[propertiesKey].(map[string]any); ok {
-			for k := range obj {
-				if IsFirstCharUpper(k) {
-					obj[FirstToLower(k)] = obj[k]
-					delete(obj, k)
-				}
-			}
-		}
 	}
 
 	for _, v := range data {
@@ -163,30 +155,4 @@ func addYAMLExtensions(data map[string]any) {
 			}
 		}
 	}
-}
-
-func IsFirstCharUpper(s string) bool {
-	if s == "" {
-		return false
-	}
-	runes := []rune(s)
-	return unicode.IsUpper(runes[0])
-}
-
-func FirstToLower(s string) string {
-	if s == "" {
-		return s
-	}
-
-	r, size := utf8.DecodeRuneInString(s)
-	if r == utf8.RuneError {
-		return s
-	}
-
-	lc := unicode.ToLower(r)
-	if r == lc {
-		return s
-	}
-
-	return string(lc) + s[size:]
 }

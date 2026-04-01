@@ -9,6 +9,7 @@ require (
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	github.com/stoewer/go-strcase v1.3.1
 	github.com/zarf-dev/zarf v0.74.0
 )
 
