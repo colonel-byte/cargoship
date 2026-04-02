@@ -3,6 +3,7 @@ module github.com/colonel-byte/zarf-distro
 go 1.26.1
 
 require (
+	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/goccy/go-yaml v1.19.2
 	github.com/invopop/jsonschema v0.13.0
 	github.com/k0sproject/rig v0.21.2
@@ -201,7 +202,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
-	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4 // indirect
 	github.com/defenseunicorns/pkg/oci v1.3.0 // indirect
 	github.com/deitch/magic v0.0.0-20240306090643-c67ab88f10cb // indirect
 	github.com/derailed/k9s v0.50.18 // indirect

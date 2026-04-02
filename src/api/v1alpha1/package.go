@@ -52,8 +52,8 @@ type ZarfDistroActions struct {
 }
 
 type ZarfDistroPackageConfig struct {
-	Binaries []ZarfBinaries        `json:"binaries,omitempty"`
-	Config   ZarfDistroImageConfig `json:"imageConfig,omitempty"`
+	Files  []ZarfFiles           `json:"files,omitempty"`
+	Config ZarfDistroImageConfig `json:"imageConfig,omitempty"`
 }
 
 type ZarfDistroImageConfig struct {
@@ -62,7 +62,7 @@ type ZarfDistroImageConfig struct {
 	Images      []string `json:"images,omitempty"`
 }
 
-type ZarfBinaries struct {
+type ZarfFiles struct {
 	Source      string             `json:"source"`
 	Shasum      string             `json:"shasum,omitempty"`
 	Target      string             `json:"target"`
@@ -75,4 +75,11 @@ type ZarfBinaries struct {
 type ZarfBinarySelector struct {
 	Roles    []string `json:"roles,omitempty"`
 	Profiles []string `json:"profiles,omitempty"`
+}
+
+func (distro ZarfDistroPackage) IsSBOMAble() bool {
+	if len(distro.Spec.Distro.Config.Images) > 0 || len(distro.Spec.Distro.Files) > 0 {
+		return true
+	}
+	return false
 }

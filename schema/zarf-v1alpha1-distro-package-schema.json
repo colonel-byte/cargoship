@@ -91,43 +91,6 @@
       ],
       "type": "object"
     },
-    "ZarfBinaries": {
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "executable": {
-          "type": "boolean"
-        },
-        "extractPath": {
-          "type": "string"
-        },
-        "selector": {
-          "$ref": "#/$defs/ZarfBinarySelector"
-        },
-        "shasum": {
-          "type": "string"
-        },
-        "source": {
-          "type": "string"
-        },
-        "symlinks": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "target": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "source",
-        "target"
-      ],
-      "type": "object"
-    },
     "ZarfBinarySelector": {
       "additionalProperties": false,
       "patternProperties": {
@@ -390,6 +353,12 @@
         "architecture": {
           "type": "string"
         },
+        "registryOverrides": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "timestamp": {
           "type": "string"
         },
@@ -431,9 +400,9 @@
         "^x-": {}
       },
       "properties": {
-        "binaries": {
+        "files": {
           "items": {
-            "$ref": "#/$defs/ZarfBinaries"
+            "$ref": "#/$defs/ZarfFiles"
           },
           "type": "array"
         },
@@ -499,6 +468,43 @@
       "required": [
         "actions",
         "distro"
+      ],
+      "type": "object"
+    },
+    "ZarfFiles": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "executable": {
+          "type": "boolean"
+        },
+        "extractPath": {
+          "type": "string"
+        },
+        "selector": {
+          "$ref": "#/$defs/ZarfBinarySelector"
+        },
+        "shasum": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "symlinks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
       ],
       "type": "object"
     }

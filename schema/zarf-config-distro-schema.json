@@ -15,6 +15,9 @@
         "output": {
           "type": "string"
         },
+        "skip_sbom": {
+          "type": "boolean"
+        },
         "version": {
           "type": "string"
         }

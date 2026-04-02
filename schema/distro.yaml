@@ -28,9 +28,9 @@ spec:
             rm -rf   target
             mkdir -p target
             echo https://github.com/rancher/rke2/releases/download/v1.35.2/rke2.linux-amd64.tar.gz
-            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.35.2/rke2.linux-amd64.tar.gz
+            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1//rke2.linux-amd64.tar.gz
   distro:
-    binaries:
+    files:
       - source: target/rke2.linux-amd64.tar.gz
         extractPath: bin/rke2
         target: /var/lib/rancher/rke2/bin/rke2
@@ -43,14 +43,16 @@ spec:
         extractPath: bin/rke2-uninstall.sh
         target: /var/lib/rancher/rke2/bin/rke2-uninstall.sh
         executable: true
-      - source: files/rke2-server.service
+      - source: target/rke2.linux-amd64.tar.gz
+        extractPath: lib/systemd/system/rke2-server.service
         target: /etc/systemd/system/rke2-server.service
         symlinks:
           - /etc/systemd/system/multi-user.target.wants/rke2-server.service
         selector:
           roles:
             - controller
-      - source: files/rke2-agent.service
+      - source: target/rke2.linux-amd64.tar.gz
+        extractPath: lib/systemd/system/rke2-agent.service
         target: /etc/systemd/system/rke2-agent.service
         symlinks:
           - /etc/systemd/system/multi-user.target.wants/rke2-agent.service

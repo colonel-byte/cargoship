@@ -28,9 +28,10 @@ import (
 )
 
 const (
-	VPkgCreateOutput           = "distro.create.output"
-	VPkgOCIConcurrency         = "distro.oci_concurrency"
-	VPkgCreateRegistryOverride = "distro.create.registry_override"
+	VDistroCreateOutput           = "distro.create.output"
+	VDistroOCIConcurrency         = "distro.oci_concurrency"
+	VDistroCreateRegistryOverride = "distro.create.registry_override"
+	VDistroCreateSkipSbom         = "distro.create.skip_sbom"
 )
 
 var (
@@ -86,5 +87,5 @@ func setDefaults() {
 	v.SetDefault(zarf.VZarfCache, config.ZarfDefaultCachePath)
 	v.SetDefault(zarf.VLogFormat, string(logger.FormatConsole))
 
-	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
+	v.SetDefault(VDistroOCIConcurrency, zoci.DefaultConcurrency)
 }

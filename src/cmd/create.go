@@ -23,6 +23,7 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/pkg/distro"
 	"github.com/spf13/cobra"
 	zcmd "github.com/zarf-dev/zarf/src/cmd"
+	zconfig "github.com/zarf-dev/zarf/src/config"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -33,6 +34,7 @@ type packageCreateOptions struct {
 	registryOverrides []string
 	ociConcurrency    int
 	confirm           bool
+	skipSBOM          bool
 }
 
 func newPackageCreateCommand() *cobra.Command {
@@ -48,11 +50,18 @@ func newPackageCreateCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
-	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", zcmd.GetStringSlice(v, VPkgCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
+	output, err := zconfig.GetAbsHomePath(v.GetString(VDistroCreateOutput))
+	if err != nil {
+		logger.From(cmd.Context()).Debug("error when trying to get user path", "error", err)
+		output = v.GetString(VDistroCreateOutput)
+	}
 
-	v.SetDefault(VPkgCreateOutput, ".")
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VDistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", zcmd.GetStringSlice(v, VDistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VDistroCreateSkipSbom), zlang.CmdPackageCreateFlagSkipSbom)
+
+	v.SetDefault(VDistroCreateOutput, ".")
 
 	return cmd
 }

@@ -16,18 +16,27 @@ package layout
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/colonel-byte/zarf-distro/src/api"
 	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
 	"github.com/colonel-byte/zarf-distro/src/config"
 	"github.com/colonel-byte/zarf-distro/src/pkg/packager"
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	zlang "github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -36,6 +45,7 @@ type AssembleOptions struct {
 	RegistryOverrides []images.RegistryOverride
 	OCIConcurrency    int
 	CachePath         string
+	SkipSBOM          bool
 	types.RemoteOptions
 }
 
@@ -47,7 +57,99 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, distroPat
 	if err != nil {
 		return nil, err
 	}
-	l.Info("using build path", "buildPath", buildPath)
+
+	onCreate := d.Spec.Actions.OnCreate
+
+	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.Before, nil, nil); err != nil {
+		return nil, fmt.Errorf("unable to run component before action: %w", err)
+	}
+
+	for filesIdx, file := range d.Spec.Distro.Files {
+		rel := filepath.Join(string(config.FilesDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		dst := filepath.Join(buildPath, rel)
+		destinationDir := filepath.Dir(dst)
+
+		if helpers.IsURL(file.Source) {
+			if file.ExtractPath != "" {
+				// get the compressedFileName from the source
+				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
+				if err != nil {
+					return nil, fmt.Errorf(zlang.ErrFileNameExtract, file.Source, err)
+				}
+				tmpDir, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
+				if err != nil {
+					return nil, err
+				}
+				defer func() {
+					err = errors.Join(err, os.RemoveAll(tmpDir))
+				}()
+				compressedFile := filepath.Join(tmpDir, compressedFileName)
+
+				// If the file is an archive, download it to the componentPath.Temp
+				if err := zutils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
+					return nil, fmt.Errorf(zlang.ErrDownloading, file.Source, err)
+				}
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
+				if err != nil {
+					return nil, fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
+				}
+			} else {
+				if err := zutils.DownloadToFile(ctx, file.Source, dst); err != nil {
+					return nil, fmt.Errorf(lang.ErrDownloading, file.Source, err)
+				}
+			}
+		} else {
+			src := file.Source
+			if !filepath.IsAbs(file.Source) {
+				src = filepath.Join(distroPath, file.Source)
+			}
+			if file.ExtractPath != "" {
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
+				if err != nil {
+					return nil, fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
+				}
+			} else {
+				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+					return nil, fmt.Errorf("unable to copy file %s: %w", src, err)
+				}
+			}
+		}
+
+		if file.ExtractPath != "" {
+			// Make sure dst reflects the actual file or directory.
+			updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
+			if updatedExtractedFileOrDir != dst {
+				if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
+					return nil, fmt.Errorf(lang.ErrWritingFile, dst, err)
+				}
+			}
+		}
+
+		// Abort packaging on invalid shasum (if one is specified).
+		if file.Shasum != "" {
+			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+				return nil, fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
+			}
+		}
+
+		if file.Executable || helpers.IsDir(dst) {
+			err := os.Chmod(dst, helpers.ReadWriteExecuteUser)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err := os.Chmod(dst, helpers.ReadWriteUser)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	componentImages := []transform.Image{}
 	manifests := []images.ImageWithManifest{}
@@ -77,6 +179,22 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, distroPat
 			return nil, err
 		}
 		manifests = append(manifests, imageManifests...)
+	}
+	sbomImageList := []transform.Image{}
+	for _, manifest := range manifests {
+		ok := images.OnlyHasImageLayers(manifest.Manifest)
+		if ok {
+			sbomImageList = append(sbomImageList, manifest.Image)
+		}
+		err = utils.SortImagesIndex(filepath.Join(buildPath, config.ImagesDir))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !opts.SkipSBOM && d.IsSBOMAble() {
+		l.Info("generating SBOM")
+		l.Info("TODO generate sbom....")
 	}
 
 	d = recordDistroMetadata(d, opts.RegistryOverrides)

@@ -34,6 +34,7 @@ type DistroCreateOptions struct {
 	Version         string `json:"version,omitempty"`
 	Name            string `json:"name,omitempty"`
 	CachePath       string `json:"cache_path,omitempty"`
+	SkipSBOM        bool   `json:"skip_sbom,omitempty"`
 }
 
 type DistroDeployOptions struct {

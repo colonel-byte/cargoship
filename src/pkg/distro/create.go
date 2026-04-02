@@ -32,6 +32,7 @@ type CreateOptions struct {
 	OCIConcurrency    int
 	CachePath         string
 	IsInteractive     bool
+	SkipSBOM          bool
 	types.RemoteOptions
 }
 
@@ -53,6 +54,10 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	assembleOpt := layout.AssembleOptions{
 		RegistryOverrides: opts.RegistryOverrides,
 		RemoteOptions:     opts.RemoteOptions,
+		OCIConcurrency:    opts.OCIConcurrency,
+		CachePath:         opts.CachePath,
+		// Don't have sbom logic yet....
+		SkipSBOM: true,
 	}
 
 	logger.From(ctx).Debug("assembling distro", "disPath.BaseDir", disPath.BaseDir)

@@ -16,5 +16,6 @@ package config
 
 const (
 	ImagesDir      = "images"
+	FilesDir       = "files"
 	ZarfDistroYaml = "distro.yaml"
 )
