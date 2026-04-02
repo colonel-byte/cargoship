@@ -15,7 +15,7 @@
 package layout
 
 import (
-	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
+	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/types"
 )
 

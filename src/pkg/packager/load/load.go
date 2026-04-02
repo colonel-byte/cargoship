@@ -19,7 +19,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
+	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/internal/distrocfg"
 	"github.com/colonel-byte/zarf-distro/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/config"

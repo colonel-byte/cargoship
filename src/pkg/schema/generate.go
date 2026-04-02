@@ -22,7 +22,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
+	cluster "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	distro "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/types"
 	"github.com/invopop/jsonschema"
 	strcase "github.com/stoewer/go-strcase"
@@ -36,23 +37,27 @@ const (
 
 type schema struct {
 	schemaStruct any
-	path         string
+	schemaPath   string
+	structPath   []string
 	keyNamer     func(string) string
 }
 
 func main() {
 	var sch = []schema{
 		{
-			schemaStruct: &v1alpha1.ZarfDistroPackage{},
-			path:         "zarf-v1alpha1-distro-package-schema.json",
+			schemaStruct: &distro.ZarfDistroPackage{},
+			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
+			structPath:   []string{"src", "types"},
 		},
 		{
-			schemaStruct: &v1alpha1.ZarfCluster{},
-			path:         "zarf-v1alpha1-cluster-schema.json",
+			schemaStruct: &cluster.ZarfCluster{},
+			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
+			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
 		},
 		{
 			schemaStruct: &types.DistroConfig{},
-			path:         "zarf-config-distro-schema.json",
+			schemaPath:   "zarf-config-distro-schema.json",
+			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
 			keyNamer: func(s string) string {
 				return s
 			},
@@ -64,9 +69,9 @@ func main() {
 		var err error
 
 		if s.keyNamer != nil {
-			schema, err = generateV1Alpha1Schema(s.schemaStruct, s.keyNamer)
+			schema, err = generateV1Alpha1Schema(s.schemaStruct, s.structPath, s.keyNamer)
 		} else {
-			schema, err = generateV1Alpha1Schema(s.schemaStruct, strcase.LowerCamelCase)
+			schema, err = generateV1Alpha1Schema(s.schemaStruct, s.structPath, strcase.LowerCamelCase)
 		}
 
 		if err != nil {
@@ -77,16 +82,16 @@ func main() {
 		// Add trailing newline to match linter expectations
 		schema = append(schema, '\n')
 
-		if err := os.WriteFile("schema/"+s.path, schema, 0644); err != nil {
+		if err := os.WriteFile("schema/"+s.schemaPath, schema, 0644); err != nil {
 			fmt.Println("Error writing schema file: ", err)
 			os.Exit(1)
 		}
 
-		fmt.Println("Successfully generated " + s.path)
+		fmt.Println("Successfully generated " + s.schemaPath)
 	}
 }
 
-func generateV1Alpha1Schema(v any, key func(string) string) ([]byte, error) {
+func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
 		IgnoredTypes:   []any{},
@@ -110,10 +115,9 @@ func generateV1Alpha1Schema(v any, key func(string) string) ([]byte, error) {
 		return nil, fmt.Errorf("unable to change to schema directory: %w", err)
 	}
 
-	typePackagePath := filepath.Join("..", "..", "api", "v1alpha1")
+	typePath := filepath.Join(append([]string{"..", "..", ".."}, path...)...)
 
-	// Get the Go comments from the v1alpha1 package
-	if err := reflector.AddGoComments("github.com/colonel-byte/zarf-distro/src/api/v1alpha1", typePackagePath); err != nil {
+	if err := reflector.AddGoComments("github.com/colonel-byte/zarf-distro", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
 	}
 

@@ -58,7 +58,7 @@ func (h *Host) LoadOS() error {
 
 func main() {
 	dh := flag.String("host", "127.0.0.1", "target host")
-	dp := flag.Int("port", 9022, "target host port")
+	dp := flag.Int("port", 3000, "target host port")
 	sf := flag.String("src", "tmpfile", "source file")
 	df := flag.String("dst", "/tmp/tempfile", "destination file")
 	sudo := flag.Bool("sudo", false, "use sudo when uploading")

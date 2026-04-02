@@ -15,12 +15,13 @@
 package v1alpha1
 
 import (
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1"
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 type ZarfDistroPackage struct {
 	APIVersion string                    `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind       ZarfDistroKind            `json:"kind" jsonschema:"enum=ZarfDistroPackage"`
+	Kind       v1alpha1.ZarfDistroKind   `json:"kind" jsonschema:"enum=ZarfDistroPackage"`
 	Metadata   ZarfDistroPackageMetadata `json:"metadata"`
 	Build      ZarfDistroBuildData       `json:"build,omitempty"`
 	Spec       ZarfDistroPackageSpec     `json:"spec"`
@@ -29,7 +30,7 @@ type ZarfDistroPackage struct {
 type ZarfDistroPackageMetadata struct {
 	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"default=false"`
 	Architecture string `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
-	ZarfDistroMetadata
+	v1alpha1.ZarfDistroMetadata
 }
 
 type ZarfDistroBuildData struct {

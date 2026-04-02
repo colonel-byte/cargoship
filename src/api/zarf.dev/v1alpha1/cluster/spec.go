@@ -14,13 +14,16 @@
 
 package v1alpha1
 
-import "github.com/k0sproject/rig"
+import (
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1"
+	"github.com/k0sproject/rig"
+)
 
 type ZarfCluster struct {
-	APIVersion string             `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind       ZarfDistroKind     `json:"kind" jsonschema:"enum=ZarfCluster"`
-	Metadata   ZarfDistroMetadata `json:"metadata"`
-	Spec       ZarfClusterSpec    `json:"spec"`
+	APIVersion string                      `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+	Kind       v1alpha1.ZarfDistroKind     `json:"kind" jsonschema:"enum=ZarfCluster"`
+	Metadata   v1alpha1.ZarfDistroMetadata `json:"metadata"`
+	Spec       ZarfClusterSpec             `json:"spec"`
 }
 
 type ZarfClusterSpec struct {

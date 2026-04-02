@@ -509,7 +509,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/v1alpha1/zarf-distro-package",
+  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro/zarf-distro-package",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "patternProperties": {
