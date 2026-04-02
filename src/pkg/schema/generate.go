@@ -23,6 +23,7 @@ import (
 	"runtime"
 
 	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
+	"github.com/colonel-byte/zarf-distro/src/types"
 	"github.com/invopop/jsonschema"
 	strcase "github.com/stoewer/go-strcase"
 )
@@ -36,6 +37,7 @@ const (
 type schema struct {
 	schemaStruct any
 	path         string
+	keyNamer     func(string) string
 }
 
 func main() {
@@ -48,10 +50,25 @@ func main() {
 			schemaStruct: &v1alpha1.ZarfDistroInstall{},
 			path:         "zarf-distro-install-v1alpha1-schema.json",
 		},
+		{
+			schemaStruct: &types.DistroConfig{},
+			path:         "zarf-distro-config-schema.json",
+			keyNamer: func(s string) string {
+				return s
+			},
+		},
 	}
 
 	for _, s := range sch {
-		schema, err := generateV1Alpha1Schema(s.schemaStruct)
+		var schema []byte
+		var err error
+
+		if s.keyNamer != nil {
+			schema, err = generateV1Alpha1Schema(s.schemaStruct, s.keyNamer)
+		} else {
+			schema, err = generateV1Alpha1Schema(s.schemaStruct, strcase.LowerCamelCase)
+		}
+
 		if err != nil {
 			fmt.Println("Error generating schema: ", err)
 			os.Exit(1)
@@ -69,11 +86,11 @@ func main() {
 	}
 }
 
-func generateV1Alpha1Schema(v any) ([]byte, error) {
+func generateV1Alpha1Schema(v any, key func(string) string) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
 		IgnoredTypes:   []any{},
-		KeyNamer:       strcase.LowerCamelCase,
+		KeyNamer:       key,
 	}
 
 	// AddGoComments breaks if called with an absolute path, so we save the current

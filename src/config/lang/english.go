@@ -18,6 +18,16 @@ const (
 	RootCmdUse   = "zarf-distro COMMAND"
 	RootCmdShort = "CLI for Zarf Distro installs"
 
+	RootGroupPackageTitle = "Package Commands:"
+	RootGroupPackageID    = "package"
+
+	RootGroupInstallTitle = "Install Commands:"
+	RootGroupInstallID    = "install"
+
 	CmdViperErrLoadingConfigFile = "failed to load config file"
-	CmdDistroCreateShort         = ""
+	CmdDistroCreateShort         = "Creates a Zarf Distro Package from a given directory or the current director"
+
+	CmdPackageFlagConcurrency  = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
+	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
+	RootCmdFlagLogLevel        = "Log level when running zarf-distro. Valid options are: warn, info, debug, trace"
 )

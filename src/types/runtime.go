@@ -15,26 +15,26 @@
 package types
 
 type DistroConfig struct {
-	CreateOpts DistroCreateOptions
-	DeployOpts DistroDeployOptions
+	DistroOpts DistroOptions `json:"distro,omitempty"`
+	LogLevel   string        `json:"log_level,omitempty" jsonschema:"enum=warn,enum=info,enum=debug,enum=trace,default=info"`
+	LogFormat  string        `json:"log_format,omitempty" jsonschema:"enum=console,enum=json,enum=dev,default=console"`
+	ZarfCache  string        `json:"zarf_cache,omitempty"`
+}
+
+type DistroOptions struct {
+	OCIConcurrency int                 `json:"oci_concurrency,omitempty"`
+	CreateOpts     DistroCreateOptions `json:"create,omitempty"`
+	DeployOpts     DistroDeployOptions `json:"deploy,omitempty"`
 }
 
 type DistroCreateOptions struct {
-	SourceDirectory string
-	Output          string
-	Version         string
-	Name            string
-	CachePath       string
+	SourceDirectory string `json:"-"`
+	Output          string `json:"output,omitempty"`
+	Version         string `json:"version,omitempty"`
+	Name            string `json:"name,omitempty"`
+	CachePath       string `json:"cache_path,omitempty"`
 }
 
 type DistroDeployOptions struct {
-	Source          string
-	Config          string
-	Packages        []string
-	ForceConflicts  bool
-	SetVariables    map[string]string                 `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used by Zarf packages in a bundle"`
-	Variables       map[string]map[string]interface{} `yaml:"variables,omitempty"`
-	SharedVariables map[string]interface{}            `yaml:"shared,omitempty"`
-	Retries         int                               `yaml:"retries"`
-	Options         map[string]interface{}            `yaml:"options,omitempty"`
+	Retries int `json:"retries,omitempty"`
 }

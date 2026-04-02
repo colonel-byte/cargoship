@@ -381,6 +381,24 @@
       },
       "type": "object"
     },
+    "ZarfDistroBuildData": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "ZarfDistroImageConfig": {
       "additionalProperties": false,
       "patternProperties": {
@@ -407,34 +425,6 @@
       },
       "type": "object"
     },
-    "ZarfDistroMetadata": {
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "annotations": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "description": {
-          "type": "string"
-        },
-        "name": {
-          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "type": "object"
-    },
     "ZarfDistroPackageConfig": {
       "additionalProperties": false,
       "patternProperties": {
@@ -451,6 +441,46 @@
           "$ref": "#/$defs/ZarfDistroImageConfig"
         }
       },
+      "type": "object"
+    },
+    "ZarfDistroPackageMetadata": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "architecture": {
+          "enum": [
+            "amd64",
+            "arm64"
+          ],
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "uncompressed": {
+          "default": false,
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "architecture",
+        "name"
+      ],
       "type": "object"
     },
     "ZarfDistroPackageSpec": {
@@ -486,6 +516,9 @@
       ],
       "type": "string"
     },
+    "build": {
+      "$ref": "#/$defs/ZarfDistroBuildData"
+    },
     "kind": {
       "enum": [
         "ZarfDistroPackage"
@@ -493,7 +526,7 @@
       "type": "string"
     },
     "metadata": {
-      "$ref": "#/$defs/ZarfDistroMetadata"
+      "$ref": "#/$defs/ZarfDistroPackageMetadata"
     },
     "spec": {
       "$ref": "#/$defs/ZarfDistroPackageSpec"

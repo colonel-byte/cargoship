@@ -15,71 +15,110 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
+	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 	"github.com/colonel-byte/zarf-distro/src/types"
-	goyaml "github.com/goccy/go-yaml"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	zarf "github.com/zarf-dev/zarf/src/cmd"
+	"github.com/zarf-dev/zarf/src/config"
+	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 var (
-	logLevel  string
-	distroCfg = types.DistroConfig{}
+	distroCfg       = types.DistroConfig{}
+	LogLevelCLI     string
+	LogFormat       string
+	IsColorDisabled bool
 )
 
-var rootCmd = &cobra.Command{
-	Use:           lang.RootCmdUse,
-	Short:         lang.RootCmdShort,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		_, _ = fmt.Fprintln(os.Stderr)
-		err := cmd.Help()
-		if err != nil {
-			return errors.New("error calling help command")
-		}
-		return nil
-	},
-}
+var rootCmd = NewZarfDistroCommand()
 
-func Execute() {
-	err := rootCmd.Execute()
-	if err == nil {
-		return
+func NewZarfDistroCommand() *cobra.Command {
+	err := initViper()
+	if err != nil {
+		fmt.Printf("failed to load config: %v", err)
 	}
-	pterm.Error.Println(err.Error())
-	os.Exit(1)
-}
 
-// RootCmd returns the root command.
-func RootCmd() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:           lang.RootCmdUse,
+		Short:         lang.RootCmdShort,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, _ = fmt.Fprintln(os.Stderr)
+			err := cmd.Help()
+			if err != nil {
+				return errors.New("error calling help command")
+			}
+			return nil
+		},
+		PreRunE: preRun,
+	}
+
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    lang.RootGroupPackageID,
+		Title: lang.RootGroupPackageTitle,
+	})
+
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    lang.RootGroupInstallID,
+		Title: lang.RootGroupInstallTitle,
+	})
+
+	rootCmd.AddCommand(newPackageCreateCommand())
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(zarf.VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(zarf.VZarfCache), zlang.RootCmdFlagCachePath)
 	return rootCmd
 }
 
-func init() {
-	log, err := logger.New(logger.ConfigDefault())
-	if err != nil {
-		fmt.Printf("failed to create logger: %v", err)
+func Execute(ctx context.Context) error {
+	_, err := rootCmd.ExecuteContextC(ctx)
+	if err == nil {
+		return nil
 	}
+	// Use default logger in case there was an error prior to the logger being setup
+	logger.Default().Error(err.Error())
+	return err
+}
 
-	err = initViper()
+// PrintViperConfigUsed informs users when Zarf has detected a config file.
+func PrintViperConfigUsed(ctx context.Context) error {
+	l := logger.From(ctx)
+
+	// Only print config info if viper is initialized.
+	vInitialized := v != nil
+	if !vInitialized {
+		return nil
+	}
+	if vConfigError != nil {
+		return fmt.Errorf("unable to load config file: %w", vConfigError)
+	}
+	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
+		l.Info("using config file", "location", cfgFile)
+	}
+	return nil
+}
+
+func init() {
+	err := initViper()
 	if err != nil {
 		fmt.Printf("failed to load config: %v", err)
 	}
 
 	if v.ConfigFileUsed() != "" {
 		if err := loadViperConfig(); err != nil {
-			log.Warn("failed to load zarf-distro-config", "error", err.Error())
 			os.Exit(1)
 		}
 	}
-
-	rootCmd.AddCommand(createCmd)
 }
 
 func loadViperConfig() error {
@@ -98,18 +137,58 @@ func loadViperConfig() error {
 }
 
 func unmarshalAndValidateConfig(configFile []byte, distroCfg *types.DistroConfig) error {
-	// read relevant config into DeployOpts.Variables
-	// need to use goyaml because Viper doesn't preserve case: https://github.com/spf13/viper/issues/1014
-	// unmarshalling into DeployOpts because we want to check all of the top level config keys which are currently defined in DeployOpts
-	err := goyaml.UnmarshalWithOptions(configFile, &distroCfg.DeployOpts, goyaml.Strict())
+	err := utils.ReadByteStrict(configFile, &distroCfg)
 	if err != nil {
 		return err
 	}
-	// validate config options
-	for optionName := range distroCfg.DeployOpts.Options {
-		if !isValidConfigOption(optionName) {
-			return fmt.Errorf("invalid config option: %s", optionName)
-		}
-	}
 	return nil
+}
+
+func preRun(cmd *cobra.Command, _ []string) error {
+	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
+	l, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled)
+	if err != nil {
+		return err
+	}
+	ctx := logger.WithContext(cmd.Context(), l)
+	cmd.SetContext(ctx)
+
+	// if --no-color is set, disable PTerm color in message prints
+	if IsColorDisabled {
+		pterm.DisableColor()
+	}
+
+	// Print out config location
+	err = PrintViperConfigUsed(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	l.Debug("using temporary directory", "tmpDir", config.CommonOptions.TempDirectory)
+	return nil
+}
+
+// setupLogger handles creating a logger and setting it as the global default.
+func setupLogger(level, format string, isColor bool) (*slog.Logger, error) {
+	// If we didn't get a level from config, fallback to "info"
+	if level == "" {
+		level = "info"
+	}
+	sLevel, err := logger.ParseLevel(level)
+	if err != nil {
+		return nil, err
+	}
+	cfg := logger.Config{
+		Level:       sLevel,
+		Format:      logger.Format(format),
+		Destination: logger.DestinationDefault,
+		Color:       logger.Color(isColor),
+	}
+	l, err := logger.New(cfg)
+	if err != nil {
+		return nil, err
+	}
+	logger.SetDefault(l)
+	l.Debug("logger successfully initialized", "cfg", cfg)
+	return l, nil
 }

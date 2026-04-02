@@ -18,27 +18,54 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
 
-	"github.com/colonel-byte/zarf-distro/src/pkg/distro"
+	"github.com/colonel-byte/zarf-distro/src/cmd"
+	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 	"github.com/colonel-byte/zarf-distro/src/types"
+	goyaml "github.com/goccy/go-yaml"
 )
 
 func main() {
-	rootCtx := context.TODO()
-	opt := types.DistroConfig{
-		CreateOpts: types.DistroCreateOptions{
-			SourceDirectory: "schema",
-			Version:         "v1.1.1",
-			CachePath:       "build",
-		},
+	Cobra()
+}
+
+func Print() {
+	cn := types.DistroConfig{}
+	if err := utils.ReadYAMLStrict(filepath.Join(".", "zarf-distro-config1.yaml"), &cn); err != nil {
+		fmt.Println("fml")
 	}
 
-	dis, err := distro.New(&opt)
-
+	bytes, err := goyaml.Marshal(cn)
 	if err != nil {
-		fmt.Printf("got the following: %v", err)
+		fmt.Println("fml - v2")
+	}
+	fmt.Println(string(bytes))
+
+	fmt.Println(cn.DistroOpts.OCIConcurrency)
+}
+
+func Cobra() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		first := true
+		for {
+			<-signalCh
+			if first {
+				first = false
+				cancel()
+				continue
+			}
+			os.Exit(1)
+		}
+	}()
+
+	if err := cmd.Execute(ctx); err != nil {
 		os.Exit(1)
 	}
-
-	dis.Create(rootCtx)
 }

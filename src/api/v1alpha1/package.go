@@ -19,10 +19,23 @@ import (
 )
 
 type ZarfDistroPackage struct {
-	APIVersion string                `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind       ZarfDistroKind        `json:"kind" jsonschema:"enum=ZarfDistroPackage"`
-	Metadata   ZarfDistroMetadata    `json:"metadata"`
-	Spec       ZarfDistroPackageSpec `json:"spec"`
+	APIVersion string                    `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+	Kind       ZarfDistroKind            `json:"kind" jsonschema:"enum=ZarfDistroPackage"`
+	Metadata   ZarfDistroPackageMetadata `json:"metadata"`
+	Build      ZarfDistroBuildData       `json:"build,omitempty"`
+	Spec       ZarfDistroPackageSpec     `json:"spec"`
+}
+
+type ZarfDistroPackageMetadata struct {
+	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"default=false"`
+	Architecture string `json:"architecture" jsonschema:"enum=amd64,enum=arm64"`
+	ZarfDistroMetadata
+}
+
+type ZarfDistroBuildData struct {
+	Architecture string `json:"architecture,omitempty"`
+	Timestamp    string `json:"timestamp,omitempty"`
+	Version      string `json:"version,omitempty"`
 }
 
 type ZarfDistroPackageSpec struct {

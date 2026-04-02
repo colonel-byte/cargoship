@@ -15,13 +15,45 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-var createCmd = &cobra.Command{
-	Use:     "create [DIRECTORY]",
-	Aliases: []string{"c"},
-	Args:    cobra.MaximumNArgs(1),
-	Short:   lang.CmdDistroCreateShort,
+type packageCreateOptions struct {
+	output            string
+	registryOverrides []string
+	ociConcurrency    int
+}
+
+func newPackageCreateCommand() *cobra.Command {
+	o := packageCreateOptions{}
+	cmd := &cobra.Command{
+		Use:     "create [Dir]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   lang.CmdDistroCreateShort,
+		GroupID: lang.RootGroupPackageID,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			return o.run(ctx, args)
+		},
+	}
+
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
+
+	v.SetDefault(VPkgCreateOutput, ".")
+
+	return cmd
+}
+
+func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
+	l := logger.From(ctx)
+	basePath := setBaseDirectory(args)
+
+	l.Debug("", "path", basePath)
+
+	return nil
 }

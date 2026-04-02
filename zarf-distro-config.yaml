@@ -1,0 +1,9 @@
+---
+# yaml-language-server: $schema=schema/zarf-distro-config-schema.json
+log_level: info
+log_format: json
+zarf_cache: ~/.zarf
+distro:
+  oci_concurrency: 10
+  create:
+    output: ~/zarf

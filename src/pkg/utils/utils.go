@@ -43,15 +43,25 @@ func ReadYAMLStrict(path string, destConfig any) error {
 		return fmt.Errorf("failed to read file at %s: %v", path, err)
 	}
 
-	err = goyaml.UnmarshalWithOptions(fileBytes, destConfig, goyaml.Strict())
+	return ReadByteStrict(fileBytes, &destConfig)
+}
+
+func ReadByteStrict(data []byte, destConfig any) error {
+	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
-		log.Warn("failed strict unmarshalling of YAML", "path", path, "error", err)
+		return fmt.Errorf("failed to create logger: %v", err)
+	}
+
+	err = goyaml.UnmarshalWithOptions(data, &destConfig, goyaml.Strict())
+	if err != nil {
+		log.Warn("failed strict unmarshalling of YAML", "error", err)
 
 		// Try again with non-strict mode
-		err = goyaml.UnmarshalWithOptions(fileBytes, destConfig)
+		err = goyaml.UnmarshalWithOptions(data, &destConfig)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal YAML at %s: %v", path, err)
+			return fmt.Errorf("failed to unmarshal YAML at %v", err)
 		}
 	}
+
 	return nil
 }

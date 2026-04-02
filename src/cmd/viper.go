@@ -21,7 +21,15 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
 	"github.com/spf13/viper"
+	zarf "github.com/zarf-dev/zarf/src/cmd"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+)
+
+const (
+	VPkgCreateOutput   = "distro.create.output"
+	VPkgOCIConcurrency = "distro.oci_concurrency"
 )
 
 var (
@@ -47,13 +55,15 @@ func initViper() error {
 		v.AddConfigPath(".")
 		v.AddConfigPath("$HOME/.zarf")
 		v.SetConfigName("zarf-distro-config")
+		v.SetConfigType("yaml")
+		v.SetConfigType("yml")
 	}
 
-	// we replace 'OPTIONS.' because in a zarf-distro-config.yaml, the key is options.<opt>, but in the environment, it's DISTRO_<OPT>
-	// e.g. DISTRO_LOG_LEVEL=debug
 	v.SetEnvPrefix("distro")
-	v.SetEnvKeyReplacer(strings.NewReplacer("OPTIONS.", ""))
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+
+	setDefaults()
 
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
@@ -68,4 +78,12 @@ func initViper() error {
 		}
 	}
 	return nil
+}
+
+func setDefaults() {
+	v.SetDefault(zarf.VLogLevel, "info")
+	v.SetDefault(zarf.VZarfCache, config.ZarfDefaultCachePath)
+	v.SetDefault(zarf.VLogFormat, string(logger.FormatConsole))
+
+	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 }

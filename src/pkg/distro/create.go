@@ -16,68 +16,58 @@ package distro
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"path/filepath"
-	"slices"
 
-	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
+	dlayout "github.com/colonel-byte/zarf-distro/src/pkg/packager/layout"
+	"github.com/colonel-byte/zarf-distro/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/images"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
-	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
+	zlayout "github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
-func (d *Distro) Create(ctx context.Context) error {
-	if err := utils.ReadYAMLStrict(filepath.Join(d.cfg.CreateOpts.SourceDirectory, "distro.yaml"), &d.distro); err != nil {
-		return err
-	}
+// CreateOptions are the optional parameters to create
+type CreateOptions struct {
+	RegistryOverrides []images.RegistryOverride
+	OCIConcurrency    int
+	CachePath         string
+	IsInteractive     bool
+	types.RemoteOptions
+}
 
-	if d.cfg.CreateOpts.Version != "" {
-		d.distro.Metadata.Version = d.cfg.CreateOpts.Version
+func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (_ string, err error) {
+	loadOpts := load.DefinitionOptions{
+		CachePath:     opts.CachePath,
+		RemoteOptions: opts.RemoteOptions,
 	}
-
-	buildPath, err := zutils.MakeTempDir("/tmp")
+	distro, err := load.DistroDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
-	for _, src := range d.distro.Spec.Distro.Config.Images {
-		refInfo, err := transform.ParseImageRef(src)
-		if err != nil {
-			return fmt.Errorf("failed to create ref for image %s: %w", src, err)
-		}
-		if slices.Contains(componentImages, refInfo) {
-			continue
-		}
-		componentImages = append(componentImages, refInfo)
+	pkgPath, err := zlayout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)
 	}
 
-	if len(componentImages) > 0 {
-		pullOpts := images.PullOptions{
-			OCIConcurrency:        10,
-			Arch:                  "amd64",
-			RegistryOverrides:     []images.RegistryOverride{},
-			CacheDirectory:        filepath.Join(d.cfg.CreateOpts.CachePath, ImagesDir),
-			PlainHTTP:             false,
-			InsecureSkipTLSVerify: false,
-		}
-		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
-		if err != nil {
-			return err
-		}
-		manifests = append(manifests, imageManifests...)
+	assembleOpt := dlayout.AssembleOptions{
+		RegistryOverrides: opts.RegistryOverrides,
+		RemoteOptions:     opts.RemoteOptions,
 	}
 
-	for _, i := range manifests {
-		fmt.Println(i.Image.Name)
+	distroLayout, err := dlayout.AssembleDistro(ctx, distro, pkgPath.BaseDir, assembleOpt)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		err = errors.Join(err, distroLayout.Cleanup())
+	}()
+
+	var distroLocation string
+	distroLocation, err = distroLayout.Archive(ctx, output, 0)
+	if err != nil {
+		return "", err
 	}
 
-	// bytes, err := goyaml.Marshal(d.distro)
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Println(string(bytes))
-
-	return nil
+	return distroLocation, nil
 }
