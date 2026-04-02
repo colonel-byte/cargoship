@@ -44,15 +44,15 @@ func main() {
 	var sch = []schema{
 		{
 			schemaStruct: &v1alpha1.ZarfDistroPackage{},
-			path:         "zarf-distro-package-v1alpha1-schema.json",
+			path:         "zarf-v1alpha1-distro-package-schema.json",
 		},
 		{
-			schemaStruct: &v1alpha1.ZarfDistroInstall{},
-			path:         "zarf-distro-install-v1alpha1-schema.json",
+			schemaStruct: &v1alpha1.ZarfCluster{},
+			path:         "zarf-v1alpha1-cluster-schema.json",
 		},
 		{
 			schemaStruct: &types.DistroConfig{},
-			path:         "zarf-distro-config-schema.json",
+			path:         "zarf-config-distro-schema.json",
 			keyNamer: func(s string) string {
 				return s
 			},

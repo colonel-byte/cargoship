@@ -39,6 +39,10 @@ repos:
           - apache
           - -y
           - "2026"
+  - repo: https://github.com/google/keep-sorted
+    rev: v0.8.0
+    hooks:
+      - id: keep-sorted
   # - repo: local
   #   hooks:
   #     - id: goimports

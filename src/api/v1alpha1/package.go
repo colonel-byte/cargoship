@@ -28,7 +28,7 @@ type ZarfDistroPackage struct {
 
 type ZarfDistroPackageMetadata struct {
 	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"default=false"`
-	Architecture string `json:"architecture" jsonschema:"enum=amd64,enum=arm64"`
+	Architecture string `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
 	ZarfDistroMetadata
 }
 

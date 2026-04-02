@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=schema/zarf-distro-config-schema.json
+# yaml-language-server: $schema=schema/zarf-config-distro-schema.json
 log_level: info
 log_format: json
 zarf_cache: ~/.zarf

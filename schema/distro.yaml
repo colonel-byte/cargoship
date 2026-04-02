@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=zarf-distro-package-v1alpha1-schema.json
+# yaml-language-server: $schema=zarf-v1alpha1-distro-package-schema.json
 kind: ZarfDistroPackage
 metadata:
   name: rancher-rke2

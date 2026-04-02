@@ -75,7 +75,7 @@ func NewZarfDistroCommand() *cobra.Command {
 
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(zarf.VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(zarf.VZarfCache), zlang.RootCmdFlagCachePath)
 	return rootCmd
 }

@@ -36,7 +36,7 @@
     "OpenSSHOptions": {
       "type": "object"
     },
-    "ZarfDistroInstallConfig": {
+    "ZarfClusterConfig": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -44,13 +44,13 @@
       "properties": {
         "profiles": {
           "items": {
-            "$ref": "#/$defs/ZarfDistroInstallProfiles"
+            "$ref": "#/$defs/ZarfClusterProfiles"
           },
           "type": "array"
         },
         "registries": {
           "items": {
-            "$ref": "#/$defs/ZarfDistroInstallRegistries"
+            "$ref": "#/$defs/ZarfClusterRegistries"
           },
           "type": "array"
         },
@@ -67,7 +67,7 @@
       ],
       "type": "object"
     },
-    "ZarfDistroInstallFiles": {
+    "ZarfClusterFiles": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -109,7 +109,7 @@
       ],
       "type": "object"
     },
-    "ZarfDistroInstallHosts": {
+    "ZarfClusterHosts": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -126,7 +126,7 @@
         },
         "files": {
           "items": {
-            "$ref": "#/$defs/ZarfDistroInstallFiles"
+            "$ref": "#/$defs/ZarfClusterFiles"
           },
           "type": "array"
         },
@@ -163,7 +163,7 @@
       ],
       "type": "object"
     },
-    "ZarfDistroInstallProfiles": {
+    "ZarfClusterProfiles": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -184,20 +184,20 @@
       ],
       "type": "object"
     },
-    "ZarfDistroInstallRegistries": {
+    "ZarfClusterRegistries": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "auth": {
-          "$ref": "#/$defs/ZarfDistroInstallRegistryAuth"
+          "$ref": "#/$defs/ZarfClusterRegistryAuth"
         },
         "name": {
           "type": "string"
         },
         "proxy": {
-          "$ref": "#/$defs/ZarfDistroInstallRegistryProxy"
+          "$ref": "#/$defs/ZarfClusterRegistryProxy"
         }
       },
       "required": [
@@ -206,7 +206,7 @@
       ],
       "type": "object"
     },
-    "ZarfDistroInstallRegistryAuth": {
+    "ZarfClusterRegistryAuth": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -224,7 +224,7 @@
       },
       "type": "object"
     },
-    "ZarfDistroInstallRegistryProxy": {
+    "ZarfClusterRegistryProxy": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -239,18 +239,18 @@
       ],
       "type": "object"
     },
-    "ZarfDistroInstallSpec": {
+    "ZarfClusterSpec": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "config": {
-          "$ref": "#/$defs/ZarfDistroInstallConfig"
+          "$ref": "#/$defs/ZarfClusterConfig"
         },
         "hosts": {
           "items": {
-            "$ref": "#/$defs/ZarfDistroInstallHosts"
+            "$ref": "#/$defs/ZarfClusterHosts"
           },
           "minItems": 1,
           "type": "array"
@@ -291,7 +291,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/v1alpha1/zarf-distro-install",
+  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/v1alpha1/zarf-cluster",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "patternProperties": {
@@ -306,7 +306,7 @@
     },
     "kind": {
       "enum": [
-        "ZarfDistroInstall"
+        "ZarfCluster"
       ],
       "type": "string"
     },
@@ -314,7 +314,7 @@
       "$ref": "#/$defs/ZarfDistroMetadata"
     },
     "spec": {
-      "$ref": "#/$defs/ZarfDistroInstallSpec"
+      "$ref": "#/$defs/ZarfClusterSpec"
     }
   },
   "required": [

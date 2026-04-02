@@ -1,6 +1,6 @@
 ---
-# yaml-language-server: $schema=zarf-distro-install-v1alpha1-schema.json
-kind: ZarfDistroInstall
+# yaml-language-server: $schema=zarf-v1alpha1-cluster-schema.json
+kind: ZarfCluster
 metadata:
   name: rancher-rke2
 spec:

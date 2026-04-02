@@ -456,6 +456,7 @@
           "type": "object"
         },
         "architecture": {
+          "default": "amd64",
           "enum": [
             "amd64",
             "arm64"
@@ -478,7 +479,6 @@
         }
       },
       "required": [
-        "architecture",
         "name"
       ],
       "type": "object"
