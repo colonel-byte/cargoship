@@ -19,10 +19,10 @@ import (
 	"errors"
 	"fmt"
 
-	dlayout "github.com/colonel-byte/zarf-distro/src/pkg/packager/layout"
+	"github.com/colonel-byte/zarf-distro/src/pkg/packager/layout"
 	"github.com/colonel-byte/zarf-distro/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/images"
-	zlayout "github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -35,27 +35,28 @@ type CreateOptions struct {
 	types.RemoteOptions
 }
 
-func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (_ string, err error) {
+func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (_ string, err error) {
 	loadOpts := load.DefinitionOptions{
 		CachePath:     opts.CachePath,
 		RemoteOptions: opts.RemoteOptions,
 	}
-	distro, err := load.DistroDefinition(ctx, packagePath, loadOpts)
+	distro, err := load.DistroDefinition(ctx, distroPath, loadOpts)
 	if err != nil {
 		return "", err
 	}
 
-	pkgPath, err := zlayout.ResolvePackagePath(packagePath)
+	disPath, err := layout.ResolveDistroPath(distroPath)
 	if err != nil {
-		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+		return "", fmt.Errorf("unable to access package path %q: %w", distroPath, err)
 	}
 
-	assembleOpt := dlayout.AssembleOptions{
+	assembleOpt := layout.AssembleOptions{
 		RegistryOverrides: opts.RegistryOverrides,
 		RemoteOptions:     opts.RemoteOptions,
 	}
 
-	distroLayout, err := dlayout.AssembleDistro(ctx, distro, pkgPath.BaseDir, assembleOpt)
+	logger.From(ctx).Debug("assembling distro", "disPath.BaseDir", disPath.BaseDir)
+	distroLayout, err := layout.AssembleDistro(ctx, distro, disPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
 	}

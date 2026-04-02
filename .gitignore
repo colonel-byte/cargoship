@@ -21,3 +21,4 @@ build
 !**/testdata/**
 coverage.out
 dist
+images/

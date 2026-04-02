@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	VPkgCreateOutput   = "distro.create.output"
-	VPkgOCIConcurrency = "distro.oci_concurrency"
+	VPkgCreateOutput           = "distro.create.output"
+	VPkgOCIConcurrency         = "distro.oci_concurrency"
+	VPkgCreateRegistryOverride = "distro.create.registry_override"
 )
 
 var (

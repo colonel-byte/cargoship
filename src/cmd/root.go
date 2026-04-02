@@ -16,27 +16,29 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 
+	"github.com/colonel-byte/zarf-distro/src/config"
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
 	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 	"github.com/colonel-byte/zarf-distro/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	zarf "github.com/zarf-dev/zarf/src/cmd"
-	"github.com/zarf-dev/zarf/src/config"
+	zconfig "github.com/zarf-dev/zarf/src/config"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 var (
-	distroCfg       = types.DistroConfig{}
-	LogLevelCLI     string
-	LogFormat       string
+	//keep-sorted start
 	IsColorDisabled bool
+	LogFormat       string
+	LogLevelCLI     string
+	distroCfg       = types.DistroConfig{}
+	//keep-sorted end
 )
 
 var rootCmd = NewZarfDistroCommand()
@@ -52,15 +54,13 @@ func NewZarfDistroCommand() *cobra.Command {
 		Short:         lang.RootCmdShort,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, _ = fmt.Fprintln(os.Stderr)
+		Run: func(cmd *cobra.Command, _ []string) {
 			err := cmd.Help()
 			if err != nil {
-				return errors.New("error calling help command")
+				_, _ = fmt.Fprintln(os.Stderr, err)
 			}
-			return nil
 		},
-		PreRunE: preRun,
+		PersistentPreRunE: preRun,
 	}
 
 	rootCmd.AddGroup(&cobra.Group{
@@ -68,15 +68,15 @@ func NewZarfDistroCommand() *cobra.Command {
 		Title: lang.RootGroupPackageTitle,
 	})
 
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    lang.RootGroupInstallID,
-		Title: lang.RootGroupInstallTitle,
-	})
-
 	rootCmd.AddCommand(newPackageCreateCommand())
+
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(zarf.VNoColor), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(zarf.VZarfCache), zlang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(zarf.VTmpDir), zlang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().StringVarP(&zconfig.CLIArch, "architecture", "a", v.GetString(zarf.VArchitecture), zlang.RootCmdFlagArch)
+
 	return rootCmd
 }
 

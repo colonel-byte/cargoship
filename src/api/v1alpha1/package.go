@@ -33,9 +33,10 @@ type ZarfDistroPackageMetadata struct {
 }
 
 type ZarfDistroBuildData struct {
-	Architecture string `json:"architecture,omitempty"`
-	Timestamp    string `json:"timestamp,omitempty"`
-	Version      string `json:"version,omitempty"`
+	Architecture      string            `json:"architecture,omitempty"`
+	Timestamp         string            `json:"timestamp,omitempty"`
+	Version           string            `json:"version,omitempty"`
+	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
 }
 
 type ZarfDistroPackageSpec struct {

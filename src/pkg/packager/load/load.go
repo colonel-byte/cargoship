@@ -21,9 +21,9 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
 	"github.com/colonel-byte/zarf-distro/src/internal/distrocfg"
+	"github.com/colonel-byte/zarf-distro/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -33,17 +33,17 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
-func DistroDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfDistroPackage, error) {
+func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistroPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
-	l.Debug("start layout.LoadPackage", "path", packagePath)
+	l.Debug("start layout.DistroDefinition", "path", distroPath)
 
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	disPath, err := layout.ResolveDistroPath(distroPath)
 	if err != nil {
 		return v1alpha1.ZarfDistroPackage{}, err
 	}
 
-	b, err := os.ReadFile(pkgPath.ManifestFile)
+	b, err := os.ReadFile(disPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfDistroPackage{}, err
 	}
@@ -53,11 +53,11 @@ func DistroDefinition(ctx context.Context, packagePath string, opts DefinitionOp
 	}
 	dis.Metadata.Architecture = config.GetArch(dis.Metadata.Architecture)
 
-	err = validate(ctx, dis, pkgPath.ManifestFile)
+	err = validate(ctx, dis, disPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfDistroPackage{}, err
 	}
-	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
+	l.Debug("done layout.DistroDefinition", "duration", time.Since(start))
 	return dis, nil
 }
 

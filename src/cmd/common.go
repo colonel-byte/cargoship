@@ -14,29 +14,24 @@
 
 package cmd
 
-type configOption string
+import (
+	"context"
+	"regexp"
 
-// Valid values for options in uds_config.yaml
-const (
-	confirm        configOption = "confirm"
-	insecure       configOption = "insecure"
-	cachePath      configOption = "uds_cache"
-	tempDirectory  configOption = "tmp_dir"
-	logLevelOption configOption = "log_level"
-	architecture   configOption = "architecture"
-	noLogFile      configOption = "no_log_file"
-	noProgress     configOption = "no_progress"
-	noColor        configOption = "no_color"
-	ociConcurrency configOption = "oci_concurrency"
+	"github.com/colonel-byte/zarf-distro/src/config"
+	zconfig "github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
-// isValidConfigOption checks if a string is a valid config option
-func isValidConfigOption(str string) bool {
-	switch configOption(str) {
-	case confirm, insecure, cachePath, tempDirectory, logLevelOption, architecture, noLogFile, noProgress, noColor, ociConcurrency:
-		return true
-	default:
-		return false
+var plainHTTP bool
+var insecureSkipTLSVerify bool
+var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
+
+func defaultRemoteOptions() types.RemoteOptions {
+	return types.RemoteOptions{
+		PlainHTTP:             plainHTTP,
+		InsecureSkipTLSVerify: insecureSkipTLSVerify,
 	}
 }
 
@@ -45,4 +40,12 @@ func setBaseDirectory(args []string) string {
 		return args[0]
 	}
 	return "."
+}
+
+func getCachePath(ctx context.Context) (string, error) {
+	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
+		logger.From(ctx).Warn("invalid characters in Zarf cache path, using default", "cfg", zconfig.ZarfDefaultCachePath, "default", zconfig.ZarfDefaultCachePath)
+		config.CommonOptions.CachePath = zconfig.ZarfDefaultCachePath
+	}
+	return zconfig.GetAbsCachePath()
 }

@@ -16,9 +16,15 @@ package cmd
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
+	"github.com/colonel-byte/zarf-distro/src/pkg/distro"
 	"github.com/spf13/cobra"
+	zcmd "github.com/zarf-dev/zarf/src/cmd"
+	zlang "github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -26,6 +32,7 @@ type packageCreateOptions struct {
 	output            string
 	registryOverrides []string
 	ociConcurrency    int
+	confirm           bool
 }
 
 func newPackageCreateCommand() *cobra.Command {
@@ -43,6 +50,7 @@ func newPackageCreateCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", zcmd.GetStringSlice(v, VPkgCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
 
 	v.SetDefault(VPkgCreateOutput, ".")
 
@@ -52,8 +60,28 @@ func newPackageCreateCommand() *cobra.Command {
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
 	basePath := setBaseDirectory(args)
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
 
-	l.Debug("", "path", basePath)
+	opt := distro.CreateOptions{
+		//keep-sorted start
+		CachePath:      cachePath,
+		IsInteractive:  !o.confirm,
+		OCIConcurrency: o.ociConcurrency,
+		RemoteOptions:  defaultRemoteOptions(),
+		//keep-sorted end
+	}
+
+	disPath, err := distro.Create(ctx, basePath, o.output, opt)
+	if lintErr, ok := errors.AsType[*lint.LintError](err); ok {
+		zcmd.PrintFindings(ctx, lintErr)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create distro package: %w", err)
+	}
+	l.Debug("distro package created", "path", disPath)
 
 	return nil
 }

@@ -14,7 +14,8 @@
 
 package config
 
-const (
-	ImagesDir      = "images"
-	ZarfDistroYaml = "distro.yaml"
+import "github.com/colonel-byte/zarf-distro/src/types"
+
+var (
+	CommonOptions types.DistroConfig
 )

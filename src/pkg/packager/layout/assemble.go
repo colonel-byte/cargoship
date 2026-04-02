@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"time"
 
+	"github.com/colonel-byte/zarf-distro/src/api"
 	"github.com/colonel-byte/zarf-distro/src/api/v1alpha1"
 	"github.com/colonel-byte/zarf-distro/src/config"
 	"github.com/colonel-byte/zarf-distro/src/pkg/packager"
@@ -37,15 +39,15 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, packagePath string, opts AssembleOptions) (*packager.DistroLayout, error) {
+func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, distroPath string, opts AssembleOptions) (*packager.DistroLayout, error) {
 	l := logger.From(ctx)
-	l.Info("assembling distro", "path", packagePath)
+	l.Info("assembling distro", "path", distroPath)
 
-	// TODO(a1994sc): remove hard coded temp directory
-	buildPath, err := zutils.MakeTempDir("/tmp")
+	buildPath, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
+	l.Info("using build path", "buildPath", buildPath)
 
 	componentImages := []transform.Image{}
 	manifests := []images.ImageWithManifest{}
@@ -69,11 +71,31 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, packagePa
 			PlainHTTP:             opts.PlainHTTP,
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		}
+		l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
 		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
 		manifests = append(manifests, imageManifests...)
 	}
-	return nil, nil
+
+	d = recordDistroMetadata(d, opts.RegistryOverrides)
+
+	return packager.NewDistroLayout(buildPath, d), nil
+}
+
+func recordDistroMetadata(distro v1alpha1.ZarfDistroPackage, registryOverrides []images.RegistryOverride) v1alpha1.ZarfDistroPackage {
+	now := time.Now()
+	distro.Build.Architecture = distro.Metadata.Architecture
+	distro.Build.Timestamp = now.Format(api.BuildTimestampFormat)
+	distro.Build.Version = distro.Metadata.Version
+
+	overrides := make(map[string]string, len(registryOverrides))
+	for i := range registryOverrides {
+		overrides[registryOverrides[i].Source] = registryOverrides[i].Override
+	}
+
+	distro.Build.RegistryOverrides = overrides
+
+	return distro
 }

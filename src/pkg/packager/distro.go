@@ -32,6 +32,13 @@ type DistroLayout struct {
 	Distro  v1alpha1.ZarfDistroPackage
 }
 
+func NewDistroLayout(dir string, distro v1alpha1.ZarfDistroPackage) *DistroLayout {
+	return &DistroLayout{
+		dirPath: dir,
+		Distro:  distro,
+	}
+}
+
 func (d *DistroLayout) DirPath() string {
 	return d.dirPath
 }

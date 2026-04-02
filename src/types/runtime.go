@@ -15,10 +15,11 @@
 package types
 
 type DistroConfig struct {
-	DistroOpts DistroOptions `json:"distro,omitempty"`
-	LogLevel   string        `json:"log_level,omitempty" jsonschema:"enum=warn,enum=info,enum=debug,enum=trace,default=info"`
-	LogFormat  string        `json:"log_format,omitempty" jsonschema:"enum=console,enum=json,enum=dev,default=console"`
-	ZarfCache  string        `json:"zarf_cache,omitempty"`
+	DistroOpts    DistroOptions `json:"distro,omitempty"`
+	LogLevel      string        `json:"log_level,omitempty" jsonschema:"enum=warn,enum=info,enum=debug,enum=trace,default=info"`
+	LogFormat     string        `json:"log_format,omitempty" jsonschema:"enum=console,enum=json,enum=dev,default=console"`
+	CachePath     string        `json:"zarf_cache,omitempty"`
+	TempDirectory string        `json:"tmp_dir,omitempty" jsonschema:"default=/tmp"`
 }
 
 type DistroOptions struct {

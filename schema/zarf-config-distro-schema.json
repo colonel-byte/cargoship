@@ -81,6 +81,10 @@
       ],
       "type": "string"
     },
+    "tmp_dir": {
+      "default": "/tmp",
+      "type": "string"
+    },
     "zarf_cache": {
       "type": "string"
     }
