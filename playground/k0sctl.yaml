@@ -1,0 +1,63 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: k0sctl.k0sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: k0s-cluster
+  user: admin
+spec:
+  hosts:
+    - openSSH:
+        address: 127.0.0.1
+        user: root
+        port: 3000
+        keyPath: ~/.ssh/id_ed25519
+      hostname: distro-kc-00
+      role: controller+worker
+    - openSSH:
+        address: 127.0.0.1
+        user: root
+        port: 3001
+        keyPath: ~/.ssh/id_ed25519
+      hostname: distro-kc-01
+      role: controller+worker
+    - openSSH:
+        address: 127.0.0.1
+        user: root
+        port: 3002
+        keyPath: ~/.ssh/id_ed25519
+      hostname: distro-kc-02
+      role: controller+worker
+    - openSSH:
+        address: 127.0.0.1
+        user: root
+        port: 3003
+        keyPath: ~/.ssh/id_ed25519
+      hostname: distro-ki-00
+      role: worker
+    - openSSH:
+        address: 127.0.0.1
+        user: root
+        port: 3004
+        keyPath: ~/.ssh/id_ed25519
+      hostname: distro-ki-01
+      role: worker
+    - openSSH:
+        address: 127.0.0.1
+        user: root
+        port: 3005
+        keyPath: ~/.ssh/id_ed25519
+      hostname: distro-ki-02
+      role: worker

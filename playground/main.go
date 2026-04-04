@@ -24,7 +24,14 @@ import (
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"
 	"github.com/k0sproject/rig/os/registry"
-	_ "github.com/k0sproject/rig/os/support"
+	zconfig "github.com/zarf-dev/zarf/src/config"
+
+	// anonymous import is needed to load the os configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/os"
+	// anonymous import is needed to load the os configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux"
+	// anonymous import is needed to load the os configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux/enterpriselinux"
 )
 
 type configurer interface {
@@ -64,11 +71,22 @@ func main() {
 	sudo := flag.Bool("sudo", false, "use sudo when uploading")
 	usr := flag.String("user", "root", "user name")
 	pwd := flag.String("pass", "", "password")
-	key := flag.String("key", "", "ssh key")
+	key := flag.String("key", "~/.ssh/id_ed25519", "ssh key")
 	proto := flag.String("proto", "ssh", "ssh/winrm")
+	config := flag.String("config", "~/.ssh/config", "user ssh config")
 	https := flag.Bool("https", false, "use https")
 
 	flag.Parse()
+
+	keys, err := zconfig.GetAbsHomePath(*key)
+	if err != nil {
+		panic(err)
+	}
+
+	configs, err := zconfig.GetAbsHomePath(*config)
+	if err != nil {
+		panic(err)
+	}
 
 	if *dh == "" {
 		println("see -help")
@@ -80,11 +98,12 @@ func main() {
 	if *proto == "ssh" {
 		h = &Host{
 			Connection: rig.Connection{
-				SSH: &rig.SSH{
-					Address: *dh,
-					Port:    *dp,
-					User:    *usr,
-					HostKey: *key,
+				OpenSSH: &rig.OpenSSH{
+					Address:    *dh,
+					Port:       dp,
+					User:       usr,
+					KeyPath:    &keys,
+					ConfigPath: &configs,
 				},
 			},
 		}
