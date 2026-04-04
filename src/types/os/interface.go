@@ -17,6 +17,7 @@ package os
 import (
 	"time"
 
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"
 )
@@ -32,6 +33,7 @@ type Configurer interface {
 	Chown(os.Host, string, string, ...exec.Option) error
 	CleanupServiceEnvironment(os.Host, string) error
 	CommandExist(os.Host, string) bool
+	ConfigureDistro(distro.Distro)
 	DaemonReload(os.Host) error
 	DeleteDir(os.Host, string, ...exec.Option) error
 	DeleteFile(os.Host, string) error

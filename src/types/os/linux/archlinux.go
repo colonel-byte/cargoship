@@ -21,6 +21,10 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_ARCH = "arch"
+)
+
 // Archlinux provides OS support for Archlinux systems
 type Archlinux struct {
 	linux.Archlinux
@@ -32,7 +36,7 @@ var _ configurer.Configurer = (*Archlinux)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "arch" || os.IDLike == "arch"
+			return os.ID == OS_KIND_ARCH || os.IDLike == OS_KIND_ARCH
 		},
 		func() any {
 			return &Archlinux{}

@@ -24,6 +24,10 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_COREOS = "CoreOS"
+)
+
 // CoreOS provides OS support for ostree based Fedora & RHEL systems
 type CoreOS struct {
 	os.Linux
@@ -35,7 +39,7 @@ var _ configurer.Configurer = (*CoreOS)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return strings.Contains(os.Name, "CoreOS") && (os.ID == "fedora" || os.ID == "rhel")
+			return strings.Contains(os.Name, OS_KIND_COREOS) && (os.ID == OS_KIND_EL_FEDORA || os.ID == OS_KIND_EL_RED_HAT)
 		},
 		func() any {
 			return &CoreOS{}

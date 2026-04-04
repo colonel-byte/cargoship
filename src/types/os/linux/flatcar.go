@@ -17,10 +17,15 @@ package linux
 import (
 	"errors"
 
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/os"
 	"github.com/k0sproject/rig/os/registry"
+)
+
+const (
+	OS_KIND_FLATCAR = "flatcar"
 )
 
 type Flatcar struct {
@@ -33,16 +38,19 @@ var _ configurer.Configurer = (*Flatcar)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "flatcar"
+			return os.ID == OS_KIND_FLATCAR
 		},
 		func() any {
-			fc := &Flatcar{}
-			// fc.SetPath("K0sBinaryPath", "/opt/bin/k0s")
-			return fc
+			return &Flatcar{}
 		},
 	)
 }
 
 func (l *Flatcar) InstallPackage(h os.Host, pkg ...string) error {
 	return errors.New("FlatcarContainerLinux does not support installing packages manually")
+}
+
+// HostPath returns the given path unchanged for linux hosts
+func (l *Flatcar) ConfigureDistro(dis distro.Distro) {
+	dis.SetPath(distro.BinaryDir, "/opt/bin")
 }

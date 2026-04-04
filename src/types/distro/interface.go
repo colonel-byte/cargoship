@@ -12,30 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package enterpriselinux
+package distro
 
-import (
-	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
-	"github.com/colonel-byte/zarf-distro/src/types/os/linux"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os/registry"
+import "sync"
+
+const (
+	Binary    = "Binary"
+	BinaryDir = "BinDir"
+	Config    = "Config"
+	Token     = "Token"
+	Data      = "DataDir"
 )
 
-// OracleLinux provides OS support for Oracle Linuc
-type OracleLinux struct {
-	linux.EnterpriseLinux
-	configurer.Linux
+type Distro interface {
+	//keep-sorted start
+	BinaryPath() string
+	ConfigPath() string
+	DataDirDefaultPath() string
+	GetPaths() map[string]string
+	JoinTokenPath() string
+	SetPath(string, string)
+	//keep-sorted end
 }
 
-var _ configurer.Configurer = (*OracleLinux)(nil)
-
-func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == linux.OS_KIND_EL_ORACLE
-		},
-		func() any {
-			return &OracleLinux{}
-		},
-	)
+type Common struct {
+	ID       string
+	paths    map[string]string
+	pathMu   sync.RWMutex
+	pathOnce sync.Once
 }

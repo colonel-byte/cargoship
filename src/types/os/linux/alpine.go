@@ -24,6 +24,10 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_ALPINE = "alpine"
+)
+
 // BaseLinux for tricking go interfaces
 type BaseLinux struct {
 	configurer.Linux
@@ -40,7 +44,7 @@ var _ configurer.Configurer = (*Alpine)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "alpine"
+			return os.ID == OS_KIND_ALPINE
 		},
 		func() any {
 			return &Alpine{}

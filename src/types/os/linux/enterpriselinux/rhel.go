@@ -33,7 +33,7 @@ var _ configurer.Configurer = (*RHEL)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "rhel" && !strings.Contains(os.Name, "CoreOS")
+			return os.ID == linux.OS_KIND_EL_RED_HAT && !strings.Contains(os.Name, linux.OS_KIND_COREOS)
 		},
 		func() any {
 			return &RHEL{}

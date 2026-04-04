@@ -21,9 +21,13 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_DEBIAN = "debian"
+)
+
 // Debian provides OS support for Debian systems
 type Debian struct {
-	linux.Ubuntu
+	linux.Debian
 	configurer.Linux
 }
 
@@ -32,7 +36,7 @@ var _ configurer.Configurer = (*Debian)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "debian"
+			return os.ID == OS_KIND_DEBIAN
 		},
 		func() any {
 			return &Debian{}

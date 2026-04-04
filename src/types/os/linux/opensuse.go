@@ -20,6 +20,11 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_OPENSUSE       = "opensuse"
+	OS_KIND_OPENSUSE_MICRO = "opensuse-microos"
+)
+
 // OpenSUSE provides OS support for OpenSUSE
 type OpenSUSE struct {
 	SLES
@@ -30,7 +35,7 @@ var _ configurer.Configurer = (*OpenSUSE)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "opensuse" || os.ID == "opensuse-microos"
+			return os.ID == OS_KIND_OPENSUSE || os.ID == OS_KIND_OPENSUSE_MICRO
 		},
 		func() any {
 			return &OpenSUSE{}

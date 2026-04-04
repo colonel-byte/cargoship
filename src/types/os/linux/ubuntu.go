@@ -20,6 +20,10 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_UBUNTU = "ubuntu"
+)
+
 // Ubuntu provides OS support for Ubuntu systems
 type Ubuntu struct {
 	Debian
@@ -30,7 +34,7 @@ var _ configurer.Configurer = (*Ubuntu)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "ubuntu"
+			return os.ID == OS_KIND_UBUNTU
 		},
 		func() any {
 			return &Ubuntu{}

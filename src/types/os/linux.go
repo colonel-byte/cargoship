@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"al.essio.dev/pkg/shellescape"
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"
 )
@@ -51,9 +52,6 @@ func (l *Linux) OSKind() string {
 // go as the distro-configurers' parents embed it too. This means you can't
 // add functions to base Linux package that call functions in the rig/os.Linux package,
 // you can however write those functions in the distro-configurers.
-// An example of this problem is the ReplaceK0sTokenPath function, which would like to
-// call `l.ServiceScriptPath("kos")`, which was worked around here by getting the
-// path as a parameter.
 
 // Quote wraps shellescape.Quote for consumers that need OS-aware escaping
 func (l *Linux) Quote(value string) string {
@@ -283,3 +281,6 @@ func (l *Linux) Base(p string) string {
 func (l *Linux) HostPath(p string) string {
 	return p
 }
+
+// ConfigureDistro Allows specific Hosts to apply specific overrides
+func (l *Linux) ConfigureDistro(dis distro.Distro) {}

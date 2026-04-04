@@ -34,7 +34,7 @@ var _ configurer.Configurer = (*Fedora)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "fedora" && !strings.Contains(os.Name, "CoreOS")
+			return os.ID == linux.OS_KIND_EL_FEDORA && !strings.Contains(os.Name, linux.OS_KIND_COREOS)
 		},
 		func() any {
 			return &Fedora{}

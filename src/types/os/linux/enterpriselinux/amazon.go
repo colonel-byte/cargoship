@@ -40,7 +40,7 @@ func (l *AmazonLinux) Hostname(h os.Host) string {
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "amzn"
+			return os.ID == linux.OS_KIND_EL_AMAZON
 		},
 		func() any {
 			return &AmazonLinux{}

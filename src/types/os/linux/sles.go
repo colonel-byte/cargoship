@@ -22,6 +22,10 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_SLES = "sles"
+)
+
 // SLES provides OS support for Suse SUSE Linux Enterprise Server
 type SLES struct {
 	linux.SLES
@@ -34,7 +38,7 @@ var _ configurer.Configurer = (*SLES)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "sles"
+			return os.ID == OS_KIND_SLES
 		},
 		func() any {
 			return &SLES{}

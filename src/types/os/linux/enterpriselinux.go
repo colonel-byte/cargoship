@@ -15,12 +15,36 @@
 package linux
 
 import (
+	"fmt"
+	"strings"
+
 	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
+	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/os"
 	"github.com/k0sproject/rig/os/linux"
+)
+
+const (
+	OS_KIND_EL_ALMA    = "almalinux"
+	OS_KIND_EL_AMAZON  = "amzn"
+	OS_KIND_EL_CENTOS  = "centos"
+	OS_KIND_EL_FEDORA  = "fedora"
+	OS_KIND_EL_ORACLE  = "ol"
+	OS_KIND_EL_RED_HAT = "rhel"
+	OS_KIND_EL_ROCKY   = "rocky"
 )
 
 // EnterpriseLinux is a base package for several RHEL-like enterprise linux distributions
 type EnterpriseLinux struct {
 	linux.EnterpriseLinux
 	configurer.Linux
+}
+
+// InstallPackage installs packages via dnf
+func (c *EnterpriseLinux) InstallPackage(h os.Host, s ...string) error {
+	if err := h.Execf("dnf install -y %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+
+	return nil
 }

@@ -24,6 +24,10 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
+const (
+	OS_KIND_SLACKWARE = "slackware"
+)
+
 // Slackware provides OS support for Slackware Linux
 type Slackware struct {
 	BaseLinux
@@ -35,7 +39,7 @@ var _ configurer.Configurer = (*Slackware)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "slackware"
+			return os.ID == OS_KIND_SLACKWARE
 		},
 		func() any {
 			return &Slackware{}

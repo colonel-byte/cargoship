@@ -19,11 +19,16 @@ import (
 	"flag"
 	"fmt"
 	goos "os"
+	"sort"
 
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distro/registry"
+	"github.com/colonel-byte/zarf-distro/src/types/os"
+	"github.com/colonel-byte/zarf-distro/src/types/os/linux"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/registry"
+	ros "github.com/k0sproject/rig/os"
+	osregistry "github.com/k0sproject/rig/os/registry"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 
 	// anonymous import is needed to load the os configurers
@@ -32,29 +37,31 @@ import (
 	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux"
 	// anonymous import is needed to load the os configurers
 	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux/enterpriselinux"
+	// anonymous import is needed to load the os configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/distro"
 )
 
-type configurer interface {
-	Pwd(host os.Host) string
-	CheckPrivilege(host os.Host) error
+type osconfigurer interface {
+	Pwd(host ros.Host) string
+	CheckPrivilege(host ros.Host) error
 }
 
 // Host is a host that utilizes rig for connections
 type Host struct {
 	rig.Connection
 
-	Configurer configurer
+	Configurer osconfigurer
 }
 
 // LoadOS is a function that assigns a OS support package to the host and
 // typecasts it to a suitable interface
 func (h *Host) LoadOS() error {
-	bf, err := registry.GetOSModuleBuilder(*h.OSVersion)
+	bf, err := osregistry.GetOSModuleBuilder(*h.OSVersion)
 	if err != nil {
 		return err
 	}
 
-	c, ok := bf().(configurer)
+	c, ok := bf().(osconfigurer)
 	if !ok {
 		return fmt.Errorf("OS %s does not support configurer interface", *h.OSVersion)
 	}
@@ -63,7 +70,7 @@ func (h *Host) LoadOS() error {
 	return nil
 }
 
-func main() {
+func Upload() {
 	dh := flag.String("host", "127.0.0.1", "target host")
 	dp := flag.Int("port", 3000, "target host port")
 	sf := flag.String("src", "tmpfile", "source file")
@@ -139,4 +146,50 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Done, file now at", *df)
+}
+
+func Distro(s string) (distro.Distro, error) {
+	ds, err := registry.GetDistroModuleBuilder(s)
+	if err != nil {
+		return nil, err
+	}
+	d := ds().(distro.Distro)
+	return d, nil
+}
+
+func OSPlay() error {
+	d, err := Distro(distro.DISTRO_ID_RKE2)
+	if err != nil {
+		return err
+	}
+	o, err := OS(linux.OS_KIND_FLATCAR)
+	if err != nil {
+		return err
+	}
+	o.ConfigureDistro(d)
+	keys := make([]string, 0, len(d.GetPaths()))
+	for k := range d.GetPaths() {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Printf("%s\t:\t%s\n", k, d.GetPaths()[k])
+	}
+	fmt.Println(d.BinaryPath())
+	return nil
+}
+
+func OS(s string) (os.Configurer, error) {
+	bf, err := osregistry.GetOSModuleBuilder(rig.OSVersion{
+		ID: s,
+	})
+	if err != nil {
+		return nil, err
+	}
+	d := bf().(os.Configurer)
+	return d, nil
+}
+
+func main() {
+
 }

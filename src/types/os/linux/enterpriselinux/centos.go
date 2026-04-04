@@ -32,7 +32,7 @@ var _ configurer.Configurer = (*CentOS)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == "centos"
+			return os.ID == linux.OS_KIND_EL_CENTOS
 		},
 		func() any {
 			return &CentOS{}
