@@ -53,6 +53,18 @@
         }
       },
       "type": "object"
+    },
+    "InstallOptions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "concurrency": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
     }
   },
   "$id": "https://github.com/colonel-byte/zarf-distro/src/types/distro-config",
@@ -64,6 +76,9 @@
   "properties": {
     "distro": {
       "$ref": "#/$defs/DistroOptions"
+    },
+    "install": {
+      "$ref": "#/$defs/InstallOptions"
     },
     "log_format": {
       "default": "console",

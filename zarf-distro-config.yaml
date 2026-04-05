@@ -22,3 +22,5 @@ distro:
   oci_concurrency: 10
   create:
     output: ~/zarf
+install:
+  concurrency: 300

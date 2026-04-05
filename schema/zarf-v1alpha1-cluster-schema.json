@@ -380,6 +380,9 @@
         "^x-": {}
       },
       "properties": {
+        "binaryPath": {
+          "type": "string"
+        },
         "dataDir": {
           "type": "string"
         },
@@ -396,6 +399,9 @@
           "type": "array"
         },
         "hostname": {
+          "type": "string"
+        },
+        "installPath": {
           "type": "string"
         },
         "kubeletRootDir": {

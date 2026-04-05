@@ -41,6 +41,19 @@ var (
 	//keep-sorted end
 )
 
+var (
+	groups = []*cobra.Group{
+		{
+			ID:    lang.RootGroupPackageID,
+			Title: lang.RootGroupPackageTitle,
+		},
+		{
+			ID:    lang.RootGroupInstallID,
+			Title: lang.RootGroupInstallTitle,
+		},
+	}
+)
+
 var rootCmd = NewZarfDistroCommand()
 
 func NewZarfDistroCommand() *cobra.Command {
@@ -63,12 +76,12 @@ func NewZarfDistroCommand() *cobra.Command {
 		PersistentPreRunE: preRun,
 	}
 
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    lang.RootGroupPackageID,
-		Title: lang.RootGroupPackageTitle,
-	})
+	for _, g := range groups {
+		rootCmd.AddGroup(g)
+	}
 
 	rootCmd.AddCommand(newPackageCreateCommand())
+	rootCmd.AddCommand(newInstallApplyCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)

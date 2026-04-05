@@ -32,6 +32,7 @@ const (
 	VDistroOCIConcurrency         = "distro.oci_concurrency"
 	VDistroCreateRegistryOverride = "distro.create.registry_override"
 	VDistroCreateSkipSbom         = "distro.create.skip_sbom"
+	VInstallConcurrency           = "install.concurrency"
 )
 
 var (
