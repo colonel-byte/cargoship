@@ -2,8 +2,12 @@ module github.com/colonel-byte/zarf-distro
 
 go 1.26.1
 
+// replaced well waiting for https://github.com/k0sproject/rig/pull/267
+replace github.com/k0sproject/rig => github.com/colonel-byte/rig v0.21.3
+
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
+	github.com/creasty/defaults v1.8.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/goccy/go-yaml v1.19.2
 	github.com/invopop/jsonschema v0.13.0
@@ -12,6 +16,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stoewer/go-strcase v1.3.1
+	github.com/stretchr/testify v1.11.1
 	github.com/zarf-dev/zarf v0.74.0
 )
 
@@ -196,7 +201,6 @@ require (
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/coreos/go-oidc/v3 v3.17.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
-	github.com/creasty/defaults v1.8.0 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

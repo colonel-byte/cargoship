@@ -53,4 +53,5 @@ func (l *Flatcar) InstallPackage(h os.Host, pkg ...string) error {
 // HostPath returns the given path unchanged for linux hosts
 func (l *Flatcar) ConfigureDistro(dis distro.Distro) {
 	dis.SetPath(distro.BinaryDir, "/opt/bin")
+	l.ConfigureDistroServices(dis.GetServices())
 }

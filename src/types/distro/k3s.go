@@ -51,6 +51,10 @@ func (r *K3S) initPaths() {
 			Token:     "/etc/rancher/k3s/token",
 			Data:      "/var/lib/rancher/k3s",
 		}
+		r.services = map[string]string{
+			ControllerService: "k3s-server",
+			WorkerService:     "k3s-worker",
+		}
 	})
 }
 
@@ -59,6 +63,13 @@ func (r *K3S) path(key string) string {
 	r.pathMu.RLock()
 	defer r.pathMu.RUnlock()
 	return r.paths[key]
+}
+
+func (r *K3S) service(key string) string {
+	r.initPaths()
+	r.pathMu.RLock()
+	defer r.pathMu.RUnlock()
+	return r.services[key]
 }
 
 func (r *K3S) BinaryPath() string {
@@ -75,6 +86,19 @@ func (r *K3S) JoinTokenPath() string {
 
 func (r *K3S) DataDirDefaultPath() string {
 	return r.path(Data)
+}
+
+func (r *K3S) GetServices() map[string]string {
+	r.initPaths()
+	return maps.Clone(r.services)
+}
+
+func (r *K3S) GetWorkerService() string {
+	return r.service(WorkerService)
+}
+
+func (r *K3S) GetControllerService() string {
+	return r.service(ControllerService)
 }
 
 func (r *K3S) GetPaths() map[string]string {

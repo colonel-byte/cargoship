@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	cluster "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	distro "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
@@ -53,6 +54,12 @@ func main() {
 			schemaStruct: &cluster.ZarfCluster{},
 			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
 			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
+			keyNamer: func(s string) string {
+				if strings.ToLower(s) == "openssh" {
+					return "openSSH"
+				}
+				return strcase.LowerCamelCase(s)
+			},
 		},
 		{
 			schemaStruct: &types.DistroConfig{},
@@ -137,9 +144,17 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	// clean up the rig.OpenSSH properties for schema
 	if defObj, ok := schemaMap["$defs"].(map[string]any); ok {
-		if sshObj, ok := defObj["OpenSSH"].(map[string]any); ok {
+		if sshObj, ok := defObj["WinRM"].(map[string]any); ok {
 			sshObj["required"] = []string{
 				"address",
+				"user",
+				"port",
+			}
+		}
+		if sshObj, ok := defObj["ZarfHost"].(map[string]any); ok {
+			sshObj["required"] = []string{
+				"role",
+				"hostname",
 			}
 		}
 	}

@@ -1,5 +1,21 @@
 {
   "$defs": {
+    "Localhost": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enabled": {
+          "description": "Enabled must be true for the connection to be valid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
     "OpenSSH": {
       "additionalProperties": false,
       "patternProperties": {
@@ -7,24 +23,35 @@
       },
       "properties": {
         "address": {
+          "description": "Address of the remote host",
+          "format": "hostname",
           "type": "string"
         },
         "configPath": {
+          "description": "Path to SSH config file",
           "type": "string"
         },
         "disableMultiplexing": {
+          "default": false,
+          "description": "Disable SSH connection multiplexing",
           "type": "boolean"
         },
         "keyPath": {
+          "description": "Path to SSH private key",
           "type": "string"
         },
         "options": {
-          "$ref": "#/$defs/OpenSSHOptions"
+          "$ref": "#/$defs/OpenSSHOptions",
+          "description": "Additional SSH options as key-value pairs"
         },
         "port": {
+          "description": "Optional SSH port",
+          "maximum": 65535,
+          "minimum": 1,
           "type": "integer"
         },
         "user": {
+          "description": "Optional SSH user",
           "type": "string"
         }
       },
@@ -34,6 +61,121 @@
       "type": "object"
     },
     "OpenSSHOptions": {
+      "type": "object"
+    },
+    "SSH": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "Address of the remote host (IP or hostname)",
+          "format": "hostname",
+          "type": "string"
+        },
+        "bastion": {
+          "$ref": "#/$defs/SSH",
+          "description": "Optional bastion host"
+        },
+        "hostKey": {
+          "description": "Optional known host key fingerprint",
+          "type": "string"
+        },
+        "keyPath": {
+          "description": "Optional path to private key",
+          "type": "string"
+        },
+        "port": {
+          "default": 22,
+          "description": "SSH port",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "user": {
+          "default": "root",
+          "description": "User to log in as",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "user",
+        "port"
+      ],
+      "type": "object"
+    },
+    "WinRM": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "Address of the remote host",
+          "format": "hostname",
+          "type": "string"
+        },
+        "bastion": {
+          "$ref": "#/$defs/SSH",
+          "description": "Optional SSH bastion"
+        },
+        "caCertPath": {
+          "description": "Path to CA certificate",
+          "type": "string"
+        },
+        "certPath": {
+          "description": "Path to client certificate",
+          "type": "string"
+        },
+        "insecure": {
+          "default": false,
+          "description": "Accept invalid TLS certificates",
+          "type": "boolean"
+        },
+        "keyPath": {
+          "description": "Path to client key",
+          "type": "string"
+        },
+        "password": {
+          "description": "Password for WinRM authentication",
+          "type": "string"
+        },
+        "port": {
+          "default": 5985,
+          "description": "WinRM port",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "tlsServerName": {
+          "description": "TLS server name override",
+          "format": "hostname",
+          "type": "string"
+        },
+        "useHttps": {
+          "default": false,
+          "description": "Use HTTPS for WinRM",
+          "type": "boolean"
+        },
+        "useNtlm": {
+          "default": false,
+          "description": "Use NTLM authentication",
+          "type": "boolean"
+        },
+        "user": {
+          "default": "Administrator",
+          "description": "User to authenticate as",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "user",
+        "port"
+      ],
       "type": "object"
     },
     "ZarfClusterConfig": {
@@ -106,60 +248,6 @@
       },
       "required": [
         "name"
-      ],
-      "type": "object"
-    },
-    "ZarfClusterHosts": {
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "dataDir": {
-          "type": "string"
-        },
-        "environment": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "files": {
-          "items": {
-            "$ref": "#/$defs/ZarfClusterFiles"
-          },
-          "type": "array"
-        },
-        "hostname": {
-          "type": "string"
-        },
-        "kubeletRootDir": {
-          "type": "string"
-        },
-        "privateAddress": {
-          "type": "string"
-        },
-        "privateInterface": {
-          "type": "string"
-        },
-        "profile": {
-          "type": "string"
-        },
-        "role": {
-          "enum": [
-            "controller",
-            "worker"
-          ],
-          "type": "string"
-        },
-        "ssh": {
-          "$ref": "#/$defs/OpenSSH"
-        }
-      },
-      "required": [
-        "role",
-        "hostname",
-        "ssh"
       ],
       "type": "object"
     },
@@ -249,11 +337,7 @@
           "$ref": "#/$defs/ZarfClusterConfig"
         },
         "hosts": {
-          "items": {
-            "$ref": "#/$defs/ZarfClusterHosts"
-          },
-          "minItems": 1,
-          "type": "array"
+          "$ref": "#/$defs/ZarfHosts"
         }
       },
       "required": [
@@ -289,6 +373,76 @@
         "name"
       ],
       "type": "object"
+    },
+    "ZarfHost": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "dataDir": {
+          "type": "string"
+        },
+        "environment": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/ZarfClusterFiles"
+          },
+          "type": "array"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "kubeletRootDir": {
+          "type": "string"
+        },
+        "localhost": {
+          "$ref": "#/$defs/Localhost"
+        },
+        "openSSH": {
+          "$ref": "#/$defs/OpenSSH"
+        },
+        "privateAddress": {
+          "type": "string"
+        },
+        "privateInterface": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "controller",
+            "'controller+worker'",
+            "single",
+            "worker"
+          ],
+          "type": "string"
+        },
+        "ssh": {
+          "$ref": "#/$defs/SSH"
+        },
+        "winRm": {
+          "$ref": "#/$defs/WinRM"
+        }
+      },
+      "required": [
+        "role",
+        "hostname"
+      ],
+      "type": "object"
+    },
+    "ZarfHosts": {
+      "items": {
+        "$ref": "#/$defs/ZarfHost"
+      },
+      "type": "array"
     }
   },
   "$id": "https://github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster/zarf-cluster",

@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package cluster
 
 import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1"
-	"github.com/k0sproject/rig"
 )
 
 type ZarfCluster struct {
@@ -27,8 +26,8 @@ type ZarfCluster struct {
 }
 
 type ZarfClusterSpec struct {
-	Config ZarfClusterConfig  `json:"config"`
-	Hosts  []ZarfClusterHosts `json:"hosts" jsonschema:"minItems=1"`
+	Config ZarfClusterConfig `json:"config"`
+	Hosts  ZarfHosts         `json:"hosts" jsonschema:"minItems=1"`
 }
 
 type ZarfClusterConfig struct {
@@ -57,19 +56,6 @@ type ZarfClusterRegistryAuth struct {
 
 type ZarfClusterRegistryProxy struct {
 	URL string `json:"url"`
-}
-
-type ZarfClusterHosts struct {
-	Role             string             `json:"role" jsonschema:"enum=controller,enum=worker"`
-	Profile          string             `json:"profile,omitempty" `
-	Hostname         string             `json:"hostname"`
-	Environment      map[string]string  `json:"environment,omitempty"`
-	Files            []ZarfClusterFiles `json:"files,omitempty"`
-	PrivateInterface string             `json:"privateInterface,omitempty"`
-	PrivateAddress   string             `json:"privateAddress,omitempty"`
-	DataDirectory    string             `json:"dataDir,omitempty"`
-	KubeletDirectory string             `json:"kubeletRootDir,omitempty"`
-	Connection       rig.OpenSSH        `json:"ssh" jsonschema:""`
 }
 
 type ZarfClusterFiles struct {

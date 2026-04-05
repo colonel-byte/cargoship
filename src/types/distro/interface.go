@@ -17,11 +17,13 @@ package distro
 import "sync"
 
 const (
-	Binary    = "Binary"
-	BinaryDir = "BinDir"
-	Config    = "Config"
-	Token     = "Token"
-	Data      = "DataDir"
+	Binary            = "Binary"
+	BinaryDir         = "BinDir"
+	Config            = "Config"
+	Token             = "Token"
+	Data              = "DataDir"
+	WorkerService     = "Worker"
+	ControllerService = "Control"
 )
 
 type Distro interface {
@@ -29,7 +31,10 @@ type Distro interface {
 	BinaryPath() string
 	ConfigPath() string
 	DataDirDefaultPath() string
+	GetControllerService() string
 	GetPaths() map[string]string
+	GetServices() map[string]string
+	GetWorkerService() string
 	JoinTokenPath() string
 	SetPath(string, string)
 	//keep-sorted end
@@ -38,6 +43,7 @@ type Distro interface {
 type Common struct {
 	ID       string
 	paths    map[string]string
+	services map[string]string
 	pathMu   sync.RWMutex
 	pathOnce sync.Once
 }

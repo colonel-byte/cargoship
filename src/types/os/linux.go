@@ -39,6 +39,7 @@ const (
 // Linux is a base module for various linux OS support packages
 type Linux struct {
 	paths    map[string]string
+	services map[string]string
 	pathMu   sync.RWMutex
 	pathOnce sync.Once
 }
@@ -282,5 +283,26 @@ func (l *Linux) HostPath(p string) string {
 	return p
 }
 
+func (l *Linux) GetDistroService(key string) (string, error) {
+	if l.services == nil {
+		return "", fmt.Errorf("the services map is not populated")
+	}
+	if val, ok := l.services[key]; ok {
+		return val, nil
+	}
+	return "", fmt.Errorf("the service %s does not exist in the service map", key)
+}
+
+// ConfigureDistroServices populates the services map for distro
+func (l *Linux) ConfigureDistroServices(services map[string]string) {
+	l.services = services
+}
+
 // ConfigureDistro Allows specific Hosts to apply specific overrides
-func (l *Linux) ConfigureDistro(dis distro.Distro) {}
+func (l *Linux) ConfigureDistro(dis distro.Distro) {
+	l.ConfigureDistroServices(dis.GetServices())
+}
+
+func (l *Linux) SetPath(key, value string) {
+	l.paths[key] = value
+}

@@ -51,6 +51,10 @@ func (r *RKE2) initPaths() {
 			Token:     "/etc/rancher/rke2/token",
 			Data:      "/var/lib/rancher/rke2",
 		}
+		r.services = map[string]string{
+			ControllerService: "rke2-server",
+			WorkerService:     "rke2-worker",
+		}
 	})
 }
 
@@ -59,6 +63,13 @@ func (r *RKE2) path(key string) string {
 	r.pathMu.RLock()
 	defer r.pathMu.RUnlock()
 	return r.paths[key]
+}
+
+func (r *RKE2) service(key string) string {
+	r.initPaths()
+	r.pathMu.RLock()
+	defer r.pathMu.RUnlock()
+	return r.services[key]
 }
 
 func (r *RKE2) BinaryPath() string {
@@ -75,6 +86,19 @@ func (r *RKE2) JoinTokenPath() string {
 
 func (r *RKE2) DataDirDefaultPath() string {
 	return r.path(Data)
+}
+
+func (r *RKE2) GetServices() map[string]string {
+	r.initPaths()
+	return maps.Clone(r.services)
+}
+
+func (r *RKE2) GetWorkerService() string {
+	return r.service(WorkerService)
+}
+
+func (r *RKE2) GetControllerService() string {
+	return r.service(ControllerService)
 }
 
 func (r *RKE2) GetPaths() map[string]string {

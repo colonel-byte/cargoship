@@ -34,6 +34,7 @@ type Configurer interface {
 	CleanupServiceEnvironment(os.Host, string) error
 	CommandExist(os.Host, string) bool
 	ConfigureDistro(distro.Distro)
+	ConfigureDistroServices(map[string]string)
 	DaemonReload(os.Host) error
 	DeleteDir(os.Host, string, ...exec.Option) error
 	DeleteFile(os.Host, string) error
@@ -41,6 +42,7 @@ type Configurer interface {
 	DownloadURL(os.Host, string, string, ...exec.Option) error
 	FileContains(os.Host, string, string) bool
 	FileExist(os.Host, string) bool
+	GetDistroService(string) (string, error)
 	HTTPStatus(os.Host, string) (int, error)
 	HostPath(string) string
 	Hostname(os.Host) string
@@ -58,6 +60,7 @@ type Configurer interface {
 	RestartService(os.Host, string) error
 	ServiceIsRunning(os.Host, string) bool
 	ServiceScriptPath(os.Host, string) (string, error)
+	SetPath(string, string)
 	StartService(os.Host, string) error
 	Stat(os.Host, string, ...exec.Option) (*os.FileInfo, error)
 	StopService(os.Host, string) error

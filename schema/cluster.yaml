@@ -57,14 +57,9 @@ spec:
       environment:
         HTTP_PROXY: 10.0.0.1:443
       ssh:
-        address: 10.0.0.2
-        user: ubuntu
-        keyPath: ~/.ssh/id_rsa
-        configPath: ~/.ssh/config
-        disableMultiplexing: false
-        options:
-          ForwardAgent: true
-          StrictHostkeyChecking: false
+        address: 1.1.1.1
+        user: root
+        port: 22
       files:
         - name: image-bundle
           src: airgap-images.tgz
@@ -84,7 +79,7 @@ spec:
       profile: control-plane
       environment:
         HTTP_PROXY: 10.0.0.1:443
-      ssh:
+      openSSH:
         address: 10.0.0.3
         user: ubuntu
         options:
@@ -93,5 +88,5 @@ spec:
     - hostname: infra-01
       role: worker
       profile: infrastructure
-      ssh:
+      openSSH:
         address: 10.0.0.4
