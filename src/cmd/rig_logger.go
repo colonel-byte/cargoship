@@ -29,27 +29,27 @@ type rigLogger struct {
 
 // Debugf implements log.Logger.
 func (l rigLogger) Debugf(msg string, args ...any) {
-	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args))
+	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...))
 }
 
 // Errorf implements log.Logger.
 func (l rigLogger) Errorf(msg string, args ...any) {
-	logger.From(l.ctx).Error(fmt.Sprintf(msg, args))
+	logger.From(l.ctx).Error(fmt.Sprintf(msg, args...))
 }
 
 // Infof implements log.Logger.
 func (l rigLogger) Infof(msg string, args ...any) {
-	logger.From(l.ctx).Info(fmt.Sprintf(msg, args))
+	logger.From(l.ctx).Info(fmt.Sprintf(msg, args...))
 }
 
 // Tracef implements log.Logger.
 func (l rigLogger) Tracef(msg string, args ...any) {
-	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args))
+	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...))
 }
 
 // Warnf implements log.Logger.
 func (l rigLogger) Warnf(msg string, args ...any) {
-	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args))
+	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args...))
 }
 
 func initRigLogger(ctx context.Context, opt InstallCommon) error {

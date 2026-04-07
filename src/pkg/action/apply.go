@@ -39,15 +39,18 @@ type Apply struct {
 }
 
 func NewApply(opts ApplyOptions) *Apply {
+	lockPhase := &phase.Lock{}
 	apply := &Apply{
 		ApplyOptions: opts,
 		Phases: phase.Phases{
 			&phase.Connect{},
 			&phase.DetectOS{},
+			lockPhase,
 			&phase.PrepareHosts{},
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
 
+			&phase.Unlock{Cancel: lockPhase.Cancel},
 			&phase.Disconnect{},
 		},
 	}
