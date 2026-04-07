@@ -49,7 +49,7 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, distroPath string, opts AssembleOptions) (*packager.DistroLayout, error) {
+func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath string, opts AssembleOptions) (*packager.DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
 
@@ -64,7 +64,7 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, distroPat
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
-	for filesIdx, file := range d.Spec.Distro.Files {
+	for filesIdx, file := range d.Spec.Config.Files {
 		rel := filepath.Join(string(config.FilesDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(buildPath, rel)
 		destinationDir := filepath.Dir(dst)
@@ -153,7 +153,7 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, distroPat
 
 	componentImages := []transform.Image{}
 	manifests := []images.ImageWithManifest{}
-	for _, src := range d.Spec.Distro.Config.Images {
+	for _, src := range d.Spec.Config.Config.Images {
 		refInfo, err := transform.ParseImageRef(src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
@@ -202,7 +202,7 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistroPackage, distroPat
 	return packager.NewDistroLayout(buildPath, d), nil
 }
 
-func recordDistroMetadata(distro v1alpha1.ZarfDistroPackage, registryOverrides []images.RegistryOverride) v1alpha1.ZarfDistroPackage {
+func recordDistroMetadata(distro v1alpha1.ZarfDistro, registryOverrides []images.RegistryOverride) v1alpha1.ZarfDistro {
 	now := time.Now()
 	distro.Build.Architecture = distro.Metadata.Architecture
 	distro.Build.Timestamp = now.Format(api.BuildTimestampFormat)

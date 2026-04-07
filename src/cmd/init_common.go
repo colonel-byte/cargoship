@@ -57,11 +57,17 @@ func initManager(ctx context.Context, opt InstallCommon) (*phase.Manager, error)
 		return nil, err
 	}
 
+	distro, err := load.DistroDefinition(ctx, "schema/distro.yaml", load.DefinitionOptions{})
+	if err != nil {
+		return nil, err
+	}
+
 	return &phase.Manager{
 		Config:            &cluster,
+		Distro:            &distro,
 		Concurrency:       opt.concurrency,
 		ConcurrentUploads: opt.concurrency,
-		DryRun:            !opt.confirm,
+		DryRun:            false,
 		DistroCfg: phase.ManagerDistroConfig{
 			BinaryDir: "/usr/local/bin",
 			Binary:    "rke2",

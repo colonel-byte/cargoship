@@ -15,10 +15,3 @@
 package v1alpha1
 
 type ZarfDistroKind string
-
-type ZarfDistroMetadata struct {
-	Name        string            `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
-	Description string            `json:"description,omitempty"`
-	Version     string            `json:"version,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
-}

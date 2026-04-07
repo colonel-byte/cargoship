@@ -46,7 +46,7 @@ type schema struct {
 func main() {
 	var sch = []schema{
 		{
-			schemaStruct: &distro.ZarfDistroPackage{},
+			schemaStruct: &distro.ZarfDistro{},
 			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
 			structPath:   []string{"src", "types"},
 		},

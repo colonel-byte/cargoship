@@ -21,14 +21,14 @@ import (
 
 type Distro struct {
 	cfg    *types.DistroConfig
-	distro v1alpha1.ZarfDistroPackage
+	distro v1alpha1.ZarfDistro
 	tmp    string
 }
 
 func New(cfg *types.DistroConfig) (*Distro, error) {
 	dis := Distro{
 		cfg:    cfg,
-		distro: v1alpha1.ZarfDistroPackage{},
+		distro: v1alpha1.ZarfDistro{},
 		tmp:    "/tmp",
 	}
 

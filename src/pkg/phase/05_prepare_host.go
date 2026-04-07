@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -40,7 +41,7 @@ func (p *PrepareHosts) Title() string {
 
 // Run the phase
 func (p *PrepareHosts) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.Config.Spec.Hosts, p.prepareHost)
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.prepareHost)
 }
 
 type prepare interface {
@@ -58,6 +59,13 @@ func (p *PrepareHosts) prepareHost(ctx context.Context, h *v1alpha1.ZarfHost) er
 		logger.From(ctx).Info("updating environment", "host", h)
 		if err := p.updateEnvironment(ctx, h); err != nil {
 			return fmt.Errorf("failed to updated environment: %w", err)
+		}
+	}
+
+	if len(p.manager.Distro.Spec.Config.OS.Sysctl) > 0 {
+		logger.From(ctx).Info("updating sysctls", "host", h)
+		if err := p.updateSysctls(ctx, h); err != nil {
+			return fmt.Errorf("failed to updated sysctls: %w", err)
 		}
 	}
 
@@ -89,4 +97,29 @@ func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *v1alpha1.ZarfHo
 		}
 		return nil
 	})
+}
+
+func (p *PrepareHosts) updateSysctls(ctx context.Context, h *v1alpha1.ZarfHost) error {
+	keys := make([]string, 0, len(p.GetDistro().Spec.Config.OS.Sysctl))
+	for k := range p.GetDistro().Spec.Config.OS.Sysctl {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for k := range keys {
+		v, _ := h.Configurer.GetSysctlValue(h, keys[k])
+		logger.From(ctx).Debug("got sysctls", "host", h, "key", keys[k], "value", v)
+	}
+
+	for k := range keys {
+		h.Configurer.SetSysctlValue(h, keys[k], p.GetDistro().Spec.Config.OS.Sysctl[keys[k]])
+		logger.From(ctx).Debug("updating sysctls", "host", h, "key", keys[k])
+	}
+
+	for k := range keys {
+		v, _ := h.Configurer.GetSysctlValue(h, keys[k])
+		logger.From(ctx).Debug("got sysctls", "host", h, "key", keys[k], "value", v)
+	}
+
+	return nil
 }

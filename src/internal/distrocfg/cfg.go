@@ -22,11 +22,11 @@ import (
 )
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
-func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfDistroPackage, error) {
-	var dis v1alpha1.ZarfDistroPackage
+func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfDistro, error) {
+	var dis v1alpha1.ZarfDistro
 	err := goyaml.Unmarshal(b, &dis)
 	if err != nil {
-		return v1alpha1.ZarfDistroPackage{}, err
+		return v1alpha1.ZarfDistro{}, err
 	}
 	return dis, nil
 }

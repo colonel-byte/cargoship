@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -64,4 +65,9 @@ func ReadByteStrict(data []byte, destConfig any) error {
 	}
 
 	return nil
+}
+
+func PrintJSON(obj any) string {
+	bytes, _ := json.MarshalIndent(obj, "", "  ")
+	return string(bytes)
 }

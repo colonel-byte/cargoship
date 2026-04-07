@@ -33,34 +33,34 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
-func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistroPackage, error) {
+func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.DistroDefinition", "path", distroPath)
 
 	disPath, err := layout.ResolveDistroPath(distroPath)
 	if err != nil {
-		return v1alpha1.ZarfDistroPackage{}, err
+		return v1alpha1.ZarfDistro{}, err
 	}
 
 	b, err := os.ReadFile(disPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfDistroPackage{}, err
+		return v1alpha1.ZarfDistro{}, err
 	}
 	dis, err := distrocfg.Parse(ctx, b)
 	if err != nil {
-		return v1alpha1.ZarfDistroPackage{}, err
+		return v1alpha1.ZarfDistro{}, err
 	}
 	dis.Metadata.Architecture = config.GetArch(dis.Metadata.Architecture)
 
 	err = validateDistro(ctx, dis, disPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfDistroPackage{}, err
+		return v1alpha1.ZarfDistro{}, err
 	}
 	l.Debug("done layout.DistroDefinition", "duration", time.Since(start))
 	return dis, nil
 }
 
-func validateDistro(_ context.Context, _ v1alpha1.ZarfDistroPackage, _ string) error {
+func validateDistro(_ context.Context, _ v1alpha1.ZarfDistro, _ string) error {
 	return nil
 }

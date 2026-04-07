@@ -306,3 +306,20 @@ func (l *Linux) ConfigureDistro(dis distro.Distro) {
 func (l *Linux) SetPath(key, value string) {
 	l.paths[key] = value
 }
+
+func (l *Linux) SetSysctlValue(h os.Host, key string, value string) error {
+	return h.Execf(`sysctl -w %s=%s`, key, value, exec.Sudo(h))
+}
+
+func (l *Linux) GetSysctlValue(h os.Host, key string) (string, error) {
+	output, err := h.ExecOutputf(`sysctl "%s"`, key)
+	if err != nil {
+		return "", err
+	}
+	sp := strings.Split(output, "=")
+	if len(sp) > 1 {
+		return strings.TrimSpace(sp[1]), nil
+	}
+
+	return "", nil
+}

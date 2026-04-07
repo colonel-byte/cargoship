@@ -251,6 +251,34 @@
       ],
       "type": "object"
     },
+    "ZarfClusterMetadata": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
     "ZarfClusterProfiles": {
       "additionalProperties": false,
       "patternProperties": {
@@ -343,34 +371,6 @@
       "required": [
         "config",
         "hosts"
-      ],
-      "type": "object"
-    },
-    "ZarfDistroMetadata": {
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "annotations": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "description": {
-          "type": "string"
-        },
-        "name": {
-          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "name"
       ],
       "type": "object"
     },
@@ -470,7 +470,7 @@
       "type": "string"
     },
     "metadata": {
-      "$ref": "#/$defs/ZarfDistroMetadata"
+      "$ref": "#/$defs/ZarfClusterMetadata"
     },
     "spec": {
       "$ref": "#/$defs/ZarfClusterSpec"

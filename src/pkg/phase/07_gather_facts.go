@@ -34,7 +34,7 @@ func (p *GatherFacts) Title() string {
 
 // Run the phase
 func (p *GatherFacts) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.Config.Spec.Hosts, p.investigateHost)
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.investigateHost)
 }
 
 func (p *GatherFacts) investigateHost(ctx context.Context, h *v1alpha1.ZarfHost) error {

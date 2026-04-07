@@ -368,6 +368,27 @@
       },
       "type": "object"
     },
+    "ZarfDistroConfig": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "files": {
+          "items": {
+            "$ref": "#/$defs/ZarfFiles"
+          },
+          "type": "array"
+        },
+        "imageConfig": {
+          "$ref": "#/$defs/ZarfDistroImageConfig"
+        },
+        "os": {
+          "$ref": "#/$defs/ZarfDistroOS"
+        }
+      },
+      "type": "object"
+    },
     "ZarfDistroImageConfig": {
       "additionalProperties": false,
       "patternProperties": {
@@ -375,6 +396,7 @@
       },
       "properties": {
         "compression": {
+          "default": "none",
           "enum": [
             "none",
             "gz",
@@ -394,25 +416,7 @@
       },
       "type": "object"
     },
-    "ZarfDistroPackageConfig": {
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "files": {
-          "items": {
-            "$ref": "#/$defs/ZarfFiles"
-          },
-          "type": "array"
-        },
-        "imageConfig": {
-          "$ref": "#/$defs/ZarfDistroImageConfig"
-        }
-      },
-      "type": "object"
-    },
-    "ZarfDistroPackageMetadata": {
+    "ZarfDistroMetadata": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -452,7 +456,22 @@
       ],
       "type": "object"
     },
-    "ZarfDistroPackageSpec": {
+    "ZarfDistroOS": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "sysctl": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroSpec": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -461,13 +480,13 @@
         "actions": {
           "$ref": "#/$defs/ZarfDistroActions"
         },
-        "distro": {
-          "$ref": "#/$defs/ZarfDistroPackageConfig"
+        "config": {
+          "$ref": "#/$defs/ZarfDistroConfig"
         }
       },
       "required": [
         "actions",
-        "distro"
+        "config"
       ],
       "type": "object"
     },
@@ -509,7 +528,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro/zarf-distro-package",
+  "$id": "https://github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro/zarf-distro",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "patternProperties": {
@@ -527,15 +546,15 @@
     },
     "kind": {
       "enum": [
-        "ZarfDistroPackage"
+        "ZarfDistro"
       ],
       "type": "string"
     },
     "metadata": {
-      "$ref": "#/$defs/ZarfDistroPackageMetadata"
+      "$ref": "#/$defs/ZarfDistroMetadata"
     },
     "spec": {
-      "$ref": "#/$defs/ZarfDistroPackageSpec"
+      "$ref": "#/$defs/ZarfDistroSpec"
     }
   },
   "required": [

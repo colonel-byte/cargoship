@@ -12,25 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package distro
 
 import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1"
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-type ZarfDistroPackage struct {
-	APIVersion string                    `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind       v1alpha1.ZarfDistroKind   `json:"kind" jsonschema:"enum=ZarfDistroPackage"`
-	Metadata   ZarfDistroPackageMetadata `json:"metadata"`
-	Build      ZarfDistroBuildData       `json:"build,omitempty"`
-	Spec       ZarfDistroPackageSpec     `json:"spec"`
+type ZarfDistro struct {
+	APIVersion string                  `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+	Kind       v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfDistro"`
+	Metadata   ZarfDistroMetadata      `json:"metadata"`
+	Build      ZarfDistroBuildData     `json:"build,omitempty"`
+	Spec       ZarfDistroSpec          `json:"spec"`
 }
 
-type ZarfDistroPackageMetadata struct {
-	Uncompressed bool   `json:"uncompressed,omitempty" jsonschema:"default=false"`
-	Architecture string `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
-	v1alpha1.ZarfDistroMetadata
+type ZarfDistroMetadata struct {
+	Uncompressed bool              `json:"uncompressed,omitempty" jsonschema:"default=false"`
+	Architecture string            `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
+	Name         string            `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	Description  string            `json:"description,omitempty"`
+	Version      string            `json:"version,omitempty"`
+	Annotations  map[string]string `json:"annotations,omitempty"`
 }
 
 type ZarfDistroBuildData struct {
@@ -40,9 +43,9 @@ type ZarfDistroBuildData struct {
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
 }
 
-type ZarfDistroPackageSpec struct {
-	Actions ZarfDistroActions       `json:"actions"`
-	Distro  ZarfDistroPackageConfig `json:"distro"`
+type ZarfDistroSpec struct {
+	Actions ZarfDistroActions `json:"actions"`
+	Config  ZarfDistroConfig  `json:"config"`
 }
 
 type ZarfDistroActions struct {
@@ -52,15 +55,20 @@ type ZarfDistroActions struct {
 	OnRemove  zarf.ZarfComponentActionSet `json:"onRemove,omitempty"`
 }
 
-type ZarfDistroPackageConfig struct {
+type ZarfDistroConfig struct {
 	Files  []ZarfFiles           `json:"files,omitempty"`
 	Config ZarfDistroImageConfig `json:"imageConfig,omitempty"`
+	OS     ZarfDistroOS          `json:"os,omitempty"`
 }
 
 type ZarfDistroImageConfig struct {
-	Compression string   `json:"compression,omitempty" jsonschema:"enum=none,enum=gz,enum=zstd"`
+	Compression string   `json:"compression,omitempty" jsonschema:"default=none,enum=none,enum=gz,enum=zstd"`
 	Path        string   `json:"path,omitempty"`
 	Images      []string `json:"images,omitempty"`
+}
+
+type ZarfDistroOS struct {
+	Sysctl map[string]string `json:"sysctl,omitempty"`
 }
 
 type ZarfFiles struct {
@@ -78,8 +86,8 @@ type ZarfBinarySelector struct {
 	Profiles []string `json:"profiles,omitempty"`
 }
 
-func (distro ZarfDistroPackage) IsSBOMAble() bool {
-	if len(distro.Spec.Distro.Config.Images) > 0 || len(distro.Spec.Distro.Files) > 0 {
+func (distro ZarfDistro) IsSBOMAble() bool {
+	if len(distro.Spec.Config.Config.Images) > 0 || len(distro.Spec.Config.Files) > 0 {
 		return true
 	}
 	return false

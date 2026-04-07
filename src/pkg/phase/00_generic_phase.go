@@ -17,22 +17,28 @@ package phase
 import (
 	"context"
 
-	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 )
 
 type GenericPhase struct {
-	Config  *v1alpha1.ZarfCluster
 	manager *Manager
 }
 
 // GetConfig is an accessor to phase Config
-func (p *GenericPhase) GetConfig() *v1alpha1.ZarfCluster {
-	return p.Config
+func (p *GenericPhase) GetConfig() *cluster.ZarfCluster {
+	return p.manager.Config
+}
+
+// GetConfig is an accessor to phase Distro
+func (p *GenericPhase) GetDistro() *distro.ZarfDistro {
+	return p.manager.Distro
 }
 
 // Prepare the phase
-func (p *GenericPhase) Prepare(c *v1alpha1.ZarfCluster) error {
-	p.Config = c
+func (p *GenericPhase) Prepare(c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+	p.manager.Config = c
+	p.manager.Distro = d
 	return nil
 }
 
@@ -41,14 +47,14 @@ func (p *GenericPhase) SetManager(m *Manager) {
 	p.manager = m
 }
 
-func (p *GenericPhase) parallelDo(ctx context.Context, hosts v1alpha1.ZarfHosts, funcs ...func(context.Context, *v1alpha1.ZarfHost) error) error {
+func (p *GenericPhase) parallelDo(ctx context.Context, hosts cluster.ZarfHosts, funcs ...func(context.Context, *cluster.ZarfHost) error) error {
 	if p.manager.Concurrency == 0 {
 		return hosts.ParallelEach(ctx, funcs...)
 	}
 	return hosts.BatchedParallelEach(ctx, p.manager.Concurrency, funcs...)
 }
 
-func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts v1alpha1.ZarfHosts, funcs ...func(context.Context, *v1alpha1.ZarfHost) error) error {
+func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.ZarfHosts, funcs ...func(context.Context, *cluster.ZarfHost) error) error {
 	if p.manager.Concurrency == 0 {
 		return hosts.ParallelEach(ctx, funcs...)
 	}
@@ -62,24 +68,3 @@ func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts v1alpha1.Zarf
 
 	return hosts.BatchedParallelEach(ctx, batchSize, funcs...)
 }
-
-// // runHooks executes hooks for the provided hosts honoring the given context.
-// func (p *GenericPhase) runHooks(ctx context.Context, action, stage string, hosts ...*v1alpha1.ZarfHost) error {
-// 	return p.parallelDo(ctx, hosts, func(_ context.Context, h *v1alpha1.ZarfHost) error {
-// 		if !p.IsWet() {
-// 			// In dry-run, list each hook command that would be executed.
-// 			cmds := h.Hooks.ForActionAndStage(action, stage)
-// 			for _, cmd := range cmds {
-
-// 				p.DryMsgf(h, "run %s %s hook: %q", stage, action, cmd)
-// 			}
-// 			return nil
-// 		}
-
-// 		if err := h.RunHooks(ctx, action, stage); err != nil {
-// 			return fmt.Errorf("running hooks failed: %w", err)
-// 		}
-
-// 		return nil
-// 	})
-// }

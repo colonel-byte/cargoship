@@ -14,10 +14,10 @@
 
 ---
 # yaml-language-server: $schema=zarf-v1alpha1-distro-package-schema.json
-kind: ZarfDistroPackage
+kind: ZarfDistro
 metadata:
   name: rancher-rke2
-  version: v1.34.3
+  version: 1.35.2-rke2r1
   architecture: amd64
 spec:
   actions:
@@ -29,7 +29,17 @@ spec:
             mkdir -p target
             echo https://github.com/rancher/rke2/releases/download/v1.35.2/rke2.linux-amd64.tar.gz
             curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.35.2%2Brke2r1//rke2.linux-amd64.tar.gz
-  distro:
+  config:
+    os:
+      sysctl:
+        # Istio related sysctl overrides
+        "fs.inotify.max_user_watches": "11048576"
+        "fs.inotify.max_user_instances": "1024"
+        # RKE2 related sysctl overrides
+        "vm.panic_on_oom": "0"
+        "vm.overcommit_memory": "1"
+        "kernel.panic": "10"
+        "kernel.panic_on_oops": "1"
     files:
       - source: target/rke2.linux-amd64.tar.gz
         extractPath: bin/rke2
@@ -43,22 +53,6 @@ spec:
         extractPath: bin/rke2-uninstall.sh
         target: /var/lib/rancher/rke2/bin/rke2-uninstall.sh
         executable: true
-      - source: target/rke2.linux-amd64.tar.gz
-        extractPath: lib/systemd/system/rke2-server.service
-        target: /etc/systemd/system/rke2-server.service
-        symlinks:
-          - /etc/systemd/system/multi-user.target.wants/rke2-server.service
-        selector:
-          roles:
-            - controller
-      - source: target/rke2.linux-amd64.tar.gz
-        extractPath: lib/systemd/system/rke2-agent.service
-        target: /etc/systemd/system/rke2-agent.service
-        symlinks:
-          - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
-        selector:
-          roles:
-            - worker
     imageConfig:
       path: /var/lib/rancher/rke2/agent/images
       compression: none

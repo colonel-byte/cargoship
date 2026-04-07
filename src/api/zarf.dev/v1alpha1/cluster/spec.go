@@ -19,10 +19,17 @@ import (
 )
 
 type ZarfCluster struct {
-	APIVersion string                      `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind       v1alpha1.ZarfDistroKind     `json:"kind" jsonschema:"enum=ZarfCluster"`
-	Metadata   v1alpha1.ZarfDistroMetadata `json:"metadata"`
-	Spec       ZarfClusterSpec             `json:"spec"`
+	APIVersion string                  `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+	Kind       v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfCluster"`
+	Metadata   ZarfClusterMetadata     `json:"metadata"`
+	Spec       ZarfClusterSpec         `json:"spec"`
+}
+
+type ZarfClusterMetadata struct {
+	Name        string            `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	Description string            `json:"description,omitempty"`
+	Version     string            `json:"version,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 type ZarfClusterSpec struct {

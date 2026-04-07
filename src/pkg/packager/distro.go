@@ -29,10 +29,10 @@ import (
 
 type DistroLayout struct {
 	dirPath string
-	Distro  v1alpha1.ZarfDistroPackage
+	Distro  v1alpha1.ZarfDistro
 }
 
-func NewDistroLayout(dir string, distro v1alpha1.ZarfDistroPackage) *DistroLayout {
+func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout {
 	return &DistroLayout{
 		dirPath: dir,
 		Distro:  distro,
@@ -62,9 +62,8 @@ func (d *DistroLayout) FileName() (string, error) {
 	if d.Distro.Build.Architecture == "" {
 		return "", errors.New("package must include a build architecture")
 	}
-	arch := d.Distro.Build.Architecture
 
-	name := fmt.Sprintf("zarf-distro-%s", arch)
+	name := fmt.Sprintf("zarf-distro-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
 	if d.Distro.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, d.Distro.Metadata.Version)
 	}

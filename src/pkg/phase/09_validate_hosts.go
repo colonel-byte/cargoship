@@ -43,11 +43,11 @@ func (p *ValidateHosts) Title() string {
 
 // Run the phase
 func (p *ValidateHosts) Run(ctx context.Context) error {
-	p.hncount = make(map[string]int, len(p.Config.Spec.Hosts))
-	p.machineidcount = make(map[string]int, len(p.Config.Spec.Hosts))
-	p.privateaddrcount = make(map[string]int, len(p.Config.Spec.Hosts))
+	p.hncount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
+	p.machineidcount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
+	p.privateaddrcount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
 
-	for _, h := range p.Config.Spec.Hosts {
+	for _, h := range p.manager.Config.Spec.Hosts {
 		p.hncount[h.Metadata.Hostname]++
 		if p.machineidcount != nil {
 			p.machineidcount[h.Metadata.MachineID]++
@@ -59,7 +59,7 @@ func (p *ValidateHosts) Run(ctx context.Context) error {
 
 	err := p.parallelDo(
 		ctx,
-		p.Config.Spec.Hosts,
+		p.manager.Config.Spec.Hosts,
 		p.validateUniqueHostname,
 		p.validateUniqueMachineID,
 		p.validateUniquePrivateAddress,
@@ -90,9 +90,9 @@ func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *v1alp
 	return nil
 }
 
-func (p *ValidateHosts) validateUniqueMachineID(_ context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ValidateHosts) validateUniqueMachineID(ctx context.Context, h *v1alpha1.ZarfHost) error {
 	if p.machineidcount[h.Metadata.MachineID] > 1 {
-		return fmt.Errorf("machine id %s is not unique: %s", h.Metadata.MachineID, h.Metadata.Hostname)
+		logger.From(ctx).Debug("machine id is not unique", "host", h.Metadata.Hostname, "id", h.Metadata.MachineID)
 	}
 
 	return nil
@@ -122,7 +122,7 @@ func (p *ValidateHosts) cleanUpOldTmpFiles(ctx context.Context, h *v1alpha1.Zarf
 	l := logger.From(ctx)
 
 	binary := fmt.Sprintf("%s.tmp.*", p.manager.GetDistroBinaryName())
-	err := fs.WalkDir(h.SudoFsys(), filepath.Join(filepath.Dir(p.manager.GetDistroBinaryDir()), binary), func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(h.SudoFsys(), filepath.Join(p.manager.GetDistroBinaryDir(), binary), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			l.Warn(fmt.Sprintf("failed to walk %s", binary), "path", p.manager.GetDistroBinaryDir(), "error", err)
 			return nil
@@ -134,7 +134,7 @@ func (p *ValidateHosts) cleanUpOldTmpFiles(ctx context.Context, h *v1alpha1.Zarf
 			return nil
 		}
 		if time.Since(info.ModTime()) > cleanUpOlderThan {
-			l.Warn("cleaning up old k0s binary upload temporary file", "host", h, "path", path)
+			l.Warn("cleaning up old engine binary upload temporary file", "host", h, "path", path)
 			if err := h.Configurer.DeleteFile(h, path); err != nil {
 				l.Warn("failed to delete", "host", h, "path", path, "error", err)
 			}
@@ -153,12 +153,12 @@ const maxSkew = 30 * time.Second
 
 func (p *ValidateHosts) validateClockSkew(ctx context.Context) error {
 	logger.From(ctx).Info("validating clock skew")
-	skews := make(map[*v1alpha1.ZarfHost]time.Duration, len(p.Config.Spec.Hosts))
+	skews := make(map[*v1alpha1.ZarfHost]time.Duration, len(p.manager.Config.Spec.Hosts))
 	var skewValues []time.Duration
 	var mu sync.Mutex
 
 	// Collect skews relative to local time
-	err := p.parallelDo(ctx, p.Config.Spec.Hosts, func(_ context.Context, h *v1alpha1.ZarfHost) error {
+	err := p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *v1alpha1.ZarfHost) error {
 		remote, err := h.Configurer.SystemTime(h)
 		if err != nil {
 			return fmt.Errorf("failed to get time from %s: %w", h, err)

@@ -22,7 +22,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	apiDistro "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/creasty/defaults"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -82,7 +83,7 @@ func (p *Phases) Replace(title string, phase Phase) {
 
 type withconfig interface {
 	Title() string
-	Prepare(*v1alpha1.ZarfCluster) error
+	Prepare(*cluster.ZarfCluster, *apiDistro.ZarfDistro) error
 }
 
 type conditional interface {
@@ -114,7 +115,8 @@ type withAfter interface {
 // Manager executes phases to construct the cluster
 type Manager struct {
 	phases            Phases
-	Config            *v1alpha1.ZarfCluster
+	Config            *cluster.ZarfCluster
+	Distro            *apiDistro.ZarfDistro
 	Concurrency       int
 	ConcurrentUploads int
 	DryRun            bool
@@ -133,7 +135,7 @@ type ManagerDistroConfig struct {
 }
 
 // NewManager creates a new Manager
-func NewManager(config *v1alpha1.ZarfCluster, distro distro.Distro) (*Manager, error) {
+func NewManager(config *cluster.ZarfCluster, distro distro.Distro) (*Manager, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config is nil")
 	}
@@ -268,7 +270,7 @@ func (m *Manager) Run(ctx context.Context) error {
 
 		if p, ok := p.(withconfig); ok {
 			l.Debug("Preparing", "phase", p.Title())
-			if err := p.Prepare(m.Config); err != nil {
+			if err := p.Prepare(m.Config, m.Distro); err != nil {
 				result = err
 				return result
 			}
