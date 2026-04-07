@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ---
-# yaml-language-server: $schema=zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../schema/zarf-v1alpha1-cluster-schema.json
 kind: ZarfCluster
 metadata:
   name: rancher-rke2
@@ -52,28 +52,65 @@ spec:
             - InfrastructureOnly=True:NoExecute
   hosts:
     - role: controller
-      profile: control-plane
-      environment:
-        HTTP_PROXY: 10.0.0.1:443
+      hostname: distro-kc01
       ssh:
-        address: 1.1.1.1
+        address: 127.0.0.1
         user: root
-        port: 22
-      privateInterface: eth1
-      privateAddress: 10.0.0.3
-    - hostname: control-plane-02
-      role: controller
-      profile: control-plane
-      environment:
-        HTTP_PROXY: 10.0.0.1:443
-      openSSH:
-        address: 10.0.0.3
-        user: ubuntu
-        options:
-          ForwardAgent: true
-          StrictHostkeyChecking: false
-    - hostname: infra-01
-      role: worker
-      profile: infrastructure
-      openSSH:
-        address: 10.0.0.4
+        port: 3000
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: controller
+      hostname: distro-kc02
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3001
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: controller
+      hostname: distro-kc03
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3002
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: worker
+      hostname: distro-ki01
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3003
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: worker
+      hostname: distro-ki02
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3004
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: worker
+      hostname: distro-ki03
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3005
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: worker
+      hostname: distro-km01
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3006
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: worker
+      hostname: distro-km02
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3007
+        keyPath: /home/aconlon/.ssh/id_ed25519
+    - role: worker
+      hostname: distro-km03
+      ssh:
+        address: 127.0.0.1
+        user: root
+        port: 3008
+        keyPath: /home/aconlon/.ssh/id_ed25519

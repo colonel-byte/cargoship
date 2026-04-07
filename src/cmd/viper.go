@@ -28,6 +28,7 @@ import (
 )
 
 const (
+	LOGGING_LEVEL_DEFAULT         = "info"
 	VDistroCreateOutput           = "distro.create.output"
 	VDistroOCIConcurrency         = "distro.oci_concurrency"
 	VDistroCreateRegistryOverride = "distro.create.registry_override"
@@ -84,9 +85,13 @@ func initViper() error {
 }
 
 func setDefaults() {
-	v.SetDefault(zarf.VLogLevel, "info")
+	v.SetDefault(zarf.VLogLevel, LOGGING_LEVEL_DEFAULT)
 	v.SetDefault(zarf.VZarfCache, config.ZarfDefaultCachePath)
 	v.SetDefault(zarf.VLogFormat, string(logger.FormatConsole))
+	v.SetDefault(zarf.VTmpDir, "/tmp")
+	v.SetDefault(zarf.VNoColor, false)
 
 	v.SetDefault(VDistroOCIConcurrency, zoci.DefaultConcurrency)
+	v.SetDefault(VDistroCreateSkipSbom, false)
+	v.SetDefault(VInstallConcurrency, 30)
 }

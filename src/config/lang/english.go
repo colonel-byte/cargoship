@@ -18,6 +18,7 @@ const (
 	//keep-sorted start
 	CmdDistroCreateShort         = "Creates a Zarf Distro Package from a given directory or the current director"
 	CmdInstallFlagConcurrency    = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
+	CmdInstallFlagConfig         = "Config file used to bootstrap a cluster."
 	CmdPackageCreateFlagOutput   = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
 	CmdPackageFlagConcurrency    = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdViperErrLoadingConfigFile = "failed to load config file"

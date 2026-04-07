@@ -53,7 +53,7 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 	}
 	dis.Metadata.Architecture = config.GetArch(dis.Metadata.Architecture)
 
-	err = validate(ctx, dis, disPath.ManifestFile)
+	err = validateDistro(ctx, dis, disPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfDistroPackage{}, err
 	}
@@ -61,6 +61,6 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 	return dis, nil
 }
 
-func validate(_ context.Context, _ v1alpha1.ZarfDistroPackage, _ string) error {
+func validateDistro(_ context.Context, _ v1alpha1.ZarfDistroPackage, _ string) error {
 	return nil
 }

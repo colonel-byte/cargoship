@@ -19,9 +19,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 
 	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/creasty/defaults"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -117,15 +119,26 @@ type Manager struct {
 	ConcurrentUploads int
 	DryRun            bool
 	Writer            io.Writer
+	DistroCfg         ManagerDistroConfig
+	dryMessages       map[string][]string
+	dryMu             sync.Mutex
+}
 
-	dryMessages map[string][]string
-	dryMu       sync.Mutex
+type ManagerDistroConfig struct {
+	BinaryDir string
+	Binary    string
+	Config    string
+	Token     string
+	Data      string
 }
 
 // NewManager creates a new Manager
-func NewManager(config *v1alpha1.ZarfCluster) (*Manager, error) {
+func NewManager(config *v1alpha1.ZarfCluster, distro distro.Distro) (*Manager, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config is nil")
+	}
+	if distro == nil {
+		return nil, fmt.Errorf("distro is nil")
 	}
 
 	return &Manager{Config: config, Writer: os.Stdout}, nil
@@ -139,6 +152,27 @@ func (m *Manager) AddPhase(p ...Phase) {
 // SetPhases sets the list of phases
 func (m *Manager) SetPhases(p Phases) {
 	m.phases = p
+}
+
+func (m *Manager) GetDistroBinaryName() string {
+	if m.DistroCfg.Binary != "" {
+		return m.DistroCfg.Binary
+	}
+	return ""
+}
+
+func (m *Manager) GetDistroBinaryDir() string {
+	if m.DistroCfg.BinaryDir != "" {
+		return m.DistroCfg.BinaryDir
+	}
+	return ""
+}
+
+func (m *Manager) GetDistroBinaryFull() string {
+	if m.DistroCfg.BinaryDir != "" && m.DistroCfg.Binary != "" {
+		return filepath.Join(m.DistroCfg.BinaryDir, m.DistroCfg.Binary)
+	}
+	return ""
 }
 
 type errorfunc func() error

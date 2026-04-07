@@ -18,13 +18,17 @@ import (
 	"context"
 
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
+	"github.com/colonel-byte/zarf-distro/src/pkg/action"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+const (
+	INSTALL_APPLY_CONFIG = "config"
+)
+
 type installApplyOptions struct {
-	concurrency int
-	confirm     bool
+	InstallCommon
 }
 
 func newInstallApplyCommand() *cobra.Command {
@@ -41,14 +45,50 @@ func newInstallApplyCommand() *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.concurrency, "concurrency", v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().StringVar(&o.config, INSTALL_APPLY_CONFIG, "", lang.CmdInstallFlagConfig)
+
+	val, err := cmd.Flags().GetString(ROOT_LOGGING_LEVEL)
+	if err != nil {
+		val = LOGGING_LEVEL_DEFAULT
+	}
+
+	o.logLevel = val
+
+	val, err = cmd.Flags().GetString(ROOT_LOGGING_FORMART)
+	if err != nil {
+		val = string(logger.FormatConsole)
+	}
+
+	o.LogFormat = val
+
+	cmd.MarkFlagRequired(INSTALL_APPLY_CONFIG)
 
 	return cmd
 }
 
 func (o *installApplyOptions) run(ctx context.Context, _ []string) error {
 	l := logger.From(ctx)
+	err := initRigLogger(ctx, o.InstallCommon)
+	if err != nil {
+		l.Warn("failed to configure logger", "err", err)
+		return err
+	}
 
-	l.Info("test", "concurrency", o.concurrency)
+	manager, err := initManager(ctx, o.InstallCommon)
+	if err != nil {
+		l.Warn("failed to create manager", "err", err)
+		return err
+	}
+
+	applyOpts := action.ApplyOptions{
+		Manager: manager,
+	}
+
+	applyAction := action.NewApply(applyOpts)
+
+	if err := applyAction.Run(ctx); err != nil {
+		return err
+	}
 
 	return nil
 }

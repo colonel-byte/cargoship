@@ -53,9 +53,6 @@ func (p *DetectOS) Run(ctx context.Context) error {
 		os := h.OSVersion.String()
 		l.Info("running", "host", h, "os", os)
 
-		// l.Debug("install path", "host", h, "path", h.InstallLocation())
-		// h.Configurer.SetPath("BinaryPath", h.InstallLocation())
-
 		return nil
 	})
 }

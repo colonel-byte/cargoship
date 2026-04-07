@@ -32,6 +32,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+const (
+	ROOT_LOGGING_LEVEL   = "log-level"
+	ROOT_LOGGING_FORMART = "log-format"
+)
+
 var (
 	//keep-sorted start
 	IsColorDisabled bool
@@ -83,11 +88,11 @@ func NewZarfDistroCommand() *cobra.Command {
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.AddCommand(newInstallApplyCommand())
 
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, ROOT_LOGGING_LEVEL, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVar(&LogFormat, ROOT_LOGGING_FORMART, v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(zarf.VNoColor), lang.RootCmdFlagNoColor)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(zarf.VZarfCache), zlang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(zarf.VTmpDir), zlang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), zarf.VZarfCache), zlang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), zarf.VTmpDir), zlang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().StringVarP(&zconfig.CLIArch, "architecture", "a", v.GetString(zarf.VArchitecture), zlang.RootCmdFlagArch)
 
 	return rootCmd
@@ -132,6 +137,15 @@ func init() {
 			os.Exit(1)
 		}
 	}
+}
+
+func parsePath(ctx context.Context, key string) string {
+	value, err := zconfig.GetAbsHomePath(v.GetString(key))
+	if err != nil {
+		logger.From(ctx).Debug("error when trying to get user path", "error", err)
+		return v.GetString(key)
+	}
+	return value
 }
 
 func loadViperConfig() error {

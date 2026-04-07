@@ -37,13 +37,13 @@ func (p *Connect) Title() string {
 }
 
 func (p *Connect) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, v1alpha1.ZarfHosts{}, func(ctx context.Context, h *v1alpha1.ZarfHost) error {
+	return p.parallelDo(ctx, p.Config.Spec.Hosts, func(ctx context.Context, h *v1alpha1.ZarfHost) error {
 		return retry.Timeout(ctx, 10*time.Minute, func(_ context.Context) error {
 			if err := h.Connect(); err != nil {
+				logger.From(ctx).Debug("got the following", "host", h, "err", err)
 				if errors.Is(err, rig.ErrCantConnect) || strings.Contains(err.Error(), "host key mismatch") {
 					return errors.Join(retry.ErrAbort, err)
 				}
-
 				return err
 			}
 

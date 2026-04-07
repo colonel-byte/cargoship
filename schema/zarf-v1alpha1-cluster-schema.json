@@ -425,7 +425,7 @@
         "role": {
           "enum": [
             "controller",
-            "'controller+worker'",
+            "controller+worker",
             "single",
             "worker"
           ],
@@ -439,8 +439,7 @@
         }
       },
       "required": [
-        "role",
-        "hostname"
+        "role"
       ],
       "type": "object"
     },

@@ -33,20 +33,22 @@ const (
 )
 
 type ZarfHost struct {
-	rig.Connection   `json:",inline"`
-	Role             string                `json:"role" jsonschema:"enum=controller,enum='controller+worker',enum=single,enum=worker"`
-	Profile          string                `json:"profile,omitempty" `
-	Hostname         string                `json:"hostname"`
-	Environment      map[string]string     `json:"environment,omitempty"`
-	Files            []ZarfClusterFiles    `json:"files,omitempty"`
-	PrivateInterface string                `json:"privateInterface,omitempty"`
-	PrivateAddress   string                `json:"privateAddress,omitempty"`
-	DataDirectory    string                `json:"dataDir,omitempty"`
-	KubeletDirectory string                `json:"kubeletRootDir,omitempty"`
-	InstallPath      string                `json:"installPath,omitempty"`
-	BinaryPath       string                `json:"binaryPath,omitempty"`
-	Configurer       configurer.Configurer `json:"-"`
-	Metadata         ZarfHostMetadata      `json:"-"`
+	rig.Connection `json:",inline"`
+	//keep-sorted start
+	BinaryPath       string             `json:"binaryPath,omitempty"`
+	DataDirectory    string             `json:"dataDir,omitempty"`
+	Environment      map[string]string  `json:"environment,omitempty"`
+	Files            []ZarfClusterFiles `json:"files,omitempty"`
+	Hostname         string             `json:"hostname,omitempty"`
+	InstallPath      string             `json:"installPath,omitempty"`
+	KubeletDirectory string             `json:"kubeletRootDir,omitempty"`
+	PrivateAddress   string             `json:"privateAddress,omitempty"`
+	PrivateInterface string             `json:"privateInterface,omitempty"`
+	Profile          string             `json:"profile,omitempty" `
+	Role             string             `json:"role" jsonschema:"enum=controller,enum=controller+worker,enum=single,enum=worker"`
+	//keep-sorted end
+	Configurer configurer.Configurer `json:"-"`
+	Metadata   ZarfHostMetadata      `json:"-"`
 }
 
 type ZarfHostMetadata struct {
@@ -86,6 +88,22 @@ func (h *ZarfHost) OSKind() (string, error) {
 		return "", err
 	}
 	return cfg.OSKind(), nil
+}
+
+// Arch returns the host architecture, caching the result in metadata
+func (h *ZarfHost) Arch() (string, error) {
+	if h.Metadata.Arch != "" {
+		return h.Metadata.Arch, nil
+	}
+	if h.Configurer == nil {
+		return "", fmt.Errorf("host configurer is not resolved")
+	}
+	arch, err := h.Configurer.Arch(h)
+	if err != nil {
+		return "", fmt.Errorf("failed to detect host architecture: %w", err)
+	}
+	h.Metadata.Arch = arch
+	return arch, nil
 }
 
 // Touch updates file modification timestamps via the resolved configurer.

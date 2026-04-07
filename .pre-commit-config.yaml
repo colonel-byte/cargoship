@@ -43,19 +43,10 @@ repos:
     rev: v0.8.0
     hooks:
       - id: keep-sorted
-  # - repo: local
-  #   hooks:
-  #     - id: goimports
-  #       name: goimports
-  #       entry: golangci-lint fmt
-  #       types:
-  #         - go
-  #       language: golang
-  #       pass_filenames: false
-  #     - id: lint
-  #       name: golangci-lint go lint
-  #       entry: golangci-lint run
-  #       types:
-  #         - go
-  #       language: golang
-  #       pass_filenames: false
+  - repo: local
+    hooks:
+      - id: schema-generator
+        name: generate-schemas
+        entry: go run ./src/pkg/schema
+        language: golang
+        pass_filenames: false

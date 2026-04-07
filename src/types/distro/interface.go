@@ -28,6 +28,7 @@ const (
 
 type Distro interface {
 	//keep-sorted start
+	BinaryName() string
 	BinaryPath() string
 	ConfigPath() string
 	DataDirDefaultPath() string

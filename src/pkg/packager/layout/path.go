@@ -47,3 +47,21 @@ func ResolveDistroPath(path string) (DistroPath, error) {
 		BaseDir:      filepath.Dir(path),
 	}, nil
 }
+
+type ClusterPath struct {
+	ManifestFile string
+	BaseDir      string
+}
+
+func ResolveClusterPath(path string) (ClusterPath, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		return ClusterPath{}, fmt.Errorf("unable to access path %q: %w", path, err)
+	}
+
+	// Direct file path
+	return ClusterPath{
+		ManifestFile: path,
+		BaseDir:      filepath.Dir(path),
+	}, nil
+}

@@ -76,6 +76,10 @@ func (r *RKE2) BinaryPath() string {
 	return r.path(BinaryDir) + "/" + r.path(Binary)
 }
 
+func (r *RKE2) BinaryName() string {
+	return r.path(Binary)
+}
+
 func (r *RKE2) ConfigPath() string {
 	return r.path(Config)
 }

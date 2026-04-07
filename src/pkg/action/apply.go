@@ -15,7 +15,11 @@
 package action
 
 import (
+	"context"
+	"time"
+
 	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type ApplyOptions struct {
@@ -40,9 +44,30 @@ func NewApply(opts ApplyOptions) *Apply {
 		Phases: phase.Phases{
 			&phase.Connect{},
 			&phase.DetectOS{},
+			&phase.PrepareHosts{},
+			&phase.GatherFacts{},
+			&phase.ValidateHosts{},
+
+			&phase.Disconnect{},
 		},
 	}
-
-	apply.Phases = append(apply.Phases, &phase.Disconnect{})
 	return apply
+}
+
+func (a Apply) Run(ctx context.Context) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	phase.NoWait = a.NoWait
+	a.Manager.SetPhases(a.Phases)
+	var result error
+
+	if result = a.Manager.Run(ctx); result != nil {
+		l.Info("apply failed", "error", result)
+		return result
+	}
+
+	duration := time.Since(start).Truncate(time.Second)
+	l.Info("finished in", "duration", duration)
+
+	return nil
 }

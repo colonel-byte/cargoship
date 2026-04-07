@@ -16,38 +16,23 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	"github.com/colonel-byte/zarf-distro/src/cmd"
-	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
-	"github.com/colonel-byte/zarf-distro/src/types"
-	goyaml "github.com/goccy/go-yaml"
+
+	// anonymous import is needed to load the os configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/os"
+	// anonymous import is needed to load the os configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux"
+	// anonymous import is needed to load the os configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux/enterpriselinux"
+	// anonymous import is needed to load the distro configurers
+	_ "github.com/colonel-byte/zarf-distro/src/types/distro"
 )
 
 func main() {
-	Cobra()
-}
-
-func Print() {
-	cn := types.DistroConfig{}
-	if err := utils.ReadYAMLStrict(filepath.Join(".", "zarf-distro-config1.yaml"), &cn); err != nil {
-		fmt.Println("fml")
-	}
-
-	bytes, err := goyaml.Marshal(cn)
-	if err != nil {
-		fmt.Println("fml - v2")
-	}
-	fmt.Println(string(bytes))
-
-	fmt.Println(cn.DistroOpts.OCIConcurrency)
-}
-
-func Cobra() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	signalCh := make(chan os.Signal, 1)

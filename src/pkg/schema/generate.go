@@ -154,7 +154,6 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 		if sshObj, ok := defObj["ZarfHost"].(map[string]any); ok {
 			sshObj["required"] = []string{
 				"role",
-				"hostname",
 			}
 		}
 	}

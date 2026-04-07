@@ -73,6 +73,10 @@ func (r *K3S) service(key string) string {
 }
 
 func (r *K3S) BinaryPath() string {
+	return r.path(BinaryDir) + "/" + r.path(Binary)
+}
+
+func (r *K3S) BinaryName() string {
 	return r.path(Binary)
 }
 
