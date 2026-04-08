@@ -21,7 +21,8 @@ import (
 	"sync"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -36,13 +37,14 @@ type Lock struct {
 }
 
 // Prepare the phase
-func (p *Lock) Prepare(c *v1alpha1.ZarfCluster) error {
+func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.manager.Config = c
 	hn, err := os.Hostname()
 	if err != nil {
 		hn = "unknown"
 	}
 	p.instanceID = fmt.Sprintf("%s-%d", hn, os.Getpid())
+	logger.From(ctx).Debug("host instance id", "host", hn, "pid", p.instanceID)
 	return nil
 }
 
@@ -79,7 +81,7 @@ func (p *Lock) Run(ctx context.Context) error {
 	return p.manager.Config.Spec.Hosts.ParallelEach(ctx, p.startTicker)
 }
 
-func (p *Lock) startTicker(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *Lock) startTicker(ctx context.Context, h *cluster.ZarfHost) error {
 	p.wg.Add(1)
 	lfp := h.Configurer.CTLLockFilePath(h)
 	ticker := time.NewTicker(10 * time.Second)
@@ -110,13 +112,13 @@ func (p *Lock) startTicker(ctx context.Context, h *v1alpha1.ZarfHost) error {
 	return nil
 }
 
-func (p *Lock) startLock(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *Lock) startLock(ctx context.Context, h *cluster.ZarfHost) error {
 	return retry.Times(ctx, 10, func(_ context.Context) error {
 		return p.tryLock(h)
 	})
 }
 
-func (p *Lock) tryLock(h *v1alpha1.ZarfHost) error {
+func (p *Lock) tryLock(h *cluster.ZarfHost) error {
 	lfp := h.Configurer.CTLLockFilePath(h)
 
 	if err := h.Configurer.UpsertFile(h, lfp, p.instanceID); err != nil {

@@ -18,10 +18,13 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/zarf-distro/src/pkg/packager"
 	"github.com/colonel-byte/zarf-distro/src/pkg/packager/load"
 	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
 	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/colonel-byte/zarf-distro/src/types/distro/registry"
+	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -42,7 +45,7 @@ func Distro(s string) (distro.Distro, error) {
 	return d, nil
 }
 
-func initManager(ctx context.Context, opt InstallCommon) (*phase.Manager, error) {
+func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*phase.Manager, error) {
 	path, err := filepath.Abs(opt.config)
 	if err != nil {
 		return nil, err
@@ -50,21 +53,30 @@ func initManager(ctx context.Context, opt InstallCommon) (*phase.Manager, error)
 
 	opt.config = path
 
-	logger.From(ctx).Info("using cluster file", "location", opt.config)
-
 	cluster, err := load.ClusterDefinition(ctx, opt.config, load.ClusterOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	distro, err := load.DistroDefinition(ctx, "schema/distro.yaml", load.DefinitionOptions{})
+	logger.From(ctx).Info("using cluster file", "location", opt.config)
+
+	loadOpts := packager.LoadOptions{
+		CachePath:    config.CommonOptions.CachePath,
+		Architecture: zconfig.CLIArch,
+		Output:       config.CommonOptions.TempDirectory,
+	}
+
+	distroLayout, err := packager.LoadDistro(ctx, distroPath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
 
+	logger.From(ctx).Warn("some info", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
+
 	return &phase.Manager{
 		Config:            &cluster,
-		Distro:            &distro,
+		Distro:            &distroLayout.Distro,
+		TempDirectory:     distroLayout.DirPath(),
 		Concurrency:       opt.concurrency,
 		ConcurrentUploads: opt.concurrency,
 		DryRun:            false,

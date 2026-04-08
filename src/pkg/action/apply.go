@@ -49,6 +49,7 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.PrepareHosts{},
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
+			&phase.UploadFiles{},
 
 			&phase.Unlock{Cancel: lockPhase.Cancel},
 			&phase.Disconnect{},

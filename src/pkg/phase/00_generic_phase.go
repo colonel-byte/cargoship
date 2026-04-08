@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
@@ -67,4 +68,9 @@ func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.ZarfH
 	}
 
 	return hosts.BatchedParallelEach(ctx, batchSize, funcs...)
+}
+
+// Wet is a shorthand for manager.Wet
+func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error {
+	return p.manager.Wet(host, msg, funcs...)
 }

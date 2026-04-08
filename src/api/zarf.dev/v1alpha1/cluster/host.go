@@ -16,11 +16,13 @@ package cluster
 
 import (
 	"fmt"
+	gos "os"
 	"time"
 
 	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/log"
 	"github.com/k0sproject/rig/os/registry"
 )
 
@@ -174,4 +176,31 @@ func (h *ZarfHost) ResolveConfigurer() error {
 	}
 
 	return fmt.Errorf("unsupported OS")
+}
+
+// FileChanged returns true when a remote file has different size or mtime compared to local
+// or if an error occurs
+func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
+	lstat, err := gos.Stat(lpath)
+	if err != nil {
+		log.Debugf("%s: local stat failed: %s", h, err)
+		return true
+	}
+	rstat, err := h.Configurer.Stat(h, rpath, exec.Sudo(h))
+	if err != nil {
+		log.Debugf("%s: remote stat failed: %s", h, err)
+		return true
+	}
+
+	if lstat.Size() != rstat.Size() {
+		log.Debugf("%s: file sizes for %s differ (%d vs %d)", h, lpath, lstat.Size(), rstat.Size())
+		return true
+	}
+
+	if !lstat.ModTime().Equal(rstat.ModTime()) {
+		log.Debugf("%s: file modtimes for %s differ (%s vs %s)", h, lpath, lstat.ModTime(), rstat.ModTime())
+		return true
+	}
+
+	return false
 }

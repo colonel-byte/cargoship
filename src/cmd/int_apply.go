@@ -34,8 +34,8 @@ type installApplyOptions struct {
 func newInstallApplyCommand() *cobra.Command {
 	o := installApplyOptions{}
 	cmd := &cobra.Command{
-		Use:     "apply",
-		Args:    cobra.MaximumNArgs(1),
+		Use:     "apply [Distro Package]",
+		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDistroCreateShort,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -66,7 +66,7 @@ func newInstallApplyCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installApplyOptions) run(ctx context.Context, _ []string) error {
+func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
 	err := initRigLogger(ctx, o.InstallCommon)
 	if err != nil {
@@ -74,11 +74,16 @@ func (o *installApplyOptions) run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	manager, err := initManager(ctx, o.InstallCommon)
+	manager, err := initManager(ctx, args[0], o.InstallCommon)
 	if err != nil {
 		l.Warn("failed to create manager", "err", err)
 		return err
 	}
+	// // deletes the temp directory at the end of the apply phases
+	// defer func() {
+	// 	l.Debug("removing staging dir", "temp", manager.TempDirectory)
+	// 	os.RemoveAll(manager.TempDirectory)
+	// }()
 
 	applyOpts := action.ApplyOptions{
 		Manager: manager,

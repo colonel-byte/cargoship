@@ -15,8 +15,17 @@
 package layout
 
 import (
+	"context"
+	"os"
+	"path/filepath"
+
 	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/zarf-distro/src/internal/distrocfg"
 	"github.com/colonel-byte/zarf-distro/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 type Distro struct {
@@ -30,6 +39,8 @@ type DistroLayout struct {
 	Distro  v1alpha1.ZarfDistro
 }
 
+type DistroLayoutOptions struct{}
+
 func New(cfg *types.DistroConfig) (*Distro, error) {
 	dis := Distro{
 		cfg:    cfg,
@@ -38,4 +49,43 @@ func New(cfg *types.DistroConfig) (*Distro, error) {
 	}
 
 	return &dis, nil
+}
+
+// LoadFromTar unpacks the given archive (any compress/format) and loads it.
+func LoadFromTar(ctx context.Context, tarPath string, opts DistroLayoutOptions) (*DistroLayout, error) {
+	dirPath, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	// Decompress the archive
+	err = archive.Decompress(ctx, tarPath, dirPath, archive.DecompressOpts{})
+	if err != nil {
+		return nil, err
+	}
+
+	// 3) Delegate to the existing LoadFromDir
+	return LoadFromDir(ctx, dirPath, opts)
+}
+
+// LoadFromDir loads and validates a package from the given directory path.
+func LoadFromDir(ctx context.Context, dirPath string, opts DistroLayoutOptions) (*DistroLayout, error) {
+	b, err := os.ReadFile(filepath.Join(dirPath, config.ZarfDistroYaml))
+	if err != nil {
+		return nil, err
+	}
+	dis, err := distrocfg.Parse(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	disLayout := &DistroLayout{
+		dirPath: dirPath,
+		Distro:  dis,
+	}
+
+	logger.From(ctx).Debug(dis.Metadata.Name)
+
+	return disLayout, nil
 }

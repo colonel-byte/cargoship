@@ -83,7 +83,7 @@ func (p *Phases) Replace(title string, phase Phase) {
 
 type withconfig interface {
 	Title() string
-	Prepare(*cluster.ZarfCluster, *apiDistro.ZarfDistro) error
+	Prepare(context.Context, *cluster.ZarfCluster, *apiDistro.ZarfDistro) error
 }
 
 type conditional interface {
@@ -122,6 +122,7 @@ type Manager struct {
 	DryRun            bool
 	Writer            io.Writer
 	DistroCfg         ManagerDistroConfig
+	TempDirectory     string
 	dryMessages       map[string][]string
 	dryMu             sync.Mutex
 }
@@ -240,20 +241,6 @@ func (m *Manager) Run(ctx context.Context) error {
 				}
 			}
 		}
-		if m.DryRun {
-			if len(m.dryMessages) == 0 {
-				l.Info("dry-run: no cluster state altering actions would be performed")
-				return
-			}
-
-			l.Info("dry-run: cluster state altering actions would be performed:")
-			for host, msgs := range m.dryMessages {
-				l.Info("dry-run:", "host", host)
-				for _, msg := range msgs {
-					l.Info("dry-run:", "msg", msg)
-				}
-			}
-		}
 	}()
 
 	for _, p := range m.phases {
@@ -270,7 +257,7 @@ func (m *Manager) Run(ctx context.Context) error {
 
 		if p, ok := p.(withconfig); ok {
 			l.Debug("Preparing", "phase", p.Title())
-			if err := p.Prepare(m.Config, m.Distro); err != nil {
+			if err := p.Prepare(ctx, m.Config, m.Distro); err != nil {
 				result = err
 				return result
 			}

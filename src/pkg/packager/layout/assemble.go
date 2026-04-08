@@ -28,6 +28,7 @@ import (
 	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/config"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -56,6 +57,7 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath strin
 	if err != nil {
 		return nil, err
 	}
+	l.Debug("assembling distro in temp folder", "tmp", buildPath)
 
 	onCreate := d.Spec.Actions.OnCreate
 
@@ -197,6 +199,15 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath strin
 	}
 
 	d = recordDistroMetadata(d, opts.RegistryOverrides)
+
+	b, err := goyaml.Marshal(d)
+	if err != nil {
+		return nil, err
+	}
+	err = os.WriteFile(filepath.Join(buildPath, config.ZarfDistroYaml), b, helpers.ReadWriteUser)
+	if err != nil {
+		return nil, err
+	}
 
 	return NewDistroLayout(buildPath, d), nil
 }

@@ -53,6 +53,8 @@ spec:
         extractPath: bin/rke2-uninstall.sh
         target: /var/lib/rancher/rke2/bin/rke2-uninstall.sh
         executable: true
+      - source: cache.json
+        target: /var/lib/rancher/rke2/agent/images/.cache.json
     imageConfig:
       path: /var/lib/rancher/rke2/agent/images
       compression: none

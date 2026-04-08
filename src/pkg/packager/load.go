@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -69,7 +70,40 @@ func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.D
 		return nil, err
 	}
 	logger.From(ctx).Debug(tmpPath)
-	// pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
+	distroLayout, err := layout.LoadFromTar(ctx, tmpPath, layout.DistroLayoutOptions{})
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	if opts.Output != "" {
+		filename, err := distroLayout.FileName()
+		if err != nil {
+			return nil, err
+		}
+		tarPath := filepath.Join(opts.Output, filename)
+		err = os.Remove(tarPath)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		dstFile, err := os.Create(tarPath)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			err = errors.Join(err, dstFile.Close())
+		}()
+		srcFile, err := os.Open(tmpPath)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			err = errors.Join(err, srcFile.Close())
+		}()
+		_, err = io.Copy(dstFile, srcFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return distroLayout, nil
 }
