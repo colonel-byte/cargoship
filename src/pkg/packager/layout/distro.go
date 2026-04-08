@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packager
+package layout
 
 import (
 	"context"
@@ -26,11 +26,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
-
-type DistroLayout struct {
-	dirPath string
-	Distro  v1alpha1.ZarfDistro
-}
 
 func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout {
 	return &DistroLayout{

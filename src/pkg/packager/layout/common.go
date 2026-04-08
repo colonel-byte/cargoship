@@ -25,6 +25,11 @@ type Distro struct {
 	tmp    string
 }
 
+type DistroLayout struct {
+	dirPath string
+	Distro  v1alpha1.ZarfDistro
+}
+
 func New(cfg *types.DistroConfig) (*Distro, error) {
 	dis := Distro{
 		cfg:    cfg,

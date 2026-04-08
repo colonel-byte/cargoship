@@ -27,7 +27,6 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api"
 	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/config"
-	"github.com/colonel-byte/zarf-distro/src/pkg/packager"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
@@ -49,7 +48,7 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath string, opts AssembleOptions) (*packager.DistroLayout, error) {
+func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath string, opts AssembleOptions) (*DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
 
@@ -199,7 +198,7 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath strin
 
 	d = recordDistroMetadata(d, opts.RegistryOverrides)
 
-	return packager.NewDistroLayout(buildPath, d), nil
+	return NewDistroLayout(buildPath, d), nil
 }
 
 func recordDistroMetadata(distro v1alpha1.ZarfDistro, registryOverrides []images.RegistryOverride) v1alpha1.ZarfDistro {

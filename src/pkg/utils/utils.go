@@ -18,10 +18,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"strings"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // ReadYAMLStrict reads a YAML file into a struct, with strict parsing
@@ -65,6 +68,24 @@ func ReadByteStrict(data []byte, destConfig any) error {
 	}
 
 	return nil
+}
+
+// IdentifySource returns the source type for the given source string.
+func IdentifySource(src string) (string, error) {
+	if parsed, err := url.Parse(src); err == nil && parsed.Scheme != "" && parsed.Host != "" {
+		return parsed.Scheme, nil
+	}
+	if strings.HasSuffix(src, ".tar.zst") || strings.HasSuffix(src, ".tar") {
+		return "tarball", nil
+	}
+	if strings.Contains(src, ".part000") {
+		return "split", nil
+	}
+	// match deployed package names: lowercase, digits, hyphens
+	if state.DeployedPackageNameRegex(src) {
+		return "cluster", nil
+	}
+	return "", fmt.Errorf("unknown source %s", src)
 }
 
 func PrintJSON(obj any) string {
