@@ -40,3 +40,7 @@ func init() {
 		},
 	)
 }
+
+func (r *RHEL) String() string {
+	return "Red Hat Enterprise Linux"
+}

@@ -39,3 +39,7 @@ func init() {
 		},
 	)
 }
+
+func (r *CentOS) String() string {
+	return "CentOS Linux"
+}

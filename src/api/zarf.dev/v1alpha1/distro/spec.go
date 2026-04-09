@@ -49,16 +49,16 @@ type ZarfDistroSpec struct {
 }
 
 type ZarfDistroActions struct {
-	OnCreate  zarf.ZarfComponentActionSet `json:"onCreate,omitempty"`
-	OnDeploy  zarf.ZarfComponentActionSet `json:"onDeploy,omitempty"`
-	OnUpgrade zarf.ZarfComponentActionSet `json:"onUpgrade,omitempty"`
-	OnRemove  zarf.ZarfComponentActionSet `json:"onRemove,omitempty"`
+	OnCreate zarf.ZarfComponentActionSet `json:"onCreate,omitempty"`
+	OnDeploy zarf.ZarfComponentActionSet `json:"onDeploy,omitempty"`
+	OnRemove zarf.ZarfComponentActionSet `json:"onRemove,omitempty"`
 }
 
 type ZarfDistroConfig struct {
-	Files  []ZarfFiles           `json:"files,omitempty"`
-	Config ZarfDistroImageConfig `json:"imageConfig,omitempty"`
-	OS     ZarfDistroOS          `json:"os,omitempty"`
+	// Files are files that will be populated on the hosts, reguardless of what install method is used
+	Files        []ZarfFile            `json:"files,omitempty"`
+	ImagesConfig ZarfDistroImageConfig `json:"imageConfig,omitempty"`
+	OS           ZarfDistroOS          `json:"os,omitempty"`
 }
 
 type ZarfDistroImageConfig struct {
@@ -68,10 +68,14 @@ type ZarfDistroImageConfig struct {
 }
 
 type ZarfDistroOS struct {
-	Sysctl map[string]string `json:"sysctl,omitempty"`
+	Sysctl    map[string]string `json:"sysctl,omitempty"`
+	FAPolicyd string            `json:"fapolicyd,omitempty"`
+	RPM       []ZarfFile        `json:"rpm,omitempty"`
+	APT       []ZarfFile        `json:"apt,omitempty"`
+	Binary    []ZarfFile        `json:"binary,omitempty"`
 }
 
-type ZarfFiles struct {
+type ZarfFile struct {
 	Source      string             `json:"source"`
 	Shasum      string             `json:"shasum,omitempty"`
 	Target      string             `json:"target"`
@@ -83,11 +87,11 @@ type ZarfFiles struct {
 
 type ZarfBinarySelector struct {
 	Roles    []string `json:"roles,omitempty"`
-	Profiles []string `json:"profiles,omitempty"`
+	Profiles []string `json:"profiles,omitempty" jsonschema:"enum=worker,enum=controller"`
 }
 
 func (distro ZarfDistro) IsSBOMAble() bool {
-	if len(distro.Spec.Config.Config.Images) > 0 || len(distro.Spec.Config.Files) > 0 {
+	if len(distro.Spec.Config.ImagesConfig.Images) > 0 || len(distro.Spec.Config.Files) > 0 {
 		return true
 	}
 	return false

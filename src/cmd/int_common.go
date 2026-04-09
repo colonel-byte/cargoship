@@ -71,7 +71,7 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 		return nil, err
 	}
 
-	logger.From(ctx).Warn("some info", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
+	logger.From(ctx).Debug("distro information", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
 
 	return &phase.Manager{
 		Config:            &cluster,

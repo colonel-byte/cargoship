@@ -17,5 +17,8 @@ package config
 const (
 	ImagesDir      = "images"
 	FilesDir       = "files"
+	RPMDir         = "rpm"
+	APTDir         = "apt"
+	TarBallDir     = "tar"
 	ZarfDistroYaml = "distro.yaml"
 )

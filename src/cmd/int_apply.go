@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
 	"github.com/colonel-byte/zarf-distro/src/pkg/action"
@@ -79,11 +80,11 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		l.Warn("failed to create manager", "err", err)
 		return err
 	}
-	// // deletes the temp directory at the end of the apply phases
-	// defer func() {
-	// 	l.Debug("removing staging dir", "temp", manager.TempDirectory)
-	// 	os.RemoveAll(manager.TempDirectory)
-	// }()
+	// deletes the temp directory at the end of the apply phases
+	defer func() {
+		l.Debug("removing staging dir", "temp", manager.TempDirectory)
+		os.RemoveAll(manager.TempDirectory)
+	}()
 
 	applyOpts := action.ApplyOptions{
 		Manager: manager,

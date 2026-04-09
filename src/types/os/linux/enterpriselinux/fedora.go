@@ -41,3 +41,7 @@ func init() {
 		},
 	)
 }
+
+func (r *Fedora) String() string {
+	return "Fedora Linux"
+}

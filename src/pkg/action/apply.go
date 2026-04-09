@@ -47,11 +47,17 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.DetectOS{},
 			lockPhase,
 			&phase.PrepareHosts{},
+			&phase.PrepareSelinux{},
+			// &phase.InstallFapolicy{},
+			// &phase.PrepareFapolicy{},
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
 			&phase.UploadFiles{},
+			&phase.RPMUploadFiles{},
 
-			&phase.Unlock{Cancel: lockPhase.Cancel},
+			&phase.Unlock{
+				Cancel: lockPhase.Cancel,
+			},
 			&phase.Disconnect{},
 		},
 	}

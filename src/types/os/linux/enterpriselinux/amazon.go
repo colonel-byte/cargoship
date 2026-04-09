@@ -47,3 +47,7 @@ func init() {
 		},
 	)
 }
+
+func (r *AmazonLinux) String() string {
+	return "Amazon Linux"
+}

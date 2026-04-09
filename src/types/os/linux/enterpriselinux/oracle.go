@@ -39,3 +39,7 @@ func init() {
 		},
 	)
 }
+
+func (r *OracleLinux) String() string {
+	return "Oracle Linux"
+}

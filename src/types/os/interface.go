@@ -40,6 +40,7 @@ type Configurer interface {
 	DeleteFile(os.Host, string) error
 	Dir(string) string
 	DownloadURL(os.Host, string, string, ...exec.Option) error
+	EnableService(os.Host, string) error
 	FileContains(os.Host, string, string) bool
 	FileExist(os.Host, string) bool
 	GetDistroService(string) (string, error)

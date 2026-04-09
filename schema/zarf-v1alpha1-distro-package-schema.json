@@ -99,6 +99,10 @@
       "properties": {
         "profiles": {
           "items": {
+            "enum": [
+              "worker",
+              "controller"
+            ],
             "type": "string"
           },
           "type": "array"
@@ -337,9 +341,6 @@
         },
         "onRemove": {
           "$ref": "#/$defs/ZarfComponentActionSet"
-        },
-        "onUpgrade": {
-          "$ref": "#/$defs/ZarfComponentActionSet"
         }
       },
       "type": "object"
@@ -376,7 +377,7 @@
       "properties": {
         "files": {
           "items": {
-            "$ref": "#/$defs/ZarfFiles"
+            "$ref": "#/$defs/ZarfFile"
           },
           "type": "array"
         },
@@ -462,6 +463,27 @@
         "^x-": {}
       },
       "properties": {
+        "apt": {
+          "items": {
+            "$ref": "#/$defs/ZarfFile"
+          },
+          "type": "array"
+        },
+        "binary": {
+          "items": {
+            "$ref": "#/$defs/ZarfFile"
+          },
+          "type": "array"
+        },
+        "fapolicyd": {
+          "type": "string"
+        },
+        "rpm": {
+          "items": {
+            "$ref": "#/$defs/ZarfFile"
+          },
+          "type": "array"
+        },
         "sysctl": {
           "additionalProperties": {
             "type": "string"
@@ -490,7 +512,7 @@
       ],
       "type": "object"
     },
-    "ZarfFiles": {
+    "ZarfFile": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}

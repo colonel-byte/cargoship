@@ -17,8 +17,6 @@ package phase
 import (
 	"context"
 	"fmt"
-	"io/fs"
-	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -65,7 +63,6 @@ func (p *ValidateHosts) Run(ctx context.Context) error {
 		p.validateUniquePrivateAddress,
 		p.validateSudo,
 		p.validateConfigurer,
-		p.cleanUpOldTmpFiles,
 	)
 	if err != nil {
 		return err
@@ -113,40 +110,6 @@ func (p *ValidateHosts) validateConfigurer(_ context.Context, h *v1alpha1.ZarfHo
 	}
 
 	return validator.ValidateHost(h)
-}
-
-const cleanUpOlderThan = 30 * time.Minute
-
-// clean up any tmp files from BinaryPath that are older than 30 minutes and warn if there are any that are newer than that
-func (p *ValidateHosts) cleanUpOldTmpFiles(ctx context.Context, h *v1alpha1.ZarfHost) error {
-	l := logger.From(ctx)
-
-	binary := fmt.Sprintf("%s.tmp.*", p.manager.GetDistroBinaryName())
-	err := fs.WalkDir(h.SudoFsys(), filepath.Join(p.manager.GetDistroBinaryDir(), binary), func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			l.Warn(fmt.Sprintf("failed to walk %s", binary), "path", p.manager.GetDistroBinaryDir(), "error", err)
-			return nil
-		}
-		l.Debug("found uploaded engine binary", "host", h, "path", path)
-		info, err := d.Info()
-		if err != nil {
-			l.Warn("failed to get info", "host", h, "path", path, "error", err)
-			return nil
-		}
-		if time.Since(info.ModTime()) > cleanUpOlderThan {
-			l.Warn("cleaning up old engine binary upload temporary file", "host", h, "path", path)
-			if err := h.Configurer.DeleteFile(h, path); err != nil {
-				l.Warn("failed to delete", "host", h, "path", path, "error", err)
-			}
-			return nil
-		}
-		l.Warn("found uploaded engine binary", "host", h, "path", path, "time", cleanUpOlderThan)
-		return nil
-	})
-	if err != nil {
-		l.Warn(fmt.Sprintf("failed to walk %s", binary), "path", p.manager.GetDistroBinaryDir(), "error", err)
-	}
-	return nil
 }
 
 const maxSkew = 30 * time.Second

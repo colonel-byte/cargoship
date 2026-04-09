@@ -39,3 +39,7 @@ func init() {
 		},
 	)
 }
+
+func (r *RockyLinux) String() string {
+	return "Rocky Linux"
+}

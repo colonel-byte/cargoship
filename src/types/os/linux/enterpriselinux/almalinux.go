@@ -39,3 +39,7 @@ func init() {
 		},
 	)
 }
+
+func (r *AlmaLinux) String() string {
+	return "AlmaLinux"
+}

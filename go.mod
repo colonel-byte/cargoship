@@ -19,6 +19,7 @@ require (
 	github.com/stoewer/go-strcase v1.3.1
 	github.com/stretchr/testify v1.11.1
 	github.com/zarf-dev/zarf v0.74.0
+	oras.land/oras-go/v2 v2.6.0
 )
 
 require (
@@ -621,7 +622,6 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.44.3 // indirect
-	oras.land/oras-go/v2 v2.6.0 // indirect
 	sigs.k8s.io/cli-utils v0.37.2 // indirect
 	sigs.k8s.io/controller-runtime v0.23.1 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
