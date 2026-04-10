@@ -81,11 +81,21 @@ func (p *RPMUploadFiles) ShouldRun() bool {
 
 // Run the phase
 func (p *RPMUploadFiles) Run(ctx context.Context) (err error) {
-	err = p.parallelDoUpload(ctx, p.control, p.uploadRPMControllerFiles, p.installRPMControllerFiles)
+	err = p.parallelDoUpload(
+		ctx,
+		p.control,
+		p.uploadRPMControllerFiles,
+		p.installRPMControllerFiles,
+	)
 	if err != nil {
 		return err
 	}
-	err = p.parallelDoUpload(ctx, p.workers, p.uploadRPMWorkerFiles, p.installRPMWorkerFiles)
+	err = p.parallelDoUpload(
+		ctx,
+		p.workers,
+		p.uploadRPMWorkerFiles,
+		p.installRPMWorkerFiles,
+	)
 	if err != nil {
 		return err
 	}

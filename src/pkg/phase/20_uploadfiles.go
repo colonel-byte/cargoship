@@ -16,7 +16,6 @@ package phase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -27,10 +26,10 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/containerd/containerd/v2/core/images/archive"
+	"github.com/containerd/containerd/v2/plugins/content/local"
+	"github.com/containerd/platforms"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
 )
 
@@ -62,45 +61,48 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 	})
 	p.disFiles = p.manager.Distro.Spec.Config.Files
 
-	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
-		buildPath, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(buildPath)
+	err := os.MkdirAll(filepath.Join(p.manager.TempDirectory, config.TarBallDir), 0755)
+	if err != nil {
+		return err
+	}
 
+	src, err := oci.NewWithContext(ctx, filepath.Join(p.manager.TempDirectory, config.ImagesDir))
+	if err != nil {
+		return err
+	}
+
+	store, err := local.NewStore(filepath.Join(p.manager.TempDirectory, config.ImagesDir))
+	if err != nil {
+		return err
+	}
+
+	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), ".tar")
-		src, err := oci.NewWithContext(ctx, filepath.Join(p.manager.TempDirectory, config.ImagesDir))
-		if err != nil {
-			return err
-		}
-		dst, err := oci.NewWithContext(ctx, buildPath)
-		if err != nil {
-			return err
-		}
-		_, err = oras.Copy(ctx, src, i, dst, i, oras.DefaultCopyOptions)
-		if err != nil {
-			return err
-		}
 		tarballPath := filepath.Join(p.manager.TempDirectory, config.TarBallDir, tarBallName)
-		err = os.Remove(tarballPath)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		logger.From(ctx).Debug("writing package to disk", "path", tarballPath)
-		files, err := os.ReadDir(buildPath)
+
+		desc, err := src.Resolve(ctx, i)
 		if err != nil {
 			return err
 		}
-		var filePaths []string
-		for _, file := range files {
-			filePaths = append(filePaths, filepath.Join(buildPath, file.Name()))
+
+		desc.URLs = []string{
+			i,
 		}
-		err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
-		_, err = os.Stat(tarballPath)
+
+		writer, err := os.OpenFile(tarballPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return fmt.Errorf("unable to read the package archive: %w", err)
+			return err
 		}
+
+		opts := []archive.ExportOpt{
+			archive.WithSkipNonDistributableBlobs(),
+			archive.WithManifest(desc, i),
+			archive.WithPlatform(platforms.DefaultStrict()),
+		}
+
+		archive.Export(ctx, store, writer, opts...)
+
+		writer.Close()
 
 		p.imgFiles = append(p.imgFiles, cluster.UploadFile{
 			Name:           tarBallName,

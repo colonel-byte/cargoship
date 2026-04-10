@@ -54,6 +54,7 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.ValidateHosts{},
 			&phase.UploadFiles{},
 			&phase.RPMUploadFiles{},
+			&phase.APTUploadFiles{},
 
 			&phase.Unlock{
 				Cancel: lockPhase.Cancel,

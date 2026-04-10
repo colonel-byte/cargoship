@@ -1,0 +1,59 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+# yaml-language-server: $schema=../../schema/zarf-v1alpha1-distro-package-schema.json
+kind: ZarfDistro
+metadata:
+  name: upstream
+spec:
+  config:
+    os:
+      apt:
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/cri-tools_1.35.0-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/cri-tools_1.35.0-1.1_amd64.deb
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubernetes-cni_1.8.0-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubernetes-cni_1.8.0-1.1_amd64.deb
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.3-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubeadm_1.35.3-1.1_amd64.deb
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.3-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubelet_1.35.3-1.1_amd64.deb
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.3-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubectl_1.35.3-1.1_amd64.deb
+        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.2.2-1~debian.13~trixie_amd64.deb
+          target: /var/lib/kubernetes/deb/containerd.io_2.2.2-1~debian.13~trixie_amd64.deb
+      rpm:
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/cri-tools-0:1.35.0-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/cri-tools-0:1.35.0-150500.1.1.x86_64.rpm
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-0:1.35.2-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubeadm-0:1.35.2-150500.1.1.x86_64.rpm
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-0:1.35.2-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubectl-0:1.35.2-150500.1.1.x86_64.rpm
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.3-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubelet-1.35.3-150500.1.1.x86_64.rpm
+        - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubernetes-cni-0:1.8.0-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubernetes-cni-0:1.8.0-150500.1.1.x86_64.rpm
+        - source: https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.2.2-1.el9.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/containerd.io-2.2.2-1.el9.x86_64.rpm
+    imageConfig:
+      compression: none
+      path: /etc/kubernetes/images
+      images:
+        - registry.k8s.io/kube-apiserver:v1.35.3
+        - registry.k8s.io/kube-controller-manager:v1.35.3
+        - registry.k8s.io/kube-scheduler:v1.35.3
+        - registry.k8s.io/kube-proxy:v1.35.3
+        - registry.k8s.io/coredns/coredns:v1.13.1
+        - registry.k8s.io/pause:3.10.1
+        - registry.k8s.io/etcd:3.6.6-0

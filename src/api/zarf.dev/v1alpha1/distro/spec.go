@@ -44,7 +44,7 @@ type ZarfDistroBuildData struct {
 }
 
 type ZarfDistroSpec struct {
-	Actions ZarfDistroActions `json:"actions"`
+	Actions ZarfDistroActions `json:"actions,omitempty"`
 	Config  ZarfDistroConfig  `json:"config"`
 }
 

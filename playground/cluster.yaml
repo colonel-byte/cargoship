@@ -53,64 +53,64 @@ spec:
   hosts:
     - role: controller
       hostname: distro-kc01
-      ssh:
+      openSSH:
         address: 127.0.0.1
         user: root
         port: 3000
         keyPath: ~/.ssh/id_ed25519
-    - role: controller
-      hostname: distro-kc02
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3001
-        keyPath: ~/.ssh/id_ed25519
-    - role: controller
-      hostname: distro-kc03
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3002
-        keyPath: ~/.ssh/id_ed25519
-    - role: worker
-      hostname: distro-ki01
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3003
-        keyPath: ~/.ssh/id_ed25519
-    - role: worker
-      hostname: distro-ki02
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3004
-        keyPath: ~/.ssh/id_ed25519
-    - role: worker
-      hostname: distro-ki03
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3005
-        keyPath: ~/.ssh/id_ed25519
-    - role: worker
-      hostname: distro-km01
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3006
-        keyPath: ~/.ssh/id_ed25519
-    - role: worker
-      hostname: distro-km02
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3007
-        keyPath: ~/.ssh/id_ed25519
-    - role: worker
-      hostname: distro-km03
-      ssh:
-        address: 127.0.0.1
-        user: root
-        port: 3008
-        keyPath: ~/.ssh/id_ed25519
+    # - role: controller
+    #   hostname: distro-kc02
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3001
+    #     keyPath: ~/.ssh/id_ed25519
+    # - role: controller
+    #   hostname: distro-kc03
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3002
+    #     keyPath: ~/.ssh/id_ed25519
+    # - role: worker
+    #   hostname: distro-ki01
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3003
+    #     keyPath: ~/.ssh/id_ed25519
+    # - role: worker
+    #   hostname: distro-ki02
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3004
+    #     keyPath: ~/.ssh/id_ed25519
+    # - role: worker
+    #   hostname: distro-ki03
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3005
+    #     keyPath: ~/.ssh/id_ed25519
+    # - role: worker
+    #   hostname: distro-km01
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3006
+    #     keyPath: ~/.ssh/id_ed25519
+    # - role: worker
+    #   hostname: distro-km02
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3007
+    #     keyPath: ~/.ssh/id_ed25519
+    # - role: worker
+    #   hostname: distro-km03
+    #   ssh:
+    #     address: 127.0.0.1
+    #     user: root
+    #     port: 3008
+    #     keyPath: ~/.ssh/id_ed25519
