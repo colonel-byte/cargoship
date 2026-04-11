@@ -18,6 +18,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/config"
 	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -48,20 +50,42 @@ func NewApply(opts ApplyOptions) *Apply {
 			lockPhase,
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
-			// &phase.InstallFapolicy{},
-			// &phase.PrepareFapolicy{},
+			&phase.PrepareFapolicy{},
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
 			&phase.UploadFiles{},
-			&phase.RPMUploadFiles{},
-			&phase.APTUploadFiles{},
-
-			&phase.Unlock{
-				Cancel: lockPhase.Cancel,
-			},
-			&phase.Disconnect{},
 		},
 	}
+
+	if len(opts.Manager.GetDistroOSFiles().Filter(func(f *distro.ZarfFile) bool {
+		return f.Selector.Package == config.SelectorRPM
+	})) > 0 {
+		apply.Phases = append(apply.Phases, &phase.RPMUploadFiles{})
+	}
+
+	if len(opts.Manager.GetDistroOSFiles().Filter(func(f *distro.ZarfFile) bool {
+		return f.Selector.Package == config.SelectorAPT
+	})) > 0 {
+		apply.Phases = append(apply.Phases, &phase.APTUploadFiles{})
+	}
+
+	if len(opts.Manager.GetDistroOSFiles().Filter(func(f *distro.ZarfFile) bool {
+		return f.Selector.Package == config.SelectorAPT
+	})) > 0 {
+		apply.Phases = append(apply.Phases, &phase.BINUploadFiles{})
+	}
+
+	postInstallPhases := []phase.Phase{
+		&phase.Unlock{
+			Cancel: lockPhase.Cancel,
+		},
+		&phase.Disconnect{},
+	}
+
+	for _, p := range postInstallPhases {
+		apply.Phases = append(apply.Phases, p)
+	}
+
 	return apply
 }
 

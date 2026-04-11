@@ -65,6 +65,7 @@ type ZarfHostMetadata struct {
 	NeedsUpgrade     bool
 	MachineID        string
 	DryRunFakeLeader bool
+	EngineUploaded   bool
 }
 
 func (h *ZarfHost) requireConfigurer() (configurer.Configurer, error) {

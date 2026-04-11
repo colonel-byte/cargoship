@@ -56,7 +56,7 @@ type ZarfDistroActions struct {
 
 type ZarfDistroConfig struct {
 	// Files are files that will be populated on the hosts, reguardless of what install method is used
-	Files        []ZarfFile            `json:"files,omitempty"`
+	Files        ZarfFiles             `json:"files,omitempty"`
 	ImagesConfig ZarfDistroImageConfig `json:"imageConfig,omitempty"`
 	OS           ZarfDistroOS          `json:"os,omitempty"`
 }
@@ -70,9 +70,7 @@ type ZarfDistroImageConfig struct {
 type ZarfDistroOS struct {
 	Sysctl    map[string]string `json:"sysctl,omitempty"`
 	FAPolicyd string            `json:"fapolicyd,omitempty"`
-	RPM       []ZarfFile        `json:"rpm,omitempty"`
-	APT       []ZarfFile        `json:"apt,omitempty"`
-	Binary    []ZarfFile        `json:"binary,omitempty"`
+	Files     ZarfFiles         `json:"files,omitempty"`
 }
 
 type ZarfFile struct {
@@ -86,8 +84,9 @@ type ZarfFile struct {
 }
 
 type ZarfBinarySelector struct {
-	Roles    []string `json:"roles,omitempty"`
-	Profiles []string `json:"profiles,omitempty" jsonschema:"enum=worker,enum=controller"`
+	Roles   []string `json:"roles,omitempty"`
+	Profile string   `json:"profile,omitempty" jsonschema:"enum=worker,enum=controller"`
+	Package string   `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
 }
 
 func (distro ZarfDistro) IsSBOMAble() bool {

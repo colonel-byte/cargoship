@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package distro
 
-const (
-	//keep-sorted start
-	FilesDir       = "files"
-	ImagesDir      = "images"
-	OSDir          = "os"
-	SelectorAPT    = "apt"
-	SelectorBIN    = "binary"
-	SelectorRPM    = "rpm"
-	TarBallDir     = "tar"
-	ZarfDistroYaml = "distro.yaml"
-	//keep-sorted end
-)
+type ZarfFiles []*ZarfFile
+
+// Filter returns a filtered list of Files. The filter function should return true for files matching the criteria.
+func (files ZarfFiles) Filter(filter func(f *ZarfFile) bool) ZarfFiles {
+	result := make(ZarfFiles, 0, len(files))
+
+	for _, f := range files {
+		if filter(f) {
+			result = append(result, f)
+		}
+	}
+
+	return result
+}

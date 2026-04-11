@@ -157,6 +157,10 @@ func (m *Manager) SetPhases(p Phases) {
 	m.phases = p
 }
 
+func (m *Manager) GetDistroOSFiles() apiDistro.ZarfFiles {
+	return m.Distro.Spec.Config.OS.Files
+}
+
 func (m *Manager) GetDistroBinaryName() string {
 	if m.DistroCfg.Binary != "" {
 		return m.DistroCfg.Binary

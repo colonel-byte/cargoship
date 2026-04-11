@@ -97,15 +97,20 @@
         "^x-": {}
       },
       "properties": {
-        "profiles": {
-          "items": {
-            "enum": [
-              "worker",
-              "controller"
-            ],
-            "type": "string"
-          },
-          "type": "array"
+        "package": {
+          "enum": [
+            "rpm",
+            "apt",
+            "binary"
+          ],
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "worker",
+            "controller"
+          ],
+          "type": "string"
         },
         "roles": {
           "items": {
@@ -463,22 +468,10 @@
         "^x-": {}
       },
       "properties": {
-        "apt": {
-          "items": {
-            "$ref": "#/$defs/ZarfFile"
-          },
-          "type": "array"
-        },
-        "binary": {
-          "items": {
-            "$ref": "#/$defs/ZarfFile"
-          },
-          "type": "array"
-        },
         "fapolicyd": {
           "type": "string"
         },
-        "rpm": {
+        "files": {
           "items": {
             "$ref": "#/$defs/ZarfFile"
           },

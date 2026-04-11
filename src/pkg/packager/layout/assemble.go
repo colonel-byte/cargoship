@@ -66,13 +66,10 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath strin
 	}
 
 	for filesIdx, file := range d.Spec.Config.Files {
-		fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, file)
+		fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file)
 	}
-	for filesIdx, file := range d.Spec.Config.OS.RPM {
-		fileGrabber(ctx, string(config.RPMDir), buildPath, distroPath, filesIdx, file)
-	}
-	for filesIdx, file := range d.Spec.Config.OS.APT {
-		fileGrabber(ctx, string(config.APTDir), buildPath, distroPath, filesIdx, file)
+	for filesIdx, file := range d.Spec.Config.OS.Files {
+		fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file)
 	}
 
 	componentImages := []transform.Image{}

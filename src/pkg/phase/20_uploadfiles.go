@@ -38,7 +38,7 @@ type UploadFiles struct {
 	GenericPhase
 
 	hosts    cluster.ZarfHosts
-	disFiles []distro.ZarfFile
+	disFiles distro.ZarfFiles
 	imgFiles []cluster.UploadFile
 }
 

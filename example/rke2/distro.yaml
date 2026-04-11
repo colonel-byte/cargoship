@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ---
-# yaml-language-server: $schema=zarf-v1alpha1-distro-package-schema.json
+# yaml-language-server: $schema=../../schema/zarf-v1alpha1-distro-package-schema.json
 kind: ZarfDistro
 metadata:
   name: rancher-rke2
@@ -47,34 +47,43 @@ spec:
         allow perm=any all : dir=/opt/cni/
         allow perm=any all : dir=/run/k3s/
         allow perm=any all : dir=/var/lib/kubelet/
-      rpm:
+      files:
         - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-common-1.35.2~rke2r1-0.el9.x86_64.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-common-1.35.2~rke2r1-0.el9.x86_64.rpm
+          selector:
+            package: rpm
         - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
+          selector:
+            package: rpm
         - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-server-1.35.2~rke2r1-0.el9.x86_64.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-server-1.35.2~rke2r1-0.el9.x86_64.rpm
           selector:
-            profiles:
-              - controller
+            package: rpm
+            profile: controller
         - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-agent-1.35.2~rke2r1-0.el9.x86_64.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-agent-1.35.2~rke2r1-0.el9.x86_64.rpm
           selector:
-            profiles:
-              - worker
-      binary:
+            package: rpm
+            profile: worker
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
+          selector:
+            package: binary
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
+          selector:
+            package: binary
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
+          selector:
+            package: binary
     files:
       - source: cache.json
         target: /var/lib/rancher/rke2/agent/images/.cache.json

@@ -20,32 +20,55 @@ metadata:
 spec:
   config:
     os:
-      apt:
+      files:
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/cri-tools_1.35.0-1.1_amd64.deb
           target: /var/lib/kubernetes/deb/cri-tools_1.35.0-1.1_amd64.deb
+          selector:
+            package: apt
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubernetes-cni_1.8.0-1.1_amd64.deb
           target: /var/lib/kubernetes/deb/kubernetes-cni_1.8.0-1.1_amd64.deb
+          selector:
+            package: apt
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.3-1.1_amd64.deb
           target: /var/lib/kubernetes/deb/kubeadm_1.35.3-1.1_amd64.deb
+          selector:
+            package: apt
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.3-1.1_amd64.deb
           target: /var/lib/kubernetes/deb/kubelet_1.35.3-1.1_amd64.deb
+          selector:
+            package: apt
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.3-1.1_amd64.deb
           target: /var/lib/kubernetes/deb/kubectl_1.35.3-1.1_amd64.deb
+          selector:
+            package: apt
         - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.2.2-1~debian.13~trixie_amd64.deb
           target: /var/lib/kubernetes/deb/containerd.io_2.2.2-1~debian.13~trixie_amd64.deb
-      rpm:
+          selector:
+            package: apt
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/cri-tools-0:1.35.0-150500.1.1.x86_64.rpm
           target: /var/lib/kubernetes/rpm/cri-tools-0:1.35.0-150500.1.1.x86_64.rpm
+          selector:
+            package: rpm
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-0:1.35.2-150500.1.1.x86_64.rpm
           target: /var/lib/kubernetes/rpm/kubeadm-0:1.35.2-150500.1.1.x86_64.rpm
+          selector:
+            package: rpm
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-0:1.35.2-150500.1.1.x86_64.rpm
           target: /var/lib/kubernetes/rpm/kubectl-0:1.35.2-150500.1.1.x86_64.rpm
+          selector:
+            package: rpm
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.3-150500.1.1.x86_64.rpm
           target: /var/lib/kubernetes/rpm/kubelet-1.35.3-150500.1.1.x86_64.rpm
+          selector:
+            package: rpm
         - source: https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubernetes-cni-0:1.8.0-150500.1.1.x86_64.rpm
           target: /var/lib/kubernetes/rpm/kubernetes-cni-0:1.8.0-150500.1.1.x86_64.rpm
+          selector:
+            package: rpm
         - source: https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.2.2-1.el9.x86_64.rpm
           target: /var/lib/kubernetes/rpm/containerd.io-2.2.2-1.el9.x86_64.rpm
+          selector:
+            package: rpm
     imageConfig:
       compression: none
       path: /etc/kubernetes/images

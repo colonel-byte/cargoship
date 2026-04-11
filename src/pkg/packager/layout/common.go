@@ -77,9 +77,6 @@ func LoadFromDir(ctx context.Context, dirPath string, opts DistroLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 	disLayout := &DistroLayout{
 		dirPath: dirPath,
 		Distro:  dis,
