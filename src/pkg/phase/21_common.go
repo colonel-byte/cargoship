@@ -22,6 +22,7 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -46,6 +47,21 @@ type UploadFilesCommon struct {
 
 	filesWorkers []cluster.UploadFile
 	filesControl []cluster.UploadFile
+}
+
+func (p *UploadFilesCommon) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+	p.distro = p.manager.Distro.Spec.Config.OS.Files
+	hosts := p.manager.Config.Spec.Hosts.Filter(utils.FilterEnterpriseLinux)
+
+	p.workers = hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return !h.IsController()
+	})
+
+	p.control = hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return h.IsController()
+	})
+
+	return nil
 }
 
 // Run the phase
@@ -74,7 +90,7 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 }
 
 func (p *UploadFilesCommon) blockOtherInstalls(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Warn("disabling host from other installs", "host", h)
+	logger.From(ctx).Debug("disabling host from other installs", "host", h)
 	h.Metadata.EngineUploaded = true
 	return nil
 }
@@ -107,7 +123,7 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 		switch f.Selector.Package {
 		case selector:
 			if f.Selector.Profile == "" || f.Selector.Profile == profile {
-				logger.From(ctx).Info("determined this file needs to be uploaded", "file", filepath.Base(f.Target))
+				logger.From(ctx).Debug("determined this file needs to be uploaded", "file", filepath.Base(f.Target))
 				files = append(files, cluster.UploadFile{
 					Name:            filepath.Base(f.Target),
 					DestinationFile: f.Target,
@@ -119,7 +135,7 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 				})
 			}
 		default:
-			logger.From(ctx).Info("not selected for upload", "file", filepath.Base(f.Target))
+			logger.From(ctx).Debug("not selected for upload", "file", filepath.Base(f.Target))
 		}
 	}
 

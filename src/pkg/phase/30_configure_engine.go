@@ -18,26 +18,23 @@ import (
 	"context"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/k0sproject/dig"
 )
 
-// UploadFiles implements a phase which upload files to hosts
-type BINUploadFiles struct {
-	UploadFilesCommon
+// ConfigureEngine writes the k0s configuration to host k0s config dir
+type ConfigureEngine struct {
+	GenericPhase
+	leader        *cluster.ZarfHost
+	configSource  int
+	newBaseConfig dig.Mapping
+	hosts         cluster.ZarfHosts
 }
 
-// Title for the phase
-func (p *BINUploadFiles) Title() string {
-	return "Upload files to hosts -- Binaries"
+// Title returns the phase title
+func (p *ConfigureEngine) Title() string {
+	return "Configure engine"
 }
 
-// Prepare the phase
-func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.UploadFilesCommon.Prepare(ctx, c, d)
-
-	p.filesControl = p.getProfileFiles(ctx, config.SelectorBIN, cluster.ROLE_CONTROLLER)
-	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorBIN, cluster.ROLE_WORKER)
-
+func (p *ConfigureEngine) Run(ctx context.Context) error {
 	return nil
 }

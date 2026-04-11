@@ -20,7 +20,6 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/config"
-	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 )
 
 // UploadFiles implements a phase which upload files to hosts
@@ -35,24 +34,10 @@ func (p *RPMUploadFiles) Title() string {
 
 // Prepare the phase
 func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.distro = p.manager.Distro.Spec.Config.OS.Files
-	hosts := p.manager.Config.Spec.Hosts.Filter(utils.FilterEnterpriseLinux)
-
-	p.workers = hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.IsController()
-	})
-
-	p.control = hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.IsController()
-	})
+	p.UploadFilesCommon.Prepare(ctx, c, d)
 
 	p.filesControl = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_CONTROLLER)
 	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_WORKER)
 
 	return nil
-}
-
-// ShouldRun is true when there are workers
-func (p *RPMUploadFiles) ShouldRun() bool {
-	return (len(p.control) + len(p.workers)) > 0
 }
