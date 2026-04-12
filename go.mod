@@ -7,11 +7,15 @@ replace github.com/k0sproject/rig => github.com/colonel-byte/rig v0.21.3
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
+	github.com/blushft/go-diagrams v0.0.0-20250322201119-d91ac4ca5de4
 	github.com/bmatcuk/doublestar/v4 v4.10.0
+	github.com/containerd/containerd/v2 v2.2.1
+	github.com/containerd/platforms v1.0.0-rc.2
 	github.com/creasty/defaults v1.8.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/goccy/go-yaml v1.19.2
 	github.com/invopop/jsonschema v0.13.0
+	github.com/k0sproject/dig v0.4.0
 	github.com/k0sproject/rig v0.21.2
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
@@ -19,6 +23,7 @@ require (
 	github.com/stoewer/go-strcase v1.3.1
 	github.com/stretchr/testify v1.11.1
 	github.com/zarf-dev/zarf v0.74.0
+	gopkg.in/yaml.v2 v2.4.0
 	oras.land/oras-go/v2 v2.6.0
 )
 
@@ -155,7 +160,6 @@ require (
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/blushft/go-diagrams v0.0.0-20250322201119-d91ac4ca5de4 // indirect
 	github.com/bmatcuk/doublestar/v2 v2.0.4 // indirect
 	github.com/bodgit/ntlmssp v0.0.0-20240506230425-31973bb52d9b // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
@@ -191,13 +195,11 @@ require (
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/containerd v1.7.29 // indirect
 	github.com/containerd/containerd/api v1.10.0 // indirect
-	github.com/containerd/containerd/v2 v2.2.1 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
-	github.com/containerd/platforms v1.0.0-rc.2 // indirect
 	github.com/containerd/plugin v1.0.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.2 // indirect
 	github.com/containerd/ttrpc v1.2.7 // indirect
@@ -365,7 +367,6 @@ require (
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/k0sproject/dig v0.4.0 // indirect
 	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/kastenhq/goversion v0.0.0-20230811215019-93b2f8823953 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
