@@ -59,6 +59,11 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.BINUploadFiles{},
 
 			&phase.ConfigureEngine{},
+			&phase.InitializeEngine{},
+			&phase.InitializeControllers{},
+			&phase.InitializeWorkers{},
+			&phase.UpgradeController{},
+			&phase.UpgradeWorkers{},
 
 			&phase.Unlock{
 				Cancel: lockPhase.Cancel,

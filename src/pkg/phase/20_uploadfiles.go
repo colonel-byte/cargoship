@@ -94,13 +94,13 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			return err
 		}
 
-		opts := []archive.ExportOpt{
-			archive.WithSkipNonDistributableBlobs(),
+		archive.Export(
+			ctx,
+			store,
+			writer,
 			archive.WithManifest(desc, i),
 			archive.WithPlatform(platforms.DefaultStrict()),
-		}
-
-		archive.Export(ctx, store, writer, opts...)
+		)
 
 		writer.Close()
 
