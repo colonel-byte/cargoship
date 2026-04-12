@@ -381,10 +381,7 @@
       },
       "properties": {
         "files": {
-          "items": {
-            "$ref": "#/$defs/ZarfFile"
-          },
-          "type": "array"
+          "$ref": "#/$defs/ZarfFiles"
         },
         "imageConfig": {
           "$ref": "#/$defs/ZarfDistroImageConfig"
@@ -472,10 +469,7 @@
           "type": "string"
         },
         "files": {
-          "items": {
-            "$ref": "#/$defs/ZarfFile"
-          },
-          "type": "array"
+          "$ref": "#/$defs/ZarfFiles"
         },
         "sysctl": {
           "additionalProperties": {
@@ -540,6 +534,12 @@
         "target"
       ],
       "type": "object"
+    },
+    "ZarfFiles": {
+      "items": {
+        "$ref": "#/$defs/ZarfFile"
+      },
+      "type": "array"
     }
   },
   "$id": "https://github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro/zarf-distro",
