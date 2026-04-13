@@ -15,6 +15,7 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
 	gos "os"
 	"time"
@@ -33,6 +34,9 @@ const (
 	ROLE_WORKER            = "worker"
 	ROLE_ERROR             = "error"
 )
+
+// ErrCommandFailed is returned when a command fails
+var ErrCommandFailed = errors.New("command failed")
 
 type ZarfHost struct {
 	rig.Connection `json:",inline"`
@@ -172,10 +176,6 @@ func (h *ZarfHost) ResolveConfigurer() error {
 		return nil
 	}
 
-	if h.InstallPath != "" {
-		h.Configurer.SetPath("K0sBinaryPath", h.InstallPath)
-	}
-
 	return fmt.Errorf("unsupported OS")
 }
 
@@ -204,4 +204,9 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 	}
 
 	return false
+}
+
+// WriteFile writes file to host with given contents. Do not use for large files.
+func (h *ZarfHost) WriteFile(path string, data string, permissions string) error {
+	return h.Configurer.WriteFile(h, path, data, permissions)
 }

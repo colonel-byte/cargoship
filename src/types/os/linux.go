@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"al.essio.dev/pkg/shellescape"
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"
 )
@@ -293,15 +292,14 @@ func (l *Linux) GetDistroService(key string) (string, error) {
 	return "", fmt.Errorf("the service %s does not exist in the service map", key)
 }
 
-// ConfigureDistroServices populates the services map for distro
-func (l *Linux) ConfigureDistroServices(services map[string]string) {
-	l.services = services
-}
-
-// ConfigureDistro Allows specific Hosts to apply specific overrides
-func (l *Linux) ConfigureDistro(dis distro.Distro) {
-	l.ConfigureDistroServices(dis.GetServices())
-}
+// Need to address cycle importing....
+// // ConfigureDistro Allows specific Hosts to apply specific overrides
+// func (l *Linux) ConfigureDistro(dis distro.Distro) {
+// 	l.ConfigureDistroServices(map[string]string{
+// 		distro.WorkerService:     dis.GetWorkerService(),
+// 		distro.ControllerService: dis.GetControllerService(),
+// 	})
+// }
 
 func (l *Linux) SetPath(key, value string) {
 	l.paths[key] = value

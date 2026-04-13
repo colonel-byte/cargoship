@@ -16,10 +16,13 @@ package phase
 
 import (
 	"context"
+
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
 )
 
 type InitializeWorkers struct {
 	GenericPhase
+	Distro distro.Distro
 }
 
 func (p *InitializeWorkers) Title() string {

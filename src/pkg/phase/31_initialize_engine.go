@@ -16,10 +16,13 @@ package phase
 
 import (
 	"context"
+
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
 )
 
 type InitializeEngine struct {
 	GenericPhase
+	Distro distro.Distro
 }
 
 // Title returns the phase title

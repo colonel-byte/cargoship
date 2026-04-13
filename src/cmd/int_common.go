@@ -76,13 +76,10 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 	return &phase.Manager{
 		Config:            &cluster,
 		Distro:            &distroLayout.Distro,
+		DistroID:          distroLayout.Distro.Spec.Type,
 		TempDirectory:     distroLayout.DirPath(),
 		Concurrency:       opt.concurrency,
 		ConcurrentUploads: opt.concurrency,
 		DryRun:            false,
-		DistroCfg: phase.ManagerDistroConfig{
-			BinaryDir: "/usr/local/bin",
-			Binary:    "rke2",
-		},
 	}, nil
 }

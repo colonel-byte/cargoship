@@ -1,5 +1,8 @@
 {
   "$defs": {
+    "Mapping": {
+      "type": "object"
+    },
     "SetValue": {
       "additionalProperties": false,
       "patternProperties": {
@@ -380,6 +383,9 @@
         "^x-": {}
       },
       "properties": {
+        "engine": {
+          "$ref": "#/$defs/Mapping"
+        },
         "files": {
           "$ref": "#/$defs/ZarfFiles"
         },
@@ -491,9 +497,18 @@
         },
         "config": {
           "$ref": "#/$defs/ZarfDistroConfig"
+        },
+        "type": {
+          "enum": [
+            "rke2",
+            "k3s",
+            "upstream"
+          ],
+          "type": "string"
         }
       },
       "required": [
+        "type",
         "config"
       ],
       "type": "object"

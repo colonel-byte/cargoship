@@ -19,28 +19,26 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-const (
-	Binary            = "Binary"
-	BinaryDir         = "BinDir"
-	Config            = "Config"
-	Token             = "Token"
-	Data              = "DataDir"
-	WorkerService     = "Worker"
-	ControllerService = "Control"
-)
+type RancherCommon struct {
+	Common
+}
 
-type Distro interface {
-	//keep-sorted start
-	BinaryName() string
-	BinaryPath() string
-	ConfigPath() string
-	ConfigureEngine(context.Context, cluster.ZarfHost, distro.ZarfDistro) error
-	DataDirDefaultPath() string
-	GetControllerService() string
-	GetWorkerService() string
-	JoinTokenPath() string
-	SetPath(string, string) error
-	//keep-sorted end
+const test = `this is a test of things`
+
+// ConfigureEngine implements Distro.
+func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, dis distro.ZarfDistro) error {
+	newBaseConfig := dis.Spec.Config.Engine.Dup()
+
+	logger.From(ctx).Warn("test", newBaseConfig.Dig(config.EngineConfig))
+
+	// err := host.WriteFile(r.Config+".test", test, "0600")
+	// if err != nil {
+	// 	return err
+	// }
+
+	return nil
 }

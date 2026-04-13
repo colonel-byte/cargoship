@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
@@ -117,11 +116,11 @@ type Manager struct {
 	phases            Phases
 	Config            *cluster.ZarfCluster
 	Distro            *apiDistro.ZarfDistro
+	DistroID          string
 	Concurrency       int
 	ConcurrentUploads int
 	DryRun            bool
 	Writer            io.Writer
-	DistroCfg         ManagerDistroConfig
 	TempDirectory     string
 	dryMessages       map[string][]string
 	dryMu             sync.Mutex
@@ -159,27 +158,6 @@ func (m *Manager) SetPhases(p Phases) {
 
 func (m *Manager) GetDistroOSFiles() apiDistro.ZarfFiles {
 	return m.Distro.Spec.Config.OS.Files
-}
-
-func (m *Manager) GetDistroBinaryName() string {
-	if m.DistroCfg.Binary != "" {
-		return m.DistroCfg.Binary
-	}
-	return ""
-}
-
-func (m *Manager) GetDistroBinaryDir() string {
-	if m.DistroCfg.BinaryDir != "" {
-		return m.DistroCfg.BinaryDir
-	}
-	return ""
-}
-
-func (m *Manager) GetDistroBinaryFull() string {
-	if m.DistroCfg.BinaryDir != "" && m.DistroCfg.Binary != "" {
-		return filepath.Join(m.DistroCfg.BinaryDir, m.DistroCfg.Binary)
-	}
-	return ""
 }
 
 type errorfunc func() error

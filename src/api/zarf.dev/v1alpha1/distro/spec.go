@@ -16,6 +16,7 @@ package distro
 
 import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1"
+	"github.com/k0sproject/dig"
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
@@ -44,6 +45,7 @@ type ZarfDistroBuildData struct {
 }
 
 type ZarfDistroSpec struct {
+	Type    string            `json:"type" jsonschema:"enum=rke2,enum=k3s,enum=upstream"`
 	Actions ZarfDistroActions `json:"actions,omitempty"`
 	Config  ZarfDistroConfig  `json:"config"`
 }
@@ -55,10 +57,11 @@ type ZarfDistroActions struct {
 }
 
 type ZarfDistroConfig struct {
-	// Files are files that will be populated on the hosts, reguardless of what install method is used
+	// Files are files that will be populated on the hosts, regardless of what install method is used
 	Files        ZarfFiles             `json:"files,omitempty"`
 	ImagesConfig ZarfDistroImageConfig `json:"imageConfig,omitempty"`
 	OS           ZarfDistroOS          `json:"os,omitempty"`
+	Engine       dig.Mapping           `json:"engine,omitempty"`
 }
 
 type ZarfDistroImageConfig struct {

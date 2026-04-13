@@ -18,6 +18,7 @@ kind: ZarfDistro
 metadata:
   name: upstream
 spec:
+  type: upstream
   config:
     os:
       files:

@@ -19,12 +19,10 @@ import (
 	"flag"
 	"fmt"
 	goos "os"
-	"sort"
 
 	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/colonel-byte/zarf-distro/src/types/distro/registry"
 	"github.com/colonel-byte/zarf-distro/src/types/os"
-	"github.com/colonel-byte/zarf-distro/src/types/os/linux"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
 	ros "github.com/k0sproject/rig/os"
@@ -155,28 +153,6 @@ func Distro(s string) (distro.Distro, error) {
 	}
 	d := ds().(distro.Distro)
 	return d, nil
-}
-
-func OSPlay() error {
-	d, err := Distro(distro.DISTRO_ID_RKE2)
-	if err != nil {
-		return err
-	}
-	o, err := OS(linux.OS_KIND_FLATCAR)
-	if err != nil {
-		return err
-	}
-	o.ConfigureDistro(d)
-	keys := make([]string, 0, len(d.GetPaths()))
-	for k := range d.GetPaths() {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		fmt.Printf("%s\t:\t%s\n", k, d.GetPaths()[k])
-	}
-	fmt.Println(d.BinaryPath())
-	return nil
 }
 
 func OS(s string) (os.Configurer, error) {

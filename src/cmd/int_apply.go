@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	INSTALL_APPLY_CONFIG = "config"
+	INSTALL_APPLY_CONFIG      = "config"
+	INSTALL_APPLY_CONCURRENCY = "concurrency"
 )
 
 type installApplyOptions struct {
@@ -45,7 +46,7 @@ func newInstallApplyCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&o.concurrency, "concurrency", v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().IntVar(&o.concurrency, INSTALL_APPLY_CONCURRENCY, v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, INSTALL_APPLY_CONFIG, "", lang.CmdInstallFlagConfig)
 
 	val, err := cmd.Flags().GetString(ROOT_LOGGING_LEVEL)
@@ -90,9 +91,7 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		Manager: manager,
 	}
 
-	applyAction := action.NewApply(applyOpts)
-
-	if err := applyAction.Run(ctx); err != nil {
+	if err := action.NewApply(applyOpts).Run(ctx); err != nil {
 		return err
 	}
 

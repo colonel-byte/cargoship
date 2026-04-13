@@ -17,7 +17,6 @@ package os
 import (
 	"time"
 
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"
 )
@@ -33,8 +32,6 @@ type Configurer interface {
 	Chown(os.Host, string, string, ...exec.Option) error
 	CleanupServiceEnvironment(os.Host, string) error
 	CommandExist(os.Host, string) bool
-	ConfigureDistro(distro.Distro)
-	ConfigureDistroServices(map[string]string)
 	DaemonReload(os.Host) error
 	DeleteDir(os.Host, string, ...exec.Option) error
 	DeleteFile(os.Host, string) error
@@ -50,6 +47,7 @@ type Configurer interface {
 	Hostname(os.Host) string
 	InstallPackage(os.Host, ...string) error
 	Kind() string
+	LongHostname(os.Host) string
 	LookPath(os.Host, string) (string, error)
 	MachineID(os.Host) (string, error)
 	MkDir(os.Host, string, ...exec.Option) error
@@ -77,6 +75,8 @@ type Configurer interface {
 	UpsertFile(os.Host, string, string) error
 	WriteFile(os.Host, string, string, string) error
 	//keep-sorted end
+	// ConfigureDistro(distro.Distro)
+	// ConfigureDistroServices(map[string]string)
 }
 
 // HostValidator allows a Configurer to implement host-specific validation logic.

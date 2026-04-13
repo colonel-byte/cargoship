@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distro/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -31,6 +33,8 @@ type ApplyOptions struct {
 	NoWait bool
 	// NoDrain skips draining worker nodes
 	NoDrain bool
+	// DistroID is used to choose the correct distro builder
+	DistroID string
 }
 
 type Apply struct {
@@ -39,6 +43,13 @@ type Apply struct {
 }
 
 func NewApply(opts ApplyOptions) *Apply {
+	disBuilder, err := registry.GetDistroModuleBuilder(opts.DistroID)
+	if err != nil {
+		return nil
+	}
+
+	d := disBuilder().(distro.Distro)
+
 	lockPhase := &phase.Lock{}
 	apply := &Apply{
 		ApplyOptions: opts,
@@ -58,12 +69,24 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.APTUploadFiles{},
 			&phase.BINUploadFiles{},
 
-			&phase.ConfigureEngine{},
-			&phase.InitializeEngine{},
-			&phase.InitializeControllers{},
-			&phase.InitializeWorkers{},
-			&phase.UpgradeController{},
-			&phase.UpgradeWorkers{},
+			&phase.ConfigureEngine{
+				Distro: d,
+			},
+			&phase.InitializeEngine{
+				Distro: d,
+			},
+			&phase.InitializeControllers{
+				Distro: d,
+			},
+			&phase.InitializeWorkers{
+				Distro: d,
+			},
+			&phase.UpgradeController{
+				Distro: d,
+			},
+			&phase.UpgradeWorkers{
+				Distro: d,
+			},
 
 			&phase.Unlock{
 				Cancel: lockPhase.Cancel,
@@ -80,9 +103,8 @@ func (a Apply) Run(ctx context.Context) error {
 	start := time.Now()
 	phase.NoWait = a.NoWait
 	a.Manager.SetPhases(a.Phases)
-	var result error
 
-	if result = a.Manager.Run(ctx); result != nil {
+	if result := a.Manager.Run(ctx); result != nil {
 		l.Info("apply failed", "error", result)
 		return result
 	}

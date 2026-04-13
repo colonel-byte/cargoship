@@ -16,14 +16,17 @@ package phase
 
 import (
 	"context"
+
+	"github.com/colonel-byte/zarf-distro/src/types/distro"
 )
 
 type UpgradeController struct {
 	GenericPhase
+	Distro distro.Distro
 }
 
 func (p *UpgradeController) Title() string {
-	return "Upgrade Worker"
+	return "Upgrade Controller"
 }
 
 func (p *UpgradeController) Run(ctx context.Context) error {

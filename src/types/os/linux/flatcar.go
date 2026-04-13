@@ -17,7 +17,6 @@ package linux
 import (
 	"errors"
 
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
 	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/os"
@@ -50,8 +49,8 @@ func (l *Flatcar) InstallPackage(h os.Host, pkg ...string) error {
 	return errors.New("FlatcarContainerLinux does not support installing packages manually")
 }
 
-// HostPath returns the given path unchanged for linux hosts
-func (l *Flatcar) ConfigureDistro(dis distro.Distro) {
-	dis.SetPath(distro.BinaryDir, "/opt/bin")
-	l.ConfigureDistroServices(dis.GetServices())
-}
+// // HostPath returns the given path unchanged for linux hosts
+// func (l *Flatcar) ConfigureDistro(dis distro.Distro) {
+// 	l.BaseLinux.ConfigureDistro(dis)
+// 	dis.SetPath(distro.BinaryDir, "/opt/bin")
+// }

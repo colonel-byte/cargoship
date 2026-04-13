@@ -19,10 +19,11 @@ import (
 )
 
 type ZarfCluster struct {
-	APIVersion string                  `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind       v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfCluster"`
-	Metadata   ZarfClusterMetadata     `json:"metadata"`
-	Spec       ZarfClusterSpec         `json:"spec"`
+	APIVersion      string                  `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+	Kind            v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfCluster"`
+	Metadata        ZarfClusterMetadata     `json:"metadata"`
+	Spec            ZarfClusterSpec         `json:"spec"`
+	RuntimeMetadata ZarfRuntimeMeta         `json:"-"`
 }
 
 type ZarfClusterMetadata struct {
@@ -32,13 +33,16 @@ type ZarfClusterMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
+type ZarfRuntimeMeta struct {
+	ControllerTLS []string
+}
+
 type ZarfClusterSpec struct {
 	Config ZarfClusterConfig `json:"config"`
 	Hosts  ZarfHosts         `json:"hosts" jsonschema:"minItems=1"`
 }
 
 type ZarfClusterConfig struct {
-	Type       string                  `json:"type" jsonschema:"enum=rke2,enum=k3s"`
 	Registries []ZarfClusterRegistries `json:"registries,omitempty"`
 	Profiles   []ZarfClusterProfiles   `json:"profiles,omitempty"`
 }

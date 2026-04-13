@@ -113,6 +113,10 @@ func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath strin
 		}
 	}
 
+	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.After, nil, nil); err != nil {
+		return nil, fmt.Errorf("unable to run component before action: %w", err)
+	}
+
 	if !opts.SkipSBOM && d.IsSBOMAble() {
 		l.Info("generating SBOM")
 		l.Info("TODO generate sbom....")

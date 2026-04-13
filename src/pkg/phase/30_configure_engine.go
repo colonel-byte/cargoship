@@ -18,16 +18,35 @@ import (
 	"context"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/k0sproject/dig"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // ConfigureEngine writes the k0s configuration to host k0s config dir
 type ConfigureEngine struct {
 	GenericPhase
-	leader        *cluster.ZarfHost
-	configSource  int
-	newBaseConfig dig.Mapping
-	hosts         cluster.ZarfHosts
+	Distro  tdis.Distro
+	leader  *cluster.ZarfHost
+	hosts   cluster.ZarfHosts
+	control cluster.ZarfHosts
+}
+
+// Prepare the phase
+func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+	p.GenericPhase.Prepare(c, d)
+	p.hosts = p.manager.Config.Spec.Hosts
+	p.control = p.hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return h.IsController()
+	})
+
+	for _, h := range p.control {
+		p.manager.Config.RuntimeMetadata.ControllerTLS = append(p.manager.Config.RuntimeMetadata.ControllerTLS, h.Configurer.Hostname(h))
+		p.manager.Config.RuntimeMetadata.ControllerTLS = append(p.manager.Config.RuntimeMetadata.ControllerTLS, h.Configurer.LongHostname(h))
+		p.manager.Config.RuntimeMetadata.ControllerTLS = append(p.manager.Config.RuntimeMetadata.ControllerTLS, h.Address())
+	}
+
+	return nil
 }
 
 // Title returns the phase title
@@ -36,5 +55,10 @@ func (p *ConfigureEngine) Title() string {
 }
 
 func (p *ConfigureEngine) Run(ctx context.Context) error {
-	return nil
+	return p.parallelDoUpload(ctx, p.hosts, p.configureEngine)
+}
+
+func (p *ConfigureEngine) configureEngine(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Warn("testing")
+	return p.Distro.ConfigureEngine(ctx, *h, *p.GetDistro())
 }

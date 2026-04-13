@@ -195,18 +195,8 @@
             "$ref": "#/$defs/ZarfClusterRegistries"
           },
           "type": "array"
-        },
-        "type": {
-          "enum": [
-            "rke2",
-            "k3s"
-          ],
-          "type": "string"
         }
       },
-      "required": [
-        "type"
-      ],
       "type": "object"
     },
     "ZarfClusterFiles": {

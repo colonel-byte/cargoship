@@ -15,64 +15,38 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/zarf-distro/src/pkg/packager/load"
 	"github.com/k0sproject/dig"
-	"gopkg.in/yaml.v2"
 )
 
 const (
-	test = "images/cluster.yaml"
+	test = "example/rke2/distro.yaml"
 )
 
 func main() {
+	ctx := context.TODO()
+	m := dig.Mapping{}
+	m["tls"] = []string{
+		"test-kc01.example.com",
+		"test-kc01",
+	}
 	path, err := filepath.Abs(test)
 	if err != nil {
 		panic(err)
 	}
-	file, err := os.Open(path)
+	distro, err := load.DistroDefinition(ctx, path, load.DefinitionOptions{
+		CachePath: "~/.zarf-cache",
+	})
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
-
-	fileBytes, err := io.ReadAll(file)
-	if err != nil {
-		panic(err)
-	}
-
-	test1(fileBytes)
-}
-
-func test1(yamlDoc []byte) {
-	m := dig.Mapping{}
-
-	if err := yaml.Unmarshal(yamlDoc, &m); err != nil {
-		panic(err)
-	}
-
-	// prettyJSON, _ := json.MarshalIndent(m.Dig("spec", "config", "profiles"), "", "  ")
-
-	// fmt.Println(string(prettyJSON))
-
-	pro01 := m.Dig("spec", "config", "profiles")
-
-	var profiles []cluster.ZarfClusterProfiles
-
-	switch pro01 := pro01.(type) {
-	case []any:
-		for _, v := range pro01 {
-			if s, ok := v.(cluster.ZarfClusterProfiles); ok {
-				profiles = append(profiles, s)
-			}
-		}
-	default:
-		fmt.Println(pro01)
-	}
-
-	fmt.Println(len(profiles))
+	cfg := distro.Spec.Config.Engine.DigMapping(config.EngineConfig)
+	fmt.Println(cfg)
+	cfg.Merge(m, dig.WithOverwrite())
+	fmt.Println(cfg)
 }

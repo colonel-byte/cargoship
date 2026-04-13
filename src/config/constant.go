@@ -26,3 +26,10 @@ const (
 	ZarfDistroYaml = "distro.yaml"
 	//keep-sorted end
 )
+
+const (
+	//keep-sorted start
+	EngineConfig = "config"
+	EngineTLS    = "tls"
+	//keep-sorted end
+)
