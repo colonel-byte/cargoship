@@ -15,38 +15,26 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"path/filepath"
 
-	"github.com/colonel-byte/zarf-distro/src/config"
-	"github.com/colonel-byte/zarf-distro/src/pkg/packager/load"
 	"github.com/k0sproject/dig"
-)
-
-const (
-	test = "example/rke2/distro.yaml"
+	"gopkg.in/yaml.v3"
 )
 
 func main() {
-	ctx := context.TODO()
-	m := dig.Mapping{}
-	m["tls"] = []string{
-		"test-kc01.example.com",
-		"test-kc01",
+	config := dig.Mapping{}
+	config["apiVersion"] = "helm.cattle.io/v1"
+	config["kind"] = "HelmChartConfig"
+	config["metadata"] = map[string]string{
+		"name":     "rke2-cilium",
+		"namspace": "kube-system",
 	}
-	path, err := filepath.Abs(test)
+	config["spec"] = map[string]string{
+		"valuesContent": `This is a test`,
+	}
+	data, err := yaml.Marshal(config)
 	if err != nil {
 		panic(err)
 	}
-	distro, err := load.DistroDefinition(ctx, path, load.DefinitionOptions{
-		CachePath: "~/.zarf-cache",
-	})
-	if err != nil {
-		panic(err)
-	}
-	cfg := distro.Spec.Config.Engine.DigMapping(config.EngineConfig)
-	fmt.Println(cfg)
-	cfg.Merge(m, dig.WithOverwrite())
-	fmt.Println(cfg)
+	fmt.Println(string(data))
 }

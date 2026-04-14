@@ -99,8 +99,8 @@ func (r *Common) SetPath(key string, value string) error {
 	return nil
 }
 
-func (r *Common) writeMap(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, key string, path string) error {
-	data, err := yaml.Marshal(config.DigMapping(key))
+func (r *Common) writeMap(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, path string) error {
+	data, err := yaml.Marshal(config)
 	if err != nil {
 		logger.From(ctx).Warn("failed to marshal yaml", "host", host)
 		return err

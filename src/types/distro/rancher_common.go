@@ -115,7 +115,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			config.DigMapping("value")[key_spec] = map[string]string{
 				"valuesContent": fmt.Sprint(v),
 			}
-			r.writeMap(ctx, host, config, "value", fmt.Sprintf("%s/server/manifests/%s-config.yaml", r.Data, k))
+			r.writeMap(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", r.Data, k))
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
@@ -146,7 +146,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		nodeConfig.DigMapping(config.EngineAudit)[key_kind] = "Policy"
 		nodeConfig.DigMapping(config.EngineAudit)[key_api_version] = "audit.k8s.io/v1"
 		audit := filepath.Join(filepath.Dir(r.Config), "audit.yaml")
-		r.writeMap(ctx, host, nodeConfig, config.EngineAudit, audit)
+		r.writeMap(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
 		nodeConfig.DigMapping(config.EngineConfig)[key_audit] = audit
 	}
 
@@ -154,11 +154,11 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		nodeConfig.DigMapping(config.EnginePSS)[key_kind] = "AdmissionConfiguration"
 		nodeConfig.DigMapping(config.EnginePSS)[key_api_version] = "apiserver.config.k8s.io/v1"
 		pss := filepath.Join(filepath.Dir(r.Config), "pss.yaml")
-		r.writeMap(ctx, host, nodeConfig, config.EnginePSS, pss)
+		r.writeMap(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
 		nodeConfig.DigMapping(config.EngineConfig)[key_pod_sec] = pss
 	}
 
-	r.writeMap(ctx, host, nodeConfig, config.EngineConfig, r.Config)
+	r.writeMap(ctx, host, nodeConfig.DigMapping(config.EngineConfig), r.Config)
 
 	return nil
 }
