@@ -104,10 +104,12 @@ func (p *UploadFilesCommon) uploadWorkerFiles(ctx context.Context, h *cluster.Za
 }
 
 func (p *UploadFilesCommon) installControllerFiles(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("installing engine - controller", "host", h)
 	return h.Configurer.InstallPackage(h, getPath(p.filesControl)...)
 }
 
 func (p *UploadFilesCommon) installWorkerFiles(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("installing engine - worker", "host", h)
 	return h.Configurer.InstallPackage(h, getPath(p.filesWorkers)...)
 }
 

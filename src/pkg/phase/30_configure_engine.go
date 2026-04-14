@@ -19,6 +19,7 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -27,6 +28,7 @@ import (
 type ConfigureEngine struct {
 	GenericPhase
 	Distro  tdis.Distro
+	run     cluster.ZarfRuntimeMeta
 	leader  *cluster.ZarfHost
 	hosts   cluster.ZarfHosts
 	control cluster.ZarfHosts
@@ -40,10 +42,33 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 		return h.IsController()
 	})
 
+	p.run = p.manager.Config.RuntimeMetadata
+
+	if len(p.control) > 0 {
+		p.control[0].Metadata.IsLeader = true
+		p.run.Leader = p.control[0]
+	}
+
+	p.run.ControllerTLS = append(p.run.ControllerTLS, c.Spec.Config.LoadBalancer)
+	p.run.LoadBalancer = c.Spec.Config.LoadBalancer
+
 	for _, h := range p.control {
-		p.manager.Config.RuntimeMetadata.ControllerTLS = append(p.manager.Config.RuntimeMetadata.ControllerTLS, h.Configurer.Hostname(h))
-		p.manager.Config.RuntimeMetadata.ControllerTLS = append(p.manager.Config.RuntimeMetadata.ControllerTLS, h.Configurer.LongHostname(h))
-		p.manager.Config.RuntimeMetadata.ControllerTLS = append(p.manager.Config.RuntimeMetadata.ControllerTLS, h.Address())
+		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.Hostname(h))
+		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.LongHostname(h))
+	}
+
+	if token, err := utils.RandomString(64); err == nil {
+		p.run.ControllerToken = token
+	} else {
+		logger.From(ctx).Warn("failed to read random", "error", err)
+		return err
+	}
+
+	if token, err := utils.RandomString(64); err == nil {
+		p.run.AgentToken = token
+	} else {
+		logger.From(ctx).Warn("failed to read random", "error", err)
+		return err
 	}
 
 	return nil
@@ -55,10 +80,16 @@ func (p *ConfigureEngine) Title() string {
 }
 
 func (p *ConfigureEngine) Run(ctx context.Context) error {
-	return p.parallelDoUpload(ctx, p.hosts, p.configureEngine)
+	con := p.manager.Concurrency
+	p.manager.Concurrency = 1
+	if err := p.parallelDo(ctx, p.hosts, p.configureEngine); err != nil {
+		return err
+	}
+	p.manager.Concurrency = con
+	return nil
 }
 
 func (p *ConfigureEngine) configureEngine(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Warn("testing")
-	return p.Distro.ConfigureEngine(ctx, *h, *p.GetDistro())
+	logger.From(ctx).Info("applying config", "host", h)
+	return p.Distro.ConfigureEngine(ctx, *h, p.run, *p.GetDistro())
 }

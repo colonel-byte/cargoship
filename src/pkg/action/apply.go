@@ -33,8 +33,6 @@ type ApplyOptions struct {
 	NoWait bool
 	// NoDrain skips draining worker nodes
 	NoDrain bool
-	// DistroID is used to choose the correct distro builder
-	DistroID string
 }
 
 type Apply struct {
@@ -43,7 +41,7 @@ type Apply struct {
 }
 
 func NewApply(opts ApplyOptions) *Apply {
-	disBuilder, err := registry.GetDistroModuleBuilder(opts.DistroID)
+	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
 	}

@@ -34,7 +34,11 @@ type ZarfClusterMetadata struct {
 }
 
 type ZarfRuntimeMeta struct {
-	ControllerTLS []string
+	ControllerTLS   []string
+	ControllerToken string
+	AgentToken      string
+	LoadBalancer    string
+	Leader          *ZarfHost
 }
 
 type ZarfClusterSpec struct {
@@ -43,8 +47,9 @@ type ZarfClusterSpec struct {
 }
 
 type ZarfClusterConfig struct {
-	Registries []ZarfClusterRegistries `json:"registries,omitempty"`
-	Profiles   []ZarfClusterProfiles   `json:"profiles,omitempty"`
+	LoadBalancer string                  `json:"loadbalancer" jsonschema:"format=hostname"`
+	Registries   []ZarfClusterRegistries `json:"registries,omitempty"`
+	Profiles     []ZarfClusterProfiles   `json:"profiles,omitempty"`
 }
 
 type ZarfClusterProfiles struct {

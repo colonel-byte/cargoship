@@ -36,11 +36,12 @@ type Distro interface {
 	BinaryName() string
 	BinaryPath() string
 	ConfigPath() string
-	ConfigureEngine(context.Context, cluster.ZarfHost, distro.ZarfDistro) error
-	DataDirDefaultPath() string
+	ConfigureEngine(context.Context, cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
+	DataDirPath() string
 	GetControllerService() string
 	GetWorkerService() string
 	JoinTokenPath() string
+	JoinTokenPathAgent() string
 	SetPath(string, string) error
 	//keep-sorted end
 }

@@ -184,6 +184,10 @@
         "^x-": {}
       },
       "properties": {
+        "loadbalancer": {
+          "format": "hostname",
+          "type": "string"
+        },
         "profiles": {
           "items": {
             "$ref": "#/$defs/ZarfClusterProfiles"
@@ -197,6 +201,9 @@
           "type": "array"
         }
       },
+      "required": [
+        "loadbalancer"
+      ],
       "type": "object"
     },
     "ZarfClusterFiles": {
@@ -370,12 +377,6 @@
         "^x-": {}
       },
       "properties": {
-        "binaryPath": {
-          "type": "string"
-        },
-        "dataDir": {
-          "type": "string"
-        },
         "environment": {
           "additionalProperties": {
             "type": "string"
@@ -391,11 +392,11 @@
         "hostname": {
           "type": "string"
         },
-        "installPath": {
-          "type": "string"
-        },
-        "kubeletRootDir": {
-          "type": "string"
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "localhost": {
           "$ref": "#/$defs/Localhost"
@@ -423,6 +424,12 @@
         },
         "ssh": {
           "$ref": "#/$defs/SSH"
+        },
+        "taints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "winRm": {
           "$ref": "#/$defs/WinRM"

@@ -105,10 +105,10 @@ type withDryRun interface {
 // These are strictly internal hooks for phases themselves and are separate
 // from user-configured lifecycle hooks handled by the RunHooks phase.
 type withBefore interface {
-	Before() error
+	Before(context.Context) error
 }
 type withAfter interface {
-	After() error
+	After(context.Context) error
 }
 
 // Manager executes phases to construct the cluster
@@ -254,7 +254,7 @@ func (m *Manager) Run(ctx context.Context) error {
 		// Run in-phase before hook if implemented.
 		if bp, ok := p.(withBefore); ok {
 			l.Debug("running before", "phase", p.Title())
-			if err := bp.Before(); err != nil {
+			if err := bp.Before(ctx); err != nil {
 				l.Debug("running before", "error", err.Error())
 				result = err
 				return result
@@ -280,7 +280,7 @@ func (m *Manager) Run(ctx context.Context) error {
 		if result == nil {
 			if ap, ok := p.(withAfter); ok {
 				l.Debug("running after", "phase", p.Title())
-				if herr := ap.After(); herr != nil {
+				if herr := ap.After(ctx); herr != nil {
 					result = herr
 					return result
 				}

@@ -41,13 +41,11 @@ var ErrCommandFailed = errors.New("command failed")
 type ZarfHost struct {
 	rig.Connection `json:",inline"`
 	//keep-sorted start
-	BinaryPath       string             `json:"binaryPath,omitempty"`
-	DataDirectory    string             `json:"dataDir,omitempty"`
 	Environment      map[string]string  `json:"environment,omitempty"`
 	Files            []ZarfClusterFiles `json:"files,omitempty"`
 	Hostname         string             `json:"hostname,omitempty"`
-	InstallPath      string             `json:"installPath,omitempty"`
-	KubeletDirectory string             `json:"kubeletRootDir,omitempty"`
+	NodeLabels       map[string]string  `json:"labels,omitempty"`
+	NodeTaints       []string           `json:"taints,omitempty"`
 	PrivateAddress   string             `json:"privateAddress,omitempty"`
 	PrivateInterface string             `json:"privateInterface,omitempty"`
 	Profile          string             `json:"profile,omitempty" `
@@ -208,5 +206,25 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 
 // WriteFile writes file to host with given contents. Do not use for large files.
 func (h *ZarfHost) WriteFile(path string, data string, permissions string) error {
-	return h.Configurer.WriteFile(h, path, data, permissions)
+	cfg, err := h.requireConfigurer()
+	if err != nil {
+		return err
+	}
+	return cfg.WriteFile(h, path, data, permissions)
+}
+
+func (h *ZarfHost) ReadFile(path string) (string, error) {
+	cfg, err := h.requireConfigurer()
+	if err != nil {
+		return "", err
+	}
+	return cfg.ReadFile(h, path)
+}
+
+func (h *ZarfHost) FileExist(path string) bool {
+	cfg, err := h.requireConfigurer()
+	if err != nil {
+		return false
+	}
+	return cfg.FileExist(h, path)
 }

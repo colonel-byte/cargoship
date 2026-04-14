@@ -15,6 +15,8 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -91,4 +93,12 @@ func IdentifySource(src string) (string, error) {
 func PrintJSON(obj any) string {
 	bytes, _ := json.MarshalIndent(obj, "", "  ")
 	return string(bytes)
+}
+
+func RandomString(length int) (string, error) {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }

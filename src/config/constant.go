@@ -29,7 +29,10 @@ const (
 
 const (
 	//keep-sorted start
-	EngineConfig = "config"
-	EngineTLS    = "tls"
+	EngineAudit    = "audit"
+	EngineConfig   = "config"
+	EngineManifest = "manifest"
+	EnginePSS      = "podSecurity"
+	EngineTLS      = "tls"
 	//keep-sorted end
 )

@@ -14,7 +14,25 @@
 
 package distro
 
-import "errors"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"path/filepath"
+
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/k0sproject/dig"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"gopkg.in/yaml.v3"
+)
+
+func NodeLabelsMapToList(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, fmt.Sprintf("%s=%s", k, m[k]))
+	}
+	return keys
+}
 
 type Common struct {
 	//keep-sorted start
@@ -47,7 +65,11 @@ func (r *Common) JoinTokenPath() string {
 	return r.Token
 }
 
-func (r *Common) DataDirDefaultPath() string {
+func (r *Common) JoinTokenPathAgent() string {
+	return filepath.Join(filepath.Dir(r.Token), "agent-token")
+}
+
+func (r *Common) DataDirPath() string {
 	return r.Data
 }
 
@@ -74,5 +96,21 @@ func (r *Common) SetPath(key string, value string) error {
 	default:
 		return ErrPathKey
 	}
+	return nil
+}
+
+func (r *Common) writeMap(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, key string, path string) error {
+	data, err := yaml.Marshal(config.DigMapping(key))
+	if err != nil {
+		logger.From(ctx).Warn("failed to marshal yaml", "host", host)
+		return err
+	}
+
+	err = host.WriteFile(path, string(data), "0600")
+	if err != nil {
+		logger.From(ctx).Warn("failed to write file", "host", host)
+		return err
+	}
+
 	return nil
 }
