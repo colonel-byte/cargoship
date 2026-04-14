@@ -46,11 +46,36 @@ spec:
         disable:
           - rke2-ingress-nginx
         embedded-registry: true
+        kube-apiserver-arg:
+          - "service-account-extend-token-expiration=false"
         profile: cis
+        protect-kernel-defaults: true
         selinux: true
         service-cidr: 10.43.0.0/16
         write-kubeconfig-mode: "0600"
         # keep-sorted end
+      audit:
+        rules:
+          - level: None
+      podSecurity:
+        plugins:
+          - name: PodSecurity
+            configuration:
+              apiVersion: pod-security.admission.config.k8s.io/v1beta1
+              kind: PodSecurityConfiguration
+              defaults:
+                enforce: "restricted"
+                enforce-version: "latest"
+                audit: "restricted"
+                audit-version: "latest"
+                warn: "restricted"
+                warn-version: "latest"
+              exemptions:
+                usernames: []
+                runtimeClasses: []
+                namespaces:
+                  - kube-system
+                  - rook-ceph
     os:
       sysctl:
         # Istio related sysctl overrides

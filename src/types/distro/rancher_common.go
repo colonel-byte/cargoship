@@ -27,7 +27,15 @@ type RancherCommon struct {
 	Common
 }
 
-const test = `this is a test of things`
+// Both RKE2 and k3s share similar logic on how to configure the Kubernetes Engine.
+// config.yaml:
+// we look at `.spec.config.engine.config`, to determine the the globally shared config across all nodes
+// audit-config.yaml:
+// we look at `.spec.config.engine.audit`, to determine the kubelet audit settings. There is no validation done at this time, please reference: https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/#audit-k8s-io-v1-Policy
+// if `.spec.config.engine.audit` is present we will add/overwrite "audit-policy-file" with the value of "/etc/rancher/rke2/audit-config.yaml"
+// rke2-pss.yaml:
+// we look at `.spec.config.engine.podSecurity`, to determine the "pod security admission" that will be enforced by the kubelet. There is no validation done at this time, please reference: https://kubernetes.io/docs/concepts/security/pod-security-admission/
+// if `.spec.config.engine.podSecurity` is present we will add/overwrite "pod-security-admission-config-file" with the value of "/etc/rancher/rke2/rke2-pss.yaml"
 
 // ConfigureEngine implements Distro.
 func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, dis distro.ZarfDistro) error {
