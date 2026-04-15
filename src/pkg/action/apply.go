@@ -33,6 +33,10 @@ type ApplyOptions struct {
 	NoWait bool
 	// NoDrain skips draining worker nodes
 	NoDrain bool
+	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
+	ModifyHosts bool
+	// FAPolicydInstall installs fapolicyd on the system
+	FAPolicydInstall bool
 }
 
 type Apply struct {
@@ -58,9 +62,18 @@ func NewApply(opts ApplyOptions) *Apply {
 			lockPhase,
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
+			&phase.InstallFapolicy{
+				Enabled: opts.FAPolicydInstall,
+			},
 			&phase.PrepareFapolicy{},
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
+			&phase.ModifyHosts{
+				Enabled: opts.ModifyHosts,
+			},
+			&phase.ConfigureFirewall{
+				Enabled: true,
+			},
 
 			&phase.UploadFiles{},
 			&phase.RPMUploadFiles{},

@@ -88,7 +88,9 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 	}()
 
 	applyOpts := action.ApplyOptions{
-		Manager: manager,
+		Manager:          manager,
+		ModifyHosts:      true,
+		FAPolicydInstall: false,
 	}
 
 	if err := action.NewApply(applyOpts).Run(ctx); err != nil {

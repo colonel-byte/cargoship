@@ -15,6 +15,7 @@
 package distro
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -100,14 +101,16 @@ func (r *Common) SetPath(key string, value string) error {
 }
 
 func (r *Common) writeMap(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, path string) error {
-	data, err := yaml.Marshal(config)
-	if err != nil {
+	buf := bytes.Buffer{}
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+
+	if err := enc.Encode(config); err != nil {
 		logger.From(ctx).Warn("failed to marshal yaml", "host", host)
 		return err
 	}
 
-	err = host.WriteFile(path, string(data), "0600")
-	if err != nil {
+	if err := host.WriteFile(path, "---\n"+buf.String(), "0600"); err != nil {
 		logger.From(ctx).Warn("failed to write file", "host", host)
 		return err
 	}

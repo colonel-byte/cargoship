@@ -30,6 +30,7 @@ const (
 // PrepareHosts installs required packages and so on on the hosts.
 type InstallFapolicy struct {
 	GenericPhase
+	Enabled        bool
 	fapolicydhosts cluster.ZarfHosts
 }
 
@@ -56,7 +57,7 @@ func (p *InstallFapolicy) Run(ctx context.Context) error {
 
 // ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
 func (p *InstallFapolicy) ShouldRun() bool {
-	return len(p.fapolicydhosts) > 0 && p.manager.Distro.Spec.Config.OS.FAPolicyd != ""
+	return len(p.fapolicydhosts) > 0 && p.manager.Distro.Spec.Config.OS.FAPolicyd != "" && p.Enabled
 }
 
 func (p *InstallFapolicy) prepareHost(ctx context.Context, h *v1alpha1.ZarfHost) error {

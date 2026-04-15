@@ -40,23 +40,25 @@ var (
 )
 
 const (
-	key_kube_cont_manager = "kube-controller-manager-arg"
+	//keep-sorted start
+	key_agent_token       = "agent-token-file"
+	key_api_version       = "apiVersion"
+	key_audit             = "audit-policy-file"
+	key_data_dir          = "data-dir"
+	key_kind              = "kind"
 	key_kube_api          = "kube-apiserver-arg"
+	key_kube_cont_manager = "kube-controller-manager-arg"
 	key_kube_scheduler    = "kube-scheduler-arg"
-	key_tls               = "tls-san"
-	key_node_taint        = "node-taint"
+	key_metadata          = "metadata"
 	key_node_label        = "node-label"
 	key_node_name         = "node-name"
-	key_data_dir          = "data-dir"
-	key_cont_token        = "token-file"
-	key_agent_token       = "agent-token-file"
-	key_server            = "server"
-	key_audit             = "audit-policy-file"
+	key_node_taint        = "node-taint"
 	key_pod_sec           = "pod-security-admission-config-file"
-	key_kind              = "kind"
-	key_api_version       = "apiVersion"
-	key_metadata          = "metadata"
+	key_server            = "server"
 	key_spec              = "spec"
+	key_tls               = "tls-san"
+	key_token             = "token-file"
+	//keep-sorted end
 )
 
 // Both RKE2 and k3s share similar logic on how to configure the Kubernetes Engine.
@@ -86,7 +88,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 	if host.IsController() {
 		nodeConfig.DigMapping(config.EngineConfig)[key_tls] = run.ControllerTLS
-		nodeConfig.DigMapping(config.EngineConfig)[key_cont_token] = r.JoinTokenPath()
+		nodeConfig.DigMapping(config.EngineConfig)[key_token] = r.JoinTokenPath()
 		nodeConfig.DigMapping(config.EngineConfig)[key_agent_token] = r.JoinTokenPathAgent()
 
 		if !host.FileExist(r.JoinTokenPath()) {
@@ -106,13 +108,13 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 		for k, v := range nodeConfig.DigMapping(config.EngineManifest) {
 			config := dig.Mapping{}
-			config.DigMapping("value")[key_api_version] = "helm.cattle.io/v1"
-			config.DigMapping("value")[key_kind] = "HelmChartConfig"
-			config.DigMapping("value")[key_metadata] = map[string]string{
-				"name":     k,
-				"namspace": "kube-system",
+			config[key_api_version] = "helm.cattle.io/v1"
+			config[key_kind] = "HelmChartConfig"
+			config[key_metadata] = map[string]string{
+				"name":      k,
+				"namespace": "kube-system",
 			}
-			config.DigMapping("value")[key_spec] = map[string]string{
+			config[key_spec] = map[string]string{
 				"valuesContent": fmt.Sprint(v),
 			}
 			r.writeMap(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", r.Data, k))
@@ -125,7 +127,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			}
 		}
 	} else {
-		nodeConfig.DigMapping(config.EngineConfig)[key_agent_token] = r.JoinTokenPathAgent()
+		nodeConfig.DigMapping(config.EngineConfig)[key_token] = r.JoinTokenPathAgent()
 		for _, v := range controllerArgs {
 			delete(nodeConfig.DigMapping(config.EngineConfig), v)
 		}
