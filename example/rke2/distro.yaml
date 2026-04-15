@@ -111,6 +111,9 @@ spec:
             type: wireguard
           tolerations:
             - operator: Exists
+          operator:
+            tolerations:
+              - operator: Exists
     os:
       sysctl:
         # Istio related sysctl overrides
