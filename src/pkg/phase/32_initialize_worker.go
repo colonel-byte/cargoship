@@ -19,6 +19,8 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/pkg/node"
+	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -56,9 +58,15 @@ func (p *InitializeWorkers) Run(ctx context.Context) error {
 }
 
 func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("waiting for the controller service to start", "service", p.Distro.GetWorkerService(), "host", h)
-	if err := h.Configurer.StartService(h, p.Distro.GetWorkerService()); err != nil {
+	logger.From(ctx).Info("waiting for the worker service to start", "service", p.Distro.GetWorkerService(), "host", h)
+
+	go func() {
+		h.Configurer.StartService(h, p.Distro.GetWorkerService())
+	}()
+
+	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {
 		return err
 	}
+
 	return h.Configurer.EnableService(h, p.Distro.GetWorkerService())
 }
