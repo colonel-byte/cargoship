@@ -57,14 +57,26 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.LongHostname(h))
 	}
 
-	if token, err := utils.RandomString(64); err == nil {
+	if p.run.Leader.Configurer.FileExist(p.run.Leader, p.Distro.JoinTokenPath()) {
+		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPath()); err != nil {
+			logger.From(ctx).Warn("failed to read token file", "error", err)
+			p.run.ControllerToken = token
+		}
+	}
+	if token, err := utils.RandomString(64); err == nil && p.run.ControllerToken == "" {
 		p.run.ControllerToken = token
 	} else {
 		logger.From(ctx).Warn("failed to read random", "error", err)
 		return err
 	}
 
-	if token, err := utils.RandomString(64); err == nil {
+	if p.run.Leader.Configurer.FileExist(p.run.Leader, p.Distro.JoinTokenPathAgent()) {
+		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPathAgent()); err != nil {
+			logger.From(ctx).Warn("failed to read agent token file", "error", err)
+			p.run.AgentToken = token
+		}
+	}
+	if token, err := utils.RandomString(64); err == nil && p.run.AgentToken == "" {
 		p.run.AgentToken = token
 	} else {
 		logger.From(ctx).Warn("failed to read random", "error", err)
@@ -80,13 +92,7 @@ func (p *ConfigureEngine) Title() string {
 }
 
 func (p *ConfigureEngine) Run(ctx context.Context) error {
-	con := p.manager.Concurrency
-	p.manager.Concurrency = 1
-	if err := p.parallelDo(ctx, p.hosts, p.configureEngine); err != nil {
-		return err
-	}
-	p.manager.Concurrency = con
-	return nil
+	return p.parallelDo(ctx, p.hosts, p.configureEngine)
 }
 
 func (p *ConfigureEngine) configureEngine(ctx context.Context, h *cluster.ZarfHost) error {
