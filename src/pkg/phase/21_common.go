@@ -22,7 +22,6 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/config"
-	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -51,14 +50,14 @@ type UploadFilesCommon struct {
 
 func (p *UploadFilesCommon) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.distro = p.manager.Distro.Spec.Config.OS.Files
-	hosts := p.manager.Config.Spec.Hosts.Filter(utils.FilterEnterpriseLinux)
+	hosts := p.manager.Config.Spec.Hosts
 
 	p.workers = hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.IsController()
+		return !h.Metadata.EngineUploaded && !h.IsController()
 	})
 
 	p.control = hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.IsController()
+		return !h.Metadata.EngineUploaded && h.IsController()
 	})
 
 	return nil
@@ -142,4 +141,21 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 	}
 
 	return files
+}
+
+func (p *UploadFilesCommon) CleanUp(ctx context.Context) {
+	err := p.parallelDo(context.Background(), p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+		if len(h.Metadata.BinaryTempFile) == 0 {
+			return nil
+		}
+		logger.From(ctx).Info("cleaning up binary tempfile", "host", h)
+		for _, f := range h.Metadata.BinaryTempFile {
+			logger.From(ctx).Debug("removing file", "file", f, "host", h)
+			_ = h.Configurer.DeleteFile(h, f)
+		}
+		return nil
+	})
+	if err != nil {
+		logger.From(ctx).Warn("failed to clean up tempfiles")
+	}
 }

@@ -30,13 +30,17 @@ func (p *Disconnect) Title() string {
 	return "Disconnect from hosts"
 }
 
-// DryRun cleans up the temporary k0s binary from the hosts
+// DryRun cleans up the temporary binary from the hosts
 func (p *Disconnect) DryRun() error {
 	_ = p.manager.Config.Spec.Hosts.ParallelEach(context.Background(), func(_ context.Context, h *v1alpha1.ZarfHost) error {
-		if h.Metadata.BinaryTempFile != "" && h.Configurer.FileExist(h, h.Metadata.BinaryTempFile) {
-			_ = h.Configurer.DeleteFile(h, h.Metadata.BinaryTempFile)
+		if len(h.Metadata.BinaryTempFile) > 0 {
+			for _, f := range h.Metadata.BinaryTempFile {
+				if h.FileExist(f) {
+					_ = h.Configurer.DeleteFile(h, f)
+				}
+			}
 		}
-		h.Metadata.BinaryTempFile = ""
+		h.Metadata.BinaryTempFile = []string{}
 		return nil
 	})
 

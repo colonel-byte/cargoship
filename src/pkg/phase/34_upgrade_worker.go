@@ -17,12 +17,15 @@ package phase
 import (
 	"context"
 
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
 )
 
 type UpgradeWorkers struct {
 	GenericPhase
-	Distro distro.Distro
+	Distro           tdis.Distro
+	worker           cluster.ZarfHosts
+	WorkerConcurrent int
 }
 
 func (p *UpgradeWorkers) Title() string {

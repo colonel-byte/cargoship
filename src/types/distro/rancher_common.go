@@ -122,7 +122,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
 			if v, err := host.ExecOutput("getent passwd etcd"); err != nil && v == "" {
-				logger.From(ctx).Info("need to create an etcd user for profile")
+				logger.From(ctx).Info("need to create an etcd user for profile", "host", host)
 				host.Execf("useradd --no-create-home --shell /sbin/nologin --system --user-group etcd", exec.Sudo(host))
 			}
 		}

@@ -17,18 +17,21 @@ package phase
 import (
 	"context"
 
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
 )
 
-type InitializeWorkers struct {
+type UpgradeController struct {
 	GenericPhase
-	Distro distro.Distro
+	Distro           tdis.Distro
+	control          cluster.ZarfHosts
+	WorkerConcurrent int
 }
 
-func (p *InitializeWorkers) Title() string {
-	return "Initialize Worker"
+func (p *UpgradeController) Title() string {
+	return "Upgrade Controller"
 }
 
-func (p *InitializeWorkers) Run(ctx context.Context) error {
+func (p *UpgradeController) Run(ctx context.Context) error {
 	return nil
 }

@@ -24,6 +24,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+const (
+	random_length = 64
+)
+
 // ConfigureEngine writes the k0s configuration to host k0s config dir
 type ConfigureEngine struct {
 	GenericPhase
@@ -63,12 +67,13 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 			p.run.ControllerToken = token
 		}
 	}
-	if token, err := utils.RandomString(64); err == nil && p.run.ControllerToken == "" {
+	if token, err := utils.RandomString(random_length); err == nil && p.run.ControllerToken == "" {
 		p.run.ControllerToken = token
 	} else {
 		logger.From(ctx).Warn("failed to read random", "error", err)
 		return err
 	}
+	logger.From(ctx).Warn("current", "token", p.run.ControllerToken)
 
 	if p.run.Leader.Configurer.FileExist(p.run.Leader, p.Distro.JoinTokenPathAgent()) {
 		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPathAgent()); err != nil {
@@ -76,12 +81,13 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 			p.run.AgentToken = token
 		}
 	}
-	if token, err := utils.RandomString(64); err == nil && p.run.AgentToken == "" {
+	if token, err := utils.RandomString(random_length); err == nil && p.run.AgentToken == "" {
 		p.run.AgentToken = token
 	} else {
 		logger.From(ctx).Warn("failed to read random", "error", err)
 		return err
 	}
+	logger.From(ctx).Warn("current", "agent-token", p.run.ControllerToken)
 
 	return nil
 }

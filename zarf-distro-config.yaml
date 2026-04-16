@@ -24,3 +24,5 @@ distro:
     output: ~/zarf
 install:
   concurrency: 300
+  worker_concurrency: 5
+  host_update: true

@@ -89,7 +89,7 @@ func NewZarfDistroCommand() *cobra.Command {
 	rootCmd.AddCommand(newInstallApplyCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, ROOT_LOGGING_LEVEL, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, ROOT_LOGGING_FORMART, v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVarP(&LogFormat, ROOT_LOGGING_FORMART, "L", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(zarf.VNoColor), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), zarf.VZarfCache), zlang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), zarf.VTmpDir), zlang.RootCmdFlagTempDir)

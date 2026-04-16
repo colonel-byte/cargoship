@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	gos "os"
+	"slices"
 	"time"
 
 	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
@@ -56,7 +57,7 @@ type ZarfHost struct {
 }
 
 type ZarfHostMetadata struct {
-	BinaryTempFile   string
+	BinaryTempFile   []string
 	Installed        bool
 	ExistingConfig   string
 	NewConfig        string
@@ -227,4 +228,18 @@ func (h *ZarfHost) FileExist(path string) bool {
 		return false
 	}
 	return cfg.FileExist(h, path)
+}
+
+// CheckHTTPStatus will perform a web request to the url and return an error if the http status is not the expected
+func (h *ZarfHost) CheckHTTPStatus(url string, expected ...int) error {
+	status, err := h.Configurer.HTTPStatus(h, url)
+	if err != nil {
+		return err
+	}
+
+	if slices.Contains(expected, status) {
+		return nil
+	}
+
+	return fmt.Errorf("expected response code %d but received %d", expected, status)
 }

@@ -196,11 +196,15 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		if ctx.Err() != nil {
 			return fmt.Errorf("upload canceled: %w", ctx.Err())
 		}
-		stagingFile := stageTempPath(*h, f.Target)
-		logger.From(ctx).Debug("need to upload from distro package", "source", filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)), "target", stagingFile)
+		target := f.Target
+		if f.Executable {
+			target = stageTempPath(*h, f.Target)
+			h.Metadata.BinaryTempFile = append(h.Metadata.BinaryTempFile, target)
+		}
+		logger.From(ctx).Debug("need to upload from distro package", "source", filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)), "target", target)
 		files = append(files, cluster.UploadFile{
 			Name:            filepath.Base(f.Target),
-			DestinationFile: stagingFile,
+			DestinationFile: target,
 			Sources: []*cluster.LocalFile{
 				{
 					Path: filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)),

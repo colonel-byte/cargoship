@@ -19,7 +19,7 @@ metadata:
   name: rancher-rke2
 spec:
   config:
-    type: rke2
+    loadbalancer: example.com
     registries:
       - name: docker.io
         proxy:

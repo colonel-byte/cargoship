@@ -34,6 +34,8 @@ const (
 	VDistroCreateRegistryOverride = "distro.create.registry_override"
 	VDistroCreateSkipSbom         = "distro.create.skip_sbom"
 	VInstallConcurrency           = "install.concurrency"
+	VInstallWorkerConcurrency     = "install.worker_concurrency"
+	VInstallUpdateHost            = "install.host_update"
 )
 
 var (
@@ -94,4 +96,5 @@ func setDefaults() {
 	v.SetDefault(VDistroOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VDistroCreateSkipSbom, false)
 	v.SetDefault(VInstallConcurrency, 30)
+	v.SetDefault(VInstallUpdateHost, false)
 }

@@ -20,24 +20,28 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
 )
 
 // UploadFiles implements a phase which upload files to hosts
-type RPMUploadFiles struct {
+type APTUploadFiles struct {
 	UploadFilesCommon
 }
 
 // Title for the phase
-func (p *RPMUploadFiles) Title() string {
-	return "Upload files to hosts -- RPM"
+func (p *APTUploadFiles) Title() string {
+	return "Upload files to hosts -- APT"
 }
 
 // Prepare the phase
-func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.UploadFilesCommon.Prepare(ctx, c, d)
 
-	p.filesControl = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_CONTROLLER)
-	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_WORKER)
+	p.control = p.control.Filter(utils.FilterDebianLinux)
+	p.workers = p.workers.Filter(utils.FilterDebianLinux)
+
+	p.filesControl = p.getProfileFiles(ctx, config.SelectorAPT, cluster.ROLE_CONTROLLER)
+	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorAPT, cluster.ROLE_WORKER)
 
 	return nil
 }

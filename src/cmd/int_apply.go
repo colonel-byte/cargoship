@@ -25,12 +25,18 @@ import (
 )
 
 const (
-	INSTALL_APPLY_CONFIG      = "config"
-	INSTALL_APPLY_CONCURRENCY = "concurrency"
+	INSTALL_APPLY_CONFIG             = "config"
+	INSTALL_APPLY_CONCURRENCY        = "concurrency"
+	INSTALL_APPLY_WORKER_CONCURRENCY = "work-concurrency"
+	INSTALL_APPLY_UPDATE_HOST        = "update-hosts"
+	INSTALL_APPLY_INSTALL_FAPOLICYD  = "install-fapolicyd"
 )
 
 type installApplyOptions struct {
 	InstallCommon
+	workerCon int
+	hosts     bool
+	fapolicy  bool
 }
 
 func newInstallApplyCommand() *cobra.Command {
@@ -46,8 +52,10 @@ func newInstallApplyCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&o.concurrency, INSTALL_APPLY_CONCURRENCY, v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, INSTALL_APPLY_CONCURRENCY, "c", v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, INSTALL_APPLY_CONFIG, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().BoolVarP(&o.hosts, INSTALL_APPLY_UPDATE_HOST, "H", v.GetBool(VInstallUpdateHost), lang.CmdInstallHostUpdate)
+	cmd.Flags().IntVarP(&o.workerCon, INSTALL_APPLY_WORKER_CONCURRENCY, "w", v.GetInt(VInstallWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(ROOT_LOGGING_LEVEL)
 	if err != nil {
@@ -89,8 +97,8 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 
 	applyOpts := action.ApplyOptions{
 		Manager:          manager,
-		ModifyHosts:      true,
-		FAPolicydInstall: false,
+		ModifyHosts:      o.hosts,
+		WorkerConcurrent: o.workerCon,
 	}
 
 	if err := action.NewApply(applyOpts).Run(ctx); err != nil {

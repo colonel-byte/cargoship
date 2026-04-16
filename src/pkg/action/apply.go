@@ -35,8 +35,8 @@ type ApplyOptions struct {
 	NoDrain bool
 	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
 	ModifyHosts bool
-	// FAPolicydInstall installs fapolicyd on the system
-	FAPolicydInstall bool
+	// WorkerConcurrent number of workers that will be installed or upgraded at a time
+	WorkerConcurrent int
 }
 
 type Apply struct {
@@ -48,6 +48,14 @@ func NewApply(opts ApplyOptions) *Apply {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
+	}
+
+	if opts.WorkerConcurrent < 0 {
+		opts.WorkerConcurrent = 0
+	}
+
+	if opts.Manager.Concurrency < 0 {
+		opts.Manager.Concurrency = 0
 	}
 
 	d := disBuilder().(distro.Distro)
@@ -62,9 +70,6 @@ func NewApply(opts ApplyOptions) *Apply {
 			lockPhase,
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
-			&phase.InstallFapolicy{
-				Enabled: opts.FAPolicydInstall,
-			},
 			&phase.PrepareFapolicy{},
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
@@ -83,20 +88,19 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.ConfigureEngine{
 				Distro: d,
 			},
-			&phase.InitializeEngine{
-				Distro: d,
-			},
 			&phase.InitializeControllers{
 				Distro: d,
 			},
 			&phase.InitializeWorkers{
-				Distro: d,
+				Distro:           d,
+				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 			&phase.UpgradeController{
 				Distro: d,
 			},
 			&phase.UpgradeWorkers{
-				Distro: d,
+				Distro:           d,
+				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 
 			&phase.Unlock{
