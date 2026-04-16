@@ -17,12 +17,15 @@ package phase
 import (
 	"context"
 
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type InitializeEngine struct {
 	GenericPhase
 	Distro distro.Distro
+	hosts  cluster.ZarfHosts
 }
 
 // Title returns the phase title
@@ -32,4 +35,18 @@ func (p *InitializeEngine) Title() string {
 
 func (p *InitializeEngine) Run(ctx context.Context) error {
 	return nil
+}
+
+func (p *InitializeEngine) CleanUp(ctx context.Context) {
+	err := p.parallelDo(context.Background(), p.hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+		if h.Metadata.BinaryTempFile == "" {
+			return nil
+		}
+		logger.From(ctx).Info("cleaning up k0s binary tempfile", "host", h)
+		_ = h.Configurer.DeleteFile(h, h.Metadata.BinaryTempFile)
+		return nil
+	})
+	if err != nil {
+		logger.From(ctx).Warn("failed to clean up tempfiles")
+	}
 }

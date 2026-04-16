@@ -90,7 +90,7 @@ type conditional interface {
 }
 
 type withcleanup interface {
-	CleanUp()
+	CleanUp(context.Context)
 }
 
 type withmanager interface {
@@ -218,8 +218,8 @@ func (m *Manager) Run(ctx context.Context) error {
 		if result != nil {
 			for _, p := range ran {
 				if c, ok := p.(withcleanup); ok {
-					l.Info("* Running clean-up", "phase", p.Title())
-					c.CleanUp()
+					l.Info("running clean-up", "phase", p.Title())
+					c.CleanUp(ctx)
 				}
 			}
 		}
