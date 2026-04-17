@@ -20,11 +20,18 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	versionRegex          = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
+	ErrDistroNotFound     = errors.New("distro binary not found")
+	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
 )
 
 func NodeLabelsMapToList(m map[string]string) []string {

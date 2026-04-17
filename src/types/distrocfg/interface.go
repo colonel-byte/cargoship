@@ -19,7 +19,6 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/k0sproject/rig/os"
 )
 
 const (
@@ -39,13 +38,15 @@ type Distro interface {
 	ConfigPath() string
 	ConfigureEngine(context.Context, cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
 	DataDirPath() string
+	DistroCmdf(string, ...any) string
 	GetClusterCIDR(distro.ZarfDistro) []string
 	GetControllerService() string
 	GetWorkerService() string
 	JoinTokenPath() string
 	JoinTokenPathAgent() string
-	KubeconfigPath(os.Host, string) string
-	KubectlCmdf(os.Host, string, string, ...any) string
+	KubeconfigPath(cluster.ZarfHost, string) string
+	KubectlCmdf(cluster.ZarfHost, string, string, ...any) string
+	RunningVersion(cluster.ZarfHost) (string, error)
 	SetPath(string, string) error
 	//keep-sorted end
 }

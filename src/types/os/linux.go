@@ -230,10 +230,6 @@ func (l *Linux) DeleteDir(h os.Host, path string, opts ...exec.Option) error {
 	return h.Exec(fmt.Sprintf(`rmdir %s`, shellescape.Quote(path)), opts...)
 }
 
-func (l *Linux) MachineID(h os.Host) (string, error) {
-	return h.ExecOutput(`cat /etc/machine-id || cat /var/lib/dbus/machine-id`)
-}
-
 // SystemTime returns the system time as UTC reported by the OS or an error if this fails
 func (l *Linux) SystemTime(h os.Host) (time.Time, error) {
 	// get utc time as a unix timestamp

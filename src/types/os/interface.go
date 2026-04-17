@@ -49,7 +49,6 @@ type Configurer interface {
 	Kind() string
 	LongHostname(os.Host) string
 	LookPath(os.Host, string) (string, error)
-	MachineID(os.Host) (string, error)
 	MkDir(os.Host, string, ...exec.Option) error
 	MoveFile(os.Host, string, string) error
 	OSKind() string

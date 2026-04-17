@@ -30,7 +30,6 @@ import (
 type ValidateHosts struct {
 	GenericPhase
 	hncount          map[string]int
-	machineidcount   map[string]int
 	privateaddrcount map[string]int
 }
 
@@ -42,14 +41,10 @@ func (p *ValidateHosts) Title() string {
 // Run the phase
 func (p *ValidateHosts) Run(ctx context.Context) error {
 	p.hncount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
-	p.machineidcount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
 	p.privateaddrcount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
 
 	for _, h := range p.manager.Config.Spec.Hosts {
 		p.hncount[h.Metadata.Hostname]++
-		if p.machineidcount != nil {
-			p.machineidcount[h.Metadata.MachineID]++
-		}
 		if h.PrivateAddress != "" {
 			p.privateaddrcount[h.PrivateAddress]++
 		}
@@ -59,7 +54,6 @@ func (p *ValidateHosts) Run(ctx context.Context) error {
 		ctx,
 		p.manager.Config.Spec.Hosts,
 		p.validateUniqueHostname,
-		p.validateUniqueMachineID,
 		p.validateUniquePrivateAddress,
 		p.validateSudo,
 		p.validateConfigurer,
@@ -87,20 +81,8 @@ func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *v1alp
 	return nil
 }
 
-func (p *ValidateHosts) validateUniqueMachineID(ctx context.Context, h *v1alpha1.ZarfHost) error {
-	if p.machineidcount[h.Metadata.MachineID] > 1 {
-		logger.From(ctx).Debug("machine id is not unique", "host", h.Metadata.Hostname, "id", h.Metadata.MachineID)
-	}
-
-	return nil
-}
-
 func (p *ValidateHosts) validateSudo(_ context.Context, h *v1alpha1.ZarfHost) error {
-	if err := h.Configurer.CheckPrivilege(h); err != nil {
-		return err
-	}
-
-	return nil
+	return h.Configurer.CheckPrivilege(h)
 }
 
 func (p *ValidateHosts) validateConfigurer(_ context.Context, h *v1alpha1.ZarfHost) error {

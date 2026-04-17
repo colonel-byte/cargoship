@@ -15,6 +15,10 @@
 package distrocfg
 
 import (
+	"fmt"
+	"path/filepath"
+
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/types/distrocfg/registry"
 )
 
@@ -50,4 +54,14 @@ func init() {
 			}
 		},
 	)
+}
+
+// KubeconfigPath implements Distro.
+func (d *K3S) KubeconfigPath(host cluster.ZarfHost, dataDir string) string {
+	return filepath.Join(filepath.Dir(d.Config), "k3s.yaml")
+}
+
+// KubectlCmdf implements Distro.
+func (d *K3S) KubectlCmdf(host cluster.ZarfHost, dataDir string, s string, args ...any) string {
+	return fmt.Sprintf(`env "KUBECONFIG=%s" %s`, d.KubeconfigPath(host, dataDir), d.DistroCmdf(`kubectl %s`, fmt.Sprintf(s, args...)))
 }

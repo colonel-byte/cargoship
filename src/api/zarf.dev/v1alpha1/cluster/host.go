@@ -57,17 +57,20 @@ type ZarfHost struct {
 }
 
 type ZarfHostMetadata struct {
-	BinaryTempFile []string
-	Installed      bool
-	ExistingConfig string
-	NewConfig      string
+	//keep-sorted start
 	Arch           string
-	IsLeader       bool
-	Hostname       string
-	Ready          bool
-	NeedsUpgrade   bool
-	MachineID      string
+	BinaryTempFile []string
+	DistroVersion  string
 	EngineUploaded bool
+	ExistingConfig string
+	Hostname       string
+	Installed      bool
+	IsLeader       bool
+	MachineID      string
+	NeedsUpgrade   bool
+	NewConfig      string
+	Ready          bool
+	//keep-sorted end
 }
 
 func (h *ZarfHost) requireConfigurer() (configurer.Configurer, error) {

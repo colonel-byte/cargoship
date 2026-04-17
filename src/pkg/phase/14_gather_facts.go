@@ -47,12 +47,6 @@ func (p *GatherFacts) investigateHost(ctx context.Context, h *v1alpha1.ZarfHost)
 
 	l.Info("detected", "host", h, "arch", arch)
 
-	id, err := h.Configurer.MachineID(h)
-	if err != nil {
-		return err
-	}
-	h.Metadata.MachineID = id
-
 	if h.Hostname != "" {
 		l.Info("using provided hostname", "host", h, "given", h.Hostname)
 		h.Metadata.Hostname = h.Hostname

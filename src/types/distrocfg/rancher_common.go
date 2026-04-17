@@ -24,7 +24,6 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/config"
 	"github.com/k0sproject/dig"
 	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -170,16 +169,6 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 	return nil
 }
 
-// KubeconfigPath implements Distro.
-func (d *RancherCommon) KubeconfigPath(host os.Host, dataDir string) string {
-	return filepath.Join(filepath.Dir(d.Config), "rke2.yaml")
-}
-
-// KubectlCmdf implements Distro.
-func (d *RancherCommon) KubectlCmdf(host os.Host, dataDir string, s string, args ...any) string {
-	return fmt.Sprintf(`env "KUBECONFIG=%s" %s`, d.KubeconfigPath(host, dataDir), fmt.Sprintf(`kubectl %s`, fmt.Sprintf(s, args...)))
-}
-
 func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 	pod := nodeConfig.DigString(config.EngineConfig, key_cidr_pod)
@@ -195,4 +184,24 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 		pod,
 		svc,
 	}
+}
+
+func (d *RancherCommon) DistroCmdf(template string, args ...any) string {
+	return fmt.Sprintf("%s %s", d.BinaryPath(), fmt.Sprintf(template, args...))
+}
+
+func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
+	bin, err := host.Configurer.LookPath(&host, d.Binary)
+	if err != nil {
+		return "", ErrDistroNotFound
+	}
+	out, err := host.ExecOutputf(`%s --version`, bin)
+	if err != nil {
+		return "", err
+	}
+	match := versionRegex.FindString(out)
+	if match == "" {
+		return "", ErrVersionNotDetected
+	}
+	return match, nil
 }
