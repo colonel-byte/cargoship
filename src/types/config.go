@@ -44,6 +44,7 @@ type DistroDeployOptions struct {
 
 type InstallOptions struct {
 	HostUpdate        bool `json:"host_update,omitempty" jsonschema:"default=true"`
+	FirewallUpdate    bool `json:"firewall_update,omitempty" jsonschema:"default=true"`
 	Concurrency       int  `json:"concurrency,omitempty" jsonschema:"minimum=0"`
 	WorkerConcurrency int  `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
 }

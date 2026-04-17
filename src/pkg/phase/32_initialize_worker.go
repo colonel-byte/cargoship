@@ -19,15 +19,13 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/pkg/node"
-	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
-	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type InitializeWorkers struct {
 	GenericPhase
-	Distro           tdis.Distro
+	Distro           distrocfg.Distro
 	worker           cluster.ZarfHosts
 	WorkerConcurrent int
 }
@@ -42,6 +40,7 @@ func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) && !h.IsController()
 	})
 	logger.From(ctx).Info("number of systems that need to be started", "hosts", len(p.worker))
+
 	return nil
 }
 
@@ -52,21 +51,26 @@ func (p *InitializeWorkers) ShouldRun() bool {
 
 func (p *InitializeWorkers) Run(ctx context.Context) error {
 	if p.WorkerConcurrent == 0 {
-		return p.worker.ParallelEach(ctx, p.startService)
+		return p.worker.ParallelEach(
+			ctx,
+			p.startService,
+			p.enableService,
+		)
 	}
-	return p.worker.BatchedParallelEach(ctx, p.WorkerConcurrent, p.startService)
+	return p.worker.BatchedParallelEach(
+		ctx,
+		p.WorkerConcurrent,
+		p.startService,
+		p.enableService,
+	)
 }
 
 func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the worker service to start", "service", p.Distro.GetWorkerService(), "host", h)
+	return h.Configurer.StartService(h, p.Distro.GetWorkerService())
+}
 
-	go func() {
-		h.Configurer.StartService(h, p.Distro.GetWorkerService())
-	}()
-
-	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {
-		return err
-	}
-
+func (p *InitializeWorkers) enableService(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("enabling the worker service", "service", p.Distro.GetWorkerService(), "host", h)
 	return h.Configurer.EnableService(h, p.Distro.GetWorkerService())
 }

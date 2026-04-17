@@ -22,8 +22,8 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/pkg/packager"
 	"github.com/colonel-byte/zarf-distro/src/pkg/packager/load"
 	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
-	"github.com/colonel-byte/zarf-distro/src/types/distro/registry"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg/registry"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -36,12 +36,12 @@ type InstallCommon struct {
 	LogFormat   string
 }
 
-func Distro(s string) (distro.Distro, error) {
+func Distro(s string) (distrocfg.Distro, error) {
 	ds, err := registry.GetDistroModuleBuilder(s)
 	if err != nil {
 		return nil, err
 	}
-	d := ds().(distro.Distro)
+	d := ds().(distrocfg.Distro)
 	return d, nil
 }
 

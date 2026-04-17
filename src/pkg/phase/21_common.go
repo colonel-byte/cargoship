@@ -16,8 +16,10 @@ package phase
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
@@ -125,12 +127,17 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 		case selector:
 			if f.Selector.Profile == "" || f.Selector.Profile == profile {
 				logger.From(ctx).Debug("determined this file needs to be uploaded", "file", filepath.Base(f.Target))
+				file := filepath.Join(p.manager.TempDirectory, config.OSDir, strconv.Itoa(i), filepath.Base(f.Target))
+				err := os.Chtimes(file, time.Unix(0, 0), time.Unix(0, 0))
+				if err != nil {
+					logger.From(ctx).Warn("failed to change the file time", "error", err)
+				}
 				files = append(files, cluster.UploadFile{
 					Name:            filepath.Base(f.Target),
 					DestinationFile: f.Target,
 					Sources: []*cluster.LocalFile{
 						{
-							Path: filepath.Join(p.manager.TempDirectory, config.OSDir, strconv.Itoa(i), filepath.Base(f.Target)),
+							Path: file,
 						},
 					},
 				})

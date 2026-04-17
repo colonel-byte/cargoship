@@ -23,7 +23,7 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	apiDistro "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/creasty/defaults"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -135,7 +135,7 @@ type ManagerDistroConfig struct {
 }
 
 // NewManager creates a new Manager
-func NewManager(config *cluster.ZarfCluster, distro distro.Distro) (*Manager, error) {
+func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config is nil")
 	}

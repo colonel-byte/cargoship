@@ -21,6 +21,7 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -40,6 +41,7 @@ type FirewallConfig struct {
 // GatherFacts gathers information about hosts, such as if k0s is already up and running
 type ConfigureFirewall struct {
 	GenericPhase
+	Distro    distrocfg.Distro
 	Enabled   bool
 	hosts     cluster.ZarfHosts
 	ipaddress []string
@@ -76,7 +78,7 @@ func (p *ConfigureFirewall) Run(ctx context.Context) error {
 		p.hosts,
 		p.configureFirewallNodes,
 		p.configureFirewallCluster,
-		p.updateFirewalld,
+		p.updateFirewall,
 		p.restartFirewall,
 	)
 }
@@ -87,13 +89,10 @@ func (p *ConfigureFirewall) restartFirewall(ctx context.Context, h *v1alpha1.Zar
 
 func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *v1alpha1.ZarfHost) error {
 	ent := FirewallConfig{
-		Type:  "hash:net",
-		Short: "k8subnets",
-		Long:  "IPset for all k8 service and pod CIDRs",
-		Entries: []string{
-			"10.42.0.0/16",
-			"10.43.0.0/16",
-		},
+		Type:    "hash:net",
+		Short:   "k8subnets",
+		Long:    "IPset for all k8 service and pod CIDRs",
+		Entries: p.Distro.GetClusterCIDR(*p.manager.Distro),
 	}
 
 	output, err := xml.MarshalIndent(ent, "", "  ")
@@ -120,7 +119,7 @@ func (p *ConfigureFirewall) configureFirewallNodes(ctx context.Context, h *v1alp
 	return h.WriteFile("/etc/firewalld/ipsets/k8s-nodes.xml", string(output)+"\n", "0600")
 }
 
-func (p *ConfigureFirewall) updateFirewalld(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ConfigureFirewall) updateFirewall(ctx context.Context, h *v1alpha1.ZarfHost) error {
 	if err := h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-nodes", exec.Sudo(h)); err != nil {
 		return err
 	}

@@ -75,7 +75,7 @@ func Context(ctx context.Context, f func(ctx context.Context) error) error {
 				l.Info("retry.Context: succeeded", "attempts", attempt)
 				return nil
 			} else {
-				l.Info("retry.Context: failed", "attempts", attempt, "error", lastErr)
+				l.Debug("retry.Context: failed", "attempts", attempt, "error", lastErr)
 			}
 		}
 	}

@@ -18,18 +18,29 @@ import (
 	"context"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type UpgradeController struct {
 	GenericPhase
-	Distro           tdis.Distro
-	control          cluster.ZarfHosts
-	WorkerConcurrent int
+	Distro  distrocfg.Distro
+	control cluster.ZarfHosts
 }
 
 func (p *UpgradeController) Title() string {
 	return "Upgrade Controller"
+}
+
+// Prepare the phase
+func (p *UpgradeController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
+	})
+	logger.From(ctx).Info("number of systems that need to be updated", "hosts", len(p.control))
+
+	return nil
 }
 
 func (p *UpgradeController) Run(ctx context.Context) error {

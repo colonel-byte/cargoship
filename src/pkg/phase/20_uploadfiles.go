@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
@@ -104,6 +105,11 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 
 		writer.Close()
 
+		err = os.Chtimes(tarballPath, time.Unix(0, 0), time.Unix(0, 0))
+		if err != nil {
+			return err
+		}
+
 		p.imgFiles = append(p.imgFiles, cluster.UploadFile{
 			Name:           tarBallName,
 			DestinationDir: p.manager.Distro.Spec.Config.ImagesConfig.Path,
@@ -132,7 +138,6 @@ func (p *UploadFiles) Run(ctx context.Context) error {
 		ctx,
 		p.manager.Config.Spec.Hosts,
 		p.cleanUpOldTmpFiles,
-		p.cleanUpOldImageFiles,
 		p.uploadDistroFiles,
 	)
 }
@@ -161,30 +166,6 @@ func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHos
 		if err != nil {
 			l.Warn(fmt.Sprintf("failed to walk %s", binary), "path", file, "error", err)
 		}
-	}
-	return nil
-}
-
-func (p *UploadFiles) cleanUpOldImageFiles(ctx context.Context, h *cluster.ZarfHost) error {
-	l := logger.From(ctx)
-
-	file := p.manager.Distro.Spec.Config.ImagesConfig.Path
-	err := fs.WalkDir(h.SudoFsys(), p.manager.Distro.Spec.Config.ImagesConfig.Path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			l.Warn(fmt.Sprintf("failed to walk %s", file), "path", file, "error", err)
-			return nil
-		}
-		if !d.IsDir() && tarBallRegex.MatchString(path) {
-			l.Debug("removing old image file", "host", h, "path", path)
-			if err := h.Configurer.DeleteFile(h, path); err != nil {
-				l.Warn("failed to delete", "host", h, "path", path, "error", err)
-			}
-			return nil
-		}
-		return nil
-	})
-	if err != nil {
-		l.Warn(fmt.Sprintf("failed to walk %s", file), "path", file, "error", err)
 	}
 	return nil
 }

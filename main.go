@@ -29,7 +29,7 @@ import (
 	// anonymous import is needed to load the os configurers
 	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux/enterpriselinux"
 	// anonymous import is needed to load the distro configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/distro"
+	_ "github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 )
 
 func main() {

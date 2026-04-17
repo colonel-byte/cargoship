@@ -61,16 +61,18 @@
       },
       "properties": {
         "concurrency": {
-          "maximum": 65535,
           "minimum": 0,
           "type": "integer"
+        },
+        "firewall_update": {
+          "default": true,
+          "type": "boolean"
         },
         "host_update": {
           "default": true,
           "type": "boolean"
         },
         "worker_concurrency": {
-          "maximum": 65535,
           "minimum": 0,
           "type": "integer"
         }

@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distro
+package distrocfg
 
 import (
 	"context"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/k0sproject/rig/os"
 )
 
 const (
@@ -38,10 +39,13 @@ type Distro interface {
 	ConfigPath() string
 	ConfigureEngine(context.Context, cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
 	DataDirPath() string
+	GetClusterCIDR(distro.ZarfDistro) []string
 	GetControllerService() string
 	GetWorkerService() string
 	JoinTokenPath() string
 	JoinTokenPathAgent() string
+	KubeconfigPath(os.Host, string) string
+	KubectlCmdf(os.Host, string, string, ...any) string
 	SetPath(string, string) error
 	//keep-sorted end
 }

@@ -36,6 +36,7 @@ const (
 	VInstallConcurrency           = "install.concurrency"
 	VInstallWorkerConcurrency     = "install.worker_concurrency"
 	VInstallUpdateHost            = "install.host_update"
+	VInstallUpdateFirewall        = "install.firewall_update"
 )
 
 var (
@@ -97,4 +98,5 @@ func setDefaults() {
 	v.SetDefault(VDistroCreateSkipSbom, false)
 	v.SetDefault(VInstallConcurrency, 30)
 	v.SetDefault(VInstallUpdateHost, false)
+	v.SetDefault(VInstallUpdateFirewall, false)
 }

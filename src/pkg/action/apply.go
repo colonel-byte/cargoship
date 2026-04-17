@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
-	"github.com/colonel-byte/zarf-distro/src/types/distro/registry"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -35,6 +35,8 @@ type ApplyOptions struct {
 	NoDrain bool
 	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
 	ModifyHosts bool
+	// ModifyFirewall updates the firewalld on the nodes
+	ModifyFirewall bool
 	// WorkerConcurrent number of workers that will be installed or upgraded at a time
 	WorkerConcurrent int
 }
@@ -58,7 +60,7 @@ func NewApply(opts ApplyOptions) *Apply {
 		opts.Manager.Concurrency = 0
 	}
 
-	d := disBuilder().(distro.Distro)
+	d := disBuilder().(distrocfg.Distro)
 
 	lockPhase := &phase.Lock{}
 	apply := &Apply{
@@ -77,7 +79,8 @@ func NewApply(opts ApplyOptions) *Apply {
 				Enabled: opts.ModifyHosts,
 			},
 			&phase.ConfigureFirewall{
-				Enabled: true,
+				Distro:  d,
+				Enabled: opts.ModifyFirewall,
 			},
 
 			&phase.UploadFiles{},

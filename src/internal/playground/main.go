@@ -20,8 +20,8 @@ import (
 	"fmt"
 	goos "os"
 
-	"github.com/colonel-byte/zarf-distro/src/types/distro"
-	"github.com/colonel-byte/zarf-distro/src/types/distro/registry"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg/registry"
 	"github.com/colonel-byte/zarf-distro/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
@@ -36,7 +36,7 @@ import (
 	// anonymous import is needed to load the os configurers
 	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux/enterpriselinux"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/distro"
+	_ "github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 )
 
 type osconfigurer interface {
@@ -146,12 +146,12 @@ func Upload() {
 	fmt.Println("Done, file now at", *df)
 }
 
-func Distro(s string) (distro.Distro, error) {
+func Distro(s string) (distrocfg.Distro, error) {
 	ds, err := registry.GetDistroModuleBuilder(s)
 	if err != nil {
 		return nil, err
 	}
-	d := ds().(distro.Distro)
+	d := ds().(distrocfg.Distro)
 	return d, nil
 }
 

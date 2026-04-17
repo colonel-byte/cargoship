@@ -20,7 +20,7 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
-	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -31,7 +31,7 @@ const (
 // ConfigureEngine writes the k0s configuration to host k0s config dir
 type ConfigureEngine struct {
 	GenericPhase
-	Distro  tdis.Distro
+	Distro  distrocfg.Distro
 	run     cluster.ZarfRuntimeMeta
 	leader  *cluster.ZarfHost
 	hosts   cluster.ZarfHosts
@@ -61,33 +61,35 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.LongHostname(h))
 	}
 
+	p.run.ControllerToken = ""
 	if p.run.Leader.Configurer.FileExist(p.run.Leader, p.Distro.JoinTokenPath()) {
-		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPath()); err != nil {
-			logger.From(ctx).Warn("failed to read token file", "error", err)
+		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPath()); err == nil {
 			p.run.ControllerToken = token
+		} else {
+			logger.From(ctx).Warn("failed to read token file", "error", err)
 		}
 	}
 	if token, err := utils.RandomString(random_length); err == nil && p.run.ControllerToken == "" {
 		p.run.ControllerToken = token
-	} else {
-		logger.From(ctx).Warn("failed to read random", "error", err)
+	} else if err != nil {
+		logger.From(ctx).Warn("failed to read random - control", "error", err)
 		return err
 	}
-	logger.From(ctx).Warn("current", "token", p.run.ControllerToken)
 
+	p.run.AgentToken = ""
 	if p.run.Leader.Configurer.FileExist(p.run.Leader, p.Distro.JoinTokenPathAgent()) {
-		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPathAgent()); err != nil {
-			logger.From(ctx).Warn("failed to read agent token file", "error", err)
+		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPathAgent()); err == nil {
 			p.run.AgentToken = token
+		} else {
+			logger.From(ctx).Warn("failed to read agent token file", "error", err)
 		}
 	}
 	if token, err := utils.RandomString(random_length); err == nil && p.run.AgentToken == "" {
 		p.run.AgentToken = token
-	} else {
-		logger.From(ctx).Warn("failed to read random", "error", err)
+	} else if err != nil {
+		logger.From(ctx).Warn("failed to read random - agent", "error", err)
 		return err
 	}
-	logger.From(ctx).Warn("current", "agent-token", p.run.ControllerToken)
 
 	return nil
 }

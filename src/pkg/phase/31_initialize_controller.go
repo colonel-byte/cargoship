@@ -19,15 +19,13 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/pkg/node"
-	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
-	tdis "github.com/colonel-byte/zarf-distro/src/types/distro"
+	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type InitializeControllers struct {
 	GenericPhase
-	Distro  tdis.Distro
+	Distro  distrocfg.Distro
 	control cluster.ZarfHosts
 }
 
@@ -47,7 +45,12 @@ func (p *InitializeControllers) Title() string {
 }
 
 func (p *InitializeControllers) Run(ctx context.Context) error {
-	return p.control.BatchedParallelEach(ctx, 1, p.startService)
+	return p.control.BatchedParallelEach(
+		ctx,
+		1,
+		p.startService,
+		p.enableService,
+	)
 }
 
 // ShouldRun is true when there are workers
@@ -57,14 +60,10 @@ func (p *InitializeControllers) ShouldRun() bool {
 
 func (p *InitializeControllers) startService(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the controller service to start", "service", p.Distro.GetControllerService(), "host", h)
+	return h.Configurer.StartService(h, p.Distro.GetControllerService())
+}
 
-	go func() {
-		h.Configurer.StartService(h, p.Distro.GetControllerService())
-	}()
-
-	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetControllerService())); err != nil {
-		return err
-	}
-
-	return h.Configurer.EnableService(h, p.Distro.GetControllerService())
+func (p *InitializeControllers) enableService(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("enabling the controller service", "service", p.Distro.GetControllerService(), "host", h)
+	return h.Configurer.EnableService(h, p.Distro.GetWorkerService())
 }

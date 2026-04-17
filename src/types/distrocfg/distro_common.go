@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distro
+package distrocfg
 
 import (
 	"bytes"
@@ -100,7 +100,7 @@ func (r *Common) SetPath(key string, value string) error {
 	return nil
 }
 
-func (r *Common) writeMap(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, path string) error {
+func (r *Common) writeYAML(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, path string) error {
 	buf := bytes.Buffer{}
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)

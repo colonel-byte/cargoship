@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package distro
+package distrocfg
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/config"
 	"github.com/k0sproject/dig"
 	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/os"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -36,6 +37,7 @@ var (
 		key_kube_api,
 		key_kube_cont_manager,
 		key_kube_scheduler,
+		key_etcd,
 	}
 )
 
@@ -44,7 +46,10 @@ const (
 	key_agent_token       = "agent-token-file"
 	key_api_version       = "apiVersion"
 	key_audit             = "audit-policy-file"
+	key_cidr_pod          = "cluster-cidr"
+	key_cidr_svc          = "service-cidr"
 	key_data_dir          = "data-dir"
+	key_etcd              = "etcd-arg"
 	key_kind              = "kind"
 	key_kube_api          = "kube-apiserver-arg"
 	key_kube_cont_manager = "kube-controller-manager-arg"
@@ -117,7 +122,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			config[key_spec] = map[string]string{
 				"valuesContent": fmt.Sprint(v),
 			}
-			r.writeMap(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", r.Data, k))
+			r.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", r.Data, k))
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
@@ -148,7 +153,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		nodeConfig.DigMapping(config.EngineAudit)[key_kind] = "Policy"
 		nodeConfig.DigMapping(config.EngineAudit)[key_api_version] = "audit.k8s.io/v1"
 		audit := filepath.Join(filepath.Dir(r.Config), "audit.yaml")
-		r.writeMap(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
+		r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
 		nodeConfig.DigMapping(config.EngineConfig)[key_audit] = audit
 	}
 
@@ -156,11 +161,38 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		nodeConfig.DigMapping(config.EnginePSS)[key_kind] = "AdmissionConfiguration"
 		nodeConfig.DigMapping(config.EnginePSS)[key_api_version] = "apiserver.config.k8s.io/v1"
 		pss := filepath.Join(filepath.Dir(r.Config), "pss.yaml")
-		r.writeMap(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
+		r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
 		nodeConfig.DigMapping(config.EngineConfig)[key_pod_sec] = pss
 	}
 
-	r.writeMap(ctx, host, nodeConfig.DigMapping(config.EngineConfig), r.Config)
+	r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), r.Config)
 
 	return nil
+}
+
+// KubeconfigPath implements Distro.
+func (d *RancherCommon) KubeconfigPath(host os.Host, dataDir string) string {
+	return filepath.Join(filepath.Dir(d.Config), "rke2.yaml")
+}
+
+// KubectlCmdf implements Distro.
+func (d *RancherCommon) KubectlCmdf(host os.Host, dataDir string, s string, args ...any) string {
+	return fmt.Sprintf(`env "KUBECONFIG=%s" %s`, d.KubeconfigPath(host, dataDir), fmt.Sprintf(`kubectl %s`, fmt.Sprintf(s, args...)))
+}
+
+func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
+	nodeConfig := dis.Spec.Config.Engine.Dup()
+	pod := nodeConfig.DigString(config.EngineConfig, key_cidr_pod)
+	if pod == "" {
+		pod = "10.42.0.0/16"
+	}
+	svc := nodeConfig.DigString(config.EngineConfig, key_cidr_svc)
+	if svc == "" {
+		svc = "10.43.0.0/16"
+	}
+
+	return []string{
+		pod,
+		svc,
+	}
 }
