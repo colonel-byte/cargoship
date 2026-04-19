@@ -19,14 +19,11 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type UpgradeWorkers struct {
-	GenericPhase
-	Distro           distrocfg.Distro
-	worker           cluster.ZarfHosts
+	UpgradeHosts
 	WorkerConcurrent int
 }
 
@@ -36,14 +33,33 @@ func (p *UpgradeWorkers) Title() string {
 
 // Prepare the phase
 func (p *UpgradeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.worker = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) && !h.IsController() && p.VersionLess(h, d.Spec.Version)
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
 	})
-	logger.From(ctx).Info("number of systems that need to be updated", "hosts", len(p.worker))
+	p.leader = control[0]
+	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) &&
+			!h.IsController() &&
+			h.Metadata.DistroVersion != UNKNOWN_VERSION &&
+			p.VersionLess(h, d.Spec.Version)
+	})
+	logger.From(ctx).Info("number of systems that need to be updated", "hosts", len(p.hosts))
+	p.service = p.Distro.GetWorkerService()
 
 	return nil
 }
 
 func (p *UpgradeWorkers) Run(ctx context.Context) error {
-	return nil
+	return p.batchedParallelWithMessage(
+		ctx,
+		"draining worker nodes",
+		p.hosts,
+		p.WorkerConcurrent,
+		p.drainNode,
+		p.stopService,
+		p.installDistro,
+		p.startService,
+		p.waitForNodeReady,
+		p.uncordonNode,
+	)
 }

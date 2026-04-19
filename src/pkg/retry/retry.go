@@ -28,7 +28,7 @@ var (
 	// DefaultTimeout is a default timeout for retry operations
 	DefaultTimeout = 10 * time.Minute
 	// Interval is the time to wait between retry attempts
-	Interval = 5 * time.Second
+	Interval = 15 * time.Second
 	// ErrAbort should be returned when an error occurs on which retrying should be aborted
 	ErrAbort = errors.New("retrying aborted")
 )
@@ -57,7 +57,7 @@ func Context(ctx context.Context, f func(ctx context.Context) error) error {
 	for {
 		select {
 		case <-ctx.Done():
-			l.Info("retry.Context: context cancelled", "attempts", attempt)
+			l.Warn("retry.Context: context cancelled", "attempts", attempt)
 			return errors.Join(ctx.Err(), lastErr)
 		case <-ticker.C:
 			attempt++
@@ -67,12 +67,12 @@ func Context(ctx context.Context, f func(ctx context.Context) error) error {
 			lastErr = f(ctx)
 
 			if errors.Is(lastErr, ErrAbort) {
-				l.Info("retry.Context: aborted", "attempts", attempt)
+				l.Warn("retry.Context: aborted", "attempts", attempt)
 				return lastErr
 			}
 
 			if lastErr == nil {
-				l.Info("retry.Context: succeeded", "attempts", attempt)
+				l.Debug("retry.Context: succeeded", "attempts", attempt)
 				return nil
 			} else {
 				l.Debug("retry.Context: failed", "attempts", attempt, "error", lastErr)

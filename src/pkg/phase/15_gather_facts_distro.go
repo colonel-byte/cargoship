@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"errors"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
@@ -32,6 +33,7 @@ type GatherFactsDistro struct {
 	GenericPhase
 	Distro distrocfg.Distro
 	hosts  cluster.ZarfHosts
+	d      *distro.ZarfDistro
 }
 
 // Title for the phase
@@ -42,6 +44,7 @@ func (p *GatherFactsDistro) Title() string {
 // Prepare the phase
 func (p *GatherFactsDistro) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts
+	p.d = d
 	return nil
 }
 
@@ -64,5 +67,8 @@ func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluste
 		h.Metadata.DistroVersion = ver
 	}
 	logger.From(ctx).Info("detected", "host", h, "version", h.Metadata.DistroVersion)
+	if p.VersionGreater(h, p.d.Spec.Version) {
+		return errors.New("will not downgrade the cluster")
+	}
 	return nil
 }

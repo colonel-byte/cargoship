@@ -89,7 +89,7 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.UploadFiles{},
 			&phase.RPMUploadFiles{},
 			&phase.APTUploadFiles{},
-			&phase.BINUploadFiles{},
+			// &phase.BINUploadFiles{},
 
 			&phase.ConfigureEngine{
 				Distro: d,
@@ -102,16 +102,18 @@ func NewApply(opts ApplyOptions) *Apply {
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 			&phase.UpgradeController{
-				Distro: d,
+				UpgradeHosts: phase.UpgradeHosts{
+					Distro: d,
+				},
 			},
 			&phase.UpgradeWorkers{
-				Distro:           d,
+				UpgradeHosts: phase.UpgradeHosts{
+					Distro: d,
+				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 
-			&phase.Unlock{
-				Cancel: lockPhase.Cancel,
-			},
+			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
 	}

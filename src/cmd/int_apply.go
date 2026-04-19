@@ -101,6 +101,7 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		Manager:          manager,
 		ModifyHosts:      o.hosts,
 		WorkerConcurrent: o.workerCon,
+		ModifyFirewall:   o.firewall,
 	}
 
 	if err := action.NewApply(applyOpts).Run(ctx); err != nil {

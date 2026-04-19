@@ -45,3 +45,21 @@ func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 
 	return nil
 }
+
+// Run the phase
+func (p *RPMUploadFiles) Run(ctx context.Context) (err error) {
+	p.parallelDo(ctx, p.control, func(ctx context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+			return zh.Configurer.InstallPackage(zh, getPath(p.filesControl)...)
+		}
+		return nil
+	})
+	p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+			return zh.Configurer.InstallPackage(zh, getPath(p.filesWorkers)...)
+		}
+		return nil
+	})
+
+	return p.UploadFilesCommon.Run(ctx)
+}

@@ -71,7 +71,6 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 		ctx,
 		p.control,
 		p.uploadControllerFiles,
-		p.installControllerFiles,
 		p.blockOtherInstalls,
 	)
 	if err != nil {
@@ -81,7 +80,6 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 		ctx,
 		p.workers,
 		p.uploadWorkerFiles,
-		p.installWorkerFiles,
 		p.blockOtherInstalls,
 	)
 	if err != nil {
@@ -102,16 +100,6 @@ func (p *UploadFilesCommon) uploadControllerFiles(ctx context.Context, h *cluste
 
 func (p *UploadFilesCommon) uploadWorkerFiles(ctx context.Context, h *cluster.ZarfHost) error {
 	return p.uploadFiles(ctx, h, p.filesWorkers)
-}
-
-func (p *UploadFilesCommon) installControllerFiles(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("installing engine - controller", "host", h)
-	return h.Configurer.InstallPackage(h, getPath(p.filesControl)...)
-}
-
-func (p *UploadFilesCommon) installWorkerFiles(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("installing engine - worker", "host", h)
-	return h.Configurer.InstallPackage(h, getPath(p.filesWorkers)...)
 }
 
 // ShouldRun is true when there are workers

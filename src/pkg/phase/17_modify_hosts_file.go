@@ -75,9 +75,8 @@ func (p *ModifyHosts) configureHostsFile(ctx context.Context, h *v1alpha1.ZarfHo
 		RawText: &hostsCon,
 	})
 
-	// clear out any existing host file entries
-	hostfile.RemoveByComment(host_comment)
 	for _, k := range slices.Sorted(maps.Keys(p.hosts)) {
+		hostfile.RemoveAddress(k)
 		hostfile.AddHostsWithComment(k, p.hosts[k], host_comment)
 	}
 

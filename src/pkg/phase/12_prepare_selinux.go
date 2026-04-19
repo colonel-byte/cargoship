@@ -51,7 +51,7 @@ func (p *PrepareSelinux) Title() string {
 
 // Run the phase
 func (p *PrepareSelinux) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.selinuxHosts, p.prepareHost)
+	return p.parallelDoWithMessage(ctx, "waiting for package to install", p.selinuxHosts, p.prepareHost)
 }
 
 // ShouldRun is true when there is a host with selinux or fapolicyd on the hosts

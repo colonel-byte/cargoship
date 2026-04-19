@@ -15,6 +15,7 @@
 package cluster
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	gos "os"
@@ -64,6 +65,7 @@ type ZarfHostMetadata struct {
 	EngineUploaded bool
 	ExistingConfig string
 	Hostname       string
+	Install        func(context.Context, *ZarfHost) error
 	Installed      bool
 	IsLeader       bool
 	MachineID      string

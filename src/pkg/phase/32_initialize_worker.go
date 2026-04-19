@@ -19,6 +19,8 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/pkg/node"
+	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -50,27 +52,49 @@ func (p *InitializeWorkers) ShouldRun() bool {
 }
 
 func (p *InitializeWorkers) Run(ctx context.Context) error {
+	err := p.parallelDoWithMessage(
+		ctx,
+		"installing distro engine",
+		p.worker,
+		p.installDistro,
+	)
+	if err != nil {
+		return err
+	}
 	if p.WorkerConcurrent == 0 {
-		return p.worker.ParallelEach(
+		return p.parallelDoWithMessage(
 			ctx,
+			"starting agent",
+			p.worker,
 			p.startService,
-			p.enableService,
 		)
 	}
-	return p.worker.BatchedParallelEach(
+	return p.batchedParallelWithMessage(
 		ctx,
+		"starting agent",
+		p.worker,
 		p.WorkerConcurrent,
 		p.startService,
-		p.enableService,
 	)
+}
+
+func (p *InitializeWorkers) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
+	if h.Metadata.Install != nil {
+		return h.Metadata.Install(ctx, h)
+	}
+	return nil
 }
 
 func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the worker service to start", "service", p.Distro.GetWorkerService(), "host", h)
-	return h.Configurer.StartService(h, p.Distro.GetWorkerService())
-}
 
-func (p *InitializeWorkers) enableService(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("enabling the worker service", "service", p.Distro.GetWorkerService(), "host", h)
+	go func() {
+		h.Configurer.StartService(h, p.Distro.GetWorkerService())
+	}()
+
+	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {
+		return err
+	}
+
 	return h.Configurer.EnableService(h, p.Distro.GetWorkerService())
 }

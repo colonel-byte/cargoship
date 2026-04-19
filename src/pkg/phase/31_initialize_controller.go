@@ -19,6 +19,8 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/pkg/node"
+	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -32,7 +34,7 @@ type InitializeControllers struct {
 // Prepare the phase
 func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
+		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UNKNOWN_VERSION
 	})
 
 	logger.From(ctx).Info("number of systems that need to be started", "hosts", len(p.control))
@@ -45,11 +47,21 @@ func (p *InitializeControllers) Title() string {
 }
 
 func (p *InitializeControllers) Run(ctx context.Context) error {
-	return p.control.BatchedParallelEach(
+	err := p.parallelDoWithMessage(
 		ctx,
+		"installing distro engine",
+		p.control,
+		p.installDistro,
+	)
+	if err != nil {
+		return err
+	}
+	return p.batchedParallelWithMessage(
+		ctx,
+		"starting engine",
+		p.control,
 		1,
 		p.startService,
-		p.enableService,
 	)
 }
 
@@ -58,12 +70,23 @@ func (p *InitializeControllers) ShouldRun() bool {
 	return len(p.control) > 0
 }
 
-func (p *InitializeControllers) startService(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("waiting for the controller service to start", "service", p.Distro.GetControllerService(), "host", h)
-	return h.Configurer.StartService(h, p.Distro.GetControllerService())
+func (p *InitializeControllers) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
+	if h.Metadata.Install != nil {
+		return h.Metadata.Install(ctx, h)
+	}
+	return nil
 }
 
-func (p *InitializeControllers) enableService(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("enabling the controller service", "service", p.Distro.GetControllerService(), "host", h)
-	return h.Configurer.EnableService(h, p.Distro.GetWorkerService())
+func (p *InitializeControllers) startService(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("waiting for the controller service to start", "service", p.Distro.GetControllerService(), "host", h)
+
+	go func() {
+		h.Configurer.StartService(h, p.Distro.GetControllerService())
+	}()
+
+	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetControllerService())); err != nil {
+		return err
+	}
+
+	return h.Configurer.EnableService(h, p.Distro.GetControllerService())
 }
