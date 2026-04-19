@@ -144,21 +144,21 @@ spec:
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
       files:
-        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-common-1.35.3~rke2r1-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-common-1.35.3~rke2r1-0.el9.x86_64.rpm
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-common-1.35.3~rke2r3-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-common-1.35.3~rke2r3-0.el9.x86_64.rpm
           selector:
             package: rpm
         - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
           selector:
             package: rpm
-        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-server-1.35.3~rke2r1-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-server-1.35.3~rke2r1-0.el9.x86_64.rpm
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-server-1.35.3~rke2r3-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-server-1.35.3~rke2r3-0.el9.x86_64.rpm
           selector:
             package: rpm
             profile: controller
-        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-agent-1.35.3~rke2r1-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-agent-1.35.3~rke2r1-0.el9.x86_64.rpm
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-agent-1.35.3~rke2r3-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-agent-1.35.3~rke2r3-0.el9.x86_64.rpm
           selector:
             package: rpm
             profile: worker
