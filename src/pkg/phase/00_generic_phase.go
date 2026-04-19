@@ -17,7 +17,9 @@ package phase
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 )
@@ -73,4 +75,16 @@ func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.ZarfH
 // Wet is a shorthand for manager.Wet
 func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error {
 	return p.manager.Wet(host, msg, funcs...)
+}
+
+func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool {
+	con, err := semver.NewConstraint(fmt.Sprintf("< %s", strings.ReplaceAll(version, "+", "-")))
+	if err != nil {
+		return false
+	}
+	v, err := semver.NewVersion(strings.ReplaceAll(host.Metadata.DistroVersion, "+", "-"))
+	if err != nil {
+		return false
+	}
+	return con.Check(v)
 }

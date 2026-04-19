@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	apiDistro "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
@@ -122,8 +121,6 @@ type Manager struct {
 	DryRun            bool
 	Writer            io.Writer
 	TempDirectory     string
-	dryMessages       map[string][]string
-	dryMu             sync.Mutex
 }
 
 type ManagerDistroConfig struct {
@@ -132,6 +129,7 @@ type ManagerDistroConfig struct {
 	Config    string
 	Token     string
 	Data      string
+	Version   string
 }
 
 // NewManager creates a new Manager
@@ -162,22 +160,6 @@ func (m *Manager) GetDistroOSFiles() apiDistro.ZarfFiles {
 
 type errorfunc func() error
 
-// DryMsg prints a message in dry-run mode
-func (m *Manager) DryMsg(host fmt.Stringer, msg string) {
-	m.dryMu.Lock()
-	defer m.dryMu.Unlock()
-	if m.dryMessages == nil {
-		m.dryMessages = make(map[string][]string)
-	}
-	var key string
-	if host == nil {
-		key = "local"
-	} else {
-		key = host.String()
-	}
-	m.dryMessages[key] = append(m.dryMessages[key], msg)
-}
-
 // Wet runs the first given function when not in dry-run mode. The second function will be
 // run when in dry-mode and the message will be displayed. Any error returned from the
 // functions will be returned and will halt the operation.
@@ -188,8 +170,6 @@ func (m *Manager) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error {
 		}
 		return nil
 	}
-
-	m.DryMsg(host, msg)
 
 	if m.DryRun && len(funcs) == 2 && funcs[1] != nil {
 		return funcs[1]()

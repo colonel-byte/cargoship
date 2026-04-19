@@ -505,10 +505,14 @@
             "upstream"
           ],
           "type": "string"
+        },
+        "version": {
+          "type": "string"
         }
       },
       "required": [
         "type",
+        "version",
         "config"
       ],
       "type": "object"

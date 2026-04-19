@@ -181,30 +181,24 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *c
 
 func (p *GenericPhase) applyFileMetadata(ctx context.Context, h *cluster.ZarfHost, dest, owner, perm string, timestamp *time.Time) error {
 	if owner != "" {
-		err := p.Wet(h, fmt.Sprintf("set owner for %s to %s", dest, owner), func() error {
-			logger.From(ctx).Debug("setting owner", "host", h, "owner", owner, "destination", dest)
-			return h.Configurer.Chown(h, dest, owner, exec.Sudo(h))
-		})
+		logger.From(ctx).Debug("setting owner", "host", h, "owner", owner, "destination", dest)
+		err := h.Configurer.Chown(h, dest, owner, exec.Sudo(h))
 		if err != nil {
 			return err
 		}
 	}
 
 	if perm != "" {
-		err := p.Wet(h, fmt.Sprintf("set permissions for %s to %s", dest, perm), func() error {
-			logger.From(ctx).Debug("setting permissions", "host", h, "permission", perm, "destination", dest)
-			return chmodWithString(h, dest, perm)
-		})
+		logger.From(ctx).Debug("setting permissions", "host", h, "permission", perm, "destination", dest)
+		err := chmodWithString(h, dest, perm)
 		if err != nil {
 			return err
 		}
 	}
 
 	if timestamp != nil {
-		err := p.Wet(h, fmt.Sprintf("set timestamp for %s to %s", dest, timestamp.String()), func() error {
-			logger.From(ctx).Debug("setting touching", "host", h, "destination", dest)
-			return h.Configurer.Touch(h, dest, *timestamp, exec.Sudo(h))
-		})
+		logger.From(ctx).Debug("setting touching", "host", h, "destination", dest)
+		err := h.Configurer.Touch(h, dest, *timestamp, exec.Sudo(h))
 		if err != nil {
 			return fmt.Errorf("failed to touch %s: %w", dest, err)
 		}

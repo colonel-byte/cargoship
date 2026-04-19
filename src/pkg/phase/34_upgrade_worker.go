@@ -37,7 +37,7 @@ func (p *UpgradeWorkers) Title() string {
 // Prepare the phase
 func (p *UpgradeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.worker = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) && !h.IsController()
+		return h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) && !h.IsController() && p.VersionLess(h, d.Spec.Version)
 	})
 	logger.From(ctx).Info("number of systems that need to be updated", "hosts", len(p.worker))
 

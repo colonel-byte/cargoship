@@ -21,6 +21,7 @@ metadata:
   architecture: amd64
 spec:
   type: rke2
+  version: 1.35.2-rke2r1
   actions:
     onCreate:
       before:

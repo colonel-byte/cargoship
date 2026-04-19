@@ -46,6 +46,7 @@ type ZarfDistroBuildData struct {
 
 type ZarfDistroSpec struct {
 	Type    string            `json:"type" jsonschema:"enum=rke2,enum=k3s,enum=upstream"`
+	Version string            `json:"version"`
 	Actions ZarfDistroActions `json:"actions,omitempty"`
 	Config  ZarfDistroConfig  `json:"config"`
 }
