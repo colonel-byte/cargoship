@@ -58,7 +58,7 @@ var (
 func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.manager.Config = c
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return (len(h.Files) + len(d.Spec.Config.Files)) > 0
+		return (len(h.Files) + len(d.Spec.Config.Files) + len(p.manager.Distro.Spec.Config.ImagesConfig.Images)) > 0
 	})
 	p.disFiles = p.manager.Distro.Spec.Config.Files
 

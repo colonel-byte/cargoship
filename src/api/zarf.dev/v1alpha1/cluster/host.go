@@ -16,8 +16,10 @@ package cluster
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	gos "os"
 	"slices"
 	"time"
@@ -182,27 +184,24 @@ func (h *ZarfHost) ResolveConfigurer() error {
 	return fmt.Errorf("unsupported OS")
 }
 
-// FileChanged returns true when a remote file has different size or mtime compared to local
-// or if an error occurs
+// FileChanged returns true when a remote file has a different sha256 checksum or if an error occurs
 func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
-	lstat, err := gos.Stat(lpath)
+	file, err := gos.Open(lpath)
 	if err != nil {
-		log.Debugf("%s: local stat failed: %s", h, err)
 		return true
 	}
-	rstat, err := h.Configurer.Stat(h, rpath, exec.Sudo(h))
+	defer file.Close()
+	lsha := sha256.New()
+	if _, err = io.Copy(lsha, file); err != nil {
+		return true
+	}
+	rsha, err := h.Configurer.Sha256sum(h, rpath, exec.Sudo(h))
 	if err != nil {
-		log.Debugf("%s: remote stat failed: %s", h, err)
 		return true
 	}
 
-	if lstat.Size() != rstat.Size() {
-		log.Debugf("%s: file sizes for %s differ (%d vs %d)", h, lpath, lstat.Size(), rstat.Size())
-		return true
-	}
-
-	if !lstat.ModTime().Equal(rstat.ModTime()) {
-		log.Debugf("%s: file modtimes for %s differ (%s vs %s)", h, lpath, lstat.ModTime(), rstat.ModTime())
+	if fmt.Sprintf("%x", lsha.Sum(nil)) != rsha {
+		log.Debugf("%s: file sha256 for %s differ (%s vs %s)", h, lpath, fmt.Sprintf("%x", lsha.Sum(nil)), rsha)
 		return true
 	}
 

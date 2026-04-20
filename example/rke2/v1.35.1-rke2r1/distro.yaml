@@ -47,7 +47,7 @@ spec:
         disable-kube-proxy: true
         disable:
           - rke2-ingress-nginx
-        embedded-registry: true
+        embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB
           - "auto-compaction-retention=1h"
@@ -202,7 +202,7 @@ spec:
             package: binary
             profile: worker
     files:
-      - source: cache.json
+      - source: ../core/cache.json
         target: /var/lib/rancher/rke2/agent/images/.cache.json
     imageConfig:
       path: /var/lib/rancher/rke2/agent/images

@@ -38,8 +38,7 @@ func (p *UpgradeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 	})
 	p.leader = control[0]
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) &&
-			!h.IsController() &&
+		return !h.IsController() &&
 			h.Metadata.DistroVersion != UNKNOWN_VERSION &&
 			p.VersionLess(h, d.Spec.Version)
 	})

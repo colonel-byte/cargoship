@@ -30,7 +30,7 @@ import (
 
 var (
 	// Interval is the time to wait between retry attempts
-	Interval = 15 * time.Second
+	Interval = 10 * time.Second
 )
 
 type GenericPhase struct {

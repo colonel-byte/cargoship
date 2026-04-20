@@ -26,7 +26,7 @@ import (
 
 var (
 	// DefaultTimeout is a default timeout for retry operations
-	DefaultTimeout = 10 * time.Minute
+	DefaultTimeout = 15 * time.Minute
 	// Interval is the time to wait between retry attempts
 	Interval = 15 * time.Second
 	// ErrAbort should be returned when an error occurs on which retrying should be aborted

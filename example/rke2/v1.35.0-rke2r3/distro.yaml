@@ -17,11 +17,11 @@
 kind: ZarfDistro
 metadata:
   name: rancher-rke2
-  version: 1.35.3-rke2r3
+  version: 1.35.0-rke2r3
   architecture: amd64
 spec:
   type: rke2
-  version: 1.35.3-rke2r3
+  version: 1.35.0-rke2r3
   actions:
     onCreate:
       before:
@@ -29,8 +29,8 @@ spec:
           cmd: |-
             rm -rf   target
             mkdir -p target
-            echo https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r3/rke2.linux-amd64.tar.gz
-            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.35.3%2Brke2r3/rke2.linux-amd64.tar.gz
+            echo https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r3/rke2.linux-amd64.tar.gz
+            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.35.0%2Brke2r3/rke2.linux-amd64.tar.gz
       after:
         - description: clean up after
           cmd: |-
@@ -47,7 +47,7 @@ spec:
         disable-kube-proxy: true
         disable:
           - rke2-ingress-nginx
-        embedded-registry: true
+        embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB
           - "auto-compaction-retention=1h"
@@ -149,21 +149,21 @@ spec:
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
       files:
-        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-common-1.35.3~rke2r3-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-common-1.35.3~rke2r3-0.el9.x86_64.rpm
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-common-1.35.0~rke2r3-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-common-1.35.0~rke2r3-0.el9.x86_64.rpm
           selector:
             package: rpm
         - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
           selector:
             package: rpm
-        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-server-1.35.3~rke2r3-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-server-1.35.3~rke2r3-0.el9.x86_64.rpm
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-server-1.35.0~rke2r3-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-server-1.35.0~rke2r3-0.el9.x86_64.rpm
           selector:
             package: rpm
             profile: controller
-        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-agent-1.35.3~rke2r3-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-agent-1.35.3~rke2r3-0.el9.x86_64.rpm
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-agent-1.35.0~rke2r3-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-agent-1.35.0~rke2r3-0.el9.x86_64.rpm
           selector:
             package: rpm
             profile: worker
@@ -208,30 +208,29 @@ spec:
       path: /var/lib/rancher/rke2/agent/images
       compression: none
       images:
-        - docker.io/rancher/rke2-runtime:v1.35.3-rke2r3
-        - docker.io/rancher/hardened-kubernetes:v1.35.3-rke2r3-build20260407
-        - docker.io/rancher/hardened-coredns:v1.14.2-build20260310
-        - docker.io/rancher/hardened-cluster-autoscaler:v1.10.3-build20260206
-        - docker.io/rancher/hardened-dns-node-cache:1.26.7-build20260310
-        - docker.io/rancher/hardened-etcd:v3.6.7-k3s1-build20260227
-        - docker.io/rancher/hardened-k8s-metrics-server:v0.8.1-build20260206
-        - docker.io/rancher/hardened-addon-resizer:1.8.23-build20260206
-        - docker.io/rancher/klipper-helm:v0.9.14-build20260309
-        - docker.io/rancher/klipper-lb:v0.4.15
+        - docker.io/rancher/rke2-runtime:v1.35.0-rke2r3
+        - docker.io/rancher/hardened-kubernetes:v1.35.0-rke2r3-build20260127
+        - docker.io/rancher/hardened-coredns:v1.14.1-build20260116
+        - docker.io/rancher/hardened-cluster-autoscaler:v1.10.2-build20260116
+        - docker.io/rancher/hardened-dns-node-cache:1.26.7-build20260119
+        - docker.io/rancher/hardened-etcd:v3.6.7-k3s1-build20260126
+        - docker.io/rancher/hardened-k8s-metrics-server:v0.8.0-build20260116
+        - docker.io/rancher/hardened-addon-resizer:1.8.23-build20260119
+        - docker.io/rancher/klipper-helm:v0.9.12-build20251215
+        - docker.io/rancher/klipper-lb:v0.4.13
         - docker.io/rancher/mirrored-pause:3.6
-        - docker.io/rancher/kube-webhook-certgen:v1.14.5-hardened1
-        - docker.io/rancher/nginx-ingress-controller:v1.14.5-hardened1
-        - docker.io/rancher/rke2-cloud-provider:v1.35.1-0.20260211145923-50fa2d70c239-build20260211
-        - docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260205
-        # cilium cni images
-        - docker.io/rancher/mirrored-cilium-certgen:v0.3.2
-        - docker.io/rancher/mirrored-cilium-cilium:v1.19.1
-        - docker.io/rancher/mirrored-cilium-cilium-envoy:v1.35.9-1770979049-232ed4a26881e4ab4f766f251f258ed424fff663
-        - docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.19.1
-        - docker.io/rancher/mirrored-cilium-hubble-relay:v1.19.1
+        - docker.io/rancher/mirrored-ingress-nginx-kube-webhook-certgen:v1.6.7
+        - docker.io/rancher/nginx-ingress-controller:v1.14.3-hardened1
+        - docker.io/rancher/rke2-cloud-provider:v1.35.0-rc1.0.20251218152248-a6c6cd15c0c4-build20251219
+        - docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260108
+        - docker.io/rancher/mirrored-cilium-certgen:v0.3.1
+        - docker.io/rancher/mirrored-cilium-cilium:v1.18.6
+        - docker.io/rancher/mirrored-cilium-cilium-envoy:v1.35.9-1767794330-db497dd19e346b39d81d7b5c0dedf6c812bcc5c9
+        - docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.18.6
+        - docker.io/rancher/mirrored-cilium-hubble-relay:v1.18.6
         - docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.3
         - docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.3
-        - docker.io/rancher/mirrored-cilium-operator-aws:v1.19.1
-        - docker.io/rancher/mirrored-cilium-operator-azure:v1.19.1
-        - docker.io/rancher/mirrored-cilium-operator-generic:v1.19.1
-        - docker.io/rancher/hardened-cni-plugins:v1.9.0-build20260309
+        - docker.io/rancher/mirrored-cilium-operator-aws:v1.18.6
+        - docker.io/rancher/mirrored-cilium-operator-azure:v1.18.6
+        - docker.io/rancher/mirrored-cilium-operator-generic:v1.18.6
+        - docker.io/rancher/hardened-cni-plugins:v1.9.0-build20260116

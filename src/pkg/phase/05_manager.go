@@ -218,7 +218,7 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 
 		if p, ok := p.(withconfig); ok {
-			l.Debug("Preparing", "phase", p.Title())
+			l.Debug("preparing", "phase", p.Title())
 			if err := p.Prepare(ctx, m.Config, m.Distro); err != nil {
 				result = err
 				return result
@@ -241,7 +241,7 @@ func (m *Manager) Run(ctx context.Context) error {
 			}
 		}
 
-		l.Info("Running", "phase", title)
+		l.Info("running", "phase", title)
 
 		if dp, ok := p.(withDryRun); ok && m.DryRun {
 			ran = append(ran, p)

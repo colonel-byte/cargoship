@@ -202,7 +202,7 @@ spec:
             package: binary
             profile: worker
     files:
-      - source: cache.json
+      - source: ../core/cache.json
         target: /var/lib/rancher/rke2/agent/images/.cache.json
     imageConfig:
       path: /var/lib/rancher/rke2/agent/images

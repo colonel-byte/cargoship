@@ -62,6 +62,7 @@ type Configurer interface {
 	ServiceScriptPath(os.Host, string) (string, error)
 	SetPath(string, string)
 	SetSysctlValue(os.Host, string, string) error
+	Sha256sum(h os.Host, path string, opts ...exec.Option) (string, error)
 	StartService(os.Host, string) error
 	Stat(os.Host, string, ...exec.Option) (*os.FileInfo, error)
 	StopService(os.Host, string) error
