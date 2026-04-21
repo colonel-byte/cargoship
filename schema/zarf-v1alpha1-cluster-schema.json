@@ -404,6 +404,12 @@
         "openSSH": {
           "$ref": "#/$defs/OpenSSH"
         },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/ZarfHostPort"
+          },
+          "type": "array"
+        },
         "privateAddress": {
           "type": "string"
         },
@@ -437,6 +443,36 @@
       },
       "required": [
         "role"
+      ],
+      "type": "object"
+    },
+    "ZarfHostPort": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "port": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "enum": [
+            "tcp",
+            "udp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "port"
       ],
       "type": "object"
     },

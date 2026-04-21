@@ -33,10 +33,10 @@ const (
 	VDistroOCIConcurrency         = "distro.oci_concurrency"
 	VDistroCreateRegistryOverride = "distro.create.registry_override"
 	VDistroCreateSkipSbom         = "distro.create.skip_sbom"
-	VInstallConcurrency           = "install.concurrency"
-	VInstallWorkerConcurrency     = "install.worker_concurrency"
-	VInstallUpdateHost            = "install.host_update"
-	VInstallUpdateFirewall        = "install.firewall_update"
+	VInstallConcurrency           = "distro.install.concurrency"
+	VInstallWorkerConcurrency     = "distro.install.worker_concurrency"
+	VInstallUpdateHost            = "distro.install.host_update"
+	VInstallUpdateFirewall        = "distro.install.firewall_update"
 )
 
 var (

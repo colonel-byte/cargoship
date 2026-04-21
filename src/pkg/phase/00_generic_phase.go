@@ -24,7 +24,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -134,7 +133,7 @@ func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bo
 func (p *GenericPhase) tickerHelper(ctx context.Context, msg string, interval time.Duration) (context.CancelFunc, error) {
 	ticker := time.NewTicker(interval)
 	start := time.Now()
-	child, cancel := context.WithTimeout(ctx, retry.DefaultTimeout)
+	child, cancel := context.WithTimeout(ctx, p.manager.Timeout)
 
 	p.wg.Add(1)
 	go func() {

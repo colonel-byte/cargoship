@@ -42,7 +42,7 @@ func (p *UpgradeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 			h.Metadata.DistroVersion != UNKNOWN_VERSION &&
 			p.VersionLess(h, d.Spec.Version)
 	})
-	logger.From(ctx).Info("number of systems that need to be updated", "hosts", len(p.hosts))
+	logger.From(ctx).Debug("number of systems that need to be updated", "hosts", len(p.hosts))
 	p.service = p.Distro.GetWorkerService()
 
 	return nil
@@ -51,7 +51,7 @@ func (p *UpgradeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 func (p *UpgradeWorkers) Run(ctx context.Context) error {
 	return p.batchedParallelWithMessage(
 		ctx,
-		"draining worker nodes",
+		"upgrading worker nodes",
 		p.hosts,
 		p.WorkerConcurrent,
 		p.drainNode,

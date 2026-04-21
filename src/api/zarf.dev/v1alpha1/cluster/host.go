@@ -50,13 +50,19 @@ type ZarfHost struct {
 	Hostname         string             `json:"hostname,omitempty"`
 	NodeLabels       map[string]string  `json:"labels,omitempty"`
 	NodeTaints       []string           `json:"taints,omitempty"`
+	Ports            []ZarfHostPort     `json:"ports,omitempty" xml:"port"`
 	PrivateAddress   string             `json:"privateAddress,omitempty"`
 	PrivateInterface string             `json:"privateInterface,omitempty"`
-	Profile          string             `json:"profile,omitempty" `
+	Profile          string             `json:"profile,omitempty"`
 	Role             string             `json:"role" jsonschema:"enum=controller,enum=controller+worker,enum=single,enum=worker"`
 	//keep-sorted end
 	Configurer configurer.Configurer `json:"-"`
 	Metadata   ZarfHostMetadata      `json:"-"`
+}
+
+type ZarfHostPort struct {
+	Protocol string `json:"protocol" xml:"protocol,attr" jsonschema:"enum=tcp,enum=udp"`
+	Port     string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
 }
 
 type ZarfHostMetadata struct {

@@ -14,11 +14,13 @@ require (
 	github.com/creasty/defaults v1.8.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/goccy/go-yaml v1.19.2
+	github.com/invopop/jsonschema v0.13.0
 	github.com/k0sproject/dig v0.4.0
 	github.com/k0sproject/rig v0.21.2
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.11.1
 	github.com/txn2/txeh v1.8.0
 	github.com/zarf-dev/zarf v0.75.0
@@ -343,7 +345,6 @@ require (
 	github.com/in-toto/attestation v1.1.2 // indirect
 	github.com/in-toto/in-toto-golang v0.10.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/itchyny/timefmt-go v0.1.7 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect

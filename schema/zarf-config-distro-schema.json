@@ -48,6 +48,9 @@
         "deploy": {
           "$ref": "#/$defs/DistroDeployOptions"
         },
+        "install": {
+          "$ref": "#/$defs/InstallOptions"
+        },
         "oci_concurrency": {
           "type": "integer"
         }
@@ -90,9 +93,6 @@
     "distro": {
       "$ref": "#/$defs/DistroOptions"
     },
-    "install": {
-      "$ref": "#/$defs/InstallOptions"
-    },
     "log_format": {
       "default": "console",
       "enum": [
@@ -110,6 +110,10 @@
         "debug",
         "trace"
       ],
+      "type": "string"
+    },
+    "timeout": {
+      "default": "20m",
       "type": "string"
     },
     "tmp_dir": {

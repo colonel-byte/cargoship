@@ -47,7 +47,7 @@ spec:
         disable-kube-proxy: true
         disable:
           - rke2-ingress-nginx
-        embedded-registry: true
+        embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB
           - "auto-compaction-retention=1h"
@@ -102,6 +102,7 @@ spec:
                 namespaces:
                   - kube-system
                   - rook-ceph
+                  - zarf
       manifest:
         rke2-cilium: |-
           kubeProxyReplacement: true

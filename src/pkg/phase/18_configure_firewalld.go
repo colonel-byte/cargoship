@@ -30,7 +30,7 @@ const (
 	FIREWALLD = "firewalld"
 )
 
-type FirewallConfig struct {
+type FirewallNodeConfig struct {
 	XMLName xml.Name `xml:"ipset"`
 	Type    string   `xml:"type,attr"`
 	Short   string   `xml:"short"`
@@ -44,18 +44,23 @@ type ConfigureFirewall struct {
 	Distro    distrocfg.Distro
 	Enabled   bool
 	hosts     cluster.ZarfHosts
+	control   cluster.ZarfHosts
 	ipaddress []string
 }
 
 // Title for the phase
 func (p *ConfigureFirewall) Title() string {
-	return "Updating hosts file for clusters nodes"
+	return "Updating hosts firewalld service"
 }
 
 // Prepare the phase
 func (p *ConfigureFirewall) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, FIREWALLD)
+	})
+
+	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return h.Configurer.ServiceIsRunning(h, FIREWALLD) && h.IsController()
 	})
 
 	for _, h := range p.hosts {
@@ -79,16 +84,12 @@ func (p *ConfigureFirewall) Run(ctx context.Context) error {
 		p.configureFirewallNodes,
 		p.configureFirewallCluster,
 		p.updateFirewall,
-		p.restartFirewall,
+		restartFirewall,
 	)
 }
 
-func (p *ConfigureFirewall) restartFirewall(ctx context.Context, h *v1alpha1.ZarfHost) (err error) {
-	return h.Configurer.RestartService(h, FIREWALLD)
-}
-
 func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *v1alpha1.ZarfHost) error {
-	ent := FirewallConfig{
+	ent := FirewallNodeConfig{
 		Type:    "hash:net",
 		Short:   "k8subnets",
 		Long:    "IPset for all k8 service and pod CIDRs",
@@ -104,7 +105,7 @@ func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *v1a
 }
 
 func (p *ConfigureFirewall) configureFirewallNodes(ctx context.Context, h *v1alpha1.ZarfHost) error {
-	ent := FirewallConfig{
+	ent := FirewallNodeConfig{
 		Type:    "hash:ip",
 		Short:   "k8nodes",
 		Long:    "IPset for all k8 nodes",
@@ -127,4 +128,8 @@ func (p *ConfigureFirewall) updateFirewall(ctx context.Context, h *v1alpha1.Zarf
 		return err
 	}
 	return nil
+}
+
+func restartFirewall(ctx context.Context, h *v1alpha1.ZarfHost) (err error) {
+	return h.Configurer.RestartService(h, FIREWALLD)
 }

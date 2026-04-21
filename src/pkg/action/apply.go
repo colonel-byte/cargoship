@@ -85,6 +85,9 @@ func NewApply(opts ApplyOptions) *Apply {
 				Distro:  d,
 				Enabled: opts.ModifyFirewall,
 			},
+			&phase.ConfigureFirewallPorts{
+				Enabled: opts.ModifyFirewall,
+			},
 
 			&phase.UploadFiles{},
 			&phase.RPMUploadFiles{},

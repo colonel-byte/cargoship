@@ -20,6 +20,7 @@ const (
 	CmdInstallFirewallUpdate        = "Whether to update all the host nodes firewall configuration."
 	CmdInstallFlagConcurrency       = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
 	CmdInstallFlagConfig            = "Config file used to bootstrap a cluster."
+	CmdInstallFlagTimeout           = "Set the timeout for how long functions will last."
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
 	CmdInstallHostUpdate            = "Whether to update all the host nodes etc/hosts file."
 	CmdPackageCreateFlagOutput      = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"

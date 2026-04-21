@@ -19,9 +19,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	apiDistro "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/creasty/defaults"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -121,6 +123,7 @@ type Manager struct {
 	DryRun            bool
 	Writer            io.Writer
 	TempDirectory     string
+	Timeout           time.Duration
 }
 
 type ManagerDistroConfig struct {
@@ -152,6 +155,19 @@ func (m *Manager) AddPhase(p ...Phase) {
 // SetPhases sets the list of phases
 func (m *Manager) SetPhases(p Phases) {
 	m.phases = p
+}
+
+// RetryTimeout wraps retry Timeout logic
+func (m *Manager) SetTimout(tm time.Duration) {
+	m.Timeout = tm
+}
+
+// RetryTimeout wraps retry Timeout logic
+func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error {
+	if m.Timeout > 0 {
+		return retry.Timeout(ctx, m.Timeout, f)
+	}
+	return retry.WithDefaultTimeout(ctx, f)
 }
 
 func (m *Manager) GetDistroOSFiles() apiDistro.ZarfFiles {

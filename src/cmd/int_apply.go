@@ -17,6 +17,7 @@ package cmd
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/colonel-byte/zarf-distro/src/config/lang"
 	"github.com/colonel-byte/zarf-distro/src/pkg/action"
@@ -80,6 +81,7 @@ func newInstallApplyCommand() *cobra.Command {
 
 func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
+
 	err := initRigLogger(ctx, o.InstallCommon)
 	if err != nil {
 		l.Warn("failed to configure logger", "err", err)
@@ -96,6 +98,14 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		l.Debug("removing staging dir", "temp", manager.TempDirectory)
 		os.RemoveAll(manager.TempDirectory)
 	}()
+
+	d, err := time.ParseDuration(Timeout)
+	if err != nil {
+		l.Warn("failed to parse timeout", "err", err)
+		return err
+	}
+
+	manager.SetTimout(d)
 
 	applyOpts := action.ApplyOptions{
 		Manager:          manager,

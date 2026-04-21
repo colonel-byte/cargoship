@@ -21,7 +21,6 @@ import (
 
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/pkg/node"
-	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -48,7 +47,9 @@ func (p *UpgradeHosts) ShouldRun() bool {
 
 func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining nodes", "node", h)
-	return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drain_node, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+	return p.manager.RetryTimeout(ctx, func(ctx context.Context) error {
+		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drain_node, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+	})
 }
 
 func (p *UpgradeHosts) stopService(ctx context.Context, h *cluster.ZarfHost) error {
@@ -71,7 +72,7 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 		h.Configurer.StartService(h, p.service)
 	}()
 
-	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.service)); err != nil {
+	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.service)); err != nil {
 		return err
 	}
 
@@ -81,7 +82,7 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
-	return retry.WithDefaultTimeout(ctx, func(ctx context.Context) error {
+	return p.manager.RetryTimeout(ctx, func(ctx context.Context) error {
 		out, err := p.leader.ExecOutput(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), ready_node, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 		if err != nil {
 			return err

@@ -20,7 +20,6 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/pkg/node"
-	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -41,7 +40,7 @@ func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 	p.worker = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) && !h.IsController()
 	})
-	logger.From(ctx).Info("number of systems that need to be started", "hosts", len(p.worker))
+	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.worker))
 
 	return nil
 }
@@ -92,7 +91,7 @@ func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHos
 		h.Configurer.StartService(h, p.Distro.GetWorkerService())
 	}()
 
-	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {
+	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {
 		return err
 	}
 

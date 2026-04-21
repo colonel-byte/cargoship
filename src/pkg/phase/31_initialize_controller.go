@@ -20,7 +20,6 @@ import (
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/zarf-distro/src/pkg/node"
-	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
 	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -37,7 +36,7 @@ func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfClus
 		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UNKNOWN_VERSION
 	})
 
-	logger.From(ctx).Info("number of systems that need to be started", "hosts", len(p.control))
+	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.control))
 
 	return nil
 }
@@ -84,7 +83,7 @@ func (p *InitializeControllers) startService(ctx context.Context, h *cluster.Zar
 		h.Configurer.StartService(h, p.Distro.GetControllerService())
 	}()
 
-	if err := retry.WithDefaultTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetControllerService())); err != nil {
+	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetControllerService())); err != nil {
 		return err
 	}
 

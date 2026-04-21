@@ -15,27 +15,32 @@
 package types
 
 type DistroConfig struct {
-	DistroOpts    DistroOptions  `json:"distro,omitempty"`
-	InstallOpts   InstallOptions `json:"install,omitempty"`
-	LogLevel      string         `json:"log_level,omitempty" jsonschema:"enum=warn,enum=info,enum=debug,enum=trace,default=info"`
-	LogFormat     string         `json:"log_format,omitempty" jsonschema:"enum=console,enum=json,enum=dev,default=console"`
-	CachePath     string         `json:"zarf_cache,omitempty"`
-	TempDirectory string         `json:"tmp_dir,omitempty" jsonschema:"default=/tmp"`
+	//keep-sorted start
+	CachePath     string        `json:"zarf_cache,omitempty"`
+	DistroOpts    DistroOptions `json:"distro,omitempty"`
+	LogFormat     string        `json:"log_format,omitempty" jsonschema:"enum=console,enum=json,enum=dev,default=console"`
+	LogLevel      string        `json:"log_level,omitempty" jsonschema:"enum=warn,enum=info,enum=debug,enum=trace,default=info"`
+	TempDirectory string        `json:"tmp_dir,omitempty" jsonschema:"default=/tmp"`
+	Timeout       string        `json:"timeout,omitempty" jsonschema:"default=20m"`
+	//keep-sorted end
 }
 
 type DistroOptions struct {
 	OCIConcurrency int                 `json:"oci_concurrency,omitempty"`
 	CreateOpts     DistroCreateOptions `json:"create,omitempty"`
 	DeployOpts     DistroDeployOptions `json:"deploy,omitempty"`
+	InstallOpts    InstallOptions      `json:"install,omitempty"`
 }
 
 type DistroCreateOptions struct {
+	//keep-sorted start
+	CachePath string `json:"cache_path,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Output    string `json:"output,omitempty"`
+	SkipSBOM  bool   `json:"skip_sbom,omitempty"`
+	Version   string `json:"version,omitempty"`
+	//keep-sorted end
 	SourceDirectory string `json:"-"`
-	Output          string `json:"output,omitempty"`
-	Version         string `json:"version,omitempty"`
-	Name            string `json:"name,omitempty"`
-	CachePath       string `json:"cache_path,omitempty"`
-	SkipSBOM        bool   `json:"skip_sbom,omitempty"`
 }
 
 type DistroDeployOptions struct {
@@ -43,8 +48,10 @@ type DistroDeployOptions struct {
 }
 
 type InstallOptions struct {
-	HostUpdate        bool `json:"host_update,omitempty" jsonschema:"default=true"`
-	FirewallUpdate    bool `json:"firewall_update,omitempty" jsonschema:"default=true"`
+	//keep-sorted start
 	Concurrency       int  `json:"concurrency,omitempty" jsonschema:"minimum=0"`
+	FirewallUpdate    bool `json:"firewall_update,omitempty" jsonschema:"default=true"`
+	HostUpdate        bool `json:"host_update,omitempty" jsonschema:"default=true"`
 	WorkerConcurrency int  `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
+	//keep-sorted end
 }

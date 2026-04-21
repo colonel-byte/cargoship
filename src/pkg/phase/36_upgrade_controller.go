@@ -41,7 +41,7 @@ func (p *UpgradeController) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 			h.Metadata.DistroVersion != UNKNOWN_VERSION &&
 			p.VersionLess(h, d.Spec.Version)
 	})
-	logger.From(ctx).Info("number of systems that need to be updated", "hosts", len(p.hosts))
+	logger.From(ctx).Debug("number of systems that need to be updated", "hosts", len(p.hosts))
 	p.service = p.Distro.GetControllerService()
 
 	return nil
@@ -50,7 +50,7 @@ func (p *UpgradeController) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 func (p *UpgradeController) Run(ctx context.Context) error {
 	return p.batchedParallelWithMessage(
 		ctx,
-		"draining controller nodes",
+		"upgrading controller nodes",
 		p.hosts,
 		1,
 		p.drainNode,
