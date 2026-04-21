@@ -18,12 +18,12 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/colonel-byte/zarf-distro/src/config"
-	"github.com/colonel-byte/zarf-distro/src/pkg/packager"
-	"github.com/colonel-byte/zarf-distro/src/pkg/packager/load"
-	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
-	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
-	"github.com/colonel-byte/zarf-distro/src/types/distrocfg/registry"
+	"github.com/colonel-byte/mare/src/config"
+	"github.com/colonel-byte/mare/src/pkg/packager"
+	"github.com/colonel-byte/mare/src/pkg/packager/load"
+	"github.com/colonel-byte/mare/src/pkg/phase"
+	"github.com/colonel-byte/mare/src/types/distrocfg"
+	"github.com/colonel-byte/mare/src/types/distrocfg/registry"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )

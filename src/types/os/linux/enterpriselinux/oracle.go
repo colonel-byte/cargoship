@@ -15,8 +15,8 @@
 package enterpriselinux
 
 import (
-	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
-	"github.com/colonel-byte/zarf-distro/src/types/os/linux"
+	configurer "github.com/colonel-byte/mare/src/types/os"
+	"github.com/colonel-byte/mare/src/types/os/linux"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/os/registry"
 )

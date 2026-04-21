@@ -19,7 +19,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/mare/src/config"
 )
 
 type DistroPath struct {

@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/colonel-byte/zarf-distro/src/config/lang"
+	"github.com/colonel-byte/mare/src/config/lang"
 	"github.com/spf13/viper"
 	zarf "github.com/zarf-dev/zarf/src/cmd"
 	"github.com/zarf-dev/zarf/src/config"
@@ -61,7 +61,7 @@ func initViper() error {
 		// Search config paths (order matters!)
 		v.AddConfigPath(".")
 		v.AddConfigPath("$HOME/.zarf")
-		v.SetConfigName("zarf-distro-config")
+		v.SetConfigName("mare-config")
 		v.SetConfigType("yaml")
 		v.SetConfigType("yml")
 	}

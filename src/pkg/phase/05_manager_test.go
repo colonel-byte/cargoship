@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"testing"
 
-	dcluster "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	dcluster "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/stretchr/testify/require"
 )
 

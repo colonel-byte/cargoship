@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/pkg/retry"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/mare/src/pkg/retry"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )

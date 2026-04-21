@@ -20,9 +20,9 @@ import (
 	"fmt"
 	goos "os"
 
-	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
-	"github.com/colonel-byte/zarf-distro/src/types/distrocfg/registry"
-	"github.com/colonel-byte/zarf-distro/src/types/os"
+	"github.com/colonel-byte/mare/src/types/distrocfg"
+	"github.com/colonel-byte/mare/src/types/distrocfg/registry"
+	"github.com/colonel-byte/mare/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
 	ros "github.com/k0sproject/rig/os"
@@ -30,13 +30,13 @@ import (
 	zconfig "github.com/zarf-dev/zarf/src/config"
 
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/os"
+	_ "github.com/colonel-byte/mare/src/types/os"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux"
+	_ "github.com/colonel-byte/mare/src/types/os/linux"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux/enterpriselinux"
+	_ "github.com/colonel-byte/mare/src/types/os/linux/enterpriselinux"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/distrocfg"
+	_ "github.com/colonel-byte/mare/src/types/distrocfg"
 )
 
 type osconfigurer interface {

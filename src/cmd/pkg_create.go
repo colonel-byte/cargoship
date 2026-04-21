@@ -19,8 +19,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/colonel-byte/zarf-distro/src/config/lang"
-	"github.com/colonel-byte/zarf-distro/src/pkg/distro"
+	"github.com/colonel-byte/mare/src/config/lang"
+	"github.com/colonel-byte/mare/src/pkg/distro"
 	"github.com/spf13/cobra"
 	zcmd "github.com/zarf-dev/zarf/src/cmd"
 	zconfig "github.com/zarf-dev/zarf/src/config"

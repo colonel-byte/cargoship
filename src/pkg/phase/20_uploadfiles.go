@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/mare/src/config"
 	"github.com/containerd/containerd/v2/core/images/archive"
 	"github.com/containerd/containerd/v2/plugins/content/local"
 	"github.com/containerd/platforms"

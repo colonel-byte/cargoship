@@ -22,9 +22,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/colonel-byte/zarf-distro/src/config"
-	"github.com/colonel-byte/zarf-distro/src/pkg/packager/layout"
-	"github.com/colonel-byte/zarf-distro/src/pkg/utils"
+	"github.com/colonel-byte/mare/src/config"
+	"github.com/colonel-byte/mare/src/pkg/packager/layout"
+	"github.com/colonel-byte/mare/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"

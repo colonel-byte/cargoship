@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	configurer "github.com/colonel-byte/zarf-distro/src/types/os"
+	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
+	configurer "github.com/colonel-byte/mare/src/types/os"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 

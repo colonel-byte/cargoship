@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/colonel-byte/zarf-distro/src/api"
-	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/zarf-distro/src/config"
+	"github.com/colonel-byte/mare/src/api"
+	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/mare/src/config"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/config/lang"

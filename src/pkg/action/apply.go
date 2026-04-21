@@ -18,9 +18,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/colonel-byte/zarf-distro/src/pkg/phase"
-	"github.com/colonel-byte/zarf-distro/src/types/distrocfg"
-	"github.com/colonel-byte/zarf-distro/src/types/distrocfg/registry"
+	"github.com/colonel-byte/mare/src/pkg/phase"
+	"github.com/colonel-byte/mare/src/types/distrocfg"
+	"github.com/colonel-byte/mare/src/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 

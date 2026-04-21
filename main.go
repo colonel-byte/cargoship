@@ -20,16 +20,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/colonel-byte/zarf-distro/src/cmd"
+	"github.com/colonel-byte/mare/src/cmd"
 
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/os"
+	_ "github.com/colonel-byte/mare/src/types/os"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux"
+	_ "github.com/colonel-byte/mare/src/types/os/linux"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/os/linux/enterpriselinux"
+	_ "github.com/colonel-byte/mare/src/types/os/linux/enterpriselinux"
 	// anonymous import is needed to load the distro configurers
-	_ "github.com/colonel-byte/zarf-distro/src/types/distrocfg"
+	_ "github.com/colonel-byte/mare/src/types/distrocfg"
 )
 
 func main() {

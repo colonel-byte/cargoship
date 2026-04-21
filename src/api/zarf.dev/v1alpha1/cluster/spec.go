@@ -15,7 +15,7 @@
 package cluster
 
 import (
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
 )
 
 type ZarfCluster struct {

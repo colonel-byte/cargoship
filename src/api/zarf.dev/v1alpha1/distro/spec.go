@@ -15,7 +15,7 @@
 package distro
 
 import (
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
 	"github.com/k0sproject/dig"
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 )

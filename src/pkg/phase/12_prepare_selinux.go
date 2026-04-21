@@ -17,9 +17,9 @@ package phase
 import (
 	"context"
 
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
+	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 

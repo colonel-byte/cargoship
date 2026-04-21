@@ -1,0 +1,97 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - main: ./.
+    binary: mare
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - arm64
+      - amd64
+      - "386"
+
+archives:
+  - formats:
+      - tar.gz
+    # this name template makes the OS and Arch compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+nfpms:
+  # note that this is an array of nfpm configs
+  - id: packagers
+    package_name: mare
+    license: Apache 2.0
+    maintainer: |-
+      Allen Conlon <software@conlon.dev>
+    formats:
+      - apk
+      - deb
+      - rpm
+    goamd64:
+      - v1
+      - v3
+    mtime: "{{ .CommitDate }}"
+    rpm:
+      group: Unspecified
+      compression: gzip
+      prefixes:
+        - /usr/bin
+      # signature:
+      #   key_file: "{{ .Env.GPG_KEY_PATH }}"
+    deb:
+      compression: zstd
+    #   signature:
+    #     key_file: "{{ .Env.GPG_KEY_PATH }}"
+    # apk:
+    #   signature:
+    #     key_file: "{{ .Env.GPG_KEY_PATH }}"
+
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  footer: >-
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).

@@ -17,7 +17,7 @@ package clustercfg
 import (
 	"context"
 
-	v1alpha1 "github.com/colonel-byte/zarf-distro/src/api/zarf.dev/v1alpha1/cluster"
+	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 )
 

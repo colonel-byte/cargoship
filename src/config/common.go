@@ -14,7 +14,7 @@
 
 package config
 
-import "github.com/colonel-byte/zarf-distro/src/types"
+import "github.com/colonel-byte/mare/src/types"
 
 var (
 	CommonOptions types.DistroConfig

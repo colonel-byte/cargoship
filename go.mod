@@ -1,4 +1,4 @@
-module github.com/colonel-byte/zarf-distro
+module github.com/colonel-byte/mare
 
 go 1.26.1
 
