@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=schema/zarf-config-distro-schema.json
+log_level: info
+log_format: console
+tmp_dir: /tmp
+zarf_cache: ~/.zarf
+timeout: 20m
+distro:
+  oci_concurrency: 10
+  create:
+    output: ~/zarf
+  install:
+    concurrency: 300
+    worker_concurrency: 5
+    host_update: true
+    firewall_update: true

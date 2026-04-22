@@ -89,6 +89,7 @@ func NewZarfDistroCommand() *cobra.Command {
 
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.AddCommand(newInstallApplyCommand())
+	rootCmd.AddCommand(newVersionCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, ROOT_LOGGING_LEVEL, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&LogFormat, ROOT_LOGGING_FORMART, "L", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)

@@ -16,6 +16,11 @@ package config
 
 import "github.com/colonel-byte/mare/src/types"
 
+const (
+	UnsetCLIVersion = "unset-development-only"
+)
+
 var (
+	CLIVersion    = UnsetCLIVersion
 	CommonOptions types.DistroConfig
 )

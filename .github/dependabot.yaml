@@ -1,0 +1,20 @@
+---
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories:
+      - "/"
+    schedule:
+      interval: daily
+    groups:
+      k8s:
+        patterns:
+          - "k8s.io/*"
+  - package-ecosystem: github-actions
+    directory: /
+    groups:
+      actions-organization:
+        patterns:
+          - "actions/*"
+    schedule:
+      interval: weekly

@@ -58,7 +58,7 @@ func (d *DistroLayout) FileName() (string, error) {
 		return "", errors.New("package must include a build architecture")
 	}
 
-	name := fmt.Sprintf("mare-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
+	name := fmt.Sprintf("zarf-distro-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
 	if d.Distro.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, d.Distro.Metadata.Version)
 	}
