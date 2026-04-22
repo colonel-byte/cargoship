@@ -56,7 +56,7 @@ func (p *APTUploadFiles) Run(ctx context.Context) (err error) {
 	})
 	p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
-			return zh.Configurer.InstallPackage(zh, getPath(p.filesControl)...)
+			return zh.Configurer.InstallPackage(zh, getPath(p.filesWorkers)...)
 		}
 		return nil
 	})

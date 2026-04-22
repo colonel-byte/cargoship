@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	apiDistro "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/mare/src/pkg/retry"
@@ -170,7 +171,7 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 	return retry.WithDefaultTimeout(ctx, f)
 }
 
-func (m *Manager) GetDistroOSFiles() apiDistro.ZarfFiles {
+func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles {
 	return m.Distro.Spec.Config.OS.Files
 }
 

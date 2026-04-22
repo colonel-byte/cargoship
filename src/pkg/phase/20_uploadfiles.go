@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/mare/src/config"
@@ -39,8 +40,8 @@ type UploadFiles struct {
 	GenericPhase
 
 	hosts    cluster.ZarfHosts
-	disFiles distro.ZarfFiles
-	imgFiles []cluster.UploadFile
+	disFiles v1alpha1.ZarfFiles
+	imgFiles []v1alpha1.ZarfFile
 }
 
 // Title for the phase
@@ -110,13 +111,12 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			return err
 		}
 
-		p.imgFiles = append(p.imgFiles, cluster.UploadFile{
-			Name:           tarBallName,
-			DestinationDir: p.manager.Distro.Spec.Config.ImagesConfig.Path,
-			Sources: []*cluster.LocalFile{
-				{
-					Path: tarballPath,
-				},
+		p.imgFiles = append(p.imgFiles, v1alpha1.ZarfFile{
+			Name:        tarBallName,
+			Target:      p.manager.Distro.Spec.Config.ImagesConfig.Path,
+			TargetIsDir: true,
+			LocalSource: v1alpha1.LocalFile{
+				Path: tarballPath,
 			},
 		})
 	}
@@ -171,7 +171,7 @@ func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHos
 }
 
 func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost) error {
-	files := []cluster.UploadFile{}
+	files := []v1alpha1.ZarfFile{}
 
 	for i, f := range p.disFiles {
 		if ctx.Err() != nil {
@@ -180,16 +180,15 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		target := f.Target
 		if f.Executable {
 			target = stageTempPath(*h, f.Target)
-			h.Metadata.BinaryTempFile = append(h.Metadata.BinaryTempFile, target)
+			f.TempTarget = target
 		}
 		logger.From(ctx).Debug("need to upload from distro package", "source", filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)), "target", target)
-		files = append(files, cluster.UploadFile{
-			Name:            filepath.Base(f.Target),
-			DestinationFile: target,
-			Sources: []*cluster.LocalFile{
-				{
-					Path: filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)),
-				},
+		files = append(files, v1alpha1.ZarfFile{
+			Name:        filepath.Base(f.Target),
+			Target:      target,
+			TargetIsDir: f.TargetIsDir,
+			LocalSource: v1alpha1.LocalFile{
+				Path: filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)),
 			},
 		})
 	}
@@ -199,10 +198,10 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		}
 		logger.From(ctx).Debug("need to upload", "target", f.Destination)
 		if f.Data != "" {
-			p.uploadData(ctx, h, &cluster.UploadFile{
-				Name:            filepath.Base(f.Destination),
-				DestinationFile: f.Destination,
-				Data:            f.Data,
+			p.uploadData(ctx, h, &v1alpha1.ZarfFile{
+				Name:   filepath.Base(f.Destination),
+				Target: f.Destination,
+				Data:   f.Data,
 			})
 		}
 	}

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -66,7 +67,7 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.ZarfHost, dir, 
 	})
 }
 
-func (p *GenericPhase) uploadFiles(ctx context.Context, h *cluster.ZarfHost, files []cluster.UploadFile) error {
+func (p *GenericPhase) uploadFiles(ctx context.Context, h *cluster.ZarfHost, files []v1alpha1.ZarfFile) error {
 	for i, f := range files {
 		logger.From(ctx).Debug("file", "num", i+1, "count", len(files))
 		p.uploadFile(ctx, h, &f)
@@ -75,79 +76,62 @@ func (p *GenericPhase) uploadFiles(ctx context.Context, h *cluster.ZarfHost, fil
 	return nil
 }
 
-func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *cluster.UploadFile) error {
+func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v1alpha1.ZarfFile) error {
 	logger.From(ctx).Info("uploading", "host", h, "file", f)
-	numfiles := len(f.Sources)
+	owner := f.Owner()
 
-	for i, s := range f.Sources {
-		dest := f.DestinationFile
-		if dest == "" {
-			dest = path.Join(f.DestinationDir, filepath.Base(s.Path))
+	// Need to figure out when "TargetIsDir"
+
+	if err := p.ensureDir(ctx, h, path.Dir(f.Target), f.DirPermString, owner); err != nil {
+		return err
+	}
+	src := path.Join(f.Base, f.LocalSource.Path)
+	var stat os.FileInfo
+	var err error
+
+	if h.FileChanged(src, f.Target) {
+		stat, err = os.Stat(src)
+		if err != nil {
+			return fmt.Errorf("failed to stat local file %s: %w", src, err)
 		}
-
-		src := path.Join(f.Base, s.Path)
-		if numfiles > 1 {
-			logger.From(ctx).Info("uploading file", "host", h, "source", src, "destination", dest, "count", numfiles, "current", i+1)
-		}
-
-		owner := f.Owner()
-
-		if err := p.ensureDir(ctx, h, path.Dir(dest), f.DirPermString, owner); err != nil {
-			return err
-		}
-
-		var stat os.FileInfo
-		var err error
-		if h.FileChanged(src, dest) {
-			stat, err = os.Stat(src)
+		err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, f.Target), func() error {
+			stat, err := os.Stat(src)
 			if err != nil {
 				return fmt.Errorf("failed to stat local file %s: %w", src, err)
 			}
-			err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, dest), func() error {
-				stat, err := os.Stat(src)
-				if err != nil {
-					return fmt.Errorf("failed to stat local file %s: %w", src, err)
+			perm := stat.Mode()
+			if f.LocalSource.PermMode != "" {
+				if v, perr := strconv.ParseUint(f.LocalSource.PermMode, 8, 32); perr == nil {
+					perm = fs.FileMode(v)
 				}
-				perm := stat.Mode()
-				if s.PermMode != "" {
-					if v, perr := strconv.ParseUint(s.PermMode, 8, 32); perr == nil {
-						perm = fs.FileMode(v)
-					}
-				}
-				return h.Upload(path.Join(f.Base, s.Path), dest, perm, exec.Sudo(h), exec.LogError(true))
-			})
-			if err != nil {
-				return err
 			}
-		} else {
-			logger.From(ctx).Info("file already exists and hasn't been changed, skipping upload", "host", h)
-		}
-
-		if stat == nil {
-			stat, err = os.Stat(src)
-			if err != nil {
-				return fmt.Errorf("failed to stat %s: %w", src, err)
-			}
-		}
-		modTime := stat.ModTime()
-		if err := p.applyFileMetadata(ctx, h, dest, owner, s.PermMode, &modTime); err != nil {
+			return h.Upload(path.Join(f.Base, f.LocalSource.Path), f.Target, perm, exec.Sudo(h), exec.LogError(true))
+		})
+		if err != nil {
 			return err
 		}
+	} else {
+		logger.From(ctx).Info("file already exists and hasn't been changed, skipping upload", "host", h)
+	}
+
+	if stat == nil {
+		stat, err = os.Stat(src)
+		if err != nil {
+			return fmt.Errorf("failed to stat %s: %w", src, err)
+		}
+	}
+
+	modTime := stat.ModTime()
+	if err := p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *cluster.UploadFile) error {
+func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v1alpha1.ZarfFile) error {
 	logger.From(ctx).Info("uploading inline data", "host", h)
-	dest := f.DestinationFile
-	if dest == "" {
-		if f.DestinationDir != "" {
-			dest = path.Join(f.DestinationDir, f.Name)
-		} else {
-			dest = f.Name
-		}
-	}
+	dest := f.Target
 
 	owner := f.Owner()
 

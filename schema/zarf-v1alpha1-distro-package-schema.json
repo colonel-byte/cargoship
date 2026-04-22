@@ -1,5 +1,35 @@
 {
   "$defs": {
+    "BinarySelector": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "package": {
+          "enum": [
+            "rpm",
+            "apt",
+            "binary"
+          ],
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "worker",
+            "controller"
+          ],
+          "type": "string"
+        },
+        "roles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "Mapping": {
       "type": "object"
     },
@@ -92,36 +122,6 @@
       "required": [
         "name"
       ],
-      "type": "object"
-    },
-    "ZarfBinarySelector": {
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "package": {
-          "enum": [
-            "rpm",
-            "apt",
-            "binary"
-          ],
-          "type": "string"
-        },
-        "profile": {
-          "enum": [
-            "worker",
-            "controller"
-          ],
-          "type": "string"
-        },
-        "roles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
       "type": "object"
     },
     "ZarfComponentAction": {
@@ -523,14 +523,27 @@
         "^x-": {}
       },
       "properties": {
+        "data": {
+          "type": "string"
+        },
         "executable": {
           "type": "boolean"
         },
         "extractPath": {
           "type": "string"
         },
+        "group": {
+          "type": "string"
+        },
+        "isDirectory": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "perm": true,
         "selector": {
-          "$ref": "#/$defs/ZarfBinarySelector"
+          "$ref": "#/$defs/BinarySelector"
         },
         "shasum": {
           "type": "string"
@@ -546,11 +559,15 @@
         },
         "target": {
           "type": "string"
+        },
+        "user": {
+          "type": "string"
         }
       },
       "required": [
         "source",
-        "target"
+        "target",
+        "isDirectory"
       ],
       "type": "object"
     },

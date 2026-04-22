@@ -25,7 +25,8 @@ import (
 	"time"
 
 	"github.com/colonel-byte/mare/src/api"
-	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/mare/src/config"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
@@ -49,7 +50,7 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-func AssembleDistro(ctx context.Context, d v1alpha1.ZarfDistro, distroPath string, opts AssembleOptions) (*DistroLayout, error) {
+func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
 
@@ -224,7 +225,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	return nil
 }
 
-func recordDistroMetadata(distro v1alpha1.ZarfDistro, registryOverrides []images.RegistryOverride) v1alpha1.ZarfDistro {
+func recordDistroMetadata(distro distro.ZarfDistro, registryOverrides []images.RegistryOverride) distro.ZarfDistro {
 	now := time.Now()
 	distro.Build.Architecture = distro.Metadata.Architecture
 	distro.Build.Timestamp = now.Format(api.BuildTimestampFormat)

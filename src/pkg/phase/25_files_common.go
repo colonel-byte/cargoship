@@ -21,17 +21,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/mare/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-func getPath(files []cluster.UploadFile) []string {
+func getPath(files []v1alpha1.ZarfFile) []string {
 	file_path := []string{}
 
 	for _, f := range files {
-		file_path = append(file_path, f.DestinationFile)
+		file_path = append(file_path, f.Target)
 	}
 
 	return file_path
@@ -44,10 +45,10 @@ type UploadFilesCommon struct {
 	workers cluster.ZarfHosts
 	control cluster.ZarfHosts
 
-	distro distro.ZarfFiles
+	distro v1alpha1.ZarfFiles
 
-	filesWorkers []cluster.UploadFile
-	filesControl []cluster.UploadFile
+	filesWorkers []v1alpha1.ZarfFile
+	filesControl []v1alpha1.ZarfFile
 }
 
 func (p *UploadFilesCommon) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
@@ -107,26 +108,24 @@ func (p *UploadFilesCommon) ShouldRun() bool {
 	return (len(p.control) + len(p.workers)) > 0
 }
 
-func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) []cluster.UploadFile {
-	files := []cluster.UploadFile{}
+func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) []v1alpha1.ZarfFile {
+	files := []v1alpha1.ZarfFile{}
 
 	for i, f := range p.distro {
 		switch f.Selector.Package {
 		case selector:
 			if f.Selector.Profile == "" || f.Selector.Profile == profile {
 				logger.From(ctx).Debug("determined this file needs to be uploaded", "file", filepath.Base(f.Target))
-				file := filepath.Join(p.manager.TempDirectory, config.OSDir, strconv.Itoa(i), filepath.Base(f.Target))
-				err := os.Chtimes(file, time.Unix(0, 0), time.Unix(0, 0))
+				filePath := filepath.Join(p.manager.TempDirectory, config.OSDir, strconv.Itoa(i), filepath.Base(f.Target))
+				err := os.Chtimes(filePath, time.Unix(0, 0), time.Unix(0, 0))
 				if err != nil {
 					logger.From(ctx).Warn("failed to change the file time", "error", err)
 				}
-				files = append(files, cluster.UploadFile{
-					Name:            filepath.Base(f.Target),
-					DestinationFile: f.Target,
-					Sources: []*cluster.LocalFile{
-						{
-							Path: file,
-						},
+				files = append(files, v1alpha1.ZarfFile{
+					Name:   filepath.Base(f.Target),
+					Target: f.Target,
+					LocalSource: v1alpha1.LocalFile{
+						Path: filePath,
 					},
 				})
 			}

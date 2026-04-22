@@ -26,6 +26,8 @@ builds:
   - main: ./.
     binary: mare
     ldflags:
+      - -s
+      - -w
       - -X github.com/colonel-byte/mare/src/config.CLIVersion={{.Version}}
     env:
       - CGO_ENABLED=0

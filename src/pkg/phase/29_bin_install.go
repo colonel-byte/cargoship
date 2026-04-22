@@ -20,6 +20,7 @@ import (
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/mare/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // UploadFiles implements a phase which upload files to hosts
@@ -40,4 +41,30 @@ func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorBIN, cluster.ROLE_WORKER)
 
 	return nil
+}
+
+// Run the phase
+func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
+	p.parallelDo(ctx, p.control, func(ctx context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+			for _, f := range p.filesControl {
+				logger.From(ctx).Debug("installing binary", "source", f.Source)
+
+			}
+			return nil
+		}
+		return nil
+	})
+	p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+			for _, f := range p.filesWorkers {
+				logger.From(ctx).Info(f.Name)
+
+			}
+			return nil
+		}
+		return nil
+	})
+
+	return p.UploadFilesCommon.Run(ctx)
 }

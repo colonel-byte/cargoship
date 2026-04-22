@@ -90,9 +90,9 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 
 			&phase.UploadFiles{},
-			&phase.RPMUploadFiles{},
-			&phase.APTUploadFiles{},
-			// &phase.BINUploadFiles{},
+			// &phase.RPMUploadFiles{},
+			// &phase.APTUploadFiles{},
+			&phase.BINUploadFiles{},
 
 			&phase.ConfigureEngine{
 				Distro: d,
