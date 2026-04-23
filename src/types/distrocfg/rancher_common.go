@@ -193,11 +193,11 @@ func (d *RancherCommon) DistroCmdf(template string, args ...any) string {
 func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
 	bin, err := host.Configurer.LookPath(&host, d.Binary)
 	if err != nil {
-		return "", ErrDistroNotFound
+		return "", ErrVersionNotDetected
 	}
 	out, err := host.ExecOutputf(`%s --version`, bin)
 	if err != nil {
-		return "", err
+		return "", ErrVersionNotDetected
 	}
 	match := versionRegex.FindString(out)
 	if match == "" {

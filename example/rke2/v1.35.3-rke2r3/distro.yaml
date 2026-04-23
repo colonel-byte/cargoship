@@ -202,6 +202,10 @@ spec:
           selector:
             package: binary
             profile: worker
+        - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
+          selector:
+            package: binary
     files:
       - source: ../core/cache.json
         target: /var/lib/rancher/rke2/agent/images/.cache.json

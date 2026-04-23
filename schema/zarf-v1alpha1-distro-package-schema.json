@@ -566,8 +566,7 @@
       },
       "required": [
         "source",
-        "target",
-        "isDirectory"
+        "target"
       ],
       "type": "object"
     },

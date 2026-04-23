@@ -30,7 +30,6 @@ import (
 
 var (
 	versionRegex          = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
-	ErrDistroNotFound     = errors.New("distro binary not found")
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
 )
 

@@ -80,21 +80,29 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 	logger.From(ctx).Info("uploading", "host", h, "file", f)
 	owner := f.Owner()
 
-	// Need to figure out when "TargetIsDir"
-
 	if err := p.ensureDir(ctx, h, path.Dir(f.Target), f.DirPermString, owner); err != nil {
 		return err
+	}
+	if f.TargetIsDir {
+		if err := p.ensureDir(ctx, h, f.Target, f.DirPermString, owner); err != nil {
+			return err
+		}
 	}
 	src := path.Join(f.Base, f.LocalSource.Path)
 	var stat os.FileInfo
 	var err error
 
-	if h.FileChanged(src, f.Target) {
+	target := f.Target
+	if f.TargetIsDir {
+		target = filepath.Join(f.Target, filepath.Base(f.LocalSource.Path))
+	}
+
+	if h.FileChanged(src, target) {
 		stat, err = os.Stat(src)
 		if err != nil {
 			return fmt.Errorf("failed to stat local file %s: %w", src, err)
 		}
-		err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, f.Target), func() error {
+		err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, target), func() error {
 			stat, err := os.Stat(src)
 			if err != nil {
 				return fmt.Errorf("failed to stat local file %s: %w", src, err)
@@ -105,7 +113,11 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 					perm = fs.FileMode(v)
 				}
 			}
-			return h.Upload(path.Join(f.Base, f.LocalSource.Path), f.Target, perm, exec.Sudo(h), exec.LogError(true))
+			err = h.Upload(path.Join(f.Base, f.LocalSource.Path), target, perm, exec.Sudo(h), exec.LogError(true))
+			if err != nil {
+				return err
+			}
+			return h.Touch(target, time.Unix(0, 0), exec.Sudo(h))
 		})
 		if err != nil {
 			return err
@@ -121,7 +133,7 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 		}
 	}
 
-	modTime := stat.ModTime()
+	modTime := time.Unix(0, 0)
 	if err := p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime); err != nil {
 		return err
 	}
@@ -205,9 +217,9 @@ func chmodWithMode(h *cluster.ZarfHost, path string, mode fs.FileMode) error {
 
 // stageTempPath returns a temp file path for the engine files on the host,
 // preserving the .exe extension on Windows so the file remains executable.
-func stageTempPath(h cluster.ZarfHost, bin string) string {
+func stageTempPath(isWin bool, bin string) string {
 	ts := strconv.FormatInt(time.Now().UnixNano(), 10)
-	if h.IsWindows() {
+	if isWin {
 		if ext := filepath.Ext(bin); strings.EqualFold(ext, ".exe") {
 			return strings.TrimSuffix(bin, ext) + ".tmp." + ts + ext
 		}

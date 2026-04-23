@@ -34,14 +34,14 @@ type ZarfFile struct {
 	Source      string         `json:"source"`
 	Symlinks    []string       `json:"symlinks,omitempty"`
 	Target      string         `json:"target"`
-	TargetIsDir bool           `json:"isDirectory"`
+	TargetIsDir bool           `json:"isDirectory,omitempty"`
 	User        string         `json:"user,omitempty"`
 	//keep-sorted end
-	Base          string    `json:"-"`
-	PermString    string    `json:"-"`
-	DirPermString string    `json:"-"`
-	TempTarget    string    `json:"-"`
-	LocalSource   LocalFile `json:"-"`
+	Base           string    `json:"-"`
+	PermString     string    `json:"-"`
+	DirPermString  string    `json:"-"`
+	OriginalTarget string    `json:"-"`
+	LocalSource    LocalFile `json:"-"`
 }
 
 type LocalFile struct {

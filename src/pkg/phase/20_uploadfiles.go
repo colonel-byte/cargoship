@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	"github.com/containerd/containerd/v2/core/images/archive"
 	"github.com/containerd/containerd/v2/plugins/content/local"
 	"github.com/containerd/platforms"
+	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2/content/oci"
 )
@@ -145,13 +147,19 @@ func (p *UploadFiles) Run(ctx context.Context) error {
 func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHost) error {
 	l := logger.From(ctx)
 
-	for _, f := range p.disFiles {
+	files := slices.Concat(p.disFiles, p.manager.Distro.Spec.Config.OS.Files)
+
+	for _, f := range files {
 		file := filepath.Base(f.Target)
 		binary := fmt.Sprintf("%s.tmp.*", file)
 		re := regexp.MustCompile(binary)
-		err := fs.WalkDir(h.SudoFsys(), filepath.Dir(f.Target), func(path string, d fs.DirEntry, err error) error {
+		folder := filepath.Dir(f.Target)
+		if f.TargetIsDir {
+			folder = f.Target
+		}
+		err := fs.WalkDir(h.SudoFsys(), folder, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				l.Warn(fmt.Sprintf("failed to walk %s", binary), "path", file, "error", err)
+				l.Debug(fmt.Sprintf("failed to walk %s", binary), "path", file, "error", err)
 				return nil
 			}
 			if !d.IsDir() && re.MatchString(d.Name()) {
@@ -179,14 +187,15 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		}
 		target := f.Target
 		if f.Executable {
-			target = stageTempPath(*h, f.Target)
-			f.TempTarget = target
+			target = stageTempPath(h.IsWindows(), f.Target)
+			f.OriginalTarget = target
 		}
 		logger.From(ctx).Debug("need to upload from distro package", "source", filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)), "target", target)
 		files = append(files, v1alpha1.ZarfFile{
-			Name:        filepath.Base(f.Target),
-			Target:      target,
-			TargetIsDir: f.TargetIsDir,
+			Name:           filepath.Base(f.Target),
+			Target:         target,
+			OriginalTarget: f.Target,
+			TargetIsDir:    f.TargetIsDir,
 			LocalSource: v1alpha1.LocalFile{
 				Path: filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)),
 			},
@@ -209,6 +218,9 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 	for i, f := range files {
 		logger.From(ctx).Debug("file", "num", i+1, "count", len(files))
 		p.uploadFile(ctx, h, &f)
+		if f.Executable {
+			h.Exec(fmt.Sprintf("chmod +x %s", f.Target), exec.Sudo(h))
+		}
 	}
 
 	for i, f := range p.imgFiles {

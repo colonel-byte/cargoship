@@ -59,9 +59,9 @@ func (p *GatherFactsDistro) Run(ctx context.Context) (err error) {
 
 func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluster.ZarfHost) error {
 	ver, err := p.Distro.RunningVersion(*h)
-	if err != nil && err != distrocfg.ErrDistroNotFound {
+	if err != nil && err != distrocfg.ErrVersionNotDetected {
 		return err
-	} else if err == distrocfg.ErrDistroNotFound {
+	} else if err == distrocfg.ErrVersionNotDetected {
 		h.Metadata.DistroVersion = UNKNOWN_VERSION
 	} else {
 		h.Metadata.DistroVersion = ver

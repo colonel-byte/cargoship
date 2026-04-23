@@ -16,16 +16,20 @@ package phase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/mare/src/config"
+	"github.com/colonel-byte/mare/src/types/distrocfg"
+	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // UploadFiles implements a phase which upload files to hosts
 type BINUploadFiles struct {
 	UploadFilesCommon
+	Distro distrocfg.Distro
 }
 
 // Title for the phase
@@ -48,8 +52,13 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 	p.parallelDo(ctx, p.control, func(ctx context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
 			for _, f := range p.filesControl {
-				logger.From(ctx).Debug("installing binary", "source", f.Source)
-
+				logger.From(ctx).Debug("installing binary", "target", f.Target)
+				if f.OriginalTarget != f.Target {
+					err := zh.Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget), exec.Sudo(zh))
+					if err != nil {
+						logger.From(ctx).Warn("failed to move", "error", err)
+					}
+				}
 			}
 			return nil
 		}
@@ -58,8 +67,13 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 	p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
 			for _, f := range p.filesWorkers {
-				logger.From(ctx).Info(f.Name)
-
+				logger.From(ctx).Debug("installing binary", "target", f.Target)
+				if f.OriginalTarget != f.Target {
+					err := zh.Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget), exec.Sudo(zh))
+					if err != nil {
+						logger.From(ctx).Warn("failed to move", "error", err)
+					}
+				}
 			}
 			return nil
 		}

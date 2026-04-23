@@ -45,14 +45,14 @@ type UploadFilesCommon struct {
 	workers cluster.ZarfHosts
 	control cluster.ZarfHosts
 
-	distro v1alpha1.ZarfFiles
+	distroFiles v1alpha1.ZarfFiles
 
 	filesWorkers []v1alpha1.ZarfFile
 	filesControl []v1alpha1.ZarfFile
 }
 
 func (p *UploadFilesCommon) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.distro = p.manager.Distro.Spec.Config.OS.Files
+	p.distroFiles = p.manager.Distro.Spec.Config.OS.Files
 	hosts := p.manager.Config.Spec.Hosts
 
 	p.workers = hosts.Filter(func(h *cluster.ZarfHost) bool {
@@ -111,7 +111,7 @@ func (p *UploadFilesCommon) ShouldRun() bool {
 func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) []v1alpha1.ZarfFile {
 	files := []v1alpha1.ZarfFile{}
 
-	for i, f := range p.distro {
+	for i, f := range p.distroFiles {
 		switch f.Selector.Package {
 		case selector:
 			if f.Selector.Profile == "" || f.Selector.Profile == profile {
@@ -121,9 +121,14 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 				if err != nil {
 					logger.From(ctx).Warn("failed to change the file time", "error", err)
 				}
+				target := f.Target
+				if f.Executable {
+					target = stageTempPath(false, f.Target)
+				}
 				files = append(files, v1alpha1.ZarfFile{
-					Name:   filepath.Base(f.Target),
-					Target: f.Target,
+					Name:           filepath.Base(f.Target),
+					Target:         target,
+					OriginalTarget: f.Target,
 					LocalSource: v1alpha1.LocalFile{
 						Path: filePath,
 					},

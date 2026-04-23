@@ -206,8 +206,9 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 		return true
 	}
 
-	if fmt.Sprintf("%x", lsha.Sum(nil)) != rsha {
-		log.Debugf("%s: file sha256 for %s differ (%s vs %s)", h, lpath, fmt.Sprintf("%x", lsha.Sum(nil)), rsha)
+	sum := fmt.Sprintf("%x", lsha.Sum(nil))
+	if sum != rsha {
+		log.Debugf("%s: file sha256 for %s differ (%s vs %s)", h, lpath, sum, rsha)
 		return true
 	}
 

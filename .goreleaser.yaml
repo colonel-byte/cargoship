@@ -35,9 +35,14 @@ builds:
       - linux
       - darwin
     goarch:
+      - arm
       - arm64
       - amd64
-      - "386"
+    goamd64:
+      - v1
+    goarm:
+      - "6"
+      - "7"
 
 archives:
   - formats:
@@ -78,7 +83,6 @@ nfpms:
       - rpm
     goamd64:
       - v1
-      - v3
     mtime: "{{ .CommitDate }}"
     rpm:
       compression: gzip
