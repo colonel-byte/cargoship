@@ -1,0 +1,46 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args:
+          - "--maxkb=1024"
+      - id: check-merge-conflict
+      - id: detect-aws-credentials
+        args:
+          - "--allow-missing-credentials"
+      - id: fix-byte-order-marker
+  - repo: https://github.com/sirosen/texthooks
+    rev: 0.7.1
+    hooks:
+      - id: fix-smartquotes
+  - repo: https://github.com/google/addlicense
+    rev: v1.2.0
+    hooks:
+      - id: addlicense
+        exclude_types:
+          - yaml
+        args:
+          - -c
+          - colonel-byte
+          - -l
+          - apache
+          - -y
+          - "2026"
+  - repo: https://github.com/google/keep-sorted
+    rev: v0.8.0
+    hooks:
+      - id: keep-sorted
+  - repo: local
+    hooks:
+      - id: schema-generator
+        name: generate-schemas
+        language: system
+        pass_filenames: false
+        entry: go run ./src/internal/schema
+      - id: docs-generator
+        name: generate-docs
+        language: system
+        pass_filenames: false
+        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml go run ./src/internal/gen-docs"

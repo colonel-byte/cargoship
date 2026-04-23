@@ -1,0 +1,128 @@
+{
+  "$defs": {
+    "DistroCreateOptions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cache_path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "skip_sbom": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "DistroDeployOptions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "retries": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "DistroOptions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "create": {
+          "$ref": "#/$defs/DistroCreateOptions"
+        },
+        "deploy": {
+          "$ref": "#/$defs/DistroDeployOptions"
+        },
+        "install": {
+          "$ref": "#/$defs/InstallOptions"
+        },
+        "oci_concurrency": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "InstallOptions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "concurrency": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "firewall_update": {
+          "default": true,
+          "type": "boolean"
+        },
+        "host_update": {
+          "default": true,
+          "type": "boolean"
+        },
+        "worker_concurrency": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/colonel-byte/cargoship/src/types/distro-config",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "distro": {
+      "$ref": "#/$defs/DistroOptions"
+    },
+    "log_format": {
+      "default": "console",
+      "enum": [
+        "console",
+        "json",
+        "dev"
+      ],
+      "type": "string"
+    },
+    "log_level": {
+      "default": "info",
+      "enum": [
+        "warn",
+        "info",
+        "debug",
+        "trace"
+      ],
+      "type": "string"
+    },
+    "timeout": {
+      "default": "20m",
+      "type": "string"
+    },
+    "tmp_dir": {
+      "default": "/tmp",
+      "type": "string"
+    },
+    "zarf_cache": {
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

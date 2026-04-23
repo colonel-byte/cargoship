@@ -21,3 +21,7 @@ build
 !**/testdata/**
 coverage.out
 dist
+images/
+
+# Added by goreleaser init:
+dist/
