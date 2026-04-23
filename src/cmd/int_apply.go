@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
+	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -82,7 +83,7 @@ func newInstallApplyCommand() *cobra.Command {
 func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
 
-	err := initRigLogger(ctx, o.InstallCommon)
+	err := riglogger.RigLogger(ctx)
 	if err != nil {
 		l.Warn("failed to configure logger", "err", err)
 		return err

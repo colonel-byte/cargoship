@@ -61,9 +61,9 @@ var (
 	}
 )
 
-var rootCmd = NewZarfDistroCommand()
+var rootCmd = NewCargoshipCommand()
 
-func NewZarfDistroCommand() *cobra.Command {
+func NewCargoshipCommand() *cobra.Command {
 	err := initViper()
 	if err != nil {
 		fmt.Printf("failed to load config: %v", err)

@@ -51,7 +51,7 @@ func initViper() error {
 	}
 
 	v = viper.New()
-	cfgFile := os.Getenv("ZARF_DISTRO_CONFIG")
+	cfgFile := os.Getenv("CARGOSHIP_CONFIG")
 
 	// Don't forget to read config either from cfgFile or from home directory!
 	if cfgFile != "" {
@@ -61,7 +61,7 @@ func initViper() error {
 		// Search config paths (order matters!)
 		v.AddConfigPath(".")
 		v.AddConfigPath("$HOME/.zarf")
-		v.SetConfigName("mare-config")
+		v.SetConfigName("cargoship-config")
 		v.SetConfigType("yaml")
 		v.SetConfigType("yml")
 	}

@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	FAPOLICYD_RULES_FILE = "/etc/fapolicyd/rules.d/31-mare.rules"
+	FAPOLICYD_RULES_FILE = "/etc/fapolicyd/rules.d/31-cargoship.rules"
 )
 
 // PrepareHosts installs required packages and so on on the hosts.

@@ -36,6 +36,11 @@ repos:
     hooks:
       - id: schema-generator
         name: generate-schemas
-        entry: go run ./src/internal/schema
         language: system
         pass_filenames: false
+        entry: go run ./src/internal/schema
+      - id: docs-generator
+        name: generate-docs
+        language: system
+        pass_filenames: false
+        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml go run ./src/internal/gen-docs"

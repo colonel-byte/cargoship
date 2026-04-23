@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package riglogger
 
 import (
 	"context"
@@ -52,7 +52,7 @@ func (l rigLogger) Warnf(msg string, args ...any) {
 	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args...))
 }
 
-func initRigLogger(ctx context.Context, opt InstallCommon) error {
+func RigLogger(ctx context.Context) error {
 	log.Log = rigLogger{
 		ctx: ctx,
 	}
