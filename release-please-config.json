@@ -5,6 +5,7 @@
       "release-type": "go",
       "package-name": "cargoship",
       "bump-minor-pre-major": true,
+      "versioning": "always-bump-minor",
       "bump-patch-for-minor-pre-major": true,
       "include-v-in-tag": true,
       "tag-separator": "",
