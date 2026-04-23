@@ -24,7 +24,7 @@ before:
 
 builds:
   - main: ./.
-    binary: mare
+    binary: cargoship
     ldflags:
       - -s
       - -w
@@ -65,15 +65,13 @@ checksum:
 
 sboms:
   - artifacts: archive
-  - id: source
-    artifacts: source
 
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot"
 
 nfpms:
   - id: packagers
-    package_name: mare
+    package_name: cargoship
     license: Apache 2.0
     maintainer: |-
       Allen Conlon <software@conlon.dev>
@@ -105,9 +103,19 @@ changelog:
       - "^docs:"
       - "^test:"
 
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - "sign-blob"
+      - "--key=env://COSIGN_KEY"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+    stdin: "{{ .Env.COSIGN_PWD }}"
+
 release:
-  footer: >-
-
+  footer: |-
     ---
-
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
