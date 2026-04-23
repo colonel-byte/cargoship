@@ -23,9 +23,9 @@ import (
 	"runtime"
 	"strings"
 
-	cluster "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	distro "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/mare/src/types"
+	cluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	distro "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
 	strcase "github.com/stoewer/go-strcase"
 )
@@ -124,7 +124,7 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	typePath := filepath.Join(append([]string{"..", "..", ".."}, path...)...)
 
-	if err := reflector.AddGoComments("github.com/colonel-byte/mare", typePath); err != nil {
+	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
 	}
 

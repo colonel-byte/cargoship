@@ -28,7 +28,7 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X github.com/colonel-byte/mare/src/config.CLIVersion={{.Version}}
+      - -X github.com/colonel-byte/cargoship/src/config.CLIVersion={{.Version}}
     env:
       - CGO_ENABLED=0
     goos:

@@ -83,7 +83,7 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/colonel-byte/mare/src/types/distro-config",
+  "$id": "https://github.com/colonel-byte/cargoship/src/types/distro-config",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "patternProperties": {

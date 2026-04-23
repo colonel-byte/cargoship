@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/mare/src/pkg/retry"
+	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/os"
 	"github.com/zarf-dev/zarf/src/pkg/logger"

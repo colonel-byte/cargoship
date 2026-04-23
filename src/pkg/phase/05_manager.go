@@ -21,11 +21,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1"
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	apiDistro "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/mare/src/pkg/retry"
-	"github.com/colonel-byte/mare/src/types/distrocfg"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	apiDistro "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/pkg/retry"
+	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/creasty/defaults"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )

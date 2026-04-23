@@ -17,8 +17,8 @@ package distrocfg
 import (
 	"context"
 
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 )
 
 const (

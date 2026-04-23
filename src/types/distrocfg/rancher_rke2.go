@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/mare/src/types/distrocfg/registry"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
 )
 
 const (

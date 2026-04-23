@@ -24,7 +24,7 @@ import (
 	"slices"
 	"time"
 
-	configurer "github.com/colonel-byte/mare/src/types/os"
+	"github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/log"
@@ -56,8 +56,8 @@ type ZarfHost struct {
 	Profile          string             `json:"profile,omitempty"`
 	Role             string             `json:"role" jsonschema:"enum=controller,enum=controller+worker,enum=single,enum=worker"`
 	//keep-sorted end
-	Configurer configurer.Configurer `json:"-"`
-	Metadata   ZarfHostMetadata      `json:"-"`
+	Configurer os.Configurer    `json:"-"`
+	Metadata   ZarfHostMetadata `json:"-"`
 }
 
 type ZarfHostPort struct {
@@ -83,7 +83,7 @@ type ZarfHostMetadata struct {
 	//keep-sorted end
 }
 
-func (h *ZarfHost) requireConfigurer() (configurer.Configurer, error) {
+func (h *ZarfHost) requireConfigurer() (os.Configurer, error) {
 	if h.Configurer == nil {
 		return nil, fmt.Errorf("%s: host configurer is not resolved", h)
 	}
@@ -181,7 +181,7 @@ func (h *ZarfHost) ResolveConfigurer() error {
 		return err
 	}
 
-	if c, ok := bf().(configurer.Configurer); ok {
+	if c, ok := bf().(os.Configurer); ok {
 		h.Configurer = c
 
 		return nil

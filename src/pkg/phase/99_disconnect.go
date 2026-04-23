@@ -17,7 +17,7 @@ package phase
 import (
 	"context"
 
-	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
+	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 )
 
 // Disconnect disconnects from the hosts

@@ -19,8 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/colonel-byte/mare/src/config/lang"
-	"github.com/colonel-byte/mare/src/pkg/action"
+	"github.com/colonel-byte/cargoship/src/config/lang"
+	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )

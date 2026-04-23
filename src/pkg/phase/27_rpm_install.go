@@ -17,10 +17,10 @@ package phase
 import (
 	"context"
 
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/mare/src/config"
-	"github.com/colonel-byte/mare/src/pkg/utils"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/utils"
 )
 
 // UploadFiles implements a phase which upload files to hosts

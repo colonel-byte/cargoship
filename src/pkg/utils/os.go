@@ -15,10 +15,10 @@
 package utils
 
 import (
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/mare/src/types/os"
-	"github.com/colonel-byte/mare/src/types/os/linux"
-	"github.com/colonel-byte/mare/src/types/os/linux/enterpriselinux"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/types/os"
+	"github.com/colonel-byte/cargoship/src/types/os/linux"
+	"github.com/colonel-byte/cargoship/src/types/os/linux/enterpriselinux"
 )
 
 func IsDebianLinux(con os.Configurer) bool {

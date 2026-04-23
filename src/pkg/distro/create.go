@@ -19,8 +19,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/colonel-byte/mare/src/pkg/packager/layout"
-	"github.com/colonel-byte/mare/src/pkg/packager/load"
+	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"

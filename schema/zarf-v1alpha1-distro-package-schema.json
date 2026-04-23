@@ -577,7 +577,7 @@
       "type": "array"
     }
   },
-  "$id": "https://github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro/zarf-distro",
+  "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro/zarf-distro",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "patternProperties": {

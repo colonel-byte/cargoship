@@ -18,7 +18,7 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/colonel-byte/mare/src/config"
+	"github.com/colonel-byte/cargoship/src/config"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"

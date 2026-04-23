@@ -17,7 +17,7 @@ package distrocfg
 import (
 	"context"
 
-	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
+	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	goyaml "github.com/goccy/go-yaml"
 )
 

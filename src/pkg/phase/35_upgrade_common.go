@@ -19,9 +19,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/mare/src/pkg/node"
-	"github.com/colonel-byte/mare/src/types/distrocfg"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/pkg/node"
+	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )

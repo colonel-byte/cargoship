@@ -17,8 +17,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/colonel-byte/mare/src/config"
-	"github.com/colonel-byte/mare/src/config/lang"
+	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/spf13/cobra"
 )
 

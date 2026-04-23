@@ -1,4 +1,4 @@
-module github.com/colonel-byte/mare
+module github.com/colonel-byte/cargoship
 
 go 1.26.1
 

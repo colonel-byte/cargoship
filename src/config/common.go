@@ -14,7 +14,7 @@
 
 package config
 
-import "github.com/colonel-byte/mare/src/types"
+import "github.com/colonel-byte/cargoship/src/types"
 
 const (
 	UnsetCLIVersion = "unset-development-only"

@@ -21,8 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
-	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/mare/src/config"
+	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -58,7 +58,7 @@ func (d *DistroLayout) FileName() (string, error) {
 		return "", errors.New("package must include a build architecture")
 	}
 
-	name := fmt.Sprintf("zarf-distro-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
+	name := fmt.Sprintf("cargoship-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
 	if d.Distro.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, d.Distro.Metadata.Version)
 	}

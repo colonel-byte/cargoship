@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/colonel-byte/mare/src/config/lang"
+	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/spf13/viper"
 	zarf "github.com/zarf-dev/zarf/src/cmd"
 	"github.com/zarf-dev/zarf/src/config"

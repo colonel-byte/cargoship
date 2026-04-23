@@ -17,7 +17,7 @@ package linux
 import (
 	"strings"
 
-	configurer "github.com/colonel-byte/mare/src/types/os"
+	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"

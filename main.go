@@ -20,16 +20,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/colonel-byte/mare/src/cmd"
+	"github.com/colonel-byte/cargoship/src/cmd"
 
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/mare/src/types/os"
+	_ "github.com/colonel-byte/cargoship/src/types/os"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/mare/src/types/os/linux"
+	_ "github.com/colonel-byte/cargoship/src/types/os/linux"
 	// anonymous import is needed to load the os configurers
-	_ "github.com/colonel-byte/mare/src/types/os/linux/enterpriselinux"
+	_ "github.com/colonel-byte/cargoship/src/types/os/linux/enterpriselinux"
 	// anonymous import is needed to load the distro configurers
-	_ "github.com/colonel-byte/mare/src/types/distrocfg"
+	_ "github.com/colonel-byte/cargoship/src/types/distrocfg"
 )
 
 func main() {

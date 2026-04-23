@@ -19,9 +19,9 @@ import (
 	"os"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/mare/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/mare/src/internal/clustercfg"
-	"github.com/colonel-byte/mare/src/pkg/packager/layout"
+	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
