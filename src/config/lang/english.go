@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package lang holds the cli helping text
 package lang
 
 const (
@@ -21,7 +22,7 @@ const (
 	CmdInstallFirewallUpdate        = "Whether to update all the host nodes firewall configuration."
 	CmdInstallFlagConcurrency       = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
 	CmdInstallFlagConfig            = "Config file used to bootstrap a cluster."
-	CmdInstallFlagConfirm           = "Confirm wether if to proceed with the install"
+	CmdInstallFlagConfirm           = "Confirm whether if to proceed with the install"
 	CmdInstallFlagTimeout           = "Set the timeout for how long functions will last."
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
 	CmdInstallHostUpdate            = "Whether to update all the host nodes etc/hosts file."

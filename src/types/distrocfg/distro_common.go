@@ -31,6 +31,7 @@ import (
 var (
 	versionRegex          = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
+	ErrPathKey            = errors.New("key for set path does not exist")
 )
 
 func NodeLabelsMapToList(m map[string]string) []string {
@@ -43,18 +44,16 @@ func NodeLabelsMapToList(m map[string]string) []string {
 
 type Common struct {
 	//keep-sorted start
-	Binary             string
-	BinaryDir          string
-	Config             string
-	Data               string
-	ID                 string
-	Service_Controller string
-	Service_Worker     string
-	Token              string
+	Binary            string
+	BinaryDir         string
+	Config            string
+	Data              string
+	ID                string
+	ServiceController string
+	Service_Worker    string
+	Token             string
 	//keep-sorted end
 }
-
-var ErrPathKey = errors.New("key for set path does not exist")
 
 func (r *Common) BinaryPath() string {
 	return r.BinaryDir + "/" + r.Binary
@@ -85,7 +84,7 @@ func (r *Common) GetWorkerService() string {
 }
 
 func (r *Common) GetControllerService() string {
-	return r.Service_Controller
+	return r.ServiceController
 }
 
 func (r *Common) SetPath(key string, value string) error {

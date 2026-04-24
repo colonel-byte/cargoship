@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package phase is all the various phases used for bootstrapping a cluster.
+// The phase files are named in a rough order used during and install;
+// - 0x are for preconnection resources, along with ssh-ing into the node
+// - 1x are used to gather information and start the prep-work for the cluster
+// - 2x are for installing files for the distro engine, e.i. rpm's, apt's, or binary files
+// - 3x are for starting the engine or for upgrading an existing install
+// - 9x are last minute things and finally disconnecting from a node
+// - ext are files that are currently not used but may be incorporated later
 package phase
 
 import (

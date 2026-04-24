@@ -28,9 +28,13 @@ import (
 )
 
 const (
-	BinaryPath         = "BinaryPath"
-	ConfigPath         = "ConfigPath"
-	JoinTokenPath      = "JoinTokenPath"
+	// BinaryPath key for the binary path for the distro engine
+	BinaryPath = "BinaryPath"
+	// ConfigPath key for the config directory for the distro engine
+	ConfigPath = "ConfigPath"
+	// JoinTokenPath key for the join token for the cluster
+	JoinTokenPath = "JoinTokenPath"
+	// DataDirDefaultPath key for the data directory for the distro engine
 	DataDirDefaultPath = "DataDirDefaultPath"
 )
 
@@ -223,6 +227,7 @@ func (l *Linux) UpsertFile(h os.Host, path, content string) error {
 	return nil
 }
 
+// DeleteDir removes a directory
 func (l *Linux) DeleteDir(h os.Host, path string, opts ...exec.Option) error {
 	return h.Exec(fmt.Sprintf(`rmdir %s`, shellescape.Quote(path)), opts...)
 }
@@ -275,6 +280,8 @@ func (l *Linux) HostPath(p string) string {
 	return p
 }
 
+// GetDistroService returns the name of the service for the current distro.
+// common key values are, "controller" and "agent"
 func (l *Linux) GetDistroService(key string) (string, error) {
 	if l.services == nil {
 		return "", fmt.Errorf("the services map is not populated")
@@ -285,23 +292,18 @@ func (l *Linux) GetDistroService(key string) (string, error) {
 	return "", fmt.Errorf("the service %s does not exist in the service map", key)
 }
 
-// Need to address cycle importing....
-// // ConfigureDistro Allows specific Hosts to apply specific overrides
-// func (l *Linux) ConfigureDistro(dis distro.Distro) {
-// 	l.ConfigureDistroServices(map[string]string{
-// 		distro.WorkerService:     dis.GetWorkerService(),
-// 		distro.ControllerService: dis.GetControllerService(),
-// 	})
-// }
-
+// SetPath adds a key value to the paths string map.
+// TODO add ref to what the paths string map does....
 func (l *Linux) SetPath(key, value string) {
 	l.paths[key] = value
 }
 
+// SetSysctlValue sets the sysctl key with the given value, will return if any errors are set
 func (l *Linux) SetSysctlValue(h os.Host, key string, value string) error {
 	return h.Execf(`sysctl -w %s=%s`, key, value, exec.Sudo(h))
 }
 
+// GetSysctlValue get the current value of a sysctl value, will return an error if the key does not exist
 func (l *Linux) GetSysctlValue(h os.Host, key string) (string, error) {
 	output, err := h.ExecOutputf(`sysctl "%s"`, key)
 	if err != nil {

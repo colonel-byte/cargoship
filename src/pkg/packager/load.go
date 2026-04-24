@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package packager for interacting with a packages distro config
 package packager
 
 import (

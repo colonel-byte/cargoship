@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package v1alpha1 is for the shared File logic across both the cluster and distro api's
 package v1alpha1
 
 import (

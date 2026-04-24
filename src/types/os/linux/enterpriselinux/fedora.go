@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package enterpriselinux is implementing the interface github.com/colonel-byte/cargoship/src/types/os.Configurer for Enterprise Linux hosts
 package enterpriselinux
 
 import (

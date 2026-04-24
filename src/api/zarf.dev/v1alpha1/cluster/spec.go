@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package cluster is for the api representation of Cluster
 package cluster
 
 import (

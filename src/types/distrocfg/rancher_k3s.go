@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	DISTRO_ID_K3S = "k3s"
+	DistroK3S = "k3s"
 )
 
 type K3S struct {
@@ -35,20 +35,20 @@ var _ Distro = (*K3S)(nil)
 func init() {
 	registry.RegisterDistroModule(
 		func(dis string) bool {
-			return dis == DISTRO_ID_K3S
+			return dis == DistroK3S
 		},
 		func() any {
 			return &K3S{
 				RancherCommon{
 					Common{
-						ID:                 DISTRO_ID_K3S,
-						BinaryDir:          "/usr/local/bin",
-						Binary:             "k3s",
-						Config:             "/etc/rancher/k3s/config.yaml",
-						Token:              "/etc/rancher/k3s/token",
-						Data:               "/var/lib/rancher/k3s",
-						Service_Controller: "k3s-server",
-						Service_Worker:     "k3s-agent",
+						ID:                DistroK3S,
+						BinaryDir:         "/usr/local/bin",
+						Binary:            "k3s",
+						Config:            "/etc/rancher/k3s/config.yaml",
+						Token:             "/etc/rancher/k3s/token",
+						Data:              "/var/lib/rancher/k3s",
+						ServiceController: "k3s-server",
+						Service_Worker:    "k3s-agent",
 					},
 				},
 			}

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	OS_KIND_SLES = "sles"
+	OSKindSLES = "sles"
 )
 
 // SLES provides OS support for Suse SUSE Linux Enterprise Server
@@ -38,7 +38,7 @@ var _ configurer.Configurer = (*SLES)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_SLES
+			return os.ID == OSKindSLES
 		},
 		func() any {
 			return &SLES{}

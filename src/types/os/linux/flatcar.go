@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	OS_KIND_FLATCAR = "flatcar"
+	OSKindFlatcar = "flatcar"
 )
 
 type Flatcar struct {
@@ -37,7 +37,7 @@ var _ configurer.Configurer = (*Flatcar)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_FLATCAR
+			return os.ID == OSKindFlatcar
 		},
 		func() any {
 			return &Flatcar{}

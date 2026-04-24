@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package os is for running commands on a remote host
 package os
 
 import (

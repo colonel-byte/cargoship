@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package linux is implementing the interface github.com/colonel-byte/cargoship/src/types/os.Configurer for Linux based hosts
 package linux
 
 import (
@@ -25,7 +26,7 @@ import (
 )
 
 const (
-	OS_KIND_ALPINE = "alpine"
+	OSKindAlpine = "alpine"
 )
 
 // BaseLinux for tricking go interfaces
@@ -44,7 +45,7 @@ var _ configurer.Configurer = (*Alpine)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_ALPINE
+			return os.ID == OSKindAlpine
 		},
 		func() any {
 			return &Alpine{}
