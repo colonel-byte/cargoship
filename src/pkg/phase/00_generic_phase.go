@@ -40,6 +40,7 @@ var (
 	Interval = 10 * time.Second
 )
 
+// GenericPhase state
 type GenericPhase struct {
 	manager *Manager
 	wg      sync.WaitGroup
@@ -50,7 +51,7 @@ func (p *GenericPhase) GetConfig() *cluster.ZarfCluster {
 	return p.manager.Config
 }
 
-// GetConfig is an accessor to phase Distro
+// GetDistro is an accessor to phase Distro
 func (p *GenericPhase) GetDistro() *distro.ZarfDistro {
 	return p.manager.Distro
 }
@@ -113,6 +114,7 @@ func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) er
 	return p.manager.Wet(host, msg, funcs...)
 }
 
+// VersionLess if host version is less then the distro version
 func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool {
 	con, err := semver.NewConstraint(fmt.Sprintf("< %s", strings.ReplaceAll(version, "+", "-")))
 	if err != nil {
@@ -125,6 +127,7 @@ func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool 
 	return con.Check(v)
 }
 
+// VersionGreater if host version is greater then the distro version
 func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool {
 	con, err := semver.NewConstraint(fmt.Sprintf("> %s", strings.ReplaceAll(version, "+", "-")))
 	if err != nil {

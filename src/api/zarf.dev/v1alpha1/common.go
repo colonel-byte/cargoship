@@ -14,4 +14,5 @@
 
 package v1alpha1
 
+// ZarfDistroKind type
 type ZarfDistroKind string

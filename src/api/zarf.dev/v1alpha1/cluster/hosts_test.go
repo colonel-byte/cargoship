@@ -44,7 +44,7 @@ func TestHostsEach(t *testing.T) {
 		var count int
 		ctx, cancel := context.WithCancel(context.Background())
 
-		fn := func(ctx context.Context, h *ZarfHost) error {
+		fn := func(_ context.Context, _ *ZarfHost) error {
 			count++
 			cancel()
 			return nil
@@ -56,7 +56,7 @@ func TestHostsEach(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
-		fn := func(_ context.Context, h *ZarfHost) error {
+		fn := func(_ context.Context, _ *ZarfHost) error {
 			return errors.New("test")
 		}
 		err := hosts.Each(context.Background(), fn)

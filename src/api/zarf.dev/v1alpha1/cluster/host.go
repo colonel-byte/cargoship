@@ -42,6 +42,7 @@ const (
 // ErrCommandFailed is returned when a command fails
 var ErrCommandFailed = errors.New("command failed")
 
+// ZarfHost is a remote connection to a node
 type ZarfHost struct {
 	rig.Connection `json:",inline"`
 	//keep-sorted start
@@ -60,11 +61,13 @@ type ZarfHost struct {
 	Metadata   ZarfHostMetadata `json:"-"`
 }
 
+// ZarfHostPort ports that should be opened on the public side of the firewall
 type ZarfHostPort struct {
 	Protocol string `json:"protocol" xml:"protocol,attr" jsonschema:"enum=tcp,enum=udp"`
 	Port     string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
 }
 
+// ZarfHostMetadata runtime discovered values
 type ZarfHostMetadata struct {
 	//keep-sorted start
 	Arch           string
@@ -142,6 +145,7 @@ func (h *ZarfHost) DeleteFile(path string) error {
 	return cfg.DeleteFile(h, path)
 }
 
+// KubeRole of the role host
 func (h *ZarfHost) KubeRole() string {
 	switch h.Role {
 	case RoleControllerWorker, RoleSingle:
@@ -224,6 +228,7 @@ func (h *ZarfHost) WriteFile(path string, data string, permissions string) error
 	return cfg.WriteFile(h, path, data, permissions)
 }
 
+// ReadFile read the contents of a file, if it exists, or returns an error
 func (h *ZarfHost) ReadFile(path string) (string, error) {
 	cfg, err := h.requireConfigurer()
 	if err != nil {
@@ -232,6 +237,7 @@ func (h *ZarfHost) ReadFile(path string) (string, error) {
 	return cfg.ReadFile(h, path)
 }
 
+// FileExist if a file exists on the host
 func (h *ZarfHost) FileExist(path string) bool {
 	cfg, err := h.requireConfigurer()
 	if err != nil {

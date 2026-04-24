@@ -21,7 +21,7 @@ import (
 	"sync"
 )
 
-// Hosts are destnation hosts
+// ZarfHosts are the hosts that will be managed
 type ZarfHosts []*ZarfHost
 
 // First returns the first host

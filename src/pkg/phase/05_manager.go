@@ -127,6 +127,7 @@ type Manager struct {
 	Timeout           time.Duration
 }
 
+// ManagerDistroConfig stores some values for manager distro config
 type ManagerDistroConfig struct {
 	BinaryDir string
 	Binary    string
@@ -158,7 +159,7 @@ func (m *Manager) SetPhases(p Phases) {
 	m.phases = p
 }
 
-// RetryTimeout wraps retry Timeout logic
+// SetTimout sets the timeout for the manager
 func (m *Manager) SetTimout(tm time.Duration) {
 	m.Timeout = tm
 }
@@ -171,6 +172,7 @@ func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) 
 	return retry.WithDefaultTimeout(ctx, f)
 }
 
+// GetDistroOSFiles returns the ZarfFiles for a distro
 func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles {
 	return m.Distro.Spec.Config.OS.Files
 }
@@ -180,7 +182,7 @@ type errorfunc func() error
 // Wet runs the first given function when not in dry-run mode. The second function will be
 // run when in dry-mode and the message will be displayed. Any error returned from the
 // functions will be returned and will halt the operation.
-func (m *Manager) Wet(_ fmt.Stringer, msg string, funcs ...errorfunc) error {
+func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error {
 	if !m.DryRun {
 		if len(funcs) > 0 && funcs[0] != nil {
 			return funcs[0]()

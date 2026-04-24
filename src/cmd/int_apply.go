@@ -28,12 +28,19 @@ import (
 )
 
 const (
-	InstallApplyConfig          = "config"
-	InstallApplyConfirm         = "confirm"
-	InstallApplyConcurrency     = "concurrency"
+	// InstallApplyConfig flag
+	InstallApplyConfig = "config"
+	// InstallApplyConfirm flag
+	InstallApplyConfirm = "confirm"
+	// InstallApplyConcurrency flag
+	InstallApplyConcurrency = "concurrency"
+	// InstallApplyWorkConcurrency flag
 	InstallApplyWorkConcurrency = "work-concurrency"
-	InstallApplyUpdateHost      = "update-hosts"
-	InstallApplyUpdateFirewall  = "update-firewall"
+	// InstallApplyUpdateHost flag
+	InstallApplyUpdateHost = "update-hosts"
+	// InstallApplyUpdateFirewall flag
+	InstallApplyUpdateFirewall = "update-firewall"
+	// InstallApplyUpdateFAPolicyD flag
 	InstallApplyUpdateFAPolicyD = "update-fapolicyd"
 )
 
@@ -125,9 +132,5 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		ModifyFirewall:   o.firewall,
 	}
 
-	if err := action.NewApply(applyOpts).Run(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return action.NewApply(applyOpts).Run(ctx)
 }
