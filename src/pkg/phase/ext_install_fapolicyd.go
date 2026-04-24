@@ -23,10 +23,11 @@ import (
 )
 
 const (
+	// FAPOLICYD name of the service for fapolicyd
 	FAPOLICYD = "fapolicyd"
 )
 
-// PrepareHosts installs required packages and so on on the hosts.
+// InstallFapolicy installs required packages and so on on the hosts.
 type InstallFapolicy struct {
 	GenericPhase
 	Enabled        bool
@@ -34,7 +35,7 @@ type InstallFapolicy struct {
 }
 
 // Prepare the phase
-func (p *InstallFapolicy) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.fapolicydhosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return !h.Configurer.ServiceIsRunning(h, FAPOLICYD)
 	})

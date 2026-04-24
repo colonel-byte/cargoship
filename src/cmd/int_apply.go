@@ -66,9 +66,9 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallApplyUpdateFAPolicyD, "f", v.GetBool(VInstallUpdateFirewall), lang.CmdInstallFapolicydUpdate)
 	cmd.Flags().IntVarP(&o.workerCon, InstallApplyWorkConcurrency, "w", v.GetInt(VInstallWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
 
-	val, err := cmd.Flags().GetString(ROOT_LOGGING_LEVEL)
+	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
-		val = LOGGING_LEVEL_DEFAULT
+		val = LoggingLevelDefault
 	}
 
 	o.logLevel = val

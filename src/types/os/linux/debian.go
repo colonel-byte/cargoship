@@ -22,6 +22,7 @@ import (
 )
 
 const (
+	// OSKindDebian id
 	OSKindDebian = "debian"
 )
 

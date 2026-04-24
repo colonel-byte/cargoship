@@ -24,9 +24,11 @@ import (
 )
 
 const (
+	// OSKindFlatcar id
 	OSKindFlatcar = "flatcar"
 )
 
+// Flatcar provides OS support for Flatcar systems
 type Flatcar struct {
 	BaseLinux
 	os.Linux
@@ -45,7 +47,8 @@ func init() {
 	)
 }
 
-func (l *Flatcar) InstallPackage(h os.Host, pkg ...string) error {
+// InstallPackage installs packages but will throw an error
+func (l *Flatcar) InstallPackage(_ os.Host, _ ...string) error {
 	return errors.New("FlatcarContainerLinux does not support installing packages manually")
 }
 

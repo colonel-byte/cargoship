@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// package main is used to generate the json schema for various objects
 package main
 
 import (
@@ -23,8 +24,8 @@ import (
 	"runtime"
 	"strings"
 
-	cluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	distro "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
 	strcase "github.com/stoewer/go-strcase"

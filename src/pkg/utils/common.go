@@ -53,6 +53,7 @@ func ReadYAMLStrict(path string, destConfig any) error {
 	return ReadByteStrict(fileBytes, &destConfig)
 }
 
+// ReadByteStrict reads a byte array and tries to place it in the provided "destConfig" object
 func ReadByteStrict(data []byte, destConfig any) error {
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
@@ -91,11 +92,13 @@ func IdentifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s", src)
 }
 
+// PrintJSON returns a string representation of a given object
 func PrintJSON(obj any) string {
 	bytes, _ := json.MarshalIndent(obj, "", "  ")
 	return string(bytes)
 }
 
+// RandomString returns a string of hexadecimal characters of a given length that is cryptographically secure, or an error
 func RandomString(length int) (string, error) {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {

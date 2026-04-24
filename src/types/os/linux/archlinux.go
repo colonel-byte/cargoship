@@ -22,6 +22,7 @@ import (
 )
 
 const (
+	// OSKindArch id
 	OSKindArch = "arch"
 )
 

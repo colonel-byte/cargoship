@@ -26,9 +26,11 @@ import (
 )
 
 const (
+	// FIREWALLD name of the service for firewalld
 	FIREWALLD = "firewalld"
 )
 
+// FirewallNodeConfig used to create firewalld config for an array of node ip address
 type FirewallNodeConfig struct {
 	XMLName xml.Name `xml:"ipset"`
 	Type    string   `xml:"type,attr"`
@@ -37,7 +39,7 @@ type FirewallNodeConfig struct {
 	Entries []string `xml:"entry"`
 }
 
-// GatherFacts gathers information about hosts, such as if k0s is already up and running
+// ConfigureFirewall state
 type ConfigureFirewall struct {
 	GenericPhase
 	Distro    distrocfg.Distro
@@ -53,7 +55,7 @@ func (p *ConfigureFirewall) Title() string {
 }
 
 // Prepare the phase
-func (p *ConfigureFirewall) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, FIREWALLD)
 	})
@@ -82,12 +84,13 @@ func (p *ConfigureFirewall) Run(ctx context.Context) error {
 		p.hosts,
 		p.configureFirewallNodes,
 		p.configureFirewallCluster,
-		p.updateFirewall,
+		p.updateFirewallCluster,
+		p.updateFirewallNode,
 		restartFirewall,
 	)
 }
 
-func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *ConfigureFirewall) configureFirewallCluster(_ context.Context, h *cluster.ZarfHost) error {
 	ent := FirewallNodeConfig{
 		Type:    "hash:net",
 		Short:   "k8subnets",
@@ -103,7 +106,7 @@ func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *clu
 	return h.WriteFile("/etc/firewalld/ipsets/k8s-subnets.xml", string(output)+"\n", "0600")
 }
 
-func (p *ConfigureFirewall) configureFirewallNodes(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *ConfigureFirewall) configureFirewallNodes(_ context.Context, h *cluster.ZarfHost) error {
 	ent := FirewallNodeConfig{
 		Type:    "hash:ip",
 		Short:   "k8nodes",
@@ -119,16 +122,14 @@ func (p *ConfigureFirewall) configureFirewallNodes(ctx context.Context, h *clust
 	return h.WriteFile("/etc/firewalld/ipsets/k8s-nodes.xml", string(output)+"\n", "0600")
 }
 
-func (p *ConfigureFirewall) updateFirewall(ctx context.Context, h *cluster.ZarfHost) error {
-	if err := h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-nodes", exec.Sudo(h)); err != nil {
-		return err
-	}
-	if err := h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-subnets", exec.Sudo(h)); err != nil {
-		return err
-	}
-	return nil
+func (p *ConfigureFirewall) updateFirewallNode(_ context.Context, h *cluster.ZarfHost) error {
+	return h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-nodes", exec.Sudo(h))
 }
 
-func restartFirewall(ctx context.Context, h *cluster.ZarfHost) (err error) {
+func (p *ConfigureFirewall) updateFirewallCluster(_ context.Context, h *cluster.ZarfHost) error {
+	return h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-subnets", exec.Sudo(h))
+}
+
+func restartFirewall(_ context.Context, h *cluster.ZarfHost) (err error) {
 	return h.Configurer.RestartService(h, FIREWALLD)
 }

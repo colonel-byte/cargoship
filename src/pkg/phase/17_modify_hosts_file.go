@@ -26,10 +26,10 @@ import (
 )
 
 const (
-	host_comment = "added by distro-ctl"
+	hostComment = "added by distro-ctl"
 )
 
-// GatherFacts gathers information about hosts, such as if k0s is already up and running
+// ModifyHosts state
 type ModifyHosts struct {
 	GenericPhase
 	Enabled bool
@@ -42,7 +42,7 @@ func (p *ModifyHosts) Title() string {
 }
 
 // Prepare the phase
-func (p *ModifyHosts) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = make(map[string][]string)
 	for _, h := range p.manager.Config.Spec.Hosts {
 		p.hosts[h.PrivateAddress] = []string{
@@ -65,7 +65,7 @@ func (p *ModifyHosts) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.configureHostsFile)
 }
 
-func (p *ModifyHosts) configureHostsFile(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *ModifyHosts) configureHostsFile(_ context.Context, h *cluster.ZarfHost) error {
 	hostsCon, err := h.ReadFile("/etc/hosts")
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func (p *ModifyHosts) configureHostsFile(ctx context.Context, h *cluster.ZarfHos
 
 	for _, k := range slices.Sorted(maps.Keys(p.hosts)) {
 		hostfile.RemoveAddress(k)
-		hostfile.AddHostsWithComment(k, p.hosts[k], host_comment)
+		hostfile.AddHostsWithComment(k, p.hosts[k], hostComment)
 	}
 
 	h.WriteFile("/etc/hosts", hostfile.RenderHostsFile(), "0644")

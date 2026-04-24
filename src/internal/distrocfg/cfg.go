@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package distrocfg is used to parse an byte array and returns a ZarfDistro
 package distrocfg
 
 import (
 	"context"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	goyaml "github.com/goccy/go-yaml"
 )
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
-func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfDistro, error) {
-	var dis v1alpha1.ZarfDistro
+func Parse(_ context.Context, b []byte) (distro.ZarfDistro, error) {
+	var dis distro.ZarfDistro
 	err := goyaml.Unmarshal(b, &dis)
 	if err != nil {
-		return v1alpha1.ZarfDistro{}, err
+		return distro.ZarfDistro{}, err
 	}
 	return dis, nil
 }

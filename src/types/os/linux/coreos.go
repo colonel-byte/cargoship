@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	// OSKindCoreOS id
 	OSKindCoreOS = "CoreOS"
 )
 
@@ -47,6 +48,7 @@ func init() {
 	)
 }
 
-func (l *CoreOS) InstallPackage(h os.Host, pkg ...string) error {
+// InstallPackage installs packages but will throw an error
+func (l *CoreOS) InstallPackage(_ os.Host, _ ...string) error {
 	return errors.New("CoreOS does not support installing packages manually")
 }

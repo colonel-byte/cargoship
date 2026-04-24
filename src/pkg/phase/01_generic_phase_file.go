@@ -134,11 +134,7 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 	}
 
 	modTime := time.Unix(0, 0)
-	if err := p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime); err != nil {
-		return err
-	}
-
-	return nil
+	return p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime)
 }
 
 func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v1alpha1.ZarfFile) error {

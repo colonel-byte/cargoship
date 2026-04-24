@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// InitializeControllers phase state
 type InitializeControllers struct {
 	GenericPhase
 	Distro  distrocfg.Distro
@@ -31,9 +32,9 @@ type InitializeControllers struct {
 }
 
 // Prepare the phase
-func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UNKNOWN_VERSION
+		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UnknownVersion
 	})
 
 	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.control))
@@ -41,10 +42,12 @@ func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfClus
 	return nil
 }
 
+// Title for the phase
 func (p *InitializeControllers) Title() string {
 	return "Initialize Controller"
 }
 
+// Run the phase
 func (p *InitializeControllers) Run(ctx context.Context) error {
 	err := p.parallelDoWithMessage(
 		ctx,

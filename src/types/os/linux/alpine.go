@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	// OSKindAlpine id
 	OSKindAlpine = "alpine"
 )
 
@@ -53,11 +54,12 @@ func init() {
 	)
 }
 
-// InstallPackage installs packages via slackpkg
+// InstallPackage installs packages via apk
 func (l *Alpine) InstallPackage(h os.Host, pkg ...string) error {
 	return h.Execf("apk add --update %s", strings.Join(pkg, " "), exec.Sudo(h))
 }
 
+// Prepare will install required packages
 func (l *Alpine) Prepare(h os.Host) error {
 	return l.InstallPackage(h, "findutils", "coreutils")
 }

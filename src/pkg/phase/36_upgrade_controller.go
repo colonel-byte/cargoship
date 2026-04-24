@@ -22,23 +22,25 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// UpgradeController phase state
 type UpgradeController struct {
 	UpgradeHosts
 }
 
+// Title for the phase
 func (p *UpgradeController) Title() string {
 	return "Upgrade Controller"
 }
 
 // Prepare the phase
-func (p *UpgradeController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
 	})
 	p.leader = control[0]
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.IsController() &&
-			h.Metadata.DistroVersion != UNKNOWN_VERSION &&
+			h.Metadata.DistroVersion != UnknownVersion &&
 			p.VersionLess(h, d.Spec.Version)
 	})
 	logger.From(ctx).Debug("number of systems that need to be updated", "hosts", len(p.hosts))
@@ -47,6 +49,7 @@ func (p *UpgradeController) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 	return nil
 }
 
+// Run the phase
 func (p *UpgradeController) Run(ctx context.Context) error {
 	return p.batchedParallelWithMessage(
 		ctx,

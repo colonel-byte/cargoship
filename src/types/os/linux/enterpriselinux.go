@@ -25,13 +25,20 @@ import (
 )
 
 const (
-	OSKindELAlma   = "almalinux"
+	// OSKindELAlma id
+	OSKindELAlma = "almalinux"
+	// OSKindELAmazon id
 	OSKindELAmazon = "amzn"
-	OSKindELCent   = "centos"
+	// OSKindELCent id
+	OSKindELCent = "centos"
+	// OSKindELFedora id
 	OSKindELFedora = "fedora"
+	// OSKindELOracle id
 	OSKindELOracle = "ol"
+	// OSKindELRedHat id
 	OSKindELRedHat = "rhel"
-	OSKindELRocky  = "rocky"
+	// OSKindELRocky id
+	OSKindELRocky = "rocky"
 )
 
 // EnterpriseLinux is a base package for several RHEL-like enterprise linux distributions

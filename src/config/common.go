@@ -17,10 +17,13 @@ package config
 import "github.com/colonel-byte/cargoship/src/types"
 
 const (
+	// UnsetCLIVersion is an unset version for when building locally
 	UnsetCLIVersion = "unset-development-only"
 )
 
 var (
-	CLIVersion    = UnsetCLIVersion
+	// CLIVersion is the version of the cli
+	CLIVersion = UnsetCLIVersion
+	// CommonOptions is the distro config
 	CommonOptions types.DistroConfig
 )

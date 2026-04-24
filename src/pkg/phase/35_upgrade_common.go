@@ -27,11 +27,12 @@ import (
 )
 
 const (
-	drain_node    = `drain --delete-emptydir-data --ignore-daemonsets --disable-eviction %s`
-	uncordon_node = `uncordon %s`
-	ready_node    = `get node -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' %s`
+	drainNode    = `drain --delete-emptydir-data --ignore-daemonsets --disable-eviction %s`
+	uncordonNode = `uncordon %s`
+	readyNode    = `get node -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' %s`
 )
 
+// UpgradeHosts phase state
 type UpgradeHosts struct {
 	GenericPhase
 	Distro  distrocfg.Distro
@@ -47,8 +48,8 @@ func (p *UpgradeHosts) ShouldRun() bool {
 
 func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining nodes", "node", h)
-	return p.manager.RetryTimeout(ctx, func(ctx context.Context) error {
-		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drain_node, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
+		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 	})
 }
 
@@ -77,8 +78,8 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
-	return p.manager.RetryTimeout(ctx, func(ctx context.Context) error {
-		out, err := p.leader.ExecOutput(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), ready_node, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
+		out, err := p.leader.ExecOutput(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 		if err != nil {
 			return err
 		}
@@ -89,6 +90,6 @@ func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost
 	})
 }
 
-func (p *UpgradeHosts) uncordonNode(ctx context.Context, h *cluster.ZarfHost) error {
-	return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), uncordon_node, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+func (p *UpgradeHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
+	return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 }

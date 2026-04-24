@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package node is used for status related functions
 package node
 
 import (
@@ -34,7 +35,7 @@ func ServiceRunningFunc(h *cluster.ZarfHost, service string) RetryFunc {
 	}
 }
 
-// HTTPStatus returns a function that returns an error unless the expected status code is returned for a HTTP get to the url
+// HTTPStatusFunc returns a function that returns an error unless the expected status code is returned for a HTTP get to the url
 func HTTPStatusFunc(h *cluster.ZarfHost, url string, expected ...int) RetryFunc {
 	return func(_ context.Context) error {
 		return h.CheckHTTPStatus(url, expected...)

@@ -30,7 +30,7 @@ import (
 type ClusterOptions struct{}
 
 // ClusterDefinition loads a package from the filesystem
-func ClusterDefinition(ctx context.Context, configPath string, opts ClusterOptions) (v1alpha1.ZarfCluster, error) {
+func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.ClusterDefinition", "path", configPath)

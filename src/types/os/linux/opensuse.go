@@ -21,7 +21,9 @@ import (
 )
 
 const (
-	OSKindOpenSUSE      = "opensuse"
+	// OSKindOpenSUSE id
+	OSKindOpenSUSE = "opensuse"
+	// OSKindOpenSUSEMicro id
 	OSKindOpenSUSEMicro = "opensuse-microos"
 )
 

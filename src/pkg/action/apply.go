@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package action are various actions used by the package
 package action
 
 import (
@@ -24,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// ApplyOptions struct
 type ApplyOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
@@ -41,11 +43,13 @@ type ApplyOptions struct {
 	WorkerConcurrent int
 }
 
+// Apply state logic
 type Apply struct {
 	ApplyOptions
 	Phases phase.Phases
 }
 
+// NewApply an apply action object
 func NewApply(opts ApplyOptions) *Apply {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
@@ -126,6 +130,7 @@ func NewApply(opts ApplyOptions) *Apply {
 	return apply
 }
 
+// Run the actions
 func (a Apply) Run(ctx context.Context) error {
 	l := logger.From(ctx)
 	start := time.Now()

@@ -22,11 +22,13 @@ import (
 	"github.com/colonel-byte/cargoship/src/config"
 )
 
+// DistroPath object that contains the manifest file and base directory
 type DistroPath struct {
 	ManifestFile string
 	BaseDir      string
 }
 
+// ResolveDistroPath returns an object of DistroPath from a given path
 func ResolveDistroPath(path string) (DistroPath, error) {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
@@ -48,11 +50,13 @@ func ResolveDistroPath(path string) (DistroPath, error) {
 	}, nil
 }
 
+// ClusterPath object that contains the manifest file and base directory
 type ClusterPath struct {
 	ManifestFile string
 	BaseDir      string
 }
 
+// ResolveClusterPath returns an object of ClusterPath from a given path
 func ResolveClusterPath(path string) (ClusterPath, error) {
 	_, err := os.Stat(path)
 	if err != nil {

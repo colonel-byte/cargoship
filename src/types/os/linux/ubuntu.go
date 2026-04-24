@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	// OSKindUbuntu id
 	OSKindUbuntu = "ubuntu"
 )
 

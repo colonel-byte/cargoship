@@ -26,7 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// UploadFiles implements a phase which upload files to hosts
+// BINUploadFiles implements a phase which upload files to hosts
 type BINUploadFiles struct {
 	UploadFilesCommon
 	Distro distrocfg.Distro

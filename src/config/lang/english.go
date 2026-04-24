@@ -16,29 +16,50 @@
 package lang
 
 const (
-	//keep-sorted start
-	CmdDistroCreateShort            = "Creates a Zarf Distro Package from a given directory or the current director"
-	CmdInstallFapolicydUpdate       = "Whether to update all the host nodes fapolicyd configuration."
-	CmdInstallFirewallUpdate        = "Whether to update all the host nodes firewall configuration."
-	CmdInstallFlagConcurrency       = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
-	CmdInstallFlagConfig            = "Config file used to bootstrap a cluster."
-	CmdInstallFlagConfirm           = "Confirm whether if to proceed with the install"
-	CmdInstallFlagTimeout           = "Set the timeout for how long functions will last."
+	// CmdDistroCreateShort create short
+	CmdDistroCreateShort = "Creates a Zarf Distro Package from a given directory or the current director"
+	// CmdInstallFapolicydUpdate install flag fapolicyd
+	CmdInstallFapolicydUpdate = "Whether to update all the host nodes fapolicyd configuration."
+	// CmdInstallFirewallUpdate install flag firewall
+	CmdInstallFirewallUpdate = "Whether to update all the host nodes firewall configuration."
+	// CmdInstallFlagConcurrency install flag concurrency
+	CmdInstallFlagConcurrency = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
+	// CmdInstallFlagConfig install flag config
+	CmdInstallFlagConfig = "Config file used to bootstrap a cluster."
+	// CmdInstallFlagConfirm install flag confirm
+	CmdInstallFlagConfirm = "Confirm whether if to proceed with the install"
+	// CmdInstallFlagTimeout install flag timeout
+	CmdInstallFlagTimeout = "Set the timeout for how long functions will last."
+	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
-	CmdInstallHostUpdate            = "Whether to update all the host nodes etc/hosts file."
-	CmdPackageCreateFlagOutput      = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
-	CmdPackageFlagConcurrency       = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
-	CmdVersionLong                  = "Displays the version of the release that the current binary was built from."
-	CmdVersionShort                 = "Shows the version of the running binary"
-	CmdViperErrLoadingConfigFile    = "failed to load config file"
-	RootCmdFlagLogFormat            = "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'."
-	RootCmdFlagLogLevel             = "Log level when running cargoship. Valid options are: warn, info, debug, trace"
-	RootCmdFlagNoColor              = "Disable terminal color codes in logging and stdout prints."
-	RootCmdShort                    = "CLI for cargoship installs"
-	RootCmdUse                      = "cargoship COMMAND"
-	RootGroupInstallID              = "install"
-	RootGroupInstallTitle           = "Install Commands:"
-	RootGroupPackageID              = "package"
-	RootGroupPackageTitle           = "Package Commands:"
-	//keep-sorted end
+	// CmdInstallHostUpdate install flag host
+	CmdInstallHostUpdate = "Whether to update all the host nodes etc/hosts file."
+	// CmdPackageCreateFlagOutput create flag output
+	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
+	// CmdPackageFlagConcurrency deploy flag concurrency
+	CmdPackageFlagConcurrency = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
+	// CmdVersionLong version long
+	CmdVersionLong = "Displays the version of the release that the current binary was built from."
+	// CmdVersionShort version short
+	CmdVersionShort = "Shows the version of the running binary"
+	// CmdViperErrLoadingConfigFile error text
+	CmdViperErrLoadingConfigFile = "failed to load config file"
+	// RootCmdFlagLogFormat log format
+	RootCmdFlagLogFormat = "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'."
+	// RootCmdFlagLogLevel log level
+	RootCmdFlagLogLevel = "Log level when running cargoship. Valid options are: warn, info, debug, trace"
+	// RootCmdFlagNoColor no color
+	RootCmdFlagNoColor = "Disable terminal color codes in logging and stdout prints."
+	// RootCmdShort root short
+	RootCmdShort = "CLI for cargoship installs"
+	// RootCmdUse root use
+	RootCmdUse = "cargoship COMMAND"
+	// RootGroupInstallID subcommand for install id
+	RootGroupInstallID = "install"
+	// RootGroupInstallTitle subcommand for install title
+	RootGroupInstallTitle = "Install Commands:"
+	// RootGroupPackageID subcommand for package id
+	RootGroupPackageID = "package"
+	// RootGroupPackageTitle subcommand for package id
+	RootGroupPackageTitle = "Package Commands:"
 )

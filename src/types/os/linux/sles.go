@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	// OSKindSLES id
 	OSKindSLES = "sles"
 )
 

@@ -23,17 +23,18 @@ import (
 )
 
 const (
-	FAPOLICYD_RULES_FILE = "/etc/fapolicyd/rules.d/31-cargoship.rules"
+	// FAPolicydRuleFile path on the host
+	FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
 )
 
-// PrepareHosts installs required packages and so on on the hosts.
+// PrepareFapolicy installs required packages and so on on the hosts.
 type PrepareFapolicy struct {
 	GenericPhase
 	fapolicydhosts cluster.ZarfHosts
 }
 
 // Prepare the phase
-func (p *PrepareFapolicy) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.fapolicydhosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, FAPOLICYD)
 	})
@@ -59,7 +60,7 @@ func (p *PrepareFapolicy) ShouldRun() bool {
 }
 
 func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
-	err := h.Configurer.WriteFile(h, FAPOLICYD_RULES_FILE, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
+	err := h.Configurer.WriteFile(h, FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
 	if err != nil {
 		return err
 	}

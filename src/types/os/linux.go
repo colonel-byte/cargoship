@@ -59,7 +59,7 @@ func (l *Linux) Quote(value string) string {
 	return shellescape.Quote(value)
 }
 
-// Arch returns the host processor architecture in the format k0s expects it
+// Arch returns the host processor architecture in the format engine expects it
 func (l *Linux) Arch(h os.Host) (string, error) {
 	arch, err := h.ExecOutput("uname -m")
 	if err != nil {

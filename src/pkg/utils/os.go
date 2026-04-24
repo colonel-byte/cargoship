@@ -21,6 +21,12 @@ import (
 	"github.com/colonel-byte/cargoship/src/types/os/linux/enterpriselinux"
 )
 
+// FilterEngineAlreadyPopulated is a function used to filter whether a host already has distro files populated
+func FilterEngineAlreadyPopulated(h *cluster.ZarfHost) bool {
+	return !h.Metadata.EngineUploaded
+}
+
+// IsDebianLinux is true if the os.Configurer is of a type of Debian based OS
 func IsDebianLinux(con os.Configurer) bool {
 	switch con.(type) {
 	case *linux.Debian, *linux.Ubuntu:
@@ -30,13 +36,12 @@ func IsDebianLinux(con os.Configurer) bool {
 	}
 }
 
+// FilterDebianLinux is a function used to filter whether a host is a Debian based OS
 func FilterDebianLinux(h *cluster.ZarfHost) bool {
-	if h.Metadata.EngineUploaded {
-		return false
-	}
 	return IsDebianLinux(h.Configurer)
 }
 
+// IsEnterpriseLinux is true if the os.Configurer is of a type of Enterprise Linux
 func IsEnterpriseLinux(con os.Configurer) bool {
 	switch con.(type) {
 	case *enterpriselinux.AlmaLinux, *enterpriselinux.AmazonLinux, *enterpriselinux.CentOS, *enterpriselinux.Fedora, *enterpriselinux.OracleLinux, *enterpriselinux.RHEL, *enterpriselinux.RockyLinux:
@@ -46,9 +51,7 @@ func IsEnterpriseLinux(con os.Configurer) bool {
 	}
 }
 
+// FilterEnterpriseLinux is a function used to filter whether a host is an Enterprise Linux OS
 func FilterEnterpriseLinux(h *cluster.ZarfHost) bool {
-	if h.Metadata.EngineUploaded {
-		return false
-	}
 	return IsEnterpriseLinux(h.Configurer)
 }

@@ -180,7 +180,7 @@ type errorfunc func() error
 // Wet runs the first given function when not in dry-run mode. The second function will be
 // run when in dry-mode and the message will be displayed. Any error returned from the
 // functions will be returned and will halt the operation.
-func (m *Manager) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error {
+func (m *Manager) Wet(_ fmt.Stringer, msg string, funcs ...errorfunc) error {
 	if !m.DryRun {
 		if len(funcs) > 0 && funcs[0] != nil {
 			return funcs[0]()

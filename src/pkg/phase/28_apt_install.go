@@ -23,7 +23,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 )
 
-// UploadFiles implements a phase which upload files to hosts
+// APTUploadFiles implements a phase which upload files to hosts
 type APTUploadFiles struct {
 	UploadFilesCommon
 }
@@ -37,8 +37,8 @@ func (p *APTUploadFiles) Title() string {
 func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.UploadFilesCommon.Prepare(ctx, c, d)
 
-	p.control = p.control.Filter(utils.FilterDebianLinux)
-	p.workers = p.workers.Filter(utils.FilterDebianLinux)
+	p.control = p.control.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.FilterDebianLinux)
+	p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.FilterDebianLinux)
 
 	p.filesControl = p.getProfileFiles(ctx, config.SelectorAPT, cluster.RoleController)
 	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorAPT, cluster.RoleWorker)
@@ -49,13 +49,13 @@ func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 // Run the phase
 func (p *APTUploadFiles) Run(ctx context.Context) (err error) {
 	p.parallelDo(ctx, p.control, func(ctx context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(_ context.Context, zh *cluster.ZarfHost) error {
 			return zh.Configurer.InstallPackage(zh, getPath(p.filesControl)...)
 		}
 		return nil
 	})
 	p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(_ context.Context, zh *cluster.ZarfHost) error {
 			return zh.Configurer.InstallPackage(zh, getPath(p.filesWorkers)...)
 		}
 		return nil

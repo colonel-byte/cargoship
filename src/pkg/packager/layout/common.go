@@ -29,19 +29,23 @@ import (
 	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// Distro struct
 type Distro struct {
 	cfg    *types.DistroConfig
 	distro distro.ZarfDistro
 	tmp    string
 }
 
+// DistroLayout struct
 type DistroLayout struct {
 	dirPath string
 	Distro  distro.ZarfDistro
 }
 
+// DistroLayoutOptions struct
 type DistroLayoutOptions struct{}
 
+// New creates a new Distro object
 func New(cfg *types.DistroConfig) (*Distro, error) {
 	dis := Distro{
 		cfg:    cfg,
@@ -69,7 +73,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opts DistroLayoutOptions) 
 }
 
 // LoadFromDir loads and validates a package from the given directory path.
-func LoadFromDir(ctx context.Context, dirPath string, opts DistroLayoutOptions) (*DistroLayout, error) {
+func LoadFromDir(ctx context.Context, dirPath string, _ DistroLayoutOptions) (*DistroLayout, error) {
 	b, err := os.ReadFile(filepath.Join(dirPath, config.ZarfDistroYaml))
 	if err != nil {
 		return nil, err

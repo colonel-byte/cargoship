@@ -36,6 +36,7 @@ func (p *Connect) Title() string {
 	return "Connect to hosts"
 }
 
+// Run the phase
 func (p *Connect) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
 		return retry.Timeout(ctx, 10*time.Minute, func(_ context.Context) error {
@@ -46,9 +47,7 @@ func (p *Connect) Run(ctx context.Context) error {
 				}
 				return err
 			}
-
 			logger.From(ctx).Info("connected", "host", h)
-
 			return nil
 		})
 	})

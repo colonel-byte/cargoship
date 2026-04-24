@@ -22,13 +22,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// Unlock phase state
 type Unlock struct {
 	GenericPhase
 	Cancel func(context.Context)
 }
 
 // Prepare the phase
-func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.manager.Config = c
 	if p.Cancel == nil {
 		p.Cancel = func(ctx context.Context) {

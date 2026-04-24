@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// Lock phase state
 type Lock struct {
 	GenericPhase
 	cfs        []func()
@@ -37,7 +38,7 @@ type Lock struct {
 }
 
 // Prepare the phase
-func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.manager.Config = c
 	hn, err := os.Hostname()
 	if err != nil {
@@ -54,7 +55,7 @@ func (p *Lock) Title() string {
 }
 
 // Cancel releases the lock
-func (p *Lock) Cancel(ctx context.Context) {
+func (p *Lock) Cancel(_ context.Context) {
 	p.m.Lock()
 	defer p.m.Unlock()
 	for _, f := range p.cfs {

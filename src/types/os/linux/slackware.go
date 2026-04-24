@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	// OSKindSlackware id
 	OSKindSlackware = "slackware"
 )
 

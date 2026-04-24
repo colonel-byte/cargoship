@@ -22,7 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// GatherFacts gathers information about hosts, such as if k0s is already up and running
+// GatherFacts gathers information about hosts
 type GatherFacts struct {
 	GenericPhase
 }

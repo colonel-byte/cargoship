@@ -23,9 +23,11 @@ import (
 )
 
 const (
+	// DistroRKE2 id
 	DistroRKE2 = "rke2"
 )
 
+// RKE2 distro struct
 type RKE2 struct {
 	RancherCommon
 }
@@ -48,7 +50,7 @@ func init() {
 						Token:             "/etc/rancher/rke2/token",
 						Data:              "/var/lib/rancher/rke2",
 						ServiceController: "rke2-server",
-						Service_Worker:    "rke2-agent",
+						ServiceWorker:     "rke2-agent",
 					},
 				},
 			}
@@ -57,7 +59,7 @@ func init() {
 }
 
 // KubeconfigPath returns the path to the admin config for a given distro
-func (d *RKE2) KubeconfigPath(host cluster.ZarfHost, dataDir string) string {
+func (d *RKE2) KubeconfigPath(_ cluster.ZarfHost, _ string) string {
 	return filepath.Join(filepath.Dir(d.Config), "rke2.yaml")
 }
 
@@ -68,10 +70,10 @@ func (d *RKE2) KubectlCmdf(host cluster.ZarfHost, dataDir string, s string, args
 
 // StopControllerService implements Distro.
 func (d *RKE2) StopControllerService(h *cluster.ZarfHost) error {
-	return d.StopService(h, d.GetControllerService(), "rke2-killall.sh")
+	return d.stopService(h, d.GetControllerService(), "rke2-killall.sh")
 }
 
 // StopWorkerService implements Distro.
 func (d *RKE2) StopWorkerService(h *cluster.ZarfHost) error {
-	return d.StopService(h, d.GetWorkerService(), "rke2-killall.sh")
+	return d.stopService(h, d.GetWorkerService(), "rke2-killall.sh")
 }

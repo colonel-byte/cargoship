@@ -41,7 +41,7 @@ type LoadOptions struct {
 	types.RemoteOptions
 }
 
-// LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
+// LoadDistro fetches, verifies, and loads a Zarf package from the specified source.
 func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.DistroLayout, error) {
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")

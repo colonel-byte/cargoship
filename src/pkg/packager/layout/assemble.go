@@ -40,6 +40,7 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// AssembleOptions options
 type AssembleOptions struct {
 	RegistryOverrides []images.RegistryOverride
 	OCIConcurrency    int
@@ -48,6 +49,7 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
+// AssembleDistro creates the actual tarballs
 func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)

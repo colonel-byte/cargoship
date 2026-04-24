@@ -23,15 +23,23 @@ import (
 )
 
 const (
-	Binary            = "Binary"
-	BinaryDir         = "BinDir"
-	Config            = "Config"
-	Token             = "Token"
-	Data              = "DataDir"
-	WorkerService     = "Worker"
+	// Binary id string
+	Binary = "Binary"
+	// BinaryDir id string
+	BinaryDir = "BinDir"
+	// Config id string
+	Config = "Config"
+	// Token id string
+	Token = "Token"
+	// Data id string
+	Data = "DataDir"
+	// WorkerService id string
+	WorkerService = "Worker"
+	// ControllerService id string
 	ControllerService = "Control"
 )
 
+// Distro interface for any distro object
 type Distro interface {
 	//keep-sorted start sticky_comments=yes
 	// BinaryName returns the engine binary name
@@ -40,11 +48,11 @@ type Distro interface {
 	BinaryPath() string
 	// ConfigPath returns the full path for the config directory used by the engine
 	ConfigPath() string
-	// ConfigureEngine
+	// ConfigureEngine does distro specific configuration on a host
 	ConfigureEngine(context.Context, cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
 	// DataDirPath returns the full path for the data directory used by the engine
 	DataDirPath() string
-	// DataDirPath returns a string that can be used to execute commands on the core engine binary
+	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 	DistroCmdf(string, ...any) string
 	// GetClusterCIDR returns a string array with the all the known cluster cidr blocks
 	GetClusterCIDR(distro.ZarfDistro) []string

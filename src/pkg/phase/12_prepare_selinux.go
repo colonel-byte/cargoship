@@ -23,17 +23,18 @@ import (
 )
 
 const (
-	CONTAINER_SELINUX = "container-selinux"
+	// ContainerSELinux package name
+	ContainerSELinux = "container-selinux"
 )
 
-// PrepareHosts installs required packages and so on on the hosts.
+// PrepareSelinux installs required packages and so on on the hosts.
 type PrepareSelinux struct {
 	GenericPhase
 	selinuxHosts cluster.ZarfHosts
 }
 
 // Prepare the phase
-func (p *PrepareSelinux) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.selinuxHosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.SELinuxEnabled(h)
 	})
@@ -59,10 +60,10 @@ func (p *PrepareSelinux) ShouldRun() bool {
 }
 
 func (p *PrepareSelinux) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("attempting to install", "host", h, "package", CONTAINER_SELINUX)
-	err := h.Configurer.InstallPackage(h, CONTAINER_SELINUX)
+	logger.From(ctx).Info("attempting to install", "host", h, "package", ContainerSELinux)
+	err := h.Configurer.InstallPackage(h, ContainerSELinux)
 	if err != nil {
-		logger.From(ctx).Warn("could not install", "host", h, "package", CONTAINER_SELINUX, "error", err)
+		logger.From(ctx).Warn("could not install", "host", h, "package", ContainerSELinux, "error", err)
 		return err
 	}
 	return nil
