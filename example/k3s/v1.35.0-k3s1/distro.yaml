@@ -112,6 +112,11 @@ spec:
           executable: true
           selector:
             package: binary
+        - source: ../core/killall.sh
+          target: /usr/local/bin/k3s-killall.sh
+          executable: true
+          selector:
+            package: binary
         - source: ../core/server.service
           target: /etc/systemd/system/k3s-server.service
           symlinks:
