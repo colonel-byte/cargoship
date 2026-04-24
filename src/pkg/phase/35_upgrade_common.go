@@ -52,11 +52,6 @@ func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error
 	})
 }
 
-func (p *UpgradeHosts) stopService(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
-	return h.Configurer.StopService(h, p.service)
-}
-
 func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("installing distro packages", "host", h)
 	if h.Metadata.Install != nil {

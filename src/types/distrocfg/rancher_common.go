@@ -24,6 +24,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/k0sproject/dig"
 	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/log"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -204,4 +205,19 @@ func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
 		return "", ErrVersionNotDetected
 	}
 	return match, nil
+}
+
+func (d *RancherCommon) StopService(h *cluster.ZarfHost, ser string, killall string) error {
+	log.Debugf("trying to stop %s", ser)
+	if h.Configurer.ServiceIsRunning(h, ser) {
+		if err := h.Configurer.StopService(h, ser); err != nil {
+			return err
+		}
+	}
+	if h.Configurer.CommandExist(h, killall) {
+		out, err := h.ExecOutput(killall, exec.Sudo(h))
+		log.Warnf("%s", out)
+		return err
+	}
+	return nil
 }

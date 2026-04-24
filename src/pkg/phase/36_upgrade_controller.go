@@ -61,3 +61,8 @@ func (p *UpgradeController) Run(ctx context.Context) error {
 		p.uncordonNode,
 	)
 }
+
+func (p *UpgradeController) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
+	return p.Distro.StopControllerService(h)
+}
