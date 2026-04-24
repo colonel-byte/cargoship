@@ -123,7 +123,7 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 			return err
 		}
 	} else {
-		logger.From(ctx).Info("file already exists and hasn't been changed, skipping upload", "host", h)
+		logger.From(ctx).Info("file already exists and hasn't been changed, skipping upload", "host", h, "file", target)
 	}
 
 	if stat == nil {

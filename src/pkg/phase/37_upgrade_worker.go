@@ -62,3 +62,8 @@ func (p *UpgradeWorkers) Run(ctx context.Context) error {
 		p.uncordonNode,
 	)
 }
+
+func (p *UpgradeWorkers) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
+	return p.Distro.StopWorkerService(h)
+}

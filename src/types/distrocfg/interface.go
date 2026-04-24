@@ -48,5 +48,7 @@ type Distro interface {
 	KubectlCmdf(cluster.ZarfHost, string, string, ...any) string
 	RunningVersion(cluster.ZarfHost) (string, error)
 	SetPath(string, string) error
+	StopControllerService(*cluster.ZarfHost) error
+	StopWorkerService(*cluster.ZarfHost) error
 	//keep-sorted end
 }

@@ -65,3 +65,11 @@ func (d *K3S) KubeconfigPath(host cluster.ZarfHost, dataDir string) string {
 func (d *K3S) KubectlCmdf(host cluster.ZarfHost, dataDir string, s string, args ...any) string {
 	return fmt.Sprintf(`env "KUBECONFIG=%s" %s`, d.KubeconfigPath(host, dataDir), d.DistroCmdf(`kubectl %s`, fmt.Sprintf(s, args...)))
 }
+
+func (d *K3S) StopControllerService(h *cluster.ZarfHost) error {
+	return d.StopService(h, d.GetControllerService(), "k3s-killall.sh")
+}
+
+func (d *K3S) StopWorkerService(h *cluster.ZarfHost) error {
+	return d.StopService(h, d.GetWorkerService(), "k3s-killall.sh")
+}

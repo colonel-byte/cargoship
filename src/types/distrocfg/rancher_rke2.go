@@ -65,3 +65,11 @@ func (d *RKE2) KubeconfigPath(host cluster.ZarfHost, dataDir string) string {
 func (d *RKE2) KubectlCmdf(host cluster.ZarfHost, dataDir string, s string, args ...any) string {
 	return fmt.Sprintf(`env "KUBECONFIG=%s" %s/bin/kubectl %s`, d.KubeconfigPath(host, dataDir), d.DataDirPath(), fmt.Sprintf(s, args...))
 }
+
+func (d *RKE2) StopControllerService(h *cluster.ZarfHost) error {
+	return d.StopService(h, d.GetControllerService(), "rke2-killall.sh")
+}
+
+func (d *RKE2) StopWorkerService(h *cluster.ZarfHost) error {
+	return d.StopService(h, d.GetWorkerService(), "rke2-killall.sh")
+}
