@@ -17,9 +17,11 @@ package lang
 const (
 	//keep-sorted start
 	CmdDistroCreateShort            = "Creates a Zarf Distro Package from a given directory or the current director"
+	CmdInstallFapolicydUpdate       = "Whether to update all the host nodes fapolicyd configuration."
 	CmdInstallFirewallUpdate        = "Whether to update all the host nodes firewall configuration."
 	CmdInstallFlagConcurrency       = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
 	CmdInstallFlagConfig            = "Config file used to bootstrap a cluster."
+	CmdInstallFlagConfirm           = "Confirm wether if to proceed with the install"
 	CmdInstallFlagTimeout           = "Set the timeout for how long functions will last."
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
 	CmdInstallHostUpdate            = "Whether to update all the host nodes etc/hosts file."

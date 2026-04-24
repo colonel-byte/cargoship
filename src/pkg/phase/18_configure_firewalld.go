@@ -19,7 +19,6 @@ import (
 	"encoding/xml"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/k0sproject/rig/exec"
@@ -88,7 +87,7 @@ func (p *ConfigureFirewall) Run(ctx context.Context) error {
 	)
 }
 
-func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *cluster.ZarfHost) error {
 	ent := FirewallNodeConfig{
 		Type:    "hash:net",
 		Short:   "k8subnets",
@@ -104,7 +103,7 @@ func (p *ConfigureFirewall) configureFirewallCluster(ctx context.Context, h *v1a
 	return h.WriteFile("/etc/firewalld/ipsets/k8s-subnets.xml", string(output)+"\n", "0600")
 }
 
-func (p *ConfigureFirewall) configureFirewallNodes(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ConfigureFirewall) configureFirewallNodes(ctx context.Context, h *cluster.ZarfHost) error {
 	ent := FirewallNodeConfig{
 		Type:    "hash:ip",
 		Short:   "k8nodes",
@@ -120,7 +119,7 @@ func (p *ConfigureFirewall) configureFirewallNodes(ctx context.Context, h *v1alp
 	return h.WriteFile("/etc/firewalld/ipsets/k8s-nodes.xml", string(output)+"\n", "0600")
 }
 
-func (p *ConfigureFirewall) updateFirewall(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ConfigureFirewall) updateFirewall(ctx context.Context, h *cluster.ZarfHost) error {
 	if err := h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-nodes", exec.Sudo(h)); err != nil {
 		return err
 	}
@@ -130,6 +129,6 @@ func (p *ConfigureFirewall) updateFirewall(ctx context.Context, h *v1alpha1.Zarf
 	return nil
 }
 
-func restartFirewall(ctx context.Context, h *v1alpha1.ZarfHost) (err error) {
+func restartFirewall(ctx context.Context, h *cluster.ZarfHost) (err error) {
 	return h.Configurer.RestartService(h, FIREWALLD)
 }

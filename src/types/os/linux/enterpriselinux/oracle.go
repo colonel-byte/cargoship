@@ -32,7 +32,7 @@ var _ configurer.Configurer = (*OracleLinux)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == linux.OS_KIND_EL_ORACLE
+			return os.ID == linux.OSKindELOracle
 		},
 		func() any {
 			return &OracleLinux{}

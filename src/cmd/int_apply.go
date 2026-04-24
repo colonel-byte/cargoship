@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"os"
 	"time"
 
@@ -27,11 +28,13 @@ import (
 )
 
 const (
-	INSTALL_APPLY_CONFIG             = "config"
-	INSTALL_APPLY_CONCURRENCY        = "concurrency"
-	INSTALL_APPLY_WORKER_CONCURRENCY = "work-concurrency"
-	INSTALL_APPLY_UPDATE_HOST        = "update-hosts"
-	INSTALL_APPLY_UPDATE_FIREWALL    = "update-firewall"
+	InstallApplyConfig          = "config"
+	InstallApplyConfirm         = "confirm"
+	InstallApplyConcurrency     = "concurrency"
+	InstallApplyWorkConcurrency = "work-concurrency"
+	InstallApplyUpdateHost      = "update-hosts"
+	InstallApplyUpdateFirewall  = "update-firewall"
+	InstallApplyUpdateFAPolicyD = "update-fapolicyd"
 )
 
 type installApplyOptions struct {
@@ -55,11 +58,13 @@ func newInstallApplyCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, INSTALL_APPLY_CONCURRENCY, "c", v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
-	cmd.Flags().StringVar(&o.config, INSTALL_APPLY_CONFIG, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().BoolVarP(&o.hosts, INSTALL_APPLY_UPDATE_HOST, "H", v.GetBool(VInstallUpdateHost), lang.CmdInstallHostUpdate)
-	cmd.Flags().BoolVarP(&o.firewall, INSTALL_APPLY_UPDATE_FIREWALL, "F", v.GetBool(VInstallUpdateFirewall), lang.CmdInstallFirewallUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, INSTALL_APPLY_WORKER_CONCURRENCY, "w", v.GetInt(VInstallWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, InstallApplyConcurrency, "c", v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().StringVar(&o.config, InstallApplyConfig, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().BoolVar(&o.confirm, InstallApplyConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVarP(&o.hosts, InstallApplyUpdateHost, "H", v.GetBool(VInstallUpdateHost), lang.CmdInstallHostUpdate)
+	cmd.Flags().BoolVarP(&o.firewall, InstallApplyUpdateFirewall, "F", v.GetBool(VInstallUpdateFirewall), lang.CmdInstallFirewallUpdate)
+	cmd.Flags().BoolVarP(&o.fapolicy, InstallApplyUpdateFAPolicyD, "f", v.GetBool(VInstallUpdateFirewall), lang.CmdInstallFapolicydUpdate)
+	cmd.Flags().IntVarP(&o.workerCon, InstallApplyWorkConcurrency, "w", v.GetInt(VInstallWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(ROOT_LOGGING_LEVEL)
 	if err != nil {
@@ -68,20 +73,25 @@ func newInstallApplyCommand() *cobra.Command {
 
 	o.logLevel = val
 
-	val, err = cmd.Flags().GetString(ROOT_LOGGING_FORMART)
+	val, err = cmd.Flags().GetString(RootLoggingFormat)
 	if err != nil {
 		val = string(logger.FormatConsole)
 	}
 
 	o.LogFormat = val
 
-	cmd.MarkFlagRequired(INSTALL_APPLY_CONFIG)
+	cmd.MarkFlagRequired(InstallApplyConfig)
 
 	return cmd
 }
 
 func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
+
+	if !o.confirm {
+		l.Warn("please include the --confirm argument")
+		return errors.New("pass confirm argument")
+	}
 
 	err := riglogger.RigLogger(ctx)
 	if err != nil {

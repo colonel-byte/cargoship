@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -59,7 +58,7 @@ func (p *PrepareSelinux) ShouldRun() bool {
 	return len(p.selinuxHosts) > 0
 }
 
-func (p *PrepareSelinux) prepareHost(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *PrepareSelinux) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("attempting to install", "host", h, "package", CONTAINER_SELINUX)
 	err := h.Configurer.InstallPackage(h, CONTAINER_SELINUX)
 	if err != nil {

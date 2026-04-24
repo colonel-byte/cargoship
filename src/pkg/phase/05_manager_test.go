@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"testing"
 
-	dcluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +43,7 @@ func (p *conditionalPhase) Run(_ context.Context) error {
 }
 
 func TestConditionalPhase(t *testing.T) {
-	m := Manager{Config: &dcluster.ZarfCluster{Spec: dcluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
 	p := &conditionalPhase{}
 	m.AddPhase(p)
 	require.NoError(t, m.Run(context.Background()))
@@ -59,7 +59,7 @@ func (p *configPhase) Title() string {
 	return "config phase"
 }
 
-func (p *configPhase) Prepare(c *dcluster.ZarfCluster) error {
+func (p *configPhase) Prepare(c *cluster.ZarfCluster) error {
 	p.receivedConfig = c != nil
 	return nil
 }
@@ -69,7 +69,7 @@ func (p *configPhase) Run(_ context.Context) error {
 }
 
 func TestConfigPhase(t *testing.T) {
-	m := Manager{Config: &dcluster.ZarfCluster{Spec: dcluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
 	p := &configPhase{}
 	m.AddPhase(p)
 	require.NoError(t, m.Run(context.Background()))
@@ -111,7 +111,7 @@ func (p *hookedPhase) Run(_ context.Context) error {
 }
 
 func TestHookedPhase(t *testing.T) {
-	m := Manager{Config: &dcluster.ZarfCluster{Spec: dcluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
 	p := &hookedPhase{}
 	m.AddPhase(p)
 	require.Error(t, m.Run(context.Background()))
@@ -121,7 +121,7 @@ func TestHookedPhase(t *testing.T) {
 
 func TestContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := Manager{Config: &dcluster.ZarfCluster{Spec: dcluster.ZarfClusterSpec{}}}
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
 	p1 := &hookedPhase{fn: func() error {
 		cancel()
 		return nil

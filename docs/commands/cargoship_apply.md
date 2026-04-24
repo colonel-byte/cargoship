@@ -19,7 +19,9 @@ cargoship apply [Distro Package] [flags]
 ```
   -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string          Config file used to bootstrap a cluster.
+      --confirm                Confirm wether if to proceed with the install
   -h, --help                   help for apply
+  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
   -F, --update-firewall        Whether to update all the host nodes firewall configuration.
   -H, --update-hosts           Whether to update all the host nodes etc/hosts file.
   -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.

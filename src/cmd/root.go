@@ -33,9 +33,9 @@ import (
 )
 
 const (
-	ROOT_LOGGING_LEVEL   = "log-level"
-	ROOT_LOGGING_FORMART = "log-format"
-	ROOT_TIMEOUT         = "timeout"
+	ROOT_LOGGING_LEVEL = "log-level"
+	RootLoggingFormat  = "log-format"
+	ROOT_TIMEOUT       = "timeout"
 )
 
 var (
@@ -92,7 +92,7 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newVersionCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, ROOT_LOGGING_LEVEL, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVarP(&LogFormat, ROOT_LOGGING_FORMART, "L", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
 	rootCmd.PersistentFlags().StringVar(&Timeout, ROOT_TIMEOUT, v.GetString(ROOT_TIMEOUT), lang.CmdInstallFlagTimeout)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(zarf.VNoColor), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), zarf.VZarfCache), zlang.RootCmdFlagCachePath)

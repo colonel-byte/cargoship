@@ -32,11 +32,11 @@ import (
 )
 
 const (
-	ROLE_CONTROLLER        = "controller"
-	ROLE_CONTROLLER_WORKER = "controller+worker"
-	ROLE_SINGLE            = "single"
-	ROLE_WORKER            = "worker"
-	ROLE_ERROR             = "error"
+	RoleController       = "controller"
+	RoleControllerWorker = "controller+worker"
+	RoleSingle           = "single"
+	RoleWorker           = "worker"
+	RoleError            = "error"
 )
 
 // ErrCommandFailed is returned when a command fails
@@ -144,8 +144,8 @@ func (h *ZarfHost) DeleteFile(path string) error {
 
 func (h *ZarfHost) KubeRole() string {
 	switch h.Role {
-	case ROLE_CONTROLLER_WORKER, ROLE_SINGLE:
-		return ROLE_CONTROLLER
+	case RoleControllerWorker, RoleSingle:
+		return RoleController
 	default:
 		return h.Role
 	}
@@ -153,22 +153,22 @@ func (h *ZarfHost) KubeRole() string {
 
 // IsController returns true for controller and controller+worker roles
 func (h *ZarfHost) IsController() bool {
-	return h.Role == ROLE_CONTROLLER || h.Role == ROLE_CONTROLLER_WORKER || h.Role == ROLE_SINGLE
+	return h.Role == RoleController || h.Role == RoleControllerWorker || h.Role == RoleSingle
 }
 
 // ServiceName returns correct service name
 func (h *ZarfHost) ServiceName() string {
 	switch h.Role {
-	case ROLE_CONTROLLER, ROLE_CONTROLLER_WORKER, ROLE_SINGLE:
-		val, err := h.Configurer.GetDistroService(ROLE_CONTROLLER)
+	case RoleController, RoleControllerWorker, RoleSingle:
+		val, err := h.Configurer.GetDistroService(RoleController)
 		if err != nil {
-			return ROLE_ERROR
+			return RoleError
 		}
 		return val
 	default:
-		val, err := h.Configurer.GetDistroService(ROLE_WORKER)
+		val, err := h.Configurer.GetDistroService(RoleWorker)
 		if err != nil {
-			return ROLE_ERROR
+			return RoleError
 		}
 		return val
 	}

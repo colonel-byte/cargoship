@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -59,7 +58,7 @@ func (p *PrepareFapolicy) ShouldRun() bool {
 	return len(p.fapolicydhosts) > 0 && p.manager.Distro.Spec.Config.OS.FAPolicyd != ""
 }
 
-func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
 	err := h.Configurer.WriteFile(h, FAPOLICYD_RULES_FILE, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
 	if err != nil {
 		return err

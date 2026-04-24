@@ -40,8 +40,8 @@ func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 	p.control = p.control.Filter(utils.FilterDebianLinux)
 	p.workers = p.workers.Filter(utils.FilterDebianLinux)
 
-	p.filesControl = p.getProfileFiles(ctx, config.SelectorAPT, cluster.ROLE_CONTROLLER)
-	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorAPT, cluster.ROLE_WORKER)
+	p.filesControl = p.getProfileFiles(ctx, config.SelectorAPT, cluster.RoleController)
+	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorAPT, cluster.RoleWorker)
 
 	return nil
 }

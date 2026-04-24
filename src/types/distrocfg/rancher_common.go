@@ -78,11 +78,11 @@ const (
 // if `.spec.config.engine.manifest` is present we will create files under
 
 // ConfigureEngine implements Distro.
-func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 
 	nodeConfig.DigMapping(config.EngineConfig)[key_node_name] = host.Hostname
-	nodeConfig.DigMapping(config.EngineConfig)[key_data_dir] = r.Data
+	nodeConfig.DigMapping(config.EngineConfig)[key_data_dir] = d.Data
 
 	if len(host.NodeLabels) > 0 {
 		nodeConfig.DigMapping(config.EngineConfig)[key_node_label] = NodeLabelsMapToList(host.NodeLabels)
@@ -93,16 +93,16 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 	if host.IsController() {
 		nodeConfig.DigMapping(config.EngineConfig)[key_tls] = run.ControllerTLS
-		nodeConfig.DigMapping(config.EngineConfig)[key_token] = r.JoinTokenPath()
-		nodeConfig.DigMapping(config.EngineConfig)[key_agent_token] = r.JoinTokenPathAgent()
+		nodeConfig.DigMapping(config.EngineConfig)[key_token] = d.JoinTokenPath()
+		nodeConfig.DigMapping(config.EngineConfig)[key_agent_token] = d.JoinTokenPathAgent()
 
-		if !host.FileExist(r.JoinTokenPath()) {
-			if err := host.WriteFile(r.JoinTokenPath(), run.ControllerToken, "0600"); err != nil {
+		if !host.FileExist(d.JoinTokenPath()) {
+			if err := host.WriteFile(d.JoinTokenPath(), run.ControllerToken, "0600"); err != nil {
 				logger.From(ctx).Warn("failed to write file", "host", host)
 				return err
 			}
 		} else {
-			if value, err := host.ReadFile(r.JoinTokenPath()); err != nil {
+			if value, err := host.ReadFile(d.JoinTokenPath()); err != nil {
 				run.ControllerToken = value
 			}
 		}
@@ -122,7 +122,7 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			config[key_spec] = map[string]string{
 				"valuesContent": fmt.Sprint(v),
 			}
-			r.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", r.Data, k))
+			d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
@@ -132,19 +132,19 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			}
 		}
 	} else {
-		nodeConfig.DigMapping(config.EngineConfig)[key_token] = r.JoinTokenPathAgent()
+		nodeConfig.DigMapping(config.EngineConfig)[key_token] = d.JoinTokenPathAgent()
 		for _, v := range controllerArgs {
 			delete(nodeConfig.DigMapping(config.EngineConfig), v)
 		}
 		nodeConfig.DigMapping(config.EngineConfig)[key_server] = fmt.Sprintf("https://%s:9345", run.LoadBalancer)
 	}
-	if !host.FileExist(r.JoinTokenPathAgent()) {
-		if err := host.WriteFile(r.JoinTokenPathAgent(), run.AgentToken, "0600"); err != nil {
+	if !host.FileExist(d.JoinTokenPathAgent()) {
+		if err := host.WriteFile(d.JoinTokenPathAgent(), run.AgentToken, "0600"); err != nil {
 			logger.From(ctx).Warn("failed to write file", "host", host)
 			return err
 		}
 	} else {
-		if value, err := host.ReadFile(r.JoinTokenPathAgent()); err != nil {
+		if value, err := host.ReadFile(d.JoinTokenPathAgent()); err != nil {
 			run.AgentToken = value
 		}
 	}
@@ -152,22 +152,20 @@ func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 	if len(nodeConfig.DigMapping(config.EngineAudit)) > 0 {
 		nodeConfig.DigMapping(config.EngineAudit)[key_kind] = "Policy"
 		nodeConfig.DigMapping(config.EngineAudit)[key_api_version] = "audit.k8s.io/v1"
-		audit := filepath.Join(filepath.Dir(r.Config), "audit.yaml")
-		r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
+		audit := filepath.Join(filepath.Dir(d.Config), "audit.yaml")
+		d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
 		nodeConfig.DigMapping(config.EngineConfig)[key_audit] = audit
 	}
 
 	if len(nodeConfig.DigMapping(config.EnginePSS)) > 0 {
 		nodeConfig.DigMapping(config.EnginePSS)[key_kind] = "AdmissionConfiguration"
 		nodeConfig.DigMapping(config.EnginePSS)[key_api_version] = "apiserver.config.k8s.io/v1"
-		pss := filepath.Join(filepath.Dir(r.Config), "pss.yaml")
-		r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
+		pss := filepath.Join(filepath.Dir(d.Config), "pss.yaml")
+		d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
 		nodeConfig.DigMapping(config.EngineConfig)[key_pod_sec] = pss
 	}
 
-	r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), r.Config)
-
-	return nil
+	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
 }
 
 func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {

@@ -40,8 +40,8 @@ func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 	p.control = p.control.Filter(utils.FilterEnterpriseLinux)
 	p.workers = p.workers.Filter(utils.FilterEnterpriseLinux)
 
-	p.filesControl = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_CONTROLLER)
-	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_WORKER)
+	p.filesControl = p.getProfileFiles(ctx, config.SelectorRPM, cluster.RoleController)
+	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorRPM, cluster.RoleWorker)
 
 	return nil
 }

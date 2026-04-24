@@ -1,0 +1,85 @@
+version: "2"
+formatters:
+  enable:
+    - goimports
+    - gofmt
+  exclusions:
+    paths:
+      - examples$
+linters:
+  default: none
+  enable:
+    - errcheck
+    - errorlint
+    - govet
+    - ineffassign
+    - nolintlint
+    - revive
+    - sloglint
+    - staticcheck
+    - testifylint
+    - unused
+    - whitespace
+  settings:
+    staticcheck:
+      checks:
+        - "all"
+        - "-QF1008"
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (*github.com/spf13/cobra.Command).Help
+        - (*github.com/spf13/cobra.Command).MarkFlagRequired
+        - (*github.com/spf13/pflag.FlagSet).MarkHidden
+        - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
+        - fmt.Fprintln
+        - fmt.Fprint
+        - fmt.Fprintf
+        - file.Close
+    govet:
+      disable:
+        - shadow
+        - fieldalignment
+        - unusedwrite
+        - printf
+      enable-all: true
+    nolintlint:
+      require-specific: true
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          arguments:
+            - "disableStutteringCheck"
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+          arguments:
+            - [] # allowlist
+            - [] # blocklist
+            - [{skipPackageNameChecks: true}] # options map
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    sloglint:
+      no-mixed-args: true
+      key-naming-case: camel
+    testifylint:
+      enable-all: true

@@ -18,7 +18,7 @@ import (
 	"context"
 	"strings"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -34,7 +34,7 @@ func (p *DetectOS) Title() string {
 
 // Run the phase
 func (p *DetectOS) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *v1alpha1.ZarfHost) error {
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
 		l := logger.From(ctx)
 
 		if err := h.ResolveConfigurer(); err != nil {

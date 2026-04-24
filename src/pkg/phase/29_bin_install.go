@@ -41,8 +41,8 @@ func (p *BINUploadFiles) Title() string {
 func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.UploadFilesCommon.Prepare(ctx, c, d)
 
-	p.filesControl = p.getProfileFiles(ctx, config.SelectorBIN, cluster.ROLE_CONTROLLER)
-	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorBIN, cluster.ROLE_WORKER)
+	p.filesControl = p.getProfileFiles(ctx, config.SelectorBIN, cluster.RoleController)
+	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorBIN, cluster.RoleWorker)
 
 	return nil
 }

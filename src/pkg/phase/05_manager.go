@@ -23,7 +23,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	apiDistro "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/creasty/defaults"
@@ -84,7 +84,7 @@ func (p *Phases) Replace(title string, phase Phase) {
 
 type withconfig interface {
 	Title() string
-	Prepare(context.Context, *cluster.ZarfCluster, *apiDistro.ZarfDistro) error
+	Prepare(context.Context, *cluster.ZarfCluster, *distro.ZarfDistro) error
 }
 
 type conditional interface {
@@ -117,7 +117,7 @@ type withAfter interface {
 type Manager struct {
 	phases            Phases
 	Config            *cluster.ZarfCluster
-	Distro            *apiDistro.ZarfDistro
+	Distro            *distro.ZarfDistro
 	DistroID          string
 	Concurrency       int
 	ConcurrentUploads int

@@ -52,9 +52,8 @@ func (p *UploadFiles) Title() string {
 }
 
 var (
-	tagPrefix    = regexp.MustCompile(`:.+$`)
-	nsPrefix     = regexp.MustCompile(`/`)
-	tarBallRegex = regexp.MustCompile(`.+\.tar$`)
+	tagPrefix = regexp.MustCompile(`:.+$`)
+	nsPrefix  = regexp.MustCompile(`/`)
 )
 
 // Prepare the phase

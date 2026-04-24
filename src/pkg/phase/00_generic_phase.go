@@ -35,7 +35,6 @@ var (
 type GenericPhase struct {
 	manager *Manager
 	wg      sync.WaitGroup
-	m       sync.Mutex
 }
 
 // GetConfig is an accessor to phase Config

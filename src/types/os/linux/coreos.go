@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	OS_KIND_COREOS = "CoreOS"
+	OSKindCoreOS = "CoreOS"
 )
 
 // CoreOS provides OS support for ostree based Fedora & RHEL systems
@@ -39,7 +39,7 @@ var _ configurer.Configurer = (*CoreOS)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return strings.Contains(os.Name, OS_KIND_COREOS) && (os.ID == OS_KIND_EL_FEDORA || os.ID == OS_KIND_EL_RED_HAT)
+			return strings.Contains(os.Name, OSKindCoreOS) && (os.ID == OSKindELFedora || os.ID == OSKindELRedHat)
 		},
 		func() any {
 			return &CoreOS{}

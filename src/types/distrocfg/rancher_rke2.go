@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	DISTRO_ID_RKE2 = "rke2"
+	DistroRKE2 = "rke2"
 )
 
 type RKE2 struct {
@@ -35,13 +35,13 @@ var _ Distro = (*RKE2)(nil)
 func init() {
 	registry.RegisterDistroModule(
 		func(dis string) bool {
-			return dis == DISTRO_ID_RKE2
+			return dis == DistroRKE2
 		},
 		func() any {
 			return &RKE2{
 				RancherCommon{
 					Common{
-						ID:                 DISTRO_ID_RKE2,
+						ID:                 DistroRKE2,
 						BinaryDir:          "/usr/local/bin",
 						Binary:             "rke2",
 						Config:             "/etc/rancher/rke2/config.yaml",

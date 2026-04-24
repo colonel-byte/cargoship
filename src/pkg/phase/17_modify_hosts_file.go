@@ -20,7 +20,6 @@ import (
 	"slices"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/txn2/txeh"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -66,7 +65,7 @@ func (p *ModifyHosts) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.configureHostsFile)
 }
 
-func (p *ModifyHosts) configureHostsFile(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ModifyHosts) configureHostsFile(ctx context.Context, h *cluster.ZarfHost) error {
 	hostsCon, err := h.ReadFile("/etc/hosts")
 	if err != nil {
 		return err

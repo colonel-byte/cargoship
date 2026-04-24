@@ -33,7 +33,6 @@ type ConfigureEngine struct {
 	GenericPhase
 	Distro  distrocfg.Distro
 	run     cluster.ZarfRuntimeMeta
-	leader  *cluster.ZarfHost
 	hosts   cluster.ZarfHosts
 	control cluster.ZarfHosts
 }

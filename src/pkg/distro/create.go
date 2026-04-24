@@ -60,7 +60,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		SkipSBOM: true,
 	}
 
-	logger.From(ctx).Debug("assembling distro", "disPath.BaseDir", disPath.BaseDir)
+	logger.From(ctx).Debug("assembling distro", "baseDir", disPath.BaseDir)
 	distroLayout, err := layout.AssembleDistro(ctx, distro, disPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err

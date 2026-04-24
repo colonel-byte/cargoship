@@ -20,7 +20,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"al.essio.dev/pkg/shellescape"
@@ -39,8 +38,6 @@ const (
 type Linux struct {
 	paths    map[string]string
 	services map[string]string
-	pathMu   sync.RWMutex
-	pathOnce sync.Once
 }
 
 // OSKind returns the identifier for Linux hosts
