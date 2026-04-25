@@ -28,8 +28,8 @@ const (
 	deleteNode = `delete node %s`
 )
 
-// ResetWorker phase state
-type ResetWorkers struct {
+// DeleteWorkers phase state
+type DeleteWorkers struct {
 	GenericPhase
 	Distro           distrocfg.Distro
 	NoDrain          bool
@@ -40,12 +40,12 @@ type ResetWorkers struct {
 }
 
 // Title for the phase
-func (p *ResetWorkers) Title() string {
+func (p *DeleteWorkers) Title() string {
 	return "Reset Worker"
 }
 
 // Prepare the phase
-func (p *ResetWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *DeleteWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
 	})
@@ -60,7 +60,7 @@ func (p *ResetWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *d
 }
 
 // Run the phase
-func (p *ResetWorkers) Run(ctx context.Context) error {
+func (p *DeleteWorkers) Run(ctx context.Context) error {
 	if !p.NoDrain {
 		err := p.batchedParallelWithMessage(
 			ctx,
@@ -82,14 +82,14 @@ func (p *ResetWorkers) Run(ctx context.Context) error {
 	)
 }
 
-func (p *ResetWorkers) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *DeleteWorkers) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
 		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 	})
 }
 
-func (p *ResetWorkers) deleteNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *DeleteWorkers) deleteNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("deleting", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
 		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), deleteNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))

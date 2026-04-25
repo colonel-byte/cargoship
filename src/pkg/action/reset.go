@@ -66,12 +66,13 @@ func NewReset(opts ResetOptions) *Reset {
 				Distro: d,
 			},
 
-			&phase.ResetWorkers{
+			&phase.DeleteWorkers{
 				Distro:           d,
 				NoDrain:          opts.NoDrain,
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 
+			&phase.DaemonReload{},
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},

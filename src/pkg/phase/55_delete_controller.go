@@ -15,11 +15,11 @@
 package phase
 
 // ResetWorker phase state
-type ResetControllers struct {
+type DeleteControllers struct {
 	GenericPhase
 }
 
 // Title for the phase
-func (p *ResetControllers) Title() string {
+func (p *DeleteControllers) Title() string {
 	return "Reset Worker"
 }
