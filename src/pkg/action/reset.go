@@ -15,9 +15,13 @@
 package action
 
 import (
+	"context"
+	"time"
+
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // ResetOptions struct
@@ -30,6 +34,8 @@ type ResetOptions struct {
 	NoDrain bool
 	// DistroID is the type of Kubernetes engine that will be removed
 	DistroID string
+	// WorkerConcurrent number of workers that will be installed or upgraded at a time
+	WorkerConcurrent int
 }
 
 // Reset state logic
@@ -60,10 +66,34 @@ func NewReset(opts ResetOptions) *Reset {
 				Distro: d,
 			},
 
+			&phase.ResetWorkers{
+				Distro:           d,
+				NoDrain:          opts.NoDrain,
+				WorkerConcurrent: opts.WorkerConcurrent,
+			},
+
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
 	}
 
 	return reset
+}
+
+// Run the actions
+func (r Reset) Run(ctx context.Context) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	phase.NoWait = r.NoWait
+	r.Manager.SetPhases(r.Phases)
+
+	if result := r.Manager.Run(ctx); result != nil {
+		l.Info("reset failed", "error", result)
+		return result
+	}
+
+	duration := time.Since(start).Truncate(time.Second)
+	l.Info("finished in", "duration", duration)
+
+	return nil
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
+	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -57,7 +58,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "apply [Distro Package]",
 		Args:    cobra.ExactArgs(1),
-		Short:   lang.CmdDistroCreateShort,
+		Short:   lang.CmdDistroApplyShort,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -65,17 +66,17 @@ func newInstallApplyCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallApplyConcurrency, "c", v.GetInt(VInstallConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, InstallApplyConcurrency, "c", v.GetInt(types.InstallConcurrency), lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallApplyConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallApplyConfirm, false, lang.CmdInstallFlagConfirm)
-	cmd.Flags().BoolVarP(&o.hosts, InstallApplyUpdateHost, "H", v.GetBool(VInstallUpdateHost), lang.CmdInstallHostUpdate)
-	cmd.Flags().BoolVarP(&o.firewall, InstallApplyUpdateFirewall, "F", v.GetBool(VInstallUpdateFirewall), lang.CmdInstallFirewallUpdate)
-	cmd.Flags().BoolVarP(&o.fapolicy, InstallApplyUpdateFAPolicyD, "f", v.GetBool(VInstallUpdateFirewall), lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallApplyWorkConcurrency, "w", v.GetInt(VInstallWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVarP(&o.hosts, InstallApplyUpdateHost, "H", v.GetBool(types.InstallUpdateHost), lang.CmdInstallHostUpdate)
+	cmd.Flags().BoolVarP(&o.firewall, InstallApplyUpdateFirewall, "F", v.GetBool(types.InstallUpdateFirewall), lang.CmdInstallFirewallUpdate)
+	cmd.Flags().BoolVarP(&o.fapolicy, InstallApplyUpdateFAPolicyD, "f", v.GetBool(types.InstallUpdateFirewall), lang.CmdInstallFapolicydUpdate)
+	cmd.Flags().IntVarP(&o.workerCon, InstallApplyWorkConcurrency, "w", v.GetInt(types.InstallWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
-		val = LoggingLevelDefault
+		val = types.LoggingLevelDefault
 	}
 
 	o.logLevel = val
@@ -100,8 +101,7 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		return errors.New("pass confirm argument")
 	}
 
-	err := riglogger.RigLogger(ctx)
-	if err != nil {
+	if err := riglogger.RigLogger(ctx); err != nil {
 		l.Warn("failed to configure logger", "err", err)
 		return err
 	}
