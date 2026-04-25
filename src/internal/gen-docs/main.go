@@ -62,5 +62,8 @@ tableOfContents: false
 		return "/commands/" + link[:len(link)-3] + "/"
 	}
 
-	doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler)
+	err := doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler)
+	if err != nil {
+		panic(err)
+	}
 }

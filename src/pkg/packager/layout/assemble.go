@@ -67,14 +67,20 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 
 	for filesIdx, file := range d.Spec.Config.Files {
-		fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file)
+		err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file)
+		if err != nil {
+			logger.From(ctx).Warn("got", "error", err)
+		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file)
+		err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file)
+		if err != nil {
+			logger.From(ctx).Warn("got", "error", err)
+		}
 	}
 
 	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
+	// manifests := []images.ImageWithManifest{}
 	for _, src := range d.Spec.Config.ImagesConfig.Images {
 		refInfo, err := transform.ParseImageRef(src)
 		if err != nil {
@@ -96,11 +102,11 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		}
 		l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
-		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
+		_, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
-		manifests = append(manifests, imageManifests...)
+		// manifests = append(manifests, imageManifests...)
 	}
 	// TODO add in the sbom logic
 	// sbomImageList := []transform.Image{}

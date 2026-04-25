@@ -18,6 +18,7 @@ import (
 	"context"
 
 	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // Disconnect disconnects from the hosts
@@ -32,17 +33,23 @@ func (p *Disconnect) Title() string {
 
 // DryRun cleans up the temporary binary from the hosts
 func (p *Disconnect) DryRun() error {
-	_ = p.manager.Config.Spec.Hosts.ParallelEach(context.Background(), func(_ context.Context, h *v1alpha1.ZarfHost) error {
+	err := p.manager.Config.Spec.Hosts.ParallelEach(context.Background(), func(ctx context.Context, h *v1alpha1.ZarfHost) error {
 		if len(h.Metadata.BinaryTempFile) > 0 {
 			for _, f := range h.Metadata.BinaryTempFile {
 				if h.FileExist(f) {
-					_ = h.Configurer.DeleteFile(h, f)
+					err := h.Configurer.DeleteFile(h, f)
+					if err != nil {
+						logger.From(ctx).Warn("failed to delete", "file", f, "host", h)
+					}
 				}
 			}
 		}
 		h.Metadata.BinaryTempFile = []string{}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	return p.Run(context.TODO())
 }

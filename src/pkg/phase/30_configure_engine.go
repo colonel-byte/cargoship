@@ -39,7 +39,9 @@ type ConfigureEngine struct {
 
 // Prepare the phase
 func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.GenericPhase.Prepare(c, d)
+	if err := p.GenericPhase.Prepare(c, d); err != nil {
+		logger.From(ctx).Warn("got", "error", err)
+	}
 	p.hosts = p.manager.Config.Spec.Hosts
 	p.control = p.hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.IsController()

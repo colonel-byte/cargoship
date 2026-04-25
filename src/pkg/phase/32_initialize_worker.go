@@ -91,7 +91,10 @@ func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHos
 	logger.From(ctx).Info("waiting for the worker service to start", "service", p.Distro.GetWorkerService(), "host", h)
 
 	go func() {
-		h.Configurer.StartService(h, p.Distro.GetWorkerService())
+		err := h.Configurer.StartService(h, p.Distro.GetWorkerService())
+		if err != nil {
+			logger.From(ctx).Warn("failed to start", "service", p.Distro.GetWorkerService(), "host", h)
+		}
 	}()
 
 	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {

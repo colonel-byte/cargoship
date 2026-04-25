@@ -133,10 +133,9 @@ func (p *Lock) tryLock(h *cluster.ZarfHost) error {
 		}
 		if content != p.instanceID {
 			if time.Since(stat.ModTime()) < 30*time.Second {
-				return fmt.Errorf("another instance of k0sctl is currently operating on the host, delete %s or wait 30 seconds for it to expire", lfp)
+				return fmt.Errorf("another instance of cargoship is currently operating on the host, delete %s or wait 30 seconds for it to expire", lfp)
 			}
-			_ = h.Configurer.DeleteFile(h, lfp)
-			return fmt.Errorf("removed existing expired lock file, will retry")
+			return h.Configurer.DeleteFile(h, lfp)
 		}
 	}
 

@@ -65,7 +65,10 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 	logger.From(ctx).Info("waiting for the service to start", "service", p.service, "host", h)
 
 	go func() {
-		h.Configurer.StartService(h, p.service)
+		err := h.Configurer.StartService(h, p.service)
+		if err != nil {
+			logger.From(ctx).Warn("failed to start", "service", p.service, "host", h)
+		}
 	}()
 
 	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.service)); err != nil {

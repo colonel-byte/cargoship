@@ -64,7 +64,7 @@ func NewApply(opts ApplyOptions) *Apply {
 		opts.Manager.Concurrency = 0
 	}
 
-	d := disBuilder().(distrocfg.Distro)
+	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
 
 	lockPhase := &phase.Lock{}
 	apply := &Apply{

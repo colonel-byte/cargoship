@@ -133,7 +133,7 @@ func permToString(val any) (string, error) {
 		if n, ok := t.(float64); ok {
 			num = int(n)
 		} else {
-			num = t.(int)
+			num = t.(int) //nolint:errcheck
 		}
 
 		if num < 0 {

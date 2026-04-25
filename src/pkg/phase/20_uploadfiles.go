@@ -97,15 +97,21 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			return err
 		}
 
-		archive.Export(
+		err = archive.Export(
 			ctx,
 			store,
 			writer,
 			archive.WithManifest(desc, i),
 			archive.WithPlatform(platforms.DefaultStrict()),
 		)
+		if err != nil {
+			logger.From(ctx).Warn("failed to create archive", "error", err)
+		}
 
-		writer.Close()
+		err = writer.Close()
+		if err != nil {
+			logger.From(ctx).Warn("failed to close writer", "error", err)
+		}
 
 		err = os.Chtimes(tarballPath, time.Unix(0, 0), time.Unix(0, 0))
 		if err != nil {
@@ -206,25 +212,34 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		}
 		logger.From(ctx).Debug("need to upload", "target", f.Destination)
 		if f.Data != "" {
-			p.uploadData(ctx, h, &v1alpha1.ZarfFile{
+			err := p.uploadData(ctx, h, &v1alpha1.ZarfFile{
 				Name:   filepath.Base(f.Destination),
 				Target: f.Destination,
 				Data:   f.Data,
 			})
+			if err != nil {
+				logger.From(ctx).Warn("failed to upload data", "file", f.Destination)
+			}
 		}
 	}
 
 	for i, f := range files {
 		logger.From(ctx).Debug("file", "num", i+1, "count", len(files))
-		p.uploadFile(ctx, h, &f)
+		if err := p.uploadFile(ctx, h, &f); err != nil {
+			logger.From(ctx).Warn("failed to upload", "file", f, "host", h)
+		}
 		if f.Executable {
-			h.Exec(fmt.Sprintf("chmod +x %s", f.Target), exec.Sudo(h))
+			if err := h.Exec(fmt.Sprintf("chmod +x %s", f.Target), exec.Sudo(h)); err != nil {
+				logger.From(ctx).Warn("failed to add execute permission", "file", f, "host", h)
+			}
 		}
 	}
 
 	for i, f := range p.imgFiles {
 		logger.From(ctx).Debug("image", "num", i+1, "count", len(p.imgFiles))
-		p.uploadFile(ctx, h, &f)
+		if err := p.uploadFile(ctx, h, &f); err != nil {
+			logger.From(ctx).Warn("failed to upload", "file", f, "host", h)
+		}
 	}
 
 	return nil

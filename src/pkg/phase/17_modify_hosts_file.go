@@ -73,13 +73,14 @@ func (p *ModifyHosts) configureHostsFile(_ context.Context, h *cluster.ZarfHost)
 	hostfile, err := txeh.NewHosts(&txeh.HostsConfig{
 		RawText: &hostsCon,
 	})
+	if err != nil {
+		return err
+	}
 
 	for _, k := range slices.Sorted(maps.Keys(p.hosts)) {
 		hostfile.RemoveAddress(k)
 		hostfile.AddHostsWithComment(k, p.hosts[k], hostComment)
 	}
 
-	h.WriteFile("/etc/hosts", hostfile.RenderHostsFile(), "0644")
-
-	return nil
+	return h.WriteFile("/etc/hosts", hostfile.RenderHostsFile(), "0644")
 }

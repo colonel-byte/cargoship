@@ -94,6 +94,9 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (stri
 		filePaths = append(filePaths, filepath.Join(d.dirPath, file.Name()))
 	}
 	err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
+	if err != nil {
+		return "", err
+	}
 	_, err = os.Stat(tarballPath)
 	if err != nil {
 		return "", fmt.Errorf("unable to read the package archive: %w", err)

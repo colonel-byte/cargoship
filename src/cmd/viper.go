@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -83,13 +84,14 @@ func initViper() error {
 
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
-		return fmt.Errorf("failed to create logger: %v", err)
+		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
 	vConfigError = v.ReadInConfig()
 	if vConfigError != nil {
+		var configErr *viper.ConfigFileNotFoundError
 		// Config file not found; ignore
-		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
+		if errors.As(vConfigError, configErr) {
 			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", vConfigError.Error())
 		}
 	}

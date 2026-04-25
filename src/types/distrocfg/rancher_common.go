@@ -123,13 +123,19 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			config[keySpec] = map[string]string{
 				"valuesContent": fmt.Sprint(v),
 			}
-			d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
+			err := d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
+			if err != nil {
+				logger.From(ctx).Warn("failed to write", "file", fmt.Sprintf("%s-config.yaml", k))
+			}
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
 			if v, err := host.ExecOutput("getent passwd etcd"); err != nil && v == "" {
 				logger.From(ctx).Info("need to create an etcd user for profile", "host", host)
-				host.Execf("useradd --no-create-home --shell /sbin/nologin --system --user-group etcd", exec.Sudo(host))
+				err := host.Execf("useradd --no-create-home --shell /sbin/nologin --system --user-group etcd", exec.Sudo(host))
+				if err != nil {
+					logger.From(ctx).Warn("failed to create", "user", "etcd")
+				}
 			}
 		}
 	} else {
@@ -154,16 +160,22 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		nodeConfig.DigMapping(config.EngineAudit)[keyKind] = "Policy"
 		nodeConfig.DigMapping(config.EngineAudit)[keyAPIVersion] = "audit.k8s.io/v1"
 		audit := filepath.Join(filepath.Dir(d.Config), "audit.yaml")
-		d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
 		nodeConfig.DigMapping(config.EngineConfig)[keyAudit] = audit
+		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
+		if err != nil {
+			logger.From(ctx).Warn("failed to write", "file", audit)
+		}
 	}
 
 	if len(nodeConfig.DigMapping(config.EnginePSS)) > 0 {
 		nodeConfig.DigMapping(config.EnginePSS)[keyKind] = "AdmissionConfiguration"
 		nodeConfig.DigMapping(config.EnginePSS)[keyAPIVersion] = "apiserver.config.k8s.io/v1"
 		pss := filepath.Join(filepath.Dir(d.Config), "pss.yaml")
-		d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
 		nodeConfig.DigMapping(config.EngineConfig)[keyPodSec] = pss
+		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
+		if err != nil {
+			logger.From(ctx).Warn("failed to write", "file", pss)
+		}
 	}
 
 	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)

@@ -32,11 +32,16 @@ import (
 )
 
 const (
-	RoleController       = "controller"
+	// RoleController string enum
+	RoleController = "controller"
+	// RoleControllerWorker string enum
 	RoleControllerWorker = "controller+worker"
-	RoleSingle           = "single"
-	RoleWorker           = "worker"
-	RoleError            = "error"
+	// RoleSingle string enum
+	RoleSingle = "single"
+	// RoleWorker string enum
+	RoleWorker = "worker"
+	// RoleError string enum
+	RoleError = "error"
 )
 
 // ErrCommandFailed is returned when a command fails
@@ -200,7 +205,11 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 	if err != nil {
 		return true
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Warnf("got the following error: %w", err)
+		}
+	}()
 	lsha := sha256.New()
 	if _, err = io.Copy(lsha, file); err != nil {
 		return true

@@ -24,6 +24,7 @@ import (
 
 	"al.essio.dev/pkg/shellescape"
 	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/log"
 	"github.com/k0sproject/rig/os"
 )
 
@@ -211,7 +212,10 @@ func (l *Linux) UpsertFile(h os.Host, path, content string) error {
 	}
 
 	defer func() {
-		_ = h.Execf(`rm -f "%s"`, tmpf, exec.Sudo(h))
+		err := h.Execf(`rm -f "%s"`, tmpf, exec.Sudo(h))
+		if err != nil {
+			log.Warnf("failed to remove file %s", tmpf)
+		}
 	}()
 
 	// mv -n is atomic

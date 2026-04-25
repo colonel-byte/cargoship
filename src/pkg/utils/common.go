@@ -34,20 +34,25 @@ import (
 func ReadYAMLStrict(path string, destConfig any) error {
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
-		return fmt.Errorf("failed to create logger: %v", err)
+		return fmt.Errorf("failed to create logger: %w", err)
 	}
 	log.Debug("Reading YAML", "path", path)
 
 	file, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("failed to open file at %s: %v", path, err)
+		return fmt.Errorf("failed to open file at %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Warn("failed to close file")
+		}
+	}()
 
 	// First try with strict mode
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed to read file at %s: %v", path, err)
+		return fmt.Errorf("failed to read file at %s: %w", path, err)
 	}
 
 	return ReadByteStrict(fileBytes, &destConfig)
@@ -57,7 +62,7 @@ func ReadYAMLStrict(path string, destConfig any) error {
 func ReadByteStrict(data []byte, destConfig any) error {
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
-		return fmt.Errorf("failed to create logger: %v", err)
+		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
 	err = goyaml.UnmarshalWithOptions(data, &destConfig, goyaml.Strict())
@@ -67,7 +72,7 @@ func ReadByteStrict(data []byte, destConfig any) error {
 		// Try again with non-strict mode
 		err = goyaml.UnmarshalWithOptions(data, &destConfig)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal YAML at %v", err)
+			return fmt.Errorf("failed to unmarshal YAML at %w", err)
 		}
 	}
 
@@ -94,7 +99,10 @@ func IdentifySource(src string) (string, error) {
 
 // PrintJSON returns a string representation of a given object
 func PrintJSON(obj any) string {
-	bytes, _ := json.MarshalIndent(obj, "", "  ")
+	bytes, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return ""
+	}
 	return string(bytes)
 }
 

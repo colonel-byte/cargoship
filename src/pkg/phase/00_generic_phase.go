@@ -76,7 +76,10 @@ func (p *GenericPhase) parallelDo(ctx context.Context, hosts cluster.ZarfHosts, 
 }
 
 func (p *GenericPhase) parallelDoWithMessage(ctx context.Context, msg string, hosts cluster.ZarfHosts, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
-	cancel, _ := p.tickerHelper(ctx, msg, Interval)
+	cancel, err := p.tickerHelper(ctx, msg, Interval)
+	if err != nil {
+		logger.From(ctx).Warn("got error well setting up ticket", "error", err)
+	}
 	defer cancel()
 	return p.parallelDo(ctx, hosts, funcs...)
 }
@@ -97,7 +100,10 @@ func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.ZarfH
 }
 
 func (p *GenericPhase) batchedParallelWithMessageInterval(ctx context.Context, msg string, interval time.Duration, hosts cluster.ZarfHosts, batchSize int, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
-	cancel, _ := p.tickerHelper(ctx, msg, interval)
+	cancel, err := p.tickerHelper(ctx, msg, interval)
+	if err != nil {
+		logger.From(ctx).Warn("got error well setting up ticket", "error", err)
+	}
 	defer cancel()
 	if batchSize <= 0 {
 		return hosts.ParallelEach(ctx, funcs...)

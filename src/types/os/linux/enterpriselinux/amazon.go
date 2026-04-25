@@ -32,7 +32,10 @@ var _ configurer.Configurer = (*AmazonLinux)(nil)
 
 // Hostname on amazon linux will return the full hostname
 func (l *AmazonLinux) Hostname(h os.Host) string {
-	hostname, _ := h.ExecOutput("hostname")
+	hostname, err := h.ExecOutput("hostname")
+	if err != nil {
+		return ""
+	}
 
 	return hostname
 }

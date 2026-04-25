@@ -114,7 +114,9 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 	// deletes the temp directory at the end of the apply phases
 	defer func() {
 		l.Debug("removing staging dir", "temp", manager.TempDirectory)
-		os.RemoveAll(manager.TempDirectory)
+		if err := os.RemoveAll(manager.TempDirectory); err != nil {
+			l.Warn("failed to remove", "folder", manager.TempDirectory)
+		}
 	}()
 
 	d, err := time.ParseDuration(Timeout)

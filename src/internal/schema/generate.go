@@ -28,6 +28,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
+	"github.com/k0sproject/rig/log"
 	strcase "github.com/stoewer/go-strcase"
 )
 
@@ -112,7 +113,11 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 	if err != nil {
 		return nil, fmt.Errorf("unable to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			log.Warnf("got the following error: %w", err)
+		}
+	}()
 
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {

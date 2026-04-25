@@ -36,7 +36,6 @@ linters:
         - fmt.Fprintln
         - fmt.Fprint
         - fmt.Fprintf
-        - file.Close
     govet:
       disable:
         - shadow

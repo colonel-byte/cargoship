@@ -83,7 +83,10 @@ func (p *InitializeControllers) startService(ctx context.Context, h *cluster.Zar
 	logger.From(ctx).Info("waiting for the controller service to start", "service", p.Distro.GetControllerService(), "host", h)
 
 	go func() {
-		h.Configurer.StartService(h, p.Distro.GetControllerService())
+		err := h.Configurer.StartService(h, p.Distro.GetControllerService())
+		if err != nil {
+			logger.From(ctx).Warn("failed to start", "service", p.Distro.GetControllerService(), "host", h)
+		}
 	}()
 
 	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetControllerService())); err != nil {

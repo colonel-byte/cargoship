@@ -43,7 +43,7 @@ func Distro(s string) (distrocfg.Distro, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := ds().(distrocfg.Distro)
+	d := ds().(distrocfg.Distro) //nolint:errcheck
 	return d, nil
 }
 

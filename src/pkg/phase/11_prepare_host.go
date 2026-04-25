@@ -107,18 +107,12 @@ func (p *PrepareHosts) updateSysctls(ctx context.Context, h *cluster.ZarfHost) e
 	sort.Strings(keys)
 
 	for k := range keys {
-		v, _ := h.Configurer.GetSysctlValue(h, keys[k])
-		logger.From(ctx).Debug("got sysctls", "host", h, "key", keys[k], "value", v)
-	}
-
-	for k := range keys {
-		h.Configurer.SetSysctlValue(h, keys[k], p.GetDistro().Spec.Config.OS.Sysctl[keys[k]])
-		logger.From(ctx).Debug("updating sysctls", "host", h, "key", keys[k])
-	}
-
-	for k := range keys {
-		v, _ := h.Configurer.GetSysctlValue(h, keys[k])
-		logger.From(ctx).Debug("got sysctls", "host", h, "key", keys[k], "value", v)
+		err := h.Configurer.SetSysctlValue(h, keys[k], p.GetDistro().Spec.Config.OS.Sysctl[keys[k]])
+		if err != nil {
+			logger.From(ctx).Warn("got error when setting sysctl value", "error", err)
+		} else {
+			logger.From(ctx).Debug("updating sysctls", "host", h, "key", keys[k])
+		}
 	}
 
 	return nil
