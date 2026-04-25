@@ -6,20 +6,11 @@
         "^x-": {}
       },
       "properties": {
-        "cache_path": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
         "output": {
           "type": "string"
         },
         "skip_sbom": {
           "type": "boolean"
-        },
-        "version": {
-          "type": "string"
         }
       },
       "type": "object"

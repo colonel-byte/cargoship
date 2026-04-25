@@ -32,7 +32,10 @@ var _ configurer.Configurer = (*AmazonLinux)(nil)
 
 // Hostname on amazon linux will return the full hostname
 func (l *AmazonLinux) Hostname(h os.Host) string {
-	hostname, _ := h.ExecOutput("hostname")
+	hostname, err := h.ExecOutput("hostname")
+	if err != nil {
+		return ""
+	}
 
 	return hostname
 }
@@ -40,7 +43,7 @@ func (l *AmazonLinux) Hostname(h os.Host) string {
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == linux.OS_KIND_EL_AMAZON
+			return os.ID == linux.OSKindELAmazon
 		},
 		func() any {
 			return &AmazonLinux{}
@@ -48,6 +51,6 @@ func init() {
 	)
 }
 
-func (r *AmazonLinux) String() string {
+func (l *AmazonLinux) String() string {
 	return "Amazon Linux"
 }

@@ -26,7 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// UploadFiles implements a phase which upload files to hosts
+// BINUploadFiles implements a phase which upload files to hosts
 type BINUploadFiles struct {
 	UploadFilesCommon
 	Distro distrocfg.Distro
@@ -39,17 +39,19 @@ func (p *BINUploadFiles) Title() string {
 
 // Prepare the phase
 func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.UploadFilesCommon.Prepare(ctx, c, d)
+	if err := p.UploadFilesCommon.Prepare(ctx, c, d); err != nil {
+		logger.From(ctx).Warn("got", "error", err)
+	}
 
-	p.filesControl = p.getProfileFiles(ctx, config.SelectorBIN, cluster.ROLE_CONTROLLER)
-	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorBIN, cluster.ROLE_WORKER)
+	p.filesControl = p.getProfileFiles(ctx, config.SelectorBIN, cluster.RoleController)
+	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorBIN, cluster.RoleWorker)
 
 	return nil
 }
 
 // Run the phase
 func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
-	p.parallelDo(ctx, p.control, func(ctx context.Context, zh *cluster.ZarfHost) error {
+	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
 			for _, f := range p.filesControl {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
@@ -64,7 +66,10 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 		}
 		return nil
 	})
-	p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.ZarfHost) error {
+	if err != nil {
+		logger.From(ctx).Warn("got", "error", err)
+	}
+	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
 			for _, f := range p.filesWorkers {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
@@ -79,6 +84,9 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 		}
 		return nil
 	})
+	if err != nil {
+		logger.From(ctx).Warn("got", "error", err)
+	}
 
 	return p.UploadFilesCommon.Run(ctx)
 }

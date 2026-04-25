@@ -14,6 +14,7 @@
 
 package v1alpha1
 
+// ZarfFiles an interface to allow for implementing the Filter function
 type ZarfFiles []*ZarfFile
 
 // Filter returns a filtered list of Files. The filter function should return true for files matching the criteria.

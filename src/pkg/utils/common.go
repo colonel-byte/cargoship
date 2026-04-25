@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package utils is for commonly used functions
 package utils
 
 import (
@@ -33,29 +34,35 @@ import (
 func ReadYAMLStrict(path string, destConfig any) error {
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
-		return fmt.Errorf("failed to create logger: %v", err)
+		return fmt.Errorf("failed to create logger: %w", err)
 	}
 	log.Debug("Reading YAML", "path", path)
 
 	file, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("failed to open file at %s: %v", path, err)
+		return fmt.Errorf("failed to open file at %s: %w", path, err)
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Warn("failed to close file")
+		}
+	}()
 
 	// First try with strict mode
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed to read file at %s: %v", path, err)
+		return fmt.Errorf("failed to read file at %s: %w", path, err)
 	}
 
 	return ReadByteStrict(fileBytes, &destConfig)
 }
 
+// ReadByteStrict reads a byte array and tries to place it in the provided "destConfig" object
 func ReadByteStrict(data []byte, destConfig any) error {
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
-		return fmt.Errorf("failed to create logger: %v", err)
+		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
 	err = goyaml.UnmarshalWithOptions(data, &destConfig, goyaml.Strict())
@@ -65,7 +72,7 @@ func ReadByteStrict(data []byte, destConfig any) error {
 		// Try again with non-strict mode
 		err = goyaml.UnmarshalWithOptions(data, &destConfig)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal YAML at %v", err)
+			return fmt.Errorf("failed to unmarshal YAML at %w", err)
 		}
 	}
 
@@ -90,11 +97,16 @@ func IdentifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s", src)
 }
 
+// PrintJSON returns a string representation of a given object
 func PrintJSON(obj any) string {
-	bytes, _ := json.MarshalIndent(obj, "", "  ")
+	bytes, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return ""
+	}
 	return string(bytes)
 }
 
+// RandomString returns a string of hexadecimal characters of a given length that is cryptographically secure, or an error
 func RandomString(length int) (string, error) {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {

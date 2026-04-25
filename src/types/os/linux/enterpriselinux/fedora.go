@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package enterpriselinux is implementing the interface github.com/colonel-byte/cargoship/src/types/os.Configurer for Enterprise Linux hosts
 package enterpriselinux
 
 import (
@@ -34,7 +35,7 @@ var _ configurer.Configurer = (*Fedora)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == linux.OS_KIND_EL_FEDORA && !strings.Contains(os.Name, linux.OS_KIND_COREOS)
+			return os.ID == linux.OSKindELFedora && !strings.Contains(os.Name, linux.OSKindCoreOS)
 		},
 		func() any {
 			return &Fedora{}

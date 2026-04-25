@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package cluster is for the api representation of Cluster
 package cluster
 
 import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 )
 
+// ZarfCluster root for a cluster config
 type ZarfCluster struct {
 	APIVersion      string                  `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
 	Kind            v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfCluster"`
@@ -26,6 +28,7 @@ type ZarfCluster struct {
 	RuntimeMetadata ZarfRuntimeMeta         `json:"-"`
 }
 
+// ZarfClusterMetadata a cluster config
 type ZarfClusterMetadata struct {
 	Name        string            `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 	Description string            `json:"description,omitempty"`
@@ -33,6 +36,7 @@ type ZarfClusterMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
+// ZarfRuntimeMeta for storing data when running the various phases
 type ZarfRuntimeMeta struct {
 	ControllerTLS   []string
 	ControllerToken string
@@ -41,39 +45,53 @@ type ZarfRuntimeMeta struct {
 	Leader          *ZarfHost
 }
 
+// ZarfClusterSpec a cluster config
 type ZarfClusterSpec struct {
 	Config ZarfClusterConfig `json:"config"`
 	Hosts  ZarfHosts         `json:"hosts" jsonschema:"minItems=1"`
 }
 
+// ZarfClusterConfig for a cluster
 type ZarfClusterConfig struct {
 	LoadBalancer string                  `json:"loadbalancer" jsonschema:"format=hostname"`
 	Registries   []ZarfClusterRegistries `json:"registries,omitempty"`
 	Profiles     []ZarfClusterProfiles   `json:"profiles,omitempty"`
 }
 
+// ZarfClusterProfiles for the engine
 type ZarfClusterProfiles struct {
 	Name    string         `json:"name"`
 	Kubelet map[string]any `json:"kubeletConfig,omitempty"`
 	Engine  map[string]any `json:"engineConfig,omitempty"`
 }
 
+// ZarfClusterRegistries overrides
 type ZarfClusterRegistries struct {
-	Name           string                   `json:"name"`
-	Authentication ZarfClusterRegistryAuth  `json:"auth,omitempty"`
-	Proxy          ZarfClusterRegistryProxy `json:"proxy"`
+	// Name of the registry
+	Name string `json:"name"`
+	// Authentication for the registry
+	Authentication ZarfClusterRegistryAuth `json:"auth,omitempty"`
+	// Proxy for the registry
+	Proxy ZarfClusterRegistryProxy `json:"proxy"`
 }
 
+// ZarfClusterRegistryAuth information
 type ZarfClusterRegistryAuth struct {
+	// Username for the remote registry
 	Username string `json:"user,omitempty"`
+	// Password for the remote registry
 	Password string `json:"pass,omitempty"`
-	Token    string `json:"token,omitempty"`
+	// Token for the remote registry
+	Token string `json:"token,omitempty"`
 }
 
+// ZarfClusterRegistryProxy override for the registry information
 type ZarfClusterRegistryProxy struct {
+	// URL to the registry that will engine will now pull from
 	URL string `json:"url"`
 }
 
+// ZarfClusterFiles data
 type ZarfClusterFiles struct {
 	Name                 string `json:"name"`
 	Source               string `json:"src,omitempty"`

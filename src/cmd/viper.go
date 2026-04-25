@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -28,15 +29,24 @@ import (
 )
 
 const (
-	LOGGING_LEVEL_DEFAULT         = "info"
-	VDistroCreateOutput           = "distro.create.output"
-	VDistroOCIConcurrency         = "distro.oci_concurrency"
+	// LoggingLevelDefault path in config
+	LoggingLevelDefault = "info"
+	// VDistroCreateOutput path in config
+	VDistroCreateOutput = "distro.create.output"
+	// VDistroOCIConcurrency path in config
+	VDistroOCIConcurrency = "distro.oci_concurrency"
+	// VDistroCreateRegistryOverride path in config
 	VDistroCreateRegistryOverride = "distro.create.registry_override"
-	VDistroCreateSkipSbom         = "distro.create.skip_sbom"
-	VInstallConcurrency           = "distro.install.concurrency"
-	VInstallWorkerConcurrency     = "distro.install.worker_concurrency"
-	VInstallUpdateHost            = "distro.install.host_update"
-	VInstallUpdateFirewall        = "distro.install.firewall_update"
+	// VDistroCreateSkipSbom path in config
+	VDistroCreateSkipSbom = "distro.create.skip_sbom"
+	// VInstallConcurrency path in config
+	VInstallConcurrency = "distro.install.concurrency"
+	// VInstallWorkerConcurrency path in config
+	VInstallWorkerConcurrency = "distro.install.worker_concurrency"
+	// VInstallUpdateHost path in config
+	VInstallUpdateHost = "distro.install.host_update"
+	// VInstallUpdateFirewall path in config
+	VInstallUpdateFirewall = "distro.install.firewall_update"
 )
 
 var (
@@ -74,13 +84,14 @@ func initViper() error {
 
 	log, err := logger.New(logger.ConfigDefault())
 	if err != nil {
-		return fmt.Errorf("failed to create logger: %v", err)
+		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
 	vConfigError = v.ReadInConfig()
 	if vConfigError != nil {
+		var configErr *viper.ConfigFileNotFoundError
 		// Config file not found; ignore
-		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
+		if errors.As(vConfigError, configErr) {
 			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", vConfigError.Error())
 		}
 	}
@@ -88,7 +99,7 @@ func initViper() error {
 }
 
 func setDefaults() {
-	v.SetDefault(zarf.VLogLevel, LOGGING_LEVEL_DEFAULT)
+	v.SetDefault(zarf.VLogLevel, LoggingLevelDefault)
 	v.SetDefault(zarf.VZarfCache, config.ZarfDefaultCachePath)
 	v.SetDefault(zarf.VLogFormat, string(logger.FormatConsole))
 	v.SetDefault(zarf.VTmpDir, "/tmp")

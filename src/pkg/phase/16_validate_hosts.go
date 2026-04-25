@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	configurer "github.com/colonel-byte/cargoship/src/types/os"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -65,7 +65,7 @@ func (p *ValidateHosts) Run(ctx context.Context) error {
 	return p.validateClockSkew(ctx)
 }
 
-func (p *ValidateHosts) validateUniqueHostname(_ context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ValidateHosts) validateUniqueHostname(_ context.Context, h *cluster.ZarfHost) error {
 	if p.hncount[h.Metadata.Hostname] > 1 {
 		return fmt.Errorf("hostname is not unique: %s", h.Metadata.Hostname)
 	}
@@ -73,7 +73,7 @@ func (p *ValidateHosts) validateUniqueHostname(_ context.Context, h *v1alpha1.Za
 	return nil
 }
 
-func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *cluster.ZarfHost) error {
 	if p.privateaddrcount[h.PrivateAddress] > 1 {
 		return fmt.Errorf("privateAddress %q is not unique: %s", h.PrivateAddress, h.Metadata.Hostname)
 	}
@@ -81,12 +81,12 @@ func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *v1alp
 	return nil
 }
 
-func (p *ValidateHosts) validateSudo(_ context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ValidateHosts) validateSudo(_ context.Context, h *cluster.ZarfHost) error {
 	return h.Configurer.CheckPrivilege(h)
 }
 
-func (p *ValidateHosts) validateConfigurer(_ context.Context, h *v1alpha1.ZarfHost) error {
-	validator, ok := h.Configurer.(configurer.HostValidator)
+func (p *ValidateHosts) validateConfigurer(_ context.Context, h *cluster.ZarfHost) error {
+	validator, ok := h.Configurer.(os.HostValidator)
 	if !ok {
 		return nil
 	}
@@ -98,12 +98,12 @@ const maxSkew = 30 * time.Second
 
 func (p *ValidateHosts) validateClockSkew(ctx context.Context) error {
 	logger.From(ctx).Info("validating clock skew")
-	skews := make(map[*v1alpha1.ZarfHost]time.Duration, len(p.manager.Config.Spec.Hosts))
+	skews := make(map[*cluster.ZarfHost]time.Duration, len(p.manager.Config.Spec.Hosts))
 	var skewValues []time.Duration
 	var mu sync.Mutex
 
 	// Collect skews relative to local time
-	err := p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *v1alpha1.ZarfHost) error {
+	err := p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
 		remote, err := h.Configurer.SystemTime(h)
 		if err != nil {
 			return fmt.Errorf("failed to get time from %s: %w", h, err)

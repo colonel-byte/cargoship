@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	OS_KIND_DEBIAN = "debian"
+	// OSKindDebian id
+	OSKindDebian = "debian"
 )
 
 // Debian provides OS support for Debian systems
@@ -36,7 +37,7 @@ var _ configurer.Configurer = (*Debian)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_DEBIAN
+			return os.ID == OSKindDebian
 		},
 		func() any {
 			return &Debian{}

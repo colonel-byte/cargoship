@@ -18,16 +18,16 @@ import (
 	"context"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 const (
+	// FAPOLICYD name of the service for fapolicyd
 	FAPOLICYD = "fapolicyd"
 )
 
-// PrepareHosts installs required packages and so on on the hosts.
+// InstallFapolicy installs required packages and so on on the hosts.
 type InstallFapolicy struct {
 	GenericPhase
 	Enabled        bool
@@ -35,7 +35,7 @@ type InstallFapolicy struct {
 }
 
 // Prepare the phase
-func (p *InstallFapolicy) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.fapolicydhosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return !h.Configurer.ServiceIsRunning(h, FAPOLICYD)
 	})
@@ -60,7 +60,7 @@ func (p *InstallFapolicy) ShouldRun() bool {
 	return len(p.fapolicydhosts) > 0 && p.manager.Distro.Spec.Config.OS.FAPolicyd != "" && p.Enabled
 }
 
-func (p *InstallFapolicy) prepareHost(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *InstallFapolicy) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("attempting to install", "host", h, "package", FAPOLICYD)
 	err := h.Configurer.InstallPackage(h, FAPOLICYD)
 	if err != nil {

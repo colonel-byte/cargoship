@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package layout is used to defining the distro package files
 package layout
 
 import (
@@ -19,7 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types"
@@ -28,23 +29,27 @@ import (
 	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// Distro struct
 type Distro struct {
 	cfg    *types.DistroConfig
-	distro v1alpha1.ZarfDistro
+	distro distro.ZarfDistro
 	tmp    string
 }
 
+// DistroLayout struct
 type DistroLayout struct {
 	dirPath string
-	Distro  v1alpha1.ZarfDistro
+	Distro  distro.ZarfDistro
 }
 
+// DistroLayoutOptions struct
 type DistroLayoutOptions struct{}
 
+// New creates a new Distro object
 func New(cfg *types.DistroConfig) (*Distro, error) {
 	dis := Distro{
 		cfg:    cfg,
-		distro: v1alpha1.ZarfDistro{},
+		distro: distro.ZarfDistro{},
 		tmp:    "/tmp",
 	}
 
@@ -68,7 +73,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opts DistroLayoutOptions) 
 }
 
 // LoadFromDir loads and validates a package from the given directory path.
-func LoadFromDir(ctx context.Context, dirPath string, opts DistroLayoutOptions) (*DistroLayout, error) {
+func LoadFromDir(ctx context.Context, dirPath string, _ DistroLayoutOptions) (*DistroLayout, error) {
 	b, err := os.ReadFile(filepath.Join(dirPath, config.ZarfDistroYaml))
 	if err != nil {
 		return nil, err

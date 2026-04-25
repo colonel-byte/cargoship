@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"regexp"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -29,10 +28,14 @@ import (
 )
 
 var (
-	versionRegex          = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
+	versionRegex = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
+	// ErrVersionNotDetected if a version is not detected
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
+	// ErrPathKey if a path key is not used
+	ErrPathKey = errors.New("key for set path does not exist")
 )
 
+// NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels
 func NodeLabelsMapToList(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -41,53 +44,64 @@ func NodeLabelsMapToList(m map[string]string) []string {
 	return keys
 }
 
+// Common for all the distro's
 type Common struct {
 	//keep-sorted start
-	Binary             string
-	BinaryDir          string
-	Config             string
-	Data               string
-	ID                 string
-	Service_Controller string
-	Service_Worker     string
-	Token              string
+	// Binary name of the engine binary
+	Binary string
+	// BinaryDir where the engine binary is stored in
+	BinaryDir string
+	// Config where the engine config is located
+	Config string
+	// Data where the engine data is located
+	Data string
+	// ID the id used to identify the distro
+	ID string
+	// ServiceController the controller service
+	ServiceController string
+	// ServiceWorker the worker service
+	ServiceWorker string
+	// Token the token path
+	Token string
 	//keep-sorted end
 }
 
-var ErrPathKey = errors.New("key for set path does not exist")
-
+// BinaryPath returns the full path to the engine binary
 func (r *Common) BinaryPath() string {
 	return r.BinaryDir + "/" + r.Binary
 }
 
+// BinaryName returns the engine binary name
 func (r *Common) BinaryName() string {
 	return r.Binary
 }
 
+// ConfigPath returns the full path for the config directory used by the engine
 func (r *Common) ConfigPath() string {
 	return r.Config
 }
 
+// JoinTokenPath returns the path of the token to join the cluster
 func (r *Common) JoinTokenPath() string {
 	return r.Token
 }
 
-func (r *Common) JoinTokenPathAgent() string {
-	return filepath.Join(filepath.Dir(r.Token), "agent-token")
-}
-
+// DataDirPath returns the full path for the data directory used by the engine
 func (r *Common) DataDirPath() string {
 	return r.Data
 }
 
+// GetWorkerService returns the name of the worker service
 func (r *Common) GetWorkerService() string {
-	return r.Service_Worker
+	return r.ServiceWorker
 }
 
+// GetControllerService returns the name of the controller service
 func (r *Common) GetControllerService() string {
-	return r.Service_Controller
+	return r.ServiceController
 }
 
+// SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
 func (r *Common) SetPath(key string, value string) error {
 	switch key {
 	case Binary:

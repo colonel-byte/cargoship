@@ -21,8 +21,10 @@ import (
 )
 
 const (
-	OS_KIND_OPENSUSE       = "opensuse"
-	OS_KIND_OPENSUSE_MICRO = "opensuse-microos"
+	// OSKindOpenSUSE id
+	OSKindOpenSUSE = "opensuse"
+	// OSKindOpenSUSEMicro id
+	OSKindOpenSUSEMicro = "opensuse-microos"
 )
 
 // OpenSUSE provides OS support for OpenSUSE
@@ -35,7 +37,7 @@ var _ configurer.Configurer = (*OpenSUSE)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_OPENSUSE || os.ID == OS_KIND_OPENSUSE_MICRO
+			return os.ID == OSKindOpenSUSE || os.ID == OSKindOpenSUSEMicro
 		},
 		func() any {
 			return &OpenSUSE{}

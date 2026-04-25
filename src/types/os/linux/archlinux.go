@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	OS_KIND_ARCH = "arch"
+	// OSKindArch id
+	OSKindArch = "arch"
 )
 
 // Archlinux provides OS support for Archlinux systems
@@ -36,7 +37,7 @@ var _ configurer.Configurer = (*Archlinux)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_ARCH || os.IDLike == OS_KIND_ARCH
+			return os.ID == OSKindArch || os.IDLike == OSKindArch
 		},
 		func() any {
 			return &Archlinux{}

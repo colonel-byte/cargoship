@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// InstallCommon common args
 type InstallCommon struct {
 	config      string
 	concurrency int
@@ -36,12 +37,13 @@ type InstallCommon struct {
 	LogFormat   string
 }
 
+// Distro returns the distro config for a given string
 func Distro(s string) (distrocfg.Distro, error) {
 	ds, err := registry.GetDistroModuleBuilder(s)
 	if err != nil {
 		return nil, err
 	}
-	d := ds().(distrocfg.Distro)
+	d := ds().(distrocfg.Distro) //nolint:errcheck
 	return d, nil
 }
 

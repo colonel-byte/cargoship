@@ -32,7 +32,7 @@ var _ configurer.Configurer = (*RockyLinux)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == linux.OS_KIND_EL_ROCKY
+			return os.ID == linux.OSKindELRocky
 		},
 		func() any {
 			return &RockyLinux{}

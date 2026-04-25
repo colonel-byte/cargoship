@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package cmd is where the commands for cargoship
 package cmd
 
 import (
@@ -33,19 +34,24 @@ import (
 )
 
 const (
-	ROOT_LOGGING_LEVEL   = "log-level"
-	ROOT_LOGGING_FORMART = "log-format"
-	ROOT_TIMEOUT         = "timeout"
+	// RootLoggingLevel command flag log level
+	RootLoggingLevel = "log-level"
+	// RootLoggingFormat command flag log format
+	RootLoggingFormat = "log-format"
+	// RootTimeout command flag timeout
+	RootTimeout = "timeout"
 )
 
 var (
-	//keep-sorted start
+	// IsColorDisabled whether to show the colored output
 	IsColorDisabled bool
-	LogFormat       string
-	LogLevelCLI     string
-	Timeout         string
-	distroCfg       = types.DistroConfig{}
-	//keep-sorted end
+	// LogFormat format of the log output
+	LogFormat string
+	// LogLevelCLI log level
+	LogLevelCLI string
+	// Timeout for how long a task runs
+	Timeout   string
+	distroCfg = types.DistroConfig{}
 )
 
 var (
@@ -63,6 +69,7 @@ var (
 
 var rootCmd = NewCargoshipCommand()
 
+// NewCargoshipCommand is the root command
 func NewCargoshipCommand() *cobra.Command {
 	err := initViper()
 	if err != nil {
@@ -91,9 +98,9 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newInstallApplyCommand())
 	rootCmd.AddCommand(newVersionCommand())
 
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, ROOT_LOGGING_LEVEL, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVarP(&LogFormat, ROOT_LOGGING_FORMART, "L", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
-	rootCmd.PersistentFlags().StringVar(&Timeout, ROOT_TIMEOUT, v.GetString(ROOT_TIMEOUT), lang.CmdInstallFlagTimeout)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVar(&Timeout, RootTimeout, v.GetString(RootTimeout), lang.CmdInstallFlagTimeout)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(zarf.VNoColor), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), zarf.VZarfCache), zlang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), zarf.VTmpDir), zlang.RootCmdFlagTempDir)
@@ -102,6 +109,7 @@ func NewCargoshipCommand() *cobra.Command {
 	return rootCmd
 }
 
+// Execute is the root execute logic
 func Execute(ctx context.Context) error {
 	_, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {

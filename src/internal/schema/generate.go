@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// package main is used to generate the json schema for various objects
 package main
 
 import (
@@ -23,10 +24,11 @@ import (
 	"runtime"
 	"strings"
 
-	cluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	distro "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
+	"github.com/k0sproject/rig/log"
 	strcase "github.com/stoewer/go-strcase"
 )
 
@@ -111,7 +113,11 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 	if err != nil {
 		return nil, fmt.Errorf("unable to get current directory: %w", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			log.Warnf("got the following error: %w", err)
+		}
+	}()
 
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {

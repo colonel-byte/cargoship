@@ -12,27 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package config is a holder of commonly used multiple times
 package config
 
 const (
-	//keep-sorted start
-	FilesDir       = "files"
-	ImagesDir      = "images"
-	OSDir          = "os"
-	SelectorAPT    = "apt"
-	SelectorBIN    = "binary"
-	SelectorRPM    = "rpm"
-	TarBallDir     = "tar"
+	// FilesDir string key
+	FilesDir = "files"
+	// ImagesDir string key
+	ImagesDir = "images"
+	// OSDir string key
+	OSDir = "os"
+	// SelectorAPT string key
+	SelectorAPT = "apt"
+	// SelectorBIN string key
+	SelectorBIN = "binary"
+	// SelectorRPM string key
+	SelectorRPM = "rpm"
+	// TarBallDir string key
+	TarBallDir = "tar"
+	// ZarfDistroYaml string key
 	ZarfDistroYaml = "distro.yaml"
-	//keep-sorted end
 )
 
 const (
-	//keep-sorted start
-	EngineAudit    = "audit"
-	EngineConfig   = "config"
+	// EngineAudit string key
+	EngineAudit = "audit"
+	// EngineConfig string key
+	EngineConfig = "config"
+	// EngineManifest string key
 	EngineManifest = "manifest"
-	EnginePSS      = "podSecurity"
-	EngineTLS      = "tls"
-	//keep-sorted end
+	// EnginePSS string key
+	EnginePSS = "podSecurity"
+	// EngineTLS string key
+	EngineTLS = "tls"
 )

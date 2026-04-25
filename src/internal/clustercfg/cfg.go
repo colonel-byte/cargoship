@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package clustercfg is used to parse an byte array and returns a ZarfCluster
 package clustercfg
 
 import (
 	"context"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 )
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
-func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfCluster, error) {
-	var dis v1alpha1.ZarfCluster
+func Parse(_ context.Context, b []byte) (cluster.ZarfCluster, error) {
+	var dis cluster.ZarfCluster
 	err := goyaml.Unmarshal(b, &dis)
 	if err != nil {
-		return v1alpha1.ZarfCluster{}, err
+		return cluster.ZarfCluster{}, err
 	}
 	return dis, nil
 }

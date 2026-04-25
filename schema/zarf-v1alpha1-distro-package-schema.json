@@ -343,12 +343,6 @@
       "properties": {
         "onCreate": {
           "$ref": "#/$defs/ZarfComponentActionSet"
-        },
-        "onDeploy": {
-          "$ref": "#/$defs/ZarfComponentActionSet"
-        },
-        "onRemove": {
-          "$ref": "#/$defs/ZarfComponentActionSet"
         }
       },
       "type": "object"
@@ -501,8 +495,7 @@
         "type": {
           "enum": [
             "rke2",
-            "k3s",
-            "upstream"
+            "k3s"
           ],
           "type": "string"
         },

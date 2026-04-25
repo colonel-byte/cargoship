@@ -32,16 +32,22 @@ import (
 )
 
 const (
-	ROLE_CONTROLLER        = "controller"
-	ROLE_CONTROLLER_WORKER = "controller+worker"
-	ROLE_SINGLE            = "single"
-	ROLE_WORKER            = "worker"
-	ROLE_ERROR             = "error"
+	// RoleController string enum
+	RoleController = "controller"
+	// RoleControllerWorker string enum
+	RoleControllerWorker = "controller+worker"
+	// RoleSingle string enum
+	RoleSingle = "single"
+	// RoleWorker string enum
+	RoleWorker = "worker"
+	// RoleError string enum
+	RoleError = "error"
 )
 
 // ErrCommandFailed is returned when a command fails
 var ErrCommandFailed = errors.New("command failed")
 
+// ZarfHost is a remote connection to a node
 type ZarfHost struct {
 	rig.Connection `json:",inline"`
 	//keep-sorted start
@@ -60,11 +66,13 @@ type ZarfHost struct {
 	Metadata   ZarfHostMetadata `json:"-"`
 }
 
+// ZarfHostPort ports that should be opened on the public side of the firewall
 type ZarfHostPort struct {
 	Protocol string `json:"protocol" xml:"protocol,attr" jsonschema:"enum=tcp,enum=udp"`
 	Port     string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
 }
 
+// ZarfHostMetadata runtime discovered values
 type ZarfHostMetadata struct {
 	//keep-sorted start
 	Arch           string
@@ -142,10 +150,11 @@ func (h *ZarfHost) DeleteFile(path string) error {
 	return cfg.DeleteFile(h, path)
 }
 
+// KubeRole of the role host
 func (h *ZarfHost) KubeRole() string {
 	switch h.Role {
-	case ROLE_CONTROLLER_WORKER, ROLE_SINGLE:
-		return ROLE_CONTROLLER
+	case RoleControllerWorker, RoleSingle:
+		return RoleController
 	default:
 		return h.Role
 	}
@@ -153,22 +162,22 @@ func (h *ZarfHost) KubeRole() string {
 
 // IsController returns true for controller and controller+worker roles
 func (h *ZarfHost) IsController() bool {
-	return h.Role == ROLE_CONTROLLER || h.Role == ROLE_CONTROLLER_WORKER || h.Role == ROLE_SINGLE
+	return h.Role == RoleController || h.Role == RoleControllerWorker || h.Role == RoleSingle
 }
 
 // ServiceName returns correct service name
 func (h *ZarfHost) ServiceName() string {
 	switch h.Role {
-	case ROLE_CONTROLLER, ROLE_CONTROLLER_WORKER, ROLE_SINGLE:
-		val, err := h.Configurer.GetDistroService(ROLE_CONTROLLER)
+	case RoleController, RoleControllerWorker, RoleSingle:
+		val, err := h.Configurer.GetDistroService(RoleController)
 		if err != nil {
-			return ROLE_ERROR
+			return RoleError
 		}
 		return val
 	default:
-		val, err := h.Configurer.GetDistroService(ROLE_WORKER)
+		val, err := h.Configurer.GetDistroService(RoleWorker)
 		if err != nil {
-			return ROLE_ERROR
+			return RoleError
 		}
 		return val
 	}
@@ -196,7 +205,11 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 	if err != nil {
 		return true
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Warnf("got the following error: %w", err)
+		}
+	}()
 	lsha := sha256.New()
 	if _, err = io.Copy(lsha, file); err != nil {
 		return true
@@ -224,6 +237,7 @@ func (h *ZarfHost) WriteFile(path string, data string, permissions string) error
 	return cfg.WriteFile(h, path, data, permissions)
 }
 
+// ReadFile read the contents of a file, if it exists, or returns an error
 func (h *ZarfHost) ReadFile(path string) (string, error) {
 	cfg, err := h.requireConfigurer()
 	if err != nil {
@@ -232,6 +246,7 @@ func (h *ZarfHost) ReadFile(path string) (string, error) {
 	return cfg.ReadFile(h, path)
 }
 
+// FileExist if a file exists on the host
 func (h *ZarfHost) FileExist(path string) bool {
 	cfg, err := h.requireConfigurer()
 	if err != nil {

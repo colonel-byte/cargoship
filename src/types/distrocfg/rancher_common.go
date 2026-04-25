@@ -28,41 +28,42 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// RancherCommon is a parent object for both RKE2 and k3s distros
 type RancherCommon struct {
 	Common
 }
 
 var (
 	controllerArgs = []string{
-		key_kube_api,
-		key_kube_cont_manager,
-		key_kube_scheduler,
-		key_etcd,
+		keyKubeAPI,
+		keyKubeConMan,
+		keyKubeScheduler,
+		keyETCD,
 	}
 )
 
 const (
 	//keep-sorted start
-	key_agent_token       = "agent-token-file"
-	key_api_version       = "apiVersion"
-	key_audit             = "audit-policy-file"
-	key_cidr_pod          = "cluster-cidr"
-	key_cidr_svc          = "service-cidr"
-	key_data_dir          = "data-dir"
-	key_etcd              = "etcd-arg"
-	key_kind              = "kind"
-	key_kube_api          = "kube-apiserver-arg"
-	key_kube_cont_manager = "kube-controller-manager-arg"
-	key_kube_scheduler    = "kube-scheduler-arg"
-	key_metadata          = "metadata"
-	key_node_label        = "node-label"
-	key_node_name         = "node-name"
-	key_node_taint        = "node-taint"
-	key_pod_sec           = "pod-security-admission-config-file"
-	key_server            = "server"
-	key_spec              = "spec"
-	key_tls               = "tls-san"
-	key_token             = "token-file"
+	keyAPIVersion    = "apiVersion"
+	keyAgentToken    = "agent-token-file"
+	keyAudit         = "audit-policy-file"
+	keyCIDRPod       = "cluster-cidr"
+	keyCIDRSVC       = "service-cidr"
+	keyDataDir       = "data-dir"
+	keyETCD          = "etcd-arg"
+	keyKind          = "kind"
+	keyKubeAPI       = "kube-apiserver-arg"
+	keyKubeConMan    = "kube-controller-manager-arg"
+	keyKubeScheduler = "kube-scheduler-arg"
+	keyMetadata      = "metadata"
+	keyNodeLabel     = "node-label"
+	keyNodeName      = "node-name"
+	keyNodeTaint     = "node-taint"
+	keyPodSec        = "pod-security-admission-config-file"
+	keyServer        = "server"
+	keySpec          = "spec"
+	keyTLS           = "tls-san"
+	keyToken         = "token-file"
 	//keep-sorted end
 )
 
@@ -77,106 +78,117 @@ const (
 // if `.spec.config.engine.podSecurity` is present we will add/overwrite "pod-security-admission-config-file" with the value of "/etc/rancher/(rke2|k3s)/pss.yaml"
 // if `.spec.config.engine.manifest` is present we will create files under
 
-// ConfigureEngine implements Distro.
-func (r *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+// ConfigureEngine does distro specific configuration on a host
+func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 
-	nodeConfig.DigMapping(config.EngineConfig)[key_node_name] = host.Hostname
-	nodeConfig.DigMapping(config.EngineConfig)[key_data_dir] = r.Data
+	nodeConfig.DigMapping(config.EngineConfig)[keyNodeName] = host.Hostname
+	nodeConfig.DigMapping(config.EngineConfig)[keyDataDir] = d.Data
 
 	if len(host.NodeLabels) > 0 {
-		nodeConfig.DigMapping(config.EngineConfig)[key_node_label] = NodeLabelsMapToList(host.NodeLabels)
+		nodeConfig.DigMapping(config.EngineConfig)[keyNodeLabel] = NodeLabelsMapToList(host.NodeLabels)
 	}
 	if len(host.NodeTaints) > 0 {
-		nodeConfig.DigMapping(config.EngineConfig)[key_node_taint] = host.NodeTaints
+		nodeConfig.DigMapping(config.EngineConfig)[keyNodeTaint] = host.NodeTaints
 	}
 
 	if host.IsController() {
-		nodeConfig.DigMapping(config.EngineConfig)[key_tls] = run.ControllerTLS
-		nodeConfig.DigMapping(config.EngineConfig)[key_token] = r.JoinTokenPath()
-		nodeConfig.DigMapping(config.EngineConfig)[key_agent_token] = r.JoinTokenPathAgent()
+		nodeConfig.DigMapping(config.EngineConfig)[keyTLS] = run.ControllerTLS
+		nodeConfig.DigMapping(config.EngineConfig)[keyToken] = d.JoinTokenPath()
+		nodeConfig.DigMapping(config.EngineConfig)[keyAgentToken] = d.JoinTokenPathAgent()
 
-		if !host.FileExist(r.JoinTokenPath()) {
-			if err := host.WriteFile(r.JoinTokenPath(), run.ControllerToken, "0600"); err != nil {
+		if !host.FileExist(d.JoinTokenPath()) {
+			if err := host.WriteFile(d.JoinTokenPath(), run.ControllerToken, "0600"); err != nil {
 				logger.From(ctx).Warn("failed to write file", "host", host)
 				return err
 			}
 		} else {
-			if value, err := host.ReadFile(r.JoinTokenPath()); err != nil {
+			if value, err := host.ReadFile(d.JoinTokenPath()); err != nil {
 				run.ControllerToken = value
 			}
 		}
 
 		if !host.Metadata.IsLeader {
-			nodeConfig.DigMapping(config.EngineConfig)[key_server] = fmt.Sprintf("https://%s:9345", run.Leader.Configurer.LongHostname(run.Leader))
+			nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.Leader.Configurer.LongHostname(run.Leader))
 		}
 
 		for k, v := range nodeConfig.DigMapping(config.EngineManifest) {
 			config := dig.Mapping{}
-			config[key_api_version] = "helm.cattle.io/v1"
-			config[key_kind] = "HelmChartConfig"
-			config[key_metadata] = map[string]string{
+			config[keyAPIVersion] = "helm.cattle.io/v1"
+			config[keyKind] = "HelmChartConfig"
+			config[keyMetadata] = map[string]string{
 				"name":      k,
 				"namespace": "kube-system",
 			}
-			config[key_spec] = map[string]string{
+			config[keySpec] = map[string]string{
 				"valuesContent": fmt.Sprint(v),
 			}
-			r.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", r.Data, k))
+			err := d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
+			if err != nil {
+				logger.From(ctx).Warn("failed to write", "file", fmt.Sprintf("%s-config.yaml", k))
+			}
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
 			if v, err := host.ExecOutput("getent passwd etcd"); err != nil && v == "" {
 				logger.From(ctx).Info("need to create an etcd user for profile", "host", host)
-				host.Execf("useradd --no-create-home --shell /sbin/nologin --system --user-group etcd", exec.Sudo(host))
+				err := host.Execf("useradd --no-create-home --shell /sbin/nologin --system --user-group etcd", exec.Sudo(host))
+				if err != nil {
+					logger.From(ctx).Warn("failed to create", "user", "etcd")
+				}
 			}
 		}
 	} else {
-		nodeConfig.DigMapping(config.EngineConfig)[key_token] = r.JoinTokenPathAgent()
+		nodeConfig.DigMapping(config.EngineConfig)[keyToken] = d.JoinTokenPathAgent()
 		for _, v := range controllerArgs {
 			delete(nodeConfig.DigMapping(config.EngineConfig), v)
 		}
-		nodeConfig.DigMapping(config.EngineConfig)[key_server] = fmt.Sprintf("https://%s:9345", run.LoadBalancer)
+		nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.LoadBalancer)
 	}
-	if !host.FileExist(r.JoinTokenPathAgent()) {
-		if err := host.WriteFile(r.JoinTokenPathAgent(), run.AgentToken, "0600"); err != nil {
+	if !host.FileExist(d.JoinTokenPathAgent()) {
+		if err := host.WriteFile(d.JoinTokenPathAgent(), run.AgentToken, "0600"); err != nil {
 			logger.From(ctx).Warn("failed to write file", "host", host)
 			return err
 		}
 	} else {
-		if value, err := host.ReadFile(r.JoinTokenPathAgent()); err != nil {
+		if value, err := host.ReadFile(d.JoinTokenPathAgent()); err != nil {
 			run.AgentToken = value
 		}
 	}
 
 	if len(nodeConfig.DigMapping(config.EngineAudit)) > 0 {
-		nodeConfig.DigMapping(config.EngineAudit)[key_kind] = "Policy"
-		nodeConfig.DigMapping(config.EngineAudit)[key_api_version] = "audit.k8s.io/v1"
-		audit := filepath.Join(filepath.Dir(r.Config), "audit.yaml")
-		r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
-		nodeConfig.DigMapping(config.EngineConfig)[key_audit] = audit
+		nodeConfig.DigMapping(config.EngineAudit)[keyKind] = "Policy"
+		nodeConfig.DigMapping(config.EngineAudit)[keyAPIVersion] = "audit.k8s.io/v1"
+		audit := filepath.Join(filepath.Dir(d.Config), "audit.yaml")
+		nodeConfig.DigMapping(config.EngineConfig)[keyAudit] = audit
+		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
+		if err != nil {
+			logger.From(ctx).Warn("failed to write", "file", audit)
+		}
 	}
 
 	if len(nodeConfig.DigMapping(config.EnginePSS)) > 0 {
-		nodeConfig.DigMapping(config.EnginePSS)[key_kind] = "AdmissionConfiguration"
-		nodeConfig.DigMapping(config.EnginePSS)[key_api_version] = "apiserver.config.k8s.io/v1"
-		pss := filepath.Join(filepath.Dir(r.Config), "pss.yaml")
-		r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
-		nodeConfig.DigMapping(config.EngineConfig)[key_pod_sec] = pss
+		nodeConfig.DigMapping(config.EnginePSS)[keyKind] = "AdmissionConfiguration"
+		nodeConfig.DigMapping(config.EnginePSS)[keyAPIVersion] = "apiserver.config.k8s.io/v1"
+		pss := filepath.Join(filepath.Dir(d.Config), "pss.yaml")
+		nodeConfig.DigMapping(config.EngineConfig)[keyPodSec] = pss
+		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
+		if err != nil {
+			logger.From(ctx).Warn("failed to write", "file", pss)
+		}
 	}
 
-	r.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), r.Config)
-
-	return nil
+	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
 }
 
+// GetClusterCIDR returns a string array with the all the known cluster cidr blocks
 func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
-	pod := nodeConfig.DigString(config.EngineConfig, key_cidr_pod)
+	pod := nodeConfig.DigString(config.EngineConfig, keyCIDRPod)
 	if pod == "" {
 		pod = "10.42.0.0/16"
 	}
-	svc := nodeConfig.DigString(config.EngineConfig, key_cidr_svc)
+	svc := nodeConfig.DigString(config.EngineConfig, keyCIDRSVC)
 	if svc == "" {
 		svc = "10.43.0.0/16"
 	}
@@ -187,10 +199,18 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	}
 }
 
+// JoinTokenPathAgent returns the path of the token to join the cluster.
+// Distro's like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.
+func (d *RancherCommon) JoinTokenPathAgent() string {
+	return filepath.Join(filepath.Dir(d.Token), "agent-token")
+}
+
+// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 func (d *RancherCommon) DistroCmdf(template string, args ...any) string {
 	return fmt.Sprintf("%s %s", d.BinaryPath(), fmt.Sprintf(template, args...))
 }
 
+// RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
 func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
 	bin, err := host.Configurer.LookPath(&host, d.Binary)
 	if err != nil {
@@ -207,7 +227,7 @@ func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
 	return match, nil
 }
 
-func (d *RancherCommon) StopService(h *cluster.ZarfHost, ser string, killall string) error {
+func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall string) error {
 	log.Debugf("trying to stop %s", ser)
 	if h.Configurer.ServiceIsRunning(h, ser) {
 		if err := h.Configurer.StopService(h, ser); err != nil {

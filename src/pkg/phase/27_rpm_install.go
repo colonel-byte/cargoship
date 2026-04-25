@@ -21,9 +21,10 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// UploadFiles implements a phase which upload files to hosts
+// RPMUploadFiles implements a phase which upload files to hosts
 type RPMUploadFiles struct {
 	UploadFilesCommon
 }
@@ -35,31 +36,39 @@ func (p *RPMUploadFiles) Title() string {
 
 // Prepare the phase
 func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.UploadFilesCommon.Prepare(ctx, c, d)
+	if err := p.UploadFilesCommon.Prepare(ctx, c, d); err != nil {
+		logger.From(ctx).Warn("got", "error", err)
+	}
 
-	p.control = p.control.Filter(utils.FilterEnterpriseLinux)
-	p.workers = p.workers.Filter(utils.FilterEnterpriseLinux)
+	p.control = p.control.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.FilterEnterpriseLinux)
+	p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.FilterEnterpriseLinux)
 
-	p.filesControl = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_CONTROLLER)
-	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorRPM, cluster.ROLE_WORKER)
+	p.filesControl = p.getProfileFiles(ctx, config.SelectorRPM, cluster.RoleController)
+	p.filesWorkers = p.getProfileFiles(ctx, config.SelectorRPM, cluster.RoleWorker)
 
 	return nil
 }
 
 // Run the phase
 func (p *RPMUploadFiles) Run(ctx context.Context) (err error) {
-	p.parallelDo(ctx, p.control, func(ctx context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(_ context.Context, zh *cluster.ZarfHost) error {
 			return zh.Configurer.InstallPackage(zh, getPath(p.filesControl)...)
 		}
 		return nil
 	})
-	p.parallelDo(ctx, p.workers, func(ctx context.Context, zh *cluster.ZarfHost) error {
-		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
+	if err != nil {
+		return err
+	}
+	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.ZarfHost) error {
+		zh.Metadata.Install = func(_ context.Context, zh *cluster.ZarfHost) error {
 			return zh.Configurer.InstallPackage(zh, getPath(p.filesWorkers)...)
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	return p.UploadFilesCommon.Run(ctx)
 }

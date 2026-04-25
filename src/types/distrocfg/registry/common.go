@@ -12,32 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package registry is used to register a distro
 package registry
 
 import (
 	"errors"
 )
 
+// ErrDistroModuleNotFound is used when a distro module is not found in the registry
 var ErrDistroModuleNotFound = errors.New("distro support not found")
 
 type (
-	buildFunc = func() any
-	matchFunc = func(string) bool
+	// BuildFunc is a function returns a basic distro object
+	BuildFunc = func() any
+	// MatchFunc is a function that takes in an id string and returns if it matches a the current distro
+	MatchFunc = func(id string) bool
 )
 
 type distroFactory struct {
-	MatchFunc matchFunc
-	BuildFunc buildFunc
+	MatchFunc MatchFunc
+	BuildFunc BuildFunc
 }
 
 var distroModules []*distroFactory
 
-func RegisterDistroModule(mf matchFunc, bf buildFunc) {
+// RegisterDistroModule takes a MatchFunc and BuildFunc and adds them to the registry of known distros.
+func RegisterDistroModule(mf MatchFunc, bf BuildFunc) {
 	// Inserting to beginning to match the most latest added
 	distroModules = append([]*distroFactory{{MatchFunc: mf, BuildFunc: bf}}, distroModules...)
 }
 
-func GetDistroModuleBuilder(dis string) (buildFunc, error) {
+// GetDistroModuleBuilder returns a BuildFunc used to construct a distro object
+func GetDistroModuleBuilder(dis string) (BuildFunc, error) {
 	for _, of := range distroModules {
 		if of.MatchFunc(dis) {
 			return of.BuildFunc, nil

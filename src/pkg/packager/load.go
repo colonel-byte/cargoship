@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package packager for interacting with a packages distro config
 package packager
 
 import (
@@ -24,7 +25,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
-	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -40,16 +40,16 @@ type LoadOptions struct {
 	types.RemoteOptions
 }
 
-// LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
+// LoadDistro fetches, verifies, and loads a Zarf package from the specified source.
 func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.DistroLayout, error) {
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}
 
-	srcType, err := utils.IdentifySource(source)
-	if err != nil {
-		return nil, err
-	}
+	// srcType, err := utils.IdentifySource(source)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Prepare a temp workspace
 	tmpDir, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -60,15 +60,16 @@ func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.D
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
-	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
-	switch srcType {
-	// TODO borrow from https://github.com/zarf-dev/zarf/blob/2233efff3e4aeb86a604ec7c3fd67f6caf4116e5/src/pkg/packager/load.go#L78
-	case "tarball":
-		tmpPath = source
-	default:
-		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
-		return nil, err
-	}
+	tmpPath := source
+	// tmpPath := filepath.Join(tmpDir, "data.tar.zst")
+	// switch srcType {
+	// // TODO borrow from https://github.com/zarf-dev/zarf/blob/2233efff3e4aeb86a604ec7c3fd67f6caf4116e5/src/pkg/packager/load.go#L78
+	// case "tarball":
+	// 	tmpPath = source
+	// default:
+	// 	err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
+	// 	return nil, err
+	// }
 	logger.From(ctx).Debug(tmpPath)
 	distroLayout, err := layout.LoadFromTar(ctx, tmpPath, layout.DistroLayoutOptions{})
 	if err != nil {

@@ -70,7 +70,9 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.ZarfHost, dir, 
 func (p *GenericPhase) uploadFiles(ctx context.Context, h *cluster.ZarfHost, files []v1alpha1.ZarfFile) error {
 	for i, f := range files {
 		logger.From(ctx).Debug("file", "num", i+1, "count", len(files))
-		p.uploadFile(ctx, h, &f)
+		if err := p.uploadFile(ctx, h, &f); err != nil {
+			logger.From(ctx).Warn("failed to upload", "file", f, "host", h)
+		}
 	}
 
 	return nil
@@ -89,8 +91,6 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 		}
 	}
 	src := path.Join(f.Base, f.LocalSource.Path)
-	var stat os.FileInfo
-	var err error
 
 	target := f.Target
 	if f.TargetIsDir {
@@ -98,10 +98,6 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 	}
 
 	if h.FileChanged(src, target) {
-		stat, err = os.Stat(src)
-		if err != nil {
-			return fmt.Errorf("failed to stat local file %s: %w", src, err)
-		}
 		err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, target), func() error {
 			stat, err := os.Stat(src)
 			if err != nil {
@@ -126,19 +122,8 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 		logger.From(ctx).Info("file already exists and hasn't been changed, skipping upload", "host", h, "file", target)
 	}
 
-	if stat == nil {
-		stat, err = os.Stat(src)
-		if err != nil {
-			return fmt.Errorf("failed to stat %s: %w", src, err)
-		}
-	}
-
 	modTime := time.Unix(0, 0)
-	if err := p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime); err != nil {
-		return err
-	}
-
-	return nil
+	return p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime)
 }
 
 func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v1alpha1.ZarfFile) error {
@@ -152,7 +137,10 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v
 	}
 
 	err := p.Wet(h, fmt.Sprintf("upload inline data => %s", dest), func() error {
-		fileMode, _ := strconv.ParseUint(f.PermString, 8, 32)
+		fileMode, err := strconv.ParseUint(f.PermString, 8, 32)
+		if err != nil {
+			logger.From(ctx).Warn("got an", "error", err)
+		}
 		remoteFile, err := h.SudoFsys().OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(fileMode))
 		if err != nil {
 			return err

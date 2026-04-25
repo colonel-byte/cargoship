@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package load for loading a given package
 package load
 
 import (
@@ -25,9 +26,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// ClusterOptions optional args that will be passed in for loading a distro package
 type ClusterOptions struct{}
 
-func ClusterDefinition(ctx context.Context, configPath string, opts ClusterOptions) (v1alpha1.ZarfCluster, error) {
+// ClusterDefinition loads a package from the filesystem
+func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.ClusterDefinition", "path", configPath)

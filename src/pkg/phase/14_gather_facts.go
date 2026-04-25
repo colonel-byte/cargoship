@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// GatherFacts gathers information about hosts, such as if k0s is already up and running
+// GatherFacts gathers information about hosts
 type GatherFacts struct {
 	GenericPhase
 }
@@ -37,7 +37,7 @@ func (p *GatherFacts) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.investigateHost)
 }
 
-func (p *GatherFacts) investigateHost(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *GatherFacts) investigateHost(ctx context.Context, h *cluster.ZarfHost) error {
 	l := logger.From(ctx)
 
 	arch, err := h.Arch()

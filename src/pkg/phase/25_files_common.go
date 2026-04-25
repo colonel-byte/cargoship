@@ -29,16 +29,16 @@ import (
 )
 
 func getPath(files []v1alpha1.ZarfFile) []string {
-	file_path := []string{}
+	filePath := []string{}
 
 	for _, f := range files {
-		file_path = append(file_path, f.Target)
+		filePath = append(filePath, f.Target)
 	}
 
-	return file_path
+	return filePath
 }
 
-// UploadFiles implements a phase which upload files to hosts
+// UploadFilesCommon implements a phase which upload files to hosts
 type UploadFilesCommon struct {
 	GenericPhase
 
@@ -51,7 +51,8 @@ type UploadFilesCommon struct {
 	filesControl []v1alpha1.ZarfFile
 }
 
-func (p *UploadFilesCommon) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+// Prepare the phase
+func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.distroFiles = p.manager.Distro.Spec.Config.OS.Files
 	hosts := p.manager.Config.Spec.Hosts
 
@@ -142,6 +143,7 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 	return files
 }
 
+// CleanUp the phase
 func (p *UploadFilesCommon) CleanUp(ctx context.Context) {
 	err := p.parallelDo(context.Background(), p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
 		if len(h.Metadata.BinaryTempFile) == 0 {
@@ -150,7 +152,9 @@ func (p *UploadFilesCommon) CleanUp(ctx context.Context) {
 		logger.From(ctx).Info("cleaning up binary tempfile", "host", h)
 		for _, f := range h.Metadata.BinaryTempFile {
 			logger.From(ctx).Debug("removing file", "file", f, "host", h)
-			_ = h.Configurer.DeleteFile(h, f)
+			if err := h.Configurer.DeleteFile(h, f); err != nil {
+				logger.From(ctx).Warn("failed to delete", "host", h, "file", f, "error", err)
+			}
 		}
 		return nil
 	})

@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	OS_KIND_UBUNTU = "ubuntu"
+	// OSKindUbuntu id
+	OSKindUbuntu = "ubuntu"
 )
 
 // Ubuntu provides OS support for Ubuntu systems
@@ -34,7 +35,7 @@ var _ configurer.Configurer = (*Ubuntu)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_UBUNTU
+			return os.ID == OSKindUbuntu
 		},
 		func() any {
 			return &Ubuntu{}

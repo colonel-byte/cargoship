@@ -21,7 +21,7 @@ import (
 	"github.com/k0sproject/rig/os/registry"
 )
 
-// OracleLinux provides OS support for Oracle Linuc
+// OracleLinux provides OS support for Oracle Linux
 type OracleLinux struct {
 	linux.EnterpriseLinux
 	configurer.Linux
@@ -32,7 +32,7 @@ var _ configurer.Configurer = (*OracleLinux)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == linux.OS_KIND_EL_ORACLE
+			return os.ID == linux.OSKindELOracle
 		},
 		func() any {
 			return &OracleLinux{}

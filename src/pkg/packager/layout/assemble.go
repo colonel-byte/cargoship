@@ -30,18 +30,17 @@ import (
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// AssembleOptions options
 type AssembleOptions struct {
 	RegistryOverrides []images.RegistryOverride
 	OCIConcurrency    int
@@ -50,6 +49,7 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
+// AssembleDistro creates the actual tarballs
 func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
@@ -67,14 +67,20 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 
 	for filesIdx, file := range d.Spec.Config.Files {
-		fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file)
+		err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file)
+		if err != nil {
+			logger.From(ctx).Warn("got", "error", err)
+		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file)
+		err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file)
+		if err != nil {
+			logger.From(ctx).Warn("got", "error", err)
+		}
 	}
 
 	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
+	// manifests := []images.ImageWithManifest{}
 	for _, src := range d.Spec.Config.ImagesConfig.Images {
 		refInfo, err := transform.ParseImageRef(src)
 		if err != nil {
@@ -96,23 +102,24 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		}
 		l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
-		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
+		_, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
-		manifests = append(manifests, imageManifests...)
+		// manifests = append(manifests, imageManifests...)
 	}
-	sbomImageList := []transform.Image{}
-	for _, manifest := range manifests {
-		ok := images.OnlyHasImageLayers(manifest.Manifest)
-		if ok {
-			sbomImageList = append(sbomImageList, manifest.Image)
-		}
-		err = utils.SortImagesIndex(filepath.Join(buildPath, config.ImagesDir))
-		if err != nil {
-			return nil, err
-		}
-	}
+	// TODO add in the sbom logic
+	// sbomImageList := []transform.Image{}
+	// for _, manifest := range manifests {
+	// 	ok := images.OnlyHasImageLayers(manifest.Manifest)
+	// 	if ok {
+	// 		sbomImageList = append(sbomImageList, manifest.Image)
+	// 	}
+	// 	err = utils.SortImagesIndex(filepath.Join(buildPath, config.ImagesDir))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.After, nil, nil); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
@@ -167,11 +174,11 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			}
 			err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
+				return fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
 			}
 		} else {
 			if err := zutils.DownloadToFile(ctx, file.Source, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, file.Source, err)
+				return fmt.Errorf(zlang.ErrDownloading, file.Source, err)
 			}
 		}
 	} else {
@@ -185,7 +192,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			}
 			err := archive.Decompress(ctx, src, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
+				return fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, src, err)
 			}
 		} else {
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
@@ -199,7 +206,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 		updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
 		if updatedExtractedFileOrDir != dst {
 			if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
-				return fmt.Errorf(lang.ErrWritingFile, dst, err)
+				return fmt.Errorf(zlang.ErrWritingFile, dst, err)
 			}
 		}
 	}

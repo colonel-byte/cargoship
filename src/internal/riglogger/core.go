@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package riglogger add settings that overrides the rig.Logger
 package riglogger
 
 import (
@@ -52,10 +53,10 @@ func (l rigLogger) Warnf(msg string, args ...any) {
 	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args...))
 }
 
+// RigLogger overrides the rig.Log with our custom logger
 func RigLogger(ctx context.Context) error {
 	log.Log = rigLogger{
 		ctx: ctx,
 	}
-
 	return nil
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// NewDistroLayout returns an DistroLayout object
 func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout {
 	return &DistroLayout{
 		dirPath: dir,
@@ -34,6 +35,7 @@ func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout {
 	}
 }
 
+// DirPath returns dirPath
 func (d *DistroLayout) DirPath() string {
 	return d.dirPath
 }
@@ -47,6 +49,7 @@ func (d *DistroLayout) Cleanup() error {
 	return nil
 }
 
+// GetImageDirPath returns the path to where the image tar balls should be stored in
 func (d *DistroLayout) GetImageDirPath() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(d.dirPath, config.ImagesDir)
@@ -70,7 +73,7 @@ func (d *DistroLayout) FileName() (string, error) {
 }
 
 // Archive creates a tarball from the package layout and returns the path to that tarball
-func (d *DistroLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) (string, error) {
+func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (string, error) {
 	filename, err := d.FileName()
 	if err != nil {
 		return "", err
@@ -91,6 +94,9 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, maxPackageSi
 		filePaths = append(filePaths, filepath.Join(d.dirPath, file.Name()))
 	}
 	err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
+	if err != nil {
+		return "", err
+	}
 	_, err = os.Stat(tarballPath)
 	if err != nil {
 		return "", fmt.Errorf("unable to read the package archive: %w", err)

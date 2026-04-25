@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/k0sproject/rig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -36,8 +36,9 @@ func (p *Connect) Title() string {
 	return "Connect to hosts"
 }
 
+// Run the phase
 func (p *Connect) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *v1alpha1.ZarfHost) error {
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
 		return retry.Timeout(ctx, 10*time.Minute, func(_ context.Context) error {
 			if err := h.Connect(); err != nil {
 				logger.From(ctx).Debug("got the following", "host", h, "err", err)
@@ -46,9 +47,7 @@ func (p *Connect) Run(ctx context.Context) error {
 				}
 				return err
 			}
-
 			logger.From(ctx).Info("connected", "host", h)
-
 			return nil
 		})
 	})

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/os"
@@ -48,7 +48,7 @@ type prepare interface {
 	Prepare(os.Host) error
 }
 
-func (p *PrepareHosts) prepareHost(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
 	if c, ok := h.Configurer.(prepare); ok {
 		if err := c.Prepare(h); err != nil {
 			return err
@@ -72,7 +72,7 @@ func (p *PrepareHosts) prepareHost(ctx context.Context, h *v1alpha1.ZarfHost) er
 	return nil
 }
 
-func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHost) error {
 	if err := h.Configurer.UpdateEnvironment(h, h.Environment); err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *v1alpha1.ZarfHo
 	})
 }
 
-func (p *PrepareHosts) updateSysctls(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *PrepareHosts) updateSysctls(ctx context.Context, h *cluster.ZarfHost) error {
 	keys := make([]string, 0, len(p.GetDistro().Spec.Config.OS.Sysctl))
 	for k := range p.GetDistro().Spec.Config.OS.Sysctl {
 		keys = append(keys, k)
@@ -107,18 +107,12 @@ func (p *PrepareHosts) updateSysctls(ctx context.Context, h *v1alpha1.ZarfHost) 
 	sort.Strings(keys)
 
 	for k := range keys {
-		v, _ := h.Configurer.GetSysctlValue(h, keys[k])
-		logger.From(ctx).Debug("got sysctls", "host", h, "key", keys[k], "value", v)
-	}
-
-	for k := range keys {
-		h.Configurer.SetSysctlValue(h, keys[k], p.GetDistro().Spec.Config.OS.Sysctl[keys[k]])
-		logger.From(ctx).Debug("updating sysctls", "host", h, "key", keys[k])
-	}
-
-	for k := range keys {
-		v, _ := h.Configurer.GetSysctlValue(h, keys[k])
-		logger.From(ctx).Debug("got sysctls", "host", h, "key", keys[k], "value", v)
+		err := h.Configurer.SetSysctlValue(h, keys[k], p.GetDistro().Spec.Config.OS.Sysctl[keys[k]])
+		if err != nil {
+			logger.From(ctx).Warn("got error when setting sysctl value", "error", err)
+		} else {
+			logger.From(ctx).Debug("updating sysctls", "host", h, "key", keys[k])
+		}
 	}
 
 	return nil

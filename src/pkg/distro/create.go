@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package distro is used for creating/deploying distro package
 package distro
 
 import (
@@ -36,7 +37,8 @@ type CreateOptions struct {
 	types.RemoteOptions
 }
 
-func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (_ string, err error) {
+// Create used to create a distro package
+func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (string, error) {
 	loadOpts := load.DefinitionOptions{
 		CachePath:     opts.CachePath,
 		RemoteOptions: opts.RemoteOptions,
@@ -60,7 +62,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		SkipSBOM: true,
 	}
 
-	logger.From(ctx).Debug("assembling distro", "disPath.BaseDir", disPath.BaseDir)
+	logger.From(ctx).Debug("assembling distro", "baseDir", disPath.BaseDir)
 	distroLayout, err := layout.AssembleDistro(ctx, distro, disPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err

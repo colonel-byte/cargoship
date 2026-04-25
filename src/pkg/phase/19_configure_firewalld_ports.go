@@ -20,20 +20,20 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// FirewallPortConfig used to create firewalld config for an array of port(s)
 type FirewallPortConfig struct {
 	XMLName xml.Name               `xml:"service"`
 	Short   string                 `xml:"short"`
 	Ports   []cluster.ZarfHostPort `xml:"port"`
 }
 
-// GatherFacts gathers information about hosts, such as if k0s is already up and running
+// ConfigureFirewallPorts gathers information about hosts, such as if the engine is already up and running
 type ConfigureFirewallPorts struct {
 	GenericPhase
 	Enabled bool
@@ -46,7 +46,7 @@ func (p *ConfigureFirewallPorts) Title() string {
 }
 
 // Prepare the phase
-func (p *ConfigureFirewallPorts) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *ConfigureFirewallPorts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, FIREWALLD) && len(h.Ports) > 0
 	})
@@ -74,7 +74,7 @@ func (p *ConfigureFirewallPorts) Run(ctx context.Context) error {
 	})
 }
 
-func (p *ConfigureFirewallPorts) configureFirewallPorts(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ConfigureFirewallPorts) configureFirewallPorts(_ context.Context, h *cluster.ZarfHost) error {
 	ent := FirewallPortConfig{
 		Short: "distro-exposed-ports",
 		Ports: h.Ports,
@@ -88,6 +88,6 @@ func (p *ConfigureFirewallPorts) configureFirewallPorts(ctx context.Context, h *
 	return h.WriteFile("/etc/firewalld/services/distro-exposed-ports.xml", string(output)+"\n", "0600")
 }
 
-func (p *ConfigureFirewallPorts) enableFirewallExposedPorts(ctx context.Context, h *v1alpha1.ZarfHost) error {
+func (p *ConfigureFirewallPorts) enableFirewallExposedPorts(_ context.Context, h *cluster.ZarfHost) error {
 	return h.Execf("firewall-cmd --permanent --zone=public --add-service=distro-exposed-ports", exec.Sudo(h))
 }

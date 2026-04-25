@@ -32,7 +32,7 @@ var _ configurer.Configurer = (*AlmaLinux)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == linux.OS_KIND_EL_ALMA
+			return os.ID == linux.OSKindELAlma
 		},
 		func() any {
 			return &AlmaLinux{}

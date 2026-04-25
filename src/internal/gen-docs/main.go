@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// package main is used to generate the markdown docs for the cli
 package main
 
 import (
@@ -61,5 +62,8 @@ tableOfContents: false
 		return "/commands/" + link[:len(link)-3] + "/"
 	}
 
-	doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler)
+	err := doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler)
+	if err != nil {
+		panic(err)
+	}
 }

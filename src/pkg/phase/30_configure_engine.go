@@ -25,22 +25,23 @@ import (
 )
 
 const (
-	random_length = 64
+	randomLength = 64
 )
 
-// ConfigureEngine writes the k0s configuration to host k0s config dir
+// ConfigureEngine writes the engine configuration to host engine config dir
 type ConfigureEngine struct {
 	GenericPhase
 	Distro  distrocfg.Distro
 	run     cluster.ZarfRuntimeMeta
-	leader  *cluster.ZarfHost
 	hosts   cluster.ZarfHosts
 	control cluster.ZarfHosts
 }
 
 // Prepare the phase
 func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	p.GenericPhase.Prepare(c, d)
+	if err := p.GenericPhase.Prepare(c, d); err != nil {
+		logger.From(ctx).Warn("got", "error", err)
+	}
 	p.hosts = p.manager.Config.Spec.Hosts
 	p.control = p.hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.IsController()
@@ -69,7 +70,7 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 			logger.From(ctx).Warn("failed to read token file", "error", err)
 		}
 	}
-	if token, err := utils.RandomString(random_length); err == nil && p.run.ControllerToken == "" {
+	if token, err := utils.RandomString(randomLength); err == nil && p.run.ControllerToken == "" {
 		p.run.ControllerToken = token
 	} else if err != nil {
 		logger.From(ctx).Warn("failed to read random - control", "error", err)
@@ -84,7 +85,7 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 			logger.From(ctx).Warn("failed to read agent token file", "error", err)
 		}
 	}
-	if token, err := utils.RandomString(random_length); err == nil && p.run.AgentToken == "" {
+	if token, err := utils.RandomString(randomLength); err == nil && p.run.AgentToken == "" {
 		p.run.AgentToken = token
 	} else if err != nil {
 		logger.From(ctx).Warn("failed to read random - agent", "error", err)
@@ -99,6 +100,7 @@ func (p *ConfigureEngine) Title() string {
 	return "Configure engine"
 }
 
+// Run the phase title
 func (p *ConfigureEngine) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.hosts, p.configureEngine)
 }

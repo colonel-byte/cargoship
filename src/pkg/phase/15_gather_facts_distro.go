@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	UNKNOWN_VERSION = "v0.0.0"
+	// UnknownVersion for when the version is not set
+	UnknownVersion = "v0.0.0"
 )
 
-// UploadFiles implements a phase which upload files to hosts
+// GatherFactsDistro state
 type GatherFactsDistro struct {
 	GenericPhase
 	Distro distrocfg.Distro
@@ -42,7 +43,7 @@ func (p *GatherFactsDistro) Title() string {
 }
 
 // Prepare the phase
-func (p *GatherFactsDistro) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts
 	p.d = d
 	return nil
@@ -59,10 +60,10 @@ func (p *GatherFactsDistro) Run(ctx context.Context) (err error) {
 
 func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluster.ZarfHost) error {
 	ver, err := p.Distro.RunningVersion(*h)
-	if err != nil && err != distrocfg.ErrVersionNotDetected {
+	if err != nil && !errors.Is(err, distrocfg.ErrVersionNotDetected) {
 		return err
-	} else if err == distrocfg.ErrVersionNotDetected {
-		h.Metadata.DistroVersion = UNKNOWN_VERSION
+	} else if errors.Is(err, distrocfg.ErrVersionNotDetected) {
+		h.Metadata.DistroVersion = UnknownVersion
 	} else {
 		h.Metadata.DistroVersion = ver
 	}

@@ -21,7 +21,7 @@ import (
 	"sync"
 )
 
-// Hosts are destnation hosts
+// ZarfHosts are the hosts that will be managed
 type ZarfHosts []*ZarfHost
 
 // First returns the first host
@@ -80,7 +80,7 @@ func (hosts ZarfHosts) Controllers() ZarfHosts {
 
 // Workers returns hosts with the role "worker"
 func (hosts ZarfHosts) Workers() ZarfHosts {
-	return hosts.WithRole(ROLE_WORKER)
+	return hosts.WithRole(RoleWorker)
 }
 
 // Each runs a function (or multiple functions chained) on every Host.

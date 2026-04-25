@@ -33,7 +33,8 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
-func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error) {
+// DistroDefinition returns a ZarfDistro object
+func DistroDefinition(ctx context.Context, distroPath string, _ DefinitionOptions) (v1alpha1.ZarfDistro, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.DistroDefinition", "path", distroPath)

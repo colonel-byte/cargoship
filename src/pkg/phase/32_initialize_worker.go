@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// InitializeWorkers phase state
 type InitializeWorkers struct {
 	GenericPhase
 	Distro           distrocfg.Distro
@@ -31,12 +32,13 @@ type InitializeWorkers struct {
 	WorkerConcurrent int
 }
 
+// Title for the phase
 func (p *InitializeWorkers) Title() string {
 	return "Initialize Worker"
 }
 
 // Prepare the phase
-func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.worker = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) && !h.IsController()
 	})
@@ -50,6 +52,7 @@ func (p *InitializeWorkers) ShouldRun() bool {
 	return len(p.worker) > 0
 }
 
+// Run the phase
 func (p *InitializeWorkers) Run(ctx context.Context) error {
 	err := p.parallelDoWithMessage(
 		ctx,
@@ -88,7 +91,10 @@ func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHos
 	logger.From(ctx).Info("waiting for the worker service to start", "service", p.Distro.GetWorkerService(), "host", h)
 
 	go func() {
-		h.Configurer.StartService(h, p.Distro.GetWorkerService())
+		err := h.Configurer.StartService(h, p.Distro.GetWorkerService())
+		if err != nil {
+			logger.From(ctx).Warn("failed to start", "service", p.Distro.GetWorkerService(), "host", h)
+		}
 	}()
 
 	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {

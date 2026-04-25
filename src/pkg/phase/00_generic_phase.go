@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package phase is all the various phases used for bootstrapping a cluster.
+// The phase files are named in a rough order used during and install;
+// - 0x are for preconnection resources, along with ssh-ing into the node
+// - 1x are used to gather information and start the prep-work for the cluster
+// - 2x are for installing files for the distro engine, e.i. rpm's, apt's, or binary files
+// - 3x are for starting the engine or for upgrading an existing install
+// - 9x are last minute things and finally disconnecting from a node
+// - ext are files that are currently not used but may be incorporated later
 package phase
 
 import (
@@ -32,10 +40,10 @@ var (
 	Interval = 10 * time.Second
 )
 
+// GenericPhase state
 type GenericPhase struct {
 	manager *Manager
 	wg      sync.WaitGroup
-	m       sync.Mutex
 }
 
 // GetConfig is an accessor to phase Config
@@ -43,7 +51,7 @@ func (p *GenericPhase) GetConfig() *cluster.ZarfCluster {
 	return p.manager.Config
 }
 
-// GetConfig is an accessor to phase Distro
+// GetDistro is an accessor to phase Distro
 func (p *GenericPhase) GetDistro() *distro.ZarfDistro {
 	return p.manager.Distro
 }
@@ -68,7 +76,10 @@ func (p *GenericPhase) parallelDo(ctx context.Context, hosts cluster.ZarfHosts, 
 }
 
 func (p *GenericPhase) parallelDoWithMessage(ctx context.Context, msg string, hosts cluster.ZarfHosts, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
-	cancel, _ := p.tickerHelper(ctx, msg, Interval)
+	cancel, err := p.tickerHelper(ctx, msg, Interval)
+	if err != nil {
+		logger.From(ctx).Warn("got error well setting up ticket", "error", err)
+	}
 	defer cancel()
 	return p.parallelDo(ctx, hosts, funcs...)
 }
@@ -89,7 +100,10 @@ func (p *GenericPhase) parallelDoUpload(ctx context.Context, hosts cluster.ZarfH
 }
 
 func (p *GenericPhase) batchedParallelWithMessageInterval(ctx context.Context, msg string, interval time.Duration, hosts cluster.ZarfHosts, batchSize int, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
-	cancel, _ := p.tickerHelper(ctx, msg, interval)
+	cancel, err := p.tickerHelper(ctx, msg, interval)
+	if err != nil {
+		logger.From(ctx).Warn("got error well setting up ticket", "error", err)
+	}
 	defer cancel()
 	if batchSize <= 0 {
 		return hosts.ParallelEach(ctx, funcs...)
@@ -106,6 +120,7 @@ func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) er
 	return p.manager.Wet(host, msg, funcs...)
 }
 
+// VersionLess if host version is less then the distro version
 func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool {
 	con, err := semver.NewConstraint(fmt.Sprintf("< %s", strings.ReplaceAll(version, "+", "-")))
 	if err != nil {
@@ -118,6 +133,7 @@ func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool 
 	return con.Check(v)
 }
 
+// VersionGreater if host version is greater then the distro version
 func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool {
 	con, err := semver.NewConstraint(fmt.Sprintf("> %s", strings.ReplaceAll(version, "+", "-")))
 	if err != nil {

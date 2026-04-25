@@ -25,13 +25,20 @@ import (
 )
 
 const (
-	OS_KIND_EL_ALMA    = "almalinux"
-	OS_KIND_EL_AMAZON  = "amzn"
-	OS_KIND_EL_CENTOS  = "centos"
-	OS_KIND_EL_FEDORA  = "fedora"
-	OS_KIND_EL_ORACLE  = "ol"
-	OS_KIND_EL_RED_HAT = "rhel"
-	OS_KIND_EL_ROCKY   = "rocky"
+	// OSKindELAlma id
+	OSKindELAlma = "almalinux"
+	// OSKindELAmazon id
+	OSKindELAmazon = "amzn"
+	// OSKindELCent id
+	OSKindELCent = "centos"
+	// OSKindELFedora id
+	OSKindELFedora = "fedora"
+	// OSKindELOracle id
+	OSKindELOracle = "ol"
+	// OSKindELRedHat id
+	OSKindELRedHat = "rhel"
+	// OSKindELRocky id
+	OSKindELRocky = "rocky"
 )
 
 // EnterpriseLinux is a base package for several RHEL-like enterprise linux distributions

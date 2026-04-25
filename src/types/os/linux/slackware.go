@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	OS_KIND_SLACKWARE = "slackware"
+	// OSKindSlackware id
+	OSKindSlackware = "slackware"
 )
 
 // Slackware provides OS support for Slackware Linux
@@ -39,7 +40,7 @@ var _ configurer.Configurer = (*Slackware)(nil)
 func init() {
 	registry.RegisterOSModule(
 		func(os rig.OSVersion) bool {
-			return os.ID == OS_KIND_SLACKWARE
+			return os.ID == OSKindSlackware
 		},
 		func() any {
 			return &Slackware{}
