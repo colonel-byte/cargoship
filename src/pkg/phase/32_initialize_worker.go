@@ -37,6 +37,7 @@ func (p *InitializeWorkers) Title() string {
 	return "Initialize Worker"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *InitializeWorkers) Explanation() string {
 	return "If the remote node does not have a running worker service, and is not a controller, install the engine and start each service by the set concurrency limit"
 }

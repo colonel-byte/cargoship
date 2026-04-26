@@ -34,6 +34,7 @@ func (p *RPMUploadFiles) Title() string {
 	return "Upload files to hosts -- RPM"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *RPMUploadFiles) Explanation() string {
 	return "If the remote node is an Enterprise Linux and the Distro package includes any files for those systems"
 }

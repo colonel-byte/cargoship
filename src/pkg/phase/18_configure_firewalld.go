@@ -54,6 +54,7 @@ func (p *ConfigureFirewall) Title() string {
 	return "Updating hosts firewalld service"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *ConfigureFirewall) Explanation() string {
 	return "If enabled, then this will create a firewalld ipsets file with the known engine cidr blocks for the pod and service networks, and create a firewalld ipsets to allow each node in cluster to access all ports on the node"
 }

@@ -51,7 +51,8 @@ func main() {
 		panic(err)
 	}
 
-	phaseApply()
+	phaseApply() //nolint:errcheck
+	phaseReset() //nolint:errcheck
 
 	if err := markdown.GenerateIndex(
 		"./docs",
@@ -102,6 +103,7 @@ func phaseApply() error {
 		},
 	})
 
+	fmt.Println("docs/actions/apply.md")
 	f, err := os.Create("docs/actions/apply.md")
 	if err != nil {
 		return err
@@ -123,4 +125,35 @@ func phaseApply() error {
 	applyDoc.PlainTextf("")
 
 	return applyDoc.Build()
+}
+
+func phaseReset() error {
+	reset := action.NewReset(action.ResetOptions{
+		Manager: &phase.Manager{
+			DistroID: distrocfg.DistroRKE2,
+		},
+	})
+
+	fmt.Println("docs/actions/reset.md")
+	f, err := os.Create("docs/actions/reset.md")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	resetDoc := markdown.NewMarkdown(f)
+
+	resetDoc.H2("reset phases")
+
+	for _, p := range reset.Phases {
+		phaseComment(resetDoc, p)
+	}
+
+	resetDoc.PlainTextf("")
+
+	return resetDoc.Build()
 }

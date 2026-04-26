@@ -34,6 +34,7 @@ func (p *APTUploadFiles) Title() string {
 	return "Upload files to hosts -- APT"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *APTUploadFiles) Explanation() string {
 	return "If the remote node is a Debian based Operating System and the Distro package includes any files for those systems"
 }

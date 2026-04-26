@@ -50,6 +50,7 @@ func (p *PrepareSelinux) Title() string {
 	return "Prepare hosts - Enterprise Linux support"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *PrepareSelinux) Explanation() string {
 	return fmt.Sprintf(`Installs %s on systems that have SELinux enabled on them`, ContainerSELinux)
 }

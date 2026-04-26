@@ -3,6 +3,7 @@ automatically generated document for the `cargoship` command
   
 ### actions
 - [apply phases](docs/actions/apply.md)
+- [reset phases](docs/actions/reset.md)
   
 ### commands
 - [cargoship](docs/commands/cargoship.md)

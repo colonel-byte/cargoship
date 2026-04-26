@@ -44,8 +44,9 @@ func (p *DeleteWorkers) Title() string {
 	return "Reset Worker"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *DeleteWorkers) Explanation() string {
-	return ""
+	return "Deletes the worker from the cluster, if enabled it will try to drain node before removing the node"
 }
 
 // Prepare the phase

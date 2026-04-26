@@ -49,6 +49,7 @@ func (p *PrepareFapolicy) Title() string {
 	return "Prepare hosts - Enterprise Linux support - Fapolicyd"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *PrepareFapolicy) Explanation() string {
 	return "Creates the distro supplied FAPolicy rules to " + FAPolicydRuleFile
 }

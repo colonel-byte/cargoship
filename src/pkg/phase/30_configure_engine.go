@@ -100,6 +100,7 @@ func (p *ConfigureEngine) Title() string {
 	return "Configure engine"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *ConfigureEngine) Explanation() string {
 	return "Runs distro specific operations"
 }

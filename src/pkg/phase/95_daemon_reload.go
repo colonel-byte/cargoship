@@ -31,6 +31,7 @@ func (p *DaemonReload) Title() string {
 	return "Reload service manager"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *DaemonReload) Explanation() string {
 	return "Runs `systemctl daemon-reload` or equivalent on all hosts."
 }

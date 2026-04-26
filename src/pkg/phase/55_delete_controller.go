@@ -14,7 +14,7 @@
 
 package phase
 
-// ResetWorker phase state
+// DeleteControllers phase state
 type DeleteControllers struct {
 	GenericPhase
 }
@@ -24,6 +24,7 @@ func (p *DeleteControllers) Title() string {
 	return "Reset Worker"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *DeleteControllers) Explanation() string {
 	return ""
 }

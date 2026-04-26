@@ -37,6 +37,7 @@ func (p *BINUploadFiles) Title() string {
 	return "Upload files to hosts -- Binaries"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *BINUploadFiles) Explanation() string {
 	return "Catch all phase if the combination of Operating System and Distro don't have other install methods"
 }

@@ -41,6 +41,7 @@ func (p *ModifyHosts) Title() string {
 	return "Updating hosts file for clusters nodes"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *ModifyHosts) Explanation() string {
 	return "If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster"
 }

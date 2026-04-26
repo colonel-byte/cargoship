@@ -36,6 +36,7 @@ func (p *Connect) Title() string {
 	return "Connect to hosts"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *Connect) Explanation() string {
 	return "Connects to a remote host via github.com/k0sproject/rig"
 }

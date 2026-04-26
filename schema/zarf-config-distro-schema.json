@@ -1,5 +1,30 @@
 {
   "$defs": {
+    "ApplyOptions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "concurrency": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "firewall_update": {
+          "default": true,
+          "type": "boolean"
+        },
+        "host_update": {
+          "default": true,
+          "type": "boolean"
+        },
+        "worker_concurrency": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "DistroCreateOptions": {
       "additionalProperties": false,
       "patternProperties": {
@@ -33,22 +58,25 @@
         "^x-": {}
       },
       "properties": {
+        "apply": {
+          "$ref": "#/$defs/ApplyOptions"
+        },
         "create": {
           "$ref": "#/$defs/DistroCreateOptions"
         },
         "deploy": {
           "$ref": "#/$defs/DistroDeployOptions"
         },
-        "install": {
-          "$ref": "#/$defs/InstallOptions"
-        },
         "oci_concurrency": {
           "type": "integer"
+        },
+        "reset": {
+          "$ref": "#/$defs/ResetOptions"
         }
       },
       "type": "object"
     },
-    "InstallOptions": {
+    "ResetOptions": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -57,6 +85,13 @@
         "concurrency": {
           "minimum": 0,
           "type": "integer"
+        },
+        "distro": {
+          "enum": [
+            "rke2",
+            "k3s"
+          ],
+          "type": "string"
         },
         "firewall_update": {
           "default": true,

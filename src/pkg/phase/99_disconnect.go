@@ -31,6 +31,7 @@ func (p *Disconnect) Title() string {
 	return "Disconnect from hosts"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *Disconnect) Explanation() string {
 	return "Deletes any lingering temp files and disconnects from the remote node"
 }

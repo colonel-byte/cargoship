@@ -46,7 +46,7 @@ type Reset struct {
 
 // NewReset an apply action object
 func NewReset(opts ResetOptions) *Reset {
-	disBuilder, err := registry.GetDistroModuleBuilder(opts.DistroID)
+	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
 	}

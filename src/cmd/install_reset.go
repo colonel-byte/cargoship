@@ -31,7 +31,7 @@ const (
 	InstallResetConfig = "config"
 	// InstallResetConfirm flag
 	InstallResetConfirm = "confirm"
-	// InstallResetConfirm flag
+	// InstallResetDistro flag
 	InstallResetDistro = "distro"
 	// InstallResetConcurrency flag
 	InstallResetConcurrency = "concurrency"
@@ -95,7 +95,7 @@ func newInstallResetCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installResetOptions) run(ctx context.Context, args []string) error {
+func (o *installResetOptions) run(ctx context.Context, _ []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {

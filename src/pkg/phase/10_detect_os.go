@@ -32,6 +32,7 @@ func (p *DetectOS) Title() string {
 	return "Detect host operating systems"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *DetectOS) Explanation() string {
 	return "Gathers information about the remote host, including: OS and OS version"
 }

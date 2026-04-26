@@ -32,6 +32,7 @@ func (p *UpgradeController) Title() string {
 	return "Upgrade Controller"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *UpgradeController) Explanation() string {
 	return "If the remote node is a controller and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node sequentially"
 }

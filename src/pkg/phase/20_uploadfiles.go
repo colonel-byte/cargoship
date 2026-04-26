@@ -51,6 +51,7 @@ func (p *UploadFiles) Title() string {
 	return "Upload files to hosts"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *UploadFiles) Explanation() string {
 	return "Uploads the distro agnostic files to each remote node"
 }

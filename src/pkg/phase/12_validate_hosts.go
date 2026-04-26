@@ -38,6 +38,7 @@ func (p *ValidateHosts) Title() string {
 	return "Validate hosts"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *ValidateHosts) Explanation() string {
 	return "Verifying that each node in the cluster has a unique name and private address, "
 }

@@ -45,6 +45,7 @@ func (p *ConfigureFirewallPorts) Title() string {
 	return "Updating hosts firewalld ports"
 }
 
+// Explanation about the current phase, used for documentation generation
 func (p *ConfigureFirewallPorts) Explanation() string {
 	return "If enabled, this will open any ports in the `.ports` section for each remote node"
 }
