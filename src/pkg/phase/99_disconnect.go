@@ -44,7 +44,7 @@ func (p *Disconnect) DryRun() error {
 				if h.FileExist(f) {
 					err := h.Configurer.DeleteFile(h, f)
 					if err != nil {
-						logger.From(ctx).Warn("failed to delete", "file", f, "host", h)
+						logger.From(ctx).Debug("failed to delete", "file", f, "host", h)
 					}
 				}
 			}

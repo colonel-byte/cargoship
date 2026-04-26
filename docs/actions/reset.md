@@ -13,6 +13,8 @@
     - Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running
 1. Reset Worker
     - Deletes the worker from the cluster, if enabled it will try to drain node before removing the node
+1. Uninstalling Worker
+    - Remove the rpm, apt, or binary files from a host
 1. Reload service manager
     - Runs `systemctl daemon-reload` or equivalent on all hosts.
 1. Release exclusive host lock

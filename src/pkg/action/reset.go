@@ -72,6 +72,10 @@ func NewReset(opts ResetOptions) *Reset {
 				NoDrain:          opts.NoDrain,
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
+			&phase.UninstallWorkers{
+				Distro:           d,
+				WorkerConcurrent: opts.WorkerConcurrent,
+			},
 
 			&phase.DaemonReload{},
 			lockPhase.UnlockPhase(),
