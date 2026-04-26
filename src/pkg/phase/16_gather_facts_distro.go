@@ -73,7 +73,7 @@ func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluste
 		h.Metadata.DistroVersion = ver
 	}
 	logger.From(ctx).Info("detected", "host", h, "version", h.Metadata.DistroVersion)
-	if p.VersionGreater(h, p.d.Spec.Version) {
+	if p.d != nil && p.VersionGreater(h, p.d.Spec.Version) {
 		return errors.New("will not downgrade the cluster")
 	}
 	return nil

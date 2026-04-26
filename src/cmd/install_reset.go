@@ -21,6 +21,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
+	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
+	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -91,6 +93,7 @@ func newInstallResetCommand() *cobra.Command {
 	o.LogFormat = val
 
 	cmd.MarkFlagRequired(InstallResetConfig)
+	cmd.MarkFlagRequired(InstallResetDistro)
 
 	return cmd
 }
@@ -108,8 +111,18 @@ func (o *installResetOptions) run(ctx context.Context, _ []string) error {
 		return err
 	}
 
+	cluster, err := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
+	if err != nil {
+		return err
+	}
+
 	resetOpts := action.ResetOptions{
-		Manager:          nil,
+		Manager: &phase.Manager{
+			DistroID:          o.distro,
+			Concurrency:       o.concurrency,
+			ConcurrentUploads: o.concurrency,
+			Config:            &cluster,
+		},
 		WorkerConcurrent: o.workerCon,
 		NoWait:           true,
 		NoDrain:          true,

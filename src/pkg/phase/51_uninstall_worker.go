@@ -65,5 +65,7 @@ func (p *UninstallWorkers) Run(ctx context.Context) error {
 func (p *UninstallWorkers) uninstallNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("uninstall", "node", h)
 	// rpm: ls /var/lib/rancher/rke2/rpm/* | xargs -I {} rpm -qp {} --queryformat "%{NAME}\n" 2>/dev/null
+	// apt: ls /var/lib/rancher/rke2/apt/* | xargs -I {} dpkg-deb --show --showformat="\${Package}\n" {}
+	// need to sort and unique the results
 	return nil
 }
