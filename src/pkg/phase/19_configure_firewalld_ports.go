@@ -45,6 +45,10 @@ func (p *ConfigureFirewallPorts) Title() string {
 	return "Updating hosts firewalld ports"
 }
 
+func (p *ConfigureFirewallPorts) Explanation() string {
+	return "If enabled, this will open any ports in the `.ports` section for each remote node"
+}
+
 // Prepare the phase
 func (p *ConfigureFirewallPorts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {

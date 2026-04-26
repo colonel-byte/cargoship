@@ -44,6 +44,10 @@ func (p *DeleteWorkers) Title() string {
 	return "Reset Worker"
 }
 
+func (p *DeleteWorkers) Explanation() string {
+	return ""
+}
+
 // Prepare the phase
 func (p *DeleteWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {

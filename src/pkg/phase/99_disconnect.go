@@ -31,6 +31,10 @@ func (p *Disconnect) Title() string {
 	return "Disconnect from hosts"
 }
 
+func (p *Disconnect) Explanation() string {
+	return "Deletes any lingering temp files and disconnects from the remote node"
+}
+
 // DryRun cleans up the temporary binary from the hosts
 func (p *Disconnect) DryRun() error {
 	err := p.manager.Config.Spec.Hosts.ParallelEach(context.Background(), func(ctx context.Context, h *v1alpha1.ZarfHost) error {

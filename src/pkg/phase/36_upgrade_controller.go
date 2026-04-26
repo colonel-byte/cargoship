@@ -32,6 +32,10 @@ func (p *UpgradeController) Title() string {
 	return "Upgrade Controller"
 }
 
+func (p *UpgradeController) Explanation() string {
+	return "If the remote node is a controller and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node sequentially"
+}
+
 // Prepare the phase
 func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {

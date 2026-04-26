@@ -34,6 +34,10 @@ func (p *RPMUploadFiles) Title() string {
 	return "Upload files to hosts -- RPM"
 }
 
+func (p *RPMUploadFiles) Explanation() string {
+	return "If the remote node is an Enterprise Linux and the Distro package includes any files for those systems"
+}
+
 // Prepare the phase
 func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	if err := p.UploadFilesCommon.Prepare(ctx, c, d); err != nil {

@@ -23,3 +23,7 @@ type DeleteControllers struct {
 func (p *DeleteControllers) Title() string {
 	return "Reset Worker"
 }
+
+func (p *DeleteControllers) Explanation() string {
+	return ""
+}

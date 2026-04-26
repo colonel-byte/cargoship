@@ -47,6 +47,10 @@ func (p *InitializeControllers) Title() string {
 	return "Initialize Controller"
 }
 
+func (p *InitializeControllers) Explanation() string {
+	return "If the remote node does not have a running controller service, and is a controller, install the engine and start each service sequentially"
+}
+
 // Run the phase
 func (p *InitializeControllers) Run(ctx context.Context) error {
 	err := p.parallelDoWithMessage(

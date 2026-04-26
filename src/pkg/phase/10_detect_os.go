@@ -32,6 +32,10 @@ func (p *DetectOS) Title() string {
 	return "Detect host operating systems"
 }
 
+func (p *DetectOS) Explanation() string {
+	return "Gathers information about the remote host, including: OS and OS version"
+}
+
 // Run the phase
 func (p *DetectOS) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {

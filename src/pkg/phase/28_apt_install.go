@@ -34,6 +34,10 @@ func (p *APTUploadFiles) Title() string {
 	return "Upload files to hosts -- APT"
 }
 
+func (p *APTUploadFiles) Explanation() string {
+	return "If the remote node is a Debian based Operating System and the Distro package includes any files for those systems"
+}
+
 // Prepare the phase
 func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	if err := p.UploadFilesCommon.Prepare(ctx, c, d); err != nil {

@@ -51,6 +51,10 @@ func (p *UploadFiles) Title() string {
 	return "Upload files to hosts"
 }
 
+func (p *UploadFiles) Explanation() string {
+	return "Uploads the distro agnostic files to each remote node"
+}
+
 var (
 	tagPrefix = regexp.MustCompile(`:.+$`)
 	nsPrefix  = regexp.MustCompile(`/`)

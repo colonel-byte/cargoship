@@ -74,14 +74,14 @@ func NewApply(opts ApplyOptions) *Apply {
 
 			&phase.DetectOS{},
 			lockPhase,
+			&phase.GatherFacts{},
+			&phase.ValidateHosts{},
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
 			&phase.PrepareFapolicy{},
-			&phase.GatherFacts{},
 			&phase.GatherFactsDistro{
 				Distro: d,
 			},
-			&phase.ValidateHosts{},
 			&phase.ModifyHosts{
 				Enabled: opts.ModifyHosts,
 			},

@@ -40,6 +40,7 @@ var Force bool
 type Phase interface {
 	Run(context.Context) error
 	Title() string
+	Explanation() string
 }
 
 // Phases is a slice of Phases

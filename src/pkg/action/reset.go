@@ -62,6 +62,7 @@ func NewReset(opts ResetOptions) *Reset {
 			lockPhase,
 
 			&phase.GatherFacts{},
+			&phase.ValidateHosts{},
 			&phase.GatherFactsDistro{
 				Distro: d,
 			},

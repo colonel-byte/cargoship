@@ -37,6 +37,10 @@ func (p *BINUploadFiles) Title() string {
 	return "Upload files to hosts -- Binaries"
 }
 
+func (p *BINUploadFiles) Explanation() string {
+	return "Catch all phase if the combination of Operating System and Distro don't have other install methods"
+}
+
 // Prepare the phase
 func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	if err := p.UploadFilesCommon.Prepare(ctx, c, d); err != nil {

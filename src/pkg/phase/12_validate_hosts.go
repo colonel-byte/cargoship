@@ -38,6 +38,10 @@ func (p *ValidateHosts) Title() string {
 	return "Validate hosts"
 }
 
+func (p *ValidateHosts) Explanation() string {
+	return "Verifying that each node in the cluster has a unique name and private address, "
+}
+
 // Run the phase
 func (p *ValidateHosts) Run(ctx context.Context) error {
 	p.hncount = make(map[string]int, len(p.manager.Config.Spec.Hosts))

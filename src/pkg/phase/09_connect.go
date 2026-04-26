@@ -36,6 +36,10 @@ func (p *Connect) Title() string {
 	return "Connect to hosts"
 }
 
+func (p *Connect) Explanation() string {
+	return "Connects to a remote host via github.com/k0sproject/rig"
+}
+
 // Run the phase
 func (p *Connect) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {

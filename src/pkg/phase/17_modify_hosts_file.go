@@ -41,6 +41,10 @@ func (p *ModifyHosts) Title() string {
 	return "Updating hosts file for clusters nodes"
 }
 
+func (p *ModifyHosts) Explanation() string {
+	return "If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster"
+}
+
 // Prepare the phase
 func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = make(map[string][]string)

@@ -100,6 +100,10 @@ func (p *ConfigureEngine) Title() string {
 	return "Configure engine"
 }
 
+func (p *ConfigureEngine) Explanation() string {
+	return "Runs distro specific operations"
+}
+
 // Run the phase title
 func (p *ConfigureEngine) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.hosts, p.configureEngine)

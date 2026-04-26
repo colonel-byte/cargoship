@@ -42,6 +42,10 @@ func (p *GatherFactsDistro) Title() string {
 	return "Gathering facts about the distro installed"
 }
 
+func (p *GatherFactsDistro) Explanation() string {
+	return "Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running"
+}
+
 // Prepare the phase
 func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts

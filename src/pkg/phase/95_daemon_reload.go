@@ -31,6 +31,10 @@ func (p *DaemonReload) Title() string {
 	return "Reload service manager"
 }
 
+func (p *DaemonReload) Explanation() string {
+	return "Runs `systemctl daemon-reload` or equivalent on all hosts."
+}
+
 // ShouldRun is true when there are controllers that needs to be reset
 func (p *DaemonReload) ShouldRun() bool {
 	return len(p.manager.Config.Spec.Hosts) > 0

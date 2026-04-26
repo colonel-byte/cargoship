@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
@@ -49,12 +50,16 @@ func (p *PrepareSelinux) Title() string {
 	return "Prepare hosts - Enterprise Linux support"
 }
 
+func (p *PrepareSelinux) Explanation() string {
+	return fmt.Sprintf(`Installs %s on systems that have SELinux enabled on them`, ContainerSELinux)
+}
+
 // Run the phase
 func (p *PrepareSelinux) Run(ctx context.Context) error {
 	return p.parallelDoWithMessage(ctx, "waiting for package to install", p.selinuxHosts, p.prepareHost)
 }
 
-// ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
+// ShouldRun is true when there is a host with selinux on the hosts
 func (p *PrepareSelinux) ShouldRun() bool {
 	return len(p.selinuxHosts) > 0
 }
