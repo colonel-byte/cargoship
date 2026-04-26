@@ -52,6 +52,13 @@ func (c *EnterpriseLinux) InstallPackage(h os.Host, s ...string) error {
 	if err := h.Execf("dnf install -y %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
 		return fmt.Errorf("failed to install packages: %w", err)
 	}
+	return nil
+}
 
+// UninstallPackage uninstalls packages via dnf
+func (c *EnterpriseLinux) UninstallPackage(h os.Host, s ...string) error {
+	if err := h.Execf("dnf remove -y %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+		return fmt.Errorf("failed to uninstall packages: %w", err)
+	}
 	return nil
 }
