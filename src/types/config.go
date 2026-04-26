@@ -35,16 +35,16 @@ type DistroConfig struct {
 
 // DistroOptions holds the values for the `.distro` section of the config file
 type DistroOptions struct {
-	//keep-sorted start
 	// CreateOpts are options used by the create subcommand
 	CreateOpts DistroCreateOptions `json:"create,omitempty"`
 	// DeployOpts are options used by the deploy subcommand
 	DeployOpts DistroDeployOptions `json:"deploy,omitempty"`
-	// InstallOpts are options used by the install subcommand
-	InstallOpts InstallOptions `json:"install,omitempty"`
+	// ApplyOpts are options used by the apply subcommand
+	ApplyOpts ApplyOptions `json:"apply,omitempty"`
+	// ResetOptions are options used by the reset subcommand
+	ResetOpts ResetOptions `json:"reset,omitempty"`
 	// OCIConcurrency is how many concurrent oci artifacts that will be pushed at a time
 	OCIConcurrency int `json:"oci_concurrency,omitempty"`
-	//keep-sorted end
 }
 
 // DistroCreateOptions holds the values for the `.distro.create` section of the config file
@@ -63,8 +63,8 @@ type DistroDeployOptions struct {
 	Retries int `json:"retries,omitempty"`
 }
 
-// InstallOptions holds the values for the `.distro.install` section of the config file
-type InstallOptions struct {
+// ApplyOptions holds the values for the `.distro.apply` section of the config file
+type ApplyOptions struct {
 	//keep-sorted start
 	// Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
 	Concurrency int `json:"concurrency,omitempty" jsonschema:"minimum=0"`
@@ -75,4 +75,18 @@ type InstallOptions struct {
 	// WorkerConcurrency number of worker nodes that will be upgraded at once
 	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
 	//keep-sorted end
+}
+
+// ResetOptions holds the values for the `.distro.reset` section of the config file
+type ResetOptions struct {
+	// Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
+	Concurrency int `json:"concurrency,omitempty" jsonschema:"minimum=0"`
+	// FirewallUpdate whether we will update the host firewall
+	FirewallUpdate bool `json:"firewall_update,omitempty" jsonschema:"default=true"`
+	// HostUpdate whether we will update the etc host file
+	HostUpdate bool `json:"host_update,omitempty" jsonschema:"default=true"`
+	// WorkerConcurrency number of worker nodes that will be upgraded at once
+	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
+	// Distro that is used to determine how to remove files
+	Distro string `json:"distro,omitempty" jsonschema:"enum=rke2,enum=k3s"`
 }

@@ -54,6 +54,11 @@ func (p *Lock) Title() string {
 	return "Acquire exclusive host lock"
 }
 
+// Explanation about the current phase, used for documentation generation
+func (p *Lock) Explanation() string {
+	return "Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other `cargoships` from doing any changes until the lock file has not been touch for over a minute"
+}
+
 // Cancel releases the lock
 func (p *Lock) Cancel(_ context.Context) {
 	p.m.Lock()

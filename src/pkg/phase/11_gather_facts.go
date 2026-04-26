@@ -32,6 +32,11 @@ func (p *GatherFacts) Title() string {
 	return "Gather host facts"
 }
 
+// Explanation about the current phase, used for documentation generation
+func (p *GatherFacts) Explanation() string {
+	return "Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface"
+}
+
 // Run the phase
 func (p *GatherFacts) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.investigateHost)

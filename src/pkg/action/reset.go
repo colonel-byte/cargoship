@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package action are various actions used by the package
 package action
 
 import (
@@ -25,120 +24,77 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// ApplyOptions struct
-type ApplyOptions struct {
+// ResetOptions struct
+type ResetOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
-	// DisableDowngradeCheck skips the downgrade check
-	DisableDowngradeCheck bool
 	// NoWait skips waiting for the cluster to be ready
 	NoWait bool
 	// NoDrain skips draining worker nodes
 	NoDrain bool
-	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
-	ModifyHosts bool
-	// ModifyFirewall updates the firewalld on the nodes
-	ModifyFirewall bool
+	// DistroID is the type of Kubernetes engine that will be removed
+	DistroID string
 	// WorkerConcurrent number of workers that will be installed or upgraded at a time
 	WorkerConcurrent int
 }
 
-// Apply state logic
-type Apply struct {
-	ApplyOptions
+// Reset state logic
+type Reset struct {
+	ResetOptions
 	Phases phase.Phases
 }
 
-// NewApply an apply action object
-func NewApply(opts ApplyOptions) *Apply {
+// NewReset an apply action object
+func NewReset(opts ResetOptions) *Reset {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
 	}
-
-	if opts.WorkerConcurrent < 0 {
-		opts.WorkerConcurrent = 0
-	}
-
-	if opts.Manager.Concurrency < 0 {
-		opts.Manager.Concurrency = 0
-	}
-
 	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
 
 	lockPhase := &phase.Lock{}
-	apply := &Apply{
-		ApplyOptions: opts,
+	reset := &Reset{
+		ResetOptions: opts,
 		Phases: phase.Phases{
 			&phase.Connect{},
 
 			&phase.DetectOS{},
 			lockPhase,
+
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
-			&phase.PrepareHosts{},
-			&phase.PrepareSelinux{},
-			&phase.PrepareFapolicy{},
 			&phase.GatherFactsDistro{
 				Distro: d,
 			},
-			&phase.ModifyHosts{
-				Enabled: opts.ModifyHosts,
-			},
-			&phase.ConfigureFirewall{
-				Distro:  d,
-				Enabled: opts.ModifyFirewall,
-			},
-			&phase.ConfigureFirewallPorts{
-				Enabled: opts.ModifyFirewall,
-			},
 
-			&phase.UploadFiles{},
-			&phase.RPMUploadFiles{},
-			&phase.APTUploadFiles{},
-			&phase.BINUploadFiles{
-				Distro: d,
-			},
+			// &phase.DeleteWorkers{
+			// 	Distro:           d,
+			// 	NoDrain:          opts.NoDrain,
+			// 	WorkerConcurrent: opts.WorkerConcurrent,
+			// },
+			// &phase.UninstallWorkers{
+			// 	Distro:           d,
+			// 	WorkerConcurrent: opts.WorkerConcurrent,
+			// },
 
-			&phase.ConfigureEngine{
-				Distro: d,
-			},
-			&phase.InitializeControllers{
-				Distro: d,
-			},
-			&phase.InitializeWorkers{
-				Distro:           d,
-				WorkerConcurrent: opts.WorkerConcurrent,
-			},
-			&phase.UpgradeController{
-				UpgradeHosts: phase.UpgradeHosts{
-					Distro: d,
-				},
-			},
-			&phase.UpgradeWorkers{
-				UpgradeHosts: phase.UpgradeHosts{
-					Distro: d,
-				},
-				WorkerConcurrent: opts.WorkerConcurrent,
-			},
-
+			&phase.DaemonReload{},
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
 	}
 
-	return apply
+	return reset
 }
 
 // Run the actions
-func (a Apply) Run(ctx context.Context) error {
+func (r Reset) Run(ctx context.Context) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	phase.NoWait = a.NoWait
-	a.Manager.SetPhases(a.Phases)
+	phase.NoWait = r.NoWait
+	r.Manager.SetPhases(r.Phases)
 
-	if result := a.Manager.Run(ctx); result != nil {
-		l.Info("apply failed", "error", result)
+	if result := r.Manager.Run(ctx); result != nil {
+		l.Info("reset failed", "error", result)
 		return result
 	}
 

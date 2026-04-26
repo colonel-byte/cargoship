@@ -15,8 +15,13 @@
 package linux
 
 import (
+	"fmt"
+	"strings"
+
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/k0sproject/rig"
+	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/os"
 	"github.com/k0sproject/rig/os/linux"
 	"github.com/k0sproject/rig/os/registry"
 )
@@ -43,4 +48,12 @@ func init() {
 			return &Archlinux{}
 		},
 	)
+}
+
+// UninstallPackage installs packages via pacman
+func (c Archlinux) UninstallPackage(h os.Host, s ...string) error {
+	if err := h.Execf("pacman -Rns --noconfirm --noprogressbar %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+		return fmt.Errorf("failed to uninstall packages: %w", err)
+	}
+	return nil
 }

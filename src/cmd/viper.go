@@ -21,32 +21,12 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
+	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/viper"
 	zarf "github.com/zarf-dev/zarf/src/cmd"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-)
-
-const (
-	// LoggingLevelDefault path in config
-	LoggingLevelDefault = "info"
-	// VDistroCreateOutput path in config
-	VDistroCreateOutput = "distro.create.output"
-	// VDistroOCIConcurrency path in config
-	VDistroOCIConcurrency = "distro.oci_concurrency"
-	// VDistroCreateRegistryOverride path in config
-	VDistroCreateRegistryOverride = "distro.create.registry_override"
-	// VDistroCreateSkipSbom path in config
-	VDistroCreateSkipSbom = "distro.create.skip_sbom"
-	// VInstallConcurrency path in config
-	VInstallConcurrency = "distro.install.concurrency"
-	// VInstallWorkerConcurrency path in config
-	VInstallWorkerConcurrency = "distro.install.worker_concurrency"
-	// VInstallUpdateHost path in config
-	VInstallUpdateHost = "distro.install.host_update"
-	// VInstallUpdateFirewall path in config
-	VInstallUpdateFirewall = "distro.install.firewall_update"
 )
 
 var (
@@ -99,15 +79,15 @@ func initViper() error {
 }
 
 func setDefaults() {
-	v.SetDefault(zarf.VLogLevel, LoggingLevelDefault)
+	v.SetDefault(zarf.VLogLevel, types.LoggingLevelDefault)
 	v.SetDefault(zarf.VZarfCache, config.ZarfDefaultCachePath)
 	v.SetDefault(zarf.VLogFormat, string(logger.FormatConsole))
 	v.SetDefault(zarf.VTmpDir, "/tmp")
 	v.SetDefault(zarf.VNoColor, false)
 
-	v.SetDefault(VDistroOCIConcurrency, zoci.DefaultConcurrency)
-	v.SetDefault(VDistroCreateSkipSbom, false)
-	v.SetDefault(VInstallConcurrency, 30)
-	v.SetDefault(VInstallUpdateHost, false)
-	v.SetDefault(VInstallUpdateFirewall, false)
+	v.SetDefault(types.DistroOCIConcurrency, zoci.DefaultConcurrency)
+	v.SetDefault(types.DistroCreateSkipSbom, false)
+	v.SetDefault(types.InstallConcurrency, 30)
+	v.SetDefault(types.InstallUpdateHost, false)
+	v.SetDefault(types.InstallUpdateFirewall, false)
 }

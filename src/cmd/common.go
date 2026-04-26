@@ -16,17 +16,43 @@ package cmd
 
 import (
 	"context"
+	"path/filepath"
 	"regexp"
 
 	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/packager"
+	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
+	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/src/types/distrocfg"
+	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// InstallCommon common args
+type InstallCommon struct {
+	config      string
+	concurrency int
+	confirm     bool
+	logLevel    string
+	LogFormat   string
+}
+
 var plainHTTP bool
 var insecureSkipTLSVerify bool
 var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
+
+// Distro returns the distro config for a given string
+func Distro(s string) (distrocfg.Distro, error) {
+	ds, err := registry.GetDistroModuleBuilder(s)
+	if err != nil {
+		return nil, err
+	}
+	d := ds().(distrocfg.Distro) //nolint:errcheck
+
+	return d, nil
+}
 
 func defaultRemoteOptions() types.RemoteOptions {
 	return types.RemoteOptions{
@@ -48,4 +74,43 @@ func getCachePath(ctx context.Context) (string, error) {
 		config.CommonOptions.CachePath = zconfig.ZarfDefaultCachePath
 	}
 	return zconfig.GetAbsCachePath()
+}
+
+func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*phase.Manager, error) {
+	path, err := filepath.Abs(opt.config)
+	if err != nil {
+		return nil, err
+	}
+
+	opt.config = path
+
+	cluster, err := load.ClusterDefinition(ctx, opt.config, load.ClusterOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	logger.From(ctx).Info("using cluster file", "location", opt.config)
+
+	loadOpts := packager.LoadOptions{
+		CachePath:    config.CommonOptions.CachePath,
+		Architecture: zconfig.CLIArch,
+		Output:       config.CommonOptions.TempDirectory,
+	}
+
+	distroLayout, err := packager.LoadDistro(ctx, distroPath, loadOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.From(ctx).Debug("distro information", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
+
+	return &phase.Manager{
+		Config:            &cluster,
+		Distro:            &distroLayout.Distro,
+		DistroID:          distroLayout.Distro.Spec.Type,
+		TempDirectory:     distroLayout.DirPath(),
+		Concurrency:       opt.concurrency,
+		ConcurrentUploads: opt.concurrency,
+		DryRun:            false,
+	}, nil
 }

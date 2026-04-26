@@ -59,6 +59,11 @@ func (l *Alpine) InstallPackage(h os.Host, pkg ...string) error {
 	return h.Execf("apk add --update %s", strings.Join(pkg, " "), exec.Sudo(h))
 }
 
+// UninstallPackage installs packages via apk
+func (l *Alpine) UninstallPackage(h os.Host, pkg ...string) error {
+	return h.Execf("apk del %s", strings.Join(pkg, " "), exec.Sudo(h))
+}
+
 // Prepare will install required packages
 func (l *Alpine) Prepare(h os.Host) error {
 	return l.InstallPackage(h, "findutils", "coreutils")

@@ -18,6 +18,10 @@ package lang
 const (
 	// CmdDistroCreateShort create short
 	CmdDistroCreateShort = "Creates a Zarf Distro Package from a given directory or the current director"
+	// CmdDistroApplyShort create short
+	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
+	// CmdDistroResetShort create short
+	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for a engine"
 	// CmdInstallFapolicydUpdate install flag fapolicyd
 	CmdInstallFapolicydUpdate = "Whether to update all the host nodes fapolicyd configuration."
 	// CmdInstallFirewallUpdate install flag firewall
@@ -26,6 +30,8 @@ const (
 	CmdInstallFlagConcurrency = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
 	// CmdInstallFlagConfig install flag config
 	CmdInstallFlagConfig = "Config file used to bootstrap a cluster."
+	// CmdInstallFlagResetDistro install flag config
+	CmdInstallFlagResetDistro = "What type of distro that will be reset. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
 	CmdInstallFlagConfirm = "Confirm whether if to proceed with the install"
 	// CmdInstallFlagTimeout install flag timeout

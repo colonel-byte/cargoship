@@ -32,6 +32,10 @@ func (p *conditionalPhase) Title() string {
 	return "conditional phase"
 }
 
+func (p *conditionalPhase) Explanation() string {
+	return "test function"
+}
+
 func (p *conditionalPhase) ShouldRun() bool {
 	p.shouldrunCalled = true
 	return false
@@ -57,6 +61,10 @@ type configPhase struct {
 
 func (p *configPhase) Title() string {
 	return "config phase"
+}
+
+func (p *configPhase) Explanation() string {
+	return "test function"
 }
 
 func (p *configPhase) Prepare(c *cluster.ZarfCluster) error {
@@ -86,6 +94,10 @@ type hookedPhase struct {
 
 func (p *hookedPhase) Title() string {
 	return "hooked phase"
+}
+
+func (p *hookedPhase) Explanation() string {
+	return "test function"
 }
 
 func (p *hookedPhase) Before() error {

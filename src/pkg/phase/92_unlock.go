@@ -44,6 +44,11 @@ func (p *Unlock) Title() string {
 	return "Release exclusive host lock"
 }
 
+// Explanation about the current phase, used for documentation generation
+func (p *Unlock) Explanation() string {
+	return "Deletes the lock file from each node, allowing other `cargoships` to run"
+}
+
 // Run the phase
 func (p *Unlock) Run(ctx context.Context) error {
 	p.Cancel(ctx)
