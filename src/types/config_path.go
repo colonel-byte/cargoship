@@ -27,11 +27,11 @@ const (
 	// DistroCreateSkipSbom path in config
 	DistroCreateSkipSbom = "distro.create.skip_sbom"
 	// InstallConcurrency path in config
-	InstallConcurrency = "distro.install.concurrency"
+	InstallConcurrency = "distro.apply.concurrency"
 	// InstallWorkerConcurrency path in config
-	InstallWorkerConcurrency = "distro.install.worker_concurrency"
+	InstallWorkerConcurrency = "distro.apply.worker_concurrency"
 	// InstallUpdateHost path in config
-	InstallUpdateHost = "distro.install.host_update"
+	InstallUpdateHost = "distro.apply.host_update"
 	// InstallUpdateFirewall path in config
-	InstallUpdateFirewall = "distro.install.firewall_update"
+	InstallUpdateFirewall = "distro.apply.firewall_update"
 )
