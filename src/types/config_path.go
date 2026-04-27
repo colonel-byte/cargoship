@@ -26,12 +26,16 @@ const (
 	DistroCreateRegistryOverride = "distro.create.registry_override"
 	// DistroCreateSkipSbom path in config
 	DistroCreateSkipSbom = "distro.create.skip_sbom"
-	// InstallConcurrency path in config
-	InstallConcurrency = "distro.apply.concurrency"
-	// InstallWorkerConcurrency path in config
-	InstallWorkerConcurrency = "distro.apply.worker_concurrency"
-	// InstallUpdateHost path in config
-	InstallUpdateHost = "distro.apply.host_update"
-	// InstallUpdateFirewall path in config
-	InstallUpdateFirewall = "distro.apply.firewall_update"
+	// DistroConcurrency path in config
+	DistroConcurrency = "distro.concurrency"
+	// DistroWorkerConcurrency path in config
+	DistroWorkerConcurrency = "distro.worker_concurrency"
+	// DistroFAPolicy path in config
+	DistroFAPolicy = "distro.fapolicy"
+	// DistroUpdateHost path in config
+	DistroUpdateHost = "distro.host_update"
+	// DistroUpdateFirewall path in config
+	DistroUpdateFirewall = "distro.firewall_update"
+	// DistroResetDistro path in config
+	DistroResetDistro = "distro.reset.distro"
 )

@@ -87,7 +87,7 @@ func setDefaults() {
 
 	v.SetDefault(types.DistroOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(types.DistroCreateSkipSbom, false)
-	v.SetDefault(types.InstallConcurrency, 30)
-	v.SetDefault(types.InstallUpdateHost, false)
-	v.SetDefault(types.InstallUpdateFirewall, false)
+	v.SetDefault(types.DistroConcurrency, 30)
+	v.SetDefault(types.DistroUpdateHost, false)
+	v.SetDefault(types.DistroUpdateFirewall, false)
 }

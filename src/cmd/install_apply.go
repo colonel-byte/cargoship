@@ -66,13 +66,13 @@ func newInstallApplyCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallApplyConcurrency, "c", v.GetInt(types.InstallConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, InstallApplyConcurrency, "c", v.GetInt(types.DistroConcurrency), lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallApplyConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallApplyConfirm, false, lang.CmdInstallFlagConfirm)
-	cmd.Flags().BoolVarP(&o.hosts, InstallApplyUpdateHost, "H", v.GetBool(types.InstallUpdateHost), lang.CmdInstallHostUpdate)
-	cmd.Flags().BoolVarP(&o.firewall, InstallApplyUpdateFirewall, "F", v.GetBool(types.InstallUpdateFirewall), lang.CmdInstallFirewallUpdate)
-	cmd.Flags().BoolVarP(&o.fapolicy, InstallApplyUpdateFAPolicyD, "f", v.GetBool(types.InstallUpdateFirewall), lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallApplyWorkConcurrency, "w", v.GetInt(types.InstallWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVarP(&o.hosts, InstallApplyUpdateHost, "H", v.GetBool(types.DistroUpdateHost), lang.CmdInstallHostUpdate)
+	cmd.Flags().BoolVarP(&o.firewall, InstallApplyUpdateFirewall, "F", v.GetBool(types.DistroUpdateFirewall), lang.CmdInstallFirewallUpdate)
+	cmd.Flags().BoolVarP(&o.fapolicy, InstallApplyUpdateFAPolicyD, "f", v.GetBool(types.DistroFAPolicy), lang.CmdInstallFapolicydUpdate)
+	cmd.Flags().IntVarP(&o.workerCon, InstallApplyWorkConcurrency, "w", v.GetInt(types.DistroWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {

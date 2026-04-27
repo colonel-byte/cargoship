@@ -7,12 +7,12 @@ zarf_cache: ~/.zarf
 timeout: 20m
 distro:
   oci_concurrency: 10
+  concurrency: 300
+  worker_concurrency: 5
+  host_update: true
+  firewall_update: true
+  fapolicy: true
   create:
     output: ~/zarf
-  apply:
-    concurrency: 300
-    worker_concurrency: 5
-    host_update: true
-    firewall_update: true
   reset:
     distro: rke2
