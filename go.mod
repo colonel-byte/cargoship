@@ -25,6 +25,7 @@ require (
 	github.com/txn2/txeh v1.8.0
 	github.com/zarf-dev/zarf v0.75.0
 	gopkg.in/yaml.v3 v3.0.1
+	k8s.io/client-go v0.35.3
 	oras.land/oras-go/v2 v2.6.0
 )
 
@@ -607,7 +608,6 @@ require (
 	k8s.io/apimachinery v0.35.3 // indirect
 	k8s.io/apiserver v0.35.1 // indirect
 	k8s.io/cli-runtime v0.35.3 // indirect
-	k8s.io/client-go v0.35.3 // indirect
 	k8s.io/component-base v0.35.3 // indirect
 	k8s.io/component-helpers v0.35.3 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect

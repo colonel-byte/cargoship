@@ -67,15 +67,23 @@ func NewReset(opts ResetOptions) *Reset {
 				Distro: d,
 			},
 
-			// &phase.DeleteWorkers{
-			// 	Distro:           d,
-			// 	NoDrain:          opts.NoDrain,
-			// 	WorkerConcurrent: opts.WorkerConcurrent,
-			// },
-			// &phase.UninstallWorkers{
-			// 	Distro:           d,
-			// 	WorkerConcurrent: opts.WorkerConcurrent,
-			// },
+			&phase.DeleteWorkers{
+				DeleteCommon: phase.DeleteCommon{
+					Distro: d,
+				},
+				NoDrain:          opts.NoDrain,
+				WorkerConcurrent: opts.WorkerConcurrent,
+			},
+			&phase.DeleteControllers{
+				DeleteCommon: phase.DeleteCommon{
+					Distro: d,
+				},
+				NoDrain: opts.NoDrain,
+			},
+			&phase.UninstallEngine{
+				Distro:           d,
+				WorkerConcurrent: opts.WorkerConcurrent,
+			},
 
 			&phase.DaemonReload{},
 			lockPhase.UnlockPhase(),

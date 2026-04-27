@@ -235,9 +235,7 @@ func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall str
 		}
 	}
 	if h.Configurer.CommandExist(h, killall) {
-		out, err := h.ExecOutput(killall, exec.Sudo(h))
-		log.Warnf("%s", out)
-		return err
+		return h.Exec(killall, exec.Sudo(h))
 	}
 	return nil
 }

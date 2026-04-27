@@ -41,6 +41,8 @@ type ApplyOptions struct {
 	ModifyFirewall bool
 	// WorkerConcurrent number of workers that will be installed or upgraded at a time
 	WorkerConcurrent int
+	// UpdateKubeConfig whether to update the local config
+	UpdateKubeConfig bool
 }
 
 // Apply state logic

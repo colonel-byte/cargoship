@@ -42,7 +42,11 @@ func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
 	})
-	p.leader = control[0]
+	if len(control) > 0 {
+		p.leader = control[0]
+	} else {
+		return ErrNoControllers
+	}
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.IsController() &&
 			h.Metadata.DistroVersion != UnknownVersion &&

@@ -60,7 +60,7 @@ func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *di
 	return nil
 }
 
-// ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
+// ShouldRun is true when this phase is enabled
 func (p *ModifyHosts) ShouldRun() bool {
 	return p.Enabled
 }
