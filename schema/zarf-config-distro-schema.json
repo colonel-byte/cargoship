@@ -5,24 +5,7 @@
       "patternProperties": {
         "^x-": {}
       },
-      "properties": {
-        "concurrency": {
-          "minimum": 0,
-          "type": "integer"
-        },
-        "firewall_update": {
-          "default": true,
-          "type": "boolean"
-        },
-        "host_update": {
-          "default": true,
-          "type": "boolean"
-        },
-        "worker_concurrency": {
-          "minimum": 0,
-          "type": "integer"
-        }
-      },
+      "properties": {},
       "type": "object"
     },
     "DistroCreateOptions": {
@@ -61,17 +44,37 @@
         "apply": {
           "$ref": "#/$defs/ApplyOptions"
         },
+        "concurrency": {
+          "minimum": 0,
+          "type": "integer"
+        },
         "create": {
           "$ref": "#/$defs/DistroCreateOptions"
         },
         "deploy": {
           "$ref": "#/$defs/DistroDeployOptions"
         },
+        "fapolicy": {
+          "default": true,
+          "type": "boolean"
+        },
+        "firewall_update": {
+          "default": true,
+          "type": "boolean"
+        },
+        "host_update": {
+          "default": true,
+          "type": "boolean"
+        },
         "oci_concurrency": {
           "type": "integer"
         },
         "reset": {
           "$ref": "#/$defs/ResetOptions"
+        },
+        "worker_concurrency": {
+          "minimum": 0,
+          "type": "integer"
         }
       },
       "type": "object"
@@ -82,28 +85,12 @@
         "^x-": {}
       },
       "properties": {
-        "concurrency": {
-          "minimum": 0,
-          "type": "integer"
-        },
         "distro": {
           "enum": [
             "rke2",
             "k3s"
           ],
           "type": "string"
-        },
-        "firewall_update": {
-          "default": true,
-          "type": "boolean"
-        },
-        "host_update": {
-          "default": true,
-          "type": "boolean"
-        },
-        "worker_concurrency": {
-          "minimum": 0,
-          "type": "integer"
         }
       },
       "type": "object"
