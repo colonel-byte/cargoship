@@ -20,6 +20,7 @@ import (
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/k0sproject/rig"
+	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"
 	"github.com/k0sproject/rig/os/registry"
 )
@@ -60,4 +61,9 @@ func (l *Slackware) InstallPackage(h os.Host, pkg ...string) error {
 	}
 
 	return h.Execf("%s && %s", updatecmd, installcmd)
+}
+
+// UninstallPackage remove packages via slackpkg
+func (l *Slackware) UninstallPackage(h os.Host, pkg ...string) error {
+	return h.Exec(fmt.Sprintf("slackpkg remove %s", strings.Join(pkg, " ")), exec.Sudo(h))
 }

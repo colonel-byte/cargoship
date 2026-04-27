@@ -42,6 +42,11 @@ func (p *GatherFactsDistro) Title() string {
 	return "Gathering facts about the distro installed"
 }
 
+// Explanation about the current phase, used for documentation generation
+func (p *GatherFactsDistro) Explanation() string {
+	return "Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running"
+}
+
 // Prepare the phase
 func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts
@@ -68,7 +73,7 @@ func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluste
 		h.Metadata.DistroVersion = ver
 	}
 	logger.From(ctx).Info("detected", "host", h, "version", h.Metadata.DistroVersion)
-	if p.VersionGreater(h, p.d.Spec.Version) {
+	if p.d != nil && p.VersionGreater(h, p.d.Spec.Version) {
 		return errors.New("will not downgrade the cluster")
 	}
 	return nil

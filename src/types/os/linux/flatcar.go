@@ -52,8 +52,7 @@ func (l *Flatcar) InstallPackage(_ os.Host, _ ...string) error {
 	return errors.New("FlatcarContainerLinux does not support installing packages manually")
 }
 
-// // HostPath returns the given path unchanged for linux hosts
-// func (l *Flatcar) ConfigureDistro(dis distro.Distro) {
-// 	l.BaseLinux.ConfigureDistro(dis)
-// 	dis.SetPath(distro.BinaryDir, "/opt/bin")
-// }
+// UninstallPackage installs packages but will throw an error
+func (l *Flatcar) UninstallPackage(_ os.Host, _ ...string) error {
+	return errors.New("FlatcarContainerLinux does not support removing packages manually")
+}

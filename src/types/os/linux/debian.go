@@ -15,8 +15,13 @@
 package linux
 
 import (
+	"fmt"
+	"strings"
+
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/k0sproject/rig"
+	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/os"
 	"github.com/k0sproject/rig/os/linux"
 	"github.com/k0sproject/rig/os/registry"
 )
@@ -43,4 +48,12 @@ func init() {
 			return &Debian{}
 		},
 	)
+}
+
+// UninstallPackage uninstalls packages via apt-get
+func (c Debian) UninstallPackage(h os.Host, s ...string) error {
+	if err := h.Execf("DEBIAN_FRONTEND=noninteractive apt-get remove -y -q %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+		return fmt.Errorf("failed to remove packages: %w", err)
+	}
+	return nil
 }

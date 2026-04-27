@@ -21,6 +21,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
+	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	zcmd "github.com/zarf-dev/zarf/src/cmd"
 	zconfig "github.com/zarf-dev/zarf/src/config"
@@ -50,18 +51,18 @@ func newPackageCreateCommand() *cobra.Command {
 		},
 	}
 
-	output, err := zconfig.GetAbsHomePath(v.GetString(VDistroCreateOutput))
+	output, err := zconfig.GetAbsHomePath(v.GetString(types.DistroCreateOutput))
 	if err != nil {
 		logger.From(cmd.Context()).Debug("error when trying to get user path", "error", err)
-		output = v.GetString(VDistroCreateOutput)
+		output = v.GetString(types.DistroCreateOutput)
 	}
 
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VDistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(types.DistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
-	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", zcmd.GetStringSlice(v, VDistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
-	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VDistroCreateSkipSbom), zlang.CmdPackageCreateFlagSkipSbom)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", zcmd.GetStringSlice(v, types.DistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(types.DistroCreateSkipSbom), zlang.CmdPackageCreateFlagSkipSbom)
 
-	v.SetDefault(VDistroCreateOutput, ".")
+	v.SetDefault(types.DistroCreateOutput, ".")
 
 	return cmd
 }

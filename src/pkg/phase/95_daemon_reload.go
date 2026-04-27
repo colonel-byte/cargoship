@@ -16,48 +16,38 @@ package phase
 
 import (
 	"context"
-	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// DetectOS performs remote OS detection
-type DetectOS struct {
+// DaemonReload phase runs `systemctl daemon-reload` or equivalent on all hosts.
+type DaemonReload struct {
 	GenericPhase
 }
 
 // Title for the phase
-func (p *DetectOS) Title() string {
-	return "Detect host operating systems"
+func (p *DaemonReload) Title() string {
+	return "Reload service manager"
 }
 
 // Explanation about the current phase, used for documentation generation
-func (p *DetectOS) Explanation() string {
-	return "Gathers information about the remote host, including: OS and OS version"
+func (p *DaemonReload) Explanation() string {
+	return "Runs `systemctl daemon-reload` or equivalent on all hosts."
+}
+
+// ShouldRun is true when there are controllers that needs to be reset
+func (p *DaemonReload) ShouldRun() bool {
+	return len(p.manager.Config.Spec.Hosts) > 0
 }
 
 // Run the phase
-func (p *DetectOS) Run(ctx context.Context) error {
+func (p *DaemonReload) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
-		l := logger.From(ctx)
-
-		if err := h.ResolveConfigurer(); err != nil {
-			if h.OSVersion.IDLike != "" {
-				l.Debug("trying to find a fallback OS support module", "host", h, "os version", h.OSVersion.String(), "like", h.OSVersion.IDLike)
-				for id := range strings.SplitSeq(h.OSVersion.IDLike, " ") {
-					h.OSVersion.ID = id
-					if err := h.ResolveConfigurer(); err == nil {
-						l.Warn("OS support fallback", "host", h, "id", id, "os version", h.OSVersion.String())
-						return nil
-					}
-				}
-			}
-			return err
+		logger.From(ctx).Info("reloading service manager", "host", h)
+		if err := h.Configurer.DaemonReload(h); err != nil {
+			logger.From(ctx).Warn("failed to reload service manager", "host", h, "error", err)
 		}
-		os := h.OSVersion.String()
-		l.Info("running", "host", h, "os", os)
-
 		return nil
 	})
 }

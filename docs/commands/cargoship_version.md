@@ -38,5 +38,5 @@ cargoship version [flags]
 
 ### SEE ALSO
 
-* [cargoship](/commands/cargoship/)	 - CLI for cargoship installs
+* [cargoship](./cargoship.md)	 - CLI for cargoship installs
 

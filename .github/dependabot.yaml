@@ -10,11 +10,12 @@ updates:
       k8s:
         patterns:
           - "k8s.io/*"
+  - package-ecosystem: pre-commit
+    directories:
+      - "/"
+    schedule:
+      interval: daily
   - package-ecosystem: github-actions
     directory: /
-    groups:
-      actions-organization:
-        patterns:
-          - "actions/*"
     schedule:
-      interval: weekly
+      interval: daily

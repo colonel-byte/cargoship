@@ -52,3 +52,8 @@ func init() {
 func (l *CoreOS) InstallPackage(_ os.Host, _ ...string) error {
 	return errors.New("CoreOS does not support installing packages manually")
 }
+
+// UninstallPackage uninstalls packages but will throw an error
+func (l *CoreOS) UninstallPackage(_ os.Host, _ ...string) error {
+	return errors.New("CoreOS does not support removing packages manually")
+}

@@ -96,6 +96,7 @@ func NewCargoshipCommand() *cobra.Command {
 
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.AddCommand(newInstallApplyCommand())
+	rootCmd.AddCommand(newInstallResetCommand())
 	rootCmd.AddCommand(newVersionCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)

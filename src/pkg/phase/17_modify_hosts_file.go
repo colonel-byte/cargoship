@@ -41,6 +41,11 @@ func (p *ModifyHosts) Title() string {
 	return "Updating hosts file for clusters nodes"
 }
 
+// Explanation about the current phase, used for documentation generation
+func (p *ModifyHosts) Explanation() string {
+	return "If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster"
+}
+
 // Prepare the phase
 func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = make(map[string][]string)
@@ -55,7 +60,7 @@ func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *di
 	return nil
 }
 
-// ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
+// ShouldRun is true when this phase is enabled
 func (p *ModifyHosts) ShouldRun() bool {
 	return p.Enabled
 }

@@ -29,7 +29,8 @@ cargoship COMMAND [flags]
 
 ### SEE ALSO
 
-* [cargoship apply](/commands/cargoship_apply/)	 - Creates a Zarf Distro Package from a given directory or the current director
-* [cargoship create](/commands/cargoship_create/)	 - Creates a Zarf Distro Package from a given directory or the current director
-* [cargoship version](/commands/cargoship_version/)	 - Shows the version of the running binary
+* [cargoship apply](./cargoship_apply.md)	 - Apply a config file to bootstrap and upgrade a cluster
+* [cargoship create](./cargoship_create.md)	 - Creates a Zarf Distro Package from a given directory or the current director
+* [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
+* [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

@@ -71,6 +71,7 @@ type Configurer interface {
 	TempDir(os.Host) (string, error)
 	TempFile(os.Host) (string, error)
 	Touch(os.Host, string, time.Time, ...exec.Option) error
+	UninstallPackage(os.Host, ...string) error
 	UpdateEnvironment(os.Host, map[string]string) error
 	UpdateServiceEnvironment(os.Host, string, map[string]string) error
 	UpsertFile(os.Host, string, string) error

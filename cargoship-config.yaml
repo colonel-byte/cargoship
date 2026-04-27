@@ -9,8 +9,10 @@ distro:
   oci_concurrency: 10
   create:
     output: ~/zarf
-  install:
+  apply:
     concurrency: 300
     worker_concurrency: 5
     host_update: true
     firewall_update: true
+  reset:
+    distro: rke2

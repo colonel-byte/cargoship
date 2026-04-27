@@ -39,6 +39,11 @@ func (p *PrepareHosts) Title() string {
 	return "Prepare hosts"
 }
 
+// Explanation about the current phase, used for documentation generation
+func (p *PrepareHosts) Explanation() string {
+	return "Updates the remote nodes; environment variables and sysctl"
+}
+
 // Run the phase
 func (p *PrepareHosts) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.prepareHost)
