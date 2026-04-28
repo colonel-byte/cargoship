@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/colonel-byte/cargoship/compare/v0.2.0...v0.2.1) (2026-04-28)
+
+
+### CI/CD
+
+* **release:** add cosign binary ([#28](https://github.com/colonel-byte/cargoship/issues/28)) ([6ba9cee](https://github.com/colonel-byte/cargoship/commit/6ba9ceec196459650de74b8fc501cb545407d2e8))
+
 ## [0.2.0](https://github.com/colonel-byte/cargoship/compare/v0.1.0...v0.2.0) (2026-04-27)
 
 
