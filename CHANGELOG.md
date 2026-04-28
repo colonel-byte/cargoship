@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/colonel-byte/cargoship/compare/v0.2.1...v0.2.2) (2026-04-28)
+
+
+### CI/CD
+
+* **release:** remove cosign key ([#30](https://github.com/colonel-byte/cargoship/issues/30)) ([2f0f9b0](https://github.com/colonel-byte/cargoship/commit/2f0f9b0045ec76672ac94543d64a5858751b11be))
+
 ## [0.2.1](https://github.com/colonel-byte/cargoship/compare/v0.2.0...v0.2.1) (2026-04-28)
 
 
