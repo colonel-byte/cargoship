@@ -103,17 +103,17 @@ changelog:
       - "^docs:"
       - "^test:"
 
-signs:
-  - cmd: cosign
-    signature: "${artifact}.sigstore.json"
-    args:
-      - "sign-blob"
-      - "--key=env://COSIGN_KEY"
-      - "--bundle=${signature}"
-      - "${artifact}"
-      - "--yes"
-    artifacts: checksum
-    stdin: "{{ .Env.COSIGN_PWD }}"
+# signs:
+#   - cmd: cosign
+#     signature: "${artifact}.sigstore.json"
+#     args:
+#       - "sign-blob"
+#       - "--key=env://COSIGN_KEY"
+#       - "--bundle=${signature}"
+#       - "${artifact}"
+#       - "--yes"
+#     artifacts: checksum
+#     stdin: "{{ .Env.COSIGN_PWD }}"
 
 release:
   footer: |-
