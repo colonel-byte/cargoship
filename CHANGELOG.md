@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/colonel-byte/cargoship/compare/v0.1.0...v0.2.0) (2026-04-27)
+
+
+### CI/CD
+
+* **release:** add syft action ([#24](https://github.com/colonel-byte/cargoship/issues/24)) ([3b9293e](https://github.com/colonel-byte/cargoship/commit/3b9293ee2bfba660e100fe6bcc1b8df6eb39114b))
+
 ## 0.1.0 (2026-04-27)
 
 
