@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.3](https://github.com/colonel-byte/cargoship/compare/v0.2.2...v0.2.3) (2026-04-28)
+
+
+### Features
+
+* rework cosign logic ([#34](https://github.com/colonel-byte/cargoship/issues/34)) ([9c5687f](https://github.com/colonel-byte/cargoship/commit/9c5687f6e9b28676856c4cc1fc7cd6612dfd1635))
+
+
+### Build
+
+* **deps:** Bump sigstore/cosign-installer from 4.1.0 to 4.1.1 ([#32](https://github.com/colonel-byte/cargoship/issues/32)) ([25cbcdd](https://github.com/colonel-byte/cargoship/commit/25cbcdd7b35821bf2d588ec1679b4636bfd5a19e))
+
 ## [0.2.2](https://github.com/colonel-byte/cargoship/compare/v0.2.1...v0.2.2) (2026-04-28)
 
 
