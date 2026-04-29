@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/colonel-byte/cargoship/compare/v0.2.4...v0.2.5) (2026-04-29)
+
+
+### CI/CD
+
+* **release:** rework release logic ([#37](https://github.com/colonel-byte/cargoship/issues/37)) ([6f28838](https://github.com/colonel-byte/cargoship/commit/6f2883800dabe96b516033d11a71a8714a483fae))
+
 ## [0.2.4](https://github.com/colonel-byte/cargoship/compare/v0.2.3...v0.2.4) (2026-04-29)
 
 
