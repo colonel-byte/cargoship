@@ -24,6 +24,7 @@
     }
   },
   "release-type": "go",
+  "skip-github-release": true,
   "include-component-in-tag": false,
   "sequential-calls": false
 }
