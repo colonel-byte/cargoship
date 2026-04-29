@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/colonel-byte/cargoship/compare/v0.2.3...v0.2.4) (2026-04-29)
+
+
+### CI/CD
+
+* **release:** change cosign cert ([#35](https://github.com/colonel-byte/cargoship/issues/35)) ([ce4c5be](https://github.com/colonel-byte/cargoship/commit/ce4c5beaec3b56e09216581c9661d9b294f492cc))
+
 ## [0.2.3](https://github.com/colonel-byte/cargoship/compare/v0.2.2...v0.2.3) (2026-04-28)
 
 
