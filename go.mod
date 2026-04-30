@@ -7,7 +7,7 @@ replace github.com/k0sproject/rig => github.com/colonel-byte/rig v0.21.3
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
-	github.com/Masterminds/semver/v3 v3.4.0
+	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/containerd/containerd/v2 v2.2.3
 	github.com/containerd/platforms v1.0.0-rc.4
 	github.com/creasty/defaults v1.8.0
