@@ -18,10 +18,12 @@ package lang
 const (
 	// CmdDistroCreateShort create short
 	CmdDistroCreateShort = "Creates a Zarf Distro Package from a given directory or the current director"
-	// CmdDistroApplyShort create short
+	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
-	// CmdDistroResetShort create short
+	// CmdDistroResetShort reset short
 	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for a engine"
+	// CmdDistroKubeConfigShort kube-config short
+	CmdDistroKubeConfigShort = "Get the admin kube-config for a control-plane node"
 	// CmdInstallFapolicydUpdate install flag fapolicyd
 	CmdInstallFapolicydUpdate = "Whether to update all the host nodes fapolicyd configuration."
 	// CmdInstallFirewallUpdate install flag firewall
@@ -32,6 +34,8 @@ const (
 	CmdInstallFlagConfig = "Config file used to bootstrap a cluster."
 	// CmdInstallFlagResetDistro install flag config
 	CmdInstallFlagResetDistro = "What type of distro that will be reset. Valid options are: 'rke2', 'k3s'."
+	// CmdInstallFlagKubeConfigDistro kube-config flag config
+	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
 	CmdInstallFlagConfirm = "Confirm whether if to proceed with the install"
 	// CmdInstallFlagTimeout install flag timeout

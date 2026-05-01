@@ -23,10 +23,10 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/distrocfg"
+	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Distro struct
@@ -58,7 +58,7 @@ func New(cfg *types.DistroConfig) (*Distro, error) {
 
 // LoadFromTar unpacks the given archive (any compress/format) and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opts DistroLayoutOptions) (*DistroLayout, error) {
-	dirPath, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
+	dirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}

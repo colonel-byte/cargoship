@@ -27,8 +27,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	zarf "github.com/zarf-dev/zarf/src/cmd"
-	zconfig "github.com/zarf-dev/zarf/src/config"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -97,15 +95,16 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.AddCommand(newInstallApplyCommand())
 	rootCmd.AddCommand(newInstallResetCommand())
+	rootCmd.AddCommand(newInstallKubeConfigCommand())
 	rootCmd.AddCommand(newVersionCommand())
 
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", v.GetString(zarf.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(zarf.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", v.GetString(types.LogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(types.LogFormat), lang.RootCmdFlagLogFormat)
 	rootCmd.PersistentFlags().StringVar(&Timeout, RootTimeout, v.GetString(RootTimeout), lang.CmdInstallFlagTimeout)
-	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(zarf.VNoColor), lang.RootCmdFlagNoColor)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), zarf.VZarfCache), zlang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), zarf.VTmpDir), zlang.RootCmdFlagTempDir)
-	rootCmd.PersistentFlags().StringVarP(&zconfig.CLIArch, "architecture", "a", v.GetString(zarf.VArchitecture), zlang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(types.NoColor), lang.RootCmdFlagNoColor)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), types.ZarfCache), zlang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), types.TmpDir), zlang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(types.Architecture), zlang.RootCmdFlagArch)
 
 	return rootCmd
 }
@@ -153,7 +152,7 @@ func init() {
 }
 
 func parsePath(ctx context.Context, key string) string {
-	value, err := zconfig.GetAbsHomePath(v.GetString(key))
+	value, err := config.GetAbsHomePath(v.GetString(key))
 	if err != nil {
 		logger.From(ctx).Debug("error when trying to get user path", "error", err)
 		return v.GetString(key)

@@ -21,12 +21,11 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
+	"github.com/colonel-byte/cargoship/src/pkg/lint"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
-	zcmd "github.com/zarf-dev/zarf/src/cmd"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -59,7 +58,7 @@ func newPackageCreateCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(types.DistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
-	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", zcmd.GetStringSlice(v, types.DistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, types.DistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(types.DistroCreateSkipSbom), zlang.CmdPackageCreateFlagSkipSbom)
 
 	v.SetDefault(types.DistroCreateOutput, ".")
@@ -86,7 +85,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 
 	disPath, err := distro.Create(ctx, basePath, o.output, opt)
 	if lintErr, ok := errors.AsType[*lint.LintError](err); ok {
-		zcmd.PrintFindings(ctx, lintErr)
+		PrintFindings(ctx, lintErr)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to create distro package: %w", err)

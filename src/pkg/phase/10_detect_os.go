@@ -44,11 +44,11 @@ func (p *DetectOS) Run(ctx context.Context) error {
 
 		if err := h.ResolveConfigurer(); err != nil {
 			if h.OSVersion.IDLike != "" {
-				l.Debug("trying to find a fallback OS support module", "host", h, "os version", h.OSVersion.String(), "like", h.OSVersion.IDLike)
+				l.Debug("trying to find a fallback OS support module", "host", h, "osVersion", h.OSVersion.String(), "like", h.OSVersion.IDLike)
 				for id := range strings.SplitSeq(h.OSVersion.IDLike, " ") {
 					h.OSVersion.ID = id
 					if err := h.ResolveConfigurer(); err == nil {
-						l.Warn("OS support fallback", "host", h, "id", id, "os version", h.OSVersion.String())
+						l.Warn("OS support fallback", "host", h, "id", id, "osVersion", h.OSVersion.String())
 						return nil
 					}
 				}

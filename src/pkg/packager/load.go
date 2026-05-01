@@ -25,8 +25,8 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
+	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -52,7 +52,7 @@ func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.D
 	// }
 
 	// Prepare a temp workspace
-	tmpDir, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
@@ -36,7 +37,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	zutils "github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -54,7 +54,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
 
-	buildPath, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
+	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			if err != nil {
 				return fmt.Errorf(zlang.ErrFileNameExtract, file.Source, err)
 			}
-			tmpDir, err := zutils.MakeTempDir(config.CommonOptions.TempDirectory)
+			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
 				return err
 			}
@@ -166,7 +166,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 			// If the file is an archive, download it to the componentPath.Temp
-			if err := zutils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
+			if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
 				return fmt.Errorf(zlang.ErrDownloading, file.Source, err)
 			}
 			decompressOpts := archive.DecompressOpts{
@@ -177,7 +177,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 				return fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
 			}
 		} else {
-			if err := zutils.DownloadToFile(ctx, file.Source, dst); err != nil {
+			if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
 				return fmt.Errorf(zlang.ErrDownloading, file.Source, err)
 			}
 		}

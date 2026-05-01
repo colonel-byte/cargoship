@@ -69,7 +69,7 @@ func NewApply(opts ApplyOptions) *Apply {
 	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
 
 	lockPhase := &phase.Lock{}
-	apply := &Apply{
+	return &Apply{
 		ApplyOptions: opts,
 		Phases: phase.Phases{
 			&phase.Connect{},
@@ -123,13 +123,16 @@ func NewApply(opts ApplyOptions) *Apply {
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
+			&phase.KubeConfig{
+				Distro:    d,
+				ClusterID: opts.Manager.Config.Metadata.Name,
+				Enabled:   true,
+			},
 
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
 	}
-
-	return apply
 }
 
 // Run the actions

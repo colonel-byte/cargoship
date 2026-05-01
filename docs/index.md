@@ -1,14 +1,15 @@
 ## Index
 automatically generated document for the `cargoship` command
-  
+
 ### actions
-- [apply phases](docs/actions/apply.md)
-- [reset phases](docs/actions/reset.md)
-  
+- [apply phases](actions/apply.md)
+- [kube-config phases](actions/kube-config.md)
+- [reset phases](actions/reset.md)
+
 ### commands
-- [cargoship](docs/commands/cargoship.md)
-- [cargoship apply](docs/commands/cargoship_apply.md)
-- [cargoship create](docs/commands/cargoship_create.md)
-- [cargoship reset](docs/commands/cargoship_reset.md)
-- [cargoship version](docs/commands/cargoship_version.md)
-  
+- [cargoship](commands/cargoship.md)
+- [cargoship apply](commands/cargoship_apply.md)
+- [cargoship create](commands/cargoship_create.md)
+- [cargoship kube-config](commands/cargoship_kube-config.md)
+- [cargoship reset](commands/cargoship_reset.md)
+- [cargoship version](commands/cargoship_version.md)

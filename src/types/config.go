@@ -55,6 +55,8 @@ type DistroOptions struct {
 	HostUpdate bool `json:"host_update,omitempty" jsonschema:"default=true"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once
 	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
+	// Type of distro we are interacting with
+	Type string `json:"type,omitempty" jsonschema:"enum=rke2,enum=k3s"`
 }
 
 // DistroCreateOptions holds the values for the `.distro.create` section of the config file
@@ -77,7 +79,4 @@ type DistroDeployOptions struct {
 type ApplyOptions struct{}
 
 // ResetOptions holds the values for the `.distro.reset` section of the config file
-type ResetOptions struct {
-	// Distro that is used to determine how to remove files
-	Distro string `json:"distro,omitempty" jsonschema:"enum=rke2,enum=k3s"`
-}
+type ResetOptions struct{}
