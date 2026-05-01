@@ -108,7 +108,8 @@ changelog:
       - "^test:"
 
 signs:
-  - cmd: cosign
+  - id: checksum
+    cmd: cosign
     signature: "${artifact}.sigstore.json"
     args:
       - "sign-blob"
@@ -117,6 +118,17 @@ signs:
       - "${artifact}"
       - "--yes"
     artifacts: checksum
+    stdin: "{{ .Env.COSIGN_PASSWORD }}"
+  - id: archive
+    cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - "sign-blob"
+      - "--key=env://COSIGN_PRIVATE_KEY"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: archive
     stdin: "{{ .Env.COSIGN_PASSWORD }}"
 
 release:
