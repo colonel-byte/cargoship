@@ -16,18 +16,20 @@
 package types
 
 const (
-	// ZarfCache path in config
-	ZarfCache = "zarf_cache"
-	// TmpDir path in config
-	TmpDir = "tmp_dir"
+	// LoggingLevelDefault path in config
+	LoggingLevelDefault = "info"
 	// LogLevel path in config
 	LogLevel = "log_level"
 	// LogFormat path in config
 	LogFormat = "log_format"
 	// NoColor path in config
 	NoColor = "no_color"
-	// LoggingLevelDefault path in config
-	LoggingLevelDefault = "info"
+	// Architecture path in config
+	Architecture = "architecture"
+	// ZarfCache path in config
+	ZarfCache = "zarf_cache"
+	// TmpDir path in config
+	TmpDir = "tmp_dir"
 	// DistroCreateOutput path in config
 	DistroCreateOutput = "distro.create.output"
 	// DistroOCIConcurrency path in config
@@ -46,6 +48,6 @@ const (
 	DistroUpdateHost = "distro.host_update"
 	// DistroUpdateFirewall path in config
 	DistroUpdateFirewall = "distro.firewall_update"
-	// DistroResetDistro path in config
-	DistroResetDistro = "distro.reset.distro"
+	// DistroType path in config
+	DistroType = "distro.type"
 )

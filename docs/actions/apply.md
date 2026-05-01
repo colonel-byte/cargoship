@@ -1,6 +1,6 @@
 ## apply phases
 1. Connect to hosts
-    - Connects to a remote host via github.com/k0sproject/rig
+    - Connects to a remote host via `github.com/k0sproject/rig`
 1. Detect host operating systems
     - Gathers information about the remote host, including: OS and OS version
 1. Acquire exclusive host lock
@@ -41,6 +41,8 @@
     - If the remote node is a controller and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node sequentially
 1. Upgrade Worker
     - If the remote node is a worker and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node by the set concurrency limit
+1. Updating kubeconfig file with the current cluster
+    - If enabled, this will update the local kubeconfig with the admin creds for the current distro
 1. Release exclusive host lock
     - Deletes the lock file from each node, allowing other `cargoships` to run
 1. Disconnect from hosts

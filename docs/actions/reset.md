@@ -1,6 +1,6 @@
 ## reset phases
 1. Connect to hosts
-    - Connects to a remote host via github.com/k0sproject/rig
+    - Connects to a remote host via `github.com/k0sproject/rig`
 1. Detect host operating systems
     - Gathers information about the remote host, including: OS and OS version
 1. Acquire exclusive host lock

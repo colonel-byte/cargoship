@@ -231,7 +231,7 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 	for i, f := range files {
 		logger.From(ctx).Debug("file", "num", i+1, "count", len(files))
 		if err := p.uploadFile(ctx, h, &f); err != nil {
-			logger.From(ctx).Warn("failed to upload", "file", f, "host", h)
+			logger.From(ctx).Warn("failed to upload", "file", f.Name, "host", h, "error", err)
 		}
 		if f.Executable {
 			if err := h.Exec(fmt.Sprintf("chmod +x %s", f.Target), exec.Sudo(h)); err != nil {
@@ -243,7 +243,7 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 	for i, f := range p.imgFiles {
 		logger.From(ctx).Debug("image", "num", i+1, "count", len(p.imgFiles))
 		if err := p.uploadFile(ctx, h, &f); err != nil {
-			logger.From(ctx).Warn("failed to upload", "file", f, "host", h)
+			logger.From(ctx).Warn("failed to upload", "file", f.Name, "host", h, "error", err)
 		}
 	}
 

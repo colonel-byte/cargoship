@@ -16,8 +16,8 @@ package cmd
 
 import (
 	"context"
-	"errors"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
@@ -39,6 +39,7 @@ const (
 
 type installKubeConfigOptions struct {
 	InstallCommon
+	distro string
 }
 
 func newInstallKubeConfigCommand() *cobra.Command {
@@ -55,7 +56,7 @@ func newInstallKubeConfigCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.config, InstallKubeConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().BoolVar(&o.confirm, InstallKubeConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().StringVarP(&o.distro, InstallKubeDistro, "D", v.GetString(types.DistroType), lang.CmdInstallFlagKubeConfigDistro)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -77,27 +78,26 @@ func newInstallKubeConfigCommand() *cobra.Command {
 func (o *installKubeConfigOptions) run(ctx context.Context, _ []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
-		l.Warn("please include the --confirm argument")
-		return errors.New("pass confirm argument")
-	}
-
 	if err := riglogger.RigLogger(ctx); err != nil {
 		l.Warn("failed to configure logger", "err", err)
 		return err
 	}
 
-	cluster, err := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
+	clusterDef, err := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
 	if err != nil {
 		return err
 	}
 
+	clusterDef.Spec.Hosts = cluster.ZarfHosts{
+		clusterDef.Spec.Hosts.Controllers().First(),
+	}
+
 	configOpts := action.KubeConfigOptions{
 		Manager: &phase.Manager{
-			DistroID:          "rke2",
+			DistroID:          o.distro,
 			Concurrency:       o.concurrency,
 			ConcurrentUploads: o.concurrency,
-			Config:            &cluster,
+			Config:            &clusterDef,
 		},
 	}
 

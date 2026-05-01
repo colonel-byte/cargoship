@@ -71,7 +71,7 @@ func newInstallResetCommand() *cobra.Command {
 
 	cmd.Flags().IntVarP(&o.concurrency, InstallResetConcurrency, "c", v.GetInt(types.DistroConcurrency), lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallResetConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallResetDistro, "D", v.GetString(types.DistroResetDistro), lang.CmdInstallFlagResetDistro)
+	cmd.Flags().StringVarP(&o.distro, InstallResetDistro, "D", v.GetString(types.DistroType), lang.CmdInstallFlagResetDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallResetConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVarP(&o.hosts, InstallResetUpdateHost, "H", v.GetBool(types.DistroUpdateHost), lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallResetUpdateFirewall, "F", v.GetBool(types.DistroUpdateFirewall), lang.CmdInstallFirewallUpdate)

@@ -114,7 +114,7 @@ func (p *PrepareHosts) updateSysctls(ctx context.Context, h *cluster.ZarfHost) e
 	for k := range keys {
 		err := h.Configurer.SetSysctlValue(h, keys[k], p.GetDistro().Spec.Config.OS.Sysctl[keys[k]])
 		if err != nil {
-			logger.From(ctx).Warn("got error when setting sysctl value", "error", err)
+			logger.From(ctx).Warn("got error when setting sysctl value", "host", h, "key", keys[k], "error", err)
 		} else {
 			logger.From(ctx).Debug("updating sysctls", "host", h, "key", keys[k])
 		}

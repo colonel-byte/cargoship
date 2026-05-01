@@ -18,14 +18,14 @@ cargoship kube-config [flags]
 
 ```
       --config string   Config file used to bootstrap a cluster.
-      --confirm         Confirm whether if to proceed with the install
+  -D, --distro string   What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'.
   -h, --help            help for kube-config
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages (default "amd64")
+  -a, --architecture string   Architecture for OCI images and Zarf packages
   -L, --log-format string     Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string      Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color              Disable terminal color codes in logging and stdout prints.

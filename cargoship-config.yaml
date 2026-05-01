@@ -6,6 +6,7 @@ tmp_dir: /tmp
 zarf_cache: ~/.zarf
 timeout: 20m
 distro:
+  type: rke2
   oci_concurrency: 10
   concurrency: 300
   worker_concurrency: 5
@@ -14,5 +15,3 @@ distro:
   fapolicy: true
   create:
     output: ~/zarf
-  reset:
-    distro: rke2

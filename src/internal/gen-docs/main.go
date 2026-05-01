@@ -102,6 +102,11 @@ func phaseApply() error {
 	apply := action.NewApply(action.ApplyOptions{
 		Manager: &phase.Manager{
 			DistroID: distrocfg.DistroRKE2,
+			Config: &cluster.ZarfCluster{
+				Metadata: cluster.ZarfClusterMetadata{
+					Name: "gen-docs",
+				},
+			},
 		},
 	})
 

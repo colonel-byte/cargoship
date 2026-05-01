@@ -27,7 +27,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	zconfig "github.com/zarf-dev/zarf/src/config"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -105,7 +104,7 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(types.NoColor), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), types.ZarfCache), zlang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), types.TmpDir), zlang.RootCmdFlagTempDir)
-	rootCmd.PersistentFlags().StringVarP(&zconfig.CLIArch, "architecture", "a", "amd64", zlang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(types.Architecture), zlang.RootCmdFlagArch)
 
 	return rootCmd
 }
@@ -153,7 +152,7 @@ func init() {
 }
 
 func parsePath(ctx context.Context, key string) string {
-	value, err := zconfig.GetAbsHomePath(v.GetString(key))
+	value, err := config.GetAbsHomePath(v.GetString(key))
 	if err != nil {
 		logger.From(ctx).Debug("error when trying to get user path", "error", err)
 		return v.GetString(key)

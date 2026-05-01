@@ -14,7 +14,12 @@
 
 package config
 
-import "github.com/colonel-byte/cargoship/src/types"
+import (
+	"os"
+	"strings"
+
+	"github.com/colonel-byte/cargoship/src/types"
+)
 
 const (
 	// UnsetCLIVersion is an unset version for when building locally
@@ -24,6 +29,20 @@ const (
 var (
 	// CLIVersion is the version of the cli
 	CLIVersion = UnsetCLIVersion
+	// CLIArch is the computer architecture of the device executing the CLI commands
+	CLIArch string
 	// CommonOptions is the distro config
 	CommonOptions types.DistroConfig
 )
+
+// GetAbsHomePath replaces ~ with the absolute path to a user's home dir
+func GetAbsHomePath(path string) (string, error) {
+	if strings.HasPrefix(path, "~") {
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return strings.Replace(path, "~", homePath, 1), nil
+	}
+	return path, nil
+}

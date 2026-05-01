@@ -46,10 +46,13 @@ func NewKubeConfig(opts KubeConfigOptions) *KubeConfig {
 	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
 
 	lockPhase := &phase.Lock{}
-	config := &KubeConfig{
+	return &KubeConfig{
 		KubeConfigOptions: opts,
 		Phases: phase.Phases{
 			&phase.Connect{},
+			&phase.DetectOS{},
+			lockPhase,
+			&phase.GatherFacts{},
 			&phase.KubeConfig{
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
@@ -59,8 +62,6 @@ func NewKubeConfig(opts KubeConfigOptions) *KubeConfig {
 			&phase.Disconnect{},
 		},
 	}
-
-	return config
 }
 
 // Run the actions

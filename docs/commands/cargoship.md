@@ -17,7 +17,7 @@ cargoship COMMAND [flags]
 ### Options
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages (default "amd64")
+  -a, --architecture string   Architecture for OCI images and Zarf packages
   -h, --help                  help for cargoship
   -L, --log-format string     Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string      Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
