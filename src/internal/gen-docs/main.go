@@ -37,6 +37,8 @@ func main() {
 	rootCmd := cmd.NewCargoshipCommand()
 	rootCmd.DisableAutoGenTag = true
 
+	var builder strings.Builder
+
 	if err := os.RemoveAll("./docs"); err != nil {
 		panic(err)
 	}
@@ -62,7 +64,13 @@ func main() {
 		markdown.WithDescription([]string{
 			"automatically generated document for the `cargoship` command",
 		}),
+		markdown.WithWriter(&builder),
 	); err != nil {
+		panic(err)
+	}
+
+	finalString := strings.ReplaceAll(strings.ReplaceAll(builder.String(), "docs/", ""), "  ", "")
+	if err := os.WriteFile("docs/index.md", []byte(finalString), 0644); err != nil {
 		panic(err)
 	}
 }
