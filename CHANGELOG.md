@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.5](https://github.com/colonel-byte/cargoship/compare/v0.2.4...v0.2.5) (2026-05-01)
+
+
+### CI/CD
+
+* **release:** expand release logic ([10eb37f](https://github.com/colonel-byte/cargoship/commit/10eb37f3c65514159d09cec7b37c18e46f20f33e))
+
+
+### Build
+
+* **deps:** Bump github.com/Masterminds/semver/v3 from 3.4.0 to 3.5.0 ([#42](https://github.com/colonel-byte/cargoship/issues/42)) ([945d93b](https://github.com/colonel-byte/cargoship/commit/945d93bfc33732157960fbc89571a0e72e81183e))
+
 ## [0.2.4](https://github.com/colonel-byte/cargoship/compare/v0.2.3...v0.2.4) (2026-04-29)
 
 
