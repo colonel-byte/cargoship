@@ -1,0 +1,9 @@
+## kube-config phases
+1. Connect to hosts
+    - Connects to a remote host via github.com/k0sproject/rig
+1. Updating kubeconfig file with the current cluster
+    - If enabled, this will update the local kubeconfig with the admin creds for the current distro
+1. Release exclusive host lock
+    - Deletes the lock file from each node, allowing other `cargoships` to run
+1. Disconnect from hosts
+    - Deletes any lingering temp files and disconnects from the remote node

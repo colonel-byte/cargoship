@@ -17,7 +17,7 @@ cargoship COMMAND [flags]
 ### Options
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages
+  -a, --architecture string   Architecture for OCI images and Zarf packages (default "amd64")
   -h, --help                  help for cargoship
   -L, --log-format string     Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string      Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
@@ -31,6 +31,7 @@ cargoship COMMAND [flags]
 
 * [cargoship apply](./cargoship_apply.md)	 - Apply a config file to bootstrap and upgrade a cluster
 * [cargoship create](./cargoship_create.md)	 - Creates a Zarf Distro Package from a given directory or the current director
+* [cargoship kube-config](./cargoship_kube-config.md)	 - Get the admin kube-config for a control-plane node
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

@@ -22,18 +22,16 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
-	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CreateOptions are the optional parameters to create
 type CreateOptions struct {
-	RegistryOverrides []images.RegistryOverride
-	OCIConcurrency    int
-	CachePath         string
-	IsInteractive     bool
-	SkipSBOM          bool
+	OCIConcurrency int
+	CachePath      string
+	IsInteractive  bool
+	SkipSBOM       bool
 	types.RemoteOptions
 }
 
@@ -54,10 +52,9 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	}
 
 	assembleOpt := layout.AssembleOptions{
-		RegistryOverrides: opts.RegistryOverrides,
-		RemoteOptions:     opts.RemoteOptions,
-		OCIConcurrency:    opts.OCIConcurrency,
-		CachePath:         opts.CachePath,
+		RemoteOptions:  opts.RemoteOptions,
+		OCIConcurrency: opts.OCIConcurrency,
+		CachePath:      opts.CachePath,
 		// Don't have sbom logic yet....
 		SkipSBOM: true,
 	}

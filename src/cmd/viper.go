@@ -23,10 +23,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/viper"
-	zarf "github.com/zarf-dev/zarf/src/cmd"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 var (
@@ -79,15 +77,26 @@ func initViper() error {
 }
 
 func setDefaults() {
-	v.SetDefault(zarf.VLogLevel, types.LoggingLevelDefault)
-	v.SetDefault(zarf.VZarfCache, config.ZarfDefaultCachePath)
-	v.SetDefault(zarf.VLogFormat, string(logger.FormatConsole))
-	v.SetDefault(zarf.VTmpDir, "/tmp")
-	v.SetDefault(zarf.VNoColor, false)
+	v.SetDefault(types.LogLevel, types.LoggingLevelDefault)
+	v.SetDefault(types.ZarfCache, config.ZarfDefaultCachePath)
+	v.SetDefault(types.LogFormat, string(logger.FormatConsole))
+	v.SetDefault(types.TmpDir, "/tmp")
+	v.SetDefault(types.NoColor, false)
 
-	v.SetDefault(types.DistroOCIConcurrency, zoci.DefaultConcurrency)
+	v.SetDefault(types.DistroOCIConcurrency, 6)
 	v.SetDefault(types.DistroCreateSkipSbom, false)
 	v.SetDefault(types.DistroConcurrency, 30)
 	v.SetDefault(types.DistroUpdateHost, false)
 	v.SetDefault(types.DistroUpdateFirewall, false)
+}
+
+// GetStringSlice returns a string slice from viper
+// it consistently returns expected results across flags and environment variables
+// https://github.com/spf13/viper/issues/380
+func GetStringSlice(v *viper.Viper, key string) []string {
+	var result []string
+	if err := v.UnmarshalKey(key, &result); err != nil {
+		return nil
+	}
+	return result
 }

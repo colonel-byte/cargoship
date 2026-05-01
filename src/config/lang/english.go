@@ -18,10 +18,12 @@ package lang
 const (
 	// CmdDistroCreateShort create short
 	CmdDistroCreateShort = "Creates a Zarf Distro Package from a given directory or the current director"
-	// CmdDistroApplyShort create short
+	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
-	// CmdDistroResetShort create short
+	// CmdDistroResetShort reset short
 	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for a engine"
+	// CmdDistroKubeConfigShort kube-config short
+	CmdDistroKubeConfigShort = "Get the admin kube-config for a control-plane node"
 	// CmdInstallFapolicydUpdate install flag fapolicyd
 	CmdInstallFapolicydUpdate = "Whether to update all the host nodes fapolicyd configuration."
 	// CmdInstallFirewallUpdate install flag firewall

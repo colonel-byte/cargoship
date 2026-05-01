@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/cmd"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
@@ -51,8 +52,9 @@ func main() {
 		panic(err)
 	}
 
-	phaseApply() //nolint:errcheck
-	phaseReset() //nolint:errcheck
+	phaseApply()      //nolint:errcheck
+	phaseReset()      //nolint:errcheck
+	phaseKubeConfig() //nolint:errcheck
 
 	if err := markdown.GenerateIndex(
 		"./docs",
@@ -150,6 +152,42 @@ func phaseReset() error {
 	resetDoc.H2("reset phases")
 
 	for _, p := range reset.Phases {
+		phaseComment(resetDoc, p)
+	}
+
+	resetDoc.PlainTextf("")
+
+	return resetDoc.Build()
+}
+
+func phaseKubeConfig() error {
+	kube := action.NewKubeConfig(action.KubeConfigOptions{
+		Manager: &phase.Manager{
+			DistroID: distrocfg.DistroRKE2,
+			Config: &cluster.ZarfCluster{
+				Metadata: cluster.ZarfClusterMetadata{
+					Name: "gen-docs",
+				},
+			},
+		},
+	})
+
+	fmt.Println("docs/actions/kube-config.md")
+	f, err := os.Create("docs/actions/kube-config.md")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	resetDoc := markdown.NewMarkdown(f)
+
+	resetDoc.H2("kube-config phases")
+
+	for _, p := range kube.Phases {
 		phaseComment(resetDoc, p)
 	}
 

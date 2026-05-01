@@ -27,7 +27,7 @@ cargoship version [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages
+  -a, --architecture string   Architecture for OCI images and Zarf packages (default "amd64")
   -L, --log-format string     Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string      Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color              Disable terminal color codes in logging and stdout prints.

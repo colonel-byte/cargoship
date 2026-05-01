@@ -16,6 +16,16 @@
 package types
 
 const (
+	// ZarfCache path in config
+	ZarfCache = "zarf_cache"
+	// TmpDir path in config
+	TmpDir = "tmp_dir"
+	// LogLevel path in config
+	LogLevel = "log_level"
+	// LogFormat path in config
+	LogFormat = "log_format"
+	// NoColor path in config
+	NoColor = "no_color"
 	// LoggingLevelDefault path in config
 	LoggingLevelDefault = "info"
 	// DistroCreateOutput path in config
