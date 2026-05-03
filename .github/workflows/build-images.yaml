@@ -1,0 +1,86 @@
+---
+name: Publish Images
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every Monday
+    - cron: '0 0 * * 1'
+  pull_request:
+    paths:
+      - 'src/internal/container/**/Dockerfile'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/internal/container/**/Dockerfile'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      tag: ${{ steps.tag.outputs.TAG }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Determine Build Tag
+        id: tag
+        env:
+          sha: ${{ github.sha }}
+          job: ${{ github.run_number }}
+        run: |-
+          echo "TAG=$(echo $job-${sha:0:8})"
+          echo "TAG=$(echo $job-${sha:0:8})" >> $GITHUB_OUTPUT
+
+      - id: set-matrix
+        env:
+          IMG_DIR: src/internal/container
+        run: |-
+          echo "matrix={\"include\":[$(ls -d src/internal/container/* | awk -F/ '{printf "%s{\"img\":\"%s\", \"name\": \"%s\" }", sep, $0, $(NF); sep=","} END {print ""}')]}"
+          echo "matrix={\"include\":[$(ls -d src/internal/container/* | awk -F/ '{printf "%s{\"img\":\"%s\", \"name\": \"%s\" }", sep, $0, $(NF); sep=","} END {print ""}')]}" >> $GITHUB_OUTPUT
+
+  release:
+    needs:
+      - setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    strategy:
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Build and push
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: ${{ matrix.img }}
+          push: true
+          tags: |-
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/bootloose/${{ matrix.name }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/bootloose/${{ matrix.name }}:${{ needs.setup.outputs.tag }}
+          no-cache: true
