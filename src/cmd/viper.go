@@ -60,17 +60,21 @@ func initViper() error {
 
 	setDefaults()
 
-	log, err := logger.New(logger.ConfigDefault())
+	log, err := logger.New(logger.Config{
+		Level:       logger.Info,
+		Format:      logger.FormatConsole,
+		Destination: os.Stdout,
+		Color:       true,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
 	vConfigError = v.ReadInConfig()
 	if vConfigError != nil {
-		var configErr *viper.ConfigFileNotFoundError
 		// Config file not found; ignore
-		if errors.As(vConfigError, configErr) {
-			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", vConfigError.Error())
+		if pathError, ok := errors.AsType[*viper.ConfigFileNotFoundError](vConfigError); ok {
+			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", pathError)
 		}
 	}
 	return nil

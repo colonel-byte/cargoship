@@ -129,9 +129,6 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	if !vInitialized {
 		return nil
 	}
-	if vConfigError != nil {
-		return fmt.Errorf("unable to load config file: %w", vConfigError)
-	}
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
 		l.Info("using config file", "location", cfgFile)
 	}
