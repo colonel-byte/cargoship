@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM fedora:44
+FROM docker.io/library/fedora:44
 
 ENV container docker
 

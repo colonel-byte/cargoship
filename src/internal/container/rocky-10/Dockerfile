@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker.io/rockylinux/rockylinux:9-ubi
+FROM docker.io/rockylinux/rockylinux:10-ubi
 
 ENV container docker
 

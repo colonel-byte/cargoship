@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM debian:trixie-slim
+FROM docker.io/library/debian:trixie-slim
 
 ENV container docker
 

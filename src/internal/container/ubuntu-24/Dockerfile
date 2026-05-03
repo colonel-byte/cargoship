@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:24.04
+FROM docker.io/library/ubuntu:24.04
 
 ENV container docker
 
