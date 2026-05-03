@@ -32,6 +32,7 @@ jobs:
           sha: ${{ github.sha }}
           job: ${{ github.run_number }}
         run: |-
+          echo "TAG=$(echo $job-${sha:0:8})"
           echo "TAG=$(echo $job-${sha:0:8})" >> $GITHUB_OUTPUT
 
       - id: set-matrix
@@ -73,6 +74,6 @@ jobs:
           context: ${{ matrix.img }}
           push: true
           tags: |-
-            ghcr.io/${{ github.event.repository.name }}/bootloose/${{ matrix.name }}:latest
-            ghcr.io/${{ github.event.repository.name }}/bootloose/${{ matrix.name }}:${{ needs.setup.outputs.tag }}
+            ghcr.io/${{ github.event.repository.name }}/cargoship/bootloose/${{ matrix.name }}:latest
+            ghcr.io/${{ github.event.repository.name }}/cargoship/bootloose/${{ matrix.name }}:${{ needs.setup.outputs.tag }}
           no-cache: true
