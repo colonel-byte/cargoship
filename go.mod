@@ -2,8 +2,10 @@ module github.com/colonel-byte/cargoship
 
 go 1.26.1
 
-// replaced well waiting for https://github.com/k0sproject/rig/pull/267
-replace github.com/k0sproject/rig => github.com/colonel-byte/rig v0.21.3
+// replaced well waiting for the following pr's:
+// - https://github.com/k0sproject/rig/pull/327
+// - https://github.com/k0sproject/rig/pull/329
+replace github.com/k0sproject/rig => github.com/colonel-byte/rig v0.30.0
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0

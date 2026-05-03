@@ -97,10 +97,6 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 		target = filepath.Join(f.Target, filepath.Base(f.LocalSource.Path))
 	}
 
-	if err := h.Touch(target, time.Time{}, exec.Sudo(h)); err != nil {
-		return err
-	}
-
 	if h.FileChanged(src, target) {
 		err := p.Wet(h, fmt.Sprintf("upload file %s => %s", src, target), func() error {
 			stat, err := os.Stat(src)
