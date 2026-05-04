@@ -1,4 +1,10 @@
+# Copyright 2023 bootloose authors
 # Copyright 2026 colonel-byte
+#
+# This file contains code derived from bootloose:
+# https://github.com/k0sproject/bootloose
+#
+# Modifications Copyright 2026 colonel-byte.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
