@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.0](https://github.com/colonel-byte/cargoship/compare/v0.2.5...v0.3.0) (2026-05-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* add proper code attribution ([#55](https://github.com/colonel-byte/cargoship/issues/55))
+
+### Features
+
+* add command to get kubeconfig ([#41](https://github.com/colonel-byte/cargoship/issues/41)) ([ae53fdf](https://github.com/colonel-byte/cargoship/commit/ae53fdf31401b6062552f2373f42e24bc678c118))
+* add proper code attribution ([#55](https://github.com/colonel-byte/cargoship/issues/55)) ([e971e89](https://github.com/colonel-byte/cargoship/commit/e971e89a38a7422a64f803d042baec488ef8a366))
+* address panic when no config is found ([#51](https://github.com/colonel-byte/cargoship/issues/51)) ([ff86d1a](https://github.com/colonel-byte/cargoship/commit/ff86d1a3cd333fdcedf3332bcfd61063ec57da0d))
+* update rig fork ([#49](https://github.com/colonel-byte/cargoship/issues/49)) ([71b9124](https://github.com/colonel-byte/cargoship/commit/71b9124e516bb77ec727800f331b6ab8a4dc20f0))
+
+
+### CI/CD
+
+* **e2e:** add image files for testing cargoship ([#52](https://github.com/colonel-byte/cargoship/issues/52)) ([9d02b45](https://github.com/colonel-byte/cargoship/commit/9d02b4529c77ffe91b0fd3d546d123885f814ed0))
+
+
+### Build
+
+* **deps:** Bump github.com/zarf-dev/zarf from 0.75.0 to 0.75.1 ([#46](https://github.com/colonel-byte/cargoship/issues/46)) ([57327f8](https://github.com/colonel-byte/cargoship/commit/57327f88337bfa69ad758dc5e6dd08df1c876d7e))
+* **deps:** Bump https://github.com/golangci/golangci-lint from v2.11.4 to 2.12.1 ([#45](https://github.com/colonel-byte/cargoship/issues/45)) ([d791dd0](https://github.com/colonel-byte/cargoship/commit/d791dd0686a6188e6614dfc3096364f35f187680))
+* **deps:** Bump https://github.com/golangci/golangci-lint from v2.12.1 to 2.12.2 ([#56](https://github.com/colonel-byte/cargoship/issues/56)) ([8d00775](https://github.com/colonel-byte/cargoship/commit/8d007757e47c38a91f1d63d442f8aba90aecd7ec))
+
 ## [0.2.5](https://github.com/colonel-byte/cargoship/compare/v0.2.4...v0.2.5) (2026-05-01)
 
 
