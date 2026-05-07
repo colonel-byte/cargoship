@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package types is a little bit of a hacky way to generate the cargo-ship-config jsonschema
 package types
 
 const (
