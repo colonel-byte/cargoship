@@ -1,0 +1,39 @@
+---
+name: Dagger builds
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths-ignore:
+      - "*.md"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Dagger Version
+        id: dagger_version
+        run: |-
+          echo "version=$(jq -r '.engineVersion' dagger.json)"
+          echo "version=$(jq -r '.engineVersion' dagger.json)" >> $GITHUB_OUTPUT
+
+      - name: Create dirs
+        run: |-
+          mkdir -p bin
+
+      - name: Build all versions
+        uses: dagger/dagger-for-github@27b130bf0f79a7f6fbbbe0fbca6760dc9bb40a77 # v8.4.1
+        with:
+          version: ${{ steps.dagger_version.outputs.version }}
+          verb: call
+          args: build
