@@ -4,7 +4,6 @@
 .scratch/
 .tool-versions
 .vagrant
-.vscode/
 *.bak
 *.key
 *.crt
@@ -16,12 +15,16 @@
 *.vbox
 *.zst
 *.zim
-build
+build/
+bin/
 .netlify
 !**/testdata/**
 coverage.out
 dist
 images/
+target/
+cluster-key
+cluster-key.pub
 
 # Added by goreleaser init:
 dist/
