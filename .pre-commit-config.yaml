@@ -48,4 +48,4 @@ repos:
         name: generate-docs
         language: system
         pass_filenames: false
-        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml go run ./src/internal/gen-docs"
+        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml go run ./src/internal/gendocs"
