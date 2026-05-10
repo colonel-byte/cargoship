@@ -1,10 +1,4 @@
-// Copyright 2021 zarf authors
 // Copyright 2026 colonel-byte
-//
-// This file contains code derived from zarf:
-// https://github.com/zarf-dev/zarf
-//
-// Modifications Copyright 2026 colonel-byte.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +22,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/types"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -109,4 +104,32 @@ func GetStringSlice(v *viper.Viper, key string) []string {
 		return nil
 	}
 	return result
+}
+
+type outputFormat string
+
+const (
+	outputJSON outputFormat = "json"
+	outputYAML outputFormat = "yaml"
+)
+
+// must implement this interface for cmd.Flags().VarP
+var _ pflag.Value = (*outputFormat)(nil)
+
+func (o *outputFormat) Set(s string) error {
+	switch s {
+	case string(outputJSON), string(outputYAML):
+		*o = outputFormat(s)
+		return nil
+	default:
+		return fmt.Errorf("invalid output format: %s", s)
+	}
+}
+
+func (o *outputFormat) String() string {
+	return string(*o)
+}
+
+func (o *outputFormat) Type() string {
+	return "outputFormat"
 }
