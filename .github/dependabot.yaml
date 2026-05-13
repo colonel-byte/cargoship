@@ -5,6 +5,7 @@ updates:
     directories:
       - "/"
       - "/magefiles"
+      - "/.dagger"
     schedule:
       interval: daily
     groups:
