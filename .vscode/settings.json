@@ -1,0 +1,10 @@
+{
+  "go.testFlags": [
+    "-v",
+    "-timeout",
+    "1h"
+  ],
+  "go.buildFlags": [
+    "-tags=mage"
+  ],
+}
