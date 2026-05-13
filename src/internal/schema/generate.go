@@ -45,6 +45,14 @@ type schema struct {
 	keyNamer     func(string) string
 }
 
+type t struct {
+	T string `json:"type"`
+}
+
+type o struct {
+	O []t `json:"oneOf"`
+}
+
 func main() {
 	var sch = []schema{
 		{
@@ -150,16 +158,20 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	// clean up the rig.OpenSSH properties for schema
 	if defObj, ok := schemaMap["$defs"].(map[string]any); ok {
-		if sshObj, ok := defObj["WinRM"].(map[string]any); ok {
-			sshObj["required"] = []string{
-				"address",
-				"user",
-				"port",
-			}
-		}
-		if sshObj, ok := defObj["ZarfHost"].(map[string]any); ok {
-			sshObj["required"] = []string{
-				"role",
+		if obj, ok := defObj["ZarfDistroOS"].(map[string]any); ok {
+			if obj, ok := obj["properties"].(map[string]any); ok {
+				if obj, ok := obj["sysctl"].(map[string]any); ok {
+					obj["additionalProperties"] = o{
+						O: []t{
+							{
+								T: "string",
+							},
+							{
+								T: "number",
+							},
+						},
+					}
+				}
 			}
 		}
 	}
