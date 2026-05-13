@@ -26,15 +26,19 @@ import (
 )
 
 // Create build of Cargoship for local testing and development
-func (m *Cargoship) BuildLocal(ctx context.Context,
+func (m *Cargoship) BuildLocal(
+	ctx context.Context,
 	os string,
 	arch string,
 	// +ignore=[".gitignore"]
 	// +defaultPath="."
-	source *dagger.Directory) *dagger.File {
-	err := m.init(ctx, source)
-	if err != nil {
-		return nil
+	source *dagger.Directory,
+) *dagger.File {
+	if !m.IsInitialized {
+		err := m.init(ctx, source)
+		if err != nil {
+			return nil
+		}
 	}
 
 	binName := fmt.Sprintf("cargoship_%s_%s", os, arch)
