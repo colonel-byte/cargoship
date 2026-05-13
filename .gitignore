@@ -15,7 +15,6 @@
 *.vbox
 *.zst
 *.zim
-build/
 bin/
 .netlify
 !**/testdata/**

@@ -28,9 +28,6 @@ import (
 func (m *Cargoship) Build(
 	ctx context.Context,
 	// +ignore=[".gitignore"]
-	// +defaultPath="bin"
-	buildDir *dagger.Directory,
-	// +ignore=[".gitignore"]
 	// +defaultPath="."
 	source *dagger.Directory,
 ) (*dagger.Directory, error) {
@@ -41,43 +38,19 @@ func (m *Cargoship) Build(
 		}
 	}
 
+	buildDir := source.Directory("build")
+
 	goos := []string{"linux", "darwin", "windows"}
 	goarch := []string{"amd64", "arm64"}
-
-	temp := dag.Container().
-		From("alpine:latest").
-		WithExec([]string{"apk", "add", "--no-cache", "git"}).
-		WithMountedDirectory("/src", source).
-		WithWorkdir("/src")
-	gitCommit, _ := temp.WithExec([]string{"git", "rev-parse", "--short", "HEAD", "--always"}).Stdout(ctx)
 
 	for _, os := range goos {
 		for _, arch := range goarch {
 			// Defining binary file name
-			binName := fmt.Sprintf("cargoship_%s_%s_%s", m.AppVersion, os, arch)
+			binName := fmt.Sprintf("cargoship_%s_%s", os, arch)
 			if os == "windows" {
 				binName += ".exe"
 			}
-
-			builder := dag.Container().
-				From("golang:"+m.GoVersion+"-alpine").
-				WithMountedCache("/go/pkg/mod", dag.CacheVolume("go-mod-"+m.GoVersion)).
-				WithEnvVariable("GOMODCACHE", "/go/pkg/mod").
-				WithMountedCache("/go/build-cache", dag.CacheVolume("go-build-"+m.GoVersion)).
-				WithEnvVariable("GOCACHE", "/go/build-cache").
-				WithMountedDirectory("/src", source).
-				WithWorkdir("/src").
-				WithEnvVariable("GOOS", os).
-				WithEnvVariable("GOARCH", arch)
-
-			ldflagsArgs := LDFlags(ctx, m.AppVersion, gitCommit)
-
-			builder = builder.WithExec([]string{
-				"sh", "-c",
-				fmt.Sprintf(`go build -v -ldflags "%s" -o /bin/%s /src/main.go`, ldflagsArgs, binName),
-			})
-
-			file := builder.File("/bin/" + binName)                         // Taking file from container
+			file := m.BuildLocal(ctx, os, arch, source)
 			buildDir = buildDir.WithFile(fmt.Sprintf("/%s", binName), file) // Adding file(bin) to dist directory
 		}
 	}
