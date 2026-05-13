@@ -48,7 +48,6 @@ type Configurer interface {
 	FileContains(os.Host, string, string) bool
 	FileExist(os.Host, string) bool
 	GetDistroService(string) (string, error)
-	GetSysctlValue(os.Host, string) (string, error)
 	HTTPStatus(os.Host, string) (int, error)
 	HostPath(string) string
 	Hostname(os.Host) string
@@ -68,7 +67,6 @@ type Configurer interface {
 	ServiceIsRunning(os.Host, string) bool
 	ServiceScriptPath(os.Host, string) (string, error)
 	SetPath(string, string)
-	SetSysctlValue(os.Host, string, string) error
 	Sha256sum(h os.Host, path string, opts ...exec.Option) (string, error)
 	StartService(os.Host, string) error
 	Stat(os.Host, string, ...exec.Option) (*os.FileInfo, error)

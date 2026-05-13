@@ -26,11 +26,13 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/k0sproject/rig"
+	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/os"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -75,8 +77,11 @@ func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) err
 
 	if len(p.manager.Distro.Spec.Config.OS.Sysctl) > 0 {
 		logger.From(ctx).Info("updating sysctls", "host", h)
-		if err := p.updateSysctls(ctx, h); err != nil {
-			return fmt.Errorf("failed to updated sysctls: %w", err)
+		if err := p.updateSysctlConfig(ctx, h); err != nil {
+			return fmt.Errorf("failed to create sysctls config: %w", err)
+		}
+		if err := h.Exec("sysctl --system", exec.Sudo(h)); err != nil {
+			return fmt.Errorf("failed apply the new sysctls: %w", err)
 		}
 	}
 
@@ -110,21 +115,23 @@ func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHos
 	})
 }
 
-func (p *PrepareHosts) updateSysctls(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *PrepareHosts) updateSysctlConfig(ctx context.Context, h *cluster.ZarfHost) error {
+	var sb strings.Builder
+
 	keys := make([]string, 0, len(p.GetDistro().Spec.Config.OS.Sysctl))
 	for k := range p.GetDistro().Spec.Config.OS.Sysctl {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	w := tabwriter.NewWriter(&sb, 1, 1, 1, ' ', 0)
+	fmt.Fprintln(w, "# sysctl generated from cargoship")
 
-	for k := range keys {
-		err := h.Configurer.SetSysctlValue(h, keys[k], p.GetDistro().Spec.Config.OS.Sysctl[keys[k]])
-		if err != nil {
-			logger.From(ctx).Warn("got error when setting sysctl value", "host", h, "key", keys[k], "error", err)
-		} else {
-			logger.From(ctx).Debug("updating sysctls", "host", h, "key", keys[k])
-		}
+	for _, key := range keys {
+		fmt.Fprintf(w, "%s\t=\t%s\n", key, p.GetDistro().Spec.Config.OS.Sysctl[key])
+	}
+	if err := w.Flush(); err != nil {
+		logger.From(ctx).Warn("failed to render sysctl tables")
 	}
 
-	return nil
+	return h.WriteFile("/etc/sysctl.d/99-cargoship.conf", sb.String(), "0644")
 }

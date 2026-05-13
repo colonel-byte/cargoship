@@ -174,7 +174,10 @@
       "required": [
         "address",
         "user",
-        "port"
+        "port",
+        "useHttps",
+        "insecure",
+        "useNtlm"
       ],
       "type": "object"
     },

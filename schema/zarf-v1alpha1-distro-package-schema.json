@@ -473,7 +473,14 @@
         },
         "sysctl": {
           "additionalProperties": {
-            "type": "string"
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
           },
           "type": "object"
         }

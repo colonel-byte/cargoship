@@ -307,22 +307,3 @@ func (l *Linux) GetDistroService(key string) (string, error) {
 func (l *Linux) SetPath(key, value string) {
 	l.paths[key] = value
 }
-
-// SetSysctlValue sets the sysctl key with the given value, will return if any errors are set
-func (l *Linux) SetSysctlValue(h os.Host, key string, value string) error {
-	return h.Execf(`sysctl -w %s=%s`, key, value, exec.Sudo(h))
-}
-
-// GetSysctlValue get the current value of a sysctl value, will return an error if the key does not exist
-func (l *Linux) GetSysctlValue(h os.Host, key string) (string, error) {
-	output, err := h.ExecOutputf(`sysctl "%s"`, key)
-	if err != nil {
-		return "", err
-	}
-	sp := strings.Split(output, "=")
-	if len(sp) > 1 {
-		return strings.TrimSpace(sp[1]), nil
-	}
-
-	return "", nil
-}

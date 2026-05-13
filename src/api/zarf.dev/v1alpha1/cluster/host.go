@@ -66,7 +66,7 @@ type ZarfHost struct {
 	PrivateAddress   string             `json:"privateAddress,omitempty"`
 	PrivateInterface string             `json:"privateInterface,omitempty"`
 	Profile          string             `json:"profile,omitempty"`
-	Role             string             `json:"role" jsonschema:"enum=controller,enum=controller+worker,enum=single,enum=worker"`
+	Role             string             `json:"role" jsonschema:"required,enum=controller,enum=controller+worker,enum=single,enum=worker"`
 	//keep-sorted end
 	Configurer os.Configurer    `json:"-"`
 	Metadata   ZarfHostMetadata `json:"-"`
