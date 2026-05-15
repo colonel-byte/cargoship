@@ -25,13 +25,25 @@ import (
 	"strings"
 )
 
-func LDFlags(ctx context.Context, version string, commit string) string {
+func LDFlags(_ context.Context, version string, commit string) string {
 	return strings.TrimSpace(
 		fmt.Sprintf(
-			"-X github.com/colonel-byte/cargoship/src/config.CLIVersion=%s "+
+			"-s -w "+
+				"-X github.com/colonel-byte/cargoship/src/config.CLIVersion=%s "+
 				"-X github.com/colonel-byte/cargoship/src/config.CLICommit=%s ",
 			version,
 			commit,
 		),
+	)
+}
+
+func GCFLags(_ context.Context) string {
+	return strings.Join(
+		[]string{
+			"-l",
+			"-B",
+			"-C",
+		},
+		" ",
 	)
 }
