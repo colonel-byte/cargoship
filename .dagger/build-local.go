@@ -57,10 +57,11 @@ func (m *Cargoship) BuildLocal(
 	gitCommit, _ := builder.WithExec([]string{"git", "rev-parse", "--short", "HEAD", "--always"}).Stdout(ctx)
 
 	ldflagsArgs := LDFlags(ctx, m.AppVersion, gitCommit)
+	gcflagsArgs := GCFLags(ctx)
 
 	builder = builder.WithExec([]string{
 		"sh", "-c",
-		fmt.Sprintf(`go build -v -ldflags "%s" -o /bin/%s /src/main.go`, ldflagsArgs, binName),
+		fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o /bin/%s /src/main.go`, gcflagsArgs, ldflagsArgs, binName),
 	})
 	return builder.File("/bin/" + binName)
 }

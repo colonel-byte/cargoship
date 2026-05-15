@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
@@ -234,8 +235,19 @@ func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall str
 			return err
 		}
 	}
+	cache := false
+	cacheFile := fmt.Sprintf("%s/agent/images/.cache.json", d.Data)
+	if h.Configurer.FileExist(h, cacheFile) {
+		cache = true
+		if err := h.Configurer.DeleteFile(h, cacheFile); err != nil {
+			return err
+		}
+	}
 	if h.Configurer.CommandExist(h, killall) {
 		return h.Exec(killall, exec.Sudo(h))
+	}
+	if cache {
+		h.Configurer.Touch(h, cacheFile, time.Unix(0, 0)) //nolint:errcheck
 	}
 	return nil
 }
