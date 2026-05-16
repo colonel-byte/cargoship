@@ -31,7 +31,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
-	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -76,10 +75,10 @@ func setBaseDirectory(args []string) string {
 
 func getCachePath(ctx context.Context) (string, error) {
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-		logger.From(ctx).Warn("invalid characters in Zarf cache path, using default", "cfg", zconfig.ZarfDefaultCachePath, "default", zconfig.ZarfDefaultCachePath)
-		config.CommonOptions.CachePath = zconfig.ZarfDefaultCachePath
+		logger.From(ctx).Warn("invalid characters in Zarf cache path, using default", "cfg", config.DefaultCachePath, "default", config.DefaultCachePath)
+		config.CommonOptions.CachePath = config.DefaultCachePath
 	}
-	return zconfig.GetAbsCachePath()
+	return config.GetAbsCachePath()
 }
 
 func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*phase.Manager, error) {
@@ -99,7 +98,7 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 
 	loadOpts := packager.LoadOptions{
 		CachePath:    config.CommonOptions.CachePath,
-		Architecture: zconfig.CLIArch,
+		Architecture: config.CLIArch,
 		Output:       config.CommonOptions.TempDirectory,
 	}
 

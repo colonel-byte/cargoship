@@ -63,10 +63,11 @@ func (o *versionOptions) run(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	output := make(map[string]any)
-	output["version"] = config.CLIVersion
-	output["platform"] = runtime.GOOS + "/" + runtime.GOARCH
-	output["go"] = runtime.Version()
+	buildMap := map[string]string{}
+	buildMap["version"] = config.CLIVersion
+	buildMap["commit"] = config.CLICommit
+	buildMap["platform"] = runtime.GOOS + "/" + runtime.GOARCH
+	buildMap["go"] = runtime.Version()
 
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -80,6 +81,8 @@ func (o *versionOptions) run(_ *cobra.Command, _ []string) error {
 			depMap[dep.Path] = dep.Version
 		}
 	}
+	output := make(map[string]any)
+	output["build"] = buildMap
 	output["dependencies"] = depMap
 
 	switch o.outputFormat {

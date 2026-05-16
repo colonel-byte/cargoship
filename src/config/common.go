@@ -22,6 +22,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/types"
@@ -30,16 +31,27 @@ import (
 const (
 	// UnsetCLIVersion is an unset version for when building locally
 	UnsetCLIVersion = "unset-development-only"
+	// UnsetCLICommit is the initial commit of this repo, short, for when building locally
+	UnsetCLICommit = "7918478d"
 )
 
 var (
 	// CLIVersion is the version of the cli
 	CLIVersion = UnsetCLIVersion
+	// CLICommit is the commit this build was created at
+	CLICommit = UnsetCLICommit
 	// CLIArch is the computer architecture of the device executing the CLI commands
 	CLIArch string
 	// CommonOptions is the distro config
 	CommonOptions types.DistroConfig
+	// DefaultCachePath the default cache directory
+	DefaultCachePath = filepath.Join("~", ".cargoship-cache")
 )
+
+// GetAbsCachePath gets the absolute cache path for images and git repos.
+func GetAbsCachePath() (string, error) {
+	return GetAbsHomePath(CommonOptions.CachePath)
+}
 
 // GetAbsHomePath replaces ~ with the absolute path to a user's home dir
 func GetAbsHomePath(path string) (string, error) {
