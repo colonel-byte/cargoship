@@ -22,6 +22,7 @@ package main
 import (
 	"context"
 	"dagger/cargoship/internal/dagger"
+	"dagger/cargoship/utils"
 	"fmt"
 )
 
@@ -56,8 +57,8 @@ func (m *Cargoship) BuildLocal(
 
 	gitCommit, _ := builder.WithExec([]string{"git", "rev-parse", "--short", "HEAD", "--always"}).Stdout(ctx)
 
-	ldflagsArgs := LDFlags(ctx, m.AppVersion, gitCommit)
-	gcflagsArgs := GCFLags(ctx)
+	ldflagsArgs := utils.LDFlags(m.AppVersion, gitCommit)
+	gcflagsArgs := utils.GCFLags()
 
 	builder = builder.WithExec([]string{
 		"sh", "-c",

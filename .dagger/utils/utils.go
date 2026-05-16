@@ -17,15 +17,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+// Package utils is logic shared across dagger and mage
+package utils
 
 import (
-	"context"
 	"fmt"
 	"strings"
 )
 
-func LDFlags(_ context.Context, version string, commit string) string {
+func LDFlags(version string, commit string) string {
 	return strings.TrimSpace(
 		fmt.Sprintf(
 			"-s -w "+
@@ -37,7 +37,7 @@ func LDFlags(_ context.Context, version string, commit string) string {
 	)
 }
 
-func GCFLags(_ context.Context) string {
+func GCFLags() string {
 	return strings.Join(
 		[]string{
 			"-l",

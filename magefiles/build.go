@@ -22,68 +22,50 @@ import (
 	"runtime"
 
 	"github.com/magefile/mage/mg"
-	"github.com/magefile/mage/sh"
-)
-
-const (
-	buildDir = "build"
 )
 
 type Build mg.Namespace
 
-var Default = Build.All
-
-// Release is a wrapper for goreleaser
-func (Build) Release() error {
-	return sh.RunV(
-		binaryPath("goreleaser"),
-		"release",
-		"--clean",
-		"--snapshot",
-		"--skip=sign",
-	)
-}
-
-// Binary will build a binary of the local system, with dagger
+// Binary will build a binary of the local system, on the host
 func (Build) Binary() error {
-	return daggerBuildLocal(runtime.GOOS, runtime.GOARCH)
+	return hostBuildLocal(runtime.GOOS, runtime.GOARCH)
 }
 
-// Linuxamd64 build a linux amd64 binary, with dagger
+// Linuxamd64 build a linux amd64 binary, on the host
 func (Build) Linuxamd64() error {
-	return daggerBuildLocal("linux", "amd64")
+	return hostBuildLocal("linux", "amd64")
 }
 
-// Linuxarm64 build a linux arm64 binary, with dagger
+// Linuxarm64 build a linux arm64 binary, on the host
 func (Build) Linuxarm64() error {
-	return daggerBuildLocal("linux", "arm64")
+	return hostBuildLocal("linux", "arm64")
 }
 
-// Macamd64 build a mac amd64 binary, with dagger
+// Macamd64 build a mac amd64 binary, on the host
 func (Build) Macamd64() error {
-	return daggerBuildLocal("darwin", "amd64")
+	return hostBuildLocal("darwin", "amd64")
 }
 
-// Macarm64 build a mac arm64 binary, with dagger
+// Macarm64 build a mac arm64 binary, on the host
 func (Build) Macarm64() error {
-	return daggerBuildLocal("darwin", "arm64")
+	return hostBuildLocal("darwin", "arm64")
 }
 
-// All builds all cargoship binaries, with dagger
-func (Build) All() error {
-	if err := ensureDagger(); err != nil {
-		return err
-	}
-	if err := clean(); err != nil {
-		return err
-	}
-	return sh.RunV(
-		binaryPath("dagger"),
-		"call",
-		"--progress=tty",
-		"--interactive=false",
-		"build",
-		"export",
-		fmt.Sprintf("--path=%s", buildDir),
+// All builds all cargoship binaries, on the host
+func (b Build) All() error {
+	return runSquential(
+		b.Linuxamd64,
+		b.Linuxarm64,
+		b.Macamd64,
+		b.Macarm64,
 	)
+}
+
+func runSquential(funcs ...func() error) error {
+	for _, f := range funcs {
+		if err := f(); err != nil {
+			fmt.Printf("got an error: %v", err)
+		}
+	}
+	return nil
 }

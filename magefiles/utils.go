@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"dagger/cargoship/utils"
+
 	"github.com/magefile/mage/sh"
 )
 
@@ -42,6 +44,29 @@ func daggerBuildLocal(oper string, arch string) error {
 		"--arch="+arch,
 		"export",
 		fmt.Sprintf("--path=%s", bin),
+	)
+}
+
+func hostBuildLocal(oper string, arch string) error {
+	bin := fmt.Sprintf("build/cargoship_%s_%s", oper, arch)
+	fmt.Println("building: " + bin)
+
+	if err := os.Remove(bin); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+
+	env := map[string]string{}
+	env["GOOS"] = oper
+	env["GOARCH"] = arch
+
+	gc := utils.GCFLags()
+	ld := utils.LDFlags("0.0.0", "")
+
+	return sh.RunWithV(
+		env,
+		"sh",
+		"-c",
+		fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin),
 	)
 }
 
