@@ -24,7 +24,6 @@
       "properties": {
         "address": {
           "description": "Address of the remote host",
-          "format": "hostname",
           "type": "string"
         },
         "configPath": {
@@ -42,7 +41,7 @@
         },
         "options": {
           "$ref": "#/$defs/OpenSSHOptions",
-          "description": "Additional SSH options as key-value pairs"
+          "description": "Additional SSH options as key-value pairs (e.g. StrictHostKeyChecking: false)"
         },
         "port": {
           "description": "Optional SSH port",
@@ -71,7 +70,6 @@
       "properties": {
         "address": {
           "description": "Address of the remote host (IP or hostname)",
-          "format": "hostname",
           "type": "string"
         },
         "bastion": {
@@ -88,7 +86,7 @@
         },
         "port": {
           "default": 22,
-          "description": "SSH port",
+          "description": "SSH port (default 22)",
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
@@ -96,13 +94,12 @@
         "user": {
           "default": "root",
           "description": "User to log in as",
+          "minLength": 1,
           "type": "string"
         }
       },
       "required": [
-        "address",
-        "user",
-        "port"
+        "address"
       ],
       "type": "object"
     },
@@ -114,7 +111,6 @@
       "properties": {
         "address": {
           "description": "Address of the remote host",
-          "format": "hostname",
           "type": "string"
         },
         "bastion": {
@@ -151,7 +147,6 @@
         },
         "tlsServerName": {
           "description": "TLS server name override",
-          "format": "hostname",
           "type": "string"
         },
         "useHttps": {
@@ -172,12 +167,7 @@
         }
       },
       "required": [
-        "address",
-        "user",
-        "port",
-        "useHttps",
-        "insecure",
-        "useNtlm"
+        "address"
       ],
       "type": "object"
     },
