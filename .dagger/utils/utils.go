@@ -37,8 +37,8 @@ func LDFlags(version string, commit string) string {
 				},
 				" ",
 			),
-			version,
-			commit,
+			strings.TrimSpace(version),
+			strings.TrimSpace(commit),
 		),
 	)
 }
