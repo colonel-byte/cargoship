@@ -35,14 +35,15 @@ type (
 	Dagger mg.Namespace
 )
 
-// Release is a wrapper for goreleaser
-func (Dagger) Release() error {
+// Toolchain generates the dagger build environment
+func (Dagger) Toolchain() error {
+	if err := ensureDagger(); err != nil {
+		return err
+	}
 	return sh.RunV(
-		binaryPath("goreleaser"),
-		"release",
-		"--clean",
-		"--snapshot",
-		"--skip=sign",
+		binaryPath("dagger"),
+		"toolchain",
+		"update",
 	)
 }
 

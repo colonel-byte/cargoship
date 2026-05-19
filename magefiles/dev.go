@@ -34,7 +34,7 @@ type (
 	Test mg.Namespace
 )
 
-// Clean removes build artifacts.
+// Clean removes build artifacts
 func (Dev) Clean() error {
 	return clean()
 }
@@ -48,6 +48,7 @@ func (Dev) Tidy() error {
 	)
 }
 
+// Digest simple returns the digest of an image, mostly for testing
 func (Dev) Digest(ctx context.Context) error {
 	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
 		DetectDefaultNativeStore: true,
