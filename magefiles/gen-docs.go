@@ -25,8 +25,13 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
+	"github.com/magefile/mage/mg"
 	"github.com/nao1215/markdown"
 	"github.com/spf13/cobra/doc"
+)
+
+type (
+	Generate mg.Namespace
 )
 
 // Document creates the docs for this repo

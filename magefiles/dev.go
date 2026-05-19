@@ -18,9 +18,20 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"runtime"
 
+	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
+	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/credentials"
+)
+
+type (
+	Dev  mg.Namespace
+	Test mg.Namespace
 )
 
 // Clean removes build artifacts.
@@ -35,6 +46,35 @@ func (Dev) Tidy() error {
 		"mod",
 		"tidy",
 	)
+}
+
+func (Dev) Digest(ctx context.Context) error {
+	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
+		DetectDefaultNativeStore: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	repo, err := remote.NewRepository("docker.io/library/alpine")
+	if err != nil {
+		return err
+	}
+
+	repo.Client = &auth.Client{
+		Credential: auth.CredentialFunc(func(ctx context.Context, host string) (auth.Credential, error) {
+			return store.Get(ctx, host)
+		}),
+	}
+
+	desc, err := repo.Resolve(ctx, "latest")
+	if err != nil {
+		return err
+	}
+
+	fmt.Print(desc.Digest)
+
+	return nil
 }
 
 // EndToEnd runs the go testing the e2e suite

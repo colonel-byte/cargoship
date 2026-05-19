@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 )
 
@@ -29,6 +30,10 @@ const (
 )
 
 var Default = Dagger.All
+
+type (
+	Dagger mg.Namespace
+)
 
 // Release is a wrapper for goreleaser
 func (Dagger) Release() error {
