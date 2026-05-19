@@ -62,11 +62,15 @@ func hostBuildLocal(oper string, arch string) error {
 	gc := utils.GCFLags()
 	ld := utils.LDFlags("0.0.0", "")
 
+	goBuild := fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
+
+	fmt.Println("executing:\n  " + goBuild)
+
 	return sh.RunWithV(
 		env,
 		"sh",
 		"-c",
-		fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin),
+		goBuild,
 	)
 }
 

@@ -28,9 +28,15 @@ import (
 func LDFlags(version string, commit string) string {
 	return strings.TrimSpace(
 		fmt.Sprintf(
-			"-s -w "+
-				"-X github.com/colonel-byte/cargoship/src/config.CLIVersion=%s "+
-				"-X github.com/colonel-byte/cargoship/src/config.CLICommit=%s ",
+			strings.Join(
+				[]string{
+					"-s",
+					"-w",
+					"-X github.com/colonel-byte/cargoship/src/config.CLIVersion=%s",
+					"-X github.com/colonel-byte/cargoship/src/config.CLICommit=%s",
+				},
+				" ",
+			),
 			version,
 			commit,
 		),

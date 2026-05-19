@@ -22,7 +22,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
@@ -59,17 +61,17 @@ func (Generate) Schema() error {
 			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
 			structPath:   []string{"src", "types"},
 		},
-		// {
-		// 	schemaStruct: &cluster.ZarfCluster{},
-		// 	schemaPath:   "zarf-v1alpha1-cluster-schema.json",
-		// 	structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
-		// 	keyNamer: func(s string) string {
-		// 		if strings.ToLower(s) == "openssh" {
-		// 			return "openSSH"
-		// 		}
-		// 		return strcase.LowerCamelCase(s)
-		// 	},
-		// },
+		{
+			schemaStruct: &cluster.ZarfCluster{},
+			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
+			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
+			keyNamer: func(s string) string {
+				if strings.ToLower(s) == "openssh" {
+					return "openSSH"
+				}
+				return strcase.LowerCamelCase(s)
+			},
+		},
 		{
 			schemaStruct: &types.DistroConfig{},
 			schemaPath:   "zarf-config-distro-schema.json",
@@ -100,10 +102,9 @@ func (Generate) Schema() error {
 
 		if err := os.WriteFile("schema/"+s.schemaPath, schema, 0644); err != nil {
 			fmt.Println("Error writing schema file: ", err)
-			return nil
+		} else {
+			fmt.Println("Successfully generated " + s.schemaPath)
 		}
-
-		fmt.Println("Successfully generated " + s.schemaPath)
 	}
 	return nil
 }
