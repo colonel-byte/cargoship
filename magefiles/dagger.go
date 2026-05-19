@@ -29,9 +29,11 @@ const (
 	buildDir = "build"
 )
 
-type Dagger mg.Namespace
-
 var Default = Dagger.All
+
+type (
+	Dagger mg.Namespace
+)
 
 // Release is a wrapper for goreleaser
 func (Dagger) Release() error {

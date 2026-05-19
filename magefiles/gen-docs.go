@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main is used to generate the markdown docs for the cli
 package main
 
 import (
@@ -26,38 +25,43 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
+	"github.com/magefile/mage/mg"
 	"github.com/nao1215/markdown"
 	"github.com/spf13/cobra/doc"
-
-	// anonymous import is needed to load the distro configurers
-	_ "github.com/colonel-byte/cargoship/src/types/distrocfg"
 )
 
-func main() {
+type (
+	Generate mg.Namespace
+)
+
+// Document creates the docs for this repo
+func (Generate) Document() error {
 	rootCmd := cmd.NewCargoshipCommand()
 	rootCmd.DisableAutoGenTag = true
 
-	var builder strings.Builder
-
 	if err := os.RemoveAll("./docs"); err != nil {
-		panic(err)
+		return err
 	}
 	if err := os.MkdirAll("./docs/commands", 0o775); err != nil {
-		panic(err)
+		return err
 	}
 	if err := os.MkdirAll("./docs/actions", 0o775); err != nil {
-		panic(err)
+		return err
+	}
+	if err := doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler); err != nil {
+		return err
+	}
+	if err := phaseApply(); err != nil {
+		return err
+	}
+	if err := phaseReset(); err != nil {
+		return err
+	}
+	if err := phaseKubeConfig(); err != nil {
+		return err
 	}
 
-	err := doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler)
-	if err != nil {
-		panic(err)
-	}
-
-	phaseApply()      //nolint:errcheck
-	phaseReset()      //nolint:errcheck
-	phaseKubeConfig() //nolint:errcheck
-
+	var builder strings.Builder
 	if err := markdown.GenerateIndex(
 		"./docs",
 		markdown.WithTitle("Index"),
@@ -66,13 +70,14 @@ func main() {
 		}),
 		markdown.WithWriter(&builder),
 	); err != nil {
-		panic(err)
+		return err
 	}
-
 	finalString := strings.ReplaceAll(strings.ReplaceAll(builder.String(), "docs/", ""), "  ", "")
 	if err := os.WriteFile("docs/index.md", []byte(finalString), 0644); err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 func prependTitle(s string) string {

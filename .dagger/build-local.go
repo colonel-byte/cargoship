@@ -61,7 +61,8 @@ func (m *Cargoship) BuildLocal(
 	gcflagsArgs := utils.GCFLags()
 
 	builder = builder.WithExec([]string{
-		"sh", "-c",
+		"sh",
+		"-c",
 		fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o /bin/%s /src/main.go`, gcflagsArgs, ldflagsArgs, binName),
 	})
 	return builder.File("/bin/" + binName)

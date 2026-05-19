@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package main is used to generate the json schema for various objects
 package main
 
 import (
@@ -53,7 +52,8 @@ type o struct {
 	O []t `json:"oneOf"`
 }
 
-func main() {
+// Schema creates the jsonschema files for a number of the yaml files
+func (Generate) Schema() error {
 	var sch = []schema{
 		{
 			schemaStruct: &distro.ZarfDistro{},
@@ -93,7 +93,7 @@ func main() {
 
 		if err != nil {
 			fmt.Println("Error generating schema: ", err)
-			os.Exit(1)
+			return nil
 		}
 
 		// Add trailing newline to match linter expectations
@@ -101,11 +101,11 @@ func main() {
 
 		if err := os.WriteFile("schema/"+s.schemaPath, schema, 0644); err != nil {
 			fmt.Println("Error writing schema file: ", err)
-			os.Exit(1)
+		} else {
+			fmt.Println("Successfully generated " + s.schemaPath)
 		}
-
-		fmt.Println("Successfully generated " + s.schemaPath)
 	}
+	return nil
 }
 
 func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
@@ -136,7 +136,7 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 		return nil, fmt.Errorf("unable to change to schema directory: %w", err)
 	}
 
-	typePath := filepath.Join(append([]string{"..", "..", ".."}, path...)...)
+	typePath := filepath.Join(append([]string{".."}, path...)...)
 
 	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)

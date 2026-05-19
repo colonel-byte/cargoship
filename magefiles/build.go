@@ -24,7 +24,9 @@ import (
 	"github.com/magefile/mage/mg"
 )
 
-type Build mg.Namespace
+type (
+	Build mg.Namespace
+)
 
 // Binary will build a binary of the local system, on the host
 func (Build) Binary() error {
