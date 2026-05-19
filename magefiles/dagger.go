@@ -21,15 +21,12 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 )
 
 const (
 	buildDir = "build"
 )
-
-type Dagger mg.Namespace
 
 var Default = Dagger.All
 

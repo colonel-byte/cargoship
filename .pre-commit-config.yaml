@@ -43,9 +43,9 @@ repos:
         name: generate-schemas
         language: system
         pass_filenames: false
-        entry: go run ./src/internal/schema
+        entry: mage generate:schema
       - id: docs-generator
         name: generate-docs
         language: system
         pass_filenames: false
-        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml go run ./src/internal/gendocs"
+        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml mage generate:document"

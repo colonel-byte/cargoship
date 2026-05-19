@@ -20,13 +20,7 @@ package main
 import (
 	"runtime"
 
-	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-)
-
-type (
-	Dev  mg.Namespace
-	Test mg.Namespace
 )
 
 // Clean removes build artifacts.

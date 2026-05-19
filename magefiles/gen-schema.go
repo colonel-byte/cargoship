@@ -22,9 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
@@ -53,24 +51,25 @@ type o struct {
 	O []t `json:"oneOf"`
 }
 
-func main() {
+// Schema creates the jsonschema files for a number of the yaml files
+func (Generate) Schema() error {
 	var sch = []schema{
 		{
 			schemaStruct: &distro.ZarfDistro{},
 			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
 			structPath:   []string{"src", "types"},
 		},
-		{
-			schemaStruct: &cluster.ZarfCluster{},
-			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
-			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
-			keyNamer: func(s string) string {
-				if strings.ToLower(s) == "openssh" {
-					return "openSSH"
-				}
-				return strcase.LowerCamelCase(s)
-			},
-		},
+		// {
+		// 	schemaStruct: &cluster.ZarfCluster{},
+		// 	schemaPath:   "zarf-v1alpha1-cluster-schema.json",
+		// 	structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
+		// 	keyNamer: func(s string) string {
+		// 		if strings.ToLower(s) == "openssh" {
+		// 			return "openSSH"
+		// 		}
+		// 		return strcase.LowerCamelCase(s)
+		// 	},
+		// },
 		{
 			schemaStruct: &types.DistroConfig{},
 			schemaPath:   "zarf-config-distro-schema.json",
@@ -93,7 +92,7 @@ func main() {
 
 		if err != nil {
 			fmt.Println("Error generating schema: ", err)
-			os.Exit(1)
+			return nil
 		}
 
 		// Add trailing newline to match linter expectations
@@ -101,11 +100,12 @@ func main() {
 
 		if err := os.WriteFile("schema/"+s.schemaPath, schema, 0644); err != nil {
 			fmt.Println("Error writing schema file: ", err)
-			os.Exit(1)
+			return nil
 		}
 
 		fmt.Println("Successfully generated " + s.schemaPath)
 	}
+	return nil
 }
 
 func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
@@ -136,7 +136,7 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 		return nil, fmt.Errorf("unable to change to schema directory: %w", err)
 	}
 
-	typePath := filepath.Join(append([]string{"..", "..", ".."}, path...)...)
+	typePath := filepath.Join(append([]string{".."}, path...)...)
 
 	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)

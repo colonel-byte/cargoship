@@ -19,14 +19,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/magefile/mage/mg"
 	"github.com/uwu-tools/magex/pkg/archive"
 	"github.com/uwu-tools/magex/pkg/downloads"
 	"github.com/uwu-tools/magex/pkg/gopath"
-)
-
-type (
-	Binary mg.Namespace
 )
 
 // Dagger install dagger into gopath
