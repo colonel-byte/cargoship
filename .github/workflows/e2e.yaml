@@ -38,9 +38,6 @@ jobs:
         run: go mod download
 
       - name: Build
-        run: go build -v ./...
-
-      - name: Build
         run: go build -ldflags="-s -w" -v -o cargoship main.go
 
       - name: Upload binary
