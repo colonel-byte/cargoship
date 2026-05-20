@@ -20,7 +20,7 @@ require (
 	github.com/invopop/jsonschema v0.13.0
 	github.com/k0sproject/dig v0.4.0
 	github.com/k0sproject/rig v0.21.2
-	github.com/magefile/mage v1.15.0
+	github.com/magefile/mage v1.17.2
 	github.com/nao1215/markdown v0.13.0
 	github.com/pterm/pterm v0.12.83
 	github.com/spf13/cobra v1.10.2
