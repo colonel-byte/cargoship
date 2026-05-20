@@ -8,6 +8,9 @@ formatters:
       - examples$
 linters:
   default: none
+  exclusions:
+    paths:
+      - magefiles/
   enable:
     - errcheck
     - errorlint
