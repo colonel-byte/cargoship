@@ -21,8 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"dagger/cargoship/utils"
-
+	"github.com/colonel-byte/cargoship/src/pkg/utils/build"
 	"github.com/magefile/mage/sh"
 )
 
@@ -59,8 +58,8 @@ func hostBuildLocal(oper string, arch string) error {
 	env["GOOS"] = oper
 	env["GOARCH"] = arch
 
-	gc := utils.GCFLags()
-	ld := utils.LDFlags("0.0.0", "")
+	gc := build.GCFLags()
+	ld := build.LDFlags("0.0.0", "")
 
 	goBuild := fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
 
