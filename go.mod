@@ -1,6 +1,6 @@
 module github.com/colonel-byte/cargoship
 
-go 1.26.2
+go 1.26.3
 
 // replaced well waiting for the following pr's:
 // - https://github.com/k0sproject/rig/pull/327
@@ -11,7 +11,7 @@ require (
 	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/avast/retry-go/v4 v4.7.0
-	github.com/containerd/containerd/v2 v2.3.0
+	github.com/containerd/containerd/v2 v2.3.1
 	github.com/containerd/platforms v1.0.0-rc.4
 	github.com/creasty/defaults v1.8.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
