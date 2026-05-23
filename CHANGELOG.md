@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.4.0](https://github.com/colonel-byte/cargoship/compare/v0.3.0...v0.4.0) (2026-05-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* add dagger for ci building ([#59](https://github.com/colonel-byte/cargoship/issues/59))
+
+### Features
+
+* add dagger for ci building ([#59](https://github.com/colonel-byte/cargoship/issues/59)) ([2545844](https://github.com/colonel-byte/cargoship/commit/2545844143f8e6b002c1d08631e455a067ee49e0))
+* add mage for make like tool ([#63](https://github.com/colonel-byte/cargoship/issues/63)) ([e35aed7](https://github.com/colonel-byte/cargoship/commit/e35aed7198b429f5f5bf3fcc5e87dc8fb749afba))
+* change sysctl to create a file ([#62](https://github.com/colonel-byte/cargoship/issues/62)) ([aba7d57](https://github.com/colonel-byte/cargoship/commit/aba7d57b69239ee11aab2b4018672f1d7aa0e6e4))
+* **cmd:** expand version debug info ([#68](https://github.com/colonel-byte/cargoship/issues/68)) ([29fd345](https://github.com/colonel-byte/cargoship/commit/29fd345eb2d01230f4a1e9442d6b058372cde588))
+* **distro:** update the upgrade logic for rancher ([#66](https://github.com/colonel-byte/cargoship/issues/66)) ([7c4da85](https://github.com/colonel-byte/cargoship/commit/7c4da855420d44e44fc36831cec236ce4287dfbf))
+* update version to include deps ([#60](https://github.com/colonel-byte/cargoship/issues/60)) ([9304ae9](https://github.com/colonel-byte/cargoship/commit/9304ae98b7c8e506f1ddd573dbc96cc71d66b9b6))
+
+
+### Miscellaneous
+
+* **deps:** updates rig version ([#69](https://github.com/colonel-byte/cargoship/issues/69)) ([cf0afc0](https://github.com/colonel-byte/cargoship/commit/cf0afc037e66ec886eb0ac52bc5d28b9b42aa877))
+* **mage:** move generate logic to mage ([#70](https://github.com/colonel-byte/cargoship/issues/70)) ([413eea0](https://github.com/colonel-byte/cargoship/commit/413eea0345aed3b30adb5a97c37236598ead4d16))
+
+
+### CI/CD
+
+* allow building on host system ([20cac43](https://github.com/colonel-byte/cargoship/commit/20cac43bc4b65516f4828d488dde834f2c3ca548))
+* remove the mage sub-modules ([#74](https://github.com/colonel-byte/cargoship/issues/74)) ([9c073a4](https://github.com/colonel-byte/cargoship/commit/9c073a4266601a9935e8e459a14d6b5585289a22))
+* update dagger deps ([#64](https://github.com/colonel-byte/cargoship/issues/64)) ([96ad0c8](https://github.com/colonel-byte/cargoship/commit/96ad0c834feb236c169c71634c9164db994accd0))
+
+
+### Build
+
+* **deps:** Bump actions/create-github-app-token from 3.1.1 to 3.2.0 ([#61](https://github.com/colonel-byte/cargoship/issues/61)) ([ac2c0b7](https://github.com/colonel-byte/cargoship/commit/ac2c0b733af9bedef407a769a9d4d12b6314861a))
+* **deps:** Bump docker/build-push-action from 7.1.0 to 7.2.0 ([#79](https://github.com/colonel-byte/cargoship/issues/79)) ([a0b4da1](https://github.com/colonel-byte/cargoship/commit/a0b4da139a540ac6440f0637e1677983f4bc05e4))
+* **deps:** Bump docker/login-action from 4.1.0 to 4.2.0 ([#80](https://github.com/colonel-byte/cargoship/issues/80)) ([5d69ede](https://github.com/colonel-byte/cargoship/commit/5d69ede09a3a9980d80016e341d5beffc03f3785))
+* **deps:** Bump docker/setup-buildx-action from 4.0.0 to 4.1.0 ([#82](https://github.com/colonel-byte/cargoship/issues/82)) ([f147cf5](https://github.com/colonel-byte/cargoship/commit/f147cf53a6dc6ea93507421b348430e1d314eb28))
+* **deps:** Bump github.com/containerd/containerd/v2 from 2.2.3 to 2.3.0 ([#73](https://github.com/colonel-byte/cargoship/issues/73)) ([9639439](https://github.com/colonel-byte/cargoship/commit/9639439f51afc00fda7a0d601f93f4e316c02991))
+* **deps:** Bump github.com/containerd/containerd/v2 from 2.3.0 to 2.3.1 ([#78](https://github.com/colonel-byte/cargoship/issues/78)) ([e6f1bd1](https://github.com/colonel-byte/cargoship/commit/e6f1bd10f13decef4e0296e5a716aae56ad8b6e5))
+* **deps:** Bump github.com/invopop/jsonschema from 0.13.0 to 0.14.0 ([#77](https://github.com/colonel-byte/cargoship/issues/77)) ([d899d71](https://github.com/colonel-byte/cargoship/commit/d899d714fcda4e366b292466dcb754372a61524a))
+* **deps:** Bump github.com/magefile/mage from 1.15.0 to 1.17.2 ([#75](https://github.com/colonel-byte/cargoship/issues/75)) ([9ac36d1](https://github.com/colonel-byte/cargoship/commit/9ac36d1ddd2ac990a720ac30566ba9cb0278b15a))
+* **deps:** Bump github.com/stoewer/go-strcase from 1.3.0 to 1.3.1 ([#76](https://github.com/colonel-byte/cargoship/issues/76)) ([df7314c](https://github.com/colonel-byte/cargoship/commit/df7314c3b53393bde9eae1bb7882dd7f447663a4))
+* **deps:** Bump github.com/zarf-dev/zarf from 0.75.1 to 0.76.0 ([#67](https://github.com/colonel-byte/cargoship/issues/67)) ([589b14f](https://github.com/colonel-byte/cargoship/commit/589b14fba97a810dc0b53d8a62941a4eb35eb2ec))
+* **deps:** Bump golangci/golangci-lint-action from 9.2.0 to 9.2.1 ([#81](https://github.com/colonel-byte/cargoship/issues/81)) ([220e939](https://github.com/colonel-byte/cargoship/commit/220e9394ffec1004b8b46d04c724dea2808945b4))
+* **deps:** Bump goreleaser/goreleaser-action from 7.2.1 to 7.2.2 ([#71](https://github.com/colonel-byte/cargoship/issues/71)) ([e27ed7b](https://github.com/colonel-byte/cargoship/commit/e27ed7bc1d39c2a230cd5440cc86d7c296ad58d8))
+* **deps:** Bump k8s.io/client-go from 0.36.0 to 0.36.1 in the k8s group across 1 directory ([#72](https://github.com/colonel-byte/cargoship/issues/72)) ([920efb9](https://github.com/colonel-byte/cargoship/commit/920efb9976899afd81826ad96dacbc9882a91066))
+* **deps:** Bump sigstore/cosign-installer from 4.1.1 to 4.1.2 ([#57](https://github.com/colonel-byte/cargoship/issues/57)) ([3aa3636](https://github.com/colonel-byte/cargoship/commit/3aa36365be6395e9c0e0e81cabd370fcd68a5c2d))
+
 ## [0.3.0](https://github.com/colonel-byte/cargoship/compare/v0.2.5...v0.3.0) (2026-05-07)
 
 
