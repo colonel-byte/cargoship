@@ -28,7 +28,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stoewer/go-strcase v1.3.1
 	github.com/stretchr/testify v1.11.1
-	github.com/txn2/txeh v1.8.0
+	github.com/txn2/txeh v1.8.1
 	github.com/uwu-tools/magex v0.10.1
 	github.com/zarf-dev/zarf v0.77.0
 	gopkg.in/yaml.v3 v3.0.1
