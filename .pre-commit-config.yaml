@@ -29,7 +29,7 @@ repos:
           - -y
           - "2026"
   - repo: https://github.com/google/keep-sorted
-    rev: v0.8.0
+    rev: v0.9.0
     hooks:
       - id: keep-sorted
   - repo: https://github.com/golangci/golangci-lint
