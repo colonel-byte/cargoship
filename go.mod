@@ -33,7 +33,7 @@ require (
 	github.com/zarf-dev/zarf v0.77.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/client-go v0.36.1
-	oras.land/oras-go/v2 v2.6.0
+	oras.land/oras-go/v2 v2.6.1
 )
 
 require (
