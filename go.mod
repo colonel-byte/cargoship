@@ -2,11 +2,6 @@ module github.com/colonel-byte/cargoship
 
 go 1.26.3
 
-// replaced well waiting for the following pr's:
-// - https://github.com/k0sproject/rig/pull/327
-// - https://github.com/k0sproject/rig/pull/329
-replace github.com/k0sproject/rig => github.com/colonel-byte/rig v0.21.3-0.20260514224526-0ae8e59049b6
-
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/Masterminds/semver/v3 v3.5.0
@@ -19,7 +14,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/invopop/jsonschema v0.14.0
 	github.com/k0sproject/dig v0.4.0
-	github.com/k0sproject/rig v0.21.2
+	github.com/k0sproject/rig v0.21.9
 	github.com/magefile/mage v1.17.2
 	github.com/nao1215/markdown v0.13.0
 	github.com/pterm/pterm v0.12.83

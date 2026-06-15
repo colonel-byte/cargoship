@@ -189,6 +189,11 @@ func (h *ZarfHost) ServiceName() string {
 	}
 }
 
+// Sudo implements [exec.host].
+func (h ZarfHost) Sudo(_ string) (string, error) {
+	panic("unimplemented")
+}
+
 // ResolveConfigurer assigns a rig-style configurer to the Host (see configurer/)
 func (h *ZarfHost) ResolveConfigurer() error {
 	bf, err := registry.GetOSModuleBuilder(*h.OSVersion)
