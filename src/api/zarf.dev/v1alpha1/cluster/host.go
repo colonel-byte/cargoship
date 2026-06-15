@@ -30,6 +30,7 @@ import (
 	"slices"
 	"time"
 
+	"al.essio.dev/pkg/shellescape"
 	"github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
@@ -70,6 +71,11 @@ type ZarfHost struct {
 	//keep-sorted end
 	Configurer os.Configurer    `json:"-"`
 	Metadata   ZarfHostMetadata `json:"-"`
+}
+
+// Sudo implements [github.com/k0sproject/rig/exec.host] wrapped in shell escape quote
+func (h ZarfHost) Sudo(cmd string) (string, error) {
+	return h.ExecOutputf("sudo -- %s", shellescape.Quote(cmd))
 }
 
 // ZarfHostPort ports that should be opened on the public side of the firewall
@@ -187,11 +193,6 @@ func (h *ZarfHost) ServiceName() string {
 		}
 		return val
 	}
-}
-
-// Sudo implements [exec.host].
-func (h ZarfHost) Sudo(_ string) (string, error) {
-	panic("unimplemented")
 }
 
 // ResolveConfigurer assigns a rig-style configurer to the Host (see configurer/)
