@@ -37,11 +37,8 @@ type (
 
 // Toolchain generates the dagger build environment
 func (Dagger) Toolchain() error {
-	if err := ensureDagger(); err != nil {
-		return err
-	}
 	return sh.RunV(
-		binaryPath("dagger"),
+		"dagger",
 		"toolchain",
 		"update",
 	)
@@ -74,14 +71,11 @@ func (Dagger) Macarm64() error {
 
 // All builds all cargoship binaries, with dagger
 func (Dagger) All() error {
-	if err := ensureDagger(); err != nil {
-		return err
-	}
 	if err := clean(); err != nil {
 		return err
 	}
 	return sh.RunV(
-		binaryPath("dagger"),
+		"dagger",
 		"call",
 		"--progress=tty",
 		"--interactive=false",
