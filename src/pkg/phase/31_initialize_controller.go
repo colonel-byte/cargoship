@@ -22,6 +22,7 @@ package phase
 
 import (
 	"context"
+	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
@@ -69,6 +70,8 @@ func (p *InitializeControllers) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// waiting a second too clean up the logs
+	time.Sleep(1 * time.Second)
 	return p.batchedParallelWithMessage(
 		ctx,
 		"starting engine",
