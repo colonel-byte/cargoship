@@ -23,6 +23,9 @@ import (
 	"context"
 	"dagger/cargoship/internal/dagger"
 	"fmt"
+
+	"github.com/sourcegraph/conc/pool"
+	_ "github.com/sourcegraph/conc/pool"
 )
 
 func (m *Cargoship) Build(
@@ -57,6 +60,8 @@ func (m *Cargoship) Build(
 		return nil, fmt.Errorf("could not download dependencies")
 	}
 
+	p := pool.New().WithErrors().WithContext(ctx)
+
 	for _, os := range goos {
 		for _, arch := range goarch {
 			// Defining binary file name
@@ -64,9 +69,17 @@ func (m *Cargoship) Build(
 			if os == "windows" {
 				binName += ".exe"
 			}
-			file := m.BuildLocal(ctx, os, arch, source)
-			buildDir = buildDir.WithFile(fmt.Sprintf("/%s", binName), file) // Adding file(bin) to dist directory
+			p.Go(func(ctx context.Context) error {
+				file := m.BuildLocal(ctx, os, arch, source)
+				buildDir = buildDir.WithFile(fmt.Sprintf("/%s", binName), file) // Adding file(bin) to dist directory
+				return nil
+			})
 		}
+	}
+
+	err = p.Wait()
+	if err != nil {
+		return nil, err
 	}
 
 	return buildDir, nil
