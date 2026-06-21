@@ -34,7 +34,7 @@ func daggerBuildLocal(oper string, arch string) error {
 	}
 
 	return sh.RunV(
-		binaryPath("dagger"),
+		"dagger",
 		"call",
 		"--progress=tty",
 		"--interactive=false",

@@ -20,19 +20,12 @@ import (
 	"path/filepath"
 
 	"github.com/magefile/mage/mg"
-	"github.com/uwu-tools/magex/pkg/archive"
-	"github.com/uwu-tools/magex/pkg/downloads"
 	"github.com/uwu-tools/magex/pkg/gopath"
 )
 
 type (
 	Binary mg.Namespace
 )
-
-// Dagger install dagger into gopath
-func (Binary) Dagger() error {
-	return ensureDagger()
-}
 
 func binInPath(bin string) bool {
 	_, err := os.Stat(binaryPath(bin))
@@ -41,24 +34,4 @@ func binInPath(bin string) bool {
 
 func binaryPath(bin string) string {
 	return filepath.Join(gopath.GOPATH(), "bin", bin)
-}
-
-func ensureDagger() error {
-	if !binInPath("dagger") {
-		return archive.DownloadToGopathBin(
-			archive.DownloadArchiveOptions{
-				DownloadOptions: downloads.DownloadOptions{
-					Name:        "dagger",
-					Version:     "0.20.8",
-					UrlTemplate: "https://dl.dagger.io/dagger/releases/{{.VERSION}}/dagger_v{{.VERSION}}_{{.GOOS}}_{{.GOARCH}}{{.EXT}}",
-				},
-				ArchiveExtensions: map[string]string{
-					"linux":   ".tar.gz",
-					"darwin":  ".tar.gz",
-					"windows": ".zip",
-				},
-			},
-		)
-	}
-	return nil
 }
