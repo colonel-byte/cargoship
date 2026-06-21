@@ -104,6 +104,11 @@ func (h *ZarfHost) requireConfigurer() (os.Configurer, error) {
 	return h.Configurer, nil
 }
 
+// String returns the connection string
+func (h *ZarfHost) String() string {
+	return h.Connection.String()
+}
+
 // Dir returns the configurer-specific directory name for the given path.
 func (h *ZarfHost) Dir(path string) (string, error) {
 	cfg, err := h.requireConfigurer()
