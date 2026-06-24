@@ -26,6 +26,8 @@ const (
 	CmdDistroCreateShort = "Creates a Zarf Distro Package from a given directory or the current director"
 	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
+	// CmdDistroPrepareShort prepare short
+	CmdDistroPrepareShort = "Prepares the nodes, including restarting the node if new kernel modules are enabled"
 	// CmdDistroResetShort reset short
 	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for a engine"
 	// CmdDistroKubeConfigShort kube-config short

@@ -471,6 +471,12 @@
         "files": {
           "$ref": "#/$defs/ZarfFiles"
         },
+        "kernel": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "sysctl": {
           "additionalProperties": {
             "oneOf": [

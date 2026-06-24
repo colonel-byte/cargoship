@@ -60,6 +60,9 @@ func (Generate) Document() error {
 	if err := phaseKubeConfig(); err != nil {
 		return err
 	}
+	if err := phasePrepare(); err != nil {
+		return err
+	}
 
 	var builder strings.Builder
 	if err := markdown.GenerateIndex(
@@ -204,6 +207,33 @@ func phaseKubeConfig() error {
 	resetDoc := markdown.NewMarkdown(f)
 
 	resetDoc.H2("kube-config phases")
+
+	for _, p := range kube.Phases {
+		phaseComment(resetDoc, p)
+	}
+
+	resetDoc.PlainTextf("")
+
+	return resetDoc.Build()
+}
+
+func phasePrepare() error {
+	kube := action.NewPrepare(action.PrepareOptions{})
+
+	fmt.Println("docs/actions/prepare.md")
+	f, err := os.Create("docs/actions/prepare.md")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	resetDoc := markdown.NewMarkdown(f)
+
+	resetDoc.H2("prepare phases")
 
 	for _, p := range kube.Phases {
 		phaseComment(resetDoc, p)

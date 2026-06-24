@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	hostComment = "added by distro-ctl"
+	hostComment = "added by cargoship"
 )
 
 // ModifyHosts state

@@ -30,7 +30,6 @@ import (
 
 // Configurer defines the per-host operations required for managing a host.
 type Configurer interface {
-	//keep-sorted start
 	Arch(os.Host) (string, error)
 	Base(string) string
 	CTLLockFilePath(h os.Host) string
@@ -80,9 +79,6 @@ type Configurer interface {
 	UpdateServiceEnvironment(os.Host, string, map[string]string) error
 	UpsertFile(os.Host, string, string) error
 	WriteFile(os.Host, string, string, string) error
-	//keep-sorted end
-	// ConfigureDistro(distro.Distro)
-	// ConfigureDistroServices(map[string]string)
 }
 
 // HostValidator allows a Configurer to implement host-specific validation logic.

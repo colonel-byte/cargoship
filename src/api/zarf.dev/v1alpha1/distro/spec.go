@@ -100,6 +100,8 @@ type ZarfDistroOS struct {
 	FAPolicyd string `json:"fapolicyd,omitempty"`
 	// Files that will be uploaded to a host
 	Files v1alpha1.ZarfFiles `json:"files,omitempty"`
+	// Kernel list of the requested kerenel modules to be enabled on the host system
+	Kernel []string `json:"kernel,omitempty"`
 }
 
 // IsSBOMAble has files that can have a sbom generated from
