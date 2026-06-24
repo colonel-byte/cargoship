@@ -51,7 +51,7 @@ const (
 	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
 	// CmdInstallHostUpdate install flag host
-	CmdInstallHostUpdate = "Whether to update all the host nodes etc/hosts file."
+	CmdInstallHostUpdate = "Whether to update all the host nodes /etc/hosts file."
 	// CmdPackageCreateFlagOutput create flag output
 	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
 	// CmdPackageFlagConcurrency deploy flag concurrency
