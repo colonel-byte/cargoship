@@ -14,7 +14,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/invopop/jsonschema v0.14.0
 	github.com/k0sproject/dig v0.4.0
-	github.com/k0sproject/rig v0.21.10
+	github.com/k0sproject/rig v0.21.11
 	github.com/magefile/mage v1.17.2
 	github.com/nao1215/markdown v0.13.0
 	github.com/pterm/pterm v0.12.83
