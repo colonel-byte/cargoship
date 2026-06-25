@@ -63,11 +63,14 @@ func (d *DistroLayout) GetImageDirPath() string {
 
 // FileName returns the name of the Zarf package should have when exported to the file system
 func (d *DistroLayout) FileName() (string, error) {
-	if d.Distro.Build.Architecture == "" {
-		return "", errors.New("package must include a build architecture")
+	if len(d.Distro.Build.Architecture) == 0 {
+		return "", errors.New("package must include at least one architecture")
 	}
 
-	name := fmt.Sprintf("cargoship-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
+	name := fmt.Sprintf("cargoship-%s", d.Distro.Metadata.Name)
+	for _, arch := range d.Distro.Build.Architecture {
+		name = fmt.Sprintf("%s-%s", name, arch)
+	}
 	if d.Distro.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, d.Distro.Metadata.Version)
 	}

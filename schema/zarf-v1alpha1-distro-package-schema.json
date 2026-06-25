@@ -6,13 +6,24 @@
         "^x-": {}
       },
       "properties": {
-        "package": {
+        "architecture": {
           "enum": [
-            "rpm",
-            "apt",
-            "binary"
+            "amd64",
+            "arm64",
+            "any"
           ],
           "type": "string"
+        },
+        "package": {
+          "items": {
+            "enum": [
+              "rpm",
+              "apt",
+              "binary"
+            ],
+            "type": "string"
+          },
+          "type": "array"
         },
         "profile": {
           "enum": [
@@ -354,7 +365,10 @@
       },
       "properties": {
         "architecture": {
-          "type": "string"
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "registryOverrides": {
           "additionalProperties": {
@@ -432,12 +446,17 @@
           "type": "object"
         },
         "architecture": {
-          "default": "amd64",
-          "enum": [
-            "amd64",
-            "arm64"
+          "default": [
+            "amd64"
           ],
-          "type": "string"
+          "items": {
+            "enum": [
+              "amd64",
+              "arm64"
+            ],
+            "type": "string"
+          },
+          "type": "array"
         },
         "description": {
           "type": "string"

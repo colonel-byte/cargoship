@@ -112,31 +112,34 @@ func (p *UploadFilesCommon) ShouldRun() bool {
 func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) []v1alpha1.ZarfFile {
 	files := []v1alpha1.ZarfFile{}
 
+	// TODO: account for os architecture
 	for i, f := range p.distroFiles {
-		switch f.Selector.Package {
-		case selector:
-			if f.Selector.Profile == "" || f.Selector.Profile == profile {
-				logger.From(ctx).Debug("determined this file needs to be uploaded", "file", filepath.Base(f.Target))
-				filePath := filepath.Join(p.manager.TempDirectory, config.OSDir, strconv.Itoa(i), filepath.Base(f.Target))
-				err := os.Chtimes(filePath, time.Unix(0, 0), time.Unix(0, 0))
-				if err != nil {
-					logger.From(ctx).Warn("failed to change the file time", "error", err)
+		for _, pkg := range f.Selector.Package {
+			switch pkg {
+			case selector:
+				if f.Selector.Profile == "" || f.Selector.Profile == profile {
+					logger.From(ctx).Debug("determined this file needs to be uploaded", "file", filepath.Base(f.Target))
+					filePath := filepath.Join(p.manager.TempDirectory, config.OSDir, strconv.Itoa(i), filepath.Base(f.Target))
+					err := os.Chtimes(filePath, time.Unix(0, 0), time.Unix(0, 0))
+					if err != nil {
+						logger.From(ctx).Warn("failed to change the file time", "error", err)
+					}
+					target := f.Target
+					if f.Executable {
+						target = stageTempPath(false, f.Target)
+					}
+					files = append(files, v1alpha1.ZarfFile{
+						Name:           filepath.Base(f.Target),
+						Target:         target,
+						OriginalTarget: f.Target,
+						LocalSource: v1alpha1.LocalFile{
+							Path: filePath,
+						},
+					})
 				}
-				target := f.Target
-				if f.Executable {
-					target = stageTempPath(false, f.Target)
-				}
-				files = append(files, v1alpha1.ZarfFile{
-					Name:           filepath.Base(f.Target),
-					Target:         target,
-					OriginalTarget: f.Target,
-					LocalSource: v1alpha1.LocalFile{
-						Path: filePath,
-					},
-				})
+			default:
+				logger.From(ctx).Debug("not selected for upload", "file", filepath.Base(f.Target))
 			}
-		default:
-			logger.From(ctx).Debug("not selected for upload", "file", filepath.Base(f.Target))
 		}
 	}
 

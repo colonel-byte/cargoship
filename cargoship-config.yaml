@@ -3,7 +3,7 @@
 log_level: info
 log_format: console
 tmp_dir: /tmp
-zarf_cache: ~/.zarf
+zarf_cache: ~/.cargoship-cache
 timeout: 20m
 distro:
   type: rke2

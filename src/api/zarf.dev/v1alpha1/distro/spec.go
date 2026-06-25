@@ -33,7 +33,7 @@ type ZarfDistro struct {
 // ZarfDistroMetadata for the distro package
 type ZarfDistroMetadata struct {
 	Uncompressed bool              `json:"uncompressed,omitempty" jsonschema:"default=false"`
-	Architecture string            `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
+	Architecture []string          `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
 	Name         string            `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 	Description  string            `json:"description,omitempty"`
 	Version      string            `json:"version,omitempty"`
@@ -43,7 +43,7 @@ type ZarfDistroMetadata struct {
 // ZarfDistroBuildData time information
 type ZarfDistroBuildData struct {
 	// Architecture of the distro package
-	Architecture string `json:"architecture,omitempty"`
+	Architecture []string `json:"architecture,omitempty"`
 	// Timestamp of when the distro was created
 	Timestamp string `json:"timestamp,omitempty"`
 	// Version of the distro is created as

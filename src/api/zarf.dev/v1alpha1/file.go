@@ -78,12 +78,14 @@ type LocalFile struct {
 
 // BinarySelector allows for filtering files based on certain criteria
 type BinarySelector struct {
+	// Architecture of file
+	Architecture string `json:"architecture,omitempty" jsonschema:"enum=amd64,enum=arm64,enum=any"`
 	// Roles arbitrary list of roles to upload files too
 	Roles []string `json:"roles,omitempty"`
 	// Profile what type of node to upload files too
 	Profile string `json:"profile,omitempty" jsonschema:"enum=worker,enum=controller"`
 	// Package what type of engine binary will be used to install
-	Package string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
+	Package []string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
 }
 
 // String returns the file bundle name or if it is empty, the source.

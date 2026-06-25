@@ -99,18 +99,20 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 
 	if len(componentImages) > 0 {
-		pullOpts := images.PullOptions{
-			OCIConcurrency:        opts.OCIConcurrency,
-			Arch:                  d.Metadata.Architecture,
-			RegistryOverrides:     opts.RegistryOverrides,
-			CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
-			PlainHTTP:             opts.PlainHTTP,
-			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		}
-		l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
-		_, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
-		if err != nil {
-			return nil, err
+		for _, arch := range d.Metadata.Architecture {
+			pullOpts := images.PullOptions{
+				OCIConcurrency:        opts.OCIConcurrency,
+				Arch:                  arch,
+				RegistryOverrides:     opts.RegistryOverrides,
+				CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
+				PlainHTTP:             opts.PlainHTTP,
+				InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+			}
+			l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
+			_, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
+			if err != nil {
+				return nil, err
+			}
 		}
 		// manifests = append(manifests, imageManifests...)
 	}
