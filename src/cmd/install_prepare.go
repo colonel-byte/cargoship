@@ -34,7 +34,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-type installApplyOptions struct {
+type installPrepareOptions struct {
 	InstallCommon
 	workerCon int
 	hosts     bool
@@ -42,12 +42,12 @@ type installApplyOptions struct {
 	fapolicy  bool
 }
 
-func newInstallApplyCommand() *cobra.Command {
-	o := installApplyOptions{}
+func newInstallPrepareCommand() *cobra.Command {
+	o := installPrepareOptions{}
 	cmd := &cobra.Command{
-		Use:     "apply [Distro Package]",
+		Use:     "prepare [Distro Package]",
 		Args:    cobra.ExactArgs(1),
-		Short:   lang.CmdDistroApplyShort,
+		Short:   lang.CmdDistroPrepareShort,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -82,7 +82,7 @@ func newInstallApplyCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installApplyOptions) run(ctx context.Context, args []string) error {
+func (o *installPrepareOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {
@@ -116,12 +116,12 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 
 	manager.SetTimout(d)
 
-	applyOpts := action.ApplyOptions{
-		Manager:          manager,
-		ModifyHosts:      o.hosts,
-		WorkerConcurrent: o.workerCon,
-		ModifyFirewall:   o.firewall,
+	opts := action.PrepareOptions{
+		Manager:        manager,
+		ModifyHosts:    o.hosts,
+		ModifyFirewall: o.firewall,
+		ModifyModules:  true,
 	}
 
-	return action.NewApply(applyOpts).Run(ctx)
+	return action.NewPrepare(opts).Run(ctx)
 }

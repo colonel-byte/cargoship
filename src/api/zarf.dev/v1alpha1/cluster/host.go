@@ -80,7 +80,7 @@ type ZarfHostPort struct {
 
 // ZarfHostMetadata runtime discovered values
 type ZarfHostMetadata struct {
-	//keep-sorted start
+	//keep-sorted start sticky_comments=yes
 	Arch           string
 	BinaryTempFile []string
 	DistroVersion  string
@@ -88,12 +88,19 @@ type ZarfHostMetadata struct {
 	ExistingConfig string
 	Hostname       string
 	Install        func(context.Context, *ZarfHost) error
-	Installed      bool
-	IsLeader       bool
-	MachineID      string
-	NeedsUpgrade   bool
-	NewConfig      string
-	Ready          bool
+	// Installed is a distro engine is already installed onto a host
+	Installed bool
+	// IsLeader if the host is a control-plane node
+	IsLeader bool
+	// MachineID is used by the distro engine to identify a node
+	MachineID string
+	// ModulesAdded is an indication if a new kernel module was added to the host system
+	ModulesAdded bool
+	// NeedsUpgrade if the host needs the distro engine upgraded
+	NeedsUpgrade bool
+	NewConfig    string
+	// Ready indicates if the distro service is up and running
+	Ready bool
 	//keep-sorted end
 }
 

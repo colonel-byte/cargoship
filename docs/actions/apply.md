@@ -9,14 +9,14 @@
     - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface
 1. Validate hosts
     - Verifying that each node in the cluster has a unique name and private address, 
+1. Gathering facts about the distro installed
+    - Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running
 1. Prepare hosts
     - Updates the remote nodes; environment variables and sysctl
 1. Prepare hosts - Enterprise Linux support
     - Installs container-selinux on systems that have SELinux enabled on them
 1. Prepare hosts - Enterprise Linux support - Fapolicyd
     - Creates the distro supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
-1. Gathering facts about the distro installed
-    - Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running
 1. Updating hosts file for clusters nodes
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
 1. Updating hosts firewalld service

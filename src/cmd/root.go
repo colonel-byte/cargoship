@@ -46,6 +46,23 @@ const (
 	RootTimeout = "timeout"
 )
 
+const (
+	// InstallConfig flag
+	InstallConfig = "config"
+	// InstallConfirm flag
+	InstallConfirm = "confirm"
+	// InstallConcurrency flag
+	InstallConcurrency = "concurrency"
+	// InstallWorkConcurrency flag
+	InstallWorkConcurrency = "work-concurrency"
+	// InstallUpdateHost flag
+	InstallUpdateHost = "update-hosts"
+	// InstallUpdateFirewall flag
+	InstallUpdateFirewall = "update-firewall"
+	// InstallUpdateFAPolicyD flag
+	InstallUpdateFAPolicyD = "update-fapolicyd"
+)
+
 var (
 	// IsColorDisabled whether to show the colored output
 	IsColorDisabled bool
@@ -100,6 +117,7 @@ func NewCargoshipCommand() *cobra.Command {
 
 	rootCmd.AddCommand(newPackageCreateCommand())
 	rootCmd.AddCommand(newInstallApplyCommand())
+	rootCmd.AddCommand(newInstallPrepareCommand())
 	rootCmd.AddCommand(newInstallResetCommand())
 	rootCmd.AddCommand(newInstallKubeConfigCommand())
 	rootCmd.AddCommand(newVersionCommand())
