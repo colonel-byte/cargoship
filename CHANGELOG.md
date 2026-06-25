@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.5.0](https://github.com/colonel-byte/cargoship/compare/v0.4.0...v0.5.0) (2026-06-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* add prepare command ([#99](https://github.com/colonel-byte/cargoship/issues/99))
+
+### Features
+
+* add prepare command ([#99](https://github.com/colonel-byte/cargoship/issues/99)) ([9f191aa](https://github.com/colonel-byte/cargoship/commit/9f191aa097f8ffb01af7c124751c792deb695a29))
+* **logging:** add better logic for distro output ([#97](https://github.com/colonel-byte/cargoship/issues/97)) ([8e96e83](https://github.com/colonel-byte/cargoship/commit/8e96e830dcc26d3b3d50549668bd80353fd4d3d6))
+* update the rig version to use upstream package ([#92](https://github.com/colonel-byte/cargoship/issues/92)) ([6e34be6](https://github.com/colonel-byte/cargoship/commit/6e34be68204ee361e943be360dbdfdd37180c29e))
+
+
+### CI/CD
+
+* **dagger:** update version ([#88](https://github.com/colonel-byte/cargoship/issues/88)) ([a1643cb](https://github.com/colonel-byte/cargoship/commit/a1643cb3a38a6edda63fe5aa2cf672d87f93de54))
+* update dagger to 0.21.7 ([#96](https://github.com/colonel-byte/cargoship/issues/96)) ([da2b4f8](https://github.com/colonel-byte/cargoship/commit/da2b4f857320875add6b1a61a9d36eabf2534d5b))
+
+
+### Build
+
+* **deps:** Bump actions/checkout from 6.0.2 to 6.0.3 ([#85](https://github.com/colonel-byte/cargoship/issues/85)) ([e059838](https://github.com/colonel-byte/cargoship/commit/e0598381202f9fa518e1b0ffc2f8d9564eb29cdc))
+* **deps:** Bump actions/checkout from 6.0.3 to 7.0.0 ([#94](https://github.com/colonel-byte/cargoship/issues/94)) ([2c55700](https://github.com/colonel-byte/cargoship/commit/2c55700306c9bf2612ccee98ebad0b005f50e2ef))
+* **deps:** Bump actions/setup-go from 6.4.0 to 6.5.0 ([#98](https://github.com/colonel-byte/cargoship/issues/98)) ([6686e60](https://github.com/colonel-byte/cargoship/commit/6686e607f59d268220478d4585ddae6c41201821))
+* **deps:** Bump github.com/k0sproject/rig from 0.21.10 to 0.21.11 ([#100](https://github.com/colonel-byte/cargoship/issues/100)) ([8152958](https://github.com/colonel-byte/cargoship/commit/8152958517d74b16d37b3c2050132976d1f0fe5f))
+* **deps:** Bump github.com/txn2/txeh from 1.8.0 to 1.8.1 ([#86](https://github.com/colonel-byte/cargoship/issues/86)) ([cc8160e](https://github.com/colonel-byte/cargoship/commit/cc8160ebb763501ba62860d33200084b4926cd20))
+* **deps:** Bump github.com/zarf-dev/zarf from 0.76.0 to 0.77.0 ([#83](https://github.com/colonel-byte/cargoship/issues/83)) ([c9edcb8](https://github.com/colonel-byte/cargoship/commit/c9edcb8fd8e08531eeed9f9bd83ca2ba05d38c56))
+* **deps:** Bump https://github.com/google/keep-sorted from v0.8.0 to 0.9.0 ([#87](https://github.com/colonel-byte/cargoship/issues/87)) ([682a63b](https://github.com/colonel-byte/cargoship/commit/682a63b555b97c04c331575cff2ac814b66416d7))
+* **deps:** Bump k8s.io/client-go from 0.36.1 to 0.36.2 in the k8s group across 1 directory ([#91](https://github.com/colonel-byte/cargoship/issues/91)) ([1138748](https://github.com/colonel-byte/cargoship/commit/11387482588fbe86f9f240fd8529774e0ec85bbd))
+* **deps:** Bump oras.land/oras-go/v2 from 2.6.0 to 2.6.1 ([#89](https://github.com/colonel-byte/cargoship/issues/89)) ([b4a51f8](https://github.com/colonel-byte/cargoship/commit/b4a51f8ae1e7b619fea8ad2f4f73d3d69422b8e2))
+
 ## [0.4.0](https://github.com/colonel-byte/cargoship/compare/v0.3.0...v0.4.0) (2026-05-23)
 
 
