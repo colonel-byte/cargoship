@@ -67,8 +67,8 @@ func (p *PrepareKernelModules) Run(ctx context.Context) error {
 func (p *PrepareKernelModules) enableModules(ctx context.Context, h *cluster.ZarfHost) error {
 	for _, m := range p.modules {
 		load := fmt.Sprintf("/etc/modules-load.d/%s.conf", m)
-		h.Metadata.ModulesAdded = true
 		if !h.Configurer.FileExist(h, load) {
+			h.Metadata.ModulesAdded = true
 			logger.From(ctx).Info("enabling kernel module", "host", h, "modules", m)
 			if err := h.Configurer.WriteFile(h, load, m, "0600"); err != nil {
 				logger.From(ctx).Warn("could not write", "host", h, "modules", m, "file", load)

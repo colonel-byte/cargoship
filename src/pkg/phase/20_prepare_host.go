@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
@@ -40,6 +41,7 @@ import (
 // PrepareHosts installs required packages and so on on the hosts.
 type PrepareHosts struct {
 	GenericPhase
+	d *distro.ZarfDistro
 }
 
 // Title for the phase
@@ -50,6 +52,12 @@ func (p *PrepareHosts) Title() string {
 // Explanation about the current phase, used for documentation generation
 func (p *PrepareHosts) Explanation() string {
 	return "Updates the remote nodes; environment variables and sysctl"
+}
+
+// Prepare the phase
+func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+	p.d = d
+	return nil
 }
 
 // Run the phase
@@ -70,7 +78,14 @@ func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) err
 
 	if len(h.Environment) > 0 {
 		logger.From(ctx).Info("updating environment", "host", h)
-		if err := p.updateEnvironment(ctx, h); err != nil {
+		if err := p.updateEnvironment(ctx, h, h.Environment); err != nil {
+			return fmt.Errorf("failed to updated environment: %w", err)
+		}
+	}
+
+	if len(p.d.Spec.Config.OS.Environment) > 0 {
+		logger.From(ctx).Info("updating environment from the distro package", "host", h)
+		if err := p.updateEnvironment(ctx, h, p.d.Spec.Config.OS.Environment); err != nil {
 			return fmt.Errorf("failed to updated environment: %w", err)
 		}
 	}
@@ -88,8 +103,8 @@ func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) err
 	return nil
 }
 
-func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHost) error {
-	if err := h.Configurer.UpdateEnvironment(h, h.Environment); err != nil {
+func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHost, env map[string]string) error {
+	if err := h.Configurer.UpdateEnvironment(h, env); err != nil {
 		return err
 	}
 	if h.Connection.Protocol() != "SSH" {

@@ -102,6 +102,8 @@ type ZarfDistroOS struct {
 	Files v1alpha1.ZarfFiles `json:"files,omitempty"`
 	// Kernel list of the requested kerenel modules to be enabled on the host system
 	Kernel []string `json:"kernel,omitempty"`
+	// Environment a map of environment variables that will be populated on the host system
+	Environment map[string]string `json:"env,omitempty"`
 }
 
 // IsSBOMAble has files that can have a sbom generated from

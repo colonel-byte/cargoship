@@ -465,6 +465,12 @@
         "^x-": {}
       },
       "properties": {
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "fapolicyd": {
           "type": "string"
         },
