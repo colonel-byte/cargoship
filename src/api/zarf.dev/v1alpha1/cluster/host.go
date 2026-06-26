@@ -55,21 +55,34 @@ var ErrCommandFailed = errors.New("command failed")
 
 // ZarfHost is a remote connection to a node
 type ZarfHost struct {
+	// Environment a map of environment variables that will be populated on the host system
+	Environment map[string]string `json:"environment,omitempty"`
+	// Files that will be uploaded to a host
+	Files []ZarfClusterFiles `json:"files,omitempty"`
+	// Hostname overrides the name of the node
+	Hostname string `json:"hostname,omitempty"`
+	// NodeLabels a map of node labels variables
+	NodeLabels map[string]string `json:"labels,omitempty"`
+	// NodeTaints
+	NodeTaints []string `json:"taints,omitempty"`
+	// Ports
+	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
+	// PrivateAddress override the given private address
+	PrivateAddress string `json:"privateAddress,omitempty"`
+	// PrivateInterface override the given private interface
+	PrivateInterface string `json:"privateInterface,omitempty"`
+	// Profile
+	Profile string `json:"profile,omitempty"`
+	// Role
+	Role string `json:"role" jsonschema:"required,enum=controller,enum=controller+worker,enum=single,enum=worker"`
+
+	// Connection is a Struct you can embed into your application's "Host" types
+	// to give them multi-protocol connectivity.
 	rig.Connection `json:",inline"`
-	//keep-sorted start
-	Environment      map[string]string  `json:"environment,omitempty"`
-	Files            []ZarfClusterFiles `json:"files,omitempty"`
-	Hostname         string             `json:"hostname,omitempty"`
-	NodeLabels       map[string]string  `json:"labels,omitempty"`
-	NodeTaints       []string           `json:"taints,omitempty"`
-	Ports            []ZarfHostPort     `json:"ports,omitempty" xml:"port"`
-	PrivateAddress   string             `json:"privateAddress,omitempty"`
-	PrivateInterface string             `json:"privateInterface,omitempty"`
-	Profile          string             `json:"profile,omitempty"`
-	Role             string             `json:"role" jsonschema:"required,enum=controller,enum=controller+worker,enum=single,enum=worker"`
-	//keep-sorted end
-	Configurer os.Configurer    `json:"-"`
-	Metadata   ZarfHostMetadata `json:"-"`
+	// Configurer defines the per-host operations required for managing a host
+	Configurer os.Configurer `json:"-"`
+	// Metadata runtime discovered values
+	Metadata ZarfHostMetadata `json:"-"`
 }
 
 // ZarfHostPort ports that should be opened on the public side of the firewall
