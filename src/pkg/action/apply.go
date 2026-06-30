@@ -100,6 +100,9 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.ConfigureFirewallPorts{
 				Enabled: opts.ModifyFirewall,
 			},
+			&phase.ConfigureFirewallPolicy{
+				Enabled: opts.ModifyFirewall,
+			},
 
 			&phase.UploadFiles{},
 			&phase.RPMUploadFiles{},

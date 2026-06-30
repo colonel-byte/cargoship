@@ -23,6 +23,8 @@
     - If enabled, then this will create a firewalld ipsets file with the known engine cidr blocks for the pod and service networks, and create a firewalld ipsets to allow each node in cluster to access all ports on the node
 1. Updating hosts firewalld ports
     - If enabled, this will open any ports in the `.ports` section for each remote node
+1. Updating hosts firewalld policies
+    - If enabled, this create firewalld policies. This is controlled by the inventory file.
 1. Upload files to hosts
     - Uploads the distro agnostic files to each remote node
 1. Upload files to hosts -- RPM

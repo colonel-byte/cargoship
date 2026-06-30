@@ -23,6 +23,7 @@ package cluster
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -57,16 +58,17 @@ var ErrCommandFailed = errors.New("command failed")
 type ZarfHost struct {
 	rig.Connection `json:",inline"`
 	//keep-sorted start
-	Environment      map[string]string  `json:"environment,omitempty"`
-	Files            []ZarfClusterFiles `json:"files,omitempty"`
-	Hostname         string             `json:"hostname,omitempty"`
-	NodeLabels       map[string]string  `json:"labels,omitempty"`
-	NodeTaints       []string           `json:"taints,omitempty"`
-	Ports            []ZarfHostPort     `json:"ports,omitempty" xml:"port"`
-	PrivateAddress   string             `json:"privateAddress,omitempty"`
-	PrivateInterface string             `json:"privateInterface,omitempty"`
-	Profile          string             `json:"profile,omitempty"`
-	Role             string             `json:"role" jsonschema:"required,enum=controller,enum=controller+worker,enum=single,enum=worker"`
+	Environment      map[string]string                   `json:"environment,omitempty"`
+	Files            []ZarfClusterFiles                  `json:"files,omitempty"`
+	Hostname         string                              `json:"hostname,omitempty"`
+	NodeLabels       map[string]string                   `json:"labels,omitempty"`
+	NodeTaints       []string                            `json:"taints,omitempty"`
+	Policy           map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
+	Ports            []ZarfHostPort                      `json:"ports,omitempty" xml:"port"`
+	PrivateAddress   string                              `json:"privateAddress,omitempty"`
+	PrivateInterface string                              `json:"privateInterface,omitempty"`
+	Profile          string                              `json:"profile,omitempty"`
+	Role             string                              `json:"role" jsonschema:"required,enum=controller,enum=controller+worker,enum=single,enum=worker"`
 	//keep-sorted end
 	Configurer os.Configurer    `json:"-"`
 	Metadata   ZarfHostMetadata `json:"-"`
@@ -76,6 +78,27 @@ type ZarfHost struct {
 type ZarfHostPort struct {
 	Protocol string `json:"protocol" xml:"protocol,attr" jsonschema:"enum=tcp,enum=udp"`
 	Port     string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
+}
+
+// ZarfFirewallPolicyConfig is used in the inventory file to allow opening ports from one zone to another with firewalld policies
+type ZarfFirewallPolicyConfig struct {
+	XMLName xml.Name           `xml:"policy" json:"-"`
+	Short   string             `xml:"short,omitempty" json:"-"`
+	Target  string             `xml:"target,attr,omitempty" json:"target" jsonschema:"enum=CONTINUE,enum=ACCEPT,enum=REJECT,enum=DROP"`
+	Ingress ZarfFirewallZone   `xml:"ingress-zone"`
+	Egress  ZarfFirewallZone   `xml:"egress-zone"`
+	Ports   []ZarfFirewallPort `xml:"port,omitempty" json:"ports,omitempty"`
+}
+
+// ZarfFirewallZone name of either the ingress or egress zone for the policy
+type ZarfFirewallZone struct {
+	Name string `xml:"name,attr"`
+}
+
+// ZarfFirewallPort is used to define what ports are allowed thru the firewalld policy
+type ZarfFirewallPort struct {
+	Port     string `xml:"port,attr" json:"port" jsonschema:"oneof_type=string;integer"`
+	Protocol string `xml:"protocol,attr" json:"protocol" jsonschema:"enum=tcp,enum=udp,enum=sctp,enum=dccp"`
 }
 
 // ZarfHostMetadata runtime discovered values
