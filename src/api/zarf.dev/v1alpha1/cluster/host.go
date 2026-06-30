@@ -92,7 +92,7 @@ type ZarfFirewallPolicyConfig struct {
 
 // ZarfFirewallZone name of either the ingress or egress zone for the policy
 type ZarfFirewallZone struct {
-	Name string `xml:"name,attr"`
+	Name string `xml:"name,attr" jsonschema:"example=trusted,example=public"`
 }
 
 // ZarfFirewallPort is used to define what ports are allowed thru the firewalld policy
