@@ -364,6 +364,92 @@
       ],
       "type": "object"
     },
+    "ZarfFirewallPolicyConfig": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "egress": {
+          "$ref": "#/$defs/ZarfFirewallZone"
+        },
+        "ingress": {
+          "$ref": "#/$defs/ZarfFirewallZone"
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/$defs/ZarfFirewallPort"
+          },
+          "type": "array"
+        },
+        "target": {
+          "enum": [
+            "CONTINUE",
+            "ACCEPT",
+            "REJECT",
+            "DROP"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "ingress",
+        "egress"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallPort": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "port": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "enum": [
+            "tcp",
+            "udp",
+            "sctp",
+            "dccp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "port",
+        "protocol"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallZone": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "examples": [
+            "trusted",
+            "public"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
     "ZarfHost": {
       "additionalProperties": false,
       "patternProperties": {
@@ -396,6 +482,12 @@
         },
         "openSSH": {
           "$ref": "#/$defs/OpenSSH"
+        },
+        "policy": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ZarfFirewallPolicyConfig"
+          },
+          "type": "object"
         },
         "ports": {
           "items": {
