@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.6.0](https://github.com/colonel-byte/cargoship/compare/v0.5.0...v0.6.0) (2026-06-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* add firewalld policy management ([#107](https://github.com/colonel-byte/cargoship/issues/107))
+* reduce binary size ([#101](https://github.com/colonel-byte/cargoship/issues/101))
+
+### Features
+
+* add firewalld policy management ([#107](https://github.com/colonel-byte/cargoship/issues/107)) ([4a52030](https://github.com/colonel-byte/cargoship/commit/4a520304207ee9c7ebe1fe555cd2a9917198259f))
+* reduce binary size ([#101](https://github.com/colonel-byte/cargoship/issues/101)) ([81bd7ea](https://github.com/colonel-byte/cargoship/commit/81bd7ea8d26f8bb180a494d72c837f6b6b9a338e))
+
+
+### Build
+
+* **deps:** Bump golangci/golangci-lint-action from 9.2.1 to 9.3.0 ([#105](https://github.com/colonel-byte/cargoship/issues/105)) ([a314b7c](https://github.com/colonel-byte/cargoship/commit/a314b7c9b40a75c0ab5dd363f0bb51d2dea656a0))
+* **deps:** Bump goreleaser/goreleaser-action from 7.2.2 to 7.2.3 ([#106](https://github.com/colonel-byte/cargoship/issues/106)) ([0b32174](https://github.com/colonel-byte/cargoship/commit/0b32174b9bb006681159c561909c5e918184d8ea))
+
 ## [0.5.0](https://github.com/colonel-byte/cargoship/compare/v0.4.0...v0.5.0) (2026-06-25)
 
 
