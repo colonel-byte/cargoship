@@ -46,8 +46,6 @@ func (m *Cargoship) BuildLocal(
 
 	builder := dag.Container().
 		From("golang:"+m.GoVersion).
-		WithMountedCache("/go/pkg/mod", dag.CacheVolume("go-mod-"+m.GoVersion)).
-		WithEnvVariable("GOMODCACHE", "/go/pkg/mod").
 		WithMountedCache("/go/build-cache", dag.CacheVolume("go-build-"+m.GoVersion)).
 		WithEnvVariable("GOCACHE", "/go/build-cache").
 		WithMountedDirectory("/src", m.Source). // Ensure the source directory with go.mod is mounted
@@ -63,7 +61,7 @@ func (m *Cargoship) BuildLocal(
 	builder = builder.WithExec([]string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o /bin/%s /src/main.go`, gcflagsArgs, ldflagsArgs, binName),
+		fmt.Sprintf(`go build -mod=vendor -a -gcflags=all="%s" -ldflags "%s" -o /bin/%s /src/main.go`, gcflagsArgs, ldflagsArgs, binName),
 	})
 	return builder.File("/bin/" + binName)
 }
