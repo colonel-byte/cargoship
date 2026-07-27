@@ -1,0 +1,429 @@
+package rig
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"maps"
+	"os"
+	goexec "os/exec"
+	"strconv"
+	"strings"
+	"sync"
+
+	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/log"
+)
+
+// ErrControlPathNotSet is returned when the controlpath is not set when disconnecting from a multiplexed connection
+var ErrControlPathNotSet = errors.New("controlpath not set")
+
+// isHostKeyError reports whether ssh stderr output indicates a host key
+// verification failure. These are fatal and should not be retried.
+func isHostKeyError(stderr string) bool {
+	return strings.Contains(stderr, "Host key verification failed") ||
+		strings.Contains(stderr, "REMOTE HOST IDENTIFICATION HAS CHANGED")
+}
+
+// OpenSSH is a rig.Connection implementation that uses the system openssh client "ssh" to connect to remote hosts.
+// The connection is multiplexec over a control master, so that subsequent connections don't need to re-authenticate.
+type OpenSSH struct {
+	// Address of the remote host
+	Address string `yaml:"address" json:"address" validate:"required" jsonschema:"required,description=Address of the remote host"`
+
+	// Optional SSH user
+	User *string `yaml:"user,omitempty" json:"user,omitempty" jsonschema:"description=Optional SSH user"`
+
+	// Optional SSH port
+	Port *int `yaml:"port,omitempty" json:"port,omitempty" jsonschema:"minimum=1,maximum=65535,description=Optional SSH port"`
+
+	// Path to SSH private key
+	KeyPath *string `yaml:"keyPath,omitempty" json:"keyPath,omitempty" jsonschema:"description=Path to SSH private key"`
+
+	// Path to SSH config file
+	ConfigPath *string `yaml:"configPath,omitempty" json:"configPath,omitempty" jsonschema:"description=Path to SSH config file"`
+
+	// Additional SSH options as key-value pairs, such as StrictHostKeyChecking: false
+	Options OpenSSHOptions `yaml:"options,omitempty" json:"options,omitempty" jsonschema:"description=Additional SSH options as key-value pairs (e.g. StrictHostKeyChecking: false)"`
+
+	// Disable SSH connection multiplexing
+	DisableMultiplexing bool `yaml:"disableMultiplexing,omitempty" json:"disableMultiplexing,omitempty" jsonschema:"default=false,description=Disable SSH connection multiplexing"`
+
+	isConnected  bool
+	controlMutex sync.Mutex
+
+	isWindows *bool
+
+	name string
+}
+
+// Protocol returns the protocol name
+func (c *OpenSSH) Protocol() string {
+	return "OpenSSH"
+}
+
+// IPAddress returns the IP address of the remote host
+func (c *OpenSSH) IPAddress() string {
+	return c.Address
+}
+
+// IsWindows returns true if the remote host is windows
+func (c *OpenSSH) IsWindows() bool {
+	// Implement your logic here
+	if c.isWindows != nil {
+		return *c.isWindows
+	}
+
+	isWin := c.Exec("cmd.exe /c exit 0") == nil
+	c.isWindows = &isWin
+	log.Debugf("%s: host is windows: %t", c, *c.isWindows)
+
+	return *c.isWindows
+}
+
+// OpenSSHOptions are options for the OpenSSH client. For example StrictHostkeyChecking: false becomes -o StrictHostKeyChecking=no
+type OpenSSHOptions map[string]any
+
+// Copy returns a copy of the options
+func (o OpenSSHOptions) Copy() OpenSSHOptions {
+	dup := make(OpenSSHOptions, len(o))
+	maps.Copy(dup, o)
+	return dup
+}
+
+// Set sets an option key to value
+func (o OpenSSHOptions) Set(key string, value any) {
+	o[key] = value
+}
+
+// SetIfUnset sets the option if it's not already set
+func (o OpenSSHOptions) SetIfUnset(key string, value any) {
+	if o.IsSet(key) {
+		return
+	}
+	o.Set(key, value)
+}
+
+// IsSet returns true if the option is set
+func (o OpenSSHOptions) IsSet(key string) bool {
+	_, ok := o[key]
+	return ok
+}
+
+// ToArgs converts the options to command line arguments
+func (o OpenSSHOptions) ToArgs() []string {
+	args := make([]string, 0, len(o)*2)
+	for k, v := range o {
+		if b, ok := v.(bool); ok {
+			if b {
+				args = append(args, "-o", k+"=yes")
+			} else {
+				args = append(args, "-o", k+"=no")
+			}
+			continue
+		}
+		args = append(args, "-o", fmt.Sprintf("%s=%v", k, v))
+	}
+	return args
+}
+
+// DefaultOpenSSHOptions are the default options for the OpenSSH client
+var DefaultOpenSSHOptions = OpenSSHOptions{
+	// It's easy to end up with control paths that are too long for unix sockets (104 chars?)
+	// with the default ~/.ssh/master-%r@%h:%p, for example something like:
+	// /Users/user/.ssh/master-ec2-xx-xx-xx-xx.eu-central-1.compute.amazonaws.com-centos.AAZFTHkT5....
+	// so, using %C here for hash instead.
+	//
+	// Note that openssh client does not respect $HOME so this will always be in the actual home dir
+	// that the ssh client digs from /etc/passwd.
+	"ControlPath":           "~/.ssh/ctrl-%C",
+	"ControlMaster":         false,
+	"ServerAliveInterval":   "60",
+	"ServerAliveCountMax":   "3",
+	"StrictHostKeyChecking": false,
+	"Compression":           false,
+	"ConnectTimeout":        "10",
+}
+
+// SetDefaults sets default values
+func (c *OpenSSH) SetDefaults() {
+	if c.Options == nil {
+		c.Options = make(OpenSSHOptions)
+	}
+	for k, v := range DefaultOpenSSHOptions {
+		if v == nil {
+			delete(c.Options, k)
+			continue
+		}
+		c.Options.SetIfUnset(k, v)
+	}
+	if c.DisableMultiplexing {
+		delete(c.Options, "ControlMaster")
+		delete(c.Options, "ControlPath")
+	}
+}
+
+func (c *OpenSSH) userhost() string {
+	if c.User != nil {
+		return fmt.Sprintf("%s@%s", *c.User, c.Address)
+	}
+	return c.Address
+}
+
+func (c *OpenSSH) args() []string {
+	args := []string{}
+	if c.KeyPath != nil && *c.KeyPath != "" {
+		args = append(args, "-i", *c.KeyPath)
+	}
+	if c.Port != nil {
+		args = append(args, "-p", strconv.Itoa(*c.Port))
+	}
+	if c.ConfigPath != nil && *c.ConfigPath != "" {
+		args = append(args, "-F", *c.ConfigPath)
+	}
+	args = append(args, c.userhost())
+	return args
+}
+
+// Connect connects to the remote host. If multiplexing is enabled, this will start a control master. If multiplexing is disabled, this will just run a noop command to check connectivity.
+func (c *OpenSSH) Connect() error {
+	if c.isConnected {
+		return nil
+	}
+
+	if c.DisableMultiplexing {
+		// Run a noop to check connectivity. Capture stderr to detect host key failures.
+		args := c.Options.ToArgs()
+		args = append(args, "-o", "BatchMode=yes")
+		args = append(args, c.args()...)
+		args = append(args, "--", "exit 0")
+		cmd := goexec.CommandContext(context.Background(), "ssh", args...) //nolint:gosec
+		var errBuf bytes.Buffer
+		cmd.Stderr = &errBuf
+		if err := cmd.Run(); err != nil {
+			errOut := errBuf.String()
+			if isHostKeyError(errOut) {
+				return fmt.Errorf("%w: host key verification failed: %w (%s)", ErrCantConnect, err, errOut)
+			}
+			return fmt.Errorf("failed to connect: %w", err)
+		}
+		c.isConnected = true
+		return nil
+	}
+
+	c.controlMutex.Lock()
+	defer c.controlMutex.Unlock()
+
+	opts := c.Options.Copy()
+	opts.Set("ControlMaster", true)
+	opts.Set("ControlPersist", 600)
+	opts.Set("TCPKeepalive", true)
+
+	optArgs := opts.ToArgs()
+	cArgs := c.args()
+	args := make([]string, 0, 2+len(optArgs)+len(cArgs))
+	args = append(args, "-N", "-f")
+	args = append(args, optArgs...)
+	args = append(args, cArgs...)
+
+	cmd := goexec.CommandContext(context.Background(), "ssh", args...) //nolint:gosec
+	var errBuf bytes.Buffer
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = io.MultiWriter(os.Stderr, &errBuf)
+	cmd.Stdin = os.Stdin
+
+	log.Debugf("%s: starting ssh control master", c)
+	err := cmd.Run()
+	if err != nil {
+		c.isConnected = false
+		errOut := errBuf.String()
+		if isHostKeyError(errOut) {
+			return fmt.Errorf("%w: host key verification failed: %w (%s)", ErrCantConnect, err, errOut)
+		}
+		return fmt.Errorf("failed to start ssh multiplexing control master: %w", err)
+	}
+
+	c.isConnected = true
+	log.Debugf("%s: started ssh multipliexing control master", c)
+
+	return nil
+}
+
+func (c *OpenSSH) closeControl() error {
+	c.controlMutex.Lock()
+	defer c.controlMutex.Unlock()
+
+	if !c.isConnected {
+		return nil
+	}
+
+	controlPath, ok := c.Options["ControlPath"].(string)
+	if !ok {
+		return ErrControlPathNotSet
+	}
+
+	cArgs := c.args()
+	args := make([]string, 0, 4+len(cArgs))
+	args = append(args, "-O", "exit", "-S", controlPath)
+	args = append(args, cArgs...)
+
+	log.Debugf("%s: closing ssh multiplexing control master", c)
+	cmd := goexec.CommandContext(context.Background(), "ssh", args...) //nolint:gosec
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed to close control master: %w", err)
+	}
+	c.isConnected = false
+	return nil
+}
+
+// Exec executes a command on the remote host
+func (c *OpenSSH) Exec(cmdStr string, opts ...exec.Option) error { //nolint:cyclop
+	if !c.DisableMultiplexing && !c.isConnected {
+		return ErrNotConnected
+	}
+
+	execOpts := exec.Build(opts...)
+	command, err := execOpts.Command(cmdStr)
+	if err != nil {
+		return fmt.Errorf("failed to build command: %w", err)
+	}
+
+	args := c.Options.ToArgs()
+	// use BatchMode (no password prompts) for non-interactive commands
+	args = append(args, "-o", "BatchMode=yes")
+	args = append(args, c.args()...)
+	args = append(args, "--", command)
+	cmd := goexec.CommandContext(context.Background(), "ssh", args...) //nolint:gosec
+
+	if execOpts.Stdin != "" {
+		execOpts.LogStdin(c.String())
+		cmd.Stdin = strings.NewReader(execOpts.Stdin)
+	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to get stdout pipe: %w", err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to get stderr pipe: %w", err)
+	}
+
+	execOpts.LogCmd(c.String(), cmd.String())
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start command: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		if execOpts.Writer == nil {
+			outputScanner := bufio.NewScanner(stdout)
+
+			for outputScanner.Scan() {
+				execOpts.AddOutput(c.String(), outputScanner.Text()+"\n", "")
+			}
+			if err := outputScanner.Err(); err != nil {
+				execOpts.LogErrorf("%s: failed to scan stdout: %v", c, err)
+			}
+		} else {
+			if _, err := io.Copy(execOpts.Writer, stdout); err != nil {
+				execOpts.LogErrorf("%s: failed to stream stdout: %v", c, err)
+			}
+		}
+	})
+	wg.Go(func() {
+		outputScanner := bufio.NewScanner(stderr)
+
+		for outputScanner.Scan() {
+			execOpts.AddOutput(c.String(), "", outputScanner.Text()+"\n")
+		}
+		if err := outputScanner.Err(); err != nil {
+			execOpts.LogErrorf("%s: failed to scan stderr: %v", c, err)
+		}
+	})
+
+	wg.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("%w: command wait: %w", ErrCommandFailed, err)
+	}
+	return nil
+}
+
+// ExecStreams executes a command on the remote host, streaming stdin, stdout and stderr
+func (c *OpenSSH) ExecStreams(cmdStr string, stdin io.ReadCloser, stdout, stderr io.Writer, opts ...exec.Option) (exec.Waiter, error) {
+	if !c.DisableMultiplexing && !c.isConnected {
+		return nil, ErrNotConnected
+	}
+	execOpts := exec.Build(opts...)
+	command, err := execOpts.Command(cmdStr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to build command: %w", ErrCommandFailed, err)
+	}
+
+	args := c.Options.ToArgs()
+	args = append(args, "-o", "BatchMode=yes")
+	args = append(args, c.args()...)
+	args = append(args, "--", command)
+	cmd := goexec.CommandContext(context.Background(), "ssh", args...) //nolint:gosec
+
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	execOpts.LogCmd(c.String(), cmd.String())
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("%w: failed to start: %w", ErrCommandFailed, err)
+	}
+
+	return cmd, nil
+}
+
+// ExecInteractive executes an interactive command on the remote host, streaming stdin, stdout and stderr
+func (c *OpenSSH) ExecInteractive(cmdStr string) error {
+	cmd, err := c.ExecStreams(cmdStr, os.Stdin, os.Stdout, os.Stderr)
+	if err != nil {
+		return err
+	}
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("%w: command wait: %w", ErrCommandFailed, err)
+	}
+	return nil
+}
+
+func (c *OpenSSH) String() string {
+	if c.name != "" {
+		return c.name
+	}
+
+	c.name = "[OpenSSH] " + c.userhost()
+	if c.Port != nil {
+		c.name = c.name + ":" + strconv.Itoa(*c.Port)
+	}
+
+	return c.name
+}
+
+// IsConnected returns true if the connection is connected
+func (c *OpenSSH) IsConnected() bool {
+	return c.isConnected
+}
+
+// Disconnect disconnects from the remote host. If multiplexing is enabled, this will close the control master.
+// If multiplexing is disabled, this will do nothing.
+func (c *OpenSSH) Disconnect() {
+	if c.DisableMultiplexing {
+		// nothing to do
+		return
+	}
+
+	if err := c.closeControl(); err != nil {
+		log.Warnf("%s: failed to close control master: %v", c, err)
+	}
+}

@@ -2,16 +2,22 @@
 version: 2
 updates:
   - package-ecosystem: gomod
+    vendor: true
     directories:
       - "/"
-      - "/magefiles"
-      - "/.dagger"
+      - "/.dagger/"
     schedule:
       interval: daily
     groups:
       k8s:
         patterns:
           - "k8s.io/*"
+      golang:
+        patterns:
+          - "golang.org/x/*"
+      docker:
+        patterns:
+          - "github.com/docker/*"
   - package-ecosystem: pre-commit
     directories:
       - "/"

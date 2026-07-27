@@ -1,0 +1,128 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+env:
+  - GO111MODULE=on
+
+before:
+  hooks:
+    - go mod download
+    - go mod verify
+
+builds:
+  - id: txeh
+    main: ./txeh/txeh.go
+    binary: txeh
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - "386"
+      - amd64
+      - arm
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+      - -tags=netgo
+      - -a
+      - -v
+    ldflags: -s -w -X github.com/txn2/txeh/txeh/cmd.Version={{.Version}}
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: '{{ .ProjectName }}_checksums.txt'
+
+signs:
+  - cmd: cosign
+    args:
+      - sign-blob
+      - '--bundle=${signature}'
+      - '${artifact}'
+      - '--yes'
+    artifacts: checksum
+    output: true
+    signature: '${artifact}.bundle'
+
+sboms:
+  - artifacts: archive
+
+changelog:
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Security
+      regexp: '^.*?sec(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+      - go mod tidy
+
+nfpms:
+  - id: default
+    file_name_template: '{{ .ProjectName }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    homepage: https://github.com/txn2/txeh
+    description: Etc Hosts Management Utility.
+    maintainer: Craig Johnston <cj@imti.co>
+    license: Apache 2.0
+    vendor: txn2
+    formats:
+      - apk
+      - deb
+      - rpm
+
+release:
+  github:
+    owner: txn2
+    name: txeh
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+
+brews:
+  - name: txeh
+    repository:
+      owner: txn2
+      name: homebrew-tap
+      token: '{{ .Env.HOMEBREW_TAP_TOKEN }}'
+    commit_author:
+      name: Craig Johnston
+      email: cj@imti.co
+    directory: Formula
+    homepage: https://github.com/txn2/txeh
+    description: "Etc Hosts Management Utility."
+    license: "Apache-2.0"
+    test: |
+      system "#{bin}/txeh version"
