@@ -167,8 +167,6 @@ github.com/containerd/log
 # github.com/containerd/platforms v1.0.0-rc.4
 ## explicit; go 1.24
 github.com/containerd/platforms
-# github.com/containerd/stargz-snapshotter/estargz v0.18.2
-## explicit; go 1.24.0
 # github.com/coreos/go-oidc/v3 v3.20.0
 ## explicit; go 1.25.0
 github.com/coreos/go-oidc/v3/oidc
@@ -360,8 +358,6 @@ github.com/go-openapi/swag/conv
 # github.com/go-openapi/swag/fileutils v0.27.3
 ## explicit; go 1.25.0
 github.com/go-openapi/swag/fileutils
-# github.com/go-openapi/swag/jsonname v0.27.3
-## explicit; go 1.25.0
 # github.com/go-openapi/swag/jsonutils v0.27.3
 ## explicit; go 1.25.0
 github.com/go-openapi/swag/jsonutils
@@ -991,8 +987,6 @@ github.com/ulikunitz/xz/lzma
 ## explicit; go 1.21
 github.com/uwu-tools/magex/pkg/gopath
 github.com/uwu-tools/magex/xplat
-# github.com/vbatts/tar-split v0.12.3
-## explicit; go 1.22.0
 # github.com/x448/float16 v0.8.4
 ## explicit; go 1.11
 github.com/x448/float16
