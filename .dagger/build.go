@@ -46,20 +46,6 @@ func (m *Cargoship) Build(
 	goos := []string{"linux", "darwin", "windows"}
 	goarch := []string{"amd64", "arm64"}
 
-	cache := dag.Container().
-		From("golang:"+m.GoVersion).
-		WithMountedCache("/go/pkg/mod", dag.CacheVolume("go-mod-"+m.GoVersion)).
-		WithEnvVariable("GOMODCACHE", "/go/pkg/mod").
-		WithMountedCache("/go/build-cache", dag.CacheVolume("go-build-"+m.GoVersion)).
-		WithEnvVariable("GOCACHE", "/go/build-cache").
-		WithMountedDirectory("/src", m.Source). // Ensure the source directory with go.mod is mounted
-		WithWorkdir("/src")
-
-	code, err := cache.WithExec([]string{"go", "mod", "download"}).ExitCode(ctx)
-	if err != nil || code > 0 {
-		return nil, fmt.Errorf("could not download dependencies")
-	}
-
 	p := pool.New().WithErrors().WithContext(ctx)
 
 	for _, os := range goos {
@@ -77,7 +63,7 @@ func (m *Cargoship) Build(
 		}
 	}
 
-	err = p.Wait()
+	err := p.Wait()
 	if err != nil {
 		return nil, err
 	}

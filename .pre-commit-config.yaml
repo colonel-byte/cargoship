@@ -4,21 +4,32 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
+        exclude: vendor/.*
         args:
           - "--maxkb=1024"
       - id: check-merge-conflict
       - id: detect-aws-credentials
+        exclude: vendor/.*
         args:
           - "--allow-missing-credentials"
       - id: fix-byte-order-marker
+        exclude: vendor/.*
+      - id: end-of-file-fixer
+        exclude: vendor/.*
+      - id: trailing-whitespace
+        args:
+          - --markdown-linebreak-ext=md
+        exclude: vendor/.*
   - repo: https://github.com/sirosen/texthooks
     rev: 0.7.1
     hooks:
       - id: fix-smartquotes
+        exclude: vendor/.*
   - repo: https://github.com/google/addlicense
     rev: v1.2.0
     hooks:
       - id: addlicense
+        exclude: vendor/.*
         exclude_types:
           - yaml
         args:
@@ -36,7 +47,9 @@ repos:
     rev: v2.12.2
     hooks:
       - id: golangci-lint
+        exclude: vendor/.*
       - id: golangci-lint-config-verify
+        exclude: vendor/.*
   - repo: local
     hooks:
       - id: schema-generator
