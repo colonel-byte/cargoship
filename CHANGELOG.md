@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.7.0](https://github.com/colonel-byte/cargoship/compare/v0.6.0...v0.7.0) (2026-07-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* vendor the golang dep ([#128](https://github.com/colonel-byte/cargoship/issues/128))
+
+### CI/CD
+
+* add envrc config ([#123](https://github.com/colonel-byte/cargoship/issues/123)) ([8e3154d](https://github.com/colonel-byte/cargoship/commit/8e3154d0b04026e3dbff7f63eeaea9ad5ee3e6f6))
+* address dependabot issues ([#129](https://github.com/colonel-byte/cargoship/issues/129)) ([07c3a04](https://github.com/colonel-byte/cargoship/commit/07c3a04402cd70ea0631b5416731884affb8c681))
+* vendor the golang dep ([#128](https://github.com/colonel-byte/cargoship/issues/128)) ([832f376](https://github.com/colonel-byte/cargoship/commit/832f376f9f47c88db9e514f626a8b389091be36f))
+
+
+### Build
+
+* **deps:** Bump actions/checkout from 7.0.0 to 7.0.1 ([#122](https://github.com/colonel-byte/cargoship/issues/122)) ([0d77578](https://github.com/colonel-byte/cargoship/commit/0d7757876902877b16439e69cc63873b699a591d))
+* **deps:** Bump actions/setup-go from 6.5.0 to 7.0.0 ([#120](https://github.com/colonel-byte/cargoship/issues/120)) ([4276e9d](https://github.com/colonel-byte/cargoship/commit/4276e9d88ea8c3e30bf368505b81d86732a81ec4))
+* **deps:** Bump actions/setup-node from 6.4.0 to 7.0.0 ([#119](https://github.com/colonel-byte/cargoship/issues/119)) ([bde75d1](https://github.com/colonel-byte/cargoship/commit/bde75d1f5d46cc7d2c58bef43eab9cbfe4b847dc))
+* **deps:** Bump docker/build-push-action from 7.2.0 to 7.3.0 ([#109](https://github.com/colonel-byte/cargoship/issues/109)) ([d201529](https://github.com/colonel-byte/cargoship/commit/d201529be28daf91a5765633064b0a8ae87b3ef0))
+* **deps:** Bump docker/login-action from 4.2.0 to 4.3.0 ([#112](https://github.com/colonel-byte/cargoship/issues/112)) ([902d370](https://github.com/colonel-byte/cargoship/commit/902d37052e58910ba9055e56e3bf37add29b9d43))
+* **deps:** Bump docker/login-action from 4.3.0 to 4.4.0 ([#114](https://github.com/colonel-byte/cargoship/issues/114)) ([a6ae875](https://github.com/colonel-byte/cargoship/commit/a6ae87501ccccf51016de905a24d3c13938b816c))
+* **deps:** Bump docker/login-action from 4.4.0 to 4.5.1 ([#126](https://github.com/colonel-byte/cargoship/issues/126)) ([3d087d1](https://github.com/colonel-byte/cargoship/commit/3d087d13fd762d4999918343fb801b7444700ad2))
+* **deps:** Bump docker/login-action from 4.5.1 to 4.5.2 ([#130](https://github.com/colonel-byte/cargoship/issues/130)) ([e93e7c1](https://github.com/colonel-byte/cargoship/commit/e93e7c1aa0105a0b0afe034c674c5030dceb1846))
+* **deps:** Bump docker/setup-buildx-action from 4.1.0 to 4.2.0 ([#113](https://github.com/colonel-byte/cargoship/issues/113)) ([92a726b](https://github.com/colonel-byte/cargoship/commit/92a726b183c79ff65960b43db5c6c24736643b78))
+* **deps:** Bump github.com/containerd/containerd/v2 from 2.3.2 to 2.3.3 ([#118](https://github.com/colonel-byte/cargoship/issues/118)) ([8992739](https://github.com/colonel-byte/cargoship/commit/8992739a282470c05fdab24716cf5d16366c8b87))
+* **deps:** Bump golang.org/x/sync from 0.21.0 to 0.22.0 ([#115](https://github.com/colonel-byte/cargoship/issues/115)) ([1ec8814](https://github.com/colonel-byte/cargoship/commit/1ec8814a986568b0d776e088e47b7032e6f2a397))
+* **deps:** Bump https://github.com/google/keep-sorted from v0.9.0 to 0.9.1 ([#110](https://github.com/colonel-byte/cargoship/issues/110)) ([773b5f3](https://github.com/colonel-byte/cargoship/commit/773b5f3dd4f97527208a0c2b744033442653bee7))
+* **deps:** Bump k8s.io/client-go from 0.36.2 to 0.36.3 in the k8s group across 1 directory ([#125](https://github.com/colonel-byte/cargoship/issues/125)) ([7126818](https://github.com/colonel-byte/cargoship/commit/7126818bf2719da6bd692a49583353ca41889d7f))
+* **deps:** Bump oras.land/oras-go/v2 from 2.6.1 to 2.6.2 ([#116](https://github.com/colonel-byte/cargoship/issues/116)) ([7140d42](https://github.com/colonel-byte/cargoship/commit/7140d42428c8fa09ba6ceaa3202a7227c91a1e4d))
+
 ## [0.6.0](https://github.com/colonel-byte/cargoship/compare/v0.5.0...v0.6.0) (2026-06-30)
 
 
