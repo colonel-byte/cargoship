@@ -20,8 +20,8 @@ bin/
 !**/testdata/**
 coverage.out
 dist
-images/
-target/
+^images/
+^target/
 cluster-key
 cluster-key.pub
 
