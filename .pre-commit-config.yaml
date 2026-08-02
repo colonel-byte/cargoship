@@ -15,11 +15,20 @@ repos:
       - id: fix-byte-order-marker
         exclude: vendor/.*
       - id: end-of-file-fixer
-        exclude: vendor/.*
+        exclude: |-
+          (?x)^(
+              vendor/.*|
+              docs/phases/.*|
+              docs/commands/.*
+          )$
       - id: trailing-whitespace
         args:
           - --markdown-linebreak-ext=md
-        exclude: vendor/.*
+        exclude: |-
+          (?x)^(
+              vendor/.*|
+              docs/phases/.*
+          )$
   - repo: https://github.com/sirosen/texthooks
     rev: 0.7.1
     hooks:
