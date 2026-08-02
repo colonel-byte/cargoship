@@ -40,8 +40,8 @@ func (Generate) Document() error {
 	rootCmd.DisableAutoGenTag = true
 
 	docsDirs := []string{
-		"./docs/actions",
 		"./docs/commands",
+		"./docs/phases",
 	}
 
 	for _, dir := range docsDirs {
@@ -80,32 +80,30 @@ func generateSummary() error {
 	var builder strings.Builder
 
 	md := markdown.NewMarkdown(&builder).H1("Index")
-	md = md.PlainText("\n[main](index.md)\n")
+	md = md.PlainText("\n[readme](index.md)\n[changelog](changelog.md)")
+	md = md.PlainText("\n-----------\n")
 
-	md = md.H1("Command")
+	md = md.H1("Commands")
 	md = md.PlainText("\n- [cargoship](commands/cargoship.md)")
 
-	if sub, err := getSubcommands(); err == nil {
+	if sub, err := getMarkdown(`cargoship_(.+)\.md`, "commands", true); err == nil {
 		for _, s := range sub {
 			md = md.PlainText(s)
 		}
 	}
 
 	md = md.PlainText("\n-----------\n")
+
 	md = md.H1("Phases")
 	md = md.PlainText("")
 
-	if phases, err := getPhases(); err == nil {
+	if phases, err := getMarkdown(`(.+)\.md`, "phases", false); err == nil {
 		for _, p := range phases {
 			md = md.PlainText(p)
 		}
 	}
 
-	md = md.PlainText(`
------------
-
-[changelog](changelog.md)
-`)
+	md = md.PlainText("")
 
 	if err := md.Build(); err != nil {
 		return err
@@ -114,56 +112,27 @@ func generateSummary() error {
 	return os.WriteFile("docs/SUMMARY.md", []byte(builder.String()), 0644)
 }
 
-func getSubcommands() ([]string, error) {
+func getMarkdown(pattern string, directory string, indent bool) ([]string, error) {
 	list := []string{}
 
-	re, err := regexp.Compile(`cargoship_.+\.md`)
+	re, err := regexp.Compile(pattern)
 	if err != nil {
 		return []string{}, err
 	}
 
-	sub, err := regexp.Compile(`cargoship_(.+)\.md`)
-	if err != nil {
-		return []string{}, err
-	}
-
-	entries, err := os.ReadDir("docs/commands")
+	entries, err := os.ReadDir(fmt.Sprintf("docs/%s", directory))
 	if err != nil {
 		return []string{}, err
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() && re.MatchString(entry.Name()) {
-			com := sub.FindStringSubmatch(entry.Name())
-			list = append(list, fmt.Sprintf("  - [%s](commands/%s)", com[1], entry.Name()))
-		}
-	}
-
-	return list, nil
-}
-
-func getPhases() ([]string, error) {
-	list := []string{}
-
-	re, err := regexp.Compile(`.+\.md`)
-	if err != nil {
-		return []string{}, err
-	}
-
-	sub, err := regexp.Compile(`(.+)\.md`)
-	if err != nil {
-		return []string{}, err
-	}
-
-	entries, err := os.ReadDir("docs/actions")
-	if err != nil {
-		return []string{}, err
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() && re.MatchString(entry.Name()) {
-			com := sub.FindStringSubmatch(entry.Name())
-			list = append(list, fmt.Sprintf("- [%s](actions/%s)", com[1], entry.Name()))
+			com := re.FindStringSubmatch(entry.Name())
+			if indent {
+				list = append(list, fmt.Sprintf("  - [%s](%s/%s)", com[1], directory, entry.Name()))
+			} else {
+				list = append(list, fmt.Sprintf("- [%s](%s/%s)", com[1], directory, entry.Name()))
+			}
 		}
 	}
 
@@ -198,8 +167,8 @@ func phaseApply() error {
 		},
 	})
 
-	fmt.Println("docs/actions/apply.md")
-	f, err := os.Create("docs/actions/apply.md")
+	fmt.Println("docs/phases/apply.md")
+	f, err := os.Create("docs/phases/apply.md")
 	if err != nil {
 		return err
 	}
@@ -229,8 +198,8 @@ func phaseReset() error {
 		},
 	})
 
-	fmt.Println("docs/actions/reset.md")
-	f, err := os.Create("docs/actions/reset.md")
+	fmt.Println("docs/phases/reset.md")
+	f, err := os.Create("docs/phases/reset.md")
 	if err != nil {
 		return err
 	}
@@ -265,8 +234,8 @@ func phaseKubeConfig() error {
 		},
 	})
 
-	fmt.Println("docs/actions/kube-config.md")
-	f, err := os.Create("docs/actions/kube-config.md")
+	fmt.Println("docs/phases/kube-config.md")
+	f, err := os.Create("docs/phases/kube-config.md")
 	if err != nil {
 		return err
 	}
@@ -292,8 +261,8 @@ func phaseKubeConfig() error {
 func phasePrepare() error {
 	kube := action.NewPrepare(action.PrepareOptions{})
 
-	fmt.Println("docs/actions/prepare.md")
-	f, err := os.Create("docs/actions/prepare.md")
+	fmt.Println("docs/phases/prepare.md")
+	f, err := os.Create("docs/phases/prepare.md")
 	if err != nil {
 		return err
 	}

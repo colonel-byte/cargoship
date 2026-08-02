@@ -1,8 +1,11 @@
 # Index
 
-[main](index.md)
+[readme](index.md)
+[changelog](changelog.md)
 
-# Command
+-----------
+
+# Commands
 
 - [cargoship](commands/cargoship.md)
   - [apply](commands/cargoship_apply.md)
@@ -16,11 +19,7 @@
 
 # Phases
 
-- [apply](actions/apply.md)
-- [kube-config](actions/kube-config.md)
-- [prepare](actions/prepare.md)
-- [reset](actions/reset.md)
-
------------
-
-[changelog](changelog.md)
+- [apply](phases/apply.md)
+- [kube-config](phases/kube-config.md)
+- [prepare](phases/prepare.md)
+- [reset](phases/reset.md)
