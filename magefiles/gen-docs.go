@@ -83,6 +83,17 @@ func generateSummary() error {
 	md = md.PlainText("\n[readme](index.md)\n[changelog](changelog.md)")
 	md = md.PlainText("\n-----------\n")
 
+	md = md.H1("Guides")
+	md = md.PlainText("")
+
+	if phases, err := getMarkdown(`(.+)\.md`, "guides", false); err == nil {
+		for _, p := range phases {
+			md = md.PlainText(p)
+		}
+	}
+
+	md = md.PlainText("\n-----------\n")
+
 	md = md.H1("Commands")
 	md = md.PlainText("\n- [cargoship](commands/cargoship.md)")
 

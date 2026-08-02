@@ -5,6 +5,12 @@
 
 -----------
 
+# Guides
+
+- [setup-inv](guides/setup-inv.md)
+
+-----------
+
 # Commands
 
 - [cargoship](commands/cargoship.md)
