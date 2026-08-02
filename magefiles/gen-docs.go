@@ -17,6 +17,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/cmd"
@@ -66,8 +68,106 @@ func (Generate) Document() error {
 	if err := phasePrepare(); err != nil {
 		return err
 	}
+	if err := generateSummary(); err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func generateSummary() error {
+	fmt.Println("docs/SUMMARY.md")
+	var builder strings.Builder
+
+	md := markdown.NewMarkdown(&builder).H1("Index")
+	md = md.PlainText("\n[main](index.md)\n")
+
+	md = md.H1("Command")
+	md = md.PlainText("\n- [cargoship](commands/cargoship.md)")
+
+	if sub, err := getSubcommands(); err == nil {
+		for _, s := range sub {
+			md = md.PlainText(s)
+		}
+	}
+
+	md = md.PlainText("\n-----------\n")
+	md = md.H1("Phases")
+	md = md.PlainText("")
+
+	if phases, err := getPhases(); err == nil {
+		for _, p := range phases {
+			md = md.PlainText(p)
+		}
+	}
+
+	md = md.PlainText(`
+-----------
+
+[changelog](changelog.md)
+`)
+
+	if err := md.Build(); err != nil {
+		return err
+	}
+
+	return os.WriteFile("docs/SUMMARY.md", []byte(builder.String()), 0644)
+}
+
+func getSubcommands() ([]string, error) {
+	list := []string{}
+
+	re, err := regexp.Compile(`cargoship_.+\.md`)
+	if err != nil {
+		return []string{}, err
+	}
+
+	sub, err := regexp.Compile(`cargoship_(.+)\.md`)
+	if err != nil {
+		return []string{}, err
+	}
+
+	entries, err := os.ReadDir("docs/commands")
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && re.MatchString(entry.Name()) {
+			com := sub.FindStringSubmatch(entry.Name())
+			list = append(list, fmt.Sprintf("  - [%s](commands/%s)", com[1], entry.Name()))
+		}
+	}
+
+	return list, nil
+}
+
+func getPhases() ([]string, error) {
+	list := []string{}
+
+	re, err := regexp.Compile(`.+\.md`)
+	if err != nil {
+		return []string{}, err
+	}
+
+	sub, err := regexp.Compile(`(.+)\.md`)
+	if err != nil {
+		return []string{}, err
+	}
+
+	entries, err := os.ReadDir("docs/actions")
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && re.MatchString(entry.Name()) {
+			com := sub.FindStringSubmatch(entry.Name())
+			list = append(list, fmt.Sprintf("- [%s](actions/%s)", com[1], entry.Name()))
+		}
+	}
+
+	return list, nil
 }
 
 func prependTitle(s string) string {
