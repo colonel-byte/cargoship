@@ -25,5 +25,8 @@ dist
 cluster-key
 cluster-key.pub
 
-# Added by goreleaser init:
+# Added for goreleaser:
 dist/
+
+# Added for mdbook:
+book/

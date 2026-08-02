@@ -15,7 +15,11 @@ repos:
       - id: fix-byte-order-marker
         exclude: vendor/.*
       - id: end-of-file-fixer
-        exclude: vendor/.*
+        exclude: |-
+          (?x)^(
+              vendor/.*|
+              docs/commands/.*
+          )$
       - id: trailing-whitespace
         args:
           - --markdown-linebreak-ext=md
