@@ -43,12 +43,11 @@ func newSha256SumCommand() *cobra.Command {
 	o := sha256SumOptions{}
 
 	cmd := &cobra.Command{
-		Use:               "sha256sum [ FILE | URL ]",
-		Args:              cobra.ExactArgs(1),
-		Aliases:           []string{"sum"},
-		Short:             lang.CmdSha256SumShort,
-		RunE:              o.run,
-		PersistentPreRunE: o.perprerun,
+		Use:     "sha256sum [ FILE | URL ]",
+		Args:    cobra.ExactArgs(1),
+		Aliases: []string{"sum"},
+		Short:   lang.CmdSha256SumShort,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVarP(&o.extractPath, "extract-path", "e", "", lang.CmdSha256SumFlagExtractPath)
@@ -56,13 +55,10 @@ func newSha256SumCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *sha256SumOptions) perprerun(_ *cobra.Command, _ []string) error {
-	return nil
-}
-
 func (o *sha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 	hashErr := errors.New("unable to compute the SHA256SUM hash")
 	ctx := cmd.Context()
+	l := logger.From(ctx)
 
 	fileName := args[0]
 
@@ -70,12 +66,14 @@ func (o *sha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 	var data io.ReadCloser
 
 	if helpers.IsURL(fileName) {
-		logger.From(cmd.Context()).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
+		l.Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 		fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
+
+		l.Debug("base", "fileBase", fileBase)
 
 		if fileBase == "" {
 			fileBase = "sha-file"
@@ -115,7 +113,8 @@ func (o *sha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
 		decompressOpts := archive.DecompressOpts{
-			Files: []string{extractedFile},
+			// We want to extract the file relative to the tar ball
+			Files: []string{o.extractPath},
 		}
 		err = archive.Decompress(ctx, fileName, tmp, decompressOpts)
 		if err != nil {
