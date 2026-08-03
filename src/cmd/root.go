@@ -44,6 +44,10 @@ const (
 	RootLoggingFormat = "log-format"
 	// RootTimeout command flag timeout
 	RootTimeout = "timeout"
+	// RootZarfCache command flag zarf-cache
+	RootZarfCache = "zarf-cache"
+	// RootArchitecture command flag architecture
+	RootArchitecture = "architecture"
 )
 
 const (
@@ -130,9 +134,9 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(types.LogFormat), lang.RootCmdFlagLogFormat)
 	rootCmd.PersistentFlags().StringVar(&Timeout, RootTimeout, v.GetString(RootTimeout), lang.CmdInstallFlagTimeout)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(types.NoColor), lang.RootCmdFlagNoColor)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", parsePath(rootCmd.Context(), types.ZarfCache), zlang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), types.ZarfCache), zlang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), types.TmpDir), zlang.RootCmdFlagTempDir)
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(types.Architecture), zlang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, RootArchitecture, "a", v.GetString(types.Architecture), zlang.RootCmdFlagArch)
 
 	return rootCmd
 }
