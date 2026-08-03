@@ -28,5 +28,6 @@ cargoship COMMAND [flags]
 * [cargoship kube-config](./cargoship_kube-config.md)	 - Get the admin kube-config for a control-plane node
 * [cargoship prepare](./cargoship_prepare.md)	 - Prepares the nodes, including restarting the node if new kernel modules are enabled
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
+* [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

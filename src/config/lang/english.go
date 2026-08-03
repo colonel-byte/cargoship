@@ -60,6 +60,10 @@ const (
 	CmdVersionLong = "Displays the version of the release that the current binary was built from."
 	// CmdVersionShort version short
 	CmdVersionShort = "Shows the version of the running binary"
+	// CmdSha256SumShort sha256sum short
+	CmdSha256SumShort = "Generates a SHA256SUM for the given file"
+	// CmdSha256SumFlagExtractPath flag description
+	CmdSha256SumFlagExtractPath = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
 	// CmdViperErrLoadingConfigFile error text
 	CmdViperErrLoadingConfigFile = "failed to load config file"
 	// RootCmdFlagLogFormat log format

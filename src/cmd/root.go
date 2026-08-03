@@ -115,12 +115,16 @@ func NewCargoshipCommand() *cobra.Command {
 		rootCmd.AddGroup(g)
 	}
 
+	// Package related
 	rootCmd.AddCommand(newPackageCreateCommand())
+	// Install related
 	rootCmd.AddCommand(newInstallApplyCommand())
 	rootCmd.AddCommand(newInstallPrepareCommand())
 	rootCmd.AddCommand(newInstallResetCommand())
 	rootCmd.AddCommand(newInstallKubeConfigCommand())
+	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
+	rootCmd.AddCommand(newSha256SumCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", v.GetString(types.LogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(types.LogFormat), lang.RootCmdFlagLogFormat)
