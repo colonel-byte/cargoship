@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.0](https://github.com/colonel-byte/cargoship/compare/v0.7.0...v0.8.0) (2026-08-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* add sha256sum command ([#136](https://github.com/colonel-byte/cargoship/issues/136))
+
+### Features
+
+* add sha256sum command ([#136](https://github.com/colonel-byte/cargoship/issues/136)) ([a1b5f8b](https://github.com/colonel-byte/cargoship/commit/a1b5f8b8b67c78a6d8daa3fbe7db6a9a0eec0425))
+
+
+### Documentation
+
+* add mdbook site builder ([#135](https://github.com/colonel-byte/cargoship/issues/135)) ([fa31b78](https://github.com/colonel-byte/cargoship/commit/fa31b78f796838e57b97afe233269be13e45900a))
+
+
+### CI/CD
+
+* fix gitignore settings ([#133](https://github.com/colonel-byte/cargoship/issues/133)) ([47d77bc](https://github.com/colonel-byte/cargoship/commit/47d77bc842aa90f0c9d45639de6f3d3c471f2046))
+* remove bootloose images ([#131](https://github.com/colonel-byte/cargoship/issues/131)) ([49bc60c](https://github.com/colonel-byte/cargoship/commit/49bc60cf344ad9b22bb22a4f425dc46501cef11d))
+
 ## [0.7.0](https://github.com/colonel-byte/cargoship/compare/v0.6.0...v0.7.0) (2026-07-28)
 
 
