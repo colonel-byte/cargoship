@@ -19,6 +19,7 @@
   - [kube-config](commands/cargoship_kube-config.md)
   - [prepare](commands/cargoship_prepare.md)
   - [reset](commands/cargoship_reset.md)
+  - [sha256sum](commands/cargoship_sha256sum.md)
   - [version](commands/cargoship_version.md)
 
 -----------
