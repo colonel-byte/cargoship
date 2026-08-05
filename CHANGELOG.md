@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.0](https://github.com/colonel-byte/cargoship/compare/v0.8.0...v0.9.0) (2026-08-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* add framework for publishing and pulling packages ([#134](https://github.com/colonel-byte/cargoship/issues/134))
+
+### Features
+
+* add framework for publishing and pulling packages ([#134](https://github.com/colonel-byte/cargoship/issues/134)) ([9f97253](https://github.com/colonel-byte/cargoship/commit/9f972535442cd50c596424ae6610bd7fbc8671ea))
+
 ## [0.8.0](https://github.com/colonel-byte/cargoship/compare/v0.7.0...v0.8.0) (2026-08-04)
 
 
