@@ -18,6 +18,8 @@
   - [create](commands/cargoship_create.md)
   - [kube-config](commands/cargoship_kube-config.md)
   - [prepare](commands/cargoship_prepare.md)
+  - [publish](commands/cargoship_publish.md)
+  - [pull](commands/cargoship_pull.md)
   - [reset](commands/cargoship_reset.md)
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [version](commands/cargoship_version.md)

@@ -33,17 +33,24 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // LoadOptions are the options for LoadDistro.
 type LoadOptions struct {
-	Shasum         string
-	Architecture   string
-	Output         string
+	Shasum       string
+	Architecture string
+	Output       string
+	// number of layers to pull in parallel
 	OCIConcurrency int
-	CachePath      string
+	// CachePath is used to cache layers from OCI package pulls
+	CachePath         string
+	VerifyBlobOptions *signing.VerifyBlobOptions
+	// Only applicable to OCI + HTTP
 	types.RemoteOptions
+	// VerificationStrategy for explicit definition
+	layout.VerificationStrategy
 }
 
 // LoadDistro fetches, verifies, and loads a Zarf package from the specified source.
@@ -52,10 +59,10 @@ func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.D
 		return nil, fmt.Errorf("must provide a package source")
 	}
 
-	// srcType, err := utils.IdentifySource(source)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	srcType, err := utils.IdentifySource(source)
+	if err != nil {
+		return nil, err
+	}
 
 	// Prepare a temp workspace
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -66,16 +73,43 @@ func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.D
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
-	tmpPath := source
-	// tmpPath := filepath.Join(tmpDir, "data.tar.zst")
-	// switch srcType {
-	// // TODO borrow from https://github.com/zarf-dev/zarf/blob/2233efff3e4aeb86a604ec7c3fd67f6caf4116e5/src/pkg/packager/load.go#L78
-	// case "tarball":
-	// 	tmpPath = source
-	// default:
-	// 	err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
-	// 	return nil, err
-	// }
+	tmpPath := filepath.Join(tmpDir, "data.tar.zst") //nolint:ineffassign,staticcheck
+	switch srcType {
+	case "oci":
+		ociOpts := pullOCIOptions{
+			Source:               source,
+			VerifyBlobOptions:    opts.VerifyBlobOptions,
+			VerificationStrategy: opts.VerificationStrategy,
+			Shasum:               opts.Shasum,
+			Architecture:         config.GetArch(opts.Architecture),
+			OCIConcurrency:       opts.OCIConcurrency,
+			RemoteOptions:        opts.RemoteOptions,
+			CachePath:            opts.CachePath,
+		}
+
+		disLayout, err := pullOCI(ctx, ociOpts)
+		if err != nil {
+			return nil, err
+		}
+		// OCI is a special case since it doesn't create a tar unless the tar file is output
+		if opts.Output != "" {
+			_, err := disLayout.Archive(ctx, opts.Output, 0)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return disLayout, nil
+	case "http", "https":
+		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify)
+		if err != nil {
+			return nil, err
+		}
+	case "tarball":
+		tmpPath = source
+	default:
+		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
+		return nil, err
+	}
 	logger.From(ctx).Debug(tmpPath)
 	distroLayout, err := layout.LoadFromTar(ctx, tmpPath, layout.DistroLayoutOptions{})
 	if err != nil {

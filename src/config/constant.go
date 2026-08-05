@@ -30,8 +30,6 @@ const (
 	SelectorRPM = "rpm"
 	// TarBallDir string key
 	TarBallDir = "tar"
-	// ZarfDistroYaml string key
-	ZarfDistroYaml = "distro.yaml"
 )
 
 const (

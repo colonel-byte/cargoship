@@ -56,18 +56,19 @@ func newPackageCreateCommand() *cobra.Command {
 		},
 	}
 
-	output, err := zconfig.GetAbsHomePath(v.GetString(types.DistroCreateOutput))
+	output, err := zconfig.GetAbsHomePath(v.GetString(types.DistroOutput))
 	if err != nil {
 		logger.From(cmd.Context()).Debug("error when trying to get user path", "error", err)
-		output = v.GetString(types.DistroCreateOutput)
+		output = v.GetString(types.DistroOutput)
 	}
 
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(types.DistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, types.DistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(types.DistroCreateSkipSbom), zlang.CmdPackageCreateFlagSkipSbom)
 
-	v.SetDefault(types.DistroCreateOutput, ".")
+	v.SetDefault(types.DistroOutput, ".")
 
 	return cmd
 }
@@ -81,12 +82,10 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 
 	opt := distro.CreateOptions{
-		//keep-sorted start
 		CachePath:      cachePath,
 		IsInteractive:  !o.confirm,
 		OCIConcurrency: o.ociConcurrency,
 		RemoteOptions:  defaultRemoteOptions(),
-		//keep-sorted end
 	}
 
 	disPath, err := distro.Create(ctx, basePath, o.output, opt)

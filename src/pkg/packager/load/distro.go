@@ -26,7 +26,7 @@ import (
 	"time"
 
 	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/cargoship/src/internal/distrocfg"
+	"github.com/colonel-byte/cargoship/src/internal/cfg"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -54,7 +54,7 @@ func DistroDefinition(ctx context.Context, distroPath string, _ DefinitionOption
 	if err != nil {
 		return v1alpha1.ZarfDistro{}, err
 	}
-	dis, err := distrocfg.Parse(ctx, b)
+	dis, err := cfg.Parse(ctx, b)
 	if err != nil {
 		return v1alpha1.ZarfDistro{}, err
 	}

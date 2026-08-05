@@ -2,7 +2,7 @@
 
 ## cargoship create
 
-Creates a Zarf Distro Package from a given directory or the current director
+Creates a Cargoship Package from a given directory or the current director
 
 ```
 cargoship create [Dir] [flags]
@@ -11,6 +11,7 @@ cargoship create [Dir] [flags]
 ### Options
 
 ```
+  -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
   -h, --help                        help for create
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
   -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
@@ -21,13 +22,15 @@ cargoship create [Dir] [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages
-  -L, --log-format string     Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string      Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color              Disable terminal color codes in logging and stdout prints.
-      --timeout string        Set the timeout for how long functions will last.
-      --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "$HOME/.zarf-cache")
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --timeout string             Set the timeout for how long functions will last.
+      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.zarf-cache")
 ```
 
 ### SEE ALSO

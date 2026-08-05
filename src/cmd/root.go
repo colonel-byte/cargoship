@@ -48,6 +48,10 @@ const (
 	RootZarfCache = "zarf-cache"
 	// RootArchitecture command flag architecture
 	RootArchitecture = "architecture"
+	// RootPlainHTTP command flag plain-http
+	RootPlainHTTP = "plain_http"
+	// RootInsecureSkipTLSVerify command flag insecure-skip-tls-verify
+	RootInsecureSkipTLSVerify = "insecure_skip_tls_verify"
 )
 
 const (
@@ -121,6 +125,8 @@ func NewCargoshipCommand() *cobra.Command {
 
 	// Package related
 	rootCmd.AddCommand(newPackageCreateCommand())
+	rootCmd.AddCommand(newPackagePublishCommand())
+	rootCmd.AddCommand(newPackagePullCommand())
 	// Install related
 	rootCmd.AddCommand(newInstallApplyCommand())
 	rootCmd.AddCommand(newInstallPrepareCommand())
@@ -137,6 +143,10 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), types.ZarfCache), zlang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), types.TmpDir), zlang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, RootArchitecture, "a", v.GetString(types.Architecture), zlang.RootCmdFlagArch)
+
+	// Security
+	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", v.GetBool(RootPlainHTTP), zlang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(RootInsecureSkipTLSVerify), zlang.RootCmdFlagInsecureSkipTLSVerify)
 
 	return rootCmd
 }

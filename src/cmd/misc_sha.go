@@ -66,7 +66,7 @@ func (o *sha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 	var data io.ReadCloser
 
 	if helpers.IsURL(fileName) {
-		l.Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
+		logger.From(ctx).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 		fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 		if err != nil {

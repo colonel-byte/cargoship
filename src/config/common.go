@@ -23,6 +23,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/types"
@@ -47,6 +48,21 @@ var (
 	// DefaultCachePath the default cache directory
 	DefaultCachePath = filepath.Join("~", ".cargoship-cache")
 )
+
+// GetArch returns the arch based on a priority list with options for overriding.
+func GetArch(archs ...string) string {
+	// List of architecture overrides.
+	priority := append([]string{CLIArch}, archs...)
+
+	// Find the first architecture that is specified.
+	for _, arch := range priority {
+		if arch != "" {
+			return arch
+		}
+	}
+
+	return runtime.GOARCH
+}
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
 func GetAbsCachePath() (string, error) {

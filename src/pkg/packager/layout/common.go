@@ -22,17 +22,11 @@
 package layout
 
 import (
-	"context"
-	"os"
-	"path/filepath"
+	"errors"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/internal/distrocfg"
-	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/colonel-byte/cargoship/src/types"
-	"github.com/zarf-dev/zarf/src/pkg/archive"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 // Distro struct
@@ -45,11 +39,35 @@ type Distro struct {
 // DistroLayout struct
 type DistroLayout struct {
 	dirPath string
+	digest  string
+	cache   *manifestCache
 	Distro  distro.ZarfDistro
 }
 
 // DistroLayoutOptions struct
-type DistroLayoutOptions struct{}
+type DistroLayoutOptions struct {
+	VerifyBlobOptions *signing.VerifyBlobOptions
+	// VerificationStrategy specifies whether verification is enforced
+	VerificationStrategy VerificationStrategy
+}
+
+// VerificationStrategy describes a strategy for determining whether to verify a package.
+type VerificationStrategy int
+
+const (
+	// VerifyIfPossible will attempt a verification, it will not error if verification
+	// data is missing. But it will not stop processing if verification fails.
+	VerifyIfPossible VerificationStrategy = iota
+	// VerifyAlways will always attempt a verification, and will fail if the
+	// verification fails.
+	VerifyAlways
+	// VerifyNever will skip all verification of a package.
+	VerifyNever
+)
+
+// ErrNoVerificationMaterial is returned when there is nothing to verify against.
+// VerifyIfPossible tolerates this; all other verification errors are always fatal.
+var ErrNoVerificationMaterial = errors.New("no verification material available")
 
 // New creates a new Distro object
 func New(cfg *types.DistroConfig) (*Distro, error) {
@@ -60,40 +78,4 @@ func New(cfg *types.DistroConfig) (*Distro, error) {
 	}
 
 	return &dis, nil
-}
-
-// LoadFromTar unpacks the given archive (any compress/format) and loads it.
-func LoadFromTar(ctx context.Context, tarPath string, opts DistroLayoutOptions) (*DistroLayout, error) {
-	dirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
-	// Decompress the archive
-	err = archive.Decompress(ctx, tarPath, dirPath, archive.DecompressOpts{})
-	if err != nil {
-		return nil, err
-	}
-
-	// 3) Delegate to the existing LoadFromDir
-	return LoadFromDir(ctx, dirPath, opts)
-}
-
-// LoadFromDir loads and validates a package from the given directory path.
-func LoadFromDir(ctx context.Context, dirPath string, _ DistroLayoutOptions) (*DistroLayout, error) {
-	b, err := os.ReadFile(filepath.Join(dirPath, config.ZarfDistroYaml))
-	if err != nil {
-		return nil, err
-	}
-	dis, err := distrocfg.Parse(ctx, b)
-	if err != nil {
-		return nil, err
-	}
-	disLayout := &DistroLayout{
-		dirPath: dirPath,
-		Distro:  dis,
-	}
-
-	logger.From(ctx).Debug(dis.Metadata.Name)
-
-	return disLayout, nil
 }

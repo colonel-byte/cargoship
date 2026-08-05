@@ -31,3 +31,13 @@ func Unique[T comparable](s []T) (r []T) {
 	}
 	return r
 }
+
+// Find returns the first element that passes the test.
+func Find[T any](ss []T, test func(T) bool) (r T) {
+	for _, s := range ss {
+		if test(s) {
+			return s
+		}
+	}
+	return r
+}

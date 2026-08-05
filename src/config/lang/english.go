@@ -23,7 +23,13 @@ package lang
 
 const (
 	// CmdDistroCreateShort create short
-	CmdDistroCreateShort = "Creates a Zarf Distro Package from a given directory or the current director"
+	CmdDistroCreateShort = "Creates a Cargoship Package from a given directory or the current director"
+	// CmdDistroPublishShort publish short
+	CmdDistroPublishShort = "Publish the Cargoship Package to an OCI registry"
+	// CmdPackagePullShort pull short
+	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and save to the local file system"
+	// CmdPackagePullFlagShasum pull shasum flag
+	CmdPackagePullFlagShasum = "Shasum of the package to pull"
 	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
 	// CmdDistroPrepareShort prepare short
@@ -56,6 +62,8 @@ const (
 	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
 	// CmdPackageFlagConcurrency deploy flag concurrency
 	CmdPackageFlagConcurrency = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
+	// CmdPackageFlagRetries publish flag retry
+	CmdPackageFlagRetries = "Number of retries to perform for Cargoships operations like package publishes"
 	// CmdVersionLong version long
 	CmdVersionLong = "Displays the version of the release that the current binary was built from."
 	// CmdVersionShort version short
@@ -84,4 +92,6 @@ const (
 	RootGroupPackageID = "package"
 	// RootGroupPackageTitle subcommand for package id
 	RootGroupPackageTitle = "Package Commands:"
+	// CmdPackageFlagVerify flag
+	CmdPackageFlagVerify = "Verify the Cargoship package signature"
 )

@@ -38,7 +38,7 @@ func ResolveDistroPath(path string) (DistroPath, error) {
 	if fileInfo.IsDir() {
 		// Backward compatible: directory -> distro.yaml
 		return DistroPath{
-			ManifestFile: filepath.Join(path, config.ZarfDistroYaml),
+			ManifestFile: filepath.Join(path, config.DistroYAML),
 			BaseDir:      path,
 		}, nil
 	}
