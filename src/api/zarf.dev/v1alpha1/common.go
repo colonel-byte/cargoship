@@ -16,3 +16,8 @@ package v1alpha1
 
 // ZarfDistroKind type
 type ZarfDistroKind string
+
+const (
+	// APIVersion the api version of this package.
+	APIVersion string = "zarf.dev/v1alpha1"
+)

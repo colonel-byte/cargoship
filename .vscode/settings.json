@@ -7,4 +7,5 @@
   "go.buildFlags": [
     "-tags=mage"
   ],
+  "git.ignoreLimitWarning": true,
 }

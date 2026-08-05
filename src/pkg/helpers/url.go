@@ -26,10 +26,21 @@ import (
 	"path"
 )
 
+const (
+	// OCIURLPrefix the prefix to indicate if a url is an OCI artifact
+	OCIURLPrefix = "oci://"
+)
+
 // IsURL is a helper function to check if a URL is valid.
 func IsURL(source string) bool {
 	parsedURL, err := url.Parse(source)
 	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
+}
+
+// IsOCIURL returns true if the given URL is an OCI URL.
+func IsOCIURL(source string) bool {
+	parsedURL, err := url.Parse(source)
+	return err == nil && parsedURL.Scheme == "oci"
 }
 
 // ExtractBasePathFromURL returns filename from URL string

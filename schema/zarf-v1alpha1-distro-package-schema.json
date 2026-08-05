@@ -356,11 +356,20 @@
         "architecture": {
           "type": "string"
         },
+        "provenanceFiles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "registryOverrides": {
           "additionalProperties": {
             "type": "string"
           },
           "type": "object"
+        },
+        "signed": {
+          "type": "boolean"
         },
         "timestamp": {
           "type": "string"
@@ -425,6 +434,9 @@
         "^x-": {}
       },
       "properties": {
+        "aggregateChecksum": {
+          "type": "string"
+        },
         "annotations": {
           "additionalProperties": {
             "type": "string"
@@ -439,16 +451,31 @@
           ],
           "type": "string"
         },
+        "athors": {
+          "type": "string"
+        },
         "description": {
+          "type": "string"
+        },
+        "documentation": {
           "type": "string"
         },
         "name": {
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         },
+        "source": {
+          "type": "string"
+        },
         "uncompressed": {
           "default": false,
           "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        },
+        "vendor": {
+          "type": "string"
         },
         "version": {
           "type": "string"

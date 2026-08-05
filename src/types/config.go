@@ -17,7 +17,6 @@ package types
 
 // DistroConfig holds the values for the `.`, or root, section of the config file
 type DistroConfig struct {
-	//keep-sorted start
 	// CachePath is the folder where oras artifacts are stored
 	CachePath string `json:"zarf_cache,omitempty"`
 	// DistroOpts are various options used by the command
@@ -30,13 +29,14 @@ type DistroConfig struct {
 	TempDirectory string `json:"tmp_dir,omitempty" jsonschema:"default=/tmp"`
 	// Timeout the longest we will run long ran tasks before failing
 	Timeout string `json:"timeout,omitempty" jsonschema:"default=20m"`
-	//keep-sorted end
 }
 
 // DistroOptions holds the values for the `.distro` section of the config file
 type DistroOptions struct {
 	// CreateOpts are options used by the create subcommand
 	CreateOpts DistroCreateOptions `json:"create,omitempty"`
+	// PublishOpts are options used by the publish subcommand
+	PublishOpts DistroPublishOptions `json:"publish,omitempty"`
 	// DeployOpts are options used by the deploy subcommand
 	DeployOpts DistroDeployOptions `json:"deploy,omitempty"`
 	// ApplyOpts are options used by the apply subcommand
@@ -55,18 +55,44 @@ type DistroOptions struct {
 	HostUpdate bool `json:"host_update,omitempty" jsonschema:"default=true"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once
 	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
+	// Retry number of retries we will try
+	Retry int `json:"retry,omitempty" jsonschema:"minimum=0"`
 	// Type of distro we are interacting with
 	Type string `json:"type,omitempty" jsonschema:"enum=rke2,enum=k3s"`
+	// Output the folder that we will create the distro tar balls in
+	Output string `json:"output,omitempty"`
+	// Verify
+	Verify string `json:"verify,omitempty"`
+	// PublicKey
+	PublicKey string `json:"public_key,omitempty"`
+	// CertificateIdentity
+	CertificateIdentity string `json:"certificate_identity,omitempty"`
+	// CertificateIdentityRegexp
+	CertificateIdentityRegexp string `json:"certificate_identity_regexp,omitempty"`
+	// CertificateOIDCIssuer
+	CertificateOIDCIssuer string `json:"certificate_oidc_issuer,omitempty"`
+	// CertificateOIDCIssuerRegexp
+	CertificateOIDCIssuerRegexp string `json:"certificate_oidc_issuer_regexp,omitempty"`
+	// TrustedRoot
+	TrustedRoot string `json:"trusted_root,omitempty"`
+	// InsecureIgnoreTLog
+	InsecureIgnoreTLog string `json:"insecure_ignore_tlog,omitempty"`
+	// UseSignedTimestamps
+	UseSignedTimestamps string `json:"use_signed_timestamps,omitempty"`
 }
 
 // DistroCreateOptions holds the values for the `.distro.create` section of the config file
 type DistroCreateOptions struct {
-	//keep-sorted start
-	// Output the folder that we will create the distro tar balls in
-	Output string `json:"output,omitempty"`
 	// SkipSBOM whether we will scan the images or files
 	SkipSBOM bool `json:"skip_sbom,omitempty"`
-	//keep-sorted end
+}
+
+// DistroPublishOptions holds the values for the `.distro.publish` section of the config file
+type DistroPublishOptions struct {
+	// SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package
+	SigningKey string `json:"signing_key,omitempty" jsonschema:"example=/home/runner/.cosign/sign.key,example=env://[ENV_VAR],example=awskms://[ENDPOINT]/[ID/ALIAS/ARN],example=openbao://[KEY]"`
+	// SigningKeyPassword the password for the private key used for signing
+	SigningKeyPassword string `json:"signing_key_password,omitempty"`
 }
 
 // DistroDeployOptions holds the values for the `.distro.deploy` section of the config file

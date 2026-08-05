@@ -38,6 +38,18 @@ type ZarfDistroMetadata struct {
 	Description  string            `json:"description,omitempty"`
 	Version      string            `json:"version,omitempty"`
 	Annotations  map[string]string `json:"annotations,omitempty"`
+	// URL is used by the oci annotation for the URL to find more information on the image.
+	URL string `json:"url,omitempty"`
+	// Authors is used by the oci annotation for the contact details of the people or organization responsible for the image (freeform string).
+	Authors string `json:"athors,omitempty"`
+	// Source is used by the oci annotation for the URL to get documentation on the image.
+	Documentation string `json:"documentation,omitempty"`
+	// Source is used by the oci annotation for the URL to get source code for building the image.
+	Source string `json:"source,omitempty"`
+	// Vendor is used by the oci annotation for the name of the distributing entity, organization or individual.
+	Vendor string `json:"vendor,omitempty"`
+	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
+	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 }
 
 // ZarfDistroBuildData time information
@@ -50,6 +62,12 @@ type ZarfDistroBuildData struct {
 	Version string `json:"version,omitempty"`
 	// RegistryOverrides for who the distro was created with
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
+	// Whether this package was signed
+	Signed *bool `json:"signed,omitempty"`
+	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
+	// These are files added after checksum generation (e.g., signature files).
+	// This list is authenticated through the signed zarf.yaml.
+	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 }
 
 // ZarfDistroSpec that manage the distro spec

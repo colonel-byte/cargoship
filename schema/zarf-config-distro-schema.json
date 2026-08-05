@@ -14,9 +14,6 @@
         "^x-": {}
       },
       "properties": {
-        "output": {
-          "type": "string"
-        },
         "skip_sbom": {
           "type": "boolean"
         }
@@ -44,6 +41,18 @@
         "apply": {
           "$ref": "#/$defs/ApplyOptions"
         },
+        "certificate_identity": {
+          "type": "string"
+        },
+        "certificate_identity_regexp": {
+          "type": "string"
+        },
+        "certificate_oidc_issuer": {
+          "type": "string"
+        },
+        "certificate_oidc_issuer_regexp": {
+          "type": "string"
+        },
         "concurrency": {
           "minimum": 0,
           "type": "integer"
@@ -66,11 +75,30 @@
           "default": true,
           "type": "boolean"
         },
+        "insecure_ignore_tlog": {
+          "type": "string"
+        },
         "oci_concurrency": {
           "type": "integer"
         },
+        "output": {
+          "type": "string"
+        },
+        "public_key": {
+          "type": "string"
+        },
+        "publish": {
+          "$ref": "#/$defs/DistroPublishOptions"
+        },
         "reset": {
           "$ref": "#/$defs/ResetOptions"
+        },
+        "retry": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trusted_root": {
+          "type": "string"
         },
         "type": {
           "enum": [
@@ -79,9 +107,36 @@
           ],
           "type": "string"
         },
+        "use_signed_timestamps": {
+          "type": "string"
+        },
+        "verify": {
+          "type": "string"
+        },
         "worker_concurrency": {
           "minimum": 0,
           "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "DistroPublishOptions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "signing_key": {
+          "examples": [
+            "/home/runner/.cosign/sign.key",
+            "env://[ENV_VAR]",
+            "awskms://[ENDPOINT]/[ID/ALIAS/ARN]",
+            "openbao://[KEY]"
+          ],
+          "type": "string"
+        },
+        "signing_key_password": {
+          "type": "string"
         }
       },
       "type": "object"

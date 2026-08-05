@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/colonel-byte/cargoship/src/pkg/packager/assemble"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -57,7 +58,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		return "", fmt.Errorf("unable to access package path %q: %w", distroPath, err)
 	}
 
-	assembleOpt := layout.AssembleOptions{
+	assembleOpt := assemble.AssembleOptions{
 		RemoteOptions:  opts.RemoteOptions,
 		OCIConcurrency: opts.OCIConcurrency,
 		CachePath:      opts.CachePath,
@@ -66,7 +67,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	}
 
 	logger.From(ctx).Debug("assembling distro", "baseDir", disPath.BaseDir)
-	distroLayout, err := layout.AssembleDistro(ctx, distro, disPath.BaseDir, assembleOpt)
+	distroLayout, err := assemble.AssembleDistro(ctx, distro, disPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
 	}
@@ -74,11 +75,5 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		err = errors.Join(err, distroLayout.Cleanup())
 	}()
 
-	var distroLocation string
-	distroLocation, err = distroLayout.Archive(ctx, output, 0)
-	if err != nil {
-		return "", err
-	}
-
-	return distroLocation, nil
+	return distroLayout.Archive(ctx, output, 0)
 }

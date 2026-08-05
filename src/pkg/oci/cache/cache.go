@@ -19,7 +19,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cache are a sub-section of function from defense-unicorn pkg cache package
+// Package cache are a sub-section of function from defense-unicorn pkg oci cache package
 package cache
 
 import (
