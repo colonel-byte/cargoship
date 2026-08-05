@@ -2,12 +2,8 @@
 .direnv/
 .idea/
 .scratch/
-.tool-versions
+/.tool-versions
 .vagrant
-*.bak
-*.key
-*.crt
-*.dat
 *.run.zstd
 *.tar
 *.tar.gz
