@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e17535e.js";
+            window.path_to_searchindex_js = "../searchindex-de300c41.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1514e526.js"></script>
+        <script src="../toc-e66fbb6d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -192,13 +192,15 @@
   -h, --help            help for kube-config
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
-<pre><code>  -a, --architecture string   Architecture for OCI images and Zarf packages
-  -L, --log-format string     Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string      Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color              Disable terminal color codes in logging and stdout prints.
-      --timeout string        Set the timeout for how long functions will last.
-      --tmpdir string         Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "$HOME/.zarf-cache")
+<pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --timeout string             Set the timeout for how long functions will last.
+      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.zarf-cache")
 </code></pre>
 <h3 id="see-also"><a class="header" href="#see-also">SEE ALSO</a></h3>
 <ul>
