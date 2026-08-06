@@ -2,24 +2,40 @@
 version: 2
 updates:
   - package-ecosystem: gomod
-    # vendor: true
     directories:
       - "/"
       - "/.dagger/"
     schedule:
-      interval: daily
+      interval: weekly
     allow:
       - dependency-type: "all"
     groups:
       k8s:
         patterns:
           - "k8s.io/*"
+          - "sigs.k8s.io/*"
       golang:
         patterns:
           - "golang.org/x/*"
       docker:
         patterns:
           - "github.com/docker/*"
+      aws:
+        patterns:
+          - "github.com/aws/*"
+          - "github.com/awslabs/*"
+      azure:
+        patterns:
+          - "github.com/Azure/*"
+      openapi:
+        patterns:
+          - "github.com/go-openapi/*"
+      hashicorp:
+        patterns:
+          - "github.com/hashicorp/*"
+      sigstore:
+        patterns:
+          - "github.com/sigstore/*"
   - package-ecosystem: pre-commit
     directories:
       - "/"
