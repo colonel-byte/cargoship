@@ -150,10 +150,10 @@ require (
 	github.com/digitorus/timestamp v0.0.0-20250524132541-c45532741eea // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v29.6.2+incompatible // indirect
+	github.com/docker/cli v29.7.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.8 // indirect
-	github.com/docker/go-connections v0.7.0 // indirect
+	github.com/docker/go-connections v0.8.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
