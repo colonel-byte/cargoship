@@ -3,10 +3,10 @@ version: 2
 updates:
   - package-ecosystem: gomod
     directories:
-      - "/"
-      - "/.dagger/"
+      - "**/*"
     schedule:
       interval: weekly
+      day: friday
     allow:
       - dependency-type: "all"
     groups:
