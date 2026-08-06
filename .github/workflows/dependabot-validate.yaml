@@ -3,7 +3,7 @@ name: dependabot validate
 on:
   pull_request:
     paths:
-      - .github/dependabot.yml
+      - .github/dependabot.yaml
       - .github/workflows/dependabot-validate.yaml
 
 jobs:
