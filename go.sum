@@ -182,8 +182,8 @@ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.29 h1:r6qZHbT+wxgWO/e9vYNUEt
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.29/go.mod h1:QRnaRcTVGKPGRy8w78HMQtKUGRYcnMZAANATkeVA6Mo=
 github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.34 h1:vuIfjzoeqhQMGJyOBU3t0ZEjn2jrN8Bbg1N4CgjzM5Q=
 github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.34/go.mod h1:hP28cN4CPJLZHirdQPrZR50JcLN4ApRJP2tzG8cRlhY=
-github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.29 h1:RdwIf/CuUsvJX3RgJagbOyotl/cxoLY4xviKuE7p2GY=
-github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.29/go.mod h1:71wt8W2EgswdZy9Mf9KNnzxZ3TiZlv4caKghPktDOkA=
+github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.34 h1:9faHsnqxJ1vDvB4wMZy/ajIDyz5QhllQjjc72RJpXAw=
+github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.34/go.mod h1:Yp6nIyejpa23nzlB/LhT63KTla9Jdi06nv/HH/OkAH8=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.30 h1:VTGy885W5DKBxWRUJbym9hytNaYzsyaPkCHGRRMAOhU=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.30/go.mod h1:AS0HycUvJRFvTt613AYDOgO2jzw+00cVSMny8XB3yMY=
 github.com/aws/aws-sdk-go-v2/service/ecr v1.55.3 h1:RtGctYMmkTerGClvdY6bHXdtly4FeYw9wz/NPz62LF8=
@@ -194,8 +194,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.12 h1:ZD2+BS
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.12/go.mod h1:Ms4zlcVBbXbiP7EVLhl+lgjvA/a7YphqQ3Ih3174EmI=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.29 h1:DRebniUGZ2MqiiIVmQJ04vIXr918hubdHMnarSLEWyU=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.29/go.mod h1:LfRkPCD8YHDM2E5eTkos2UpwYeZnBcVarTa8L59bJHA=
-github.com/aws/aws-sdk-go-v2/service/kms v1.53.4 h1:PEgVSsWtR8NNxsDxFL2Ywisi7R+1EFQARGsT4q3mWwI=
-github.com/aws/aws-sdk-go-v2/service/kms v1.53.4/go.mod h1:3EeKyDGPGSCEphG2OolwNGNF45RvQIfm27AYYpfEWrw=
+github.com/aws/aws-sdk-go-v2/service/kms v1.55.3 h1:qS073F+cSl7QKstrm3Jb8D/XkKBWZ4zHdmRG/cmHLoU=
+github.com/aws/aws-sdk-go-v2/service/kms v1.55.3/go.mod h1:l1gMRJ4UawrC6rpVWRz39pZxlyHID0VIS/YEEiLi4E8=
 github.com/aws/aws-sdk-go-v2/service/signin v1.2.0 h1:3nXpRcFwRCW8n7HgO2QGy0Dc20eQNfBuUemGQhpF8m8=
 github.com/aws/aws-sdk-go-v2/service/signin v1.2.0/go.mod h1:LxYujSTLPRlp2vTtcUO/+1ilrew8ytt6SvQyOgejzFQ=
 github.com/aws/aws-sdk-go-v2/service/sso v1.31.3 h1:ey1XLTYXb9PcLt4535632o5kCGXNXEhNb620Dqwuylo=
