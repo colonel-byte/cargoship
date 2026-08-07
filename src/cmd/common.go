@@ -1,4 +1,4 @@
-// Copyright 2021 zarf authors
+// Copyright 2021 zarf authors 
 // Copyright 2026 colonel-byte
 //
 // This file contains code derived from zarf:
