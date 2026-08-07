@@ -108,7 +108,6 @@ func (Generate) Schema() error {
 func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
-		IgnoredTypes:   []any{},
 		KeyNamer:       key,
 	}
 

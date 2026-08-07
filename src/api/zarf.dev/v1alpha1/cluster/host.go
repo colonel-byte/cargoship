@@ -67,20 +67,21 @@ type ZarfHost struct {
 	Hostname string `json:"hostname,omitempty"`
 	// NodeLabels a map of node labels variables
 	NodeLabels map[string]string `json:"labels,omitempty"`
-	// NodeTaints
+	// NodeTaints that will be applied to the distro specific config that will be applied to the node
 	NodeTaints []string `json:"taints,omitempty"`
 	// Policy firewalld policies to allow traffic from one interface to another
 	Policy map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
-	// Ports
+	// Ports are a list of ports and protocols that will be opened on a specfic node
 	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
 	// PrivateAddress override the given private address
 	PrivateAddress string `json:"privateAddress,omitempty"`
 	// PrivateInterface override the given private interface
 	PrivateInterface string `json:"privateInterface,omitempty"`
-	// Profile
+	// Profile is the name of the profile that should be used in the config
 	Profile string `json:"profile,omitempty"`
-	// Role
-	Role string `json:"role" jsonschema:"required,enum=controller,enum=controller+worker,enum=single,enum=worker"`
+	// Role of this node will be applied when adding nodes to the cluster;
+	// options are either controller or worker.
+	Role string `json:"role" jsonschema:"required,enum=controller,enum=worker"`
 	// Configurer defines the per-host operations required for managing a host
 	Configurer os.Configurer `json:"-"`
 	// Metadata runtime discovered values
@@ -89,8 +90,10 @@ type ZarfHost struct {
 
 // ZarfHostPort ports that should be opened on the public side of the firewall
 type ZarfHostPort struct {
+	// Protocol the type of allowed traffic
 	Protocol string `json:"protocol" xml:"protocol,attr" jsonschema:"enum=tcp,enum=udp"`
-	Port     string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
+	// Port the port number, or range, that will be opened
+	Port string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
 }
 
 // ZarfFirewallPolicyConfig is used in the inventory file to allow opening ports from one zone to another with firewalld policies
@@ -110,8 +113,10 @@ type ZarfFirewallZone struct {
 
 // ZarfFirewallPort is used to define what ports are allowed thru the firewalld policy
 type ZarfFirewallPort struct {
-	Port     string `xml:"port,attr" json:"port" jsonschema:"oneof_type=string;integer"`
+	// Protocol the type of allowed traffic
 	Protocol string `xml:"protocol,attr" json:"protocol" jsonschema:"enum=tcp,enum=udp,enum=sctp,enum=dccp"`
+	// Port the port number, or range, that will be opened
+	Port string `xml:"port,attr" json:"port" jsonschema:"oneof_type=string;integer"`
 }
 
 // ZarfHostMetadata runtime discovered values

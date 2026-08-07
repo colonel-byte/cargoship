@@ -423,6 +423,7 @@
       },
       "properties": {
         "port": {
+          "description": "Port the port number, or range, that will be opened",
           "oneOf": [
             {
               "type": "string"
@@ -433,6 +434,7 @@
           ]
         },
         "protocol": {
+          "description": "Protocol the type of allowed traffic",
           "enum": [
             "tcp",
             "udp",
@@ -443,8 +445,8 @@
         }
       },
       "required": [
-        "port",
-        "protocol"
+        "protocol",
+        "port"
       ],
       "type": "object"
     },
@@ -514,7 +516,7 @@
           "type": "object"
         },
         "ports": {
-          "description": "Ports",
+          "description": "Ports are a list of ports and protocols that will be opened on a specfic node",
           "items": {
             "$ref": "#/$defs/ZarfHostPort"
           },
@@ -529,15 +531,13 @@
           "type": "string"
         },
         "profile": {
-          "description": "Profile",
+          "description": "Profile is the name of the profile that should be used in the config",
           "type": "string"
         },
         "role": {
-          "description": "Role",
+          "description": "Role of this node will be applied when adding nodes to the cluster;\noptions are either controller or worker.",
           "enum": [
             "controller",
-            "controller+worker",
-            "single",
             "worker"
           ],
           "type": "string"
@@ -546,7 +546,7 @@
           "$ref": "#/$defs/SSH"
         },
         "taints": {
-          "description": "NodeTaints",
+          "description": "NodeTaints that will be applied to the distro specific config that will be applied to the node",
           "items": {
             "type": "string"
           },
@@ -569,6 +569,7 @@
       },
       "properties": {
         "port": {
+          "description": "Port the port number, or range, that will be opened",
           "oneOf": [
             {
               "type": "string"
@@ -579,6 +580,7 @@
           ]
         },
         "protocol": {
+          "description": "Protocol the type of allowed traffic",
           "enum": [
             "tcp",
             "udp"

@@ -462,10 +462,12 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Annotations that will be added to the OCI manifest",
           "type": "object"
         },
         "architecture": {
           "default": "amd64",
+          "description": "Architecture the CPU architecture this distro is built for",
           "enum": [
             "amd64",
             "arm64"
@@ -477,6 +479,7 @@
           "type": "string"
         },
         "description": {
+          "description": "Description of what this distro package is created to do",
           "type": "string"
         },
         "documentation": {
@@ -484,6 +487,7 @@
           "type": "string"
         },
         "name": {
+          "description": "Name of the distro package",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         },
@@ -492,7 +496,7 @@
           "type": "string"
         },
         "uncompressed": {
-          "default": false,
+          "description": "Uncompressed indicates if this package should be compressed or not",
           "type": "boolean"
         },
         "url": {
@@ -504,10 +508,12 @@
           "type": "string"
         },
         "version": {
+          "description": "Version of the distro that will be installed, suggested to align to the kubernetes version being installed",
           "type": "string"
         }
       },
       "required": [
+        "uncompressed",
         "name"
       ],
       "type": "object"

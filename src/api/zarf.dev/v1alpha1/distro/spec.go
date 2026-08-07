@@ -32,12 +32,18 @@ type ZarfDistro struct {
 
 // ZarfDistroMetadata for the distro package
 type ZarfDistroMetadata struct {
-	Uncompressed bool              `json:"uncompressed,omitempty" jsonschema:"default=false"`
-	Architecture string            `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
-	Name         string            `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
-	Description  string            `json:"description,omitempty"`
-	Version      string            `json:"version,omitempty"`
-	Annotations  map[string]string `json:"annotations,omitempty"`
+	// Uncompressed indicates if this package should be compressed or not
+	Uncompressed bool
+	// Architecture the CPU architecture this distro is built for
+	Architecture string `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
+	// Name of the distro package
+	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	// Description of what this distro package is created to do
+	Description string `json:"description,omitempty"`
+	// Version of the distro that will be installed, suggested to align to the kubernetes version being installed
+	Version string `json:"version,omitempty"`
+	// Annotations that will be added to the OCI manifest
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// URL is used by the oci annotation for the URL to find more information on the image.
 	URL string `json:"url,omitempty"`
 	// Authors is used by the oci annotation for the contact details of the people or organization responsible for the image (freeform string).
