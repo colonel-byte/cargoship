@@ -21,10 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
 	"github.com/k0sproject/rig/log"
@@ -55,26 +52,26 @@ type o struct {
 // Schema creates the jsonschema files for a number of the yaml files
 func (Generate) Schema() error {
 	var sch = []schema{
-		{
-			schemaStruct: &distro.ZarfDistro{},
-			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
-			structPath:   []string{"src", "types"},
-		},
-		{
-			schemaStruct: &cluster.ZarfCluster{},
-			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
-			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
-			keyNamer: func(s string) string {
-				if strings.ToLower(s) == "openssh" {
-					return "openSSH"
-				}
-				return strcase.LowerCamelCase(s)
-			},
-		},
+		// {
+		// 	schemaStruct: &distro.ZarfDistro{},
+		// 	schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
+		// 	structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
+		// },
+		// {
+		// 	schemaStruct: &cluster.ZarfCluster{},
+		// 	schemaPath:   "zarf-v1alpha1-cluster-schema.json",
+		// 	structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
+		// 	keyNamer: func(s string) string {
+		// 		if strings.ToLower(s) == "openssh" {
+		// 			return "openSSH"
+		// 		}
+		// 		return strcase.LowerCamelCase(s)
+		// 	},
+		// },
 		{
 			schemaStruct: &types.DistroConfig{},
 			schemaPath:   "zarf-config-distro-schema.json",
-			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
+			structPath:   []string{"src", "types"},
 			keyNamer: func(s string) string {
 				return s
 			},
@@ -140,6 +137,10 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
+	}
+
+	for k := range reflector.CommentMap {
+		fmt.Println(k)
 	}
 
 	schema := reflector.Reflect(v)
