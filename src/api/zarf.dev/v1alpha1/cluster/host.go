@@ -56,8 +56,7 @@ var ErrCommandFailed = errors.New("command failed")
 
 // ZarfHost is a remote connection to a node
 type ZarfHost struct {
-	rig.Connection `json:",inline"`
-	//keep-sorted start
+	rig.Connection   `json:",inline"`
 	Environment      map[string]string                   `json:"environment,omitempty"`
 	Files            []ZarfClusterFiles                  `json:"files,omitempty"`
 	Hostname         string                              `json:"hostname,omitempty"`
@@ -69,9 +68,8 @@ type ZarfHost struct {
 	PrivateInterface string                              `json:"privateInterface,omitempty"`
 	Profile          string                              `json:"profile,omitempty"`
 	Role             string                              `json:"role" jsonschema:"required,enum=controller,enum=controller+worker,enum=single,enum=worker"`
-	//keep-sorted end
-	Configurer os.Configurer    `json:"-"`
-	Metadata   ZarfHostMetadata `json:"-"`
+	Configurer       os.Configurer                       `json:"-"`
+	Metadata         ZarfHostMetadata                    `json:"-"`
 }
 
 // ZarfHostPort ports that should be opened on the public side of the firewall
@@ -103,7 +101,6 @@ type ZarfFirewallPort struct {
 
 // ZarfHostMetadata runtime discovered values
 type ZarfHostMetadata struct {
-	//keep-sorted start sticky_comments=yes
 	Arch           string
 	BinaryTempFile []string
 	DistroVersion  string
@@ -124,7 +121,6 @@ type ZarfHostMetadata struct {
 	NewConfig    string
 	// Ready indicates if the distro service is up and running
 	Ready bool
-	//keep-sorted end
 }
 
 func (h *ZarfHost) requireConfigurer() (os.Configurer, error) {

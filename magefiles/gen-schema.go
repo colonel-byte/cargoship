@@ -16,15 +16,15 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
+	"strings"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
-	"github.com/k0sproject/rig/log"
 	strcase "github.com/stoewer/go-strcase"
 )
 
@@ -52,22 +52,22 @@ type o struct {
 // Schema creates the jsonschema files for a number of the yaml files
 func (Generate) Schema() error {
 	var sch = []schema{
-		// {
-		// 	schemaStruct: &distro.ZarfDistro{},
-		// 	schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
-		// 	structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
-		// },
-		// {
-		// 	schemaStruct: &cluster.ZarfCluster{},
-		// 	schemaPath:   "zarf-v1alpha1-cluster-schema.json",
-		// 	structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
-		// 	keyNamer: func(s string) string {
-		// 		if strings.ToLower(s) == "openssh" {
-		// 			return "openSSH"
-		// 		}
-		// 		return strcase.LowerCamelCase(s)
-		// 	},
-		// },
+		{
+			schemaStruct: &distro.ZarfDistro{},
+			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
+			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
+		},
+		{
+			schemaStruct: &cluster.ZarfCluster{},
+			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
+			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
+			keyNamer: func(s string) string {
+				if strings.ToLower(s) == "openssh" {
+					return "openSSH"
+				}
+				return strcase.LowerCamelCase(s)
+			},
+		},
 		{
 			schemaStruct: &types.DistroConfig{},
 			schemaPath:   "zarf-config-distro-schema.json",
@@ -112,35 +112,10 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 		KeyNamer:       key,
 	}
 
-	// AddGoComments breaks if called with an absolute path, so we save the current
-	// directory, move to the directory of this source file, then use a relative path
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get current directory: %w", err)
-	}
-	defer func() {
-		if err := os.Chdir(originalDir); err != nil {
-			log.Warnf("got the following error: %w", err)
-		}
-	}()
-
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		return nil, errors.New("unable to get the current filename")
-	}
-	schemaDir := filepath.Dir(filename)
-	if err := os.Chdir(schemaDir); err != nil {
-		return nil, fmt.Errorf("unable to change to schema directory: %w", err)
-	}
-
-	typePath := filepath.Join(append([]string{".."}, path...)...)
+	typePath := filepath.Join(path...)
 
 	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
-	}
-
-	for k := range reflector.CommentMap {
-		fmt.Println(k)
 	}
 
 	schema := reflector.Reflect(v)

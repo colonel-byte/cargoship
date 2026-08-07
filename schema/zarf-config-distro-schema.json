@@ -2,6 +2,7 @@
   "$defs": {
     "ApplyOptions": {
       "additionalProperties": false,
+      "description": "ApplyOptions holds the values for the `.distro.apply` section of the config file",
       "patternProperties": {
         "^x-": {}
       },
@@ -10,11 +11,13 @@
     },
     "DistroCreateOptions": {
       "additionalProperties": false,
+      "description": "DistroCreateOptions holds the values for the `.distro.create` section of the config file",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "skip_sbom": {
+          "description": "SkipSBOM whether we will scan the images or files",
           "type": "boolean"
         }
       },
@@ -22,11 +25,13 @@
     },
     "DistroDeployOptions": {
       "additionalProperties": false,
+      "description": "DistroDeployOptions holds the values for the `.distro.deploy` section of the config file",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "retries": {
+          "description": "Retries how many times we will try to push a package",
           "type": "integer"
         }
       },
@@ -34,73 +39,94 @@
     },
     "DistroOptions": {
       "additionalProperties": false,
+      "description": "DistroOptions holds the values for the `.distro` section of the config file",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "apply": {
-          "$ref": "#/$defs/ApplyOptions"
+          "$ref": "#/$defs/ApplyOptions",
+          "description": "ApplyOpts are options used by the apply subcommand"
         },
         "certificate_identity": {
+          "description": "CertificateIdentity",
           "type": "string"
         },
         "certificate_identity_regexp": {
+          "description": "CertificateIdentityRegexp",
           "type": "string"
         },
         "certificate_oidc_issuer": {
+          "description": "CertificateOIDCIssuer",
           "type": "string"
         },
         "certificate_oidc_issuer_regexp": {
+          "description": "CertificateOIDCIssuerRegexp",
           "type": "string"
         },
         "concurrency": {
+          "description": "Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once",
           "minimum": 0,
           "type": "integer"
         },
         "create": {
-          "$ref": "#/$defs/DistroCreateOptions"
+          "$ref": "#/$defs/DistroCreateOptions",
+          "description": "CreateOpts are options used by the create subcommand"
         },
         "deploy": {
-          "$ref": "#/$defs/DistroDeployOptions"
+          "$ref": "#/$defs/DistroDeployOptions",
+          "description": "DeployOpts are options used by the deploy subcommand"
         },
         "fapolicy": {
           "default": true,
+          "description": "FAPolicyd whether we will update hosts with fapolicyd",
           "type": "boolean"
         },
         "firewall_update": {
           "default": true,
+          "description": "FirewallUpdate whether we will update the host firewall",
           "type": "boolean"
         },
         "host_update": {
           "default": true,
+          "description": "HostUpdate whether we will update the etc host file",
           "type": "boolean"
         },
         "insecure_ignore_tlog": {
+          "description": "InsecureIgnoreTLog",
           "type": "string"
         },
         "oci_concurrency": {
+          "description": "OCIConcurrency is how many concurrent oci artifacts that will be pushed at a time",
           "type": "integer"
         },
         "output": {
+          "description": "Output the folder that we will create the distro tar balls in",
           "type": "string"
         },
         "public_key": {
+          "description": "PublicKey",
           "type": "string"
         },
         "publish": {
-          "$ref": "#/$defs/DistroPublishOptions"
+          "$ref": "#/$defs/DistroPublishOptions",
+          "description": "PublishOpts are options used by the publish subcommand"
         },
         "reset": {
-          "$ref": "#/$defs/ResetOptions"
+          "$ref": "#/$defs/ResetOptions",
+          "description": "ResetOptions are options used by the reset subcommand"
         },
         "retry": {
+          "description": "Retry number of retries we will try",
           "minimum": 0,
           "type": "integer"
         },
         "trusted_root": {
+          "description": "TrustedRoot",
           "type": "string"
         },
         "type": {
+          "description": "Type of distro we are interacting with",
           "enum": [
             "rke2",
             "k3s"
@@ -108,12 +134,15 @@
           "type": "string"
         },
         "use_signed_timestamps": {
+          "description": "UseSignedTimestamps",
           "type": "string"
         },
         "verify": {
+          "description": "Verify",
           "type": "string"
         },
         "worker_concurrency": {
+          "description": "WorkerConcurrency number of worker nodes that will be upgraded at once",
           "minimum": 0,
           "type": "integer"
         }
@@ -122,11 +151,13 @@
     },
     "DistroPublishOptions": {
       "additionalProperties": false,
+      "description": "DistroPublishOptions holds the values for the `.distro.publish` section of the config file",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "signing_key": {
+          "description": "SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package",
           "examples": [
             "/home/runner/.cosign/sign.key",
             "env://[ENV_VAR]",
@@ -136,6 +167,7 @@
           "type": "string"
         },
         "signing_key_password": {
+          "description": "SigningKeyPassword the password for the private key used for signing",
           "type": "string"
         }
       },
@@ -143,6 +175,7 @@
     },
     "ResetOptions": {
       "additionalProperties": false,
+      "description": "ResetOptions holds the values for the `.distro.reset` section of the config file",
       "patternProperties": {
         "^x-": {}
       },
@@ -153,15 +186,18 @@
   "$id": "https://github.com/colonel-byte/cargoship/src/types/distro-config",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "description": "DistroConfig holds the values for the `.`, or root, section of the config file",
   "patternProperties": {
     "^x-": {}
   },
   "properties": {
     "distro": {
-      "$ref": "#/$defs/DistroOptions"
+      "$ref": "#/$defs/DistroOptions",
+      "description": "DistroOpts are various options used by the command"
     },
     "log_format": {
       "default": "console",
+      "description": "LogFormat how the logs are displayed well running",
       "enum": [
         "console",
         "json",
@@ -171,6 +207,7 @@
     },
     "log_level": {
       "default": "info",
+      "description": "LogLevel the level of logs that will be displayed",
       "enum": [
         "warn",
         "info",
@@ -181,13 +218,16 @@
     },
     "timeout": {
       "default": "20m",
+      "description": "Timeout the longest we will run long ran tasks before failing",
       "type": "string"
     },
     "tmp_dir": {
       "default": "/tmp",
+      "description": "TempDirectory the directory where we store stuff before deleting them",
       "type": "string"
     },
     "zarf_cache": {
+      "description": "CachePath is the folder where oras artifacts are stored",
       "type": "string"
     }
   },

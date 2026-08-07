@@ -173,6 +173,7 @@
     },
     "ZarfClusterConfig": {
       "additionalProperties": false,
+      "description": "ZarfClusterConfig for a cluster",
       "patternProperties": {
         "^x-": {}
       },
@@ -201,6 +202,7 @@
     },
     "ZarfClusterFiles": {
       "additionalProperties": false,
+      "description": "ZarfClusterFiles data",
       "patternProperties": {
         "^x-": {}
       },
@@ -243,6 +245,7 @@
     },
     "ZarfClusterMetadata": {
       "additionalProperties": false,
+      "description": "ZarfClusterMetadata a cluster config",
       "patternProperties": {
         "^x-": {}
       },
@@ -271,6 +274,7 @@
     },
     "ZarfClusterProfiles": {
       "additionalProperties": false,
+      "description": "ZarfClusterProfiles for the engine",
       "patternProperties": {
         "^x-": {}
       },
@@ -292,18 +296,22 @@
     },
     "ZarfClusterRegistries": {
       "additionalProperties": false,
+      "description": "ZarfClusterRegistries overrides",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "auth": {
-          "$ref": "#/$defs/ZarfClusterRegistryAuth"
+          "$ref": "#/$defs/ZarfClusterRegistryAuth",
+          "description": "Authentication for the registry"
         },
         "name": {
+          "description": "Name of the registry",
           "type": "string"
         },
         "proxy": {
-          "$ref": "#/$defs/ZarfClusterRegistryProxy"
+          "$ref": "#/$defs/ZarfClusterRegistryProxy",
+          "description": "Proxy for the registry"
         }
       },
       "required": [
@@ -314,17 +322,21 @@
     },
     "ZarfClusterRegistryAuth": {
       "additionalProperties": false,
+      "description": "ZarfClusterRegistryAuth information",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "pass": {
+          "description": "Password for the remote registry",
           "type": "string"
         },
         "token": {
+          "description": "Token for the remote registry",
           "type": "string"
         },
         "user": {
+          "description": "Username for the remote registry",
           "type": "string"
         }
       },
@@ -332,11 +344,13 @@
     },
     "ZarfClusterRegistryProxy": {
       "additionalProperties": false,
+      "description": "ZarfClusterRegistryProxy override for the registry information",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "url": {
+          "description": "URL to the registry that will engine will now pull from",
           "type": "string"
         }
       },
@@ -347,6 +361,7 @@
     },
     "ZarfClusterSpec": {
       "additionalProperties": false,
+      "description": "ZarfClusterSpec a cluster config",
       "patternProperties": {
         "^x-": {}
       },
@@ -366,6 +381,7 @@
     },
     "ZarfFirewallPolicyConfig": {
       "additionalProperties": false,
+      "description": "ZarfFirewallPolicyConfig is used in the inventory file to allow opening ports from one zone to another with firewalld policies",
       "patternProperties": {
         "^x-": {}
       },
@@ -401,6 +417,7 @@
     },
     "ZarfFirewallPort": {
       "additionalProperties": false,
+      "description": "ZarfFirewallPort is used to define what ports are allowed thru the firewalld policy",
       "patternProperties": {
         "^x-": {}
       },
@@ -433,6 +450,7 @@
     },
     "ZarfFirewallZone": {
       "additionalProperties": false,
+      "description": "ZarfFirewallZone name of either the ingress or egress zone for the policy",
       "patternProperties": {
         "^x-": {}
       },
@@ -452,6 +470,7 @@
     },
     "ZarfHost": {
       "additionalProperties": false,
+      "description": "ZarfHost is a remote connection to a node",
       "patternProperties": {
         "^x-": {}
       },
@@ -533,6 +552,7 @@
     },
     "ZarfHostPort": {
       "additionalProperties": false,
+      "description": "ZarfHostPort ports that should be opened on the public side of the firewall",
       "patternProperties": {
         "^x-": {}
       },
@@ -562,6 +582,7 @@
       "type": "object"
     },
     "ZarfHosts": {
+      "description": "ZarfHosts are the hosts that will be managed",
       "items": {
         "$ref": "#/$defs/ZarfHost"
       },
@@ -571,6 +592,7 @@
   "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster/zarf-cluster",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "description": "ZarfCluster root for a cluster config",
   "patternProperties": {
     "^x-": {}
   },
