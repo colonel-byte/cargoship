@@ -25,7 +25,7 @@ import (
 	"os"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
-	"github.com/colonel-byte/cargoship/src/pkg/packager"
+	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	zconfig "github.com/zarf-dev/zarf/src/config"
@@ -81,7 +81,7 @@ func (o *packagePullOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
+	packagePath, err := distro.Pull(ctx, srcURL, outputDir, distro.PullOptions{
 		SHASum:               o.shasum,
 		VerificationStrategy: o.verify.toStrategy(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(nil, v),

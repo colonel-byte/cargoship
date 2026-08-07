@@ -31,7 +31,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
 	"github.com/colonel-byte/cargoship/src/pkg/lint"
-	"github.com/colonel-byte/cargoship/src/pkg/packager"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
@@ -97,13 +96,13 @@ func (o *packagePublishOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	loadOpts := packager.LoadOptions{
+	loadOpts := distro.LoadOptions{
 		CachePath:    config.CommonOptions.CachePath,
 		Architecture: config.CLIArch,
 		Output:       config.CommonOptions.TempDirectory,
 	}
 
-	distroLayout, err := packager.LoadDistro(ctx, distroSource, loadOpts)
+	distroLayout, err := distro.Load(ctx, distroSource, loadOpts)
 	if err != nil {
 		return err
 	}

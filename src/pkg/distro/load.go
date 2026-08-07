@@ -18,8 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package packager for interacting with a packages distro config
-package packager
+package distro
 
 import (
 	"context"
@@ -53,8 +52,8 @@ type LoadOptions struct {
 	layout.VerificationStrategy
 }
 
-// LoadDistro fetches, verifies, and loads a Zarf package from the specified source.
-func LoadDistro(ctx context.Context, source string, opts LoadOptions) (*layout.DistroLayout, error) {
+// Load fetches, verifies, and loads a Zarf package from the specified source.
+func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroLayout, error) {
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}

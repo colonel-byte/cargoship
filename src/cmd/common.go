@@ -26,7 +26,7 @@ import (
 	"regexp"
 
 	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/packager"
+	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
@@ -96,13 +96,13 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 
 	logger.From(ctx).Info("using cluster file", "location", opt.config)
 
-	loadOpts := packager.LoadOptions{
+	loadOpts := distro.LoadOptions{
 		CachePath:    config.CommonOptions.CachePath,
 		Architecture: config.CLIArch,
 		Output:       config.CommonOptions.TempDirectory,
 	}
 
-	distroLayout, err := packager.LoadDistro(ctx, distroPath, loadOpts)
+	distroLayout, err := distro.Load(ctx, distroPath, loadOpts)
 	if err != nil {
 		return nil, err
 	}

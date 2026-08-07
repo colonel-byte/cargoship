@@ -18,7 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packager
+package distro
 
 import (
 	"context"
@@ -92,7 +92,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 		return "", errors.New("host cannot be empty")
 	}
 
-	disLayout, err := LoadDistro(ctx, source, LoadOptions{
+	disLayout, err := Load(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
 		Architecture:         arch,
 		VerifyBlobOptions:    opts.VerifyBlobOptions,
