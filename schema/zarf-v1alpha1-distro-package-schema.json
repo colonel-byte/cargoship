@@ -437,7 +437,8 @@
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "path": {
           "description": "Path that the image tar balls will be uploaded too",

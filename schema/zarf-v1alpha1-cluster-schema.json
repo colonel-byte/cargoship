@@ -479,21 +479,25 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Environment a map of environment variables that will be populated on the host system",
           "type": "object"
         },
         "files": {
+          "description": "Files that will be uploaded to a host",
           "items": {
             "$ref": "#/$defs/ZarfClusterFiles"
           },
           "type": "array"
         },
         "hostname": {
+          "description": "Hostname overrides the name of the node",
           "type": "string"
         },
         "labels": {
           "additionalProperties": {
             "type": "string"
           },
+          "description": "NodeLabels a map of node labels variables",
           "type": "object"
         },
         "localhost": {
@@ -506,24 +510,30 @@
           "additionalProperties": {
             "$ref": "#/$defs/ZarfFirewallPolicyConfig"
           },
+          "description": "Policy firewalld policies to allow traffic from one interface to another",
           "type": "object"
         },
         "ports": {
+          "description": "Ports",
           "items": {
             "$ref": "#/$defs/ZarfHostPort"
           },
           "type": "array"
         },
         "privateAddress": {
+          "description": "PrivateAddress override the given private address",
           "type": "string"
         },
         "privateInterface": {
+          "description": "PrivateInterface override the given private interface",
           "type": "string"
         },
         "profile": {
+          "description": "Profile",
           "type": "string"
         },
         "role": {
+          "description": "Role",
           "enum": [
             "controller",
             "controller+worker",
@@ -536,6 +546,7 @@
           "$ref": "#/$defs/SSH"
         },
         "taints": {
+          "description": "NodeTaints",
           "items": {
             "type": "string"
           },

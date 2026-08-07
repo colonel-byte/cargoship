@@ -107,7 +107,7 @@ type ZarfDistroImageConfig struct {
 	// Path that the image tar balls will be uploaded too
 	Path string `json:"path,omitempty"`
 	// Images list of the various required offline images
-	Images []string `json:"images,omitempty"`
+	Images []string `json:"images,omitempty" jsonschema:"uniqueItems=true"`
 }
 
 // ZarfDistroOS holds specific values for apply to a host
