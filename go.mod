@@ -1,6 +1,6 @@
 module github.com/colonel-byte/cargoship
 
-go 1.26.4
+go 1.26.5
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0
@@ -29,7 +29,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/txn2/txeh v1.8.1
 	github.com/uwu-tools/magex v0.10.1
-	github.com/zarf-dev/zarf v0.77.0
+	github.com/zarf-dev/zarf v0.82.0
 	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/client-go v0.36.3
@@ -369,7 +369,6 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.44.0 // indirect
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.45.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
