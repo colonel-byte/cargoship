@@ -20,7 +20,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -80,7 +79,7 @@ func (p *PrepareKernelModules) enableModules(ctx context.Context, h *cluster.Zar
 
 func (p *PrepareKernelModules) rebootNodes(ctx context.Context, h *cluster.ZarfHost) error {
 	if h.Metadata.ModulesAdded {
-		if err := h.Exec("reboot now", exec.Sudo(h)); err != nil {
+		if err := h.Configurer.Reboot(h); err != nil {
 			logger.From(ctx).Warn("issue when trying to reboot", "host", h)
 		}
 	}
