@@ -148,6 +148,7 @@
         },
         "worker_concurrency": {
           "description": "WorkerConcurrency number of worker nodes that will be upgraded at once",
+          "maximum": 1000,
           "minimum": 0,
           "type": "integer"
         }

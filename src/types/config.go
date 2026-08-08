@@ -54,7 +54,7 @@ type DistroOptions struct {
 	// HostUpdate whether we will update the etc host file
 	HostUpdate bool `json:"host_update,omitempty" jsonschema:"default=true"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once
-	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
+	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0,maximum=1000"`
 	// Retry number of retries we will try
 	Retry int `json:"retry,omitempty" jsonschema:"minimum=0"`
 	// Type of distro we are interacting with
