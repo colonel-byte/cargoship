@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -105,6 +106,10 @@ func (Generate) Schema() error {
 	return nil
 }
 
+var (
+	regex = `\.([A-Za-z]+)$`
+)
+
 func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
@@ -115,6 +120,16 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
+	}
+
+	re := regexp.MustCompile(regex)
+
+	// Strip the key from the comments
+	for k, v := range reflector.CommentMap {
+		matches := re.FindStringSubmatch(k)
+		if len(matches) > 0 {
+			reflector.CommentMap[k] = strings.TrimSpace(strings.TrimPrefix(v, matches[1]))
+		}
 	}
 
 	schema := reflector.Reflect(v)

@@ -337,31 +337,31 @@
     },
     "ZarfDistroActions": {
       "additionalProperties": false,
-      "description": "ZarfDistroActions that are ran during certain phases of the distro package",
+      "description": "that are ran during certain phases of the distro package",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "onCreate": {
           "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "OnCreate actions"
+          "description": "actions"
         }
       },
       "type": "object"
     },
     "ZarfDistroBuildData": {
       "additionalProperties": false,
-      "description": "ZarfDistroBuildData time information",
+      "description": "time information",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "architecture": {
-          "description": "Architecture of the distro package",
+          "description": "of the distro package",
           "type": "string"
         },
         "provenanceFiles": {
-          "description": "ProvenanceFiles lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
+          "description": "lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
           "items": {
             "type": "string"
           },
@@ -371,7 +371,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "RegistryOverrides for who the distro was created with",
+          "description": "for who the distro was created with",
           "type": "object"
         },
         "signed": {
@@ -379,11 +379,11 @@
           "type": "boolean"
         },
         "timestamp": {
-          "description": "Timestamp of when the distro was created",
+          "description": "of when the distro was created",
           "type": "string"
         },
         "version": {
-          "description": "Version of the distro is created as",
+          "description": "of the distro is created as",
           "type": "string"
         }
       },
@@ -391,40 +391,40 @@
     },
     "ZarfDistroConfig": {
       "additionalProperties": false,
-      "description": "ZarfDistroConfig holds values for distro config",
+      "description": "holds values for distro config",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "engine": {
           "$ref": "#/$defs/Mapping",
-          "description": "Engine is used for configuring the engine"
+          "description": "is used for configuring the engine"
         },
         "files": {
           "$ref": "#/$defs/ZarfFiles",
-          "description": "Files are files that will be populated on the hosts, regardless of what install method is used"
+          "description": "are files that will be populated on the hosts, regardless of what install method is used"
         },
         "imageConfig": {
           "$ref": "#/$defs/ZarfDistroImageConfig",
-          "description": "ImagesConfig for the images"
+          "description": "for the images"
         },
         "os": {
           "$ref": "#/$defs/ZarfDistroOS",
-          "description": "OS for the node os"
+          "description": "for the node os"
         }
       },
       "type": "object"
     },
     "ZarfDistroImageConfig": {
       "additionalProperties": false,
-      "description": "ZarfDistroImageConfig holds values for the images that will be populated on a host",
+      "description": "holds values for the images that will be populated on a host",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "compression": {
           "default": "none",
-          "description": "Compression that the image tar balls will be compressed with",
+          "description": "that the image tar balls will be compressed with",
           "enum": [
             "none",
             "gz",
@@ -433,7 +433,7 @@
           "type": "string"
         },
         "images": {
-          "description": "Images list of the various required offline images",
+          "description": "list of the various required offline images",
           "items": {
             "type": "string"
           },
@@ -441,7 +441,7 @@
           "uniqueItems": true
         },
         "path": {
-          "description": "Path that the image tar balls will be uploaded too",
+          "description": "that the image tar balls will be uploaded too",
           "type": "string"
         }
       },
@@ -449,7 +449,7 @@
     },
     "ZarfDistroMetadata": {
       "additionalProperties": false,
-      "description": "ZarfDistroMetadata for the distro package",
+      "description": "for the distro package",
       "patternProperties": {
         "^x-": {}
       },
@@ -462,12 +462,12 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Annotations that will be added to the OCI manifest",
+          "description": "that will be added to the OCI manifest",
           "type": "object"
         },
         "architecture": {
           "default": "amd64",
-          "description": "Architecture the CPU architecture this distro is built for",
+          "description": "the CPU architecture this distro is built for",
           "enum": [
             "amd64",
             "arm64"
@@ -475,11 +475,11 @@
           "type": "string"
         },
         "athors": {
-          "description": "Authors is used by the oci annotation for the contact details of the people or organization responsible for the image (freeform string).",
+          "description": "is used by the oci annotation for the contact details of the people or organization responsible for the image (freeform string).",
           "type": "string"
         },
         "description": {
-          "description": "Description of what this distro package is created to do",
+          "description": "of what this distro package is created to do",
           "type": "string"
         },
         "documentation": {
@@ -487,28 +487,28 @@
           "type": "string"
         },
         "name": {
-          "description": "Name of the distro package",
+          "description": "of the distro package",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         },
         "source": {
-          "description": "Source is used by the oci annotation for the URL to get source code for building the image.",
+          "description": "is used by the oci annotation for the URL to get source code for building the image.",
           "type": "string"
         },
         "uncompressed": {
-          "description": "Uncompressed indicates if this package should be compressed or not",
+          "description": "indicates if this package should be compressed or not",
           "type": "boolean"
         },
         "url": {
-          "description": "URL is used by the oci annotation for the URL to find more information on the image.",
+          "description": "is used by the oci annotation for the URL to find more information on the image.",
           "type": "string"
         },
         "vendor": {
-          "description": "Vendor is used by the oci annotation for the name of the distributing entity, organization or individual.",
+          "description": "is used by the oci annotation for the name of the distributing entity, organization or individual.",
           "type": "string"
         },
         "version": {
-          "description": "Version of the distro that will be installed, suggested to align to the kubernetes version being installed",
+          "description": "of the distro that will be installed, suggested to align to the kubernetes version being installed",
           "type": "string"
         }
       },
@@ -520,7 +520,7 @@
     },
     "ZarfDistroOS": {
       "additionalProperties": false,
-      "description": "ZarfDistroOS holds specific values for apply to a host",
+      "description": "holds specific values for apply to a host",
       "patternProperties": {
         "^x-": {}
       },
@@ -529,19 +529,19 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment a map of environment variables that will be populated on the host system",
+          "description": "a map of environment variables that will be populated on the host system",
           "type": "object"
         },
         "fapolicyd": {
-          "description": "FAPolicyd config file contents that will be applied to a host",
+          "description": "config file contents that will be applied to a host",
           "type": "string"
         },
         "files": {
           "$ref": "#/$defs/ZarfFiles",
-          "description": "Files that will be uploaded to a host"
+          "description": "that will be uploaded to a host"
         },
         "kernel": {
-          "description": "Kernel list of the requested kerenel modules to be enabled on the host system",
+          "description": "list of the requested kerenel modules to be enabled on the host system",
           "items": {
             "type": "string"
           },
@@ -558,7 +558,7 @@
               }
             ]
           },
-          "description": "Sysctl a map of sysctl values that will be applied to a host",
+          "description": "a map of sysctl values that will be applied to a host",
           "type": "object"
         }
       },
@@ -566,21 +566,21 @@
     },
     "ZarfDistroSpec": {
       "additionalProperties": false,
-      "description": "ZarfDistroSpec that manage the distro spec",
+      "description": "that manage the distro spec",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "actions": {
           "$ref": "#/$defs/ZarfDistroActions",
-          "description": "Actions that are ran during some package phases"
+          "description": "that are ran during some package phases"
         },
         "config": {
           "$ref": "#/$defs/ZarfDistroConfig",
-          "description": "Config for the distro"
+          "description": "for the distro"
         },
         "type": {
-          "description": "Type of distro that is being created",
+          "description": "of distro that is being created",
           "enum": [
             "rke2",
             "k3s"
@@ -588,7 +588,7 @@
           "type": "string"
         },
         "version": {
-          "description": "Version of the engine",
+          "description": "of the engine",
           "type": "string"
         }
       },
@@ -662,7 +662,7 @@
   "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro/zarf-distro",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "ZarfDistro root information",
+  "description": "root information",
   "patternProperties": {
     "^x-": {}
   },
