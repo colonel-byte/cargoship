@@ -36,10 +36,8 @@ type ZarfCluster struct {
 
 // ZarfClusterMetadata a cluster config
 type ZarfClusterMetadata struct {
-	Name        string            `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
-	Description string            `json:"description,omitempty"`
-	Version     string            `json:"version,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
+	// Name acts as the name of the cluster if you allow cargoship to add it to the kubeconfig
+	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 }
 
 // ZarfRuntimeMeta for storing data when running the various phases

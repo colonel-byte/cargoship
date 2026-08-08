@@ -54,30 +54,30 @@ type DistroOptions struct {
 	// HostUpdate whether we will update the etc host file
 	HostUpdate bool `json:"host_update,omitempty" jsonschema:"default=true"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once
-	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0"`
+	WorkerConcurrency int `json:"worker_concurrency,omitempty" jsonschema:"minimum=0,maximum=1000"`
 	// Retry number of retries we will try
 	Retry int `json:"retry,omitempty" jsonschema:"minimum=0"`
 	// Type of distro we are interacting with
 	Type string `json:"type,omitempty" jsonschema:"enum=rke2,enum=k3s"`
 	// Output the folder that we will create the distro tar balls in
 	Output string `json:"output,omitempty"`
-	// Verify
-	Verify string `json:"verify,omitempty"`
-	// PublicKey
+	// Verify the Cargoship package signature
+	Verify string `json:"verify,omitempty" jsonschema:"enum=never,enum=if-possible,enum=always"`
+	// PublicKey path to public key file for validating signed packages
 	PublicKey string `json:"public_key,omitempty"`
-	// CertificateIdentity
+	// CertificateIdentity required identity claim in the signing certificate
 	CertificateIdentity string `json:"certificate_identity,omitempty"`
-	// CertificateIdentityRegexp
+	// CertificateIdentityRegexp equired identity claim in the signing certificate, allows usage of regex
 	CertificateIdentityRegexp string `json:"certificate_identity_regexp,omitempty"`
-	// CertificateOIDCIssuer
+	// CertificateOIDCIssuer required OIDC issuer claim in the signing certificate
 	CertificateOIDCIssuer string `json:"certificate_oidc_issuer,omitempty"`
-	// CertificateOIDCIssuerRegexp
+	// CertificateOIDCIssuerRegexp required OIDC issuer claim in the signing certificate, allows usage of regex
 	CertificateOIDCIssuerRegexp string `json:"certificate_oidc_issuer_regexp,omitempty"`
-	// TrustedRoot
+	// TrustedRoot path to a Sigstore TrustedRoot JSON
 	TrustedRoot string `json:"trusted_root,omitempty"`
 	// InsecureIgnoreTLog
 	InsecureIgnoreTLog string `json:"insecure_ignore_tlog,omitempty"`
-	// UseSignedTimestamps
+	// UseSignedTimestamps verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.
 	UseSignedTimestamps string `json:"use_signed_timestamps,omitempty"`
 }
 

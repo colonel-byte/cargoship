@@ -173,6 +173,7 @@
     },
     "ZarfClusterConfig": {
       "additionalProperties": false,
+      "description": "for a cluster",
       "patternProperties": {
         "^x-": {}
       },
@@ -201,6 +202,7 @@
     },
     "ZarfClusterFiles": {
       "additionalProperties": false,
+      "description": "data",
       "patternProperties": {
         "^x-": {}
       },
@@ -243,24 +245,14 @@
     },
     "ZarfClusterMetadata": {
       "additionalProperties": false,
+      "description": "a cluster config",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
-        "annotations": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "description": {
-          "type": "string"
-        },
         "name": {
+          "description": "acts as the name of the cluster if you allow cargoship to add it to the kubeconfig",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "type": "string"
-        },
-        "version": {
           "type": "string"
         }
       },
@@ -271,6 +263,7 @@
     },
     "ZarfClusterProfiles": {
       "additionalProperties": false,
+      "description": "for the engine",
       "patternProperties": {
         "^x-": {}
       },
@@ -292,18 +285,22 @@
     },
     "ZarfClusterRegistries": {
       "additionalProperties": false,
+      "description": "overrides",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "auth": {
-          "$ref": "#/$defs/ZarfClusterRegistryAuth"
+          "$ref": "#/$defs/ZarfClusterRegistryAuth",
+          "description": "for the registry"
         },
         "name": {
+          "description": "of the registry",
           "type": "string"
         },
         "proxy": {
-          "$ref": "#/$defs/ZarfClusterRegistryProxy"
+          "$ref": "#/$defs/ZarfClusterRegistryProxy",
+          "description": "for the registry"
         }
       },
       "required": [
@@ -314,17 +311,21 @@
     },
     "ZarfClusterRegistryAuth": {
       "additionalProperties": false,
+      "description": "information",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "pass": {
+          "description": "for the remote registry",
           "type": "string"
         },
         "token": {
+          "description": "for the remote registry",
           "type": "string"
         },
         "user": {
+          "description": "for the remote registry",
           "type": "string"
         }
       },
@@ -332,11 +333,13 @@
     },
     "ZarfClusterRegistryProxy": {
       "additionalProperties": false,
+      "description": "override for the registry information",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "url": {
+          "description": "to the registry that will engine will now pull from",
           "type": "string"
         }
       },
@@ -347,6 +350,7 @@
     },
     "ZarfClusterSpec": {
       "additionalProperties": false,
+      "description": "a cluster config",
       "patternProperties": {
         "^x-": {}
       },
@@ -366,6 +370,7 @@
     },
     "ZarfFirewallPolicyConfig": {
       "additionalProperties": false,
+      "description": "is used in the inventory file to allow opening ports from one zone to another with firewalld policies",
       "patternProperties": {
         "^x-": {}
       },
@@ -401,11 +406,13 @@
     },
     "ZarfFirewallPort": {
       "additionalProperties": false,
+      "description": "is used to define what ports are allowed thru the firewalld policy",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "port": {
+          "description": "the port number, or range, that will be opened",
           "oneOf": [
             {
               "type": "string"
@@ -416,6 +423,7 @@
           ]
         },
         "protocol": {
+          "description": "the type of allowed traffic",
           "enum": [
             "tcp",
             "udp",
@@ -426,13 +434,14 @@
         }
       },
       "required": [
-        "port",
-        "protocol"
+        "protocol",
+        "port"
       ],
       "type": "object"
     },
     "ZarfFirewallZone": {
       "additionalProperties": false,
+      "description": "name of either the ingress or egress zone for the policy",
       "patternProperties": {
         "^x-": {}
       },
@@ -452,6 +461,7 @@
     },
     "ZarfHost": {
       "additionalProperties": false,
+      "description": "is a remote connection to a node",
       "patternProperties": {
         "^x-": {}
       },
@@ -460,21 +470,25 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "a map of environment variables that will be populated on the host system",
           "type": "object"
         },
         "files": {
+          "description": "that will be uploaded to a host",
           "items": {
             "$ref": "#/$defs/ZarfClusterFiles"
           },
           "type": "array"
         },
         "hostname": {
+          "description": "overrides the name of the node",
           "type": "string"
         },
         "labels": {
           "additionalProperties": {
             "type": "string"
           },
+          "description": "a map of node labels variables",
           "type": "object"
         },
         "localhost": {
@@ -487,28 +501,32 @@
           "additionalProperties": {
             "$ref": "#/$defs/ZarfFirewallPolicyConfig"
           },
+          "description": "firewalld policies to allow traffic from one interface to another",
           "type": "object"
         },
         "ports": {
+          "description": "are a list of ports and protocols that will be opened on a specfic node",
           "items": {
             "$ref": "#/$defs/ZarfHostPort"
           },
           "type": "array"
         },
         "privateAddress": {
+          "description": "override the given private address",
           "type": "string"
         },
         "privateInterface": {
+          "description": "override the given private interface",
           "type": "string"
         },
         "profile": {
+          "description": "is the name of the profile that should be used in the config",
           "type": "string"
         },
         "role": {
+          "description": "of this node will be applied when adding nodes to the cluster;\noptions are either controller or worker.",
           "enum": [
             "controller",
-            "controller+worker",
-            "single",
             "worker"
           ],
           "type": "string"
@@ -517,6 +535,7 @@
           "$ref": "#/$defs/SSH"
         },
         "taints": {
+          "description": "that will be applied to the distro specific config that will be applied to the node",
           "items": {
             "type": "string"
           },
@@ -533,11 +552,13 @@
     },
     "ZarfHostPort": {
       "additionalProperties": false,
+      "description": "ports that should be opened on the public side of the firewall",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "port": {
+          "description": "the port number, or range, that will be opened",
           "oneOf": [
             {
               "type": "string"
@@ -548,6 +569,7 @@
           ]
         },
         "protocol": {
+          "description": "the type of allowed traffic",
           "enum": [
             "tcp",
             "udp"
@@ -562,6 +584,7 @@
       "type": "object"
     },
     "ZarfHosts": {
+      "description": "are the hosts that will be managed",
       "items": {
         "$ref": "#/$defs/ZarfHost"
       },
@@ -571,6 +594,7 @@
   "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster/zarf-cluster",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "description": "root for a cluster config",
   "patternProperties": {
     "^x-": {}
   },

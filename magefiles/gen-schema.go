@@ -16,18 +16,16 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
+	"regexp"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
-	"github.com/k0sproject/rig/log"
 	strcase "github.com/stoewer/go-strcase"
 )
 
@@ -58,7 +56,7 @@ func (Generate) Schema() error {
 		{
 			schemaStruct: &distro.ZarfDistro{},
 			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
-			structPath:   []string{"src", "types"},
+			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
 		},
 		{
 			schemaStruct: &cluster.ZarfCluster{},
@@ -74,7 +72,7 @@ func (Generate) Schema() error {
 		{
 			schemaStruct: &types.DistroConfig{},
 			schemaPath:   "zarf-config-distro-schema.json",
-			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
+			structPath:   []string{"src", "types"},
 			keyNamer: func(s string) string {
 				return s
 			},
@@ -111,35 +109,23 @@ func (Generate) Schema() error {
 func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
-		IgnoredTypes:   []any{},
 		KeyNamer:       key,
 	}
 
-	// AddGoComments breaks if called with an absolute path, so we save the current
-	// directory, move to the directory of this source file, then use a relative path
-	originalDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get current directory: %w", err)
-	}
-	defer func() {
-		if err := os.Chdir(originalDir); err != nil {
-			log.Warnf("got the following error: %w", err)
-		}
-	}()
-
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		return nil, errors.New("unable to get the current filename")
-	}
-	schemaDir := filepath.Dir(filename)
-	if err := os.Chdir(schemaDir); err != nil {
-		return nil, fmt.Errorf("unable to change to schema directory: %w", err)
-	}
-
-	typePath := filepath.Join(append([]string{".."}, path...)...)
+	typePath := filepath.Join(path...)
 
 	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
+	}
+
+	re := regexp.MustCompile(`\.([A-Za-z0-9]+)$`)
+
+	// Strip the key from the comments
+	for k, v := range reflector.CommentMap {
+		matches := re.FindStringSubmatch(k)
+		if len(matches) > 0 {
+			reflector.CommentMap[k] = strings.TrimSpace(strings.TrimPrefix(v, matches[1]))
+		}
 	}
 
 	schema := reflector.Reflect(v)
@@ -156,7 +142,7 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	addYAMLExtensions(schemaMap)
 
-	// clean up the rig.OpenSSH properties for schema
+	// allow the sysctl object to use numbers along side strings
 	if defObj, ok := schemaMap["$defs"].(map[string]any); ok {
 		if obj, ok := defObj["ZarfDistroOS"].(map[string]any); ok {
 			if obj, ok := obj["properties"].(map[string]any); ok {
