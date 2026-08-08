@@ -250,20 +250,9 @@
         "^x-": {}
       },
       "properties": {
-        "annotations": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "description": {
-          "type": "string"
-        },
         "name": {
+          "description": "acts as the name of the cluster if you allow cargoship to add it to the kubeconfig",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "type": "string"
-        },
-        "version": {
           "type": "string"
         }
       },

@@ -48,13 +48,13 @@ type ZarfDistroMetadata struct {
 	URL string `json:"url,omitempty"`
 	// Authors is used by the oci annotation for the contact details of the people or organization responsible for the image (freeform string).
 	Authors string `json:"athors,omitempty"`
-	// Source is used by the oci annotation for the URL to get documentation on the image.
+	// Documentation source is used by the oci annotation for the URL to get documentation on the image.
 	Documentation string `json:"documentation,omitempty"`
 	// Source is used by the oci annotation for the URL to get source code for building the image.
 	Source string `json:"source,omitempty"`
 	// Vendor is used by the oci annotation for the name of the distributing entity, organization or individual.
 	Vendor string `json:"vendor,omitempty"`
-	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
+	// AggregateChecksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 }
 

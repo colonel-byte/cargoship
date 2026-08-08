@@ -455,7 +455,7 @@
       },
       "properties": {
         "aggregateChecksum": {
-          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package.",
+          "description": "of a checksums.txt file that contains checksums all the layers within the package.",
           "type": "string"
         },
         "annotations": {
@@ -483,7 +483,7 @@
           "type": "string"
         },
         "documentation": {
-          "description": "Source is used by the oci annotation for the URL to get documentation on the image.",
+          "description": "source is used by the oci annotation for the URL to get documentation on the image.",
           "type": "string"
         },
         "name": {

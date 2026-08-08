@@ -106,10 +106,6 @@ func (Generate) Schema() error {
 	return nil
 }
 
-var (
-	regex = `\.([A-Za-z]+)$`
-)
-
 func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
@@ -122,7 +118,7 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
 	}
 
-	re := regexp.MustCompile(regex)
+	re := regexp.MustCompile(`\.([A-Za-z0-9]+)$`)
 
 	// Strip the key from the comments
 	for k, v := range reflector.CommentMap {
@@ -146,7 +142,7 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	addYAMLExtensions(schemaMap)
 
-	// clean up the rig.OpenSSH properties for schema
+	// allow the sysctl object to use numbers along side strings
 	if defObj, ok := schemaMap["$defs"].(map[string]any); ok {
 		if obj, ok := defObj["ZarfDistroOS"].(map[string]any); ok {
 			if obj, ok := obj["properties"].(map[string]any); ok {
