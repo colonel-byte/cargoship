@@ -79,42 +79,67 @@ func generateSummary() error {
 	fmt.Println("docs/SUMMARY.md")
 	var builder strings.Builder
 
-	md := markdown.NewMarkdown(&builder).H1("Index")
-	md = md.PlainText("\n[readme](index.md)\n[changelog](changelog.md)")
-	md = md.PlainText("\n-----------\n")
+	md := markdown.NewMarkdown(&builder)
 
-	md = md.H1("Guides")
-	md = md.PlainText("")
-
-	if phases, err := getMarkdown(`(.+)\.md`, "guides", false); err == nil {
-		for _, p := range phases {
-			md = md.PlainText(p)
-		}
+	summary := []struct {
+		title  string
+		folder string
+		regex  string
+		indent bool
+		extra  string
+	}{
+		{
+			title: "Index",
+			extra: "[readme](index.md)",
+		},
+		{
+			title:  "Guides",
+			regex:  `(.+)\.md`,
+			folder: "guides",
+		},
+		{
+			title:  "Commands",
+			extra:  "- [cargoship](commands/cargoship.md)",
+			regex:  `cargoship_(.+)\.md`,
+			folder: "commands",
+			indent: true,
+		},
+		{
+			title:  "Phases",
+			regex:  `(.+)\.md`,
+			folder: "phases",
+		},
+		{
+			title:  "Development",
+			folder: "dev",
+			regex:  `(.+)\.md`,
+		},
+		{
+			title:  "Misc",
+			folder: "misc",
+			regex:  `(.+)\.md`,
+		},
 	}
 
-	md = md.PlainText("\n-----------\n")
-
-	md = md.H1("Commands")
-	md = md.PlainText("\n- [cargoship](commands/cargoship.md)")
-
-	if sub, err := getMarkdown(`cargoship_(.+)\.md`, "commands", true); err == nil {
-		for _, s := range sub {
-			md = md.PlainText(s)
+	for i, item := range summary {
+		md = md.H1(item.title)
+		md = md.PlainText("")
+		if item.extra != "" {
+			md = md.PlainText(item.extra)
+		}
+		if item.regex != "" && item.folder != "" {
+			if mark, err := getMarkdown(item.regex, item.folder, item.indent); err == nil {
+				for _, p := range mark {
+					md = md.PlainText(p)
+				}
+			}
+		}
+		if i != len(summary)-1 {
+			md = md.PlainText("\n-----------\n")
+		} else {
+			md = md.PlainText("")
 		}
 	}
-
-	md = md.PlainText("\n-----------\n")
-
-	md = md.H1("Phases")
-	md = md.PlainText("")
-
-	if phases, err := getMarkdown(`(.+)\.md`, "phases", false); err == nil {
-		for _, p := range phases {
-			md = md.PlainText(p)
-		}
-	}
-
-	md = md.PlainText("")
 
 	if err := md.Build(); err != nil {
 		return err

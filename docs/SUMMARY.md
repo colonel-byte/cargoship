@@ -1,7 +1,6 @@
 # Index
 
 [readme](index.md)
-[changelog](changelog.md)
 
 -----------
 
@@ -32,3 +31,15 @@
 - [kube-config](phases/kube-config.md)
 - [prepare](phases/prepare.md)
 - [reset](phases/reset.md)
+
+-----------
+
+# Development
+
+- [mage](dev/mage.md)
+
+-----------
+
+# Misc
+
+- [changelog](misc/changelog.md)
