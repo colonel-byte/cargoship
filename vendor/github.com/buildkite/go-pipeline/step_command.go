@@ -37,6 +37,7 @@ type CommandStep struct {
 	Signature *Signature        `yaml:"signature,omitempty"`
 	Matrix    *Matrix           `yaml:"matrix,omitempty"`
 	Cache     *Cache            `yaml:"cache,omitempty"`
+	Checkout  *Checkout         `yaml:"checkout,omitempty"`
 
 	// RemainingFields stores any other top-level mapping items so they at least
 	// survive an unmarshal-marshal round-trip.
@@ -116,6 +117,9 @@ func (c *CommandStep) interpolate(tf stringTransformer) error {
 			return fmt.Errorf("interpolating cache: %w", err)
 		}
 	}
+	if err := c.Checkout.interpolate(tf); err != nil {
+		return fmt.Errorf("interpolating checkout: %w", err)
+	}
 
 	switch tf.(type) {
 	case envInterpolator:
@@ -152,6 +156,20 @@ func (c *CommandStep) interpolate(tf stringTransformer) error {
 // Step-level secrets take precedence over pipeline-level secrets for deduplication.
 func (c *CommandStep) MergeSecretsFromPipeline(pipelineSecrets Secrets) {
 	c.Secrets = pipelineSecrets.MergeWith(c.Secrets)
+}
+
+// MergeCheckoutFromPipeline merges pipeline-level checkout config into this
+// step's checkout. Step-level values take precedence per leaf; an empty
+// parent is a no-op.
+//
+// The receiver's Checkout is mutated in place, so callers that share a
+// *Checkout across steps (e.g. via programmatic construction) must copy
+// first. The parse path materialises an independent Checkout per step.
+func (c *CommandStep) MergeCheckoutFromPipeline(pipelineCheckout *Checkout) {
+	if pipelineCheckout.IsEmpty() {
+		return
+	}
+	c.Checkout = c.Checkout.mergeFrom(pipelineCheckout)
 }
 
 func (CommandStep) stepTag() {}
