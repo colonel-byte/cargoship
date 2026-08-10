@@ -1705,7 +1705,7 @@ github.com/shibumi/go-pathspec
 # github.com/shopspring/decimal v1.4.0
 ## explicit; go 1.10
 github.com/shopspring/decimal
-# github.com/sigstore/cosign/v3 v3.1.2
+# github.com/sigstore/cosign/v3 v3.1.3
 ## explicit; go 1.26.0
 github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio
 github.com/sigstore/cosign/v3/cmd/cosign/cli/options
