@@ -36,6 +36,7 @@
 
 # Development
 
+- [dagger](dev/dagger.md)
 - [mage](dev/mage.md)
 
 -----------
