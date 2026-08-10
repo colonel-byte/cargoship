@@ -22,9 +22,21 @@ updates:
       golang:
         patterns:
           - "golang.org/x/*"
+          - "google.golang.org/*"
       docker:
         patterns:
           - "github.com/docker/*"
+          - "github.com/mody/*"
+      cosign:
+        patterns:
+          - "github.com/aws/*"
+          - "github.com/awslabs/*"
+          - "github.com/Azure/*"
+          - "github.com/sigstore/*"
+          - "github.com/spiffe/*"
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/*"
       misc:
         patterns:
           - "*"
