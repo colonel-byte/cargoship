@@ -3,13 +3,18 @@ version: 2
 updates:
   - package-ecosystem: gomod
     directories:
-      - "**/*"
+      - "/"
     schedule:
       interval: weekly
       day: monday
+    assignees:
+      - "a1994sc"
     allow:
       - dependency-type: "all"
     groups:
+      zarf:
+        patterns:
+          - "github.com/zarf-dev/*"
       k8s:
         patterns:
           - "k8s.io/*"
@@ -20,28 +25,20 @@ updates:
       docker:
         patterns:
           - "github.com/docker/*"
-      aws:
+      misc:
         patterns:
-          - "github.com/aws/*"
-          - "github.com/awslabs/*"
-      azure:
-        patterns:
-          - "github.com/Azure/*"
-      openapi:
-        patterns:
-          - "github.com/go-openapi/*"
-      hashicorp:
-        patterns:
-          - "github.com/hashicorp/*"
-      sigstore:
-        patterns:
-          - "github.com/sigstore/*"
+          - "*"
   - package-ecosystem: pre-commit
     directories:
       - "/"
     schedule:
       interval: daily
+    assignees:
+      - "a1994sc"
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - "/"
     schedule:
       interval: daily
+    assignees:
+      - "a1994sc"
