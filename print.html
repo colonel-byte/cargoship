@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c361b0a.js";
+            window.path_to_searchindex_js = "searchindex-a0206ba5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b85f870d.js"></script>
@@ -319,16 +319,31 @@ metadata:
     loadbalancer: bubbles-kc.test.com
 </code></pre>
 <p>This is required as it will be added to the valid TLS Subject Alternative Names used by the Kubernetes API server, this can be the Round-Robin DNS record for the control-plane nodes, or it could be a cloud load-balancer like AWS NLB.</p>
+<p>An optional section is the <code>.spec.config.profiles</code> section, this allows for defining groups of node types, examples include <code>control</code>, <code>infra</code>, and <code>worker</code>. That can be used by a host to have a standard set of node labels or firewalld ports opened.</p>
+<pre><code class="language-yaml">spec:
+  config:
+    profiles:
+      control:
+        host:
+          ports:
+            - port: 6443
+              protocol: tcp
+        engine:
+          labels:
+            adrp.xyz/purpose-control: "true"
+          taints:
+            - CriticalOnly=True:NoExecute
+</code></pre>
 <p>The largest section like be the <code>.spec.hosts</code> array:</p>
 <pre><code class="language-yaml">spec:
   hosts:
     - hostname: distro-kc01
       ssh:
-        address: 10.0.3.114
+        address: 10.1.2.3
         user: root
         port: 22
         keyPath: ~/.ssh/id_ed25519
-      profile: control-plane
+      profile: control
       role: controller
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -667,7 +682,7 @@ metadata:
 </li>
 <li>Gather host facts
 <ul>
-<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface</li>
+<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
 </ul>
 </li>
 <li>Validate hosts
@@ -797,7 +812,7 @@ metadata:
 </li>
 <li>Gather host facts
 <ul>
-<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface</li>
+<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
 </ul>
 </li>
 <li>Updating kubeconfig file with the current cluster
@@ -887,7 +902,7 @@ metadata:
 </li>
 <li>Gather host facts
 <ul>
-<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface</li>
+<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
 </ul>
 </li>
 <li>Validate hosts
