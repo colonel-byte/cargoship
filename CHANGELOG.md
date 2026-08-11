@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.10.0](https://github.com/colonel-byte/cargoship/compare/v0.9.0...v0.10.0) (2026-08-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* add profiles for the config ([#176](https://github.com/colonel-byte/cargoship/issues/176))
+* schema generator includes golang comments ([#165](https://github.com/colonel-byte/cargoship/issues/165))
+
+### Features
+
+* add profiles for the config ([#176](https://github.com/colonel-byte/cargoship/issues/176)) ([cda1112](https://github.com/colonel-byte/cargoship/commit/cda1112ef8c1f284b7abff2a71d33380910b7d4a))
+* add the built dagger artifacts ([#158](https://github.com/colonel-byte/cargoship/issues/158)) ([9f61630](https://github.com/colonel-byte/cargoship/commit/9f6163021dcd1300a522b44101d652ee7c6a6e23))
+* schema generator includes golang comments ([#165](https://github.com/colonel-byte/cargoship/issues/165)) ([68364ff](https://github.com/colonel-byte/cargoship/commit/68364ff101da6177193702a1d82ac68c978a53da))
+* standardize the location distro interaction ([#159](https://github.com/colonel-byte/cargoship/issues/159)) ([3ba592e](https://github.com/colonel-byte/cargoship/commit/3ba592eb0e1549cc36eba7cd21e8991bcb958de4))
+
+
+### Documentation
+
+* expand info about the project ([#166](https://github.com/colonel-byte/cargoship/issues/166)) ([4d672f5](https://github.com/colonel-byte/cargoship/commit/4d672f52f66f4b715946dc2ee681f80866b640d9))
+
+
+### CI/CD
+
+* update dependabot to update indirect goland modules ([#138](https://github.com/colonel-byte/cargoship/issues/138)) ([5cd3b69](https://github.com/colonel-byte/cargoship/commit/5cd3b69b1e7e98afa7a686601eae25fa5c1e0dbf))
+* update the dependabot ([#174](https://github.com/colonel-byte/cargoship/issues/174)) ([8061c61](https://github.com/colonel-byte/cargoship/commit/8061c61c8d755c168e61b15a6c0c2bab8a78b547))
+* update the dependabot config ([#172](https://github.com/colonel-byte/cargoship/issues/172)) ([aa6652a](https://github.com/colonel-byte/cargoship/commit/aa6652a756d87b1fc52d029c14eb1a9b8a123478))
+* update the dependabot logic ([#150](https://github.com/colonel-byte/cargoship/issues/150)) ([d7b2fef](https://github.com/colonel-byte/cargoship/commit/d7b2fef1d05514ff6dab86cba825d3768caf0ec9))
+
+
+### Build
+
+* **deps:** Bump github.com/alibabacloud-go/debug from 1.0.0 to 1.0.1 ([#149](https://github.com/colonel-byte/cargoship/issues/149)) ([6891f31](https://github.com/colonel-byte/cargoship/commit/6891f31721473f27187f5ff8d6e79f6e57b5c1b1))
+* **deps:** Bump github.com/aws/aws-sdk-go-v2/internal/configsources from 1.4.29 to 1.4.34 ([#144](https://github.com/colonel-byte/cargoship/issues/144)) ([45d3e40](https://github.com/colonel-byte/cargoship/commit/45d3e40af149ad24077947d705e4a0eb33635e66))
+* **deps:** Bump github.com/Azure/go-autorest/autorest/date from 0.3.0 to 0.3.1 ([#143](https://github.com/colonel-byte/cargoship/issues/143)) ([e3e647f](https://github.com/colonel-byte/cargoship/commit/e3e647fdd29828a90462870d2c2a53b06764d805))
+* **deps:** Bump github.com/docker/cli in the docker group across 1 directory ([#167](https://github.com/colonel-byte/cargoship/issues/167)) ([8ef1011](https://github.com/colonel-byte/cargoship/commit/8ef1011324325f20ba402ba926daeefbfcab4eba))
+* **deps:** Bump github.com/felixge/httpsnoop from 1.0.4 to 1.1.0 ([#154](https://github.com/colonel-byte/cargoship/issues/154)) ([be7dd60](https://github.com/colonel-byte/cargoship/commit/be7dd60e0ff6411047cb9f518cfd20b7c9f334a6))
+* **deps:** Bump github.com/gabriel-vasile/mimetype from 1.4.13 to 1.4.15 ([#142](https://github.com/colonel-byte/cargoship/issues/142)) ([e620467](https://github.com/colonel-byte/cargoship/commit/e6204675d75d92cb628809fbd702f539db785fdd))
+* **deps:** Bump github.com/go-git/go-git/v5 from 5.19.1 to 5.19.2 ([#163](https://github.com/colonel-byte/cargoship/issues/163)) ([8300cdd](https://github.com/colonel-byte/cargoship/commit/8300cdd909c8d1776da9681f8efee81fccf252eb))
+* **deps:** Bump github.com/go-openapi/swag/pools from 0.27.3 to 0.28.0 ([#145](https://github.com/colonel-byte/cargoship/issues/145)) ([f712628](https://github.com/colonel-byte/cargoship/commit/f71262804b2d5bf8c85ad4fb38a29e617439a78c))
+* **deps:** Bump github.com/lestrrat-go/dsig from 1.2.1 to 1.3.0 ([#141](https://github.com/colonel-byte/cargoship/issues/141)) ([b280e61](https://github.com/colonel-byte/cargoship/commit/b280e611deca47e94afe143790513bef47876abb))
+* **deps:** Bump github.com/lestrrat-go/jwx/v3 from 3.1.1 to 3.2.0 ([#157](https://github.com/colonel-byte/cargoship/issues/157)) ([b077c77](https://github.com/colonel-byte/cargoship/commit/b077c77cf1c1389d7cf4e11d79403f815a27f3ac))
+* **deps:** Bump github.com/moby/sys/sequential from 0.6.0 to 0.7.0 ([#156](https://github.com/colonel-byte/cargoship/issues/156)) ([081a016](https://github.com/colonel-byte/cargoship/commit/081a016e156054bfab5c53560dc38354a641f7ff))
+* **deps:** Bump go.opentelemetry.io/.../google.golang.org/grpc/otelgrpc from 0.68.0 to 0.69.0 ([#155](https://github.com/colonel-byte/cargoship/issues/155)) ([457dfa7](https://github.com/colonel-byte/cargoship/commit/457dfa73706876bc6e83fd61c0f5321aafc2f192))
+* **deps:** Bump go.opentelemetry.io/otel/metric from 1.44.0 to 1.45.0 ([#162](https://github.com/colonel-byte/cargoship/issues/162)) ([91435aa](https://github.com/colonel-byte/cargoship/commit/91435aade9ee9314128098209cca29802cac24f9))
+* **deps:** Bump go.opentelemetry.io/otel/metric from 1.44.0 to 1.45.0 in /.dagger ([#164](https://github.com/colonel-byte/cargoship/issues/164)) ([268f75a](https://github.com/colonel-byte/cargoship/commit/268f75a576f0eaafc73c43e94220d6e4a22c4add))
+* **deps:** Bump the aws group across 1 directory with 14 updates ([#151](https://github.com/colonel-byte/cargoship/issues/151)) ([4af8fdf](https://github.com/colonel-byte/cargoship/commit/4af8fdf824d75e0560dbca32fd3b9e789aa698ff))
+* **deps:** Bump the aws group across 1 directory with 15 updates ([#168](https://github.com/colonel-byte/cargoship/issues/168)) ([56ea0cf](https://github.com/colonel-byte/cargoship/commit/56ea0cf5a6ff7394db5d4cf61ea44cf21cd69909))
+* **deps:** Bump the azure group across 1 directory with 6 updates ([#152](https://github.com/colonel-byte/cargoship/issues/152)) ([26a3688](https://github.com/colonel-byte/cargoship/commit/26a36884bff38842e998da83e38b3b337ea3e999))
+* **deps:** Bump the docker group across 1 directory with 2 updates ([#140](https://github.com/colonel-byte/cargoship/issues/140)) ([9fce9c0](https://github.com/colonel-byte/cargoship/commit/9fce9c0f27321a350e03bf049c34765b2ae70928))
+* **deps:** Bump the misc group across 1 directory with 28 updates ([#175](https://github.com/colonel-byte/cargoship/issues/175)) ([031dc81](https://github.com/colonel-byte/cargoship/commit/031dc819298f708ae3d18e598635c97bbc62d6f4))
+* **deps:** Bump the openapi group across 1 directory with 11 updates ([#153](https://github.com/colonel-byte/cargoship/issues/153)) ([8273afb](https://github.com/colonel-byte/cargoship/commit/8273afb4ab79b0501994c6d5843b68a4c9702d4b))
+* **deps:** Bump the sigstore group across 1 directory with 6 updates ([#161](https://github.com/colonel-byte/cargoship/issues/161)) ([26f65d3](https://github.com/colonel-byte/cargoship/commit/26f65d3919ddee72f2a3feeecce74bbb61b4cf33))
+
 ## [0.9.0](https://github.com/colonel-byte/cargoship/compare/v0.8.0...v0.9.0) (2026-08-05)
 
 
