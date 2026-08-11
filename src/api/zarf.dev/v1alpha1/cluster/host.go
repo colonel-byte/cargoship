@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	gos "os"
 	"slices"
 	"time"
@@ -65,14 +66,6 @@ type ZarfHost struct {
 	Files []ZarfClusterFiles `json:"files,omitempty"`
 	// Hostname overrides the name of the node
 	Hostname string `json:"hostname,omitempty"`
-	// NodeLabels a map of node labels variables
-	NodeLabels map[string]string `json:"labels,omitempty"`
-	// NodeTaints that will be applied to the distro specific config that will be applied to the node
-	NodeTaints []string `json:"taints,omitempty"`
-	// Policy firewalld policies to allow traffic from one interface to another
-	Policy map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
-	// Ports are a list of ports and protocols that will be opened on a specfic node
-	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
 	// PrivateAddress override the given private address
 	PrivateAddress string `json:"privateAddress,omitempty"`
 	// PrivateInterface override the given private interface
@@ -82,10 +75,70 @@ type ZarfHost struct {
 	// Role of this node will be applied when adding nodes to the cluster;
 	// options are either controller or worker.
 	Role string `json:"role" jsonschema:"required,enum=controller,enum=worker"`
+	// Host config for the various nodes
+	Host ZarfHostConfig `json:"host,omitempty"`
+	// Host config for the various nodes
+	Engine ZarfHostEngine `json:"engine,omitempty"`
 	// Configurer defines the per-host operations required for managing a host
 	Configurer os.Configurer `json:"-"`
 	// Metadata runtime discovered values
 	Metadata ZarfHostMetadata `json:"-"`
+}
+
+// ZarfHostConfig defines the configuration for a specific host, including
+// firewall policies and ports that need to be opened on the node.
+type ZarfHostConfig struct {
+	// Policy firewalld policies to allow traffic from one interface to another
+	Policy map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
+	// Ports are a list of ports and protocols that will be opened on a specfic node
+	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
+}
+
+// Merge merges update into c if the corresponding fields in c are nil.
+//
+// update: ZarfHostConfig to merge from.
+// No return value.
+func (c *ZarfHostConfig) Merge(update ZarfHostConfig) {
+	if len(c.Policy) == 0 && len(update.Policy) > 0 {
+		c.Policy = make(map[string]ZarfFirewallPolicyConfig)
+		maps.Copy(c.Policy, update.Policy)
+	}
+	if len(c.Ports) == 0 && len(update.Ports) > 0 {
+		for _, p := range update.Ports {
+			if slices.Contains(c.Ports, p) {
+				continue
+			}
+			c.Ports = append(c.Ports, p)
+		}
+	}
+}
+
+// ZarfHostEngine defines configuration options for node-level metadata,
+// specifically Kubernetes node labels and taints applied to a cluster host.
+type ZarfHostEngine struct {
+	// NodeLabels a map of node labels variables
+	NodeLabels map[string]string `json:"labels,omitempty"`
+	// NodeTaints that will be applied to the distro specific config that will be applied to the node
+	NodeTaints []string `json:"taints,omitempty"`
+}
+
+// Merge merges update into c if the corresponding fields in c are nil.
+//
+// update: ZarfHostEngine to merge from.
+// No return value.
+func (c *ZarfHostEngine) Merge(update ZarfHostEngine) {
+	if len(c.NodeLabels) == 0 && len(update.NodeLabels) > 0 {
+		c.NodeLabels = make(map[string]string)
+		maps.Copy(c.NodeLabels, update.NodeLabels)
+	}
+	if len(c.NodeTaints) == 0 && len(update.NodeTaints) > 0 {
+		for _, p := range update.NodeTaints {
+			if slices.Contains(c.NodeTaints, p) {
+				continue
+			}
+			c.NodeTaints = append(c.NodeTaints, p)
+		}
+	}
 }
 
 // ZarfHostPort ports that should be opened on the public side of the firewall

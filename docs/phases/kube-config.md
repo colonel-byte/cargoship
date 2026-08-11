@@ -6,7 +6,7 @@
 1. Acquire exclusive host lock
     - Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other `cargoships` from doing any changes until the lock file has not been touch for over a minute
 1. Gather host facts
-    - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface
+    - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.
 1. Updating kubeconfig file with the current cluster
     - If enabled, this will update the local kubeconfig with the admin creds for the current distro
 1. Release exclusive host lock

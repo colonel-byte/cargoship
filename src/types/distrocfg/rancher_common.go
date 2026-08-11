@@ -86,11 +86,11 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 	nodeConfig.DigMapping(config.EngineConfig)[keyNodeName] = host.Hostname
 	nodeConfig.DigMapping(config.EngineConfig)[keyDataDir] = d.Data
 
-	if len(host.NodeLabels) > 0 {
-		nodeConfig.DigMapping(config.EngineConfig)[keyNodeLabel] = NodeLabelsMapToList(host.NodeLabels)
+	if len(host.Engine.NodeLabels) > 0 {
+		nodeConfig.DigMapping(config.EngineConfig)[keyNodeLabel] = NodeLabelsMapToList(host.Engine.NodeLabels)
 	}
-	if len(host.NodeTaints) > 0 {
-		nodeConfig.DigMapping(config.EngineConfig)[keyNodeTaint] = host.NodeTaints
+	if len(host.Engine.NodeTaints) > 0 {
+		nodeConfig.DigMapping(config.EngineConfig)[keyNodeTaint] = host.Engine.NodeTaints
 	}
 
 	if host.IsController() {

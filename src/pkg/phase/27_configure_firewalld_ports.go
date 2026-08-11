@@ -53,7 +53,7 @@ func (p *ConfigureFirewallPorts) Explanation() string {
 // Prepare the phase
 func (p *ConfigureFirewallPorts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, FIREWALLD) && len(h.Ports) > 0
+		return h.Configurer.ServiceIsRunning(h, FIREWALLD) && len(h.Host.Ports) > 0
 	})
 
 	logger.From(ctx).Info("nodes that need ports exposed", "nodes", len(p.hosts))
@@ -82,7 +82,7 @@ func (p *ConfigureFirewallPorts) Run(ctx context.Context) error {
 func (p *ConfigureFirewallPorts) configureFirewallPorts(_ context.Context, h *cluster.ZarfHost) error {
 	ent := FirewallPortConfig{
 		Short: "distro-exposed-ports",
-		Ports: h.Ports,
+		Ports: h.Host.Ports,
 	}
 
 	output, err := xml.MarshalIndent(ent, "", "  ")
