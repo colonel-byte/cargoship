@@ -48,6 +48,15 @@ func (Dev) Tidy() error {
 	)
 }
 
+// Vendor just runs the module vendor
+func (Dev) Vendor() error {
+	return sh.RunV(
+		"go",
+		"mod",
+		"vendor",
+	)
+}
+
 // Digest simple returns the digest of an image, mostly for testing
 func (Dev) Digest(ctx context.Context) error {
 	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
