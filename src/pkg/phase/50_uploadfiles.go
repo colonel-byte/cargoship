@@ -35,8 +35,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
+	carch "github.com/colonel-byte/cargoship/src/pkg/oci/archive"
 	"github.com/containerd/containerd/v2/core/images/archive"
-	"github.com/containerd/containerd/v2/plugins/content/local"
 	"github.com/containerd/platforms"
 	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -80,15 +80,13 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 		return err
 	}
 
-	src, err := oci.NewWithContext(ctx, filepath.Join(p.manager.TempDirectory, config.ImagesDir))
+	imagesPath := filepath.Join(p.manager.TempDirectory, config.ImagesDir)
+	src, err := oci.NewWithContext(ctx, imagesPath)
 	if err != nil {
 		return err
 	}
 
-	store, err := local.NewStore(filepath.Join(p.manager.TempDirectory, config.ImagesDir))
-	if err != nil {
-		return err
-	}
+	store := &carch.OciArchiveStore{Root: imagesPath, Src: src}
 
 	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), ".tar")

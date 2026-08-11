@@ -31,6 +31,7 @@ import (
 // GatherFacts gathers information about hosts
 type GatherFacts struct {
 	GenericPhase
+	profiles map[string]cluster.ZarfClusterProfiles
 }
 
 // Title for the phase
@@ -40,14 +41,26 @@ func (p *GatherFacts) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *GatherFacts) Explanation() string {
-	return "Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface"
+	return "Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file."
 }
 
 // Run the phase
 func (p *GatherFacts) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, p.investigateHost)
+	p.profiles = p.manager.Config.Spec.Config.Profiles
+
+	return p.parallelDo(
+		ctx,
+		p.manager.Config.Spec.Hosts,
+		p.investigateHost,
+		p.setupProfileOverrides,
+	)
 }
 
+// investigateHost gathers network and host-specific facts, such as architecture, hostname, private interface, and private address, for a given host.
+//
+// ctx: Context for logging and cancellation.
+// h: Pointer to the cluster.ZarfHost to investigate.
+// Returns an error if resolution fails.
 func (p *GatherFacts) investigateHost(ctx context.Context, h *cluster.ZarfHost) error {
 	l := logger.From(ctx)
 
@@ -85,6 +98,22 @@ func (p *GatherFacts) investigateHost(ctx context.Context, h *cluster.ZarfHost) 
 			}
 		}
 	}
+
+	return nil
+}
+
+// setupProfileOverrides merges profile-specific engine and host configurations into the given host if a matching profile is found.
+//
+// ctx: Context for logging.
+// h: Pointer to the cluster.ZarfHost to apply profile overrides to.
+// Returns an error if any occurs during the setup.
+func (p *GatherFacts) setupProfileOverrides(ctx context.Context, h *cluster.ZarfHost) error {
+	if profile, ok := p.profiles[h.Profile]; ok {
+		h.Engine.Merge(profile.Engine)
+		h.Host.Merge(profile.Host)
+	}
+
+	logger.From(ctx).Info("testing", "host", h, "profile", h.Profile)
 
 	return nil
 }

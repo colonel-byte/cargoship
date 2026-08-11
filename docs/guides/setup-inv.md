@@ -22,6 +22,24 @@ spec:
 
 This is required as it will be added to the valid TLS Subject Alternative Names used by the Kubernetes API server, this can be the Round-Robin DNS record for the control-plane nodes, or it could be a cloud load-balancer like AWS NLB.
 
+An optional section is the `.spec.config.profiles` section, this allows for defining groups of node types, examples include `control`, `infra`, and `worker`. That can be used by a host to have a standard set of node labels or firewalld ports opened.
+
+```yaml
+spec:
+  config:
+    profiles:
+      control:
+        host:
+          ports:
+            - port: 6443
+              protocol: tcp
+        engine:
+          labels:
+            adrp.xyz/purpose-control: "true"
+          taints:
+            - CriticalOnly=True:NoExecute
+```
+
 The largest section like be the `.spec.hosts` array:
 
 ```yaml
@@ -29,10 +47,10 @@ spec:
   hosts:
     - hostname: distro-kc01
       ssh:
-        address: 10.0.3.114
+        address: 10.1.2.3
         user: root
         port: 22
         keyPath: ~/.ssh/id_ed25519
-      profile: control-plane
+      profile: control
       role: controller
 ```

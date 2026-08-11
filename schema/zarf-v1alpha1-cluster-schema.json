@@ -183,10 +183,10 @@
           "type": "string"
         },
         "profiles": {
-          "items": {
+          "additionalProperties": {
             "$ref": "#/$defs/ZarfClusterProfiles"
           },
-          "type": "array"
+          "type": "object"
         },
         "registries": {
           "items": {
@@ -268,19 +268,13 @@
         "^x-": {}
       },
       "properties": {
-        "engineConfig": {
-          "type": "object"
+        "engine": {
+          "$ref": "#/$defs/ZarfHostEngine"
         },
-        "kubeletConfig": {
-          "type": "object"
-        },
-        "name": {
-          "type": "string"
+        "host": {
+          "$ref": "#/$defs/ZarfHostConfig"
         }
       },
-      "required": [
-        "name"
-      ],
       "type": "object"
     },
     "ZarfClusterRegistries": {
@@ -466,6 +460,10 @@
         "^x-": {}
       },
       "properties": {
+        "engine": {
+          "$ref": "#/$defs/ZarfHostEngine",
+          "description": "Host config for the various nodes"
+        },
         "environment": {
           "additionalProperties": {
             "type": "string"
@@ -480,36 +478,19 @@
           },
           "type": "array"
         },
+        "host": {
+          "$ref": "#/$defs/ZarfHostConfig",
+          "description": "config for the various nodes"
+        },
         "hostname": {
           "description": "overrides the name of the node",
           "type": "string"
-        },
-        "labels": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "a map of node labels variables",
-          "type": "object"
         },
         "localhost": {
           "$ref": "#/$defs/Localhost"
         },
         "openSSH": {
           "$ref": "#/$defs/OpenSSH"
-        },
-        "policy": {
-          "additionalProperties": {
-            "$ref": "#/$defs/ZarfFirewallPolicyConfig"
-          },
-          "description": "firewalld policies to allow traffic from one interface to another",
-          "type": "object"
-        },
-        "ports": {
-          "description": "are a list of ports and protocols that will be opened on a specfic node",
-          "items": {
-            "$ref": "#/$defs/ZarfHostPort"
-          },
-          "type": "array"
         },
         "privateAddress": {
           "description": "override the given private address",
@@ -534,13 +515,6 @@
         "ssh": {
           "$ref": "#/$defs/SSH"
         },
-        "taints": {
-          "description": "that will be applied to the distro specific config that will be applied to the node",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "winRm": {
           "$ref": "#/$defs/WinRM"
         }
@@ -548,6 +522,54 @@
       "required": [
         "role"
       ],
+      "type": "object"
+    },
+    "ZarfHostConfig": {
+      "additionalProperties": false,
+      "description": "defines the configuration for a specific host, including firewall policies and ports that need to be opened on the node.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "policy": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ZarfFirewallPolicyConfig"
+          },
+          "description": "firewalld policies to allow traffic from one interface to another",
+          "type": "object"
+        },
+        "ports": {
+          "description": "are a list of ports and protocols that will be opened on a specfic node",
+          "items": {
+            "$ref": "#/$defs/ZarfHostPort"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfHostEngine": {
+      "additionalProperties": false,
+      "description": "defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "a map of node labels variables",
+          "type": "object"
+        },
+        "taints": {
+          "description": "that will be applied to the distro specific config that will be applied to the node",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
       "type": "object"
     },
     "ZarfHostPort": {

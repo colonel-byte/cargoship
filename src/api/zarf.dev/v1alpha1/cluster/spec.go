@@ -57,16 +57,15 @@ type ZarfClusterSpec struct {
 
 // ZarfClusterConfig for a cluster
 type ZarfClusterConfig struct {
-	LoadBalancer string                  `json:"loadbalancer" jsonschema:"format=hostname"`
-	Registries   []ZarfClusterRegistries `json:"registries,omitempty"`
-	Profiles     []ZarfClusterProfiles   `json:"profiles,omitempty"`
+	LoadBalancer string                         `json:"loadbalancer" jsonschema:"format=hostname"`
+	Registries   []ZarfClusterRegistries        `json:"registries,omitempty"`
+	Profiles     map[string]ZarfClusterProfiles `json:"profiles,omitempty"`
 }
 
 // ZarfClusterProfiles for the engine
 type ZarfClusterProfiles struct {
-	Name    string         `json:"name"`
-	Kubelet map[string]any `json:"kubeletConfig,omitempty"`
-	Engine  map[string]any `json:"engineConfig,omitempty"`
+	Host   ZarfHostConfig `json:"host,omitempty"`
+	Engine ZarfHostEngine `json:"engine,omitempty"`
 }
 
 // ZarfClusterRegistries overrides
