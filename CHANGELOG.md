@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/colonel-byte/cargoship/compare/v0.10.0...v0.10.1) (2026-08-12)
+
+
+### Documentation
+
+* simplify markdown ([#177](https://github.com/colonel-byte/cargoship/issues/177)) ([37511a5](https://github.com/colonel-byte/cargoship/commit/37511a5ca3c8db665ea3d5f8b1bda99cbfe7a91d))
+
 ## [0.10.0](https://github.com/colonel-byte/cargoship/compare/v0.9.0...v0.10.0) (2026-08-11)
 
 
