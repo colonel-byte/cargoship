@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7d496659.js";
+            window.path_to_searchindex_js = "../searchindex-2b0312f8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b85f870d.js"></script>
@@ -181,22 +181,26 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="inventory"><a class="header" href="#inventory">Inventory</a></h1>
-<p>To create a basic inventory file for bootstrapping or upgrading an existing cluster, it will start off looking like the following:</p>
+                        <h1 id="inventory-configuration-guide"><a class="header" href="#inventory-configuration-guide">Inventory Configuration Guide</a></h1>
+<p>This guide explains how to author a cluster inventory file for bootstrapping or upgrading clusters with Cargoship.</p>
+<h2 id="basic-structure"><a class="header" href="#basic-structure">Basic Structure</a></h2>
+<p>A basic inventory file defines the cluster’s metadata, global configuration, profiles, and individual target hosts. Start with the following template:</p>
 <pre><code class="language-yaml">---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-cluster-schema.json
 kind: ZarfCluster
 metadata:
   name: bubbles
 </code></pre>
-<p>The <code>.metadata.name</code> will be used by <code>cargoship</code> set the cluster name, so in this case the kube-config context will be <code>bubbles</code>.</p>
-<p>Next section is:</p>
+<p>The <code>.metadata.name</code> field sets the cluster name. Cargoship uses this to configure the context name in the resulting <code>kubeconfig</code> (e.g., <code>bubbles</code>).</p>
+<h2 id="global-configuration"><a class="header" href="#global-configuration">Global Configuration</a></h2>
+<p>The <code>.spec.config</code> section configures cluster-wide settings, such as load balancer endpoints:</p>
 <pre><code class="language-yaml">spec:
   config:
     loadbalancer: bubbles-kc.test.com
 </code></pre>
-<p>This is required as it will be added to the valid TLS Subject Alternative Names used by the Kubernetes API server, this can be the Round-Robin DNS record for the control-plane nodes, or it could be a cloud load-balancer like AWS NLB.</p>
-<p>An optional section is the <code>.spec.config.profiles</code> section, this allows for defining groups of node types, examples include <code>control</code>, <code>infra</code>, and <code>worker</code>. That can be used by a host to have a standard set of node labels or firewalld ports opened.</p>
+<p>The <code>loadbalancer</code> address is required. Cargoship adds this to the TLS Subject Alternative Names (SANs) for the Kubernetes API server. This can be a Round-Robin DNS record pointing to your control-plane nodes, or an external load balancer like an AWS NLB.</p>
+<h2 id="node-profiles"><a class="header" href="#node-profiles">Node Profiles</a></h2>
+<p>The optional <code>.spec.config.profiles</code> section defines reusable groups of node configurations (e.g., <code>control</code>, <code>infra</code>, or <code>worker</code>). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.</p>
 <pre><code class="language-yaml">spec:
   config:
     profiles:
@@ -211,7 +215,8 @@ metadata:
           taints:
             - CriticalOnly=True:NoExecute
 </code></pre>
-<p>The largest section like be the <code>.spec.hosts</code> array:</p>
+<h2 id="target-hosts"><a class="header" href="#target-hosts">Target Hosts</a></h2>
+<p>The <code>.spec.hosts</code> array is the main body of the inventory. It defines each host node, its connection details, role, and profile:</p>
 <pre><code class="language-yaml">spec:
   hosts:
     - hostname: distro-kc01

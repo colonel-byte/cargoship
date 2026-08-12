@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7d496659.js";
+            window.path_to_searchindex_js = "../searchindex-2b0312f8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b85f870d.js"></script>
@@ -181,93 +181,54 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="dagger"><a class="header" href="#dagger">Dagger</a></h1>
+                        <h1 id="dagger-build-pipeline"><a class="header" href="#dagger-build-pipeline">Dagger Build Pipeline</a></h1>
+<p>This document describes how Cargoship uses <a href="https://dagger.io/">Dagger</a> to orchestrate reproducible, containerized builds.</p>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
-<p>This repository uses <a href="https://dagger.io/">Dagger</a> as its containerized build pipeline.</p>
-<p>In practical terms, the Dagger setup is responsible for building <code>cargoship</code> binaries in a reproducible environment instead of relying entirely on the host machine’s local Go toolchain.</p>
-<p>The Dagger module for this repository is defined by <code>dagger.json</code> at the repository root and implemented in the <code>.dagger/</code> directory.</p>
-<h2 id="dagger-module-configuration"><a class="header" href="#dagger-module-configuration">Dagger module configuration</a></h2>
-<p>The root <code>dagger.json</code> file tells Dagger four important things:</p>
+<p>Cargoship uses Dagger as its primary build pipeline to compile cross-platform binaries in a consistent environment. Containerizing the build process avoids environmental drift and reduces dependency on the host’s local Go toolchain.</p>
+<p>The Dagger module is defined by <code>dagger.json</code> at the repository root, with its implementation located in the <code>.dagger/</code> directory.</p>
+<h2 id="module-structure"><a class="header" href="#module-structure">Module Structure</a></h2>
+<p>The <code>.dagger/</code> directory is a standalone Dagger module written in Go:</p>
 <ul>
-<li>the module name is <code>cargoship</code></li>
-<li>the module uses the Go SDK</li>
-<li>the module source code lives in <code>.dagger</code></li>
+<li><strong><code>main.go</code></strong> — Defines the core <code>Cargoship</code> Dagger object and metadata initialization logic.</li>
+<li><strong><code>build.go</code></strong> — Implements the multi-platform <code>Build</code> pipeline.</li>
+<li><strong><code>build-local.go</code></strong> — Implements the single-target <code>BuildLocal</code> compilation.</li>
+<li><strong><code>utils/utils.go</code></strong> — Provides shared build configuration, including compiler and linker flags.</li>
+<li><strong><code>dagger.gen.go</code> &amp; <code>internal/dagger/</code></strong> — Contain the auto-generated Dagger SDK.</li>
 </ul>
-<p>That means commands like <code>dagger call build</code> are resolved against the Go code in <code>.dagger/</code>.</p>
-<h2 id="the-dagger-directory"><a class="header" href="#the-dagger-directory">The <code>.dagger/</code> directory</a></h2>
-<p>The <code>.dagger/</code> directory is a standalone Go-based Dagger module.</p>
-<p>Important files include:</p>
+<p>The module manages its own <code>go.mod</code> file since Dagger runs the module code as an isolated Go program.</p>
+<h2 id="core-module-logic"><a class="header" href="#core-module-logic">Core Module Logic</a></h2>
+<p>The entry point of the module is the <code>Cargoship</code> struct defined in <code>.dagger/main.go</code>. It retains state and tracks build-related metadata:</p>
 <ul>
-<li><code>main.go</code> — defines the core <code>Cargoship</code> Dagger object and initialization logic</li>
-<li><code>build.go</code> — defines the multi-platform <code>Build</code> pipeline</li>
-<li><code>build-local.go</code> — defines the single-target <code>BuildLocal</code> pipeline</li>
-<li><code>utils/utils.go</code> — shared linker and compiler flags used by Dagger builds</li>
-<li><code>dagger.gen.go</code> and <code>internal/dagger/</code> — generated Dagger SDK code</li>
+<li><strong><code>Source</code></strong> — The mounted repository source tree.</li>
+<li><strong><code>AppVersion</code></strong> — The application version, dynamically derived from Git tags.</li>
+<li><strong><code>GoVersion</code></strong> — The Go toolchain version, dynamically parsed from the root <code>go.mod</code>.</li>
 </ul>
-<p>The module has its own <code>go.mod</code> because Dagger modules are implemented as Go programs that Dagger executes.</p>
-<h2 id="core-dagger-object"><a class="header" href="#core-dagger-object">Core Dagger object</a></h2>
-<p>The central type is <code>Cargoship</code> in <code>.dagger/main.go</code>.</p>
-<p>It stores:</p>
-<ul>
-<li><code>Source</code> — the mounted source tree</li>
-<li><code>AppVersion</code> — the application version derived from Git tags</li>
-<li><code>GoVersion</code> — the Go version parsed from the repository <code>go.mod</code></li>
-<li><code>IsInitialized</code> — whether initialization has already happened</li>
-</ul>
-<h3 id="initialization-flow"><a class="header" href="#initialization-flow">Initialization flow</a></h3>
-<p>Before a build runs, the module initializes itself by:</p>
+<h3 id="initialization-flow"><a class="header" href="#initialization-flow">Initialization Flow</a></h3>
+<p>Before executing any build, the module automatically resolves metadata by:</p>
 <ol>
-<li>starting an <code>alpine</code> container</li>
-<li>installing <code>git</code></li>
-<li>mounting the repository source into <code>/src</code></li>
-<li>running <code>git describe --tags --abbrev=0</code></li>
-<li>reading <code>go.mod</code></li>
-<li>extracting the Go version with a regex</li>
+<li>Spinning up an <code>alpine</code> container and installing <code>git</code>.</li>
+<li>Mounting the repository source and running <code>git describe --tags --abbrev=0</code> to determine the release version.</li>
+<li>Reading the root <code>go.mod</code> to parse the required Go toolchain version using a regular expression.</li>
 </ol>
-<p>This gives the build pipeline two key pieces of metadata:</p>
+<p>This metadata ensures that the build uses the correct compiler image and embeds precise version info into the compiled binaries.</p>
+<h2 id="build-functions"><a class="header" href="#build-functions">Build Functions</a></h2>
+<p>The module exposes two main API entry points for compilation.</p>
+<h3 id="buildlocal"><a class="header" href="#buildlocal"><code>BuildLocal</code></a></h3>
+<p><code>BuildLocal</code> compiles Cargoship for a single target platform.</p>
 <ul>
-<li>the release version from Git tags</li>
-<li>the Go toolchain version to use for the build container</li>
+<li><strong>Parameters:</strong> <code>os</code> (string), <code>arch</code> (string), <code>source</code> (Directory)</li>
+<li><strong>Returns:</strong> <code>File</code> (the compiled binary)</li>
 </ul>
-<p>The version string has the leading <code>v</code> trimmed before being stored in <code>AppVersion</code>.</p>
-<h2 id="buildlocal"><a class="header" href="#buildlocal"><code>BuildLocal</code></a></h2>
-<p><code>BuildLocal</code> in <code>.dagger/build-local.go</code> is the single-platform build function.</p>
-<p>It accepts:</p>
+<p>During execution, <code>BuildLocal</code> starts a container using the official <code>golang</code> image matching the parsed Go toolchain version. It mounts a persistent Go build cache (<code>/go/build-cache</code>), sets <code>GOOS</code> and <code>GOARCH</code>, and compiles the application.</p>
+<p>Shared utilities in <code>.dagger/utils/utils.go</code> inject optimization and metadata flags:</p>
 <ul>
-<li><code>os</code></li>
-<li><code>arch</code></li>
-<li><code>source</code></li>
+<li><code>-s -w</code> linker flags to strip debug symbols and reduce binary size.</li>
+<li><code>-X</code> variables to embed the <code>AppVersion</code> and current Git commit SHA into the binary configuration.</li>
 </ul>
-<p>and returns a single built file.</p>
-<h3 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h3>
-<p><code>BuildLocal</code>:</p>
-<ol>
-<li>ensures the module is initialized</li>
-<li>chooses a binary name like <code>cargoship_linux_amd64</code></li>
-<li>starts a build container from <code>golang:&lt;detected-go-version&gt;</code></li>
-<li>mounts a persistent Dagger cache at <code>/go/build-cache</code></li>
-<li>mounts the repository source at <code>/src</code></li>
-<li>sets <code>GOOS</code> and <code>GOARCH</code></li>
-<li>gets the current short Git commit with <code>git rev-parse --short HEAD --always</code></li>
-<li>computes build flags</li>
-<li>runs <code>go build -mod=vendor ... /src/main.go</code></li>
-<li>returns the built file from <code>/bin/&lt;name&gt;</code></li>
-</ol>
-<h3 id="build-flags"><a class="header" href="#build-flags">Build flags</a></h3>
-<p>The shared helpers in <code>.dagger/utils/utils.go</code> inject:</p>
+<h3 id="build"><a class="header" href="#build"><code>Build</code></a></h3>
+<p><code>Build</code> compiles Cargoship for all supported release platforms concurrently.</p>
 <ul>
-<li><code>-s -w</code> linker flags to reduce binary size</li>
-<li><code>-X github.com/colonel-byte/cargoship/src/config.CLIVersion=...</code></li>
-<li><code>-X github.com/colonel-byte/cargoship/src/config.CLICommit=...</code></li>
-</ul>
-<p>So the Dagger build embeds both the application version and the Git commit into the binary.</p>
-<h2 id="build"><a class="header" href="#build"><code>Build</code></a></h2>
-<p><code>Build</code> in <code>.dagger/build.go</code> is the multi-platform pipeline.</p>
-<p>It:</p>
-<ul>
-<li>initializes the module if needed</li>
-<li>starts from the repository <code>build/</code> directory object</li>
-<li>defines target platforms:
+<li><strong>Supported Platforms:</strong>
 <ul>
 <li><code>linux/amd64</code></li>
 <li><code>linux/arm64</code></li>
@@ -277,88 +238,37 @@
 <li><code>windows/arm64</code></li>
 </ul>
 </li>
-<li>runs builds concurrently using <code>sourcegraph/conc/pool</code></li>
-<li>adds each built file into the output directory</li>
-<li>returns a <code>dagger.Directory</code> containing all built artifacts</li>
+<li><strong>Returns:</strong> <code>Directory</code> (containing all compiled binaries, with <code>.exe</code> extensions appended for Windows targets)</li>
 </ul>
-<p>Windows binaries get the <code>.exe</code> suffix.</p>
-<p>In other words:</p>
+<p>The multi-platform build executes concurrent compilation tasks utilizing a <code>sourcegraph/conc</code> concurrency pool.</p>
+<h2 id="orchestration-and-integrations"><a class="header" href="#orchestration-and-integrations">Orchestration and Integrations</a></h2>
+<h3 id="mage-integration"><a class="header" href="#mage-integration">Mage Integration</a></h3>
+<p>Mage serves as the task runner and interfaces directly with the Dagger CLI. The targets in <code>magefiles/dagger.go</code> wrap Dagger invocations:</p>
 <ul>
-<li><code>BuildLocal</code> returns one file</li>
-<li><code>Build</code> returns a directory of all platform builds</li>
-</ul>
-<h2 id="how-mage-uses-dagger"><a class="header" href="#how-mage-uses-dagger">How Mage uses Dagger</a></h2>
-<p>The repository’s Mage automation treats Dagger as the primary build path.</p>
-<p>The <code>magefiles/dagger.go</code> file exposes a <code>Dagger</code> namespace with targets such as:</p>
-<ul>
-<li><code>Dagger.Toolchain</code></li>
-<li><code>Dagger.Binary</code></li>
-<li><code>Dagger.Linuxamd64</code></li>
-<li><code>Dagger.Linuxarm64</code></li>
-<li><code>Dagger.Macamd64</code></li>
-<li><code>Dagger.Macarm64</code></li>
-<li><code>Dagger.All</code></li>
-</ul>
-<h3 id="important-detail"><a class="header" href="#important-detail">Important detail</a></h3>
-<p>The default Mage target is <code>Dagger.All</code>.</p>
-<p>That means running plain <code>mage</code> builds all binaries through the Dagger pipeline.</p>
-<h3 id="mapping-from-mage-to-dagger-calls"><a class="header" href="#mapping-from-mage-to-dagger-calls">Mapping from Mage to Dagger calls</a></h3>
-<p>Mage shells out to the Dagger CLI.</p>
-<h4 id="full-build"><a class="header" href="#full-build">Full build</a></h4>
-<p><code>Dagger.All</code> runs:</p>
+<li><code>mage</code> or <code>mage dagger:all</code> triggers the full multi-platform build:
 <pre><code class="language-sh">dagger call --progress=tty --interactive=false build export --path=build
 </code></pre>
-<p>This executes the Dagger <code>Build</code> function and exports the returned directory into the local <code>build/</code> folder.</p>
-<h4 id="single-platform-build"><a class="header" href="#single-platform-build">Single-platform build</a></h4>
-<p>The helper <code>daggerBuildLocal()</code> runs:</p>
+</li>
+<li>Single-platform Mage targets (such as <code>mage dagger:linuxamd64</code>) invoke <code>BuildLocal</code>:
 <pre><code class="language-sh">dagger call --progress=tty --interactive=false build-local --os=&lt;os&gt; --arch=&lt;arch&gt; export --path=build/cargoship_&lt;os&gt;_&lt;arch&gt;
 </code></pre>
-<p>This executes <code>BuildLocal</code> and exports the returned file to a specific path.</p>
-<h2 id="how-ci-uses-dagger"><a class="header" href="#how-ci-uses-dagger">How CI uses Dagger</a></h2>
-<p>GitHub Actions has a dedicated workflow in <code>.github/workflows/dagger.yaml</code>.</p>
-<p>That workflow:</p>
+</li>
+</ul>
+<h3 id="github-actions-ci"><a class="header" href="#github-actions-ci">GitHub Actions CI</a></h3>
+<p>The Dagger pipeline is executed in CI via <code>.github/workflows/dagger.yaml</code>. The workflow:</p>
 <ol>
-<li>checks out the repository with full history</li>
-<li>reads the Dagger engine version from <code>dagger.json</code></li>
-<li>invokes <code>dagger/dagger-for-github</code></li>
-<li>runs the <code>build</code> Dagger verb</li>
+<li>Checks out the repository with full git history (required to resolve <code>AppVersion</code> from tags).</li>
+<li>Configures the Dagger CLI and Engine.</li>
+<li>Runs <code>dagger call build export</code> to compile and cache the binaries.</li>
+<li>Optionally integrates with Dagger Cloud via <code>DAGGER_CLOUD_TOKEN</code> for execution insights and telemetry.</li>
 </ol>
-<p>The full Git history matters because the Dagger module derives <code>AppVersion</code> from Git tags.</p>
-<p>The workflow also passes <code>DAGGER_CLOUD_TOKEN</code>, which suggests builds can be connected to Dagger Cloud for observability or remote execution features.</p>
-<h2 id="relationship-to-host-builds"><a class="header" href="#relationship-to-host-builds">Relationship to host builds</a></h2>
-<p>This repository supports two build styles:</p>
-<h3 id="dagger-build-path"><a class="header" href="#dagger-build-path">Dagger build path</a></h3>
-<ul>
-<li>containerized</li>
-<li>version-aware</li>
-<li>embeds Git version/commit metadata</li>
-<li>default path used by Mage</li>
-<li>multi-platform by design</li>
-</ul>
-<h3 id="host-build-path"><a class="header" href="#host-build-path">Host build path</a></h3>
-<p>The non-Dagger path in <code>magefiles/build.go</code> and <code>magefiles/utils.go</code> runs <code>go build</code> directly on the host.</p>
-<p>That path is useful for simpler local builds, but the Dagger path appears to be the preferred and more reproducible workflow.</p>
-<h2 id="what-dagger-is-not-doing-here"><a class="header" href="#what-dagger-is-not-doing-here">What Dagger is not doing here</a></h2>
-<p>In this repository, Dagger is focused on binary builds.</p>
-<p>It is not currently the tool used for:</p>
-<ul>
-<li>generating docs</li>
-<li>generating schemas</li>
-<li>publishing releases</li>
-<li>building the mdBook site</li>
-</ul>
-<p>Those responsibilities are handled elsewhere by Mage, mdBook, GitHub Actions, and GoReleaser.</p>
-<h2 id="practical-summary"><a class="header" href="#practical-summary">Practical summary</a></h2>
-<p>If you reduce the setup to the essentials, the Dagger configuration in this repo does the following:</p>
-<ul>
-<li>defines a Go-based Dagger module in <code>.dagger/</code></li>
-<li>detects the app version from Git tags</li>
-<li>detects the Go version from <code>go.mod</code></li>
-<li>builds <code>cargoship</code> in a containerized Go environment</li>
-<li>supports both single-platform and multi-platform outputs</li>
-<li>is used by both Mage and GitHub Actions</li>
-<li>serves as the default build pipeline for the project</li>
-</ul>
+<h2 id="containerized-vs-host-builds"><a class="header" href="#containerized-vs-host-builds">Containerized vs. Host Builds</a></h2>
+<p>Cargoship supports two parallel compilation workflows:</p>
+<ol>
+<li><strong>Dagger Build Path (Default):</strong> Containerized, version-aware, hermetic, and capable of concurrent cross-compilation. This is the default path utilized by Mage and GitHub Actions.</li>
+<li><strong>Host Build Path:</strong> Executes <code>go build</code> directly on the local machine using host-level Go toolchains (implemented in <code>magefiles/build.go</code>). This path is preserved for quick, un-containerized local development.</li>
+</ol>
+<p>Dagger in this repository is strictly focused on binary compilation; other repository tasks like documentation generation, YAML schema updates, and GitHub releases are managed separately through Mage, mdBook, and GoReleaser.</p>
 
                     </main>
 

@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7d496659.js";
+            window.path_to_searchindex_js = "searchindex-2b0312f8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b85f870d.js"></script>
@@ -180,146 +180,125 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="cargoship"><a class="header" href="#cargoship">Cargoship</a></h1>
-<p>Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages.</p>
-<p>It is designed for two main jobs:</p>
+<p>Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages. It is designed to simplify two core workflows:</p>
+<ol>
+<li><strong>Package Creation:</strong> Building a self-contained, offline Kubernetes distro package containing everything needed for installation in disconnected or highly-regulated environments.</li>
+<li><strong>Cluster Lifecycle Management:</strong> Bootstrapping, upgrading, and managing the cluster on target hosts over SSH using the packaged distribution.</li>
+</ol>
+<p>Cargoship bridges the gap between offline distro packaging tools and remote cluster lifecycle managers, supporting OCI image and file packaging, secure publishing to OCI registries, and robust SSH orchestration.</p>
+<hr>
+<h2 id="supported-distributions"><a class="header" href="#supported-distributions">Supported Distributions</a></h2>
+<p>Cargoship currently provides native support and integration for the following Kubernetes engines:</p>
 <ul>
-<li>create an offline Kubernetes distro package</li>
-<li>bootstrap and manage a cluster from that package over SSH</li>
-</ul>
-<p>Cargoship combines ideas from distro packaging tools and remote cluster lifecycle tools, with support for packaging files and OCI images, publishing packages to registries, and applying them to target hosts.</p>
-<h2 id="what-cargoship-does"><a class="header" href="#what-cargoship-does">What Cargoship does</a></h2>
-<p>Cargoship supports the full lifecycle of an offline distro package:</p>
-<ul>
-<li>create a distro package from a definition directory</li>
-<li>publish a package to an OCI registry</li>
-<li>pull a package from a registry or URL</li>
-<li>prepare hosts before installation</li>
-<li>apply a package to bootstrap or upgrade a cluster</li>
-<li>fetch cluster kubeconfig</li>
-<li>reset or uninstall a cluster</li>
-</ul>
-<p>The project currently includes distro integrations for:</p>
-<ul>
-<li><strong>RKE2</strong></li>
 <li><strong>K3s</strong></li>
+<li><strong>RKE2</strong></li>
 </ul>
-<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
-<p>Cargoship is organized around two main concepts:</p>
-<h3 id="1-offline-distro-packages"><a class="header" href="#1-offline-distro-packages">1. Offline distro packages</a></h3>
-<p>A distro package contains the artifacts needed to install a Kubernetes distribution in disconnected or controlled environments. That includes:</p>
+<hr>
+<h2 id="core-concepts"><a class="header" href="#core-concepts">Core Concepts</a></h2>
+<p>Cargoship is built around two primary architectural concepts:</p>
+<h3 id="1-offline-distro-packages"><a class="header" href="#1-offline-distro-packages">1. Offline Distro Packages</a></h3>
+<p>A Cargoship package is a single, compressed archive containing all artifacts necessary to spin up or upgrade a Kubernetes cluster in air-gapped networks. It bundles:</p>
 <ul>
-<li>distro metadata</li>
-<li>host files</li>
-<li>engine configuration</li>
-<li>OCI images</li>
-<li>checksums and package layout metadata</li>
+<li>Distro-specific metadata and layout descriptors.</li>
+<li>Required engine configuration templates and system files.</li>
+<li>OCI images and container artifacts.</li>
+<li>Checksums and cryptographic signatures for integrity verification.</li>
 </ul>
-<p>The package creation pipeline loads a distro definition, assembles package content, and writes an archive for later distribution.</p>
-<h3 id="2-phase-based-cluster-operations"><a class="header" href="#2-phase-based-cluster-operations">2. Phase-based cluster operations</a></h3>
-<p>Cluster operations are modeled as ordered phases. High-level actions such as <code>apply</code>, <code>prepare</code>, <code>reset</code>, and <code>kube-config</code> are composed from reusable phases.</p>
-<p>For example, <code>apply</code> includes steps such as:</p>
+<p>The package compilation process loads a local distro definition, gathers all specified assets, and produces a single, verifiable archive.</p>
+<h3 id="2-phase-based-orchestration"><a class="header" href="#2-phase-based-orchestration">2. Phase-Based Orchestration</a></h3>
+<p>Cluster operations are modeled as ordered sequences of reusable, structured “phases.” This makes high-level actions (<code>apply</code>, <code>prepare</code>, <code>reset</code>, <code>kube-config</code>) predictable, easier to debug, and simple to extend.</p>
+<p>For example, the <strong><code>apply</code></strong> workflow comprises the following phases:</p>
+<ol>
+<li><strong>Connect:</strong> Establish secure SSH connections to all target hosts.</li>
+<li><strong>OS Detection &amp; Fact Gathering:</strong> Identify host operating systems and system resources.</li>
+<li><strong>Validation:</strong> Verify that host nodes meet the pre-requisites.</li>
+<li><strong>Prepare:</strong> Install OS packages, load kernel modules, and configure system firewalls or policies.</li>
+<li><strong>Upload:</strong> Securely transfer required package binaries, configuration templates, and OCI images to the nodes.</li>
+<li><strong>Bootstrap / Upgrade:</strong> Initialize primary control-plane nodes and join worker nodes.</li>
+<li><strong>Kubeconfig Retrieval:</strong> Fetch the generated admin credentials.</li>
+<li><strong>Cleanup &amp; Disconnect:</strong> Release locks, clean up temporary artifacts, and close SSH sessions.</li>
+</ol>
+<hr>
+<h2 id="usage-examples"><a class="header" href="#usage-examples">Usage Examples</a></h2>
+<p>Here are the standard workflows for compiling and deploying offline Kubernetes packages with Cargoship.</p>
+<h3 id="1-compile-an-offline-package"><a class="header" href="#1-compile-an-offline-package">1. Compile an Offline Package</a></h3>
+<p>To build an offline archive containing all required files, binaries, and container images:</p>
+<pre><code class="language-bash"># Create a package from the current directory structure
+cargoship create .
+
+# Build from a specific path and output to a custom directory
+cargoship create ./distro-defs -o ./build/
+</code></pre>
+<h3 id="2-prepare-target-nodes"><a class="header" href="#2-prepare-target-nodes">2. Prepare Target Nodes</a></h3>
+<p>Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, <code>fapolicyd</code> rules, and <code>/etc/hosts</code>) across target machines using your cluster configuration inventory:</p>
+<pre><code class="language-bash">cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+</code></pre>
+<h3 id="3-deploy-or-upgrade-a-cluster"><a class="header" href="#3-deploy-or-upgrade-a-cluster">3. Deploy or Upgrade a Cluster</a></h3>
+<p>Bootstrap a new cluster or upgrade an existing one from the compiled package:</p>
+<pre><code class="language-bash">cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+</code></pre>
+<h3 id="4-fetch-the-kubeconfig"><a class="header" href="#4-fetch-the-kubeconfig">4. Fetch the Kubeconfig</a></h3>
+<p>Retrieve the admin <code>kubeconfig</code> securely from the primary controller:</p>
+<pre><code class="language-bash">cargoship kube-config --config ./cargoship-config.yaml
+</code></pre>
+<h3 id="5-uninstall-or-reset-target-nodes"><a class="header" href="#5-uninstall-or-reset-target-nodes">5. Uninstall or Reset Target Nodes</a></h3>
+<p>Stop, uninstall, and completely purge the Kubernetes distro and its state from the target hosts:</p>
+<pre><code class="language-bash">cargoship reset --config ./cargoship-config.yaml --distro rke2
+</code></pre>
+<hr>
+<h2 id="configuration-and-schemas"><a class="header" href="#configuration-and-schemas">Configuration and Schemas</a></h2>
+<p>Cargoship relies on strongly-typed YAML definitions to govern its operations:</p>
 <ul>
-<li>connect to hosts</li>
-<li>detect OS</li>
-<li>gather facts</li>
-<li>validate hosts</li>
-<li>prepare hosts</li>
-<li>upload files</li>
-<li>configure the engine</li>
-<li>initialize or upgrade nodes</li>
-<li>update kubeconfig</li>
-<li>release locks and disconnect</li>
+<li><strong>Cluster Inventories:</strong> Specify SSH configurations, credentials, host roles, profiles, and load-balancer addresses.</li>
+<li><strong>Distro Package Definitions:</strong> Map out the required binaries, OCI images, and layout settings.</li>
+<li><strong>Distro Runtime Configs:</strong> Configure the underlying distribution engine.</li>
 </ul>
-<p>This phase model makes cluster operations structured, debuggable, and easier to extend.</p>
-<h2 id="configuration-model"><a class="header" href="#configuration-model">Configuration model</a></h2>
-<p>Cargoship uses typed YAML definitions for:</p>
+<p>The corresponding JSON schemas are automatically generated from Go structs into <code>schema/</code>. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion.</p>
+<p>An inventory authoring guide is available in <a href="docs/guides/setup-inv.html">docs/guides/setup-inv.md</a>.</p>
+<hr>
+<h2 id="development-and-build-workflows"><a class="header" href="#development-and-build-workflows">Development and Build Workflows</a></h2>
+<p>Task automation is built using <strong>Mage</strong>, with <strong>Dagger</strong> acting as the containerized execution engine.</p>
+<h3 id="mage-automation"><a class="header" href="#mage-automation">Mage Automation</a></h3>
+<p>Mage handles tasks including local compilation, e2e test execution, schema updates, and documentation generation. Key generated files include:</p>
 <ul>
-<li>cluster inventory/config</li>
-<li>distro package definitions</li>
-<li>distro runtime config</li>
+<li><code>build/cargoship_*</code> (Release binaries)</li>
+<li><code>docs/commands/*</code> (Cobra command references)</li>
+<li><code>docs/phases/*</code> (Orchestration phase explanations)</li>
+<li><code>docs/SUMMARY.md</code> (mdBook layout manifest)</li>
+<li><code>schema/*.json</code> (YAML validations)</li>
 </ul>
-<p>These schemas are generated from Go types and written into <code>schema/</code>, which makes YAML authoring easier in editors that support JSON schema references.</p>
-<p>The docs include an inventory authoring guide and example schema usage.</p>
-<h2 id="documentation"><a class="header" href="#documentation">Documentation</a></h2>
-<p>Project docs are built with mdBook and live under <code>docs/</code>.</p>
-<p>Generated docs include:</p>
-<ul>
-<li>CLI command reference</li>
-<li>phase documentation</li>
-<li>summary/navigation content</li>
-</ul>
-<p>Docs are generated from real code so the command and phase documentation stay aligned with implementation.</p>
-<h2 id="build-and-development-workflow"><a class="header" href="#build-and-development-workflow">Build and development workflow</a></h2>
-<p>This repo uses Mage for task automation and Dagger for the main build pipeline.</p>
-<h3 id="mage-responsibilities"><a class="header" href="#mage-responsibilities">Mage responsibilities</a></h3>
-<p>Mage targets are used for:</p>
-<ul>
-<li>local builds</li>
-<li>Dagger builds</li>
-<li>end-to-end tests</li>
-<li>docs generation</li>
-<li>schema generation</li>
-</ul>
-<h3 id="dagger-responsibilities"><a class="header" href="#dagger-responsibilities">Dagger responsibilities</a></h3>
-<p>Dagger is used as the default build path for producing binaries across platforms.</p>
-<h3 id="generated-outputs"><a class="header" href="#generated-outputs">Generated outputs</a></h3>
-<p>Automation in this repo maintains:</p>
-<ul>
-<li><code>build/cargoship_*</code></li>
-<li><code>docs/commands/*</code></li>
-<li><code>docs/phases/*</code></li>
-<li><code>docs/SUMMARY.md</code></li>
-<li><code>schema/*.json</code></li>
-</ul>
-<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<p>The <code>example/</code> directory contains sample distro content for:</p>
-<ul>
-<li><code>k3s</code></li>
-<li><code>rke2</code></li>
-</ul>
-<p>These examples are useful for understanding package structure and authoring your own distro definitions.</p>
-<h2 id="release-and-ci"><a class="header" href="#release-and-ci">Release and CI</a></h2>
-<p>The repository includes GitHub workflows for:</p>
-<ul>
-<li>dependency validation</li>
-<li>build/test checks</li>
-<li>e2e runs</li>
-<li>docs deployment</li>
-<li>release automation</li>
-</ul>
-<p>Releases are driven by GoReleaser, with checksum and signing support.</p>
-<h2 id="design-notes"><a class="header" href="#design-notes">Design notes</a></h2>
-<p>A few notable implementation patterns in the repo:</p>
-<ul>
-<li>side-effect registration for distro and OS modules</li>
-<li>phase-oriented orchestration for cluster workflows</li>
-<li>generated docs and schemas from source code</li>
-<li>offline-first packaging centered around files, images, and checksums</li>
-</ul>
+<h3 id="dagger-builds"><a class="header" href="#dagger-builds">Dagger Builds</a></h3>
+<p>Dagger coordinates hermetic, multi-platform compilation inside containerized Go environments. It ensures that compiled binaries are reproducible and decoupled from the developer’s local compiler version.</p>
+<h3 id="continuous-integration-ci-and-releases"><a class="header" href="#continuous-integration-ci-and-releases">Continuous Integration (CI) and Releases</a></h3>
+<p>GitHub Actions workflows run lint checks, dependency validation, cross-compilation, and end-to-end tests for every pull request. Releases are managed through <strong>GoReleaser</strong>, automating build signing, verification, and asset publishing.</p>
+<hr>
 <h2 id="inspiration"><a class="header" href="#inspiration">Inspiration</a></h2>
-<p>This project is clearly influenced by tools such as:</p>
+<p>Cargoship draws major design and engineering inspiration from:</p>
 <ul>
-<li><a href="https://github.com/k0sproject/k0sctl">k0sproject/k0sctl</a></li>
-<li><a href="https://github.com/zarf-dev/zarf">zarf-dev/zarf</a></li>
+<li><a href="https://github.com/k0sproject/k0sctl">k0sproject/k0sctl</a> — For elegant SSH-based multi-node orchestration and configuration patterns.</li>
+<li><a href="https://github.com/zarf-dev/zarf">zarf-dev/zarf</a> — For air-gapped image and file packaging and offline-first design.</li>
 </ul>
-<p>while focusing on offline distro packaging plus SSH-based cluster lifecycle management.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="inventory"><a class="header" href="#inventory">Inventory</a></h1>
-<p>To create a basic inventory file for bootstrapping or upgrading an existing cluster, it will start off looking like the following:</p>
+<h1 id="inventory-configuration-guide"><a class="header" href="#inventory-configuration-guide">Inventory Configuration Guide</a></h1>
+<p>This guide explains how to author a cluster inventory file for bootstrapping or upgrading clusters with Cargoship.</p>
+<h2 id="basic-structure"><a class="header" href="#basic-structure">Basic Structure</a></h2>
+<p>A basic inventory file defines the cluster’s metadata, global configuration, profiles, and individual target hosts. Start with the following template:</p>
 <pre><code class="language-yaml">---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-cluster-schema.json
 kind: ZarfCluster
 metadata:
   name: bubbles
 </code></pre>
-<p>The <code>.metadata.name</code> will be used by <code>cargoship</code> set the cluster name, so in this case the kube-config context will be <code>bubbles</code>.</p>
-<p>Next section is:</p>
+<p>The <code>.metadata.name</code> field sets the cluster name. Cargoship uses this to configure the context name in the resulting <code>kubeconfig</code> (e.g., <code>bubbles</code>).</p>
+<h2 id="global-configuration"><a class="header" href="#global-configuration">Global Configuration</a></h2>
+<p>The <code>.spec.config</code> section configures cluster-wide settings, such as load balancer endpoints:</p>
 <pre><code class="language-yaml">spec:
   config:
     loadbalancer: bubbles-kc.test.com
 </code></pre>
-<p>This is required as it will be added to the valid TLS Subject Alternative Names used by the Kubernetes API server, this can be the Round-Robin DNS record for the control-plane nodes, or it could be a cloud load-balancer like AWS NLB.</p>
-<p>An optional section is the <code>.spec.config.profiles</code> section, this allows for defining groups of node types, examples include <code>control</code>, <code>infra</code>, and <code>worker</code>. That can be used by a host to have a standard set of node labels or firewalld ports opened.</p>
+<p>The <code>loadbalancer</code> address is required. Cargoship adds this to the TLS Subject Alternative Names (SANs) for the Kubernetes API server. This can be a Round-Robin DNS record pointing to your control-plane nodes, or an external load balancer like an AWS NLB.</p>
+<h2 id="node-profiles"><a class="header" href="#node-profiles">Node Profiles</a></h2>
+<p>The optional <code>.spec.config.profiles</code> section defines reusable groups of node configurations (e.g., <code>control</code>, <code>infra</code>, or <code>worker</code>). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.</p>
 <pre><code class="language-yaml">spec:
   config:
     profiles:
@@ -334,7 +313,8 @@ metadata:
           taints:
             - CriticalOnly=True:NoExecute
 </code></pre>
-<p>The largest section like be the <code>.spec.hosts</code> array:</p>
+<h2 id="target-hosts"><a class="header" href="#target-hosts">Target Hosts</a></h2>
+<p>The <code>.spec.hosts</code> array is the main body of the inventory. It defines each host node, its connection details, role, and profile:</p>
 <pre><code class="language-yaml">spec:
   hosts:
     - hostname: distro-kc01
@@ -947,93 +927,54 @@ metadata:
 </li>
 </ol>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="dagger"><a class="header" href="#dagger">Dagger</a></h1>
+<h1 id="dagger-build-pipeline"><a class="header" href="#dagger-build-pipeline">Dagger Build Pipeline</a></h1>
+<p>This document describes how Cargoship uses <a href="https://dagger.io/">Dagger</a> to orchestrate reproducible, containerized builds.</p>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
-<p>This repository uses <a href="https://dagger.io/">Dagger</a> as its containerized build pipeline.</p>
-<p>In practical terms, the Dagger setup is responsible for building <code>cargoship</code> binaries in a reproducible environment instead of relying entirely on the host machine’s local Go toolchain.</p>
-<p>The Dagger module for this repository is defined by <code>dagger.json</code> at the repository root and implemented in the <code>.dagger/</code> directory.</p>
-<h2 id="dagger-module-configuration"><a class="header" href="#dagger-module-configuration">Dagger module configuration</a></h2>
-<p>The root <code>dagger.json</code> file tells Dagger four important things:</p>
+<p>Cargoship uses Dagger as its primary build pipeline to compile cross-platform binaries in a consistent environment. Containerizing the build process avoids environmental drift and reduces dependency on the host’s local Go toolchain.</p>
+<p>The Dagger module is defined by <code>dagger.json</code> at the repository root, with its implementation located in the <code>.dagger/</code> directory.</p>
+<h2 id="module-structure"><a class="header" href="#module-structure">Module Structure</a></h2>
+<p>The <code>.dagger/</code> directory is a standalone Dagger module written in Go:</p>
 <ul>
-<li>the module name is <code>cargoship</code></li>
-<li>the module uses the Go SDK</li>
-<li>the module source code lives in <code>.dagger</code></li>
+<li><strong><code>main.go</code></strong> — Defines the core <code>Cargoship</code> Dagger object and metadata initialization logic.</li>
+<li><strong><code>build.go</code></strong> — Implements the multi-platform <code>Build</code> pipeline.</li>
+<li><strong><code>build-local.go</code></strong> — Implements the single-target <code>BuildLocal</code> compilation.</li>
+<li><strong><code>utils/utils.go</code></strong> — Provides shared build configuration, including compiler and linker flags.</li>
+<li><strong><code>dagger.gen.go</code> &amp; <code>internal/dagger/</code></strong> — Contain the auto-generated Dagger SDK.</li>
 </ul>
-<p>That means commands like <code>dagger call build</code> are resolved against the Go code in <code>.dagger/</code>.</p>
-<h2 id="the-dagger-directory"><a class="header" href="#the-dagger-directory">The <code>.dagger/</code> directory</a></h2>
-<p>The <code>.dagger/</code> directory is a standalone Go-based Dagger module.</p>
-<p>Important files include:</p>
+<p>The module manages its own <code>go.mod</code> file since Dagger runs the module code as an isolated Go program.</p>
+<h2 id="core-module-logic"><a class="header" href="#core-module-logic">Core Module Logic</a></h2>
+<p>The entry point of the module is the <code>Cargoship</code> struct defined in <code>.dagger/main.go</code>. It retains state and tracks build-related metadata:</p>
 <ul>
-<li><code>main.go</code> — defines the core <code>Cargoship</code> Dagger object and initialization logic</li>
-<li><code>build.go</code> — defines the multi-platform <code>Build</code> pipeline</li>
-<li><code>build-local.go</code> — defines the single-target <code>BuildLocal</code> pipeline</li>
-<li><code>utils/utils.go</code> — shared linker and compiler flags used by Dagger builds</li>
-<li><code>dagger.gen.go</code> and <code>internal/dagger/</code> — generated Dagger SDK code</li>
+<li><strong><code>Source</code></strong> — The mounted repository source tree.</li>
+<li><strong><code>AppVersion</code></strong> — The application version, dynamically derived from Git tags.</li>
+<li><strong><code>GoVersion</code></strong> — The Go toolchain version, dynamically parsed from the root <code>go.mod</code>.</li>
 </ul>
-<p>The module has its own <code>go.mod</code> because Dagger modules are implemented as Go programs that Dagger executes.</p>
-<h2 id="core-dagger-object"><a class="header" href="#core-dagger-object">Core Dagger object</a></h2>
-<p>The central type is <code>Cargoship</code> in <code>.dagger/main.go</code>.</p>
-<p>It stores:</p>
-<ul>
-<li><code>Source</code> — the mounted source tree</li>
-<li><code>AppVersion</code> — the application version derived from Git tags</li>
-<li><code>GoVersion</code> — the Go version parsed from the repository <code>go.mod</code></li>
-<li><code>IsInitialized</code> — whether initialization has already happened</li>
-</ul>
-<h3 id="initialization-flow"><a class="header" href="#initialization-flow">Initialization flow</a></h3>
-<p>Before a build runs, the module initializes itself by:</p>
+<h3 id="initialization-flow"><a class="header" href="#initialization-flow">Initialization Flow</a></h3>
+<p>Before executing any build, the module automatically resolves metadata by:</p>
 <ol>
-<li>starting an <code>alpine</code> container</li>
-<li>installing <code>git</code></li>
-<li>mounting the repository source into <code>/src</code></li>
-<li>running <code>git describe --tags --abbrev=0</code></li>
-<li>reading <code>go.mod</code></li>
-<li>extracting the Go version with a regex</li>
+<li>Spinning up an <code>alpine</code> container and installing <code>git</code>.</li>
+<li>Mounting the repository source and running <code>git describe --tags --abbrev=0</code> to determine the release version.</li>
+<li>Reading the root <code>go.mod</code> to parse the required Go toolchain version using a regular expression.</li>
 </ol>
-<p>This gives the build pipeline two key pieces of metadata:</p>
+<p>This metadata ensures that the build uses the correct compiler image and embeds precise version info into the compiled binaries.</p>
+<h2 id="build-functions"><a class="header" href="#build-functions">Build Functions</a></h2>
+<p>The module exposes two main API entry points for compilation.</p>
+<h3 id="buildlocal"><a class="header" href="#buildlocal"><code>BuildLocal</code></a></h3>
+<p><code>BuildLocal</code> compiles Cargoship for a single target platform.</p>
 <ul>
-<li>the release version from Git tags</li>
-<li>the Go toolchain version to use for the build container</li>
+<li><strong>Parameters:</strong> <code>os</code> (string), <code>arch</code> (string), <code>source</code> (Directory)</li>
+<li><strong>Returns:</strong> <code>File</code> (the compiled binary)</li>
 </ul>
-<p>The version string has the leading <code>v</code> trimmed before being stored in <code>AppVersion</code>.</p>
-<h2 id="buildlocal"><a class="header" href="#buildlocal"><code>BuildLocal</code></a></h2>
-<p><code>BuildLocal</code> in <code>.dagger/build-local.go</code> is the single-platform build function.</p>
-<p>It accepts:</p>
+<p>During execution, <code>BuildLocal</code> starts a container using the official <code>golang</code> image matching the parsed Go toolchain version. It mounts a persistent Go build cache (<code>/go/build-cache</code>), sets <code>GOOS</code> and <code>GOARCH</code>, and compiles the application.</p>
+<p>Shared utilities in <code>.dagger/utils/utils.go</code> inject optimization and metadata flags:</p>
 <ul>
-<li><code>os</code></li>
-<li><code>arch</code></li>
-<li><code>source</code></li>
+<li><code>-s -w</code> linker flags to strip debug symbols and reduce binary size.</li>
+<li><code>-X</code> variables to embed the <code>AppVersion</code> and current Git commit SHA into the binary configuration.</li>
 </ul>
-<p>and returns a single built file.</p>
-<h3 id="what-it-does"><a class="header" href="#what-it-does">What it does</a></h3>
-<p><code>BuildLocal</code>:</p>
-<ol>
-<li>ensures the module is initialized</li>
-<li>chooses a binary name like <code>cargoship_linux_amd64</code></li>
-<li>starts a build container from <code>golang:&lt;detected-go-version&gt;</code></li>
-<li>mounts a persistent Dagger cache at <code>/go/build-cache</code></li>
-<li>mounts the repository source at <code>/src</code></li>
-<li>sets <code>GOOS</code> and <code>GOARCH</code></li>
-<li>gets the current short Git commit with <code>git rev-parse --short HEAD --always</code></li>
-<li>computes build flags</li>
-<li>runs <code>go build -mod=vendor ... /src/main.go</code></li>
-<li>returns the built file from <code>/bin/&lt;name&gt;</code></li>
-</ol>
-<h3 id="build-flags"><a class="header" href="#build-flags">Build flags</a></h3>
-<p>The shared helpers in <code>.dagger/utils/utils.go</code> inject:</p>
+<h3 id="build"><a class="header" href="#build"><code>Build</code></a></h3>
+<p><code>Build</code> compiles Cargoship for all supported release platforms concurrently.</p>
 <ul>
-<li><code>-s -w</code> linker flags to reduce binary size</li>
-<li><code>-X github.com/colonel-byte/cargoship/src/config.CLIVersion=...</code></li>
-<li><code>-X github.com/colonel-byte/cargoship/src/config.CLICommit=...</code></li>
-</ul>
-<p>So the Dagger build embeds both the application version and the Git commit into the binary.</p>
-<h2 id="build"><a class="header" href="#build"><code>Build</code></a></h2>
-<p><code>Build</code> in <code>.dagger/build.go</code> is the multi-platform pipeline.</p>
-<p>It:</p>
-<ul>
-<li>initializes the module if needed</li>
-<li>starts from the repository <code>build/</code> directory object</li>
-<li>defines target platforms:
+<li><strong>Supported Platforms:</strong>
 <ul>
 <li><code>linux/amd64</code></li>
 <li><code>linux/arm64</code></li>
@@ -1043,224 +984,110 @@ metadata:
 <li><code>windows/arm64</code></li>
 </ul>
 </li>
-<li>runs builds concurrently using <code>sourcegraph/conc/pool</code></li>
-<li>adds each built file into the output directory</li>
-<li>returns a <code>dagger.Directory</code> containing all built artifacts</li>
+<li><strong>Returns:</strong> <code>Directory</code> (containing all compiled binaries, with <code>.exe</code> extensions appended for Windows targets)</li>
 </ul>
-<p>Windows binaries get the <code>.exe</code> suffix.</p>
-<p>In other words:</p>
+<p>The multi-platform build executes concurrent compilation tasks utilizing a <code>sourcegraph/conc</code> concurrency pool.</p>
+<h2 id="orchestration-and-integrations"><a class="header" href="#orchestration-and-integrations">Orchestration and Integrations</a></h2>
+<h3 id="mage-integration"><a class="header" href="#mage-integration">Mage Integration</a></h3>
+<p>Mage serves as the task runner and interfaces directly with the Dagger CLI. The targets in <code>magefiles/dagger.go</code> wrap Dagger invocations:</p>
 <ul>
-<li><code>BuildLocal</code> returns one file</li>
-<li><code>Build</code> returns a directory of all platform builds</li>
-</ul>
-<h2 id="how-mage-uses-dagger"><a class="header" href="#how-mage-uses-dagger">How Mage uses Dagger</a></h2>
-<p>The repository’s Mage automation treats Dagger as the primary build path.</p>
-<p>The <code>magefiles/dagger.go</code> file exposes a <code>Dagger</code> namespace with targets such as:</p>
-<ul>
-<li><code>Dagger.Toolchain</code></li>
-<li><code>Dagger.Binary</code></li>
-<li><code>Dagger.Linuxamd64</code></li>
-<li><code>Dagger.Linuxarm64</code></li>
-<li><code>Dagger.Macamd64</code></li>
-<li><code>Dagger.Macarm64</code></li>
-<li><code>Dagger.All</code></li>
-</ul>
-<h3 id="important-detail"><a class="header" href="#important-detail">Important detail</a></h3>
-<p>The default Mage target is <code>Dagger.All</code>.</p>
-<p>That means running plain <code>mage</code> builds all binaries through the Dagger pipeline.</p>
-<h3 id="mapping-from-mage-to-dagger-calls"><a class="header" href="#mapping-from-mage-to-dagger-calls">Mapping from Mage to Dagger calls</a></h3>
-<p>Mage shells out to the Dagger CLI.</p>
-<h4 id="full-build"><a class="header" href="#full-build">Full build</a></h4>
-<p><code>Dagger.All</code> runs:</p>
+<li><code>mage</code> or <code>mage dagger:all</code> triggers the full multi-platform build:
 <pre><code class="language-sh">dagger call --progress=tty --interactive=false build export --path=build
 </code></pre>
-<p>This executes the Dagger <code>Build</code> function and exports the returned directory into the local <code>build/</code> folder.</p>
-<h4 id="single-platform-build"><a class="header" href="#single-platform-build">Single-platform build</a></h4>
-<p>The helper <code>daggerBuildLocal()</code> runs:</p>
+</li>
+<li>Single-platform Mage targets (such as <code>mage dagger:linuxamd64</code>) invoke <code>BuildLocal</code>:
 <pre><code class="language-sh">dagger call --progress=tty --interactive=false build-local --os=&lt;os&gt; --arch=&lt;arch&gt; export --path=build/cargoship_&lt;os&gt;_&lt;arch&gt;
 </code></pre>
-<p>This executes <code>BuildLocal</code> and exports the returned file to a specific path.</p>
-<h2 id="how-ci-uses-dagger"><a class="header" href="#how-ci-uses-dagger">How CI uses Dagger</a></h2>
-<p>GitHub Actions has a dedicated workflow in <code>.github/workflows/dagger.yaml</code>.</p>
-<p>That workflow:</p>
+</li>
+</ul>
+<h3 id="github-actions-ci"><a class="header" href="#github-actions-ci">GitHub Actions CI</a></h3>
+<p>The Dagger pipeline is executed in CI via <code>.github/workflows/dagger.yaml</code>. The workflow:</p>
 <ol>
-<li>checks out the repository with full history</li>
-<li>reads the Dagger engine version from <code>dagger.json</code></li>
-<li>invokes <code>dagger/dagger-for-github</code></li>
-<li>runs the <code>build</code> Dagger verb</li>
+<li>Checks out the repository with full git history (required to resolve <code>AppVersion</code> from tags).</li>
+<li>Configures the Dagger CLI and Engine.</li>
+<li>Runs <code>dagger call build export</code> to compile and cache the binaries.</li>
+<li>Optionally integrates with Dagger Cloud via <code>DAGGER_CLOUD_TOKEN</code> for execution insights and telemetry.</li>
 </ol>
-<p>The full Git history matters because the Dagger module derives <code>AppVersion</code> from Git tags.</p>
-<p>The workflow also passes <code>DAGGER_CLOUD_TOKEN</code>, which suggests builds can be connected to Dagger Cloud for observability or remote execution features.</p>
-<h2 id="relationship-to-host-builds"><a class="header" href="#relationship-to-host-builds">Relationship to host builds</a></h2>
-<p>This repository supports two build styles:</p>
-<h3 id="dagger-build-path"><a class="header" href="#dagger-build-path">Dagger build path</a></h3>
-<ul>
-<li>containerized</li>
-<li>version-aware</li>
-<li>embeds Git version/commit metadata</li>
-<li>default path used by Mage</li>
-<li>multi-platform by design</li>
-</ul>
-<h3 id="host-build-path"><a class="header" href="#host-build-path">Host build path</a></h3>
-<p>The non-Dagger path in <code>magefiles/build.go</code> and <code>magefiles/utils.go</code> runs <code>go build</code> directly on the host.</p>
-<p>That path is useful for simpler local builds, but the Dagger path appears to be the preferred and more reproducible workflow.</p>
-<h2 id="what-dagger-is-not-doing-here"><a class="header" href="#what-dagger-is-not-doing-here">What Dagger is not doing here</a></h2>
-<p>In this repository, Dagger is focused on binary builds.</p>
-<p>It is not currently the tool used for:</p>
-<ul>
-<li>generating docs</li>
-<li>generating schemas</li>
-<li>publishing releases</li>
-<li>building the mdBook site</li>
-</ul>
-<p>Those responsibilities are handled elsewhere by Mage, mdBook, GitHub Actions, and GoReleaser.</p>
-<h2 id="practical-summary"><a class="header" href="#practical-summary">Practical summary</a></h2>
-<p>If you reduce the setup to the essentials, the Dagger configuration in this repo does the following:</p>
-<ul>
-<li>defines a Go-based Dagger module in <code>.dagger/</code></li>
-<li>detects the app version from Git tags</li>
-<li>detects the Go version from <code>go.mod</code></li>
-<li>builds <code>cargoship</code> in a containerized Go environment</li>
-<li>supports both single-platform and multi-platform outputs</li>
-<li>is used by both Mage and GitHub Actions</li>
-<li>serves as the default build pipeline for the project</li>
-</ul>
+<h2 id="containerized-vs-host-builds"><a class="header" href="#containerized-vs-host-builds">Containerized vs. Host Builds</a></h2>
+<p>Cargoship supports two parallel compilation workflows:</p>
+<ol>
+<li><strong>Dagger Build Path (Default):</strong> Containerized, version-aware, hermetic, and capable of concurrent cross-compilation. This is the default path utilized by Mage and GitHub Actions.</li>
+<li><strong>Host Build Path:</strong> Executes <code>go build</code> directly on the local machine using host-level Go toolchains (implemented in <code>magefiles/build.go</code>). This path is preserved for quick, un-containerized local development.</li>
+</ol>
+<p>Dagger in this repository is strictly focused on binary compilation; other repository tasks like documentation generation, YAML schema updates, and GitHub releases are managed separately through Mage, mdBook, and GoReleaser.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="magefiles"><a class="header" href="#magefiles">Magefiles</a></h1>
-<blockquote>
-<p>Mage is a make/rake-like build tool using Go. You write plain-old go functions, and Mage automatically uses them as Makefile-like runnable targets.</p>
-</blockquote>
-<p>From <code>magefile.org/</code></p>
-<h2 id="about"><a class="header" href="#about">About</a></h2>
-<p>This repository uses <code>mage</code> as its task runner instead of a traditional <code>Makefile</code>. In practice, the <code>magefiles/</code> directory is the project’s automation layer for:</p>
+<h1 id="mage-tasks-and-automation"><a class="header" href="#mage-tasks-and-automation">Mage Tasks and Automation</a></h1>
+<p>This document explains how Cargoship uses <a href="https://magefile.org/">Mage</a> to orchestrate build, test, and generation tasks.</p>
+<h2 id="overview-1"><a class="header" href="#overview-1">Overview</a></h2>
+<p>Cargoship uses <code>mage</code> as its primary task runner and automation tool instead of a traditional <code>Makefile</code>. The implementation resides in the <code>magefiles/</code> directory, which acts as the central repository for:</p>
 <ul>
-<li>building binaries</li>
-<li>running developer utility tasks</li>
-<li>running end-to-end tests</li>
-<li>generating documentation</li>
-<li>generating JSON schemas</li>
+<li>Building binaries (both containerized with Dagger and natively on the host).</li>
+<li>Running end-to-end (e2e) tests.</li>
+<li>Generating documentation from the codebase.</li>
+<li>Generating and publishing JSON schemas from Go types.</li>
 </ul>
-<p>The Mage entrypoint is <code>magefiles/main.go</code>, which calls <code>mage.Main()</code> and lets Mage discover exported targets from the other Go files in that directory.</p>
-<h2 id="how-the-magefiles-are-organized"><a class="header" href="#how-the-magefiles-are-organized">How the magefiles are organized</a></h2>
-<p>The code in <code>magefiles/</code> is grouped into namespaces. Each namespace becomes a family of Mage targets.</p>
-<h3 id="dagger-1"><a class="header" href="#dagger-1"><code>Dagger</code></a></h3>
-<p>The <code>Dagger</code> namespace is the main build pipeline and is also the default Mage target.</p>
-<p>It provides targets to:</p>
+<p>The entry point of the automation layer is <code>magefiles/main.go</code>, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.</p>
+<h2 id="namespace-architecture"><a class="header" href="#namespace-architecture">Namespace Architecture</a></h2>
+<p>Mage targets are organized into logical Go namespaces to group related operations together.</p>
+<h3 id="dagger-namespace"><a class="header" href="#dagger-namespace"><code>Dagger</code> Namespace</a></h3>
+<p>The <code>Dagger</code> namespace is the default target and the primary build path. It manages containerized and reproducible builds of the Cargoship binary:</p>
 <ul>
-<li>update the Dagger toolchain</li>
-<li>build a binary for the current platform</li>
-<li>build Linux amd64 and arm64 binaries</li>
-<li>build macOS amd64 and arm64 binaries</li>
-<li>build all binaries into <code>build/</code></li>
+<li><code>Toolchain</code> — Configures the local Dagger toolchain.</li>
+<li><code>Binary</code> — Compiles the binary for the host’s platform.</li>
+<li><code>Linuxamd64</code> / <code>Linuxarm64</code> — Compiles Linux binaries.</li>
+<li><code>Macamd64</code> / <code>Macarm64</code> — Compiles macOS binaries.</li>
+<li><code>All</code> — Compiles and exports all release binaries to <code>build/</code> concurrently.</li>
 </ul>
-<p>This is the containerized or reproducible build path and appears to be the preferred build workflow for the project.</p>
-<h3 id="build-1"><a class="header" href="#build-1"><code>Build</code></a></h3>
-<p>The <code>Build</code> namespace provides host-based builds without Dagger.</p>
-<p>It mirrors the Dagger targets and can:</p>
+<p>Running <code>mage</code> without arguments defaults to <code>Dagger.All</code>.</p>
+<h3 id="build-namespace"><a class="header" href="#build-namespace"><code>Build</code> Namespace</a></h3>
+<p>The <code>Build</code> namespace mirrors the compilation targets of the <code>Dagger</code> namespace but bypasses containerization, executing compilation natively on the host’s Go toolchain. This path is intended for quick, local development.</p>
+<h3 id="dev-namespace"><a class="header" href="#dev-namespace"><code>Dev</code> Namespace</a></h3>
+<p>The <code>Dev</code> namespace aggregates convenience tasks for day-to-day development:</p>
 <ul>
-<li>build for the current platform</li>
-<li>cross-build Linux amd64 and arm64</li>
-<li>cross-build macOS amd64 and arm64</li>
-<li>build all of them sequentially</li>
+<li><code>Clean</code> — Deletes local compilation artifacts and cleans the <code>build/</code> directory.</li>
+<li><code>Tidy</code> — Runs <code>go mod tidy</code> inside the workspace.</li>
+<li><code>ResolveImageDigest</code> — Resolves and logs specific container digests for validation.</li>
 </ul>
-<p>This is the simpler local Go build path.</p>
-<h3 id="dev"><a class="header" href="#dev"><code>Dev</code></a></h3>
-<p>The <code>Dev</code> namespace contains developer convenience tasks.</p>
-<p>It currently provides targets to:</p>
+<h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
+<p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
 <ul>
-<li>clean local build artifacts</li>
-<li>run <code>go mod tidy</code></li>
-<li>resolve and print a container image digest for testing</li>
+<li><code>E2E</code> — Automatically compiles Cargoship via Dagger and executes the complete Go-based end-to-end test suite in verbose mode.</li>
 </ul>
-<p>These tasks are more for day-to-day development than for release builds.</p>
-<h3 id="test"><a class="header" href="#test"><code>Test</code></a></h3>
-<p>The <code>Test</code> namespace currently contains the end-to-end test target.</p>
-<p>It:</p>
+<h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
+<p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
 <ul>
-<li>builds a local binary using Dagger</li>
-<li>runs the Go end-to-end test suite with verbose output</li>
+<li><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</li>
+<li><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</li>
 </ul>
-<h3 id="generate"><a class="header" href="#generate"><code>Generate</code></a></h3>
-<p>The <code>Generate</code> namespace is used for generated project assets.</p>
-<p>It provides targets to:</p>
+<hr>
+<h2 id="file-by-file-reference"><a class="header" href="#file-by-file-reference">File-by-File Reference</a></h2>
 <ul>
-<li>generate documentation</li>
-<li>generate JSON schemas</li>
+<li><strong><code>main.go</code>:</strong> Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution.</li>
+<li><strong><code>dagger.go</code>:</strong> Houses user-facing targets for containerized compilation via Dagger.</li>
+<li><strong><code>build.go</code>:</strong> Defines compilation tasks utilizing the local host Go toolchain.</li>
+<li><strong><code>dev.go</code>:</strong> Defines convenience tasks under the <code>Dev</code> and <code>Test</code> namespaces.</li>
+<li><strong><code>gen-docs.go</code>:</strong> Performs Cobra command extraction and phase parser generation to update everything inside the <code>docs/</code> tree.</li>
+<li><strong><code>gen-schema.go</code>:</strong> Maps Go types to JSON schemas under <code>schema/</code>.</li>
+<li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction.</li>
+<li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
 </ul>
-<p>This is where most code-generation style maintenance lives.</p>
-<h2 id="file-by-file-overview"><a class="header" href="#file-by-file-overview">File-by-file overview</a></h2>
-<h3 id="maingo"><a class="header" href="#maingo"><code>main.go</code></a></h3>
-<p>This is the Mage bootstrap file. It calls <code>mage.Main()</code> so Mage can discover and run targets from the rest of the directory.</p>
-<p>It also imports distro configuration code for side effects so tasks that depend on those registrations can run correctly.</p>
-<h3 id="daggergo"><a class="header" href="#daggergo"><code>dagger.go</code></a></h3>
-<p>This file defines the <code>Dagger</code> namespace.</p>
-<p>It contains targets for:</p>
-<ul>
-<li><code>Toolchain</code></li>
-<li><code>Binary</code></li>
-<li><code>Linuxamd64</code></li>
-<li><code>Linuxarm64</code></li>
-<li><code>Macamd64</code></li>
-<li><code>Macarm64</code></li>
-<li><code>All</code></li>
-</ul>
-<p>It also sets the default Mage target to <code>Dagger.All</code>, so running plain <code>mage</code> should build all binaries through Dagger.</p>
-<h3 id="buildgo"><a class="header" href="#buildgo"><code>build.go</code></a></h3>
-<p>This file defines the <code>Build</code> namespace.</p>
-<p>It offers the same platform-oriented build targets as <code>Dagger</code>, but uses the host Go toolchain directly instead of the Dagger pipeline.</p>
-<h3 id="devgo"><a class="header" href="#devgo"><code>dev.go</code></a></h3>
-<p>This file defines two namespaces:</p>
-<ul>
-<li><code>Dev</code></li>
-<li><code>Test</code></li>
-</ul>
-<p><code>Dev</code> contains maintenance and debugging helpers. <code>Test</code> contains the end-to-end test target.</p>
-<h3 id="gen-docsgo"><a class="header" href="#gen-docsgo"><code>gen-docs.go</code></a></h3>
-<p>This file defines part of the <code>Generate</code> namespace and is responsible for documentation generation.</p>
-<p>The <code>Generate.Document</code> target:</p>
-<ul>
-<li>recreates <code>docs/commands</code></li>
-<li>recreates <code>docs/phases</code></li>
-<li>generates CLI command documentation from Cobra commands</li>
-<li>generates phase documentation from internal action definitions</li>
-<li>rebuilds <code>docs/SUMMARY.md</code></li>
-</ul>
-<p>In other words, it keeps generated docs synchronized with the current code.</p>
-<h3 id="gen-schemago"><a class="header" href="#gen-schemago"><code>gen-schema.go</code></a></h3>
-<p>This file defines the schema-generation part of the <code>Generate</code> namespace.</p>
-<p>The <code>Generate.Schema</code> target generates JSON schema files for several project configuration types, including cluster, distro package, and distro config definitions.</p>
-<p>It uses Go type reflection and then applies a small amount of post-processing so the resulting schemas better match the project’s YAML needs.</p>
-<h3 id="utilsgo"><a class="header" href="#utilsgo"><code>utils.go</code></a></h3>
-<p>This file contains shared helper functions used by other magefiles.</p>
-<p>These helpers:</p>
-<ul>
-<li>build binaries with Dagger</li>
-<li>build binaries with the local Go toolchain</li>
-<li>remove existing build artifacts</li>
-</ul>
-<p>Most of the actual build mechanics live here, while <code>dagger.go</code> and <code>build.go</code> mainly expose user-facing targets.</p>
-<h3 id="binarygo"><a class="header" href="#binarygo"><code>binary.go</code></a></h3>
-<p>This file contains small helper functions for working with binaries in <code>GOPATH/bin</code>.</p>
-<p>Right now it does not expose user-facing Mage targets, but it provides reusable helper logic for checking whether a binary exists and for constructing its path.</p>
-<h2 id="generated-outputs-1"><a class="header" href="#generated-outputs-1">Generated outputs</a></h2>
-<p>The Mage targets in this directory are responsible for maintaining several kinds of generated output, including:</p>
-<ul>
-<li><code>build/cargoship_*</code></li>
-<li><code>docs/commands/*</code></li>
-<li><code>docs/phases/*</code></li>
-<li><code>docs/SUMMARY.md</code></li>
-<li><code>schema/*.json</code></li>
-</ul>
-<h2 id="practical-summary-1"><a class="header" href="#practical-summary-1">Practical summary</a></h2>
-<p>If you think of <code>magefiles/</code> as the project’s automation layer, the responsibilities break down like this:</p>
-<ul>
-<li>use <code>Dagger</code> for the primary build workflow</li>
-<li>use <code>Build</code> for local non-Dagger builds</li>
-<li>use <code>Dev</code> for cleanup and maintenance tasks</li>
-<li>use <code>Test</code> for end-to-end testing</li>
-<li>use <code>Generate</code> for docs and schema generation</li>
-</ul>
-<p>That makes the <code>magefiles/</code> folder the main place where build, test, and generation workflows are encoded for the repository.</p>
+<hr>
+<h2 id="managed-outputs"><a class="header" href="#managed-outputs">Managed Outputs</a></h2>
+<p>Running various Mage tasks maintains and updates the following filesystem artifacts:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Output Directory / File</th><th style="text-align: left">Description</th><th style="text-align: left">Target</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>build/cargoship_*</code></td><td style="text-align: left">Compiled release binaries</td><td style="text-align: left"><code>Dagger.All</code> / <code>Build.All</code></td></tr>
+<tr><td style="text-align: left"><code>docs/commands/*</code></td><td style="text-align: left">Auto-generated CLI documentation</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>schema/*.json</code></td><td style="text-align: left">JSON schemas for YAML validations</td><td style="text-align: left"><code>Generate.Schema</code></td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
 <h2 id="0100-2026-08-11"><a class="header" href="#0100-2026-08-11"><a href="https://github.com/colonel-byte/cargoship/compare/v0.9.0...v0.10.0">0.10.0</a> (2026-08-11)</a></h2>
@@ -1276,7 +1103,7 @@ metadata:
 <li>schema generator includes golang comments (<a href="https://github.com/colonel-byte/cargoship/issues/165">#165</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/68364ff101da6177193702a1d82ac68c978a53da">68364ff</a>)</li>
 <li>standardize the location distro interaction (<a href="https://github.com/colonel-byte/cargoship/issues/159">#159</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3ba592eb0e1549cc36eba7cd21e8991bcb958de4">3ba592e</a>)</li>
 </ul>
-<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
+<h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
 <ul>
 <li>expand info about the project (<a href="https://github.com/colonel-byte/cargoship/issues/166">#166</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4d672f52f66f4b715946dc2ee681f80866b640d9">4d672f5</a>)</li>
 </ul>
@@ -1287,7 +1114,7 @@ metadata:
 <li>update the dependabot config (<a href="https://github.com/colonel-byte/cargoship/issues/172">#172</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/aa6652a756d87b1fc52d029c14eb1a9b8a123478">aa6652a</a>)</li>
 <li>update the dependabot logic (<a href="https://github.com/colonel-byte/cargoship/issues/150">#150</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7b2fef1d05514ff6dab86cba825d3768caf0ec9">d7b2fef</a>)</li>
 </ul>
-<h3 id="build-2"><a class="header" href="#build-2">Build</a></h3>
+<h3 id="build-1"><a class="header" href="#build-1">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/alibabacloud-go/debug from 1.0.0 to 1.0.1 (<a href="https://github.com/colonel-byte/cargoship/issues/149">#149</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6891f31721473f27187f5ff8d6e79f6e57b5c1b1">6891f31</a>)</li>
 <li><strong>deps:</strong> Bump github.com/aws/aws-sdk-go-v2/internal/configsources from 1.4.29 to 1.4.34 (<a href="https://github.com/colonel-byte/cargoship/issues/144">#144</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/45d3e40af149ad24077947d705e4a0eb33635e66">45d3e40</a>)</li>
@@ -1329,7 +1156,7 @@ metadata:
 <ul>
 <li>add sha256sum command (<a href="https://github.com/colonel-byte/cargoship/issues/136">#136</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a1b5f8b8b67c78a6d8daa3fbe7db6a9a0eec0425">a1b5f8b</a>)</li>
 </ul>
-<h3 id="documentation-1-1"><a class="header" href="#documentation-1-1">Documentation</a></h3>
+<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
 <ul>
 <li>add mdbook site builder (<a href="https://github.com/colonel-byte/cargoship/issues/135">#135</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/fa31b78f796838e57b97afe233269be13e45900a">fa31b78</a>)</li>
 </ul>
@@ -1377,7 +1204,7 @@ metadata:
 <li>add firewalld policy management (<a href="https://github.com/colonel-byte/cargoship/issues/107">#107</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4a520304207ee9c7ebe1fe555cd2a9917198259f">4a52030</a>)</li>
 <li>reduce binary size (<a href="https://github.com/colonel-byte/cargoship/issues/101">#101</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/81bd7ea8d26f8bb180a494d72c837f6b6b9a338e">81bd7ea</a>)</li>
 </ul>
-<h3 id="build-2-1"><a class="header" href="#build-2-1">Build</a></h3>
+<h3 id="build-2"><a class="header" href="#build-2">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump golangci/golangci-lint-action from 9.2.1 to 9.3.0 (<a href="https://github.com/colonel-byte/cargoship/issues/105">#105</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a314b7c9b40a75c0ab5dd363f0bb51d2dea656a0">a314b7c</a>)</li>
 <li><strong>deps:</strong> Bump goreleaser/goreleaser-action from 7.2.2 to 7.2.3 (<a href="https://github.com/colonel-byte/cargoship/issues/106">#106</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0b32174b9bb006681159c561909c5e918184d8ea">0b32174</a>)</li>

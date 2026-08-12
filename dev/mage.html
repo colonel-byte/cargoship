@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-7d496659.js";
+            window.path_to_searchindex_js = "../searchindex-2b0312f8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b85f870d.js"></script>
@@ -181,141 +181,78 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="magefiles"><a class="header" href="#magefiles">Magefiles</a></h1>
-<blockquote>
-<p>Mage is a make/rake-like build tool using Go. You write plain-old go functions, and Mage automatically uses them as Makefile-like runnable targets.</p>
-</blockquote>
-<p>From <code>magefile.org/</code></p>
-<h2 id="about"><a class="header" href="#about">About</a></h2>
-<p>This repository uses <code>mage</code> as its task runner instead of a traditional <code>Makefile</code>. In practice, the <code>magefiles/</code> directory is the project’s automation layer for:</p>
+                        <h1 id="mage-tasks-and-automation"><a class="header" href="#mage-tasks-and-automation">Mage Tasks and Automation</a></h1>
+<p>This document explains how Cargoship uses <a href="https://magefile.org/">Mage</a> to orchestrate build, test, and generation tasks.</p>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Cargoship uses <code>mage</code> as its primary task runner and automation tool instead of a traditional <code>Makefile</code>. The implementation resides in the <code>magefiles/</code> directory, which acts as the central repository for:</p>
 <ul>
-<li>building binaries</li>
-<li>running developer utility tasks</li>
-<li>running end-to-end tests</li>
-<li>generating documentation</li>
-<li>generating JSON schemas</li>
+<li>Building binaries (both containerized with Dagger and natively on the host).</li>
+<li>Running end-to-end (e2e) tests.</li>
+<li>Generating documentation from the codebase.</li>
+<li>Generating and publishing JSON schemas from Go types.</li>
 </ul>
-<p>The Mage entrypoint is <code>magefiles/main.go</code>, which calls <code>mage.Main()</code> and lets Mage discover exported targets from the other Go files in that directory.</p>
-<h2 id="how-the-magefiles-are-organized"><a class="header" href="#how-the-magefiles-are-organized">How the magefiles are organized</a></h2>
-<p>The code in <code>magefiles/</code> is grouped into namespaces. Each namespace becomes a family of Mage targets.</p>
-<h3 id="dagger"><a class="header" href="#dagger"><code>Dagger</code></a></h3>
-<p>The <code>Dagger</code> namespace is the main build pipeline and is also the default Mage target.</p>
-<p>It provides targets to:</p>
+<p>The entry point of the automation layer is <code>magefiles/main.go</code>, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.</p>
+<h2 id="namespace-architecture"><a class="header" href="#namespace-architecture">Namespace Architecture</a></h2>
+<p>Mage targets are organized into logical Go namespaces to group related operations together.</p>
+<h3 id="dagger-namespace"><a class="header" href="#dagger-namespace"><code>Dagger</code> Namespace</a></h3>
+<p>The <code>Dagger</code> namespace is the default target and the primary build path. It manages containerized and reproducible builds of the Cargoship binary:</p>
 <ul>
-<li>update the Dagger toolchain</li>
-<li>build a binary for the current platform</li>
-<li>build Linux amd64 and arm64 binaries</li>
-<li>build macOS amd64 and arm64 binaries</li>
-<li>build all binaries into <code>build/</code></li>
+<li><code>Toolchain</code> — Configures the local Dagger toolchain.</li>
+<li><code>Binary</code> — Compiles the binary for the host’s platform.</li>
+<li><code>Linuxamd64</code> / <code>Linuxarm64</code> — Compiles Linux binaries.</li>
+<li><code>Macamd64</code> / <code>Macarm64</code> — Compiles macOS binaries.</li>
+<li><code>All</code> — Compiles and exports all release binaries to <code>build/</code> concurrently.</li>
 </ul>
-<p>This is the containerized or reproducible build path and appears to be the preferred build workflow for the project.</p>
-<h3 id="build"><a class="header" href="#build"><code>Build</code></a></h3>
-<p>The <code>Build</code> namespace provides host-based builds without Dagger.</p>
-<p>It mirrors the Dagger targets and can:</p>
+<p>Running <code>mage</code> without arguments defaults to <code>Dagger.All</code>.</p>
+<h3 id="build-namespace"><a class="header" href="#build-namespace"><code>Build</code> Namespace</a></h3>
+<p>The <code>Build</code> namespace mirrors the compilation targets of the <code>Dagger</code> namespace but bypasses containerization, executing compilation natively on the host’s Go toolchain. This path is intended for quick, local development.</p>
+<h3 id="dev-namespace"><a class="header" href="#dev-namespace"><code>Dev</code> Namespace</a></h3>
+<p>The <code>Dev</code> namespace aggregates convenience tasks for day-to-day development:</p>
 <ul>
-<li>build for the current platform</li>
-<li>cross-build Linux amd64 and arm64</li>
-<li>cross-build macOS amd64 and arm64</li>
-<li>build all of them sequentially</li>
+<li><code>Clean</code> — Deletes local compilation artifacts and cleans the <code>build/</code> directory.</li>
+<li><code>Tidy</code> — Runs <code>go mod tidy</code> inside the workspace.</li>
+<li><code>ResolveImageDigest</code> — Resolves and logs specific container digests for validation.</li>
 </ul>
-<p>This is the simpler local Go build path.</p>
-<h3 id="dev"><a class="header" href="#dev"><code>Dev</code></a></h3>
-<p>The <code>Dev</code> namespace contains developer convenience tasks.</p>
-<p>It currently provides targets to:</p>
+<h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
+<p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
 <ul>
-<li>clean local build artifacts</li>
-<li>run <code>go mod tidy</code></li>
-<li>resolve and print a container image digest for testing</li>
+<li><code>E2E</code> — Automatically compiles Cargoship via Dagger and executes the complete Go-based end-to-end test suite in verbose mode.</li>
 </ul>
-<p>These tasks are more for day-to-day development than for release builds.</p>
-<h3 id="test"><a class="header" href="#test"><code>Test</code></a></h3>
-<p>The <code>Test</code> namespace currently contains the end-to-end test target.</p>
-<p>It:</p>
+<h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
+<p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
 <ul>
-<li>builds a local binary using Dagger</li>
-<li>runs the Go end-to-end test suite with verbose output</li>
+<li><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</li>
+<li><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</li>
 </ul>
-<h3 id="generate"><a class="header" href="#generate"><code>Generate</code></a></h3>
-<p>The <code>Generate</code> namespace is used for generated project assets.</p>
-<p>It provides targets to:</p>
+<hr>
+<h2 id="file-by-file-reference"><a class="header" href="#file-by-file-reference">File-by-File Reference</a></h2>
 <ul>
-<li>generate documentation</li>
-<li>generate JSON schemas</li>
+<li><strong><code>main.go</code>:</strong> Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution.</li>
+<li><strong><code>dagger.go</code>:</strong> Houses user-facing targets for containerized compilation via Dagger.</li>
+<li><strong><code>build.go</code>:</strong> Defines compilation tasks utilizing the local host Go toolchain.</li>
+<li><strong><code>dev.go</code>:</strong> Defines convenience tasks under the <code>Dev</code> and <code>Test</code> namespaces.</li>
+<li><strong><code>gen-docs.go</code>:</strong> Performs Cobra command extraction and phase parser generation to update everything inside the <code>docs/</code> tree.</li>
+<li><strong><code>gen-schema.go</code>:</strong> Maps Go types to JSON schemas under <code>schema/</code>.</li>
+<li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction.</li>
+<li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
 </ul>
-<p>This is where most code-generation style maintenance lives.</p>
-<h2 id="file-by-file-overview"><a class="header" href="#file-by-file-overview">File-by-file overview</a></h2>
-<h3 id="maingo"><a class="header" href="#maingo"><code>main.go</code></a></h3>
-<p>This is the Mage bootstrap file. It calls <code>mage.Main()</code> so Mage can discover and run targets from the rest of the directory.</p>
-<p>It also imports distro configuration code for side effects so tasks that depend on those registrations can run correctly.</p>
-<h3 id="daggergo"><a class="header" href="#daggergo"><code>dagger.go</code></a></h3>
-<p>This file defines the <code>Dagger</code> namespace.</p>
-<p>It contains targets for:</p>
-<ul>
-<li><code>Toolchain</code></li>
-<li><code>Binary</code></li>
-<li><code>Linuxamd64</code></li>
-<li><code>Linuxarm64</code></li>
-<li><code>Macamd64</code></li>
-<li><code>Macarm64</code></li>
-<li><code>All</code></li>
-</ul>
-<p>It also sets the default Mage target to <code>Dagger.All</code>, so running plain <code>mage</code> should build all binaries through Dagger.</p>
-<h3 id="buildgo"><a class="header" href="#buildgo"><code>build.go</code></a></h3>
-<p>This file defines the <code>Build</code> namespace.</p>
-<p>It offers the same platform-oriented build targets as <code>Dagger</code>, but uses the host Go toolchain directly instead of the Dagger pipeline.</p>
-<h3 id="devgo"><a class="header" href="#devgo"><code>dev.go</code></a></h3>
-<p>This file defines two namespaces:</p>
-<ul>
-<li><code>Dev</code></li>
-<li><code>Test</code></li>
-</ul>
-<p><code>Dev</code> contains maintenance and debugging helpers. <code>Test</code> contains the end-to-end test target.</p>
-<h3 id="gen-docsgo"><a class="header" href="#gen-docsgo"><code>gen-docs.go</code></a></h3>
-<p>This file defines part of the <code>Generate</code> namespace and is responsible for documentation generation.</p>
-<p>The <code>Generate.Document</code> target:</p>
-<ul>
-<li>recreates <code>docs/commands</code></li>
-<li>recreates <code>docs/phases</code></li>
-<li>generates CLI command documentation from Cobra commands</li>
-<li>generates phase documentation from internal action definitions</li>
-<li>rebuilds <code>docs/SUMMARY.md</code></li>
-</ul>
-<p>In other words, it keeps generated docs synchronized with the current code.</p>
-<h3 id="gen-schemago"><a class="header" href="#gen-schemago"><code>gen-schema.go</code></a></h3>
-<p>This file defines the schema-generation part of the <code>Generate</code> namespace.</p>
-<p>The <code>Generate.Schema</code> target generates JSON schema files for several project configuration types, including cluster, distro package, and distro config definitions.</p>
-<p>It uses Go type reflection and then applies a small amount of post-processing so the resulting schemas better match the project’s YAML needs.</p>
-<h3 id="utilsgo"><a class="header" href="#utilsgo"><code>utils.go</code></a></h3>
-<p>This file contains shared helper functions used by other magefiles.</p>
-<p>These helpers:</p>
-<ul>
-<li>build binaries with Dagger</li>
-<li>build binaries with the local Go toolchain</li>
-<li>remove existing build artifacts</li>
-</ul>
-<p>Most of the actual build mechanics live here, while <code>dagger.go</code> and <code>build.go</code> mainly expose user-facing targets.</p>
-<h3 id="binarygo"><a class="header" href="#binarygo"><code>binary.go</code></a></h3>
-<p>This file contains small helper functions for working with binaries in <code>GOPATH/bin</code>.</p>
-<p>Right now it does not expose user-facing Mage targets, but it provides reusable helper logic for checking whether a binary exists and for constructing its path.</p>
-<h2 id="generated-outputs"><a class="header" href="#generated-outputs">Generated outputs</a></h2>
-<p>The Mage targets in this directory are responsible for maintaining several kinds of generated output, including:</p>
-<ul>
-<li><code>build/cargoship_*</code></li>
-<li><code>docs/commands/*</code></li>
-<li><code>docs/phases/*</code></li>
-<li><code>docs/SUMMARY.md</code></li>
-<li><code>schema/*.json</code></li>
-</ul>
-<h2 id="practical-summary"><a class="header" href="#practical-summary">Practical summary</a></h2>
-<p>If you think of <code>magefiles/</code> as the project’s automation layer, the responsibilities break down like this:</p>
-<ul>
-<li>use <code>Dagger</code> for the primary build workflow</li>
-<li>use <code>Build</code> for local non-Dagger builds</li>
-<li>use <code>Dev</code> for cleanup and maintenance tasks</li>
-<li>use <code>Test</code> for end-to-end testing</li>
-<li>use <code>Generate</code> for docs and schema generation</li>
-</ul>
-<p>That makes the <code>magefiles/</code> folder the main place where build, test, and generation workflows are encoded for the repository.</p>
+<hr>
+<h2 id="managed-outputs"><a class="header" href="#managed-outputs">Managed Outputs</a></h2>
+<p>Running various Mage tasks maintains and updates the following filesystem artifacts:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Output Directory / File</th><th style="text-align: left">Description</th><th style="text-align: left">Target</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left"><code>build/cargoship_*</code></td><td style="text-align: left">Compiled release binaries</td><td style="text-align: left"><code>Dagger.All</code> / <code>Build.All</code></td></tr>
+<tr><td style="text-align: left"><code>docs/commands/*</code></td><td style="text-align: left">Auto-generated CLI documentation</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>schema/*.json</code></td><td style="text-align: left">JSON schemas for YAML validations</td><td style="text-align: left"><code>Generate.Schema</code></td></tr>
+</tbody>
+</table>
+</div>
 
                     </main>
 
