@@ -1,6 +1,10 @@
-# Inventory
+# Inventory Configuration Guide
 
-To create a basic inventory file for bootstrapping or upgrading an existing cluster, it will start off looking like the following:
+This guide explains how to author a cluster inventory file for bootstrapping or upgrading clusters with Cargoship.
+
+## Basic Structure
+
+A basic inventory file defines the cluster's metadata, global configuration, profiles, and individual target hosts. Start with the following template:
 
 ```yaml
 ---
@@ -10,9 +14,11 @@ metadata:
   name: bubbles
 ```
 
-The `.metadata.name` will be used by `cargoship` set the cluster name, so in this case the kube-config context will be `bubbles`.
+The `.metadata.name` field sets the cluster name. Cargoship uses this to configure the context name in the resulting `kubeconfig` (e.g., `bubbles`).
 
-Next section is:
+## Global Configuration
+
+The `.spec.config` section configures cluster-wide settings, such as load balancer endpoints:
 
 ```yaml
 spec:
@@ -20,9 +26,11 @@ spec:
     loadbalancer: bubbles-kc.test.com
 ```
 
-This is required as it will be added to the valid TLS Subject Alternative Names used by the Kubernetes API server, this can be the Round-Robin DNS record for the control-plane nodes, or it could be a cloud load-balancer like AWS NLB.
+The `loadbalancer` address is required. Cargoship adds this to the TLS Subject Alternative Names (SANs) for the Kubernetes API server. This can be a Round-Robin DNS record pointing to your control-plane nodes, or an external load balancer like an AWS NLB.
 
-An optional section is the `.spec.config.profiles` section, this allows for defining groups of node types, examples include `control`, `infra`, and `worker`. That can be used by a host to have a standard set of node labels or firewalld ports opened.
+## Node Profiles
+
+The optional `.spec.config.profiles` section defines reusable groups of node configurations (e.g., `control`, `infra`, or `worker`). Profiles simplify management by applying standard node labels, taints, or host firewall rules across matching hosts.
 
 ```yaml
 spec:
@@ -40,7 +48,9 @@ spec:
             - CriticalOnly=True:NoExecute
 ```
 
-The largest section like be the `.spec.hosts` array:
+## Target Hosts
+
+The `.spec.hosts` array is the main body of the inventory. It defines each host node, its connection details, role, and profile:
 
 ```yaml
 spec:

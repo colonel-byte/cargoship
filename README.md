@@ -1,153 +1,146 @@
 # Cargoship
 
-Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages.
+Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages. It is designed to simplify two core workflows:
 
-It is designed for two main jobs:
+1.  **Package Creation:** Building a self-contained, offline Kubernetes distro package containing everything needed for installation in disconnected or highly-regulated environments.
+2.  **Cluster Lifecycle Management:** Bootstrapping, upgrading, and managing the cluster on target hosts over SSH using the packaged distribution.
 
-- create an offline Kubernetes distro package
-- bootstrap and manage a cluster from that package over SSH
+Cargoship bridges the gap between offline distro packaging tools and remote cluster lifecycle managers, supporting OCI image and file packaging, secure publishing to OCI registries, and robust SSH orchestration.
 
-Cargoship combines ideas from distro packaging tools and remote cluster lifecycle tools, with support for packaging files and OCI images, publishing packages to registries, and applying them to target hosts.
+---
 
-## What Cargoship does
+## Supported Distributions
 
-Cargoship supports the full lifecycle of an offline distro package:
+Cargoship currently provides native support and integration for the following Kubernetes engines:
 
-- create a distro package from a definition directory
-- publish a package to an OCI registry
-- pull a package from a registry or URL
-- prepare hosts before installation
-- apply a package to bootstrap or upgrade a cluster
-- fetch cluster kubeconfig
-- reset or uninstall a cluster
+*   **K3s**
+*   **RKE2**
 
-The project currently includes distro integrations for:
+---
 
-- **RKE2**
-- **K3s**
+## Core Concepts
 
-## How it works
+Cargoship is built around two primary architectural concepts:
 
-Cargoship is organized around two main concepts:
+### 1. Offline Distro Packages
 
-### 1. Offline distro packages
+A Cargoship package is a single, compressed archive containing all artifacts necessary to spin up or upgrade a Kubernetes cluster in air-gapped networks. It bundles:
 
-A distro package contains the artifacts needed to install a Kubernetes distribution in disconnected or controlled environments. That includes:
+*   Distro-specific metadata and layout descriptors.
+*   Required engine configuration templates and system files.
+*   OCI images and container artifacts.
+*   Checksums and cryptographic signatures for integrity verification.
 
-- distro metadata
-- host files
-- engine configuration
-- OCI images
-- checksums and package layout metadata
+The package compilation process loads a local distro definition, gathers all specified assets, and produces a single, verifiable archive.
 
-The package creation pipeline loads a distro definition, assembles package content, and writes an archive for later distribution.
+### 2. Phase-Based Orchestration
 
-### 2. Phase-based cluster operations
+Cluster operations are modeled as ordered sequences of reusable, structured "phases." This makes high-level actions (`apply`, `prepare`, `reset`, `kube-config`) predictable, easier to debug, and simple to extend.
 
-Cluster operations are modeled as ordered phases. High-level actions such as `apply`, `prepare`, `reset`, and `kube-config` are composed from reusable phases.
+For example, the **`apply`** workflow comprises the following phases:
 
-For example, `apply` includes steps such as:
+1.  **Connect:** Establish secure SSH connections to all target hosts.
+2.  **OS Detection & Fact Gathering:** Identify host operating systems and system resources.
+3.  **Validation:** Verify that host nodes meet the pre-requisites.
+4.  **Prepare:** Install OS packages, load kernel modules, and configure system firewalls or policies.
+5.  **Upload:** Securely transfer required package binaries, configuration templates, and OCI images to the nodes.
+6.  **Bootstrap / Upgrade:** Initialize primary control-plane nodes and join worker nodes.
+7.  **Kubeconfig Retrieval:** Fetch the generated admin credentials.
+8.  **Cleanup & Disconnect:** Release locks, clean up temporary artifacts, and close SSH sessions.
 
-- connect to hosts
-- detect OS
-- gather facts
-- validate hosts
-- prepare hosts
-- upload files
-- configure the engine
-- initialize or upgrade nodes
-- update kubeconfig
-- release locks and disconnect
+---
 
-This phase model makes cluster operations structured, debuggable, and easier to extend.
+## Usage Examples
 
-## Configuration model
+Here are the standard workflows for compiling and deploying offline Kubernetes packages with Cargoship.
 
-Cargoship uses typed YAML definitions for:
+### 1. Compile an Offline Package
 
-- cluster inventory/config
-- distro package definitions
-- distro runtime config
+To build an offline archive containing all required files, binaries, and container images:
 
-These schemas are generated from Go types and written into `schema/`, which makes YAML authoring easier in editors that support JSON schema references.
+```bash
+# Create a package from the current directory structure
+cargoship create .
 
-The docs include an inventory authoring guide and example schema usage.
+# Build from a specific path and output to a custom directory
+cargoship create ./distro-defs -o ./build/
+```
 
-## Documentation
+### 2. Prepare Target Nodes
 
-Project docs are built with mdBook and live under `docs/`.
+Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, `fapolicyd` rules, and `/etc/hosts`) across target machines using your cluster configuration inventory:
 
-Generated docs include:
+```bash
+cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+```
 
-- CLI command reference
-- phase documentation
-- summary/navigation content
+### 3. Deploy or Upgrade a Cluster
 
-Docs are generated from real code so the command and phase documentation stay aligned with implementation.
+Bootstrap a new cluster or upgrade an existing one from the compiled package:
 
-## Build and development workflow
+```bash
+cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+```
 
-This repo uses Mage for task automation and Dagger for the main build pipeline.
+### 4. Fetch the Kubeconfig
 
-### Mage responsibilities
+Retrieve the admin `kubeconfig` securely from the primary controller:
 
-Mage targets are used for:
+```bash
+cargoship kube-config --config ./cargoship-config.yaml
+```
 
-- local builds
-- Dagger builds
-- end-to-end tests
-- docs generation
-- schema generation
+### 5. Uninstall or Reset Target Nodes
 
-### Dagger responsibilities
+Stop, uninstall, and completely purge the Kubernetes distro and its state from the target hosts:
 
-Dagger is used as the default build path for producing binaries across platforms.
+```bash
+cargoship reset --config ./cargoship-config.yaml --distro rke2
+```
 
-### Generated outputs
+---
 
-Automation in this repo maintains:
+## Configuration and Schemas
 
-- `build/cargoship_*`
-- `docs/commands/*`
-- `docs/phases/*`
-- `docs/SUMMARY.md`
-- `schema/*.json`
+Cargoship relies on strongly-typed YAML definitions to govern its operations:
 
-## Examples
+*   **Cluster Inventories:** Specify SSH configurations, credentials, host roles, profiles, and load-balancer addresses.
+*   **Distro Package Definitions:** Map out the required binaries, OCI images, and layout settings.
+*   **Distro Runtime Configs:** Configure the underlying distribution engine.
 
-The `example/` directory contains sample distro content for:
+The corresponding JSON schemas are automatically generated from Go structs into `schema/`. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion.
 
-- `k3s`
-- `rke2`
+An inventory authoring guide is available in [docs/guides/setup-inv.md](./docs/guides/setup-inv.md).
 
-These examples are useful for understanding package structure and authoring your own distro definitions.
+---
 
-## Release and CI
+## Development and Build Workflows
 
-The repository includes GitHub workflows for:
+Task automation is built using **Mage**, with **Dagger** acting as the containerized execution engine.
 
-- dependency validation
-- build/test checks
-- e2e runs
-- docs deployment
-- release automation
+### Mage Automation
 
-Releases are driven by GoReleaser, with checksum and signing support.
+Mage handles tasks including local compilation, e2e test execution, schema updates, and documentation generation. Key generated files include:
 
-## Design notes
+*   `build/cargoship_*` (Release binaries)
+*   `docs/commands/*` (Cobra command references)
+*   `docs/phases/*` (Orchestration phase explanations)
+*   `docs/SUMMARY.md` (mdBook layout manifest)
+*   `schema/*.json` (YAML validations)
 
-A few notable implementation patterns in the repo:
+### Dagger Builds
 
-- side-effect registration for distro and OS modules
-- phase-oriented orchestration for cluster workflows
-- generated docs and schemas from source code
-- offline-first packaging centered around files, images, and checksums
+Dagger coordinates hermetic, multi-platform compilation inside containerized Go environments. It ensures that compiled binaries are reproducible and decoupled from the developer's local compiler version.
+
+### Continuous Integration (CI) and Releases
+
+GitHub Actions workflows run lint checks, dependency validation, cross-compilation, and end-to-end tests for every pull request. Releases are managed through **GoReleaser**, automating build signing, verification, and asset publishing.
+
+---
 
 ## Inspiration
 
-This project is clearly influenced by tools such as:
+Cargoship draws major design and engineering inspiration from:
 
-- [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl)
-- [zarf-dev/zarf](https://github.com/zarf-dev/zarf)
-
-while focusing on offline distro packaging plus SSH-based cluster lifecycle management.
+*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) — For elegant SSH-based multi-node orchestration and configuration patterns.
+*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) — For air-gapped image and file packaging and offline-first design.
