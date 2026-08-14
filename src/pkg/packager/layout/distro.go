@@ -89,6 +89,11 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (stri
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
+	// Removes ingest directory that is only used for caching the images with ORAS
+	err = os.Remove(filepath.Join(d.dirPath, "images", "ingest"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 
 	files, err := os.ReadDir(d.dirPath)
