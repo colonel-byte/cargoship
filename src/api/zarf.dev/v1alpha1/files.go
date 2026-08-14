@@ -14,10 +14,10 @@
 
 package v1alpha1
 
-// ZarfFiles an interface to allow for implementing the Filter function
+// ZarfFiles is an ordered list of files.
 type ZarfFiles []*ZarfFile
 
-// Filter returns a filtered list of Files. The filter function should return true for files matching the criteria.
+// Filter returns the files for which filter returns true.
 func (files ZarfFiles) Filter(filter func(f *ZarfFile) bool) ZarfFiles {
 	result := make(ZarfFiles, 0, len(files))
 

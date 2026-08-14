@@ -173,12 +173,13 @@
     },
     "ZarfClusterConfig": {
       "additionalProperties": false,
-      "description": "for a cluster",
+      "description": "holds cluster-wide configuration.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "loadbalancer": {
+          "description": "is the hostname clients use to reach the cluster control plane.",
           "format": "hostname",
           "type": "string"
         },
@@ -186,9 +187,11 @@
           "additionalProperties": {
             "$ref": "#/$defs/ZarfClusterProfiles"
           },
+          "description": "maps a profile name to host and engine overrides that a host can select.",
           "type": "object"
         },
         "registries": {
+          "description": "lists the container registries the cluster uses.",
           "items": {
             "$ref": "#/$defs/ZarfClusterRegistries"
           },
@@ -202,36 +205,44 @@
     },
     "ZarfClusterFiles": {
       "additionalProperties": false,
-      "description": "data",
+      "description": "defines a file to write to a host.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "data": {
+          "description": "holds inline content for the file, as an alternative to Source.",
           "type": "string"
         },
         "dst": {
+          "description": "is the path on the host where cargoship writes the file.",
           "type": "string"
         },
         "dstDir": {
+          "description": "is the directory on the host where cargoship writes the file.",
           "type": "string"
         },
         "group": {
+          "description": "identifies the file group on the host.",
           "examples": [
             "root"
           ],
           "type": "string"
         },
         "name": {
+          "description": "identifies the file in the cluster configuration.",
           "type": "string"
         },
         "perm": {
+          "description": "sets the file mode cargoship applies on the host.",
           "type": "string"
         },
         "src": {
+          "description": "is the local path or URL cargoship reads the file from.",
           "type": "string"
         },
         "user": {
+          "description": "identifies the file owner on the host.",
           "examples": [
             "root"
           ],
@@ -245,13 +256,13 @@
     },
     "ZarfClusterMetadata": {
       "additionalProperties": false,
-      "description": "a cluster config",
+      "description": "holds identifying information for a cluster.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "name": {
-          "description": "acts as the name of the cluster if you allow cargoship to add it to the kubeconfig",
+          "description": "sets the cluster name. If you allow cargoship to update the kubeconfig, cargoship uses this name there.",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         }
@@ -263,38 +274,40 @@
     },
     "ZarfClusterProfiles": {
       "additionalProperties": false,
-      "description": "for the engine",
+      "description": "holds the host and engine overrides for one profile.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "engine": {
-          "$ref": "#/$defs/ZarfHostEngine"
+          "$ref": "#/$defs/ZarfHostEngine",
+          "description": "holds the node label and taint overrides applied to a host that selects this profile."
         },
         "host": {
-          "$ref": "#/$defs/ZarfHostConfig"
+          "$ref": "#/$defs/ZarfHostConfig",
+          "description": "holds the configuration overrides applied to a host that selects this profile."
         }
       },
       "type": "object"
     },
     "ZarfClusterRegistries": {
       "additionalProperties": false,
-      "description": "overrides",
+      "description": "holds the credentials and pull proxy for one container registry.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "auth": {
           "$ref": "#/$defs/ZarfClusterRegistryAuth",
-          "description": "for the registry"
+          "description": "holds the credentials for the registry."
         },
         "name": {
-          "description": "of the registry",
+          "description": "identifies the registry.",
           "type": "string"
         },
         "proxy": {
           "$ref": "#/$defs/ZarfClusterRegistryProxy",
-          "description": "for the registry"
+          "description": "holds the pull redirect settings for the registry."
         }
       },
       "required": [
@@ -305,21 +318,21 @@
     },
     "ZarfClusterRegistryAuth": {
       "additionalProperties": false,
-      "description": "information",
+      "description": "holds the credentials for a container registry.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "pass": {
-          "description": "for the remote registry",
+          "description": "is the login secret for the remote registry.",
           "type": "string"
         },
         "token": {
-          "description": "for the remote registry",
+          "description": "authenticates to the remote registry instead of a username and password.",
           "type": "string"
         },
         "user": {
-          "description": "for the remote registry",
+          "description": "is the login name for the remote registry.",
           "type": "string"
         }
       },
@@ -327,13 +340,13 @@
     },
     "ZarfClusterRegistryProxy": {
       "additionalProperties": false,
-      "description": "override for the registry information",
+      "description": "redirects pulls for a registry to a different URL.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "url": {
-          "description": "to the registry that will engine will now pull from",
+          "description": "is the registry address the engine pulls from instead of the original registry.",
           "type": "string"
         }
       },
@@ -344,16 +357,18 @@
     },
     "ZarfClusterSpec": {
       "additionalProperties": false,
-      "description": "a cluster config",
+      "description": "holds the configuration and hosts for a cluster.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "config": {
-          "$ref": "#/$defs/ZarfClusterConfig"
+          "$ref": "#/$defs/ZarfClusterConfig",
+          "description": "holds the cluster-wide configuration."
         },
         "hosts": {
-          "$ref": "#/$defs/ZarfHosts"
+          "$ref": "#/$defs/ZarfHosts",
+          "description": "lists the hosts that make up the cluster."
         }
       },
       "required": [
@@ -364,24 +379,28 @@
     },
     "ZarfFirewallPolicyConfig": {
       "additionalProperties": false,
-      "description": "is used in the inventory file to allow opening ports from one zone to another with firewalld policies",
+      "description": "configures a firewalld policy that opens ports from one zone to another.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "egress": {
-          "$ref": "#/$defs/ZarfFirewallZone"
+          "$ref": "#/$defs/ZarfFirewallZone",
+          "description": "is the zone the policy allows traffic to."
         },
         "ingress": {
-          "$ref": "#/$defs/ZarfFirewallZone"
+          "$ref": "#/$defs/ZarfFirewallZone",
+          "description": "is the zone the policy allows traffic from."
         },
         "ports": {
+          "description": "lists the ports this policy allows.",
           "items": {
             "$ref": "#/$defs/ZarfFirewallPort"
           },
           "type": "array"
         },
         "target": {
+          "description": "is the action taken on traffic that matches the policy.",
           "enum": [
             "CONTINUE",
             "ACCEPT",
@@ -400,13 +419,13 @@
     },
     "ZarfFirewallPort": {
       "additionalProperties": false,
-      "description": "is used to define what ports are allowed thru the firewalld policy",
+      "description": "defines a port allowed through the firewalld policy.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "port": {
-          "description": "the port number, or range, that will be opened",
+          "description": "is the port number, or port range, cargoship opens.",
           "oneOf": [
             {
               "type": "string"
@@ -417,7 +436,7 @@
           ]
         },
         "protocol": {
-          "description": "the type of allowed traffic",
+          "description": "is the type of allowed traffic.",
           "enum": [
             "tcp",
             "udp",
@@ -435,12 +454,13 @@
     },
     "ZarfFirewallZone": {
       "additionalProperties": false,
-      "description": "name of either the ingress or egress zone for the policy",
+      "description": "is the name of either the ingress or egress zone for a policy.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "name": {
+          "description": "identifies the firewalld zone.",
           "examples": [
             "trusted",
             "public"
@@ -462,17 +482,17 @@
       "properties": {
         "engine": {
           "$ref": "#/$defs/ZarfHostEngine",
-          "description": "Host config for the various nodes"
+          "description": "holds the node label and taint overrides for this node."
         },
         "environment": {
           "additionalProperties": {
             "type": "string"
           },
-          "description": "a map of environment variables that will be populated on the host system",
+          "description": "maps environment variables cargoship sets on the host.",
           "type": "object"
         },
         "files": {
-          "description": "that will be uploaded to a host",
+          "description": "lists files cargoship uploads to the host.",
           "items": {
             "$ref": "#/$defs/ZarfClusterFiles"
           },
@@ -480,10 +500,10 @@
         },
         "host": {
           "$ref": "#/$defs/ZarfHostConfig",
-          "description": "config for the various nodes"
+          "description": "holds the host-level configuration overrides for this node."
         },
         "hostname": {
-          "description": "overrides the name of the node",
+          "description": "overrides the discovered name of the node.",
           "type": "string"
         },
         "localhost": {
@@ -493,19 +513,19 @@
           "$ref": "#/$defs/OpenSSH"
         },
         "privateAddress": {
-          "description": "override the given private address",
+          "description": "overrides the discovered private address of the node.",
           "type": "string"
         },
         "privateInterface": {
-          "description": "override the given private interface",
+          "description": "overrides the discovered private interface of the node.",
           "type": "string"
         },
         "profile": {
-          "description": "is the name of the profile that should be used in the config",
+          "description": "selects a profile by name from the cluster config's Profiles map.",
           "type": "string"
         },
         "role": {
-          "description": "of this node will be applied when adding nodes to the cluster;\noptions are either controller or worker.",
+          "description": "sets the node role when cargoship adds this host to the cluster. It must be controller or worker.",
           "enum": [
             "controller",
             "worker"
@@ -526,7 +546,7 @@
     },
     "ZarfHostConfig": {
       "additionalProperties": false,
-      "description": "defines the configuration for a specific host, including firewall policies and ports that need to be opened on the node.",
+      "description": "defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.",
       "patternProperties": {
         "^x-": {}
       },
@@ -535,11 +555,11 @@
           "additionalProperties": {
             "$ref": "#/$defs/ZarfFirewallPolicyConfig"
           },
-          "description": "firewalld policies to allow traffic from one interface to another",
+          "description": "maps a policy name to a firewalld policy that allows traffic from one interface to another.",
           "type": "object"
         },
         "ports": {
-          "description": "are a list of ports and protocols that will be opened on a specfic node",
+          "description": "lists the ports and protocols cargoship opens on the node.",
           "items": {
             "$ref": "#/$defs/ZarfHostPort"
           },
@@ -559,11 +579,11 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "a map of node labels variables",
+          "description": "maps Kubernetes node label keys to their values.",
           "type": "object"
         },
         "taints": {
-          "description": "that will be applied to the distro specific config that will be applied to the node",
+          "description": "lists the Kubernetes node taints cargoship applies to the node.",
           "items": {
             "type": "string"
           },
@@ -574,13 +594,13 @@
     },
     "ZarfHostPort": {
       "additionalProperties": false,
-      "description": "ports that should be opened on the public side of the firewall",
+      "description": "is a port cargoship opens on the public side of the firewall.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "port": {
-          "description": "the port number, or range, that will be opened",
+          "description": "is the port number, or port range, cargoship opens.",
           "oneOf": [
             {
               "type": "string"
@@ -591,7 +611,7 @@
           ]
         },
         "protocol": {
-          "description": "the type of allowed traffic",
+          "description": "is the type of allowed traffic.",
           "enum": [
             "tcp",
             "udp"
@@ -606,7 +626,7 @@
       "type": "object"
     },
     "ZarfHosts": {
-      "description": "are the hosts that will be managed",
+      "description": "is an ordered list of hosts that cargoship manages together.",
       "items": {
         "$ref": "#/$defs/ZarfHost"
       },
@@ -616,28 +636,32 @@
   "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster/zarf-cluster",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "root for a cluster config",
+  "description": "is the root object of a cluster configuration document.",
   "patternProperties": {
     "^x-": {}
   },
   "properties": {
     "apiVersion": {
+      "description": "identifies the API group and version of this configuration document.",
       "enum": [
         "zarf.dev/v1alpha1"
       ],
       "type": "string"
     },
     "kind": {
+      "description": "identifies the document type. The value must be ZarfCluster.",
       "enum": [
         "ZarfCluster"
       ],
       "type": "string"
     },
     "metadata": {
-      "$ref": "#/$defs/ZarfClusterMetadata"
+      "$ref": "#/$defs/ZarfClusterMetadata",
+      "description": "holds identifying information for the cluster."
     },
     "spec": {
-      "$ref": "#/$defs/ZarfClusterSpec"
+      "$ref": "#/$defs/ZarfClusterSpec",
+      "description": "holds the configuration and hosts for the cluster."
     }
   },
   "required": [

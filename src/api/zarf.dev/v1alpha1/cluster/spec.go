@@ -18,90 +18,115 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cluster is for the api representation of Cluster
+// Package cluster defines the API types for a cluster configuration.
 package cluster
 
 import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 )
 
-// ZarfCluster root for a cluster config
+// ZarfCluster is the root object of a cluster configuration document.
 type ZarfCluster struct {
-	APIVersion      string                  `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind            v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfCluster"`
-	Metadata        ZarfClusterMetadata     `json:"metadata"`
-	Spec            ZarfClusterSpec         `json:"spec"`
-	RuntimeMetadata ZarfRuntimeMeta         `json:"-"`
+	// APIVersion identifies the API group and version of this configuration document.
+	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+	// Kind identifies the document type. The value must be ZarfCluster.
+	Kind v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfCluster"`
+	// Metadata holds identifying information for the cluster.
+	Metadata ZarfClusterMetadata `json:"metadata"`
+	// Spec holds the configuration and hosts for the cluster.
+	Spec ZarfClusterSpec `json:"spec"`
+	// RuntimeMetadata stores data gathered while the phases run.
+	RuntimeMetadata ZarfRuntimeMeta `json:"-"`
 }
 
-// ZarfClusterMetadata a cluster config
+// ZarfClusterMetadata holds identifying information for a cluster.
 type ZarfClusterMetadata struct {
-	// Name acts as the name of the cluster if you allow cargoship to add it to the kubeconfig
+	// Name sets the cluster name. If you allow cargoship to update the kubeconfig, cargoship uses this name there.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 }
 
-// ZarfRuntimeMeta for storing data when running the various phases
+// ZarfRuntimeMeta stores data gathered while the phases run.
 type ZarfRuntimeMeta struct {
-	ControllerTLS   []string
+	// ControllerTLS lists the names and addresses on the controller TLS certificate.
+	ControllerTLS []string
+	// ControllerToken authorizes a worker node to join the cluster as a controller.
 	ControllerToken string
-	AgentToken      string
-	LoadBalancer    string
-	Leader          *ZarfHost
+	// AgentToken authorizes a worker node to join the cluster as an agent.
+	AgentToken string
+	// LoadBalancer is the hostname clients use to reach the cluster control plane.
+	LoadBalancer string
+	// Leader is the controller host that stores the cluster join tokens.
+	Leader *ZarfHost
 }
 
-// ZarfClusterSpec a cluster config
+// ZarfClusterSpec holds the configuration and hosts for a cluster.
 type ZarfClusterSpec struct {
+	// Config holds the cluster-wide configuration.
 	Config ZarfClusterConfig `json:"config"`
-	Hosts  ZarfHosts         `json:"hosts" jsonschema:"minItems=1"`
+	// Hosts lists the hosts that make up the cluster.
+	Hosts ZarfHosts `json:"hosts" jsonschema:"minItems=1"`
 }
 
-// ZarfClusterConfig for a cluster
+// ZarfClusterConfig holds cluster-wide configuration.
 type ZarfClusterConfig struct {
-	LoadBalancer string                         `json:"loadbalancer" jsonschema:"format=hostname"`
-	Registries   []ZarfClusterRegistries        `json:"registries,omitempty"`
-	Profiles     map[string]ZarfClusterProfiles `json:"profiles,omitempty"`
+	// LoadBalancer is the hostname clients use to reach the cluster control plane.
+	LoadBalancer string `json:"loadbalancer" jsonschema:"format=hostname"`
+	// Registries lists the container registries the cluster uses.
+	Registries []ZarfClusterRegistries `json:"registries,omitempty"`
+	// Profiles maps a profile name to host and engine overrides that a host can select.
+	Profiles map[string]ZarfClusterProfiles `json:"profiles,omitempty"`
 }
 
-// ZarfClusterProfiles for the engine
+// ZarfClusterProfiles holds the host and engine overrides for one profile.
 type ZarfClusterProfiles struct {
-	Host   ZarfHostConfig `json:"host,omitempty"`
+	// Host holds the configuration overrides applied to a host that selects this profile.
+	Host ZarfHostConfig `json:"host,omitempty"`
+	// Engine holds the node label and taint overrides applied to a host that selects this profile.
 	Engine ZarfHostEngine `json:"engine,omitempty"`
 }
 
-// ZarfClusterRegistries overrides
+// ZarfClusterRegistries holds the credentials and pull proxy for one container registry.
 type ZarfClusterRegistries struct {
-	// Name of the registry
+	// Name identifies the registry.
 	Name string `json:"name"`
-	// Authentication for the registry
+	// Authentication holds the credentials for the registry.
 	Authentication ZarfClusterRegistryAuth `json:"auth,omitempty"`
-	// Proxy for the registry
+	// Proxy holds the pull redirect settings for the registry.
 	Proxy ZarfClusterRegistryProxy `json:"proxy"`
 }
 
-// ZarfClusterRegistryAuth information
+// ZarfClusterRegistryAuth holds the credentials for a container registry.
 type ZarfClusterRegistryAuth struct {
-	// Username for the remote registry
+	// Username is the login name for the remote registry.
 	Username string `json:"user,omitempty"`
-	// Password for the remote registry
+	// Password is the login secret for the remote registry.
 	Password string `json:"pass,omitempty"`
-	// Token for the remote registry
+	// Token authenticates to the remote registry instead of a username and password.
 	Token string `json:"token,omitempty"`
 }
 
-// ZarfClusterRegistryProxy override for the registry information
+// ZarfClusterRegistryProxy redirects pulls for a registry to a different URL.
 type ZarfClusterRegistryProxy struct {
-	// URL to the registry that will engine will now pull from
+	// URL is the registry address the engine pulls from instead of the original registry.
 	URL string `json:"url"`
 }
 
-// ZarfClusterFiles data
+// ZarfClusterFiles defines a file to write to a host.
 type ZarfClusterFiles struct {
-	Name                 string `json:"name"`
-	Source               string `json:"src,omitempty"`
-	Destination          string `json:"dst,omitempty"`
+	// Name identifies the file in the cluster configuration.
+	Name string `json:"name"`
+	// Source is the local path or URL cargoship reads the file from.
+	Source string `json:"src,omitempty"`
+	// Destination is the path on the host where cargoship writes the file.
+	Destination string `json:"dst,omitempty"`
+	// DestinationDirectory is the directory on the host where cargoship writes the file.
 	DestinationDirectory string `json:"dstDir,omitempty"`
-	Permission           string `json:"perm,omitempty"`
-	User                 string `json:"user,omitempty" jsonschema:"example=root"`
-	Group                string `json:"group,omitempty" jsonschema:"example=root"`
-	Data                 string `json:"data,omitempty"`
+	// Permission sets the file mode cargoship applies on the host.
+	Permission string `json:"perm,omitempty"`
+	// User identifies the file owner on the host.
+	User string `json:"user,omitempty" jsonschema:"example=root"`
+	// Group identifies the file group on the host.
+	Group string `json:"group,omitempty" jsonschema:"example=root"`
+	// Data holds inline content for the file, as an alternative to Source.
+	Data string `json:"data,omitempty"`
 }

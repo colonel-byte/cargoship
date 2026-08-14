@@ -14,10 +14,10 @@
 
 package v1alpha1
 
-// ZarfDistroKind type
+// ZarfDistroKind identifies the kind of a zarf.dev v1alpha1 document, for example ZarfCluster or ZarfDistro.
 type ZarfDistroKind string
 
 const (
-	// APIVersion the api version of this package.
+	// APIVersion is the API version string for the zarf.dev v1alpha1 package.
 	APIVersion string = "zarf.dev/v1alpha1"
 )

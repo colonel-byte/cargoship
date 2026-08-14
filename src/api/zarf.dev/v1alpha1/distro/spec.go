@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package distro is for the api representation of Distro Package
+// Package distro defines the API types for a distro package.
 package distro
 
 import (
@@ -21,116 +21,121 @@ import (
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-// ZarfDistro root information
+// ZarfDistro is the root object of a distro package configuration document.
 type ZarfDistro struct {
-	APIVersion string                  `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
-	Kind       v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfDistro"`
-	Metadata   ZarfDistroMetadata      `json:"metadata"`
-	Build      ZarfDistroBuildData     `json:"build,omitempty"`
-	Spec       ZarfDistroSpec          `json:"spec"`
+	// APIVersion identifies the API group and version of this configuration document.
+	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+	// Kind identifies the document type. The value must be ZarfDistro.
+	Kind v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfDistro"`
+	// Metadata holds identifying information for the distro package.
+	Metadata ZarfDistroMetadata `json:"metadata"`
+	// Build holds information recorded when the package was built.
+	Build ZarfDistroBuildData `json:"build,omitempty"`
+	// Spec holds the configuration for the distro package.
+	Spec ZarfDistroSpec `json:"spec"`
 }
 
-// ZarfDistroMetadata for the distro package
+// ZarfDistroMetadata holds identifying information for a distro package.
 type ZarfDistroMetadata struct {
-	// Uncompressed indicates if this package should be compressed or not
+	// Uncompressed disables compression for this package when true.
 	Uncompressed bool
-	// Architecture the CPU architecture this distro is built for
+	// Architecture is the CPU architecture this distro package targets.
 	Architecture string `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
-	// Name of the distro package
+	// Name identifies the distro package.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
-	// Description of what this distro package is created to do
+	// Description explains what this distro package does.
 	Description string `json:"description,omitempty"`
-	// Version of the distro that will be installed, suggested to align to the kubernetes version being installed
+	// Version is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.
 	Version string `json:"version,omitempty"`
-	// Annotations that will be added to the OCI manifest
+	// Annotations holds key-value pairs added to the OCI manifest.
 	Annotations map[string]string `json:"annotations,omitempty"`
-	// URL is used by the oci annotation for the URL to find more information on the image.
+	// URL sets the OCI annotation for more information about the image.
 	URL string `json:"url,omitempty"`
-	// Authors is used by the oci annotation for the contact details of the people or organization responsible for the image (freeform string).
+	// Authors sets the OCI annotation for the contact details of the people or organization responsible for the image.
 	Authors string `json:"athors,omitempty"`
-	// Documentation source is used by the oci annotation for the URL to get documentation on the image.
+	// Documentation sets the OCI annotation for the URL to the image documentation.
 	Documentation string `json:"documentation,omitempty"`
-	// Source is used by the oci annotation for the URL to get source code for building the image.
+	// Source sets the OCI annotation for the URL to the image source code.
 	Source string `json:"source,omitempty"`
-	// Vendor is used by the oci annotation for the name of the distributing entity, organization or individual.
+	// Vendor sets the OCI annotation for the name of the organization or individual that distributes the image.
 	Vendor string `json:"vendor,omitempty"`
-	// AggregateChecksum of a checksums.txt file that contains checksums all the layers within the package.
+	// AggregateChecksum is the checksum of the checksums.txt file, which lists the checksum for every layer in the package.
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 }
 
-// ZarfDistroBuildData time information
+// ZarfDistroBuildData holds information recorded when the package was built.
 type ZarfDistroBuildData struct {
-	// Architecture of the distro package
+	// Architecture is the CPU architecture used to build the package.
 	Architecture string `json:"architecture,omitempty"`
-	// Timestamp of when the distro was created
+	// Timestamp is the time the package was created.
 	Timestamp string `json:"timestamp,omitempty"`
-	// Version of the distro is created as
+	// Version records the distro version used to build the package.
 	Version string `json:"version,omitempty"`
-	// RegistryOverrides for who the distro was created with
+	// RegistryOverrides maps each original registry to the registry actually used to build the package.
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
-	// Whether this package was signed
+	// Signed indicates whether the package was signed. A nil value means the signing status was not recorded.
 	Signed *bool `json:"signed,omitempty"`
-	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
-	// These are files added after checksum generation (e.g., signature files).
-	// This list is authenticated through the signed zarf.yaml.
+	// ProvenanceFiles lists files in the package that checksums.txt does not cover.
+	// These are files added after cargoship generates checksums, for example signature files.
+	// The signed distro.yaml authenticates this list.
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 }
 
-// ZarfDistroSpec that manage the distro spec
+// ZarfDistroSpec holds the configuration for a distro package.
 type ZarfDistroSpec struct {
-	// Type of distro that is being created
+	// Type selects the distro engine: rke2 or k3s.
 	Type string `json:"type" jsonschema:"enum=rke2,enum=k3s"`
-	// Version of the engine
+	// Version is the version of the distro engine.
 	Version string `json:"version"`
-	// Actions that are ran during some package phases
+	// Actions defines the actions cargoship runs while building the package.
 	Actions ZarfDistroActions `json:"actions,omitempty"`
-	// Config for the distro
+	// Config holds the distro engine configuration.
 	Config ZarfDistroConfig `json:"config"`
 }
 
-// ZarfDistroActions that are ran during certain phases of the distro package
+// ZarfDistroActions defines the actions cargoship runs during specific phases of building the distro package.
 type ZarfDistroActions struct {
-	// OnCreate actions
+	// OnCreate lists the actions cargoship runs when it creates the package.
 	OnCreate zarf.ZarfComponentActionSet `json:"onCreate,omitempty"`
 }
 
-// ZarfDistroConfig holds values for distro config
+// ZarfDistroConfig holds the configuration for the distro engine.
 type ZarfDistroConfig struct {
-	// Files are files that will be populated on the hosts, regardless of what install method is used
+	// Files lists files that cargoship writes to every host, no matter which install method it uses.
 	Files v1alpha1.ZarfFiles `json:"files,omitempty"`
-	// ImagesConfig for the images
+	// ImagesConfig holds settings for the images bundled with the package.
 	ImagesConfig ZarfDistroImageConfig `json:"imageConfig,omitempty"`
-	// OS for the node os
+	// OS holds settings applied to the host operating system.
 	OS ZarfDistroOS `json:"os,omitempty"`
-	// Engine is used for configuring the engine
+	// Engine holds configuration passed through to the distro engine.
 	Engine dig.Mapping `json:"engine,omitempty"`
 }
 
-// ZarfDistroImageConfig holds values for the images that will be populated on a host
+// ZarfDistroImageConfig holds settings for the images cargoship writes to a host.
 type ZarfDistroImageConfig struct {
-	// Compression that the image tar balls will be compressed with
+	// Compression sets the compression format for the image tarballs.
 	Compression string `json:"compression,omitempty" jsonschema:"default=none,enum=none,enum=gz,enum=zstd"`
-	// Path that the image tar balls will be uploaded too
+	// Path is the upload destination for the image tarballs.
 	Path string `json:"path,omitempty"`
-	// Images list of the various required offline images
+	// Images lists the offline images required by the package.
 	Images []string `json:"images,omitempty" jsonschema:"uniqueItems=true"`
 }
 
-// ZarfDistroOS holds specific values for apply to a host
+// ZarfDistroOS holds settings applied to a host.
 type ZarfDistroOS struct {
-	// Sysctl a map of sysctl values that will be applied to a host
+	// Sysctl maps sysctl keys to the values cargoship applies to a host.
 	Sysctl map[string]string `json:"sysctl,omitempty"`
-	// FAPolicyd config file contents that will be applied to a host
+	// FAPolicyd holds the fapolicyd config file contents cargoship writes to a host.
 	FAPolicyd string `json:"fapolicyd,omitempty"`
-	// Files that will be uploaded to a host
+	// Files lists files cargoship uploads to a host.
 	Files v1alpha1.ZarfFiles `json:"files,omitempty"`
-	// Kernel list of the requested kerenel modules to be enabled on the host system
+	// Kernel lists the kernel modules cargoship enables on the host.
 	Kernel []string `json:"kernel,omitempty"`
-	// Environment a map of environment variables that will be populated on the host system
+	// Environment maps environment variables cargoship sets on the host.
 	Environment map[string]string `json:"env,omitempty"`
 }
 
-// IsSBOMAble has files that can have a sbom generated from
+// IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.
 func (distro ZarfDistro) IsSBOMAble() bool {
 	if len(distro.Spec.Config.ImagesConfig.Images) > 0 || len(distro.Spec.Config.Files) > 0 {
 		return true
