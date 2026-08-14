@@ -18,7 +18,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package v1alpha1 is for the shared File logic across both the cluster and distro api's
+// Package v1alpha1 defines file types shared by the cluster and distro APIs.
 package v1alpha1
 
 import (
@@ -28,65 +28,65 @@ import (
 	"strings"
 )
 
-// ZarfFile used by both Distro and Cluster logic
+// ZarfFile defines a file shared by the distro and cluster APIs.
 type ZarfFile struct {
-	// Data file contents
+	// Data holds the inline file content.
 	Data string `json:"data,omitempty"`
-	// Executable if the file should have executable permissions
+	// Executable sets executable permissions on the file when true.
 	Executable bool `json:"executable,omitempty"`
-	// ExtractPath used to extract a file from a tar ball
+	// ExtractPath is the path cargoship extracts from a tarball.
 	ExtractPath string `json:"extractPath,omitempty"`
-	// Group to which the file will be owned by
+	// Group is the group that owns the file.
 	Group string `json:"group,omitempty"`
-	// Name id, not the actual file name
+	// Name identifies the file entry. It is not the file name on disk.
 	Name string `json:"name,omitempty"`
-	// PermMode what permissions will be applied to the file
+	// PermMode sets the permissions cargoship applies to the file. It accepts an octal string or an integer, for example "0644" or 644.
 	PermMode any `json:"perm,omitempty"`
-	// Selector used to determine if this file should be uploaded to the node
+	// Selector controls whether cargoship uploads this file to a given node.
 	Selector BinarySelector `json:"selector,omitempty"`
-	// Shasum is used to check the file during sourcing of the distro package
+	// Shasum verifies the file when cargoship sources the distro package.
 	Shasum string `json:"shasum,omitempty"`
-	// Source path the file should be found during package creation
+	// Source is the path where cargoship finds the file when it creates the package.
 	Source string `json:"source"`
-	// Symlinks that will be created from the Target file
+	// Symlinks lists the symlinks cargoship creates that point to Target.
 	Symlinks []string `json:"symlinks,omitempty"`
-	// Target path on the remote host that will created
+	// Target is the path on the remote host where cargoship writes the file.
 	Target string `json:"target"`
-	// TargetIsDir if the target is a directory, normally used for image upload logic
+	// TargetIsDir indicates that Target is a directory. Cargoship uses this mainly for image uploads.
 	TargetIsDir bool `json:"isDirectory,omitempty"`
-	// User to which the file will be owned by
+	// User is the user that owns the file.
 	User string `json:"user,omitempty"`
-	// Base is runtime option
+	// Base is the local directory cargoship joins with LocalSource.Path to find the file. Cargoship resolves it at runtime; it is not read from the config.
 	Base string `json:"-"`
-	// PermString is runtime option
+	// PermString is the octal permission string cargoship applies to the file. Cargoship derives it from PermMode at runtime.
 	PermString string `json:"-"`
-	// DirPermString is runtime option
+	// DirPermString is the octal permission string cargoship applies to the file's parent directory.
 	DirPermString string `json:"-"`
-	// OriginalTarget is runtime option
+	// OriginalTarget is the target path before cargoship renames it during install. Cargoship uses it to move the file back into place.
 	OriginalTarget string `json:"-"`
-	// LocalSource is runtime option
+	// LocalSource holds the resolved local path and permission cargoship uses to upload the file.
 	LocalSource LocalFile `json:"-"`
 }
 
-// LocalFile runtime information that will be used for the local files
+// LocalFile holds the local path and permission cargoship resolves for uploading a file.
 type LocalFile struct {
-	// Path to the file that will be uploaded
+	// Path is the local path to the file cargoship uploads.
 	Path string
-	// PermMode permission of the file
+	// PermMode is the octal permission string cargoship applies to the file.
 	PermMode string
 }
 
-// BinarySelector allows for filtering files based on certain criteria
+// BinarySelector selects which files to upload to a host, based on host role and install method.
 type BinarySelector struct {
-	// Roles arbitrary list of roles to upload files too
+	// Roles lists the host roles this file applies to.
 	Roles []string `json:"roles,omitempty"`
-	// Profile what type of node to upload files too
+	// Profile selects which host role receives this file: worker or controller.
 	Profile string `json:"profile,omitempty" jsonschema:"enum=worker,enum=controller"`
-	// Package what type of engine binary will be used to install
+	// Package selects which install method receives this file: rpm, apt, or binary.
 	Package string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
 }
 
-// String returns the file bundle name or if it is empty, the source.
+// String returns Name. If Name is empty, it returns Source instead.
 func (u *ZarfFile) String() string {
 	if u.Name == "" {
 		return u.Source
@@ -94,12 +94,12 @@ func (u *ZarfFile) String() string {
 	return u.Name
 }
 
-// Owner returns a chown compatible user:group string from User and Group, or empty when neither are set.
+// Owner returns a chown-compatible "user:group" string built from User and Group. It returns an empty string when both are empty.
 func (u *ZarfFile) Owner() string {
 	return strings.TrimSuffix(fmt.Sprintf("%s:%s", u.User, u.Group), ":")
 }
 
-// UnmarshalYAML sets in some sane defaults when unmarshaling the data from yaml
+// UnmarshalYAML unmarshals the YAML data, then converts PermMode into PermString.
 func (u *ZarfFile) UnmarshalYAML(unmarshal func(any) error) error {
 	type uploadFile ZarfFile
 	yu := (*uploadFile)(u)
@@ -117,12 +117,12 @@ func (u *ZarfFile) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
-// HasData if the Data is not empty
+// HasData reports whether Data holds non-blank content.
 func (u *ZarfFile) HasData() bool {
 	return strings.TrimSpace(u.Data) != ""
 }
 
-// TargetDirectory returns the directory for the target file
+// TargetDirectory returns Target if TargetIsDir is true. Otherwise it returns the base name of Target.
 func (u *ZarfFile) TargetDirectory() string {
 	if u.TargetIsDir {
 		return u.Target
@@ -130,7 +130,8 @@ func (u *ZarfFile) TargetDirectory() string {
 	return filepath.Base(u.Target)
 }
 
-// converts string or integer value to octal string for chmod
+// permToString converts an int, float64, or string permission value to an octal string for chmod.
+// It returns an empty string and no error for any other type.
 func permToString(val any) (string, error) {
 	var s string
 	switch t := val.(type) {

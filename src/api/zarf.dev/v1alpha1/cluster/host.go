@@ -40,15 +40,15 @@ import (
 )
 
 const (
-	// RoleController string enum
+	// RoleController marks a host as a control-plane node.
 	RoleController = "controller"
-	// RoleControllerWorker string enum
+	// RoleControllerWorker marks a host as both a control-plane node and a worker node.
 	RoleControllerWorker = "controller+worker"
-	// RoleSingle string enum
+	// RoleSingle marks a host as a single-node cluster: both control plane and worker on one host.
 	RoleSingle = "single"
-	// RoleWorker string enum
+	// RoleWorker marks a host as a worker node.
 	RoleWorker = "worker"
-	// RoleError string enum
+	// RoleError is a sentinel value returned when a role or service lookup fails.
 	RoleError = "error"
 )
 
@@ -57,47 +57,42 @@ var ErrCommandFailed = errors.New("command failed")
 
 // ZarfHost is a remote connection to a node
 type ZarfHost struct {
-	// Connection is a Struct you can embed into your application's "Host" types
-	// to give them multi-protocol connectivity.
+	// Connection embeds rig's connection type. It gives ZarfHost multi-protocol connectivity to a remote host.
 	rig.Connection `json:",inline"`
-	// Environment a map of environment variables that will be populated on the host system
+	// Environment maps environment variables cargoship sets on the host.
 	Environment map[string]string `json:"environment,omitempty"`
-	// Files that will be uploaded to a host
+	// Files lists files cargoship uploads to the host.
 	Files []ZarfClusterFiles `json:"files,omitempty"`
-	// Hostname overrides the name of the node
+	// Hostname overrides the discovered name of the node.
 	Hostname string `json:"hostname,omitempty"`
-	// PrivateAddress override the given private address
+	// PrivateAddress overrides the discovered private address of the node.
 	PrivateAddress string `json:"privateAddress,omitempty"`
-	// PrivateInterface override the given private interface
+	// PrivateInterface overrides the discovered private interface of the node.
 	PrivateInterface string `json:"privateInterface,omitempty"`
-	// Profile is the name of the profile that should be used in the config
+	// Profile selects a profile by name from the cluster config's Profiles map.
 	Profile string `json:"profile,omitempty"`
-	// Role of this node will be applied when adding nodes to the cluster;
-	// options are either controller or worker.
+	// Role sets the node role when cargoship adds this host to the cluster. It must be controller or worker.
 	Role string `json:"role" jsonschema:"required,enum=controller,enum=worker"`
-	// Host config for the various nodes
+	// Host holds the host-level configuration overrides for this node.
 	Host ZarfHostConfig `json:"host,omitempty"`
-	// Host config for the various nodes
+	// Engine holds the node label and taint overrides for this node.
 	Engine ZarfHostEngine `json:"engine,omitempty"`
-	// Configurer defines the per-host operations required for managing a host
+	// Configurer is the per-host operations implementation cargoship uses to manage this host.
 	Configurer os.Configurer `json:"-"`
-	// Metadata runtime discovered values
+	// Metadata holds values cargoship discovers about this host at runtime.
 	Metadata ZarfHostMetadata `json:"-"`
 }
 
 // ZarfHostConfig defines the configuration for a specific host, including
-// firewall policies and ports that need to be opened on the node.
+// firewall policies and the ports cargoship opens on the node.
 type ZarfHostConfig struct {
-	// Policy firewalld policies to allow traffic from one interface to another
+	// Policy maps a policy name to a firewalld policy that allows traffic from one interface to another.
 	Policy map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
-	// Ports are a list of ports and protocols that will be opened on a specfic node
+	// Ports lists the ports and protocols cargoship opens on the node.
 	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
 }
 
-// Merge merges update into c if the corresponding fields in c are nil.
-//
-// update: ZarfHostConfig to merge from.
-// No return value.
+// Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c.
 func (c *ZarfHostConfig) Merge(update ZarfHostConfig) {
 	if len(c.Policy) == 0 && len(update.Policy) > 0 {
 		c.Policy = make(map[string]ZarfFirewallPolicyConfig)
@@ -116,16 +111,13 @@ func (c *ZarfHostConfig) Merge(update ZarfHostConfig) {
 // ZarfHostEngine defines configuration options for node-level metadata,
 // specifically Kubernetes node labels and taints applied to a cluster host.
 type ZarfHostEngine struct {
-	// NodeLabels a map of node labels variables
+	// NodeLabels maps Kubernetes node label keys to their values.
 	NodeLabels map[string]string `json:"labels,omitempty"`
-	// NodeTaints that will be applied to the distro specific config that will be applied to the node
+	// NodeTaints lists the Kubernetes node taints cargoship applies to the node.
 	NodeTaints []string `json:"taints,omitempty"`
 }
 
-// Merge merges update into c if the corresponding fields in c are nil.
-//
-// update: ZarfHostEngine to merge from.
-// No return value.
+// Merge copies NodeLabels and NodeTaints from update into c, for whichever of those fields are empty in c.
 func (c *ZarfHostEngine) Merge(update ZarfHostEngine) {
 	if len(c.NodeLabels) == 0 && len(update.NodeLabels) > 0 {
 		c.NodeLabels = make(map[string]string)
@@ -141,61 +133,77 @@ func (c *ZarfHostEngine) Merge(update ZarfHostEngine) {
 	}
 }
 
-// ZarfHostPort ports that should be opened on the public side of the firewall
+// ZarfHostPort is a port cargoship opens on the public side of the firewall.
 type ZarfHostPort struct {
-	// Protocol the type of allowed traffic
+	// Protocol is the type of allowed traffic.
 	Protocol string `json:"protocol" xml:"protocol,attr" jsonschema:"enum=tcp,enum=udp"`
-	// Port the port number, or range, that will be opened
+	// Port is the port number, or port range, cargoship opens.
 	Port string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
 }
 
-// ZarfFirewallPolicyConfig is used in the inventory file to allow opening ports from one zone to another with firewalld policies
+// ZarfFirewallPolicyConfig configures a firewalld policy that opens ports from one zone to another.
 type ZarfFirewallPolicyConfig struct {
-	XMLName xml.Name           `xml:"policy" json:"-"`
-	Short   string             `xml:"short,omitempty" json:"-"`
-	Target  string             `xml:"target,attr,omitempty" json:"target" jsonschema:"enum=CONTINUE,enum=ACCEPT,enum=REJECT,enum=DROP"`
-	Ingress ZarfFirewallZone   `xml:"ingress-zone"`
-	Egress  ZarfFirewallZone   `xml:"egress-zone"`
-	Ports   []ZarfFirewallPort `xml:"port,omitempty" json:"ports,omitempty"`
+	// XMLName sets the element name cargoship uses when it marshals this policy to firewalld XML.
+	XMLName xml.Name `xml:"policy" json:"-"`
+	// Short is a human-readable description of the policy.
+	Short string `xml:"short,omitempty" json:"-"`
+	// Target is the action taken on traffic that matches the policy.
+	Target string `xml:"target,attr,omitempty" json:"target" jsonschema:"enum=CONTINUE,enum=ACCEPT,enum=REJECT,enum=DROP"`
+	// Ingress is the zone the policy allows traffic from.
+	Ingress ZarfFirewallZone `xml:"ingress-zone"`
+	// Egress is the zone the policy allows traffic to.
+	Egress ZarfFirewallZone `xml:"egress-zone"`
+	// Ports lists the ports this policy allows.
+	Ports []ZarfFirewallPort `xml:"port,omitempty" json:"ports,omitempty"`
 }
 
-// ZarfFirewallZone name of either the ingress or egress zone for the policy
+// ZarfFirewallZone is the name of either the ingress or egress zone for a policy.
 type ZarfFirewallZone struct {
+	// Name identifies the firewalld zone.
 	Name string `xml:"name,attr" jsonschema:"example=trusted,example=public"`
 }
 
-// ZarfFirewallPort is used to define what ports are allowed thru the firewalld policy
+// ZarfFirewallPort defines a port allowed through the firewalld policy.
 type ZarfFirewallPort struct {
-	// Protocol the type of allowed traffic
+	// Protocol is the type of allowed traffic.
 	Protocol string `xml:"protocol,attr" json:"protocol" jsonschema:"enum=tcp,enum=udp,enum=sctp,enum=dccp"`
-	// Port the port number, or range, that will be opened
+	// Port is the port number, or port range, cargoship opens.
 	Port string `xml:"port,attr" json:"port" jsonschema:"oneof_type=string;integer"`
 }
 
-// ZarfHostMetadata runtime discovered values
+// ZarfHostMetadata holds values cargoship discovers about a host at runtime.
 type ZarfHostMetadata struct {
-	Arch           string
+	// Arch is the CPU architecture detected on the host.
+	Arch string
+	// BinaryTempFile lists temporary paths on the host cargoship uses to stage the engine binary during install.
 	BinaryTempFile []string
-	DistroVersion  string
+	// DistroVersion is the version of the distro engine detected on the host.
+	DistroVersion string
+	// EngineUploaded indicates whether cargoship has already uploaded the distro engine binary to the host.
 	EngineUploaded bool
+	// ExistingConfig is the engine configuration currently present on the host.
 	ExistingConfig string
-	Hostname       string
-	Install        func(context.Context, *ZarfHost) error
-	// Installed is a distro engine is already installed onto a host
+	// Hostname is the hostname the host reports.
+	Hostname string
+	// Install is the function cargoship calls to install the distro engine on the host.
+	Install func(context.Context, *ZarfHost) error
+	// Installed indicates whether a distro engine is already installed on the host.
 	Installed bool
-	// IsLeader if the host is a control-plane node
+	// IsLeader indicates whether this host is the cluster's control-plane leader.
 	IsLeader bool
-	// MachineID is used by the distro engine to identify a node
+	// MachineID identifies the node to the distro engine.
 	MachineID string
-	// ModulesAdded is an indication if a new kernel module was added to the host system
+	// ModulesAdded indicates whether cargoship added a new kernel module to the host.
 	ModulesAdded bool
-	// NeedsUpgrade if the host needs the distro engine upgraded
+	// NeedsUpgrade indicates whether the host needs the distro engine upgraded.
 	NeedsUpgrade bool
-	NewConfig    string
-	// Ready indicates if the distro service is up and running
+	// NewConfig is the engine configuration cargoship will write to the host.
+	NewConfig string
+	// Ready indicates whether the distro service is up and running.
 	Ready bool
 }
 
+// requireConfigurer returns the resolved configurer for h, or an error if none has been resolved yet.
 func (h *ZarfHost) requireConfigurer() (os.Configurer, error) {
 	if h.Configurer == nil {
 		return nil, fmt.Errorf("%s: host configurer is not resolved", h)
@@ -260,7 +268,7 @@ func (h *ZarfHost) DeleteFile(path string) error {
 	return cfg.DeleteFile(h, path)
 }
 
-// KubeRole of the role host
+// KubeRole returns the Kubernetes role for this host. It maps controller+worker and single to controller.
 func (h *ZarfHost) KubeRole() string {
 	switch h.Role {
 	case RoleControllerWorker, RoleSingle:
@@ -270,12 +278,12 @@ func (h *ZarfHost) KubeRole() string {
 	}
 }
 
-// IsController returns true for controller and controller+worker roles
+// IsController returns true for the controller, controller+worker, and single roles.
 func (h *ZarfHost) IsController() bool {
 	return h.Role == RoleController || h.Role == RoleControllerWorker || h.Role == RoleSingle
 }
 
-// ServiceName returns correct service name
+// ServiceName returns the name of the distro service that runs on this host.
 func (h *ZarfHost) ServiceName() string {
 	switch h.Role {
 	case RoleController, RoleControllerWorker, RoleSingle:
@@ -293,7 +301,7 @@ func (h *ZarfHost) ServiceName() string {
 	}
 }
 
-// ResolveConfigurer assigns a rig-style configurer to the Host (see configurer/)
+// ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.
 func (h *ZarfHost) ResolveConfigurer() error {
 	bf, err := registry.GetOSModuleBuilder(*h.OSVersion)
 	if err != nil {
@@ -309,7 +317,8 @@ func (h *ZarfHost) ResolveConfigurer() error {
 	return fmt.Errorf("unsupported OS")
 }
 
-// FileChanged returns true when a remote file has a different sha256 checksum or if an error occurs
+// FileChanged compares the local file at lpath to the remote file at rpath by sha256 checksum.
+// It returns true if the checksums differ or if either checksum cannot be computed.
 func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 	file, err := gos.Open(lpath)
 	if err != nil {
@@ -338,7 +347,7 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 	return false
 }
 
-// WriteFile writes file to host with given contents. Do not use for large files.
+// WriteFile writes data to path on the host. Do not use this for large files.
 func (h *ZarfHost) WriteFile(path string, data string, permissions string) error {
 	cfg, err := h.requireConfigurer()
 	if err != nil {
@@ -347,7 +356,7 @@ func (h *ZarfHost) WriteFile(path string, data string, permissions string) error
 	return cfg.WriteFile(h, path, data, permissions)
 }
 
-// ReadFile read the contents of a file, if it exists, or returns an error
+// ReadFile returns the contents of path on the host, or an error if the file does not exist.
 func (h *ZarfHost) ReadFile(path string) (string, error) {
 	cfg, err := h.requireConfigurer()
 	if err != nil {
@@ -356,7 +365,7 @@ func (h *ZarfHost) ReadFile(path string) (string, error) {
 	return cfg.ReadFile(h, path)
 }
 
-// FileExist if a file exists on the host
+// FileExist returns true if path exists on the host.
 func (h *ZarfHost) FileExist(path string) bool {
 	cfg, err := h.requireConfigurer()
 	if err != nil {
@@ -365,7 +374,7 @@ func (h *ZarfHost) FileExist(path string) bool {
 	return cfg.FileExist(h, path)
 }
 
-// CheckHTTPStatus will perform a web request to the url and return an error if the http status is not the expected
+// CheckHTTPStatus requests url and returns an error if the response status is not one of expected.
 func (h *ZarfHost) CheckHTTPStatus(url string, expected ...int) error {
 	status, err := h.Configurer.HTTPStatus(h, url)
 	if err != nil {

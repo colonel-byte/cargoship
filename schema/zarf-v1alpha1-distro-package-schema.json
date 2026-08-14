@@ -337,31 +337,31 @@
     },
     "ZarfDistroActions": {
       "additionalProperties": false,
-      "description": "that are ran during certain phases of the distro package",
+      "description": "defines the actions cargoship runs during specific phases of building the distro package.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "onCreate": {
           "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "actions"
+          "description": "lists the actions cargoship runs when it creates the package."
         }
       },
       "type": "object"
     },
     "ZarfDistroBuildData": {
       "additionalProperties": false,
-      "description": "time information",
+      "description": "holds information recorded when the package was built.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "architecture": {
-          "description": "of the distro package",
+          "description": "is the CPU architecture used to build the package.",
           "type": "string"
         },
         "provenanceFiles": {
-          "description": "lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
+          "description": "lists files in the package that checksums.txt does not cover.\nThese are files added after cargoship generates checksums, for example signature files.\nThe signed distro.yaml authenticates this list.",
           "items": {
             "type": "string"
           },
@@ -371,19 +371,19 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "for who the distro was created with",
+          "description": "maps each original registry to the registry actually used to build the package.",
           "type": "object"
         },
         "signed": {
-          "description": "Whether this package was signed",
+          "description": "indicates whether the package was signed. A nil value means the signing status was not recorded.",
           "type": "boolean"
         },
         "timestamp": {
-          "description": "of when the distro was created",
+          "description": "is the time the package was created.",
           "type": "string"
         },
         "version": {
-          "description": "of the distro is created as",
+          "description": "records the distro version used to build the package.",
           "type": "string"
         }
       },
@@ -391,40 +391,40 @@
     },
     "ZarfDistroConfig": {
       "additionalProperties": false,
-      "description": "holds values for distro config",
+      "description": "holds the configuration for the distro engine.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "engine": {
           "$ref": "#/$defs/Mapping",
-          "description": "is used for configuring the engine"
+          "description": "holds configuration passed through to the distro engine."
         },
         "files": {
           "$ref": "#/$defs/ZarfFiles",
-          "description": "are files that will be populated on the hosts, regardless of what install method is used"
+          "description": "lists files that cargoship writes to every host, no matter which install method it uses."
         },
         "imageConfig": {
           "$ref": "#/$defs/ZarfDistroImageConfig",
-          "description": "for the images"
+          "description": "holds settings for the images bundled with the package."
         },
         "os": {
           "$ref": "#/$defs/ZarfDistroOS",
-          "description": "for the node os"
+          "description": "holds settings applied to the host operating system."
         }
       },
       "type": "object"
     },
     "ZarfDistroImageConfig": {
       "additionalProperties": false,
-      "description": "holds values for the images that will be populated on a host",
+      "description": "holds settings for the images cargoship writes to a host.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "compression": {
           "default": "none",
-          "description": "that the image tar balls will be compressed with",
+          "description": "sets the compression format for the image tarballs.",
           "enum": [
             "none",
             "gz",
@@ -433,7 +433,7 @@
           "type": "string"
         },
         "images": {
-          "description": "list of the various required offline images",
+          "description": "lists the offline images required by the package.",
           "items": {
             "type": "string"
           },
@@ -441,7 +441,7 @@
           "uniqueItems": true
         },
         "path": {
-          "description": "that the image tar balls will be uploaded too",
+          "description": "is the upload destination for the image tarballs.",
           "type": "string"
         }
       },
@@ -449,25 +449,25 @@
     },
     "ZarfDistroMetadata": {
       "additionalProperties": false,
-      "description": "for the distro package",
+      "description": "holds identifying information for a distro package.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "aggregateChecksum": {
-          "description": "of a checksums.txt file that contains checksums all the layers within the package.",
+          "description": "is the checksum of the checksums.txt file, which lists the checksum for every layer in the package.",
           "type": "string"
         },
         "annotations": {
           "additionalProperties": {
             "type": "string"
           },
-          "description": "that will be added to the OCI manifest",
+          "description": "holds key-value pairs added to the OCI manifest.",
           "type": "object"
         },
         "architecture": {
           "default": "amd64",
-          "description": "the CPU architecture this distro is built for",
+          "description": "is the CPU architecture this distro package targets.",
           "enum": [
             "amd64",
             "arm64"
@@ -475,40 +475,40 @@
           "type": "string"
         },
         "athors": {
-          "description": "is used by the oci annotation for the contact details of the people or organization responsible for the image (freeform string).",
+          "description": "sets the OCI annotation for the contact details of the people or organization responsible for the image.",
           "type": "string"
         },
         "description": {
-          "description": "of what this distro package is created to do",
+          "description": "explains what this distro package does.",
           "type": "string"
         },
         "documentation": {
-          "description": "source is used by the oci annotation for the URL to get documentation on the image.",
+          "description": "sets the OCI annotation for the URL to the image documentation.",
           "type": "string"
         },
         "name": {
-          "description": "of the distro package",
+          "description": "identifies the distro package.",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         },
         "source": {
-          "description": "is used by the oci annotation for the URL to get source code for building the image.",
+          "description": "sets the OCI annotation for the URL to the image source code.",
           "type": "string"
         },
         "uncompressed": {
-          "description": "indicates if this package should be compressed or not",
+          "description": "disables compression for this package when true.",
           "type": "boolean"
         },
         "url": {
-          "description": "is used by the oci annotation for the URL to find more information on the image.",
+          "description": "sets the OCI annotation for more information about the image.",
           "type": "string"
         },
         "vendor": {
-          "description": "is used by the oci annotation for the name of the distributing entity, organization or individual.",
+          "description": "sets the OCI annotation for the name of the organization or individual that distributes the image.",
           "type": "string"
         },
         "version": {
-          "description": "of the distro that will be installed, suggested to align to the kubernetes version being installed",
+          "description": "is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.",
           "type": "string"
         }
       },
@@ -520,7 +520,7 @@
     },
     "ZarfDistroOS": {
       "additionalProperties": false,
-      "description": "holds specific values for apply to a host",
+      "description": "holds settings applied to a host.",
       "patternProperties": {
         "^x-": {}
       },
@@ -529,19 +529,19 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "a map of environment variables that will be populated on the host system",
+          "description": "maps environment variables cargoship sets on the host.",
           "type": "object"
         },
         "fapolicyd": {
-          "description": "config file contents that will be applied to a host",
+          "description": "holds the fapolicyd config file contents cargoship writes to a host.",
           "type": "string"
         },
         "files": {
           "$ref": "#/$defs/ZarfFiles",
-          "description": "that will be uploaded to a host"
+          "description": "lists files cargoship uploads to a host."
         },
         "kernel": {
-          "description": "list of the requested kerenel modules to be enabled on the host system",
+          "description": "lists the kernel modules cargoship enables on the host.",
           "items": {
             "type": "string"
           },
@@ -558,7 +558,7 @@
               }
             ]
           },
-          "description": "a map of sysctl values that will be applied to a host",
+          "description": "maps sysctl keys to the values cargoship applies to a host.",
           "type": "object"
         }
       },
@@ -566,21 +566,21 @@
     },
     "ZarfDistroSpec": {
       "additionalProperties": false,
-      "description": "that manage the distro spec",
+      "description": "holds the configuration for a distro package.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "actions": {
           "$ref": "#/$defs/ZarfDistroActions",
-          "description": "that are ran during some package phases"
+          "description": "defines the actions cargoship runs while building the package."
         },
         "config": {
           "$ref": "#/$defs/ZarfDistroConfig",
-          "description": "for the distro"
+          "description": "holds the distro engine configuration."
         },
         "type": {
-          "description": "of distro that is being created",
+          "description": "selects the distro engine: rke2 or k3s.",
           "enum": [
             "rke2",
             "k3s"
@@ -588,7 +588,7 @@
           "type": "string"
         },
         "version": {
-          "description": "of the engine",
+          "description": "is the version of the distro engine.",
           "type": "string"
         }
       },
@@ -662,31 +662,36 @@
   "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro/zarf-distro",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "root information",
+  "description": "is the root object of a distro package configuration document.",
   "patternProperties": {
     "^x-": {}
   },
   "properties": {
     "apiVersion": {
+      "description": "identifies the API group and version of this configuration document.",
       "enum": [
         "zarf.dev/v1alpha1"
       ],
       "type": "string"
     },
     "build": {
-      "$ref": "#/$defs/ZarfDistroBuildData"
+      "$ref": "#/$defs/ZarfDistroBuildData",
+      "description": "holds information recorded when the package was built."
     },
     "kind": {
+      "description": "identifies the document type. The value must be ZarfDistro.",
       "enum": [
         "ZarfDistro"
       ],
       "type": "string"
     },
     "metadata": {
-      "$ref": "#/$defs/ZarfDistroMetadata"
+      "$ref": "#/$defs/ZarfDistroMetadata",
+      "description": "holds identifying information for the distro package."
     },
     "spec": {
-      "$ref": "#/$defs/ZarfDistroSpec"
+      "$ref": "#/$defs/ZarfDistroSpec",
+      "description": "holds the configuration for the distro package."
     }
   },
   "required": [

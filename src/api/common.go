@@ -18,10 +18,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package api for core logic shared between the api resources
+// Package api holds core logic shared by the API resource packages.
 package api
 
 import "time"
 
-// BuildTimestampFormat for the logging output
+// BuildTimestampFormat is the timestamp layout used in log output.
 const BuildTimestampFormat = time.RFC1123Z
