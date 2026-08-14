@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.2](https://github.com/colonel-byte/cargoship/compare/v0.10.1...v0.10.2) (2026-08-14)
+
+
+### Features
+
+* remove ingests folder from tarball ([#180](https://github.com/colonel-byte/cargoship/issues/180)) ([29ded7b](https://github.com/colonel-byte/cargoship/commit/29ded7b16f47e9434f9e721b82af055ca29db074))
+
+
+### Documentation
+
+* add asd ste1000 ([#179](https://github.com/colonel-byte/cargoship/issues/179)) ([6fed7f5](https://github.com/colonel-byte/cargoship/commit/6fed7f5c709087d33403eac0fa5793abe739226e))
+
 ## [0.10.1](https://github.com/colonel-byte/cargoship/compare/v0.10.0...v0.10.1) (2026-08-12)
 
 
