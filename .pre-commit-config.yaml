@@ -52,13 +52,13 @@ repos:
     rev: v0.9.1
     hooks:
       - id: keep-sorted
-  # - repo: https://github.com/golangci/golangci-lint
-  #   rev: v2.12.2
-  #   hooks:
-  #     - id: golangci-lint
-  #       exclude: vendor/.*
-  #     - id: golangci-lint-config-verify
-  #       exclude: vendor/.*
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.12.2
+    hooks:
+      - id: golangci-lint
+        exclude: vendor/.*
+      - id: golangci-lint-config-verify
+        exclude: vendor/.*
   - repo: local
     hooks:
       - id: schema-generator
