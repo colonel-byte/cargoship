@@ -1,4 +1,21 @@
-// Package markdown is markdown builder that includes to convert Markdown to HTML.
+// Package markdown is a simple markdown builder.
+//
+// A document is one method chain: call [NewMarkdown] with a writer, add blocks
+// in the order they should appear, and finish with [Markdown.Build]. The output
+// follows GitHub Flavored Markdown.
+//
+// Nested structures, such as a list inside a list item, are out of scope. They
+// would turn the chain into a tree.
+//
+// The builder records errors instead of returning them from every call. Nothing
+// panics on bad input, and a rejected call does not stop the document: the
+// chain runs to the end, and [Markdown.Error] and [Markdown.Build] both report
+// the first error it recorded.
+//
+// [Markdown.String] returns the document without needing a writer. That is how
+// the mermaid subpackages hand a diagram to [Markdown.CodeBlocks].
+//
+// A builder is not safe for concurrent use. Build one document per goroutine.
 package markdown
 
 import (
@@ -163,36 +180,212 @@ type Markdown struct {
 	tocOptions *TableOfContentsOptions
 	// tocInserted indicates whether a table of contents placeholder has been generated.
 	tocInserted bool
+	// blockSpacing separates every block with a blank line.
+	blockSpacing bool
+}
+
+// Option configures a Markdown at construction time.
+type Option func(*Markdown)
+
+// WithBlockSpacing separates every block with a blank line.
+//
+// The default output only inserts the blank lines markdown cannot do without,
+// which keeps documents compact but leaves markdownlint complaining about
+// headings, fenced blocks, and tables that touch their neighbors. Tools such
+// as mkdocs are stricter than GitHub about this. Turn the option on when the
+// document is going to be linted or rendered by something other than GitHub.
+func WithBlockSpacing() Option {
+	return func(m *Markdown) {
+		m.blockSpacing = true
+	}
 }
 
 // NewMarkdown returns new Markdown.
-func NewMarkdown(w io.Writer) *Markdown {
-	return &Markdown{
+func NewMarkdown(w io.Writer, opts ...Option) *Markdown {
+	m := &Markdown{
 		body:    []string{},
 		dest:    w,
 		headers: []headerInfo{},
 	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
 }
 
 // String returns markdown text.
+//
+// It returns the document built so far whether or not an error was recorded,
+// and it does not need a writer, so it works on a builder constructed with nil.
 func (m *Markdown) String() string {
-	content := strings.Join(m.body, internal.LineFeed())
+	body := m.body
 
-	// Replace table of contents placeholders with actual table of contents content if present
 	if m.tocInserted && m.tocOptions != nil {
-		tocContent := m.generateTableOfContents()
-		if len(tocContent) > 0 {
-			tocText := strings.Join(tocContent, internal.LineFeed())
-			placeholder := TableOfContentsMarkerBegin + internal.LineFeed() + TableOfContentsMarkerEnd
-			replacement := TableOfContentsMarkerBegin + internal.LineFeed() + tocText + internal.LineFeed() + TableOfContentsMarkerEnd
-			content = strings.ReplaceAll(content, placeholder, replacement)
+		if toc := m.generateTableOfContents(); len(toc) > 0 {
+			body = insertTableOfContents(body, toc)
 		}
 	}
 
-	return content
+	return joinBlocks(body, m.blockSpacing)
 }
 
-// Error returns error.
+// normalizeLineFeeds rewrites every line ending in text to the platform one.
+// Text that reaches the builder from elsewhere, such as a table rendered by
+// tablewriter, is separated by "\n" regardless of platform.
+func normalizeLineFeeds(text string) string {
+	return normalizeLineFeedsTo(text, internal.LineFeed())
+}
+
+// normalizeLineFeedsTo rewrites every line ending in text to lineFeed.
+//
+// The target line ending is a parameter rather than read from the platform so
+// that both answers can be tested wherever the tests run. Reading the platform
+// here left the Windows branch untested on Linux and the other way round.
+func normalizeLineFeedsTo(text, lineFeed string) string {
+	if lineFeed == "\n" {
+		return strings.ReplaceAll(text, "\r\n", "\n")
+	}
+	return strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\n", lineFeed)
+}
+
+// joinBlocks joins the body, adding the blank line that markdown requires
+// between certain blocks.
+//
+// A blockquote or alert swallows whatever follows it by lazy continuation, and
+// a list swallows a table or a paragraph that starts on the next line. Both
+// produce documents that render wrongly on GitHub while looking fine in the
+// source, which is why callers of this package litter their code with manual
+// spacer calls. Everything else is joined exactly as before.
+func joinBlocks(body []string, always bool) string {
+	lf := internal.LineFeed()
+
+	var buf strings.Builder
+	for i, block := range body {
+		if i > 0 {
+			buf.WriteString(lf)
+			if needsBlankLine(body[i-1], block, always) {
+				buf.WriteString(lf)
+			}
+		}
+		buf.WriteString(block)
+	}
+	return buf.String()
+}
+
+// needsBlankLine reports whether a blank line has to separate two blocks.
+func needsBlankLine(prev, next string, always bool) bool {
+	// A whitespace-only entry, which is what LF() writes, already separates the
+	// blocks; adding another blank line would just pile them up.
+	if strings.TrimSpace(prev) == "" || strings.TrimSpace(next) == "" {
+		return false
+	}
+	// Table and Details already end with a line feed, so the join produces the
+	// blank line on its own.
+	if strings.HasSuffix(prev, internal.LineFeed()) {
+		return false
+	}
+	// An HTML comment renders as nothing and cannot absorb the block before it.
+	// The table of contents markers are comments, so this keeps the generated
+	// entries tucked against them.
+	if strings.HasPrefix(next, "<!--") || strings.HasPrefix(prev, "<!--") {
+		return false
+	}
+
+	prevList, nextList := listKind(prev), listKind(next)
+	sameList := prevList != "" && prevList == nextList
+
+	if always {
+		// Consecutive items of one list still belong together; everything else
+		// gets the blank line markdownlint expects.
+		return !sameList
+	}
+
+	switch {
+	case isQuoteBlock(prev):
+		// Anything on the line after a quote is read as part of it.
+		return true
+	case prevList != "" && !sameList:
+		// A different kind of list starts a new list, so it needs the blank line
+		// as much as a paragraph or a table does.
+		return true
+	default:
+		return false
+	}
+}
+
+// isQuoteBlock reports whether the block is a blockquote or an alert.
+func isQuoteBlock(block string) bool {
+	return strings.HasPrefix(block, ">")
+}
+
+// listKind identifies which kind of list item a block is, or returns an empty
+// string when it is not a list item at all.
+//
+// The kind matters because list items are appended one per entry: consecutive
+// items of the same list must stay tight, while a bullet list followed by an
+// ordered list is two lists and needs the blank line between them.
+func listKind(block string) string {
+	trimmed := strings.TrimLeft(block, " ")
+
+	switch {
+	case strings.HasPrefix(trimmed, "- [ ] "), strings.HasPrefix(trimmed, "- [x] "):
+		return "checkbox"
+	case strings.HasPrefix(trimmed, "- "), strings.HasPrefix(trimmed, "* "), strings.HasPrefix(trimmed, "+ "):
+		return "bullet"
+	}
+
+	digits := 0
+	for digits < len(trimmed) && trimmed[digits] >= '0' && trimmed[digits] <= '9' {
+		digits++
+	}
+	if digits > 0 && strings.HasPrefix(trimmed[digits:], ". ") {
+		return "ordered"
+	}
+	return ""
+}
+
+// insertTableOfContents places the generated entries between the two marker
+// entries in the body.
+//
+// The markers are separate body entries, so this works on the slice rather than
+// on the joined text. Matching the joined text meant matching the exact pair
+// "<!-- BEGIN_TOC -->\n<!-- END_TOC -->", which silently stopped matching as
+// soon as anything was placed between the markers: the replacement quietly did
+// nothing and the document shipped with an empty table of contents.
+func insertTableOfContents(body, toc []string) []string {
+	begin := -1
+	for i, line := range body {
+		if line == TableOfContentsMarkerBegin {
+			begin = i
+			break
+		}
+	}
+	if begin == -1 {
+		return body
+	}
+
+	end := -1
+	for i := begin + 1; i < len(body); i++ {
+		if body[i] == TableOfContentsMarkerEnd {
+			end = i
+			break
+		}
+	}
+	if end == -1 {
+		return body
+	}
+
+	out := make([]string, 0, len(body)+len(toc))
+	out = append(out, body[:begin+1]...)
+	out = append(out, toc...)
+	out = append(out, body[end:]...)
+	return out
+}
+
+// Error returns the error the chain recorded, or nil.
+//
+// It is the same error [Markdown.Build] returns, for callers who would rather
+// check before writing than after.
 func (m *Markdown) Error() error {
 	return m.err
 }
@@ -209,6 +402,15 @@ func (m *Markdown) PlainTextf(format string, args ...interface{}) *Markdown {
 }
 
 // Build writes markdown text to output destination.
+//
+// It returns the error the chain recorded, or nil. A nil destination and a
+// destination that refuses the document are both reported rather than causing a
+// panic, and either message carries the earlier error too when there is one.
+//
+// The document is written with a trailing line ending, so appending a second
+// document to the same writer starts it on its own line.
+//
+// Build may be called more than once; each call writes the document again.
 func (m *Markdown) Build() error {
 	if m.dest == nil {
 		if m.err != nil {
@@ -217,7 +419,15 @@ func (m *Markdown) Build() error {
 		return errors.New("failed to write markdown text: destination writer is nil")
 	}
 
-	if _, err := fmt.Fprint(m.dest, m.String()); err != nil {
+	// A document written to a file has to end with a newline: markdownlint MD047
+	// requires it, and appending a second document to the same writer would
+	// otherwise splice its first line onto the last line of this one.
+	out := m.String()
+	if !strings.HasSuffix(out, internal.LineFeed()) {
+		out += internal.LineFeed()
+	}
+
+	if _, err := fmt.Fprint(m.dest, out); err != nil {
 		if m.err != nil {
 			return fmt.Errorf("failed to write markdown text: %w: %s", err, m.err.Error()) //nolint:wrapcheck
 		}
@@ -391,7 +601,19 @@ func (m *Markdown) generateTableOfContents() []string {
 	}
 
 	tocLines := make([]string, 0, len(m.headers))
-	minIndent := int(m.tocOptions.MinDepth)
+	// Indent relative to the shallowest heading that actually appears, not to
+	// the requested MinDepth. TableOfContents pins MinDepth at H1, so a document
+	// that starts at H2 would otherwise have every entry indented two spaces,
+	// producing a list nested under nothing.
+	minIndent := int(m.tocOptions.MaxDepth)
+	for _, header := range m.headers {
+		if header.level < m.tocOptions.MinDepth || header.level > m.tocOptions.MaxDepth {
+			continue
+		}
+		if int(header.level) < minIndent {
+			minIndent = int(header.level)
+		}
+	}
 	anchorCounts := make(map[string]int, len(m.headers))
 
 	for _, header := range m.headers {
@@ -437,11 +659,17 @@ func generateGitHubAnchor(text string) string {
 }
 
 // Details is markdown details.
+//
+// The body is surrounded by blank lines because an HTML block swallows
+// everything up to the next blank line: without them the markdown inside
+// <details> renders as literal text, and the block that follows </details>
+// disappears into the same HTML block.
 func (m *Markdown) Details(summary, text string) *Markdown {
+	lf := internal.LineFeed()
 	m.body = append(
 		m.body,
-		fmt.Sprintf("<details><summary>%s</summary>%s%s%s</details>",
-			summary, internal.LineFeed(), text, internal.LineFeed()))
+		fmt.Sprintf("<details>%s<summary>%s</summary>%s%s%s%s%s</details>%s",
+			lf, summary, lf, lf, text, lf, lf, lf))
 	return m
 }
 
@@ -491,10 +719,17 @@ func (m *Markdown) CheckBox(set []CheckBoxSet) *Markdown {
 // Blockquote is markdown blockquote.
 // If you set text "Hello", it will be converted to "> Hello".
 func (m *Markdown) Blockquote(text string) *Markdown {
-	lines := strings.Split(text, internal.LineFeed())
-	for _, line := range lines {
-		m.body = append(m.body, fmt.Sprintf("> %s", line))
+	// Split on "\n" after dropping "\r": splitting on internal.LineFeed() meant
+	// a plain Go literal containing "\n" was never split on Windows, and the
+	// quote silently covered only its first line.
+	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+	for i, line := range lines {
+		lines[i] = fmt.Sprintf("> %s", line)
 	}
+	// One entry per quote rather than one per line: the whole quote is a single
+	// block, and the join has to be able to put a blank line after it without
+	// cutting it in half.
+	m.body = append(m.body, strings.Join(lines, internal.LineFeed()))
 	return m
 }
 
@@ -503,6 +738,12 @@ func (m *Markdown) Blockquote(text string) *Markdown {
 // "```go
 // Hello
 // ```".
+//
+// The block is fenced with three backticks, so content holding a line that
+// starts with three backticks closes it early and everything after that line
+// renders as prose. Markdown's answer is a longer fence, which this method does
+// not write: a caller whose content can hold a fence has to build the block
+// itself with PlainText.
 func (m *Markdown) CodeBlocks(lang SyntaxHighlight, text string) *Markdown {
 	m.body = append(m.body,
 		fmt.Sprintf("```%s%s%s%s```", lang, internal.LineFeed(), text, internal.LineFeed()))
@@ -539,6 +780,88 @@ type TableSet struct {
 	// Alignment is column alignment for each column.
 	// If nil or shorter than header length, remaining columns use AlignDefault.
 	Alignment []TableAlignment
+	// EscapeCells runs every header and row cell through EscapeTableCell.
+	//
+	// It is off by default because cells often hold markup the caller built on
+	// purpose, with Link or Bold, and because callers who already escape their
+	// own data would end up escaping it twice. Turn it on when the cells carry
+	// arbitrary text that may contain a pipe or a newline.
+	EscapeCells bool
+}
+
+// EscapeTableCell makes text safe to place in a table cell.
+//
+// A pipe ends the cell, so a pipe in the data silently splits it in two and
+// drops the last column of the row; a newline ends the row outright. Neither
+// produces an error, and ValidateColumns cannot see either, because the row
+// still has the right length before it is serialized.
+//
+// The function is idempotent: a pipe that the caller already escaped is left
+// alone, so passing text through it twice is harmless.
+func EscapeTableCell(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			if i+1 < len(s) {
+				switch s[i+1] {
+				case '|', '\\':
+					// Keep an existing escape intact, including the character it
+					// escapes, so "\|" does not become "\\|".
+					b.WriteByte(s[i])
+					i++
+					b.WriteByte(s[i])
+					continue
+				case '\n', '\r':
+					// A backslash before a line break is a hard break. The break
+					// itself is rewritten below, so drop the backslash rather than
+					// letting it carry the line ending through untouched.
+					continue
+				}
+			}
+			b.WriteByte(s[i])
+		case '|':
+			b.WriteString(`\|`)
+		case '\r':
+			// Swallow the CR of a CRLF pair; a lone CR ends the line too.
+			if i+1 < len(s) && s[i+1] == '\n' {
+				continue
+			}
+			b.WriteString("<br>")
+		case '\n':
+			b.WriteString("<br>")
+		default:
+			b.WriteByte(s[i])
+		}
+	}
+	return b.String()
+}
+
+// escaped returns the table with every cell escaped, leaving the original
+// untouched so the caller's slices are not modified.
+func (t TableSet) escaped() TableSet {
+	header := make([]string, len(t.Header))
+	for i, cell := range t.Header {
+		header[i] = EscapeTableCell(cell)
+	}
+
+	rows := make([][]string, len(t.Rows))
+	for i, row := range t.Rows {
+		escapedRow := make([]string, len(row))
+		for j, cell := range row {
+			escapedRow[j] = EscapeTableCell(cell)
+		}
+		rows[i] = escapedRow
+	}
+
+	return TableSet{
+		Header:      header,
+		Rows:        rows,
+		Alignment:   t.Alignment,
+		EscapeCells: t.EscapeCells,
+	}
 }
 
 // ValidateColumns checks if the number of columns in the header and records match.
@@ -565,6 +888,10 @@ func (m *Markdown) Table(t TableSet) *Markdown {
 
 	if len(t.Header) == 0 {
 		return m
+	}
+
+	if t.EscapeCells {
+		t = t.escaped()
 	}
 
 	var buf strings.Builder
@@ -633,6 +960,10 @@ func (m *Markdown) CustomTable(t TableSet, options TableOptions) *Markdown {
 		}
 	}
 
+	if t.EscapeCells {
+		t = t.escaped()
+	}
+
 	buf := &strings.Builder{}
 	table := tablewriter.NewTable(
 		buf,
@@ -698,12 +1029,105 @@ func (m *Markdown) CustomTable(t TableSet, options TableOptions) *Markdown {
 		return m
 	}
 
-	m.body = append(m.body, buf.String())
+	// tablewriter always separates rows with "\n", so on Windows its output
+	// would otherwise mix line endings with the rest of the document, and the
+	// delimiter row rewrite below would fail to find any rows to work on.
+	rendered := normalizeLineFeeds(buf.String())
+
+	m.body = append(m.body, applyAlignmentToDelimiterRow(rendered, t.Alignment))
 	return m
 }
 
+// applyAlignmentToDelimiterRow rewrites the delimiter row of a rendered table so
+// it carries the alignment colons markdown uses.
+//
+// tablewriter aligns by padding cells, which says nothing to a markdown reader:
+// alignment lives in the second row, as :--- / :---: / ---:. Without this,
+// TableSet.Alignment is silently dropped by CustomTable while Table honors it.
+// Each column keeps its rendered width so the source stays visually aligned.
+func applyAlignmentToDelimiterRow(rendered string, alignment []TableAlignment) string {
+	if len(alignment) == 0 {
+		return rendered
+	}
+
+	lineFeed := internal.LineFeed()
+	lines := strings.Split(rendered, lineFeed)
+	const delimiterRowIndex = 1
+	if len(lines) <= delimiterRowIndex {
+		return rendered
+	}
+
+	// The delimiter row is "|-----|------|"; splitting on "|" yields an empty
+	// field at each end.
+	// Splitting "|---|---|" on "|" leaves an empty field at each end, so a real
+	// delimiter row always yields at least two fields.
+	const minDelimiterFields = 2
+	columns := strings.Split(lines[delimiterRowIndex], "|")
+	if len(columns) < minDelimiterFields {
+		return rendered
+	}
+
+	for i := 1; i < len(columns)-1; i++ {
+		if strings.TrimLeft(columns[i], "-") != "" {
+			return rendered // not a delimiter row after all; leave it alone
+		}
+		align := AlignDefault
+		if i-1 < len(alignment) {
+			align = alignment[i-1]
+		}
+		columns[i] = delimiterCell(len(columns[i]), align)
+	}
+
+	lines[delimiterRowIndex] = strings.Join(columns, "|")
+	return strings.Join(lines, lineFeed)
+}
+
+const (
+	// oneSidedMarkerWidth is the narrowest cell that fits ":-" or "-:".
+	oneSidedMarkerWidth = 2
+	// twoSidedMarkerWidth is the narrowest cell that fits ":-:".
+	twoSidedMarkerWidth = 3
+)
+
+// delimiterCell renders one delimiter cell of the given width for the alignment.
+// The width is preserved so the rendered table keeps its columns lined up. A
+// column too narrow to hold its marker falls back to a plain rule rather than
+// widening the table.
+func delimiterCell(width int, align TableAlignment) string {
+	switch align {
+	case AlignLeft:
+		if width < oneSidedMarkerWidth {
+			return strings.Repeat("-", width)
+		}
+		return ":" + strings.Repeat("-", width-1)
+	case AlignRight:
+		if width < oneSidedMarkerWidth {
+			return strings.Repeat("-", width)
+		}
+		return strings.Repeat("-", width-1) + ":"
+	case AlignCenter:
+		if width < twoSidedMarkerWidth {
+			return strings.Repeat("-", width)
+		}
+		return ":" + strings.Repeat("-", width-twoSidedMarkerWidth+1) + ":"
+	case AlignDefault:
+		return strings.Repeat("-", width)
+	}
+	return strings.Repeat("-", width)
+}
+
 // LF is line feed.
+//
+// It writes a line holding two spaces, which is a hard line break marker. It
+// also happens to separate blocks, which is how most callers use it. Use
+// BlankLine when a blank line is what you mean.
 func (m *Markdown) LF() *Markdown {
 	m.body = append(m.body, "  ")
+	return m
+}
+
+// BlankLine writes an empty line between two blocks.
+func (m *Markdown) BlankLine() *Markdown {
+	m.body = append(m.body, "")
 	return m
 }
