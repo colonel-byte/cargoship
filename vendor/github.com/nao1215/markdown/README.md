@@ -1,5 +1,5 @@
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Go Reference](https://pkg.go.dev/badge/github.com/nao1215/markdown.svg)](https://pkg.go.dev/github.com/nao1215/markdown)
 [![MultiPlatformUnitTest](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml)
@@ -7,59 +7,18 @@
 [![Gosec](https://github.com/nao1215/markdown/actions/workflows/gosec.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/gosec.yml)
 ![Coverage](https://raw.githubusercontent.com/nao1215/octocovs-central-repo/main/badges/nao1215/markdown/coverage.svg)
 
-[日本語](./doc/ja/README.md) | [Русский](./doc/ru/README.md) | [中文](./doc/zh-cn/README.md) | [한국어](./doc/ko/README.md) | [Español](./doc/es/README.md) | [Français](./doc/fr/README.md)
-
 # What is markdown package
-The Package markdown is a simple markdown builder in golang. The markdown package assembles Markdown using method chaining, not uses a template engine like [html/template](https://pkg.go.dev/html/template). The syntax of Markdown follows **GitHub Markdown**.
-  
-The markdown package was initially developed to save test results in [nao1215/spectest](https://github.com/nao1215/spectest). Therefore, the markdown package implements the features required by spectest. For example, the markdown package supports **mermaid diagrams (entity relationship diagram, sequence diagram, user journey diagram, git graph diagram, mindmap diagram, requirement diagram, xy chart, packet diagram, block diagram, kanban diagram, flowchart, pie chart, quadrant chart, state diagram, class diagram, Gantt chart, architecture diagram)**, which was a necessary feature in spectest.
-  
-Additionally, complex code that increases the complexity of the library, such as generating nested lists, will not be added. I want to keep this library as simple as possible.
-  
+
+The markdown package is a simple Markdown builder in Go. It assembles Markdown using method chaining, and does not use a template engine like [html/template](https://pkg.go.dev/html/template). The syntax follows GitHub Markdown.
+
+It covers the GitHub Markdown syntax: headings, lists, checkbox lists, tables, code blocks, blockquotes, horizontal rules, text formatting, links, images, details, footnotes, math expressions, and alerts. It also builds 24 mermaid diagram types, from sequence and flowchart to Gantt, C4 context, and Wardley map; each one has an example below. Two helpers go beyond Markdown syntax: status badges and an index for a directory full of markdown files.
+
+Complex code that increases the complexity of the library, such as generating nested lists, will not be added. I want to keep this library as simple as possible.
+
 ## Supported OS and go version
 - OS: Linux, macOS, Windows
 - Go: 1.23 or later
-  
-## Supported Markdown features
-- [x] Heading; H1, H2, H3, H4, H5, H6
-- [x] Blockquote 
-- [x] Bullet list
-- [x] Ordered list
-- [x] Checkbox list 
-- [x] Code blocks
-- [x] Horizontal rule 
-- [x] Table
-- [x] Text formatting; bold, italic, code, strikethrough, bold italic
-- [x] Text with link
-- [x] Reference link
-- [x] Text with image
-- [x] Plain text
-- [x] Details 
-- [x] Footnotes
-- [x] Mathematical expressions
-- [x] Alerts; NOTE, TIP, IMPORTANT, CAUTION, WARNING
-- [x] mermaid sequence diagram
-- [x] mermaid user journey diagram
-- [x] mermaid git graph diagram
-- [x] mermaid mindmap diagram
-- [x] mermaid requirement diagram
-- [x] mermaid xy chart
-- [x] mermaid packet diagram
-- [x] mermaid block diagram
-- [x] mermaid kanban diagram
-- [x] mermaid entity relationship diagram
-- [x] mermaid flowchart 
-- [x] mermaid pie chart
-- [x] mermaid quadrant chart
-- [x] mermaid state diagram
-- [x] mermaid class diagram
-- [x] mermaid Gantt chart
-- [x] mermaid architecture diagram (beta feature) 
 
-### Features not in Markdown syntax
-- Generate badges; RedBadge(), YellowBadge(), GreenBadge().
-- Generate an index for a directory full of markdown files; GenerateIndex()
-  
 ## Example
 ### Basic usage
 ```go
@@ -72,7 +31,7 @@ import (
 )
 
 func main() {
-	md.NewMarkdown(os.Stdout).
+	md.NewMarkdown(os.Stdout, md.WithBlockSpacing()).
 		H1("This is H1").
 		PlainText("This is plain text").
 		H2f("This is %s with text format", "H2").
@@ -117,48 +76,58 @@ func main() {
 Output:
 ````
 # This is H1
+
 This is plain text
-  
+
 ## This is H2 with text format
+
 Text formatting, such as **bold** and *italic*, `code` styles.
-  
+
 ## Code Block
+
 ```go
 package main
 import "fmt"
 
 func main() {
-        fmt.Println("Hello, World!")
+	fmt.Println("Hello, World!")
 }
 ```
-  
+
 ## List
+
 - Bullet Item 1
 - Bullet Item 2
 - Bullet Item 3
+
 1. Ordered Item 1
 2. Ordered Item 2
 3. Ordered Item 3
-  
+
 ## CheckBox
+
 - [ ] `sample code`
 - [x] [Go](https://golang.org)
 - [ ] ~~strikethrough~~
-  
+
 ## Blockquote
+
 > If you can dream it, you can do it.
-  
+
 ### Horizontal Rule
+
 ---
-  
+
 ## Table
-| NAME  | AGE | COUNTRY |
-|-------|-----|---------|
-| David |  23 | USA     |
-| John  |  30 | UK      |
-| Bob   |  25 | Canada  |
+
+| Name | Age | Country |
+|---------|---------|---------|
+| David | 23 | USA |
+| John | 30 | UK |
+| Bob | 25 | Canada |
 
 ## Image
+
 ![sample_image](./sample.png)
 ````
 
@@ -318,7 +287,7 @@ func main() {
 		SyncResponse("David", "Sophia", "wake up, wake up").
 		String()
 
-	markdown.NewMarkdown(os.Stdout).
+	markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("Sequence Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build()
@@ -328,6 +297,7 @@ func main() {
 Plain text output: [markdown is here](./doc/sequence/generated.md)
 ````
 ## Sequence Diagram
+
 ```mermaid
 sequenceDiagram
     participant Sophia
@@ -401,7 +371,7 @@ func main() {
 		Task("Complete payment", userjourney.ScoreSatisfied, "Customer", "Payment Service").
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("User Journey Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -413,6 +383,7 @@ func main() {
 Plain text output: [markdown is here](./doc/userjourney/generated.md)
 ````text
 ## User Journey Diagram
+
 ```mermaid
 journey
     title Checkout Journey
@@ -467,7 +438,7 @@ func main() {
 		Merge("develop", gitgraph.WithCommitTag("v1.0.0")).
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("Git Graph").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -479,9 +450,10 @@ func main() {
 Plain text output: [markdown is here](./doc/gitgraph/generated.md)
 ````text
 ## Git Graph
+
 ```mermaid
 ---
-title: Release Flow
+title: "Release Flow"
 ---
 gitGraph
     commit id: "init" tag: "v0.1.0"
@@ -496,7 +468,7 @@ gitGraph
 Mermaid output:
 ```mermaid
 ---
-title: Release Flow
+title: "Release Flow"
 ---
 gitGraph
     commit id: "init" tag: "v0.1.0"
@@ -537,7 +509,7 @@ func main() {
 		Sibling("Q2").
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("Mindmap").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -549,9 +521,10 @@ func main() {
 Plain text output: [markdown is here](./doc/mindmap/generated.md)
 ````text
 ## Mindmap
+
 ```mermaid
 ---
-title: Product Strategy Mindmap
+title: "Product Strategy Mindmap"
 ---
 mindmap
     Product Strategy
@@ -567,7 +540,7 @@ mindmap
 Mermaid output:
 ```mermaid
 ---
-title: Product Strategy Mindmap
+title: "Product Strategy Mindmap"
 ---
 mindmap
     Product Strategy
@@ -631,7 +604,7 @@ func main() {
 		).
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("Requirement Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -643,9 +616,10 @@ func main() {
 Plain text output: [markdown is here](./doc/requirement/generated.md)
 ````text
 ## Requirement Diagram
+
 ```mermaid
 ---
-title: Checkout Requirements
+title: "Checkout Requirements"
 ---
 requirementDiagram
     direction TB
@@ -675,7 +649,7 @@ requirementDiagram
 Mermaid output:
 ```mermaid
 ---
-title: Checkout Requirements
+title: "Checkout Requirements"
 ---
 requirementDiagram
     direction TB
@@ -727,7 +701,7 @@ func main() {
 		Line(30, 50, 70, 85, 75, 95).
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("XY Chart").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -739,6 +713,7 @@ func main() {
 Plain text output: [markdown is here](./doc/xychart/generated.md)
 ````text
 ## XY Chart
+
 ```mermaid
 xychart
     title "Sales Revenue"
@@ -786,7 +761,7 @@ func main() {
 		Field(64, 95, "Data (variable length)").
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("Packet").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -798,6 +773,7 @@ func main() {
 Plain text output: [markdown is here](./doc/packet/generated.md)
 ````text
 ## Packet
+
 ```mermaid
 packet
     title UDP Packet
@@ -859,7 +835,7 @@ func main() {
 		LinkWithLabel("Backend", "reads from", "Cache").
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("Block Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -871,9 +847,12 @@ func main() {
 Plain text output: [markdown is here](./doc/block/generated.md)
 ````text
 ## Block Diagram
+
 ```mermaid
+---
+title: "Checkout Architecture"
+---
 block
-    title Checkout Architecture
     columns 3
     Frontend toBackend<["calls"]>(right) Backend
     space:2 toDB<["&nbsp;"]>(down)
@@ -885,8 +864,10 @@ block
 
 Mermaid output:
 ```mermaid
+---
+title: "Checkout Architecture"
+---
 block
-    title Checkout Architecture
     columns 3
     Frontend toBackend<["calls"]>(right) Backend
     space:2 toDB<["&nbsp;"]>(down)
@@ -928,7 +909,7 @@ func main() {
 		Task("Review API", kanban.WithTaskPriority(kanban.PriorityVeryHigh)).
 		String()
 
-	if err := markdown.NewMarkdown(os.Stdout).
+	if err := markdown.NewMarkdown(os.Stdout, markdown.WithBlockSpacing()).
 		H2("Kanban Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build(); err != nil {
@@ -940,9 +921,10 @@ func main() {
 Plain text output: [markdown is here](./doc/kanban/generated.md)
 ````text
 ## Kanban Diagram
+
 ```mermaid
 ---
-title: Sprint Board
+title: "Sprint Board"
 config:
   kanban:
     ticketBaseUrl: 'https://example.com/tickets/'
@@ -959,7 +941,7 @@ kanban
 Mermaid output:
 ```mermaid
 ---
-title: Sprint Board
+title: "Sprint Board"
 config:
   kanban:
     ticketBaseUrl: 'https://example.com/tickets/'
@@ -1092,7 +1074,7 @@ func main() {
 		).
 		String()
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("Entity Relationship Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, erString).
 		Build()
@@ -1106,24 +1088,25 @@ func main() {
 Plain text output: [markdown is here](./doc/er/generated.md)
 ````
 ## Entity Relationship Diagram
+
 ```mermaid
 erDiagram
-	teachers ||--o{ students : "Teacher has many students"
-	teachers }|..|| schools : "School has many teachers"
-	schools {
-		int id PK,UK "School ID"
-		string name  "School Name"
-		int teacher_id FK,UK "Teacher ID"
-	}
-	students {
-		int id PK,UK "Student ID"
-		string name  "Student Name"
-		int teacher_id FK,UK "Teacher ID"
-	}
-	teachers {
-		int id PK,UK "Teacher ID"
-		string name  "Teacher Name"
-	}
+    teachers ||--o{ students : "Teacher has many students"
+    teachers }|..|| schools : "School has many teachers"
+    schools {
+        int id PK,UK "School ID"
+        string name  "School Name"
+        int teacher_id FK,UK "Teacher ID"
+    }
+    students {
+        int id PK,UK "Student ID"
+        string name  "Student Name"
+        int teacher_id FK,UK "Teacher ID"
+    }
+    teachers {
+        int id PK,UK "Teacher ID"
+        string name  "Teacher Name"
+    }
 
 ```
 ````
@@ -1176,17 +1159,24 @@ func main() {
 		flowchart.WithTitle("mermaid flowchart builder"),
 		flowchart.WithOrientalTopToBottom(),
 	).
+		Subgraph("ingest", "Ingest").
+		SubgraphDirection(flowchart.DirectionLR).
 		NodeWithText("A", "Node A").
 		StadiumNode("B", "Node B").
+		LinkWithArrowHead("A", "B").
+		SubgraphEnd().
 		SubroutineNode("C", "Node C").
 		DatabaseNode("D", "Database").
-		LinkWithArrowHead("A", "B").
 		LinkWithArrowHeadAndText("B", "D", "send original data").
 		LinkWithArrowHead("B", "C").
 		DottedLinkWithText("C", "D", "send filtered data").
+		ClassDef("stored", "fill:#d4f7d4,stroke:#2b8a3e").
+		Class("D", "stored").
+		Style("C", "fill:#fff3bf,stroke:#e67700").
+		ClickHref("D", "https://example.com/database", "The database").
 		String()
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("Flowchart").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, fc).
 		Build()
@@ -1200,33 +1190,51 @@ func main() {
 Plain text output: [markdown is here](./doc/flowchart/generated.md)
 ````
 ## Flowchart
+
 ```mermaid
 ---
-title: mermaid flowchart builder
+title: "mermaid flowchart builder"
 ---
 flowchart TB
-	A["Node A"]
-	B(["Node B"])
-	C[["Node C"]]
-	D[("Database")]
-	A-->B
-	B-->|"send original data"|D
-	B-->C
-	C-. "send filtered data" .-> D
+    subgraph ingest["Ingest"]
+        direction LR
+        A["Node A"]
+        B(["Node B"])
+        A-->B
+    end
+    C[["Node C"]]
+    D[("Database")]
+    B-->|"send original data"|D
+    B-->C
+    C-. "send filtered data" .-> D
+    classDef stored fill:#d4f7d4,stroke:#2b8a3e
+    class D stored
+    style C fill:#fff3bf,stroke:#e67700
+    click D "https://example.com/database" "The database"
 ```
 ````
 
 Mermaid output:
 ```mermaid
+---
+title: "mermaid flowchart builder"
+---
 flowchart TB
-	A["Node A"]
-	B(["Node B"])
-	C[["Node C"]]
-	D[("Database")]
-	A-->B
-	B-->|"send original data"|D
-	B-->C
-	C-. "send filtered data" .-> D
+    subgraph ingest["Ingest"]
+        direction LR
+        A["Node A"]
+        B(["Node B"])
+        A-->B
+    end
+    C[["Node C"]]
+    D[("Database")]
+    B-->|"send original data"|D
+    B-->C
+    C-. "send filtered data" .-> D
+    classDef stored fill:#d4f7d4,stroke:#2b8a3e
+    class D stored
+    style C fill:#fff3bf,stroke:#e67700
+    click D "https://example.com/database" "The database"
 ```
 
 ### Pie chart syntax
@@ -1261,7 +1269,7 @@ func main() {
 		LabelAndIntValue("C", 30).
 		String()
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("Pie Chart").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, chart).
 		Build()
@@ -1275,6 +1283,7 @@ func main() {
 Plain text output: [markdown is here](./doc/piechart/generated.md)
 ````
 ## Pie Chart
+
 ```mermaid
 %%{init: {"pie": {"textPosition": 0.75}, "themeVariables": {"pieOuterStrokeWidth": "5px"}} }%%
 pie showData
@@ -1395,7 +1404,7 @@ func main() {
 				Arrow:     arch.ArrowNone,
 			}).String() //nolint
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("Architecture Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build()
@@ -1408,6 +1417,7 @@ func main() {
 Plain text output: [markdown is here](./doc/architecture/generated.md)
 ````
 ## Architecture Diagram
+
 ```mermaid
 architecture-beta
     service left_disk(disk)[Disk]
@@ -1468,7 +1478,7 @@ func main() {
 		EndTransition("Delivered").
 		String()
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("State Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
 		Build()
@@ -1482,9 +1492,10 @@ func main() {
 Plain text output: [markdown is here](./doc/state/generated.md)
 ````
 ## State Diagram
+
 ```mermaid
 ---
-title: Order State Machine
+title: "Order State Machine"
 ---
 stateDiagram-v2
     [*] --> Pending
@@ -1507,7 +1518,7 @@ stateDiagram-v2
 Mermaid output:
 ```mermaid
 ---
-title: Order State Machine
+title: "Order State Machine"
 ---
 stateDiagram-v2
     [*] --> Pending
@@ -1575,7 +1586,7 @@ func main() {
 		NoteFor("Order", "Aggregate Root").
 		String()
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("Class Diagram").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, diagramString).
 		Build()
@@ -1589,9 +1600,10 @@ func main() {
 Plain text output: [markdown is here](./doc/class/generated.md)
 ````text
 ## Class Diagram
+
 ```mermaid
 ---
-title: Checkout Domain
+title: "Checkout Domain"
 ---
 classDiagram
     direction LR
@@ -1605,8 +1617,9 @@ classDiagram
         +int quantity
         +Subtotal() int
     }
-    class PaymentGateway
-    <<Interface>> PaymentGateway
+    class PaymentGateway {
+        <<Interface>>
+    }
     Order "1" *-- "many" LineItem : contains
     Order --> PaymentGateway : uses
     note for Order "Aggregate Root"
@@ -1616,7 +1629,7 @@ classDiagram
 Mermaid output:
 ```mermaid
 ---
-title: Checkout Domain
+title: "Checkout Domain"
 ---
 classDiagram
     direction LR
@@ -1630,8 +1643,9 @@ classDiagram
         +int quantity
         +Subtotal() int
     }
-    class PaymentGateway
-    <<Interface>> PaymentGateway
+    class PaymentGateway {
+        <<Interface>>
+    }
     Order "1" *-- "many" LineItem : contains
     Order --> PaymentGateway : uses
     note for Order "Aggregate Root"
@@ -1674,7 +1688,7 @@ func main() {
 		Point("Feature D", 0.80, 0.15).
 		String()
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("Quadrant Chart").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, chart).
 		Build()
@@ -1688,6 +1702,7 @@ func main() {
 Plain text output: [markdown is here](./doc/quadrant/generated.md)
 ````
 ## Quadrant Chart
+
 ```mermaid
 quadrantChart
     title Product Prioritization
@@ -1761,7 +1776,7 @@ func main() {
 		MilestoneWithID("Launch", "launch", "2024-01-26").
 		String()
 
-	err = markdown.NewMarkdown(f).
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
 		H2("Gantt Chart").
 		CodeBlocks(markdown.SyntaxHighlightMermaid, chart).
 		Build()
@@ -1775,18 +1790,28 @@ func main() {
 Plain text output: [markdown is here](./doc/gantt/generated.md)
 ````
 ## Gantt Chart
+
 ```mermaid
 gantt
-    title Project Schedule
+    title Software Development Schedule
     dateFormat YYYY-MM-DD
     section Planning
-    Requirements :done, req, 2024-01-01, 5d
-    Design :done, design, 2024-01-08, 3d
+    Requirements Analysis :done, req, 2024-01-01, 7d
+    System Design :done, design, 2024-01-08, 5d
+
     section Development
-    Coding :crit, active, code, 2024-01-12, 10d
-    Review :review, after code, 2d
-    section Release
-    Launch :milestone, launch, 2024-01-26, 0d
+    Backend Development :crit, active, backend, 2024-01-15, 14d
+    Frontend Development :active, frontend, 2024-01-15, 14d
+    Integration :integrate, after backend, 5d
+
+    section Testing
+    Unit Testing :unit, after integrate, 3d
+    Integration Testing :inttest, after unit, 4d
+    UAT :uat, after inttest, 5d
+
+    section Deployment
+    Staging Deploy :after uat, 2d
+    Production Release :crit, milestone, 2024-03-01, 0d
 ```
 ````
 
@@ -1803,6 +1828,542 @@ gantt
     Review :review, after code, 2d
     section Release
     Launch :milestone, launch, 2024-01-26, 0d
+```
+
+### Timeline syntax
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/timeline"
+)
+
+//go:generate go run main.go
+
+func main() {
+	f, err := os.Create("generated.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	diagram := timeline.NewDiagram(
+		io.Discard,
+		timeline.WithTitle("History of Social Media"),
+	).
+		Period("2002", "LinkedIn").
+		Section("Second wave").
+		Period("2004", "Facebook", "Google").
+		Period("2005", "YouTube").
+		Section("Third wave").
+		Period("2006", "Twitter").
+		Event("Reddit").
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("Timeline").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+A period holds as many events as you give it, and `Event` adds one more to the period written last. A colon in a section name, a period or an event is emitted as `#58;`, because a colon is what separates a period from its events; it reaches the reader as a colon either way, so `Period("09:00", "Stand up")` says what it looks like. The title keeps its colons: mermaid reads it as the rest of the line.
+
+Plain text output: [markdown is here](./doc/timeline/generated.md)
+````
+## Timeline
+
+```mermaid
+timeline
+    title History of Social Media
+    2002 : LinkedIn
+    section Second wave
+        2004 : Facebook : Google
+        2005 : YouTube
+    section Third wave
+        2006 : Twitter : Reddit
+```
+````
+
+Mermaid output:
+```mermaid
+timeline
+    title History of Social Media
+    2002 : LinkedIn
+    section Second wave
+        2004 : Facebook : Google
+        2005 : YouTube
+    section Third wave
+        2006 : Twitter : Reddit
+```
+
+### Sankey syntax
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/sankey"
+)
+
+//go:generate go run main.go
+
+func main() {
+	f, err := os.Create("generated.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	diagram := sankey.NewDiagram(io.Discard).
+		Link("Agricultural 'waste'", "Bio-conversion", 124.729).
+		Link("Bio-conversion", "Liquid", 0.597).
+		Link("Bio-conversion", "Losses, and more", 26.862).
+		Link("Bio-conversion", "Solid", 280.322).
+		Link("Bio-conversion", "Gas", 81.144).
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("Sankey").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+Nodes are never declared: a node exists because a flow names it, and two flows naming the same node are two flows through one node. The diagram body is CSV, so a node name holding a comma or a double quote is quoted for you, as `Losses, and more` is above.
+
+Plain text output: [markdown is here](./doc/sankey/generated.md)
+````
+## Sankey
+
+```mermaid
+sankey-beta
+
+Agricultural 'waste',Bio-conversion,124.729
+Bio-conversion,Liquid,0.597
+Bio-conversion,"Losses, and more",26.862
+Bio-conversion,Solid,280.322
+Bio-conversion,Gas,81.144
+```
+````
+
+Mermaid output:
+```mermaid
+sankey-beta
+
+Agricultural 'waste',Bio-conversion,124.729
+Bio-conversion,Liquid,0.597
+Bio-conversion,"Losses, and more",26.862
+Bio-conversion,Solid,280.322
+Bio-conversion,Gas,81.144
+```
+
+### Radar syntax
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/radar"
+)
+
+//go:generate go run main.go
+
+func main() {
+	f, err := os.Create("generated.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	chart := radar.NewDiagram(io.Discard, radar.WithTitle("Grades")).
+		Axis("Math", "Science", "English").
+		Axis("History", "Art").
+		Curve("Alice", 85, 90, 80, 70, 75).
+		Curve("Bob", 70, 75, 85, 80, 90).
+		Max(100).
+		Min(0).
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("Radar").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, chart).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+Axes are declared once, in order, and every curve gives its values in that same order. mermaid wants an identifier in front of each label; nothing in a radar chart refers to one, so the package numbers them and you pass only the labels.
+
+Plain text output: [markdown is here](./doc/radar/generated.md)
+````
+## Radar
+
+```mermaid
+---
+title: "Grades"
+---
+radar-beta
+  axis a1["Math"], a2["Science"], a3["English"]
+  axis a4["History"], a5["Art"]
+  curve c1["Alice"]{85, 90, 80, 70, 75}
+  curve c2["Bob"]{70, 75, 85, 80, 90}
+  max 100
+  min 0
+```
+````
+
+Mermaid output:
+```mermaid
+---
+title: "Grades"
+---
+radar-beta
+  axis a1["Math"], a2["Science"], a3["English"]
+  axis a4["History"], a5["Art"]
+  curve c1["Alice"]{85, 90, 80, 70, 75}
+  curve c2["Bob"]{70, 75, 85, 80, 90}
+  max 100
+  min 0
+```
+
+### Treemap syntax
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/treemap"
+)
+
+//go:generate go run main.go
+
+func main() {
+	f, err := os.Create("generated.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	diagram := treemap.NewDiagram(io.Discard, treemap.WithTitle("Budget")).
+		Section("Ops").
+		Leaf("Salaries", 1200).
+		Section("Cloud").
+		Leaf("Compute", 400).
+		Parent().
+		Leaf("Travel", 300).
+		Parent().
+		Section("Marketing").
+		Leaf("Ads", 800).
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("Treemap").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+mermaid expresses the hierarchy with indentation, and the builder walks it rather than asking for a tree of objects: `Section` opens a level, `Leaf` puts a value in the current one, and `Parent` goes back up. A section carries no value of its own; mermaid gives it the sum of what it holds.
+
+Plain text output: [markdown is here](./doc/treemap/generated.md)
+````
+## Treemap
+
+```mermaid
+---
+title: "Budget"
+---
+treemap-beta
+"Ops"
+    "Salaries": 1200
+    "Cloud"
+        "Compute": 400
+    "Travel": 300
+"Marketing"
+    "Ads": 800
+```
+````
+
+Mermaid output:
+```mermaid
+---
+title: "Budget"
+---
+treemap-beta
+"Ops"
+    "Salaries": 1200
+    "Cloud"
+        "Compute": 400
+    "Travel": 300
+"Marketing"
+    "Ads": 800
+```
+
+### C4 context syntax
+
+mermaid marks its C4 support experimental and says the syntax may change, so this package stays on the C4Context diagram: the people and the software systems around the one being described.
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/c4"
+)
+
+//go:generate go run main.go
+
+func main() {
+	f, err := os.Create("generated.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	diagram := c4.NewDiagram(io.Discard, c4.WithTitle("System Context: Internet Banking")).
+		EnterpriseBoundary("bank", "Big Bank plc").
+		Person("customer", "Personal Banking Customer", c4.WithDescription("A customer of the bank.")).
+		SystemBoundary("banking", "Internet Banking").
+		System("web", "Internet Banking System", c4.WithDescription("Shows account information.")).
+		SystemDb("accounts", "Accounts Database").
+		BoundaryEnd().
+		BoundaryEnd().
+		SystemExt("mail", "E-mail System", c4.WithDescription("The internal Microsoft Exchange system.")).
+		Rel("customer", "web", "Views balances", c4.WithTechnology("HTTPS")).
+		BiRel("web", "accounts", "Reads from and writes to", c4.WithTechnology("SQL/TCP")).
+		Rel("web", "mail", "Sends e-mail using", c4.WithTechnology("SMTP")).
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("C4 Context").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+A boundary is a pair of calls rather than a nested builder: `Boundary`, `EnterpriseBoundary` and `SystemBoundary` open one, everything after belongs to it, and `BoundaryEnd` closes it. Leaving one open is reported from `Build`, because mermaid refuses a diagram whose brace never closes.
+
+Labels are escaped with the entity form mermaid decodes, so a quotation mark or a `#` in one cannot break the macro syntax. The title is the exception: mermaid reads the rest of the line, quotes and all, so the package does not quote it.
+
+Plain text output: [markdown is here](./doc/c4/generated.md)
+````
+## C4 Context
+
+```mermaid
+C4Context
+    title System Context: Internet Banking
+    Enterprise_Boundary(bank, "Big Bank plc") {
+        Person(customer, "Personal Banking Customer", "A customer of the bank.")
+        System_Boundary(banking, "Internet Banking") {
+            System(web, "Internet Banking System", "Shows account information.")
+            SystemDb(accounts, "Accounts Database")
+        }
+    }
+    System_Ext(mail, "E-mail System", "The internal Microsoft Exchange system.")
+    Rel(customer, web, "Views balances", "HTTPS")
+    BiRel(web, accounts, "Reads from and writes to", "SQL/TCP")
+    Rel(web, mail, "Sends e-mail using", "SMTP")
+```
+````
+
+Mermaid output:
+```mermaid
+C4Context
+    title System Context: Internet Banking
+    Enterprise_Boundary(bank, "Big Bank plc") {
+        Person(customer, "Personal Banking Customer", "A customer of the bank.")
+        System_Boundary(banking, "Internet Banking") {
+            System(web, "Internet Banking System", "Shows account information.")
+            SystemDb(accounts, "Accounts Database")
+        }
+    }
+    System_Ext(mail, "E-mail System", "The internal Microsoft Exchange system.")
+    Rel(customer, web, "Views balances", "HTTPS")
+    BiRel(web, accounts, "Reads from and writes to", "SQL/TCP")
+    Rel(web, mail, "Sends e-mail using", "SMTP")
+```
+
+### Venn syntax
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/venn"
+)
+
+//go:generate go run main.go
+
+func main() {
+	f, err := os.Create("generated.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	diagram := venn.NewDiagram(io.Discard, venn.WithTitle("What the languages share")).
+		SetWithLabel("go", "Go").
+		SetWithLabel("rust", "Rust").
+		SetWithLabel("compiled", "Compiled and statically typed").
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("Venn").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+A Venn diagram is the sets and nothing else: where they overlap is worked out by mermaid rather than declared, so there is no call for an intersection. A set name is written unquoted and mermaid reads only letters, digits, underscores and hyphens there, so `Set` reports a name outside that rather than mangling it; a label has no such limit, which is what `SetWithLabel` is for.
+
+Plain text output: [markdown is here](./doc/venn/generated.md)
+````
+## Venn
+
+```mermaid
+venn-beta
+    title What the languages share
+    set go["Go"]
+    set rust["Rust"]
+    set compiled["Compiled and statically typed"]
+```
+````
+
+Mermaid output:
+```mermaid
+venn-beta
+    title What the languages share
+    set go["Go"]
+    set rust["Rust"]
+    set compiled["Compiled and statically typed"]
+```
+
+### Wardley map syntax
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/wardley"
+)
+
+//go:generate go run main.go
+
+func main() {
+	f, err := os.Create("generated.md")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	diagram := wardley.NewMap(io.Discard, wardley.WithTitle("Checkout, as it stands")).
+		Anchor("Customer", 0.95, 0.95).
+		Component("Checkout (web)", 0.6, 0.8).
+		Component("Payment service", 0.75, 0.5).
+		Component("Card network", 0.95, 0.2).
+		Link("Customer", "Checkout (web)").
+		Link("Checkout (web)", "Payment service").
+		Link("Payment service", "Card network").
+		Evolve("Payment service", 0.9).
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("Wardley map").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, diagram).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+The two coordinates are evolution and visibility, each from 0.0 to 1.0: evolution runs left to right, from something built for the first time to something bought as a commodity, and visibility runs bottom to top, from the plumbing to what the user actually touches. `Evolve` is what turns a map of today into an argument about tomorrow.
+
+A name is written unquoted and mermaid reads only letters, digits, spaces, underscores, hyphens and parentheses there, refusing its own escape form as well, so a name outside that set is reported from `Build` rather than mangled into one that draws something else.
+
+Plain text output: [markdown is here](./doc/wardley/generated.md)
+````
+## Wardley map
+
+```mermaid
+wardley-beta
+    title Checkout, as it stands
+    anchor Customer [0.95, 0.95]
+    component Checkout (web) [0.6, 0.8]
+    component Payment service [0.75, 0.5]
+    component Card network [0.95, 0.2]
+    Customer -> Checkout (web)
+    Checkout (web) -> Payment service
+    Payment service -> Card network
+    evolve Payment service 0.9
+```
+````
+
+Mermaid output:
+```mermaid
+wardley-beta
+    title Checkout, as it stands
+    anchor Customer [0.95, 0.95]
+    component Checkout (web) [0.6, 0.8]
+    component Payment service [0.75, 0.5]
+    component Card network [0.95, 0.2]
+    Customer -> Checkout (web)
+    Checkout (web) -> Payment service
+    Payment service -> Card network
+    evolve Payment service 0.9
 ```
 
 ## Creating an index for a directory full of markdown files
@@ -1870,8 +2431,6 @@ Next Description
 ## Contribution
 First off, thanks for taking the time to contribute! See [CONTRIBUTING.md](./CONTRIBUTING.md) for more information. Contributions are not only related to development. For example, GitHub Star motivates me to develop! Please feel free to contribute to this project.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=nao1215/markdown&type=Date)](https://star-history.com/#nao1215/markdown&Date)
-
 ### Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
@@ -1883,10 +2442,16 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://debimate.jp/"><img src="https://avatars.githubusercontent.com/u/22737008?v=4?s=50" width="50px;" alt="CHIKAMATSU Naohiro"/><br /><sub><b>CHIKAMATSU Naohiro</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=nao1215" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/varmakarthik12"><img src="https://avatars.githubusercontent.com/u/17958166?v=4?s=50" width="50px;" alt="Karthik Sundari"/><br /><sub><b>Karthik Sundari</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=varmakarthik12" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/varmakarthik12"><img src="https://avatars.githubusercontent.com/u/17958166?v=4?s=50" width="50px;" alt="Karthik Sundari"/><br /><sub><b>Karthik Sundari</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=varmakarthik12" title="Code">💻</a> <a href="https://github.com/nao1215/markdown/issues?q=author%3Avarmakarthik12" title="Ideas, Planning, & Feedback">🤔</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Avihuc"><img src="https://avatars.githubusercontent.com/u/32455410?v=4?s=50" width="50px;" alt="Avihuc"/><br /><sub><b>Avihuc</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=Avihuc" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://www.claranceliberi.me/"><img src="https://avatars.githubusercontent.com/u/60586899?v=4?s=50" width="50px;" alt="Clarance Liberiste Ntwari"/><br /><sub><b>Clarance Liberiste Ntwari</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=claranceliberi" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/amitaifrey"><img src="https://avatars.githubusercontent.com/u/7527632?v=4?s=50" width="50px;" alt="Amitai Frey"/><br /><sub><b>Amitai Frey</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=amitaifrey" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/wI2L"><img src="https://avatars.githubusercontent.com/u/6519569?v=4?s=50" width="50px;" alt="William Poussier"/><br /><sub><b>William Poussier</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3AwI2L" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://hibare.in/"><img src="https://avatars.githubusercontent.com/u/20609766?v=4?s=50" width="50px;" alt="Shubham Hibare"/><br /><sub><b>Shubham Hibare</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3Ahibare" title="Bug reports">🐛</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://barrymorrison.com/"><img src="https://avatars.githubusercontent.com/u/689591?v=4?s=50" width="50px;" alt="Barry Morrison"/><br /><sub><b>Barry Morrison</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3Aesacteksab" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chaunsin"><img src="https://avatars.githubusercontent.com/u/33649884?v=4?s=50" width="50px;" alt="chaunsin"/><br /><sub><b>chaunsin</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3Achaunsin" title="Ideas, Planning, & Feedback">🤔</a></td>
     </tr>
   </tbody>
   <tfoot>
@@ -1905,4 +2470,4 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind are welcome, and that includes bug reports and feature requests: several of the features above exist because someone opened an issue asking for them.

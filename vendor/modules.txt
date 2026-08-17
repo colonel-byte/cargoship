@@ -12,13 +12,13 @@ atomicgo.dev/keyboard/keys
 # atomicgo.dev/schedule v0.1.0
 ## explicit; go 1.18
 atomicgo.dev/schedule
-# buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260709200747-435963d16310.1
+# buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260709200747-435963d16310.1
 ## explicit; go 1.23
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate
 # cloud.google.com/go v0.123.0
 ## explicit; go 1.24.0
 cloud.google.com/go
-# cloud.google.com/go/auth v0.23.0
+# cloud.google.com/go/auth v0.23.1
 ## explicit; go 1.25.0
 cloud.google.com/go/auth
 cloud.google.com/go/auth/credentials
@@ -376,21 +376,22 @@ github.com/alibabacloud-go/endpoint-util/service
 # github.com/alibabacloud-go/openapi-util v0.1.2
 ## explicit; go 1.14
 github.com/alibabacloud-go/openapi-util/service
-# github.com/alibabacloud-go/tea v1.2.2
+# github.com/alibabacloud-go/tea v1.5.3
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea/tea
 github.com/alibabacloud-go/tea/utils
 # github.com/alibabacloud-go/tea-utils v1.4.5
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea-utils/service
-# github.com/alibabacloud-go/tea-utils/v2 v2.0.6
+# github.com/alibabacloud-go/tea-utils/v2 v2.0.9
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea-utils/v2/service
 # github.com/alibabacloud-go/tea-xml v1.1.3
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea-xml/service
-# github.com/aliyun/credentials-go v1.4.5
+# github.com/aliyun/credentials-go v1.4.12
 ## explicit; go 1.14
+github.com/aliyun/credentials-go
 github.com/aliyun/credentials-go/credentials
 github.com/aliyun/credentials-go/credentials/internal/http
 github.com/aliyun/credentials-go/credentials/internal/utils
@@ -580,7 +581,7 @@ github.com/bodgit/windows
 # github.com/buger/jsonparser v1.6.1
 ## explicit; go 1.13
 github.com/buger/jsonparser
-# github.com/buildkite/agent/v3 v3.136.2
+# github.com/buildkite/agent/v3 v3.137.0
 ## explicit; go 1.26.5
 github.com/buildkite/agent/v3/api
 github.com/buildkite/agent/v3/api/proto/gen
@@ -638,7 +639,7 @@ github.com/common-nighthawk/go-figure
 # github.com/containerd/console v1.0.5
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd/v2 v2.3.3
+# github.com/containerd/containerd/v2 v2.3.4
 ## explicit; go 1.26.3
 github.com/containerd/containerd/v2/core/content
 github.com/containerd/containerd/v2/core/images
@@ -690,7 +691,7 @@ github.com/decred/dcrd/dcrec/secp256k1/v4
 # github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 ## explicit; go 1.24.0
 github.com/defenseunicorns/pkg/helpers/v2
-# github.com/defenseunicorns/pkg/oci v1.3.1
+# github.com/defenseunicorns/pkg/oci v1.3.2
 ## explicit; go 1.24.0
 github.com/defenseunicorns/pkg/oci
 github.com/defenseunicorns/pkg/oci/cache
@@ -853,7 +854,7 @@ github.com/go-logr/logr/funcr
 # github.com/go-logr/stdr v1.2.2
 ## explicit; go 1.16
 github.com/go-logr/stdr
-# github.com/go-openapi/analysis v0.25.5
+# github.com/go-openapi/analysis v0.26.0
 ## explicit; go 1.25.0
 github.com/go-openapi/analysis
 github.com/go-openapi/analysis/internal/debug
@@ -873,7 +874,7 @@ github.com/go-openapi/jsonpointer/jsonname
 ## explicit; go 1.25.0
 github.com/go-openapi/jsonreference
 github.com/go-openapi/jsonreference/internal
-# github.com/go-openapi/loads v0.25.0
+# github.com/go-openapi/loads v0.25.1
 ## explicit; go 1.25.0
 github.com/go-openapi/loads
 # github.com/go-openapi/runtime v0.33.0
@@ -940,7 +941,7 @@ github.com/go-openapi/swag/typeutils
 # github.com/go-openapi/swag/yamlutils v0.28.0
 ## explicit; go 1.25.0
 github.com/go-openapi/swag/yamlutils
-# github.com/go-openapi/validate v0.26.1
+# github.com/go-openapi/validate v0.26.3
 ## explicit; go 1.25.0
 github.com/go-openapi/validate
 # github.com/go-piv/piv-go/v2 v2.6.0
@@ -1099,7 +1100,7 @@ github.com/google/s2a-go/stream
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
-# github.com/googleapis/enterprise-certificate-proxy v0.3.20
+# github.com/googleapis/enterprise-certificate-proxy v0.3.21
 ## explicit; go 1.25.0
 github.com/googleapis/enterprise-certificate-proxy/client
 github.com/googleapis/enterprise-certificate-proxy/client/util
@@ -1490,7 +1491,7 @@ github.com/mozillazg/docker-credential-acr-helper/pkg/version
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/nao1215/markdown v0.13.0
+# github.com/nao1215/markdown v1.0.0
 ## explicit; go 1.23
 github.com/nao1215/markdown
 github.com/nao1215/markdown/internal
@@ -1677,7 +1678,7 @@ github.com/pterm/pterm/internal
 # github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 ## explicit
 github.com/rcrowley/go-metrics
-# github.com/rogpeppe/go-internal v1.15.0
+# github.com/rogpeppe/go-internal v1.16.0
 ## explicit; go 1.25
 github.com/rogpeppe/go-internal/internal/syscall/windows
 github.com/rogpeppe/go-internal/internal/syscall/windows/sysdll
@@ -1871,8 +1872,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/hashivault
 # github.com/sigstore/timestamp-authority/v2 v2.1.3
 ## explicit; go 1.25.0
 github.com/sigstore/timestamp-authority/v2/pkg/verification
-# github.com/sirupsen/logrus v1.9.4
-## explicit; go 1.17
+# github.com/sirupsen/logrus v1.10.0
+## explicit; go 1.23
 github.com/sirupsen/logrus
 # github.com/sorairolake/lzip-go v0.3.8
 ## explicit; go 1.22
@@ -1925,10 +1926,12 @@ github.com/stangelandcl/ppmd/internal/h7z
 # github.com/stoewer/go-strcase v1.3.1
 ## explicit; go 1.11
 github.com/stoewer/go-strcase
-# github.com/stretchr/testify v1.11.1
+# github.com/stretchr/testify v1.12.0
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
+github.com/stretchr/testify/internal/difflib
+github.com/stretchr/testify/internal/spew
 github.com/stretchr/testify/require
 # github.com/subosito/gotenv v1.6.0
 ## explicit; go 1.18
@@ -2031,7 +2034,7 @@ github.com/xeipuuv/gojsonschema
 # github.com/xlab/treeprint v1.2.0
 ## explicit; go 1.13
 github.com/xlab/treeprint
-# github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
+# github.com/xo/terminfo v1.0.0
 ## explicit; go 1.19
 github.com/xo/terminfo
 # github.com/yashtewari/glob-intersection v0.2.0
