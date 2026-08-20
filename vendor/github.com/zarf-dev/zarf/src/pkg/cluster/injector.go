@@ -27,6 +27,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -45,6 +46,8 @@ type ZarfInjectorOptions struct {
 	RegistryNodePort uint16
 	// InjectorNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	InjectorNodePort uint16
+	// IPFamily determines the injector listen address; defaults to IPv4 when unset
+	IPFamily state.IPFamily
 }
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -88,7 +91,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return "", 0, err
 	}
 
-	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
@@ -149,7 +152,9 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	_, err = retryInjectorRequest(ctx, "delete injector binary ConfigMap", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -164,25 +169,11 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	_, err = retryInjectorRequest(ctx, "delete injector payload ConfigMaps", func() error {
+		return c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	})
 	if err != nil {
 		return err
-	}
-
-	// This is needed because labels were not present in payload config maps previously.
-	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, cm := range cmList.Items {
-		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
-			continue
-		}
-		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
 	}
 
 	// TODO: Replace with wait package in the future.
@@ -246,7 +237,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
-
 	cmNames := []string{}
 	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
@@ -266,7 +256,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 		}
 		cmNames = append(cmNames, fileName)
 
-		// Give the control plane a 250ms buffer between each configmap
+		// Give the control plane a 250ms buffer between each configmap.
 		time.Sleep(250 * time.Millisecond)
 	}
 	return cmNames, shasum, nil
@@ -532,7 +522,13 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string) *v1ac.PodApplyConfiguration {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily) *v1ac.PodApplyConfiguration {
+	listenHost := "0.0.0.0"
+	if ipFamily == state.IPFamilyIPv6 {
+		listenHost = "[::]"
+	}
+	listenAddr := fmt.Sprintf("%s:%d", listenHost, 5000)
+
 	executeMode := int32(0777)
 	userID := int64(1000)
 	groupID := int64(2000)
@@ -582,6 +578,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			v1ac.PodSpec().
 				// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
 				WithTerminationGracePeriodSeconds(1).
+				WithAutomountServiceAccountToken(false).
 				WithNodeName(nodeName).
 				WithRestartPolicy(corev1.RestartPolicyNever).
 				WithSecurityContext(
@@ -600,12 +597,13 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 						WithImage(image).
 						WithImagePullPolicy(corev1.PullIfNotPresent).
 						WithWorkingDir("/zarf-init").
-						WithCommand("/zarf-init/zarf-injector", shasum).
+						WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
 						WithVolumeMounts(volumeMounts...).
 						WithSecurityContext(
 							v1ac.SecurityContext().
 								WithReadOnlyRootFilesystem(true).
 								WithAllowPrivilegeEscalation(false).
+								WithPrivileged(false).
 								WithRunAsNonRoot(true).
 								WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
 						).
@@ -671,4 +669,43 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}
 	return svc, nil
+}
+
+// retryInjectorRequest retries headerless transient Kubernetes API throttles for injector payload cleanup.
+func retryInjectorRequest(ctx context.Context, operation string, request func() error) (retried bool, err error) {
+	l := logger.From(ctx)
+	err = retry.Do(func() error {
+		requestErr := request()
+		if requestErr == nil {
+			return nil
+		}
+		if !kerrors.IsTooManyRequests(requestErr) || hasServerRetryDelay(requestErr) {
+			return retry.Unrecoverable(requestErr)
+		}
+		return requestErr
+	},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(func(n uint, requestErr error, retryConfig *retry.Config) time.Duration {
+			delay := retry.CombineDelay(retry.BackOffDelay, retry.RandomDelay)(n, requestErr, retryConfig)
+			retried = true
+			l.Warn("retrying transient Kubernetes API request",
+				"operation", operation,
+				"attempt", n+1,
+				"maxAttempts", config.ZarfDefaultRetries,
+				"nextDelay", delay,
+				"error", requestErr,
+			)
+			return delay
+		}),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+	)
+	return retried, err
+}
+
+func hasServerRetryDelay(err error) bool {
+	_, ok := kerrors.SuggestsClientDelay(err)
+	return ok
 }
