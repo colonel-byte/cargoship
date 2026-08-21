@@ -11,7 +11,7 @@ Cargoship uses `mage` as its primary task runner and automation tool instead of 
 *   Generating documentation from the codebase.
 *   Generating and publishing JSON schemas from Go types.
 
-The entry point of the automation layer is `magefiles/main.go`, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.
+The entry point of the automation layer is `magefiles/core/core.go`, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.
 
 ## Namespace Architecture
 
@@ -58,7 +58,7 @@ The `Generate` namespace handles code-generation and repository asset updates:
 
 ## File-by-File Reference
 
-*   **`main.go`:** Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution.
+*   **`core/core.go`:** Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in `magefiles/`) so it does not collide with the `func main()` that the `mage` CLI generates on the fly — see [Running Mage Directly](#running-mage-directly-without-the-cli) below.
 *   **`dagger.go`:** Houses user-facing targets for containerized compilation via Dagger.
 *   **`build.go`:** Defines compilation tasks utilizing the local host Go toolchain.
 *   **`dev.go`:** Defines convenience tasks under the `Dev` and `Test` namespaces.
@@ -80,3 +80,30 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `docs/phases/*` | Auto-generated cluster phase descriptors | `Generate.Document` |
 | `docs/SUMMARY.md` | Compiled table of contents for mdBook | `Generate.Document` |
 | `schema/*.json` | JSON schemas for YAML validations | `Generate.Schema` |
+
+---
+
+## Running Mage Directly (Without the CLI)
+
+Normally you invoke tasks through the installed `mage` binary, e.g. `mage dagger:binary`. The `mage` CLI works by scanning `magefiles/` for exported functions and namespaces, then generating its own `func main()` (written to a gitignored `mage_output_file.go`) that wires those functions up to CLI subcommands before compiling and running the result.
+
+Because that generated file declares `package main` with its own `func main()`, it cannot coexist with a second, hand-written `func main()` in the same package — hence `core/core.go` (which does exactly that, via `mage.Main()`) is split out into its own `magefiles/core` subpackage rather than sitting alongside the task files in `magefiles/`.
+
+This split means `core/core.go` can also be run on its own, bypassing the `mage` CLI entirely:
+
+```sh
+go run ./magefiles/core
+```
+
+This builds and runs the same `mage.Main()` entry point that the `mage` CLI would otherwise generate for you. It's useful when:
+
+*   The `mage` binary isn't installed on the host (e.g. a minimal CI or container image that already has a Go toolchain).
+*   You want a single, explicit `go run` invocation instead of depending on a separately-installed tool.
+
+Task selection still works the same way — pass the namespace:target as an argument, e.g.:
+
+```sh
+go run ./magefiles/core dagger:binary
+```
+
+Note that `magefiles/` itself remains its own `package main` for the `mage` CLI's benefit; `core/core.go` is a separate package and binary, not part of that compiled unit.
