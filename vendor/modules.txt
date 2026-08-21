@@ -2043,8 +2043,8 @@ github.com/yashtewari/glob-intersection
 # github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 ## explicit; go 1.17
 github.com/youmark/pkcs8
-# github.com/zarf-dev/zarf v0.77.0
-## explicit; go 1.26.0
+# github.com/zarf-dev/zarf v0.84.0
+## explicit; go 1.26.6
 github.com/zarf-dev/zarf/src/api/v1alpha1
 github.com/zarf-dev/zarf/src/config
 github.com/zarf-dev/zarf/src/config/lang
@@ -2052,17 +2052,19 @@ github.com/zarf-dev/zarf/src/internal/dns
 github.com/zarf-dev/zarf/src/internal/gitea
 github.com/zarf-dev/zarf/src/internal/healthchecks
 github.com/zarf-dev/zarf/src/internal/packager/template
-github.com/zarf-dev/zarf/src/internal/template
 github.com/zarf-dev/zarf/src/pkg/archive
 github.com/zarf-dev/zarf/src/pkg/cluster
+github.com/zarf-dev/zarf/src/pkg/feature
 github.com/zarf-dev/zarf/src/pkg/images
 github.com/zarf-dev/zarf/src/pkg/interactive
 github.com/zarf-dev/zarf/src/pkg/logger
 github.com/zarf-dev/zarf/src/pkg/message
+github.com/zarf-dev/zarf/src/pkg/ocischeme
 github.com/zarf-dev/zarf/src/pkg/packager/actions
 github.com/zarf-dev/zarf/src/pkg/pki
 github.com/zarf-dev/zarf/src/pkg/signing
 github.com/zarf-dev/zarf/src/pkg/state
+github.com/zarf-dev/zarf/src/pkg/template
 github.com/zarf-dev/zarf/src/pkg/transform
 github.com/zarf-dev/zarf/src/pkg/utils
 github.com/zarf-dev/zarf/src/pkg/utils/exec
@@ -2891,6 +2893,7 @@ k8s.io/kubectl/pkg/scheme
 k8s.io/kubectl/pkg/util/i18n
 k8s.io/kubectl/pkg/util/interrupt
 k8s.io/kubectl/pkg/util/openapi
+k8s.io/kubectl/pkg/util/podutils
 k8s.io/kubectl/pkg/util/templates
 k8s.io/kubectl/pkg/util/term
 k8s.io/kubectl/pkg/validation

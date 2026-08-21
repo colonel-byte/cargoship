@@ -38,7 +38,7 @@ type ZarfDistro struct {
 // ZarfDistroMetadata holds identifying information for a distro package.
 type ZarfDistroMetadata struct {
 	// Uncompressed disables compression for this package when true.
-	Uncompressed bool
+	Uncompressed bool `json:"uncompressed,omitempty"`
 	// Architecture is the CPU architecture this distro package targets.
 	Architecture string `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
 	// Name identifies the distro package.

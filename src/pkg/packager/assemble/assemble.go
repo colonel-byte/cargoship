@@ -48,6 +48,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -74,7 +75,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 
 	onCreate := d.Spec.Actions.OnCreate
 
-	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.Before, nil, nil); err != nil {
+	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -119,7 +120,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 		}
 	}
 
-	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.After, nil, nil); err != nil {
+	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.After, nil, nil, template.StateAccess{}); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
