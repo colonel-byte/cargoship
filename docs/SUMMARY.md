@@ -8,6 +8,7 @@
 
 - [setup-inv](guides/setup-inv.md)
 
+
 -----------
 
 # Commands
@@ -23,6 +24,7 @@
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [version](commands/cargoship_version.md)
 
+
 -----------
 
 # Phases
@@ -32,12 +34,14 @@
 - [prepare](phases/prepare.md)
 - [reset](phases/reset.md)
 
+
 -----------
 
 # Development
 
 - [dagger](dev/dagger.md)
 - [mage](dev/mage.md)
+
 
 -----------
 

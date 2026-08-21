@@ -161,6 +161,7 @@
           "type": "array"
         },
         "setVariable": {
+          "deprecated": true,
           "pattern": "^[A-Z0-9_]+$",
           "type": "string"
         },
@@ -513,7 +514,6 @@
         }
       },
       "required": [
-        "uncompressed",
         "name"
       ],
       "type": "object"
