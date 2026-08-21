@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b4291704.js";
+            window.path_to_searchindex_js = "searchindex-90361c0b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b85f870d.js"></script>
@@ -1079,7 +1079,7 @@ metadata:
 <li>Generating documentation from the codebase.</li>
 <li>Generating and publishing JSON schemas from Go types.</li>
 </ul>
-<p>The entry point of the automation layer is <code>magefiles/main.go</code>, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.</p>
+<p>The entry point of the automation layer is <code>magefiles/core/core.go</code>, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.</p>
 <h2 id="namespace-architecture"><a class="header" href="#namespace-architecture">Namespace Architecture</a></h2>
 <p>Mage targets are organized into logical Go namespaces to group related operations together.</p>
 <h3 id="dagger-namespace"><a class="header" href="#dagger-namespace"><code>Dagger</code> Namespace</a></h3>
@@ -1115,7 +1115,7 @@ metadata:
 <hr>
 <h2 id="file-by-file-reference"><a class="header" href="#file-by-file-reference">File-by-File Reference</a></h2>
 <ul>
-<li><strong><code>main.go</code>:</strong> Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution.</li>
+<li><strong><code>core/core.go</code>:</strong> Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in <code>magefiles/</code>) so it does not collide with the <code>func main()</code> that the <code>mage</code> CLI generates on the fly — see <a href="#running-mage-directly-without-the-cli">Running Mage Directly</a> below.</li>
 <li><strong><code>dagger.go</code>:</strong> Houses user-facing targets for containerized compilation via Dagger.</li>
 <li><strong><code>build.go</code>:</strong> Defines compilation tasks utilizing the local host Go toolchain.</li>
 <li><strong><code>dev.go</code>:</strong> Defines convenience tasks under the <code>Dev</code> and <code>Test</code> namespaces.</li>
@@ -1141,6 +1141,22 @@ metadata:
 </tbody>
 </table>
 </div>
+<hr>
+<h2 id="running-mage-directly-without-the-cli"><a class="header" href="#running-mage-directly-without-the-cli">Running Mage Directly (Without the CLI)</a></h2>
+<p>Normally you invoke tasks through the installed <code>mage</code> binary, e.g. <code>mage dagger:binary</code>. The <code>mage</code> CLI works by scanning <code>magefiles/</code> for exported functions and namespaces, then generating its own <code>func main()</code> (written to a gitignored <code>mage_output_file.go</code>) that wires those functions up to CLI subcommands before compiling and running the result.</p>
+<p>Because that generated file declares <code>package main</code> with its own <code>func main()</code>, it cannot coexist with a second, hand-written <code>func main()</code> in the same package — hence <code>core/core.go</code> (which does exactly that, via <code>mage.Main()</code>) is split out into its own <code>magefiles/core</code> subpackage rather than sitting alongside the task files in <code>magefiles/</code>.</p>
+<p>This split means <code>core/core.go</code> can also be run on its own, bypassing the <code>mage</code> CLI entirely:</p>
+<pre><code class="language-sh">go run ./magefiles/core
+</code></pre>
+<p>This builds and runs the same <code>mage.Main()</code> entry point that the <code>mage</code> CLI would otherwise generate for you. It’s useful when:</p>
+<ul>
+<li>The <code>mage</code> binary isn’t installed on the host (e.g. a minimal CI or container image that already has a Go toolchain).</li>
+<li>You want a single, explicit <code>go run</code> invocation instead of depending on a separately-installed tool.</li>
+</ul>
+<p>Task selection still works the same way — pass the namespace:target as an argument, e.g.:</p>
+<pre><code class="language-sh">go run ./magefiles/core dagger:binary
+</code></pre>
+<p>Note that <code>magefiles/</code> itself remains its own <code>package main</code> for the <code>mage</code> CLI’s benefit; <code>core/core.go</code> is a separate package and binary, not part of that compiled unit.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
 <h2 id="0110-2026-08-21"><a class="header" href="#0110-2026-08-21"><a href="https://github.com/colonel-byte/cargoship/compare/v0.10.2...v0.11.0">0.11.0</a> (2026-08-21)</a></h2>
