@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/colonel-byte/cargoship/compare/v0.10.2...v0.11.0) (2026-08-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* update zarf version ([#187](https://github.com/colonel-byte/cargoship/issues/187))
+
+### Features
+
+* update zarf version ([#187](https://github.com/colonel-byte/cargoship/issues/187)) ([13c9595](https://github.com/colonel-byte/cargoship/commit/13c95955fecc3fca242f847befc0f1f65dc0069c))
+
+
+### Build
+
+* **deps:** Bump the cosign group across 1 directory with 20 updates ([#183](https://github.com/colonel-byte/cargoship/issues/183)) ([eb4a6ff](https://github.com/colonel-byte/cargoship/commit/eb4a6ff3669d650d29a7591b137e0defe8915074))
+* **deps:** Bump the golang group across 1 directory with 10 updates ([#182](https://github.com/colonel-byte/cargoship/issues/182)) ([a9deafc](https://github.com/colonel-byte/cargoship/commit/a9deafcedd1cce6addcd103d0cc16b2a370a1a69))
+* **deps:** Bump the misc group across 1 directory with 17 updates ([#186](https://github.com/colonel-byte/cargoship/issues/186)) ([b20ea24](https://github.com/colonel-byte/cargoship/commit/b20ea24431fc0e3ac99f414ed4f5a00f22cb8bac))
+* **deps:** Bump the opentelemetry group across 1 directory with 5 updates ([#184](https://github.com/colonel-byte/cargoship/issues/184)) ([61ce493](https://github.com/colonel-byte/cargoship/commit/61ce4938316fc0388463542ec11c9e685fa04207))
+
 ## [0.10.2](https://github.com/colonel-byte/cargoship/compare/v0.10.1...v0.10.2) (2026-08-14)
 
 
