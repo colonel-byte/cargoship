@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9376729b.js";
+            window.path_to_searchindex_js = "../searchindex-a1d57e01.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b85f870d.js"></script>
@@ -183,37 +183,44 @@
                     <main>
                         <h2 id="kube-config-phases"><a class="header" href="#kube-config-phases">kube-config phases</a></h2>
 <ol>
-<li>Connect to hosts
+<li>
+<p>Connect to hosts</p>
 <ul>
 <li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
 </ul>
 </li>
-<li>Detect host operating systems
+<li>
+<p>Detect host operating systems</p>
 <ul>
 <li>Gathers information about the remote host, including: OS and OS version</li>
 </ul>
 </li>
-<li>Acquire exclusive host lock
+<li>
+<p>Acquire exclusive host lock</p>
 <ul>
 <li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
 </ul>
 </li>
-<li>Gather host facts
+<li>
+<p>Gather host facts</p>
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
 </ul>
 </li>
-<li>Updating kubeconfig file with the current cluster
+<li>
+<p>Updating kubeconfig file with the current cluster</p>
 <ul>
 <li>If enabled, this will update the local kubeconfig with the admin creds for the current distro</li>
 </ul>
 </li>
-<li>Release exclusive host lock
+<li>
+<p>Release exclusive host lock</p>
 <ul>
 <li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
 </ul>
 </li>
-<li>Disconnect from hosts
+<li>
+<p>Disconnect from hosts</p>
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
 </ul>

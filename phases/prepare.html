@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9376729b.js";
+            window.path_to_searchindex_js = "../searchindex-a1d57e01.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b85f870d.js"></script>
@@ -183,47 +183,56 @@
                     <main>
                         <h2 id="prepare-phases"><a class="header" href="#prepare-phases">prepare phases</a></h2>
 <ol>
-<li>Connect to hosts
+<li>
+<p>Connect to hosts</p>
 <ul>
 <li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
 </ul>
 </li>
-<li>Detect host operating systems
+<li>
+<p>Detect host operating systems</p>
 <ul>
 <li>Gathers information about the remote host, including: OS and OS version</li>
 </ul>
 </li>
-<li>Acquire exclusive host lock
+<li>
+<p>Acquire exclusive host lock</p>
 <ul>
 <li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
 </ul>
 </li>
-<li>Prepare hosts
+<li>
+<p>Prepare hosts</p>
 <ul>
 <li>Updates the remote nodes; environment variables and sysctl</li>
 </ul>
 </li>
-<li>Prepare hosts - Enterprise Linux support
+<li>
+<p>Prepare hosts - Enterprise Linux support</p>
 <ul>
 <li>Installs container-selinux on systems that have SELinux enabled on them</li>
 </ul>
 </li>
-<li>Prepare hosts - Enterprise Linux support - Fapolicyd
+<li>
+<p>Prepare hosts - Enterprise Linux support - Fapolicyd</p>
 <ul>
 <li>Creates the distro supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules</li>
 </ul>
 </li>
-<li>Enable the requested kernel modueles
+<li>
+<p>Enable the requested kernel modueles</p>
 <ul>
 <li>Turns on the list of requested modules on the host, then reboots the box if modules are added</li>
 </ul>
 </li>
-<li>Release exclusive host lock
+<li>
+<p>Release exclusive host lock</p>
 <ul>
 <li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
 </ul>
 </li>
-<li>Disconnect from hosts
+<li>
+<p>Disconnect from hosts</p>
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
 </ul>

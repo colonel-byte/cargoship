@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9376729b.js";
+            window.path_to_searchindex_js = "../searchindex-a1d57e01.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b85f870d.js"></script>
@@ -183,62 +183,74 @@
                     <main>
                         <h2 id="reset-phases"><a class="header" href="#reset-phases">reset phases</a></h2>
 <ol>
-<li>Connect to hosts
+<li>
+<p>Connect to hosts</p>
 <ul>
 <li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
 </ul>
 </li>
-<li>Detect host operating systems
+<li>
+<p>Detect host operating systems</p>
 <ul>
 <li>Gathers information about the remote host, including: OS and OS version</li>
 </ul>
 </li>
-<li>Acquire exclusive host lock
+<li>
+<p>Acquire exclusive host lock</p>
 <ul>
 <li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
 </ul>
 </li>
-<li>Gather host facts
+<li>
+<p>Gather host facts</p>
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
 </ul>
 </li>
-<li>Validate hosts
+<li>
+<p>Validate hosts</p>
 <ul>
 <li>Verifying that each node in the cluster has a unique name and private address,</li>
 </ul>
 </li>
-<li>Gathering facts about the distro installed
+<li>
+<p>Gathering facts about the distro installed</p>
 <ul>
 <li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
 </ul>
 </li>
-<li>Reset Worker
+<li>
+<p>Reset Worker</p>
 <ul>
 <li>Deletes the worker from the cluster, if enabled it will try to drain node before removing the node</li>
 </ul>
 </li>
-<li>Reset Controller
+<li>
+<p>Reset Controller</p>
 <ul>
 <li>Deletes the controller from the cluster, if enabled it will try to drain node before removing the node</li>
 </ul>
 </li>
-<li>Uninstalling Engine
+<li>
+<p>Uninstalling Engine</p>
 <ul>
 <li>Remove the rpm, apt, or binary files from all the hosts</li>
 </ul>
 </li>
-<li>Reload service manager
+<li>
+<p>Reload service manager</p>
 <ul>
 <li>Runs <code>systemctl daemon-reload</code> or equivalent on all hosts.</li>
 </ul>
 </li>
-<li>Release exclusive host lock
+<li>
+<p>Release exclusive host lock</p>
 <ul>
 <li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
 </ul>
 </li>
-<li>Disconnect from hosts
+<li>
+<p>Disconnect from hosts</p>
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
 </ul>
