@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.12.0](https://github.com/colonel-byte/cargoship/compare/v0.11.0...v0.12.0) (2026-08-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* rework viper config ([#191](https://github.com/colonel-byte/cargoship/issues/191))
+
+### Features
+
+* add shell completion for flags ([#190](https://github.com/colonel-byte/cargoship/issues/190)) ([9c4046a](https://github.com/colonel-byte/cargoship/commit/9c4046a77ee96911930cae4c0df9b379b0158a2d))
+* rework viper config ([#191](https://github.com/colonel-byte/cargoship/issues/191)) ([5513027](https://github.com/colonel-byte/cargoship/commit/5513027781368449747342ad12f685dfb3ae9318))
+
+
+### CI/CD
+
+* move mage main to allow vendoring ([#188](https://github.com/colonel-byte/cargoship/issues/188)) ([75c6d46](https://github.com/colonel-byte/cargoship/commit/75c6d464621ea3e128087d4376ec315d92fefe8f))
+
 ## [0.11.0](https://github.com/colonel-byte/cargoship/compare/v0.10.2...v0.11.0) (2026-08-21)
 
 
