@@ -31,6 +31,14 @@ import (
 var (
 	v            *viper.Viper
 	vConfigError error
+
+	// resolvedConfig holds config values resolved through viper's normal
+	// defaults > env > config-file precedence pipeline (NOT flags -- flags are
+	// never bound back into viper). It is distinct from distroCfg in root.go,
+	// which is populated by a separate, stricter, non-viper YAML parse that
+	// doesn't see defaults or env vars. Populated once, inside initViper(),
+	// which itself only runs once per process (guarded by `if v != nil`).
+	resolvedConfig types.DistroConfig
 )
 
 func initViper() error {
@@ -81,6 +89,13 @@ func initViper() error {
 			log.Debug(lang.CmdViperErrLoadingConfigFile, "error", notFoundErr)
 		}
 	}
+
+	// Populated regardless of vConfigError above: defaults/env vars still need to
+	// resolve even when no config file was found. Never fatal -- a bad unmarshal
+	// just means flags fall back to their Go zero values as the viper-seed default.
+	if err := v.Unmarshal(&resolvedConfig); err != nil {
+		log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
+	}
 	return nil
 }
 
@@ -96,6 +111,29 @@ func setDefaults() {
 	v.SetDefault(types.DistroConcurrency, 30)
 	v.SetDefault(types.DistroUpdateHost, false)
 	v.SetDefault(types.DistroUpdateFirewall, false)
+
+	// The keys below have no real default value beyond the Go zero value -- they're
+	// registered anyway (not skipped) because v.Unmarshal(&resolvedConfig) only picks
+	// up a key that's "known" to viper (via SetDefault, a config-file entry, or an
+	// explicit Set). A key set *only* through an environment variable is invisible to
+	// Unmarshal without this: AutomaticEnv resolves it fine for a direct v.GetString
+	// call, but Unmarshal builds its result from v.AllKeys(), which never learns about
+	// an env-only key on its own. Confirmed via a standalone reproduction before adding
+	// these -- omitting any of them silently drops that key's env-var support.
+	v.SetDefault(types.Architecture, "")
+	v.SetDefault(types.DistroCreateRegistryOverride, []string{})
+	v.SetDefault(types.DistroFAPolicy, false)
+	v.SetDefault(types.DistroWorkerConcurrency, 0)
+	v.SetDefault(types.DistroType, "")
+	v.SetDefault(types.DistroRetry, 0)
+	v.SetDefault(types.DistroPublishSigningKey, "")
+	v.SetDefault(types.DistroPublishSigningKeyPassword, "")
+	v.SetDefault(types.DistroCertificateIdentity, "")
+	v.SetDefault(types.DistroCertificateIdentityRegexp, "")
+	v.SetDefault(types.DistroCertificateOIDCIssuer, "")
+	v.SetDefault(types.DistroCertificateOIDCIssuerRegexp, "")
+	v.SetDefault(types.DistroTrustedRoot, "")
+	v.SetDefault(types.DistroPublicKey, "")
 }
 
 // GetStringSlice returns a string slice from viper

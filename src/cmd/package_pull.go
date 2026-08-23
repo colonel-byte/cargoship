@@ -53,6 +53,9 @@ func newPackagePullCommand() *cobra.Command {
 		},
 	}
 
+	// types.DistroOutput is read directly from viper (not resolvedConfig) for
+	// consistency with package_create.go, where SetDefault(".") for this same key
+	// runs after resolvedConfig's one-time Unmarshal and would otherwise be missed.
 	output, err := zconfig.GetAbsHomePath(v.GetString(types.DistroOutput))
 	if err != nil {
 		logger.From(cmd.Context()).Debug("error when trying to get user path", "error", err)

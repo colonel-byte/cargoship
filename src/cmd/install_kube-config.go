@@ -62,7 +62,7 @@ func newInstallKubeConfigCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.config, InstallKubeConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallKubeDistro, "D", v.GetString(types.DistroType), lang.CmdInstallFlagKubeConfigDistro)
+	cmd.Flags().StringVarP(&o.distro, InstallKubeDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagKubeConfigDistro)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {

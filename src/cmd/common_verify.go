@@ -118,22 +118,29 @@ func newKeylessVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagS
 	fs := pflag.NewFlagSet("keyless-verify", pflag.ContinueOnError)
 
 	fs.StringVar(&f.certificateIdentity, "certificate-identity",
-		v.GetString(types.DistroCertificateIdentity), zlang.CmdPackageVerifyFlagCertificateIdentity)
+		resolvedConfig.DistroOpts.CertificateIdentity, zlang.CmdPackageVerifyFlagCertificateIdentity)
 	fs.StringVar(&f.certificateIdentityRegexp, "certificate-identity-regexp",
-		v.GetString(types.DistroCertificateIdentityRegexp), zlang.CmdPackageVerifyFlagCertificateIdentityRegexp)
+		resolvedConfig.DistroOpts.CertificateIdentityRegexp, zlang.CmdPackageVerifyFlagCertificateIdentityRegexp)
 	fs.StringVar(&f.certificateOIDCIssuer, "certificate-oidc-issuer",
-		v.GetString(types.DistroCertificateOIDCIssuer), zlang.CmdPackageVerifyFlagCertificateOIDCIssuer)
+		resolvedConfig.DistroOpts.CertificateOIDCIssuer, zlang.CmdPackageVerifyFlagCertificateOIDCIssuer)
 	fs.StringVar(&f.certificateOIDCIssuerRegexp, "certificate-oidc-issuer-regexp",
-		v.GetString(types.DistroCertificateOIDCIssuerRegexp), zlang.CmdPackageVerifyFlagCertificateOIDCIssuerRegexp)
+		resolvedConfig.DistroOpts.CertificateOIDCIssuerRegexp, zlang.CmdPackageVerifyFlagCertificateOIDCIssuerRegexp)
 	fs.StringVar(&f.trustedRoot, "trusted-root",
-		v.GetString(types.DistroTrustedRoot), zlang.CmdPackageVerifyFlagTrustedRoot)
+		resolvedConfig.DistroOpts.TrustedRoot, zlang.CmdPackageVerifyFlagTrustedRoot)
 
+	// types.DistroInsecureIgnoreTlog is read directly from viper (not resolvedConfig):
+	// a struct field can't distinguish "unset" from "explicitly set to false", and that
+	// distinction is what picks the ignoreTlogDefault below.
 	ignoreTlogDefault := true
 	if v.IsSet(types.DistroInsecureIgnoreTlog) {
 		ignoreTlogDefault = v.GetBool(types.DistroInsecureIgnoreTlog)
 	}
 	fs.BoolVar(&f.insecureIgnoreTlog, "insecure-ignore-tlog", ignoreTlogDefault,
 		zlang.CmdPackageVerifyFlagInsecureIgnoreTlog)
+	// types.DistroUseSignedTimestamps is read directly from viper (not resolvedConfig):
+	// the struct field is typed string (it mirrors the config-file schema) but this flag
+	// is a bool, and DistroOpts.UseSignedTimestamps is excluded from Unmarshal (mapstructure:"-")
+	// for the same reason as Verify/InsecureIgnoreTLog below.
 	fs.BoolVar(&f.useSignedTimestamps, "use-signed-timestamps",
 		v.GetBool(types.DistroUseSignedTimestamps), zlang.CmdPackageVerifyFlagUseSignedTimestamps)
 
@@ -145,7 +152,7 @@ func newKeylessVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagS
 func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 	fs := pflag.NewFlagSet("verify", pflag.ContinueOnError)
 
-	fs.StringVarP(&f.publicKeyPath, "key", "k", v.GetString(types.DistroPublicKey), zlang.CmdPackageFlagFlagPublicKey)
+	fs.StringVarP(&f.publicKeyPath, "key", "k", resolvedConfig.DistroOpts.PublicKey, zlang.CmdPackageFlagFlagPublicKey)
 	f.verify = verifyModeIfPossible
 	fs.VarP(&f.verify, "verify", "", lang.CmdPackageFlagVerify)
 	fs.Lookup("verify").NoOptDefVal = string(verifyModeAlways)
@@ -193,6 +200,8 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 	// cmd may be nil when run() is called directly (e.g. from tests); in that case only
 	// the viper config path is checked for an explicit override.
 	hasKeylessIdentity := f.certificateIdentity != "" || f.certificateIdentityRegexp != ""
+	// types.DistroInsecureIgnoreTlog is read directly from viper here too (not
+	// resolvedConfig) -- same IsSet reasoning as newKeylessVerifyFlagSet above.
 	tlogExplicit := v.IsSet(types.DistroInsecureIgnoreTlog)
 	if cmd != nil {
 		tlogExplicit = tlogExplicit || cmd.Flags().Changed("insecure-ignore-tlog")
@@ -208,6 +217,8 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 func (f *packageVerifyFlags) preRunE(cmd *cobra.Command, _ []string) error {
 	// Apply viper default for --verify when the flag was not set on the CLI.
 	// Accepts legacy bool values ("true"/"false") from existing configs.
+	// types.DistroVerify is read directly from viper (not resolvedConfig): a struct
+	// field can't represent "unset", which is exactly what v.IsSet distinguishes here.
 	if !cmd.Flags().Changed("verify") && v.IsSet(types.DistroVerify) {
 		if err := f.verify.Set(v.GetString(types.DistroVerify)); err != nil {
 			return fmt.Errorf("invalid package.verify config value %q: %w", v.GetString(types.DistroVerify), err)

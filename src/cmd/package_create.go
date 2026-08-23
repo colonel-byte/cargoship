@@ -56,6 +56,9 @@ func newPackageCreateCommand() *cobra.Command {
 		},
 	}
 
+	// types.DistroOutput is read directly from viper (not resolvedConfig): the
+	// SetDefault(".") below runs after resolvedConfig's one-time Unmarshal (which
+	// happens early, inside initViper()), so a struct field would never see it.
 	output, err := zconfig.GetAbsHomePath(v.GetString(types.DistroOutput))
 	if err != nil {
 		logger.From(cmd.Context()).Debug("error when trying to get user path", "error", err)
@@ -64,8 +67,8 @@ func newPackageCreateCommand() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
-	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, types.DistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
-	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(types.DistroCreateSkipSbom), zlang.CmdPackageCreateFlagSkipSbom)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", resolvedConfig.DistroOpts.CreateOpts.RegistryOverride, zlang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", resolvedConfig.DistroOpts.CreateOpts.SkipSBOM, zlang.CmdPackageCreateFlagSkipSbom)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
