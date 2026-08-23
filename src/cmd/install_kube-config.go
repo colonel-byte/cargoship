@@ -29,7 +29,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -62,11 +61,11 @@ func newInstallKubeConfigCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.config, InstallKubeConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallKubeDistro, "D", v.GetString(types.DistroType), lang.CmdInstallFlagKubeConfigDistro)
+	cmd.Flags().StringVarP(&o.distro, InstallKubeDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagKubeConfigDistro)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
-		val = types.LoggingLevelDefault
+		val = loggingLevelDefault
 	}
 
 	o.logLevel = val

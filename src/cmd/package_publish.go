@@ -31,7 +31,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
 	"github.com/colonel-byte/cargoship/src/pkg/lint"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -63,9 +62,9 @@ func newPackagePublishCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
-	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(types.DistroRetry), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(types.DistroPublishSigningKey), zlang.CmdPackagePublishFlagSigningKey)
-	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(types.DistroPublishSigningKeyPassword), zlang.CmdPackagePublishFlagSigningKeyPassword)
+	cmd.Flags().IntVar(&o.retries, "retries", resolvedConfig.DistroOpts.Retry, lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackagePublishFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackagePublishFlagSigningKeyPassword)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {

@@ -16,6 +16,13 @@
         "^x-": {}
       },
       "properties": {
+        "registry_override": {
+          "description": "remaps references from one registry to another",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "skip_sbom": {
           "description": "whether we will scan the images or files",
           "type": "boolean"
@@ -196,6 +203,10 @@
     "^x-": {}
   },
   "properties": {
+    "architecture": {
+      "description": "the CPU architecture to use for OCI operations",
+      "type": "string"
+    },
     "distro": {
       "$ref": "#/$defs/DistroOptions",
       "description": "are various options used by the command"
@@ -220,6 +231,10 @@
         "trace"
       ],
       "type": "string"
+    },
+    "no_color": {
+      "description": "whether to disable terminal color codes in logging and stdout prints",
+      "type": "boolean"
     },
     "timeout": {
       "default": "20m",

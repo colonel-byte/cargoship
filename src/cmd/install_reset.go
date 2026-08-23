@@ -29,7 +29,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -75,18 +74,18 @@ func newInstallResetCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallResetConcurrency, "c", v.GetInt(types.DistroConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, InstallResetConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallResetConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallResetDistro, "D", v.GetString(types.DistroType), lang.CmdInstallFlagResetDistro)
+	cmd.Flags().StringVarP(&o.distro, InstallResetDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagResetDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallResetConfirm, false, lang.CmdInstallFlagConfirm)
-	cmd.Flags().BoolVarP(&o.hosts, InstallResetUpdateHost, "H", v.GetBool(types.DistroUpdateHost), lang.CmdInstallHostUpdate)
-	cmd.Flags().BoolVarP(&o.firewall, InstallResetUpdateFirewall, "F", v.GetBool(types.DistroUpdateFirewall), lang.CmdInstallFirewallUpdate)
-	cmd.Flags().BoolVarP(&o.fapolicy, InstallResetUpdateFAPolicyD, "f", v.GetBool(types.DistroFAPolicy), lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallResetWorkConcurrency, "w", v.GetInt(types.DistroWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVarP(&o.hosts, InstallResetUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
+	cmd.Flags().BoolVarP(&o.firewall, InstallResetUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
+	cmd.Flags().BoolVarP(&o.fapolicy, InstallResetUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
+	cmd.Flags().IntVarP(&o.workerCon, InstallResetWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
-		val = types.LoggingLevelDefault
+		val = loggingLevelDefault
 	}
 
 	o.logLevel = val

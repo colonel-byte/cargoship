@@ -26,7 +26,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -53,10 +52,10 @@ func newPackagePullCommand() *cobra.Command {
 		},
 	}
 
-	output, err := zconfig.GetAbsHomePath(v.GetString(types.DistroOutput))
+	output, err := zconfig.GetAbsHomePath(v.GetString(distroOutputKey))
 	if err != nil {
 		logger.From(cmd.Context()).Debug("error when trying to get user path", "error", err)
-		output = v.GetString(types.DistroOutput)
+		output = v.GetString(distroOutputKey)
 	}
 
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)

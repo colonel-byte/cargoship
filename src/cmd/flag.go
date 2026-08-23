@@ -17,7 +17,6 @@ package cmd
 import (
 	"github.com/colonel-byte/cargoship/src/cmd/flags"
 	"github.com/colonel-byte/cargoship/src/config/lang"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -25,7 +24,7 @@ import (
 // registerFlagOCIConcurrency adds the OCI concurrency flag to cmd, with its default sourced
 // from config and shell completion suggestions provided by flags.RegisterOCIConcurrency.
 func registerFlagOCIConcurrency(cmd *cobra.Command, con *int) error {
-	cmd.Flags().IntVar(con, PackageOCIConcurrency, v.GetInt(types.DistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().IntVar(con, PackageOCIConcurrency, resolvedConfig.DistroOpts.OCIConcurrency, lang.CmdPackageFlagConcurrency)
 	return cmd.RegisterFlagCompletionFunc(PackageOCIConcurrency, flags.RegisterOCIConcurrency)
 }
 

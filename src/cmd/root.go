@@ -53,6 +53,9 @@ const (
 	RootPlainHTTP = "plain_http"
 	// RootInsecureSkipTLSVerify command flag insecure-skip-tls-verify
 	RootInsecureSkipTLSVerify = "insecure_skip_tls_verify"
+	// loggingLevelDefault is the log level used when neither a flag, env var,
+	// config file, nor viper default resolves one.
+	loggingLevelDefault = "info"
 )
 
 const (
@@ -144,19 +147,19 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
 
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", v.GetString(types.LogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {
 		fmt.Printf("failed to register %s flag completion: %v", RootLoggingLevel, err)
 	}
-	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(types.LogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", resolvedConfig.LogFormat, lang.RootCmdFlagLogFormat)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingFormat, flags.RegisterLogFormat); err != nil {
 		fmt.Printf("failed to register %s flag completion: %v", RootLoggingFormat, err)
 	}
 	rootCmd.PersistentFlags().StringVar(&Timeout, RootTimeout, v.GetString(RootTimeout), lang.CmdInstallFlagTimeout)
-	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(types.NoColor), lang.RootCmdFlagNoColor)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), types.ZarfCache), zlang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), types.TmpDir), zlang.RootCmdFlagTempDir)
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, RootArchitecture, "a", v.GetString(types.Architecture), zlang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), resolvedConfig.CachePath), zlang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), resolvedConfig.TempDirectory), zlang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, RootArchitecture, "a", resolvedConfig.Architecture, zlang.RootCmdFlagArch)
 
 	// Security
 	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", v.GetBool(RootPlainHTTP), zlang.RootCmdFlagPlainHTTP)
@@ -204,13 +207,13 @@ func init() {
 	}
 }
 
-func parsePath(ctx context.Context, key string) string {
-	value, err := config.GetAbsHomePath(v.GetString(key))
+func parsePath(ctx context.Context, value string) string {
+	absValue, err := config.GetAbsHomePath(value)
 	if err != nil {
 		logger.From(ctx).Debug("error when trying to get user path", "error", err)
-		return v.GetString(key)
+		return value
 	}
-	return value
+	return absValue
 }
 
 func loadViperConfig() error {

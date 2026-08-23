@@ -29,7 +29,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -55,17 +54,17 @@ func newInstallPrepareCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", v.GetInt(types.DistroConcurrency), lang.CmdInstallFlagConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
-	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", v.GetBool(types.DistroUpdateHost), lang.CmdInstallHostUpdate)
-	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", v.GetBool(types.DistroUpdateFirewall), lang.CmdInstallFirewallUpdate)
-	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", v.GetBool(types.DistroFAPolicy), lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallWorkConcurrency, "w", v.GetInt(types.DistroWorkerConcurrency), lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
+	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
+	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
+	cmd.Flags().IntVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
-		val = types.LoggingLevelDefault
+		val = loggingLevelDefault
 	}
 
 	o.logLevel = val
