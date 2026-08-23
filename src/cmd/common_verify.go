@@ -25,7 +25,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -40,6 +39,19 @@ const flagGroupAnnotation = "cargoship_flag_group"
 
 // verifyFlagGroupTitle is the usage section title for package verification flags.
 const verifyFlagGroupTitle = "Verification Flags"
+
+// These three keys are read directly from viper, never through resolvedConfig: verify
+// and insecureIgnoreTlogKey need v.IsSet to distinguish "unset" from "set to zero
+// value", which a struct field can't represent, and useSignedTimestampsKey's real
+// value is a bool (read via v.GetBool) even though the DistroOptions field it maps to
+// is typed as a string (mirroring the config-file schema). All three are excluded from
+// Unmarshal (mapstructure:"-" in config.go), so configPath falls back to their json
+// tag -- see configPath's doc comment in viper.go.
+var (
+	verifyKey              = configPath("DistroOpts", "Verify")
+	insecureIgnoreTlogKey  = configPath("DistroOpts", "InsecureIgnoreTLog")
+	useSignedTimestampsKey = configPath("DistroOpts", "UseSignedTimestamps")
+)
 
 // annotateFlagGroup tags every flag in fs with the given usage-section title.
 func annotateFlagGroup(fs *pflag.FlagSet, title string) {
@@ -128,21 +140,14 @@ func newKeylessVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagS
 	fs.StringVar(&f.trustedRoot, "trusted-root",
 		resolvedConfig.DistroOpts.TrustedRoot, zlang.CmdPackageVerifyFlagTrustedRoot)
 
-	// types.DistroInsecureIgnoreTlog is read directly from viper (not resolvedConfig):
-	// a struct field can't distinguish "unset" from "explicitly set to false", and that
-	// distinction is what picks the ignoreTlogDefault below.
 	ignoreTlogDefault := true
-	if v.IsSet(types.DistroInsecureIgnoreTlog) {
-		ignoreTlogDefault = v.GetBool(types.DistroInsecureIgnoreTlog)
+	if v.IsSet(insecureIgnoreTlogKey) {
+		ignoreTlogDefault = v.GetBool(insecureIgnoreTlogKey)
 	}
 	fs.BoolVar(&f.insecureIgnoreTlog, "insecure-ignore-tlog", ignoreTlogDefault,
 		zlang.CmdPackageVerifyFlagInsecureIgnoreTlog)
-	// types.DistroUseSignedTimestamps is read directly from viper (not resolvedConfig):
-	// the struct field is typed string (it mirrors the config-file schema) but this flag
-	// is a bool, and DistroOpts.UseSignedTimestamps is excluded from Unmarshal (mapstructure:"-")
-	// for the same reason as Verify/InsecureIgnoreTLog below.
 	fs.BoolVar(&f.useSignedTimestamps, "use-signed-timestamps",
-		v.GetBool(types.DistroUseSignedTimestamps), zlang.CmdPackageVerifyFlagUseSignedTimestamps)
+		v.GetBool(useSignedTimestampsKey), zlang.CmdPackageVerifyFlagUseSignedTimestamps)
 
 	annotateFlagGroup(fs, verifyFlagGroupTitle)
 	return fs
@@ -200,9 +205,7 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 	// cmd may be nil when run() is called directly (e.g. from tests); in that case only
 	// the viper config path is checked for an explicit override.
 	hasKeylessIdentity := f.certificateIdentity != "" || f.certificateIdentityRegexp != ""
-	// types.DistroInsecureIgnoreTlog is read directly from viper here too (not
-	// resolvedConfig) -- same IsSet reasoning as newKeylessVerifyFlagSet above.
-	tlogExplicit := v.IsSet(types.DistroInsecureIgnoreTlog)
+	tlogExplicit := v.IsSet(insecureIgnoreTlogKey)
 	if cmd != nil {
 		tlogExplicit = tlogExplicit || cmd.Flags().Changed("insecure-ignore-tlog")
 	}
@@ -217,11 +220,9 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 func (f *packageVerifyFlags) preRunE(cmd *cobra.Command, _ []string) error {
 	// Apply viper default for --verify when the flag was not set on the CLI.
 	// Accepts legacy bool values ("true"/"false") from existing configs.
-	// types.DistroVerify is read directly from viper (not resolvedConfig): a struct
-	// field can't represent "unset", which is exactly what v.IsSet distinguishes here.
-	if !cmd.Flags().Changed("verify") && v.IsSet(types.DistroVerify) {
-		if err := f.verify.Set(v.GetString(types.DistroVerify)); err != nil {
-			return fmt.Errorf("invalid package.verify config value %q: %w", v.GetString(types.DistroVerify), err)
+	if !cmd.Flags().Changed("verify") && v.IsSet(verifyKey) {
+		if err := f.verify.Set(v.GetString(verifyKey)); err != nil {
+			return fmt.Errorf("invalid package.verify config value %q: %w", v.GetString(verifyKey), err)
 		}
 	}
 	return nil

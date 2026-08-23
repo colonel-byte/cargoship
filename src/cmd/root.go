@@ -53,6 +53,9 @@ const (
 	RootPlainHTTP = "plain_http"
 	// RootInsecureSkipTLSVerify command flag insecure-skip-tls-verify
 	RootInsecureSkipTLSVerify = "insecure_skip_tls_verify"
+	// loggingLevelDefault is the log level used when neither a flag, env var,
+	// config file, nor viper default resolves one.
+	loggingLevelDefault = "info"
 )
 
 const (

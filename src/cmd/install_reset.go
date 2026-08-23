@@ -29,7 +29,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -86,7 +85,7 @@ func newInstallResetCommand() *cobra.Command {
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
-		val = types.LoggingLevelDefault
+		val = loggingLevelDefault
 	}
 
 	o.logLevel = val

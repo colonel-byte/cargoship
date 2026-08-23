@@ -28,12 +28,18 @@ import (
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/lint"
-	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/cobra"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
+
+// distroOutputKey is read directly from viper (not resolvedConfig), in both this file
+// and package_pull.go: the SetDefault(".") below runs after resolvedConfig's one-time
+// Unmarshal (which happens early, inside initViper()), so a struct field would never
+// see it. Still derived via configPath (see viper.go) so the key can't drift from the
+// struct's own tag.
+var distroOutputKey = configPath("DistroOpts", "Output")
 
 type packageCreateOptions struct {
 	output            string
@@ -56,13 +62,10 @@ func newPackageCreateCommand() *cobra.Command {
 		},
 	}
 
-	// types.DistroOutput is read directly from viper (not resolvedConfig): the
-	// SetDefault(".") below runs after resolvedConfig's one-time Unmarshal (which
-	// happens early, inside initViper()), so a struct field would never see it.
-	output, err := zconfig.GetAbsHomePath(v.GetString(types.DistroOutput))
+	output, err := zconfig.GetAbsHomePath(v.GetString(distroOutputKey))
 	if err != nil {
 		logger.From(cmd.Context()).Debug("error when trying to get user path", "error", err)
-		output = v.GetString(types.DistroOutput)
+		output = v.GetString(distroOutputKey)
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
@@ -74,7 +77,7 @@ func newPackageCreateCommand() *cobra.Command {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
 	}
 
-	v.SetDefault(types.DistroOutput, ".")
+	v.SetDefault(distroOutputKey, ".")
 
 	return cmd
 }

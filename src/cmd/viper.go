@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
@@ -66,6 +67,11 @@ func initViper() error {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
+	// Must run before ReadInConfig/Unmarshal below: v.Unmarshal only discovers a key
+	// that's already "known" to viper (via SetDefault, a config-file entry, or an
+	// explicit Set) -- see the comment on setDefaults for why this matters for
+	// env-var-only values. Calling this after Unmarshal would silently break env-var
+	// support for every key not also present in the user's config file.
 	setDefaults()
 
 	log, err := logger.New(logger.Config{
@@ -96,21 +102,56 @@ func initViper() error {
 	if err := v.Unmarshal(&resolvedConfig); err != nil {
 		log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
 	}
+
 	return nil
 }
 
-func setDefaults() {
-	v.SetDefault(types.LogLevel, types.LoggingLevelDefault)
-	v.SetDefault(types.ZarfCache, config.ZarfDefaultCachePath)
-	v.SetDefault(types.LogFormat, string(logger.FormatConsole))
-	v.SetDefault(types.TmpDir, "/tmp")
-	v.SetDefault(types.NoColor, false)
+// configPath derives a viper dot-path key for a field in types.DistroConfig by
+// reading the same struct tags v.Unmarshal(&resolvedConfig) decodes against, so the
+// key can never silently drift from what actually gets populated. fieldNames is the
+// chain of Go struct field names from DistroConfig down to the target field, e.g.
+// configPath("DistroOpts", "OCIConcurrency") -> "distro.oci_concurrency".
+//
+// A field excluded from Unmarshal (mapstructure:"-", see config.go) falls back to its
+// json tag, which still names the same viper key -- those fields are read directly via
+// raw v.Get/v.IsSet calls elsewhere, but the key itself still comes from one place.
+//
+// Panics on a bad field chain: this only ever runs against the fixed types.DistroConfig
+// shape during startup, so a mismatch is a programming error that should fail loud
+// immediately, not silently resolve to an empty/wrong key.
+func configPath(fieldNames ...string) string {
+	t := reflect.TypeFor[types.DistroConfig]()
+	parts := make([]string, 0, len(fieldNames))
+	for _, name := range fieldNames {
+		field, ok := t.FieldByName(name)
+		if !ok {
+			panic(fmt.Sprintf("configPath: no field %q in %s", name, t))
+		}
+		key := field.Tag.Get("mapstructure")
+		if key == "" || key == "-" {
+			key, _, _ = strings.Cut(field.Tag.Get("json"), ",")
+		}
+		if key == "" || key == "-" {
+			panic(fmt.Sprintf("configPath: field %q has no usable mapstructure or json tag", name))
+		}
+		parts = append(parts, key)
+		t = field.Type
+	}
+	return strings.Join(parts, ".")
+}
 
-	v.SetDefault(types.DistroOCIConcurrency, 6)
-	v.SetDefault(types.DistroCreateSkipSbom, false)
-	v.SetDefault(types.DistroConcurrency, 30)
-	v.SetDefault(types.DistroUpdateHost, false)
-	v.SetDefault(types.DistroUpdateFirewall, false)
+func setDefaults() {
+	v.SetDefault(configPath("LogLevel"), loggingLevelDefault)
+	v.SetDefault(configPath("CachePath"), config.ZarfDefaultCachePath)
+	v.SetDefault(configPath("LogFormat"), string(logger.FormatConsole))
+	v.SetDefault(configPath("TempDirectory"), "/tmp")
+	v.SetDefault(configPath("NoColor"), false)
+
+	v.SetDefault(configPath("DistroOpts", "OCIConcurrency"), 6)
+	v.SetDefault(configPath("DistroOpts", "CreateOpts", "SkipSBOM"), false)
+	v.SetDefault(configPath("DistroOpts", "Concurrency"), 30)
+	v.SetDefault(configPath("DistroOpts", "HostUpdate"), false)
+	v.SetDefault(configPath("DistroOpts", "FirewallUpdate"), false)
 
 	// The keys below have no real default value beyond the Go zero value -- they're
 	// registered anyway (not skipped) because v.Unmarshal(&resolvedConfig) only picks
@@ -120,20 +161,20 @@ func setDefaults() {
 	// call, but Unmarshal builds its result from v.AllKeys(), which never learns about
 	// an env-only key on its own. Confirmed via a standalone reproduction before adding
 	// these -- omitting any of them silently drops that key's env-var support.
-	v.SetDefault(types.Architecture, "")
-	v.SetDefault(types.DistroCreateRegistryOverride, []string{})
-	v.SetDefault(types.DistroFAPolicy, false)
-	v.SetDefault(types.DistroWorkerConcurrency, 0)
-	v.SetDefault(types.DistroType, "")
-	v.SetDefault(types.DistroRetry, 0)
-	v.SetDefault(types.DistroPublishSigningKey, "")
-	v.SetDefault(types.DistroPublishSigningKeyPassword, "")
-	v.SetDefault(types.DistroCertificateIdentity, "")
-	v.SetDefault(types.DistroCertificateIdentityRegexp, "")
-	v.SetDefault(types.DistroCertificateOIDCIssuer, "")
-	v.SetDefault(types.DistroCertificateOIDCIssuerRegexp, "")
-	v.SetDefault(types.DistroTrustedRoot, "")
-	v.SetDefault(types.DistroPublicKey, "")
+	v.SetDefault(configPath("Architecture"), "")
+	v.SetDefault(configPath("DistroOpts", "CreateOpts", "RegistryOverride"), []string{})
+	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
+	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), 0)
+	v.SetDefault(configPath("DistroOpts", "Type"), "")
+	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
+	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")
+	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKeyPassword"), "")
+	v.SetDefault(configPath("DistroOpts", "CertificateIdentity"), "")
+	v.SetDefault(configPath("DistroOpts", "CertificateIdentityRegexp"), "")
+	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuer"), "")
+	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuerRegexp"), "")
+	v.SetDefault(configPath("DistroOpts", "TrustedRoot"), "")
+	v.SetDefault(configPath("DistroOpts", "PublicKey"), "")
 }
 
 // GetStringSlice returns a string slice from viper
