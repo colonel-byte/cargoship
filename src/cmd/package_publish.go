@@ -63,11 +63,14 @@ func newPackagePublishCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(types.DistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(types.DistroRetry), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(types.DistroPublishSigningKey), zlang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(types.DistroPublishSigningKeyPassword), zlang.CmdPackagePublishFlagSigningKeyPassword)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+
+	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
+		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
+	}
 
 	return cmd
 }

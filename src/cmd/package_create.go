@@ -63,10 +63,13 @@ func newPackageCreateCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(types.DistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, types.DistroCreateRegistryOverride), zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(types.DistroCreateSkipSbom), zlang.CmdPackageCreateFlagSkipSbom)
+
+	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
+		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
+	}
 
 	v.SetDefault(types.DistroOutput, ".")
 

@@ -59,10 +59,13 @@ func newPackagePullCommand() *cobra.Command {
 		output = v.GetString(types.DistroOutput)
 	}
 
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(types.DistroOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().StringVarP(&o.outputDirectory, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
+
+	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
+		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
+	}
 
 	return cmd
 }

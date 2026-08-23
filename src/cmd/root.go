@@ -27,6 +27,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/colonel-byte/cargoship/src/cmd/flags"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
@@ -71,6 +72,16 @@ const (
 	InstallUpdateFAPolicyD = "update-fapolicyd"
 )
 
+const (
+	// PackageOCIConcurrency flag
+	PackageOCIConcurrency = "oci-concurrency"
+)
+
+const (
+	// MiscOutput flag
+	MiscOutput = "output"
+)
+
 var (
 	// IsColorDisabled whether to show the colored output
 	IsColorDisabled bool
@@ -110,11 +121,8 @@ func NewCargoshipCommand() *cobra.Command {
 		Short:         lang.RootCmdShort,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Run: func(cmd *cobra.Command, _ []string) {
-			err := cmd.Help()
-			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, err)
-			}
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
 		},
 		PersistentPreRunE: preRun,
 	}
@@ -137,7 +145,13 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newSha256SumCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", v.GetString(types.LogLevel), lang.RootCmdFlagLogLevel)
+	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {
+		fmt.Printf("failed to register %s flag completion: %v", RootLoggingLevel, err)
+	}
 	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", v.GetString(types.LogFormat), lang.RootCmdFlagLogFormat)
+	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingFormat, flags.RegisterLogFormat); err != nil {
+		fmt.Printf("failed to register %s flag completion: %v", RootLoggingFormat, err)
+	}
 	rootCmd.PersistentFlags().StringVar(&Timeout, RootTimeout, v.GetString(RootTimeout), lang.CmdInstallFlagTimeout)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", v.GetBool(types.NoColor), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), types.ZarfCache), zlang.RootCmdFlagCachePath)

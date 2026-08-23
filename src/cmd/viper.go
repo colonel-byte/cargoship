@@ -52,7 +52,6 @@ func initViper() error {
 		v.AddConfigPath("$HOME/.zarf")
 		v.SetConfigName("cargoship-config")
 		v.SetConfigType("yaml")
-		v.SetConfigType("yml")
 	}
 
 	v.SetEnvPrefix("distro")
@@ -73,9 +72,13 @@ func initViper() error {
 
 	vConfigError = v.ReadInConfig()
 	if vConfigError != nil {
-		// Config file not found; ignore
-		if pathError, ok := errors.AsType[*viper.ConfigFileNotFoundError](vConfigError); ok {
-			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", pathError)
+		// A missing config file is expected when running on flags/env/defaults alone; ignore it.
+		// Any other error (e.g. malformed YAML, permission denied) means a config file was found
+		// but couldn't be used, so surface it instead of silently falling back to defaults.
+		if notFoundErr, ok := errors.AsType[viper.ConfigFileNotFoundError](vConfigError); !ok {
+			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", vConfigError)
+		} else {
+			log.Debug(lang.CmdViperErrLoadingConfigFile, "error", notFoundErr)
 		}
 	}
 	return nil
