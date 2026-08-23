@@ -30,6 +30,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type versionOptions struct {
@@ -40,21 +41,18 @@ func newVersionCommand() *cobra.Command {
 	o := versionOptions{}
 
 	cmd := &cobra.Command{
-		Use:               "version",
-		Aliases:           []string{"v"},
-		Short:             lang.CmdVersionShort,
-		Long:              lang.CmdVersionLong,
-		RunE:              o.run,
-		PersistentPreRunE: o.perprerun,
+		Use:     "version",
+		Aliases: []string{"v"},
+		Short:   lang.CmdVersionShort,
+		Long:    lang.CmdVersionLong,
+		RunE:    o.run,
 	}
 
-	cmd.Flags().VarP(&o.outputFormat, "output", "o", "output format (yaml|json)")
+	if err := registerFlagOutputFormat(cmd, &o.outputFormat); err != nil {
+		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
+	}
 
 	return cmd
-}
-
-func (o *versionOptions) perprerun(_ *cobra.Command, _ []string) error {
-	return nil
 }
 
 func (o *versionOptions) run(_ *cobra.Command, _ []string) error {

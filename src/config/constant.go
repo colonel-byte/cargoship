@@ -44,3 +44,12 @@ const (
 	// EngineTLS string key
 	EngineTLS = "tls"
 )
+
+const (
+	// OutputFromatJSON json output format
+	OutputFromatJSON = "json"
+	// OutputFromatYAML yaml output format
+	OutputFromatYAML = "yaml"
+	// OutputFromatTable table output format
+	OutputFromatTable = "table"
+)

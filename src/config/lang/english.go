@@ -68,6 +68,8 @@ const (
 	CmdVersionLong = "Displays the version of the release that the current binary was built from."
 	// CmdVersionShort version short
 	CmdVersionShort = "Shows the version of the running binary"
+	// CmdVersionOutputFromat version flag output format
+	CmdVersionOutputFromat = "output format (yaml|json)"
 	// CmdSha256SumShort sha256sum short
 	CmdSha256SumShort = "Generates a SHA256SUM for the given file"
 	// CmdSha256SumFlagExtractPath flag description
