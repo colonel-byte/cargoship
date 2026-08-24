@@ -34,8 +34,9 @@ import (
 	"time"
 
 	retry "github.com/avast/retry-go/v4"
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
-	"github.com/zarf-dev/zarf/src/config"
+	zconfig "github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -68,6 +69,8 @@ func parseChecksum(src string) (string, string, error) {
 }
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
+// When src contains an inline checksum in the form URL@sha256, that checksum is used.
+// For struct-based callers, prefer DownloadToFileWithChecksum.
 func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
@@ -76,12 +79,28 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 		return err
 	}
 
-	err = helpers.CreateDirectory(filepath.Dir(dst), helpers.ReadWriteExecuteUser)
-	if err != nil {
+	return DownloadToFileWithChecksum(ctx, src, dst, checksum, "")
+}
+
+// DownloadToFileWithChecksum downloads src to dst, using checksum (if non-empty) for validation and caching.
+// checksum SHOULD come from structured config (e.g. ZarfFile.Shasum) rather than being encoded into src.
+func DownloadToFileWithChecksum(ctx context.Context, src, dst, checksum, cacheBaseName string) (err error) {
+	if err := helpers.CreateDirectory(filepath.Dir(dst), helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err)
 	}
 
 	l := logger.From(ctx)
+	cachePath := cacheFilePath(ctx, checksum, cacheBaseName)
+	if cachePath != "" {
+		hit, err := tryServeFromCache(ctx, cachePath, checksum, dst)
+		if err != nil {
+			return err
+		}
+		if hit {
+			return nil
+		}
+	}
+
 	err = retry.Do(
 		func() error {
 			// Create the file
@@ -93,9 +112,9 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 			closeErr := file.Close()
 			return errors.Join(getErr, closeErr)
 		},
-		retry.Attempts(uint(config.ZarfDefaultRetries)),
-		retry.Delay(config.ZarfDefaultRetryDelay),
-		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.Attempts(uint(zconfig.ZarfDefaultRetries)),
+		retry.Delay(zconfig.ZarfDefaultRetryDelay),
+		retry.MaxDelay(zconfig.ZarfDefaultRetryMaxDelay),
 		retry.DelayType(func(n uint, err error, rc *retry.Config) time.Duration {
 			var rlErr retryAfterDuration
 			if errors.As(err, &rlErr) {
@@ -106,10 +125,10 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
-			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+			if zconfig.ZarfDefaultRetries > 1 && n+1 < uint(zconfig.ZarfDefaultRetries) {
 				l.Warn("retrying download",
 					"attempt", n+1,
-					"maxAttempts", config.ZarfDefaultRetries,
+					"maxAttempts", zconfig.ZarfDefaultRetries,
 					"url", src,
 					"error", err,
 				)
@@ -129,9 +148,113 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 		if received != checksum {
 			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s ", dst, checksum, received)
 		}
+
+		// update cache on successful download
+		if cachePath != "" {
+			updateCache(ctx, cachePath, dst)
+		}
 	}
 
 	return nil
+}
+
+// cacheFilesSubdir is the subdirectory under the cache root where downloaded files
+// are cached by checksum.
+const cacheFilesSubdir = "files"
+
+// cacheFilePath returns the on-disk cache path for checksum, or "" if caching isn't
+// applicable (no checksum given, or the cache root can't be resolved).
+func cacheFilePath(ctx context.Context, checksum, cacheBaseName string) string {
+	if checksum == "" {
+		return ""
+	}
+	cacheRoot, err := config.GetAbsCachePath()
+	if err != nil || cacheRoot == "" {
+		logger.From(ctx).Debug("cache root unavailable, skipping file cache", "error", err)
+		return ""
+	}
+	cacheFileName := checksum
+	if cacheBaseName != "" {
+		cacheFileName = fmt.Sprintf("%s_%s", checksum, cacheBaseName)
+	}
+	return filepath.Join(cacheRoot, cacheFilesSubdir, cacheFileName)
+}
+
+// tryServeFromCache copies cachePath to dst if it exists and its content matches
+// checksum. It reports (true, nil) when dst was populated from the cache. A cache
+// miss (file absent, unreadable, or checksum mismatch) is not an error: it just
+// means the caller should fall back to downloading, so it's logged at debug level
+// and reported as (false, nil).
+func tryServeFromCache(ctx context.Context, cachePath, checksum, dst string) (bool, error) {
+	l := logger.From(ctx)
+	if _, err := os.Stat(cachePath); err != nil {
+		return false, nil
+	}
+	received, err := helpers.GetSHA256OfFile(cachePath)
+	if err != nil {
+		l.Debug("unable to checksum cache file, ignoring cache entry", "path", cachePath, "error", err)
+		return false, nil
+	}
+	if received != checksum {
+		l.Debug("cache file checksum mismatch, ignoring cache entry", "path", cachePath)
+		return false, nil
+	}
+
+	srcFile, err := os.Open(cachePath)
+	if err != nil {
+		return false, err
+	}
+	defer srcFile.Close() //nolint:errcheck
+	file, err := os.Create(dst)
+	if err != nil {
+		return false, fmt.Errorf(lang.ErrWritingFile, dst, err)
+	}
+	defer file.Close() //nolint:errcheck
+	if _, err := io.Copy(file, srcFile); err != nil {
+		return false, fmt.Errorf("unable to copy cached file %s: %w", cachePath, err)
+	}
+	return true, nil
+}
+
+// updateCache best-effort copies dst into the file cache at cachePath. It writes to
+// a temp file in the same directory first and renames it into place, so concurrent
+// downloads of the same checksum (this package is used under --oci-concurrency-style
+// parallelism) can't interleave writes and corrupt the shared cache entry. Every
+// failure is non-fatal to the caller, which already has a valid dst -- caching is
+// purely an optimization for next time, so failures are logged at debug and dropped.
+func updateCache(ctx context.Context, cachePath, dst string) {
+	l := logger.From(ctx)
+	if err := helpers.CreateDirectory(filepath.Dir(cachePath), helpers.ReadWriteExecuteUser); err != nil {
+		l.Debug("unable to create cache directory, skipping cache update", "error", err)
+		return
+	}
+	srcFile, err := os.Open(dst)
+	if err != nil {
+		l.Debug("unable to reopen downloaded file for caching, skipping cache update", "error", err)
+		return
+	}
+	defer srcFile.Close() //nolint:errcheck
+
+	tmp, err := os.CreateTemp(filepath.Dir(cachePath), filepath.Base(cachePath)+".tmp-*")
+	if err != nil {
+		l.Debug("unable to create temp cache file, skipping cache update", "error", err)
+		return
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath) //nolint:errcheck // no-op once successfully renamed below
+
+	if _, err := io.Copy(tmp, srcFile); err != nil {
+		tmp.Close() //nolint:errcheck
+		l.Debug("unable to write temp cache file, skipping cache update", "error", err)
+		return
+	}
+	if err := tmp.Close(); err != nil {
+		l.Debug("unable to close temp cache file, skipping cache update", "error", err)
+		return
+	}
+	if err := os.Rename(tmpPath, cachePath); err != nil {
+		l.Debug("unable to move temp cache file into place, skipping cache update", "error", err)
+	}
 }
 
 func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err error) {

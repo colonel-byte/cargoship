@@ -75,7 +75,7 @@ func setBaseDirectory(args []string) string {
 
 func getCachePath(ctx context.Context) (string, error) {
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-		logger.From(ctx).Warn("invalid characters in Zarf cache path, using default", "cfg", config.DefaultCachePath, "default", config.DefaultCachePath)
+		logger.From(ctx).Warn("invalid characters in cargo-ship cache path, using default", "cfg", config.DefaultCachePath, "default", config.DefaultCachePath)
 		config.CommonOptions.CachePath = config.DefaultCachePath
 	}
 	return config.GetAbsCachePath()
@@ -96,8 +96,13 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 
 	logger.From(ctx).Info("using cluster file", "location", opt.config)
 
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	loadOpts := distro.LoadOptions{
-		CachePath:    config.CommonOptions.CachePath,
+		CachePath:    cachePath,
 		Architecture: config.CLIArch,
 		Output:       config.CommonOptions.TempDirectory,
 	}

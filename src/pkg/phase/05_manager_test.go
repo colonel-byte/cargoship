@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,7 +74,7 @@ func (p *configPhase) Explanation() string {
 	return "test function"
 }
 
-func (p *configPhase) Prepare(c *cluster.ZarfCluster) error {
+func (p *configPhase) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.receivedConfig = c != nil
 	return nil
 }
@@ -106,17 +107,17 @@ func (p *hookedPhase) Explanation() string {
 	return "test function"
 }
 
-func (p *hookedPhase) Before() error {
+func (p *hookedPhase) Before(_ context.Context) error {
 	p.beforeCalled = true
 	return nil
 }
 
-func (p *hookedPhase) After() error {
+func (p *hookedPhase) After(_ context.Context) error {
 	p.afterCalled = true
 	return nil
 }
 
-func (p *hookedPhase) CleanUp() {
+func (p *hookedPhase) CleanUp(_ context.Context) {
 	p.cleanupCalled = true
 }
 

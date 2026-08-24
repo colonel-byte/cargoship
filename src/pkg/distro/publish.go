@@ -87,7 +87,7 @@ func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.R
 		return registry.Reference{}, err
 	}
 
-	if err := pushToRemote(ctx, disLayout, disRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions); err != nil {
+	if err := pushToRemote(ctx, disLayout, disRef, opts); err != nil {
 		return registry.Reference{}, err
 	}
 
@@ -95,19 +95,24 @@ func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.R
 }
 
 // pushToRemote pushes a package to the given reference
-func pushToRemote(ctx context.Context, layout *layout.DistroLayout, ref registry.Reference, concurrency int, retries int, remoteOpts types.RemoteOptions) error {
+func pushToRemote(ctx context.Context, layout *layout.DistroLayout, ref registry.Reference, opts PublishOptions) error {
 	arch := layout.Distro.Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)
 
-	remote, err := coci.NewRemote(ctx, ref.String(), platform, oci.WithPlainHTTP(remoteOpts.PlainHTTP), oci.WithInsecureSkipVerify(remoteOpts.InsecureSkipTLSVerify))
+	cacheMod, err := coci.GetOCICacheModifier(ctx, opts.CachePath)
+	if err != nil {
+		return fmt.Errorf("could not configure OCI cache: %w", err)
+	}
+
+	remote, err := coci.NewRemote(ctx, ref.String(), platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
 	publishOptions := coci.PublishOptions{
-		OCIConcurrency: concurrency,
-		Retries:        retries,
+		OCIConcurrency: opts.OCIConcurrency,
+		Retries:        opts.Retries,
 	}
 
 	_, err = remote.PushPackage(ctx, layout, publishOptions)

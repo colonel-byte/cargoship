@@ -99,7 +99,7 @@ func (o *packagePublishOptions) run(ctx context.Context, args []string) error {
 	}
 
 	loadOpts := distro.LoadOptions{
-		CachePath:    config.CommonOptions.CachePath,
+		CachePath:    cachePath,
 		Architecture: config.CLIArch,
 		Output:       config.CommonOptions.TempDirectory,
 	}
