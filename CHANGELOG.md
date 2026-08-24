@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.13.0](https://github.com/colonel-byte/cargoship/compare/v0.12.0...v0.13.0) (2026-08-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* add caching of artifacts ([#204](https://github.com/colonel-byte/cargoship/issues/204))
+
+### Features
+
+* add caching of artifacts ([#204](https://github.com/colonel-byte/cargoship/issues/204)) ([854111d](https://github.com/colonel-byte/cargoship/commit/854111dd521c03b7eb2b275c5906dc23c0e2a77a))
+* add shell completion for arch ([#207](https://github.com/colonel-byte/cargoship/issues/207)) ([e81b2fb](https://github.com/colonel-byte/cargoship/commit/e81b2fbf3befe062c8e39adf04141bb50b560f7e))
+* fix permissions when pulling package ([#206](https://github.com/colonel-byte/cargoship/issues/206)) ([8990299](https://github.com/colonel-byte/cargoship/commit/89902995bdc4fc75aa2d4f08864e04adf6bf62ac))
+
+
+### CI/CD
+
+* update dependabot config ([#196](https://github.com/colonel-byte/cargoship/issues/196)) ([3ca50fd](https://github.com/colonel-byte/cargoship/commit/3ca50fddde487d5916b35823bdc77bf9602cf412))
+
+
+### Build
+
+* **deps:** Bump google.golang.org/grpc from 1.83.0 to 1.83.1 ([#195](https://github.com/colonel-byte/cargoship/issues/195)) ([8878453](https://github.com/colonel-byte/cargoship/commit/88784531588e37eeb94694e8327bf60cd370230a))
+* **deps:** Bump the core group across 1 directory with 2 updates ([#198](https://github.com/colonel-byte/cargoship/issues/198)) ([1b6324e](https://github.com/colonel-byte/cargoship/commit/1b6324e93ad3a94422e62d77c351959eb9ed52c1))
+* **deps:** Bump the cosign group across 1 directory with 16 updates ([#199](https://github.com/colonel-byte/cargoship/issues/199)) ([3bbb43d](https://github.com/colonel-byte/cargoship/commit/3bbb43d4e09ffd3c238a270883a48eae20f2f3d3))
+* **deps:** Bump the k8s group across 1 directory with 8 updates ([#194](https://github.com/colonel-byte/cargoship/issues/194)) ([9b49268](https://github.com/colonel-byte/cargoship/commit/9b49268de160d6ce6040570cc161050dab95f90b))
+* **deps:** Bump the misc group across 1 directory with 28 updates ([#201](https://github.com/colonel-byte/cargoship/issues/201)) ([dfb9e29](https://github.com/colonel-byte/cargoship/commit/dfb9e2973390e93c8f4949f53203237f072d9341))
+
 ## [0.12.0](https://github.com/colonel-byte/cargoship/compare/v0.11.0...v0.12.0) (2026-08-23)
 
 
