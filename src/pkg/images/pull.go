@@ -40,7 +40,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/internal/dns"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
-	"github.com/colonel-byte/cargoship/src/pkg/oci/cache"
+	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -89,7 +89,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	if err := helpers.CreateDirectory(opts.CacheDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
-		return nil, fmt.Errorf("failed to create cache directory %s: %w", destinationDirectory, err)
+		return nil, fmt.Errorf("failed to create cache directory %s: %w", opts.CacheDirectory, err)
 	}
 
 	if opts.ResponseHeaderTimeout < 0 {
@@ -317,7 +317,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	if err != nil {
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
-	pullSrc = cache.New(repo, localCache)
+	pullSrc = orasCache.New(repo, localCache)
 	var desc ocispec.Descriptor
 	err = retry.Do(
 		func() error {

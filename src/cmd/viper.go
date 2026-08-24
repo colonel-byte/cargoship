@@ -21,11 +21,11 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -142,7 +142,7 @@ func configPath(fieldNames ...string) string {
 
 func setDefaults() {
 	v.SetDefault(configPath("LogLevel"), loggingLevelDefault)
-	v.SetDefault(configPath("CachePath"), config.ZarfDefaultCachePath)
+	v.SetDefault(configPath("CachePath"), config.DefaultCachePath)
 	v.SetDefault(configPath("LogFormat"), string(logger.FormatConsole))
 	v.SetDefault(configPath("TempDirectory"), "/tmp")
 	v.SetDefault(configPath("NoColor"), false)

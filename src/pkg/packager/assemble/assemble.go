@@ -171,7 +171,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 			// If the file is an archive, download it to the componentPath.Temp
-			if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
+			if err := utils.DownloadToFileWithChecksum(ctx, file.Source, compressedFile, file.Shasum, filepath.Base(file.Target)); err != nil {
 				return fmt.Errorf(zlang.ErrDownloading, file.Source, err)
 			}
 			decompressOpts := archive.DecompressOpts{
@@ -182,7 +182,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 				return fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
 			}
 		} else {
-			if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
+			if err := utils.DownloadToFileWithChecksum(ctx, file.Source, dst, file.Shasum, filepath.Base(file.Target)); err != nil {
 				return fmt.Errorf(zlang.ErrDownloading, file.Source, err)
 			}
 		}
