@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a0a76d5d.js";
+            window.path_to_searchindex_js = "../searchindex-bd11fac9.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b85f870d.js"></script>
+        <script src="../toc-2f72d095.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -192,6 +192,8 @@
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
   -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
       --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string     Password to the private key used for signing packages
       --skip-sbom                   Skip generating SBOM for this package
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
