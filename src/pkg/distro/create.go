@@ -39,6 +39,10 @@ type CreateOptions struct {
 	CachePath      string
 	IsInteractive  bool
 	SkipSBOM       bool
+	// Reproducible pins Build.Timestamp to config.InitCommit instead of the
+	// current time, and is recorded on Build.Reproducible, so identical package
+	// inputs produce byte-identical output.
+	Reproducible bool
 	types.RemoteOptions
 }
 
@@ -62,6 +66,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		RemoteOptions:  opts.RemoteOptions,
 		OCIConcurrency: opts.OCIConcurrency,
 		CachePath:      opts.CachePath,
+		Reproducible:   opts.Reproducible,
 		// Don't have sbom logic yet....
 		SkipSBOM: true,
 	}

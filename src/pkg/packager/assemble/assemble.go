@@ -59,6 +59,10 @@ type AssembleOptions struct {
 	OCIConcurrency    int
 	CachePath         string
 	SkipSBOM          bool
+	// Reproducible pins Build.Timestamp to config.InitCommit instead of the
+	// current time, and is recorded on Build.Reproducible, so identical package
+	// inputs produce byte-identical output.
+	Reproducible bool
 	types.RemoteOptions
 }
 
@@ -135,7 +139,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 	d.Metadata.AggregateChecksum = checksumSha
 
-	d = recordDistroMetadata(d, opts.RegistryOverrides)
+	d = recordDistroMetadata(d, opts)
 
 	b, err := goyaml.Marshal(d)
 	if err != nil {
@@ -237,15 +241,27 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	return nil
 }
 
-func recordDistroMetadata(distro distro.ZarfDistro, registryOverrides []images.RegistryOverride) distro.ZarfDistro {
-	now := time.Now()
-	distro.Build.Architecture = distro.Metadata.Architecture
-	distro.Build.Timestamp = now.Format(api.BuildTimestampFormat)
-	distro.Build.Version = distro.Metadata.Version
+// buildTimestamp returns the timestamp to record as Build.Timestamp. When
+// reproducible is true (--reproducible), it's pinned to config.InitCommit instead
+// of the current time, so two builds from identical inputs produce byte-identical
+// output. Mirrors "flux push artifact --reproducible", anchored to this project's
+// own init commit rather than the literal Unix epoch.
+func buildTimestamp(reproducible bool) time.Time {
+	if reproducible {
+		return config.InitCommit
+	}
+	return time.Now()
+}
 
-	overrides := make(map[string]string, len(registryOverrides))
-	for i := range registryOverrides {
-		overrides[registryOverrides[i].Source] = registryOverrides[i].Override
+func recordDistroMetadata(distro distro.ZarfDistro, opts AssembleOptions) distro.ZarfDistro {
+	distro.Build.Architecture = distro.Metadata.Architecture
+	distro.Build.Timestamp = buildTimestamp(opts.Reproducible).Format(api.BuildTimestampFormat)
+	distro.Build.Version = distro.Metadata.Version
+	distro.Build.Reproducible = opts.Reproducible
+
+	overrides := make(map[string]string, len(opts.RegistryOverrides))
+	for i := range opts.RegistryOverrides {
+		overrides[opts.RegistryOverrides[i].Source] = opts.RegistryOverrides[i].Override
 	}
 
 	distro.Build.RegistryOverrides = overrides

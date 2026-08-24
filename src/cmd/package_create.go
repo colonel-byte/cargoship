@@ -47,6 +47,7 @@ type packageCreateOptions struct {
 	ociConcurrency    int
 	confirm           bool
 	skipSBOM          bool
+	reproducible      bool
 }
 
 func newPackageCreateCommand() *cobra.Command {
@@ -72,6 +73,7 @@ func newPackageCreateCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", resolvedConfig.DistroOpts.CreateOpts.RegistryOverride, zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", resolvedConfig.DistroOpts.CreateOpts.SkipSBOM, zlang.CmdPackageCreateFlagSkipSbom)
+	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
@@ -95,6 +97,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		IsInteractive:  !o.confirm,
 		OCIConcurrency: o.ociConcurrency,
 		RemoteOptions:  defaultRemoteOptions(),
+		Reproducible:   o.reproducible,
 	}
 
 	disPath, err := distro.Create(ctx, basePath, o.output, opt)

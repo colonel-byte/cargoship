@@ -96,4 +96,6 @@ const (
 	RootGroupPackageTitle = "Package Commands:"
 	// CmdPackageFlagVerify flag
 	CmdPackageFlagVerify = "Verify the Cargoship package signature"
+	// CmdPackageCreateFlagReproducible create flag reproducible
+	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to 1970-01-01T00:00:00Z instead of the current time, so identical inputs produce a byte-identical package."
 )

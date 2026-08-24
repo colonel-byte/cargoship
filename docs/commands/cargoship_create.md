@@ -16,6 +16,7 @@ cargoship create [Dir] [flags]
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
   -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
       --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --reproducible                Pin the recorded package build time to 1970-01-01T00:00:00Z instead of the current time, so identical inputs produce a byte-identical package.
       --skip-sbom                   Skip generating SBOM for this package
 ```
 
