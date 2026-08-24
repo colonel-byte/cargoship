@@ -36,9 +36,9 @@ builds:
       - linux
       - darwin
     goarch:
-      - arm
       - arm64
       - amd64
+      - riscv64
     goamd64:
       - v1
     goarm:
