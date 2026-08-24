@@ -22,6 +22,7 @@
   - [pull](commands/cargoship_pull.md)
   - [reset](commands/cargoship_reset.md)
   - [sha256sum](commands/cargoship_sha256sum.md)
+  - [sign](commands/cargoship_sign.md)
   - [version](commands/cargoship_version.md)
 
 

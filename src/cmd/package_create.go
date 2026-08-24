@@ -42,11 +42,13 @@ import (
 var distroOutputKey = configPath("DistroOpts", "Output")
 
 type packageCreateOptions struct {
-	output            string
-	registryOverrides []string
-	ociConcurrency    int
-	confirm           bool
-	skipSBOM          bool
+	output             string
+	registryOverrides  []string
+	ociConcurrency     int
+	confirm            bool
+	skipSBOM           bool
+	signingKeyPath     string
+	signingKeyPassword string
 }
 
 func newPackageCreateCommand() *cobra.Command {
@@ -72,6 +74,8 @@ func newPackageCreateCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", resolvedConfig.DistroOpts.CreateOpts.RegistryOverride, zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", resolvedConfig.DistroOpts.CreateOpts.SkipSBOM, zlang.CmdPackageCreateFlagSkipSbom)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackageCreateFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageCreateFlagSigningKeyPassword)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
@@ -91,10 +95,12 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 
 	opt := distro.CreateOptions{
-		CachePath:      cachePath,
-		IsInteractive:  !o.confirm,
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
+		CachePath:          cachePath,
+		IsInteractive:      !o.confirm,
+		OCIConcurrency:     o.ociConcurrency,
+		RemoteOptions:      defaultRemoteOptions(),
+		SigningKeyPath:     o.signingKeyPath,
+		SigningKeyPassword: o.signingKeyPassword,
 	}
 
 	disPath, err := distro.Create(ctx, basePath, o.output, opt)
