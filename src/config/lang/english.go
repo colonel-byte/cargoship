@@ -96,4 +96,25 @@ const (
 	RootGroupPackageTitle = "Package Commands:"
 	// CmdPackageFlagVerify flag
 	CmdPackageFlagVerify = "Verify the Cargoship package signature"
+	// CmdDistroSignShort sign short
+	CmdDistroSignShort = "Signs an existing Cargoship distro package"
+	// CmdDistroSignLong sign long
+	CmdDistroSignLong = "Signs an existing Cargoship distro package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the distro.yaml file and does not modify the package checksums."
+	// CmdDistroSignExample sign example
+	CmdDistroSignExample = `
+# Sign an unsigned package
+$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
+
+# Re-sign with a new key (overwrite existing signature)
+$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./new-key.pem --overwrite
+
+# Sign a package from an OCI registry and output to a local directory
+$ cargoship sign oci://ghcr.io/my-org/my-package:1.0.0 --signing-key ./private-key.pem --output ./signed/
+
+# Sign a package and publish directly to an OCI registry
+$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem --output oci://ghcr.io/my-org/signed-packages
+
+# Sign with a cloud KMS key
+$ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
+`
 )

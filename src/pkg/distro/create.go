@@ -39,6 +39,10 @@ type CreateOptions struct {
 	CachePath      string
 	IsInteractive  bool
 	SkipSBOM       bool
+	// SigningKeyPath and SigningKeyPassword sign the package as part of creation
+	// when set. Empty values are a no-op -- see DistroLayout.SignPackage.
+	SigningKeyPath     string
+	SigningKeyPassword string
 	types.RemoteOptions
 }
 
@@ -59,9 +63,11 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	}
 
 	assembleOpt := assemble.AssembleOptions{
-		RemoteOptions:  opts.RemoteOptions,
-		OCIConcurrency: opts.OCIConcurrency,
-		CachePath:      opts.CachePath,
+		RemoteOptions:      opts.RemoteOptions,
+		OCIConcurrency:     opts.OCIConcurrency,
+		CachePath:          opts.CachePath,
+		SigningKeyPath:     opts.SigningKeyPath,
+		SigningKeyPassword: opts.SigningKeyPassword,
 		// Don't have sbom logic yet....
 		SkipSBOM: true,
 	}
