@@ -47,6 +47,9 @@ updates:
       interval: daily
     assignees:
       - "a1994sc"
+    groups:
+      core:
+        - "*"
   - package-ecosystem: github-actions
     directories:
       - "/"
@@ -54,3 +57,6 @@ updates:
       interval: daily
     assignees:
       - "a1994sc"
+    groups:
+      core:
+        - "*"
