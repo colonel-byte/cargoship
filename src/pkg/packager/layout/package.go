@@ -224,6 +224,38 @@ func isCleanPath(s string) bool {
 	return s != ".." && !strings.ContainsAny(s, `/\`)
 }
 
+// normalizePermissions canonicalizes file and directory permissions in the
+// package layout so archives produced from different sources (build vs pull)
+// use consistent modes.
+func (d *DistroLayout) normalizePermissions() error {
+	return filepath.WalkDir(d.dirPath, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip symlinks; not currently used in packages, but avoid mutating targets.
+		if entry.Type()&fs.ModeSymlink != 0 {
+			return nil
+		}
+
+		// Directories and executable files are normalized to 0755 (rwxr-xr-x);
+		// every other regular file is normalized to 0644 (rw-r--r--).
+		mode := os.FileMode(helpers.ReadAllWriteUser)
+		if entry.IsDir() {
+			mode = helpers.ReadExecuteAllWriteUser
+		} else {
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			if info.Mode().Perm()&0111 != 0 {
+				mode = helpers.ReadExecuteAllWriteUser
+			}
+		}
+		return os.Chmod(path, mode)
+	})
+}
+
 // IsSigned returns true if the package is signed.
 // It first checks the package metadata (Build.Signed), then falls back to
 // checking for the presence of a signature file for backward compatibility.

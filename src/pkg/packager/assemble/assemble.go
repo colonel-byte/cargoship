@@ -129,7 +129,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 		return nil, err
 	}
 	checksumPath := filepath.Join(buildPath, config.Checksums)
-	err = os.WriteFile(checksumPath, []byte(checksumContent), helpers.ReadWriteUser)
+	err = os.WriteFile(checksumPath, []byte(checksumContent), helpers.ReadAllWriteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	if err != nil {
 		return nil, err
 	}
-	err = os.WriteFile(filepath.Join(buildPath, config.DistroYAML), b, helpers.ReadWriteUser)
+	err = os.WriteFile(filepath.Join(buildPath, config.DistroYAML), b, helpers.ReadAllWriteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -224,12 +224,12 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	}
 
 	if file.Executable || helpers.IsDir(dst) {
-		err := os.Chmod(dst, helpers.ReadWriteExecuteUser)
+		err := os.Chmod(dst, helpers.ReadExecuteAllWriteUser)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := os.Chmod(dst, helpers.ReadWriteUser)
+		err := os.Chmod(dst, helpers.ReadAllWriteUser)
 		if err != nil {
 			return err
 		}

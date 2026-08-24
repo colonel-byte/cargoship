@@ -96,6 +96,10 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (stri
 	}
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 
+	if err := d.normalizePermissions(); err != nil {
+		return "", err
+	}
+
 	files, err := os.ReadDir(d.dirPath)
 	if err != nil {
 		return "", err
