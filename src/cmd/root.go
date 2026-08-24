@@ -160,6 +160,9 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), resolvedConfig.CachePath), zlang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), resolvedConfig.TempDirectory), zlang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, RootArchitecture, "a", resolvedConfig.Architecture, zlang.RootCmdFlagArch)
+	if err := rootCmd.RegisterFlagCompletionFunc(RootArchitecture, flags.RegisterArchitectureFormat); err != nil {
+		fmt.Printf("failed to register %s flag completion: %v", RootArchitecture, err)
+	}
 
 	// Security
 	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", v.GetBool(RootPlainHTTP), zlang.RootCmdFlagPlainHTTP)
