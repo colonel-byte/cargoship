@@ -49,11 +49,11 @@ repos:
           - -y
           - "2026"
   - repo: https://github.com/google/keep-sorted
-    rev: v0.9.1
+    rev: v0.10.0
     hooks:
       - id: keep-sorted
   - repo: https://github.com/golangci/golangci-lint
-    rev: v2.12.2
+    rev: v2.13.1
     hooks:
       - id: golangci-lint
         exclude: vendor/.*
