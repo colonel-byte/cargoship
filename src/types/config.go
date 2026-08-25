@@ -15,6 +15,11 @@
 // Package types is a little bit of a hacky way to generate the cargo-ship-config jsonschema
 package types
 
+import (
+	"github.com/invopop/jsonschema"
+	orderedmap "github.com/pb33f/ordered-map/v2"
+)
+
 // DistroConfig holds the values for the `.`, or root, section of the config file
 type DistroConfig struct {
 	// CachePath is the folder where oras artifacts are stored
@@ -91,7 +96,7 @@ type DistroCreateOptions struct {
 	SkipSBOM bool `json:"skip_sbom,omitempty" mapstructure:"skip_sbom"`
 	// RegistryOverride maps a source registry to the registry cargoship uses instead
 	// when pulling images, for example {"docker.io": "mirror.example.com"}
-	RegistryOverride map[string]string `json:"registry_override,omitempty" mapstructure:"-"` // mapstructure:"-": viper always splits a map key on "." when merging its settings tree, so a domain key like "docker.io" gets silently corrupted into a nested map; read directly from the config file instead (see initViper in cmd/viper.go)
+	RegistryOverride RegistryOverrideMap `json:"registry_override,omitempty" mapstructure:"-"` // mapstructure:"-": viper always splits a map key on "." when merging its settings tree, so a domain key like "docker.io" gets silently corrupted into a nested map; read directly from the config file instead (see initViper in cmd/viper.go)
 }
 
 // DistroPublishOptions holds the values for the `.distro.publish` section of the config file
@@ -113,3 +118,32 @@ type ApplyOptions struct{}
 
 // ResetOptions holds the values for the `.distro.reset` section of the config file
 type ResetOptions struct{}
+
+// RegistryOverrideMap maps a source registry to the registry cargoship uses instead.
+// It's a named type (rather than a bare map[string]string) solely so it can implement
+// JSONSchemaExtend below and suggest common registries in the generated schema; the
+// config file is not restricted to those.
+type RegistryOverrideMap map[string]string
+
+// commonRegistries are suggested, non-exhaustive property names for RegistryOverrideMap's
+// generated schema -- editors with YAML/JSON schema support (e.g. the redhat.vscode-yaml
+// extension) offer them as autocomplete for registry_override keys.
+var commonRegistries = []string{
+	"docker.io",
+	"ghcr.io",
+	"quay.io",
+	"gcr.io",
+	"registry.k8s.io",
+	"public.ecr.aws",
+}
+
+// JSONSchemaExtend adds commonRegistries to the schema's properties, alongside the
+// additionalProperties the reflector already set for the map[string]string element
+// type, so the suggestions are additive and don't restrict which keys are allowed.
+func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema) {
+	suggestions := orderedmap.New[string, *jsonschema.Schema]()
+	for _, registry := range commonRegistries {
+		suggestions.Set(registry, &jsonschema.Schema{Type: "string"})
+	}
+	s.Properties = suggestions
+}
