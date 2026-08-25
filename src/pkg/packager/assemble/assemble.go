@@ -60,7 +60,7 @@ type AssembleOptions struct {
 	OCIConcurrency    int
 	CachePath         string
 	SkipSBOM          bool
-	// Reproducible pins Build.Timestamp to config.InitCommit instead of the
+	// Reproducible pins Build.Timestamp to config.Timestamp instead of the
 	// current time, and is recorded on Build.Reproducible, so identical package
 	// inputs produce byte-identical output.
 	Reproducible bool
@@ -256,13 +256,12 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 }
 
 // buildTimestamp returns the timestamp to record as Build.Timestamp. When
-// reproducible is true (--reproducible), it's pinned to config.InitCommit instead
+// reproducible is true (--reproducible), it's pinned to config.Timestamp instead
 // of the current time, so two builds from identical inputs produce byte-identical
-// output. Mirrors "flux push artifact --reproducible", anchored to this project's
-// own init commit rather than the literal Unix epoch.
+// output. Mirrors "flux push artifact --reproducible".
 func buildTimestamp(reproducible bool) time.Time {
 	if reproducible {
-		return config.InitCommit
+		return config.Timestamp
 	}
 	return time.Now()
 }

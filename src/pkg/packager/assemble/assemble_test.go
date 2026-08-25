@@ -27,8 +27,8 @@ import (
 
 func TestBuildTimestampReproducible(t *testing.T) {
 	got := buildTimestamp(true)
-	if !got.Equal(config.InitCommit) {
-		t.Fatalf("buildTimestamp(true) = %v, want %v", got, config.InitCommit)
+	if !got.Equal(config.Timestamp) {
+		t.Fatalf("buildTimestamp(true) = %v, want %v", got, config.Timestamp)
 	}
 }
 
@@ -40,8 +40,8 @@ func TestBuildTimestampNonReproducible(t *testing.T) {
 	if got.Before(before) || got.After(after) {
 		t.Fatalf("buildTimestamp(false) = %v, want between %v and %v", got, before, after)
 	}
-	if got.Equal(config.InitCommit) {
-		t.Fatalf("buildTimestamp(false) unexpectedly equals config.InitCommit")
+	if got.Equal(config.Timestamp) {
+		t.Fatalf("buildTimestamp(false) unexpectedly equals config.Timestamp")
 	}
 }
 
@@ -68,7 +68,7 @@ func TestRecordDistroMetadataReproducible(t *testing.T) {
 	if !got.Build.Reproducible {
 		t.Errorf("Build.Reproducible = false, want true")
 	}
-	wantTimestamp := config.InitCommit.Format(api.BuildTimestampFormat)
+	wantTimestamp := config.Timestamp.Format(api.BuildTimestampFormat)
 	if got.Build.Timestamp != wantTimestamp {
 		t.Errorf("Build.Timestamp = %q, want %q", got.Build.Timestamp, wantTimestamp)
 	}

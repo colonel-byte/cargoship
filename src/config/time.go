@@ -17,6 +17,6 @@ package config
 import "time"
 
 var (
-	// InitCommit is the timestamp of the very first commit in github.com/colonel-byte/cargoship
-	InitCommit = time.Date(2026, time.March, 27, 22, 40, 34, 0, time.UTC)
+	// Timestamp is the timestamp for the reproduciable tarball logic
+	Timestamp = time.Unix(0, 0).UTC()
 )

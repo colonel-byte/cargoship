@@ -97,7 +97,7 @@ const (
 	// CmdPackageFlagVerify flag
 	CmdPackageFlagVerify = "Verify the Cargoship package signature"
 	// CmdPackageCreateFlagReproducible create flag reproducible
-	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to 1970-01-01T00:00:00Z instead of the current time, so identical inputs produce a byte-identical package."
+	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package."
 	// CmdDistroSignShort sign short
 	CmdDistroSignShort = "Signs an existing Cargoship distro package"
 	// CmdDistroSignLong sign long

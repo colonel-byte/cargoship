@@ -39,7 +39,7 @@ type CreateOptions struct {
 	CachePath      string
 	IsInteractive  bool
 	SkipSBOM       bool
-	// Reproducible pins Build.Timestamp to config.InitCommit instead of the
+	// Reproducible pins Build.Timestamp to config.Timestamp instead of the
 	// current time, and is recorded on Build.Reproducible, so identical package
 	// inputs produce byte-identical output.
 	Reproducible bool

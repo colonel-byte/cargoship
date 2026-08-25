@@ -350,6 +350,50 @@
       },
       "type": "object"
     },
+    "ZarfDistroBuildData": {
+      "additionalProperties": false,
+      "description": "holds information recorded when the package was built.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "description": "is the CPU architecture used to build the package.",
+          "type": "string"
+        },
+        "provenanceFiles": {
+          "description": "lists files in the package that checksums.txt does not cover.\nThese are files added after cargoship generates checksums, for example signature files.\nThe signed distro.yaml authenticates this list.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "registryOverrides": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps each original registry to the registry actually used to build the package.",
+          "type": "object"
+        },
+        "reproducible": {
+          "description": "indicates Build.Timestamp was pinned to a fixed value\n(config.Timestamp) instead of the actual build time, so identical\npackage inputs produce byte-identical output.",
+          "type": "boolean"
+        },
+        "signed": {
+          "description": "indicates whether the package was signed. A nil value means the signing status was not recorded.",
+          "type": "boolean"
+        },
+        "timestamp": {
+          "description": "is the time the package was created.",
+          "type": "string"
+        },
+        "version": {
+          "description": "records the distro version used to build the package.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "ZarfDistroConfig": {
       "additionalProperties": false,
       "description": "holds the configuration for the distro engine.",
@@ -633,6 +677,10 @@
         "zarf.dev/v1alpha1"
       ],
       "type": "string"
+    },
+    "build": {
+      "$ref": "#/$defs/ZarfDistroBuildData",
+      "description": "holds information recorded when the package was built."
     },
     "kind": {
       "description": "identifies the document type. The value must be ZarfDistro.",
