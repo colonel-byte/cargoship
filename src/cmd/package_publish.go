@@ -34,6 +34,7 @@ import (
 	"github.com/spf13/cobra"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -109,12 +110,21 @@ func (o *packagePublishOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	// Overwrite=true because Publish always (re-)signs on publish; without it, a
+	// package that already carries a signature bundle (e.g. re-publishing after a
+	// fix) would fail with "file already exists" instead of replacing it.
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = o.signingKeyPath
+	signOpts.Password = o.signingKeyPassword
+	signOpts.Overwrite = true
+
 	opt := distro.PublishOptions{
-		CachePath:      cachePath,
-		IsInteractive:  !o.confirm,
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		Registry:       &dstRef,
+		CachePath:       cachePath,
+		IsInteractive:   !o.confirm,
+		OCIConcurrency:  o.ociConcurrency,
+		RemoteOptions:   defaultRemoteOptions(),
+		Registry:        &dstRef,
+		SignBlobOptions: signOpts,
 	}
 
 	disPath, err := distro.Publish(ctx, distroLayout, dstRef, opt)

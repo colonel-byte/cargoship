@@ -43,6 +43,10 @@ type CreateOptions struct {
 	// current time, and is recorded on Build.Reproducible, so identical package
 	// inputs produce byte-identical output.
 	Reproducible bool
+	// SigningKeyPath and SigningKeyPassword sign the package as part of creation
+	// when set. Empty values are a no-op -- see DistroLayout.SignPackage.
+	SigningKeyPath     string
+	SigningKeyPassword string
 	types.RemoteOptions
 }
 
@@ -63,10 +67,12 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	}
 
 	assembleOpt := assemble.AssembleOptions{
-		RemoteOptions:  opts.RemoteOptions,
-		OCIConcurrency: opts.OCIConcurrency,
-		CachePath:      opts.CachePath,
-		Reproducible:   opts.Reproducible,
+		RemoteOptions:      opts.RemoteOptions,
+		OCIConcurrency:     opts.OCIConcurrency,
+		CachePath:          opts.CachePath,
+		Reproducible:       opts.Reproducible,
+		SigningKeyPath:     opts.SigningKeyPath,
+		SigningKeyPassword: opts.SigningKeyPassword,
 		// Don't have sbom logic yet....
 		SkipSBOM: true,
 	}

@@ -48,6 +48,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
@@ -63,6 +64,10 @@ type AssembleOptions struct {
 	// current time, and is recorded on Build.Reproducible, so identical package
 	// inputs produce byte-identical output.
 	Reproducible bool
+	// SigningKeyPath and SigningKeyPassword sign the package as part of assembly when
+	// set. Empty values are a no-op -- see DistroLayout.SignPackage.
+	SigningKeyPath     string
+	SigningKeyPassword string
 	types.RemoteOptions
 }
 
@@ -150,7 +155,16 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 		return nil, err
 	}
 
-	return layout.NewDistroLayout(buildPath, d), nil
+	distroLayout := layout.NewDistroLayout(buildPath, d)
+
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+	if err := distroLayout.SignPackage(ctx, signOpts); err != nil {
+		return nil, err
+	}
+
+	return distroLayout, nil
 }
 
 func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.ZarfFile) error {

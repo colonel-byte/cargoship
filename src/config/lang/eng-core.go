@@ -98,4 +98,8 @@ const (
 	CmdPackageFlagVerify = "Verify the Cargoship package signature"
 	// CmdPackageCreateFlagReproducible create flag reproducible
 	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to 1970-01-01T00:00:00Z instead of the current time, so identical inputs produce a byte-identical package."
+	// CmdDistroSignShort sign short
+	CmdDistroSignShort = "Signs an existing Cargoship distro package"
+	// CmdDistroSignLong sign long
+	CmdDistroSignLong = "Signs an existing Cargoship distro package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the distro.yaml file and does not modify the package checksums."
 )

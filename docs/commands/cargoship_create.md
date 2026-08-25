@@ -17,6 +17,8 @@ cargoship create [Dir] [flags]
   -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
       --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
       --reproducible                Pin the recorded package build time to 1970-01-01T00:00:00Z instead of the current time, so identical inputs produce a byte-identical package.
+      --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string     Password to the private key used for signing packages
       --skip-sbom                   Skip generating SBOM for this package
 ```
 
