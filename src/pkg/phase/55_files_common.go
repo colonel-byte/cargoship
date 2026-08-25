@@ -102,11 +102,15 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 	return p.parallelDo(ctx, slices.Concat(p.control, p.workers), p.cleanStaleUploads)
 }
 
-// cleanStaleUploads removes files this run's upload left in the manifest from a previous
-// version but didn't re-upload itself, e.g. an engine binary a version bump renamed.
+// cleanStaleUploads removes engine files this run's upload left in the manifest from a previous
+// version but didn't re-upload itself, e.g. an engine binary a version bump renamed. The diff is
+// scoped to the "engine" category: other upload phases (e.g. images) record into the same
+// per-host UploadedFiles list, and their entries may not exist yet by the time this phase runs.
 func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
 	current := parseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
-	p.removeStaleManifestEntries(ctx, h, p.priorManifest[h], current)
+	old := filterManifestByCategory(p.priorManifest[h], "engine")
+	current = filterManifestByCategory(current, "engine")
+	p.removeStaleManifestEntries(ctx, h, old, current)
 	return nil
 }
 

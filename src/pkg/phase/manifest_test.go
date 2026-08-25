@@ -89,3 +89,40 @@ func TestDiffManifestEmptyWhenNothingChanged(t *testing.T) {
 	require.Empty(t, diffManifest(entries, entries))
 	require.Empty(t, diffManifest(nil, entries))
 }
+
+func TestFilterManifestByCategory(t *testing.T) {
+	entries := []ManifestEntry{
+		{Category: "engine", Path: "/usr/local/bin/k3s"},
+		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/app_v1.tar"},
+		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/other_v1.tar"},
+		{Category: "file", Path: "/etc/rancher/k3s/config.yaml"},
+	}
+
+	require.Equal(t, []ManifestEntry{
+		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/app_v1.tar"},
+		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/other_v1.tar"},
+	}, filterManifestByCategory(entries, "image"))
+
+	require.Empty(t, filterManifestByCategory(entries, "data"))
+}
+
+func TestDiffManifestIsScopedByCategory(t *testing.T) {
+	// Regression check for the bug the image-cleanup phase must avoid: the engine binary phase
+	// hasn't re-recorded its file yet when the image phase's own stale-check runs, so an
+	// unscoped diff would misread the engine binary as stale and delete a file still in use.
+	old := []ManifestEntry{
+		{Category: "engine", Path: "/usr/local/bin/k3s"},
+		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/app_v1.tar"},
+	}
+	// Simulates mid-run state: the image phase re-recorded its file, the engine phase hasn't run yet.
+	current := []ManifestEntry{
+		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/app_v2.tar"},
+	}
+
+	oldImages := filterManifestByCategory(old, "image")
+	currentImages := filterManifestByCategory(current, "image")
+
+	require.Equal(t, []ManifestEntry{
+		{Category: "image", Path: "/var/lib/rancher/k3s/agent/images/app_v1.tar"},
+	}, diffManifest(oldImages, currentImages))
+}

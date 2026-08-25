@@ -103,6 +103,20 @@ func diffManifest(old, current []ManifestEntry) []ManifestEntry {
 	return stale
 }
 
+// filterManifestByCategory returns only the entries matching category. Stale-file diffing must
+// be scoped to a single category: an upload phase for one category (e.g. images) can run before
+// another phase (e.g. the engine binary) has re-recorded its own files for the current run, and
+// an unscoped diff would misread the other category's not-yet-uploaded files as stale.
+func filterManifestByCategory(entries []ManifestEntry, category string) []ManifestEntry {
+	filtered := make([]ManifestEntry, 0, len(entries))
+	for _, e := range entries {
+		if e.Category == category {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
+}
+
 // readManifest reads and parses the manifest from h. It returns nil if the manifest doesn't
 // exist or can't be read.
 func (p *GenericPhase) readManifest(h *cluster.ZarfHost) []ManifestEntry {
