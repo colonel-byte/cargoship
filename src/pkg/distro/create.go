@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/colonel-byte/cargoship/src/pkg/images"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/assemble"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
@@ -42,7 +43,8 @@ type CreateOptions struct {
 	// Reproducible pins Build.Timestamp to config.Timestamp instead of the
 	// current time, and is recorded on Build.Reproducible, so identical package
 	// inputs produce byte-identical output.
-	Reproducible bool
+	Reproducible      bool
+	RegistryOverrides []images.RegistryOverride
 	// SigningKeyPath and SigningKeyPassword sign the package as part of creation
 	// when set. Empty values are a no-op -- see DistroLayout.SignPackage.
 	SigningKeyPath     string
@@ -71,6 +73,7 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 		OCIConcurrency:     opts.OCIConcurrency,
 		CachePath:          opts.CachePath,
 		Reproducible:       opts.Reproducible,
+		RegistryOverrides:  opts.RegistryOverrides,
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 		// Don't have sbom logic yet....

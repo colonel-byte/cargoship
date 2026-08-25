@@ -17,11 +17,11 @@
       },
       "properties": {
         "registry_override": {
-          "description": "remaps references from one registry to another",
-          "items": {
+          "additionalProperties": {
             "type": "string"
           },
-          "type": "array"
+          "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}",
+          "type": "object"
         },
         "skip_sbom": {
           "description": "whether we will scan the images or files",
