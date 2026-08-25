@@ -24,6 +24,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/types"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -103,7 +104,37 @@ func initViper() error {
 		log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
 	}
 
+	// RegistryOverride is mapstructure:"-" (see types.DistroConfig) and must be read
+	// directly from the config file, bypassing viper's Unmarshal above: its map keys
+	// are registry domains like "docker.io", and viper always treats "." as a
+	// nested-key delimiter when merging its settings tree, silently corrupting any
+	// such key into a nested map. Never fatal, same reasoning as the Unmarshal above.
+	if cfgPath := v.ConfigFileUsed(); cfgPath != "" {
+		overrides, err := loadRegistryOverrides(cfgPath)
+		if err != nil {
+			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
+		} else {
+			resolvedConfig.DistroOpts.CreateOpts.RegistryOverride = overrides
+		}
+	}
+
 	return nil
+}
+
+// loadRegistryOverrides reads DistroOpts.CreateOpts.RegistryOverride directly out of
+// the config file at cfgPath. It exists because that field is mapstructure:"-" -- see
+// the comment where it's called in initViper for why viper's Unmarshal can't be trusted
+// with it.
+func loadRegistryOverrides(cfgPath string) (map[string]string, error) {
+	raw, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+	var fileConfig types.DistroConfig
+	if err := goyaml.UnmarshalWithOptions(raw, &fileConfig); err != nil {
+		return nil, err
+	}
+	return fileConfig.DistroOpts.CreateOpts.RegistryOverride, nil
 }
 
 // configPath derives a viper dot-path key for a field in types.DistroConfig by
@@ -162,7 +193,6 @@ func setDefaults() {
 	// an env-only key on its own. Confirmed via a standalone reproduction before adding
 	// these -- omitting any of them silently drops that key's env-var support.
 	v.SetDefault(configPath("Architecture"), "")
-	v.SetDefault(configPath("DistroOpts", "CreateOpts", "RegistryOverride"), []string{})
 	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
 	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), 0)
 	v.SetDefault(configPath("DistroOpts", "Type"), "")

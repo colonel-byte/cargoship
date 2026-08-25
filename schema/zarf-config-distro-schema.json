@@ -17,11 +17,8 @@
       },
       "properties": {
         "registry_override": {
-          "description": "remaps references from one registry to another",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+          "$ref": "#/$defs/RegistryOverrideMap",
+          "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"
         },
         "skip_sbom": {
           "description": "whether we will scan the images or files",
@@ -180,6 +177,36 @@
         },
         "signing_key_password": {
           "description": "the password for the private key used for signing",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "RegistryOverrideMap": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "maps a source registry to the registry cargoship uses instead.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "docker.io": {
+          "type": "string"
+        },
+        "gcr.io": {
+          "type": "string"
+        },
+        "ghcr.io": {
+          "type": "string"
+        },
+        "public.ecr.aws": {
+          "type": "string"
+        },
+        "quay.io": {
+          "type": "string"
+        },
+        "registry.k8s.io": {
           "type": "string"
         }
       },
