@@ -131,6 +131,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			Name:        tarBallName,
 			Target:      p.manager.Distro.Spec.Config.ImagesConfig.Path,
 			TargetIsDir: true,
+			Category:    "image",
 			LocalSource: v1alpha1.LocalFile{
 				Path: tarballPath,
 			},
@@ -210,6 +211,7 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 			Target:         target,
 			OriginalTarget: f.Target,
 			TargetIsDir:    f.TargetIsDir,
+			Category:       "file",
 			LocalSource: v1alpha1.LocalFile{
 				Path: filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)),
 			},

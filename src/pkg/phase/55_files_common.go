@@ -18,7 +18,9 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
@@ -49,6 +51,10 @@ type UploadFilesCommon struct {
 
 	filesWorkers []v1alpha1.ZarfFile
 	filesControl []v1alpha1.ZarfFile
+
+	// priorManifest holds each host's upload manifest as it was before this run touched it,
+	// captured in Prepare so Run can tell which of those files an upgrade no longer uploads.
+	priorManifest map[*cluster.ZarfHost][]ManifestEntry
 }
 
 // Prepare the phase
@@ -63,6 +69,11 @@ func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _
 	p.control = hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return !h.Metadata.EngineUploaded && h.IsController()
 	})
+
+	p.priorManifest = make(map[*cluster.ZarfHost][]ManifestEntry, len(p.control)+len(p.workers))
+	for _, h := range slices.Concat(p.control, p.workers) {
+		p.priorManifest[h] = p.readManifest(h)
+	}
 
 	return nil
 }
@@ -87,6 +98,15 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+
+	return p.parallelDo(ctx, slices.Concat(p.control, p.workers), p.cleanStaleUploads)
+}
+
+// cleanStaleUploads removes files this run's upload left in the manifest from a previous
+// version but didn't re-upload itself, e.g. an engine binary a version bump renamed.
+func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
+	current := parseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
+	p.removeStaleManifestEntries(ctx, h, p.priorManifest[h], current)
 	return nil
 }
 
@@ -130,6 +150,7 @@ func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string
 					Name:           filepath.Base(f.Target),
 					Target:         target,
 					OriginalTarget: f.Target,
+					Category:       "engine",
 					LocalSource: v1alpha1.LocalFile{
 						Path: filePath,
 					},
