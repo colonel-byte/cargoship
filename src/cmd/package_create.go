@@ -47,6 +47,7 @@ type packageCreateOptions struct {
 	ociConcurrency     int
 	confirm            bool
 	skipSBOM           bool
+	reproducible       bool
 	signingKeyPath     string
 	signingKeyPassword string
 }
@@ -74,6 +75,7 @@ func newPackageCreateCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", resolvedConfig.DistroOpts.CreateOpts.RegistryOverride, zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", resolvedConfig.DistroOpts.CreateOpts.SkipSBOM, zlang.CmdPackageCreateFlagSkipSbom)
+	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageCreateFlagSigningKeyPassword)
 
@@ -99,6 +101,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		IsInteractive:      !o.confirm,
 		OCIConcurrency:     o.ociConcurrency,
 		RemoteOptions:      defaultRemoteOptions(),
+		Reproducible:       o.reproducible,
 		SigningKeyPath:     o.signingKeyPath,
 		SigningKeyPassword: o.signingKeyPassword,
 	}

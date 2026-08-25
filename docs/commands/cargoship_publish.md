@@ -39,7 +39,7 @@ cargoship publish [Package] [REPOSITORY] [flags]
       --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --timeout string             Set the timeout for how long functions will last.
       --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.zarf-cache")
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### SEE ALSO

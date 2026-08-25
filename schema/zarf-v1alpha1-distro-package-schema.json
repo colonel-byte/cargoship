@@ -375,6 +375,10 @@
           "description": "maps each original registry to the registry actually used to build the package.",
           "type": "object"
         },
+        "reproducible": {
+          "description": "indicates Build.Timestamp was pinned to a fixed value\n(config.Timestamp) instead of the actual build time, so identical\npackage inputs produce byte-identical output.",
+          "type": "boolean"
+        },
         "signed": {
           "description": "indicates whether the package was signed. A nil value means the signing status was not recorded.",
           "type": "boolean"

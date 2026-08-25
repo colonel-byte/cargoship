@@ -75,6 +75,10 @@ type ZarfDistroBuildData struct {
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
 	// Signed indicates whether the package was signed. A nil value means the signing status was not recorded.
 	Signed *bool `json:"signed,omitempty"`
+	// Reproducible indicates Build.Timestamp was pinned to a fixed value
+	// (config.Timestamp) instead of the actual build time, so identical
+	// package inputs produce byte-identical output.
+	Reproducible bool `json:"reproducible,omitempty"`
 	// ProvenanceFiles lists files in the package that checksums.txt does not cover.
 	// These are files added after cargoship generates checksums, for example signature files.
 	// The signed distro.yaml authenticates this list.
