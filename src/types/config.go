@@ -32,6 +32,8 @@ type DistroConfig struct {
 	LogLevel string `json:"log_level,omitempty" mapstructure:"log_level" jsonschema:"enum=warn,enum=info,enum=debug,enum=trace,default=info"`
 	// NoColor whether to disable terminal color codes in logging and stdout prints
 	NoColor bool `json:"no_color,omitempty" mapstructure:"no_color"`
+	// LogFile enables always writing a full-verbosity debug log to a file, regardless of LogLevel
+	LogFile bool `json:"log_file,omitempty" mapstructure:"log_file"`
 	// Architecture the CPU architecture to use for OCI operations
 	Architecture string `json:"architecture,omitempty" mapstructure:"architecture"`
 	// TempDirectory the directory where we store stuff before deleting them

@@ -26,10 +26,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/colonel-byte/cargoship/src/cmd/flags"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/config/lang"
+	"github.com/colonel-byte/cargoship/src/internal/logging"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/pterm/pterm"
@@ -92,8 +95,13 @@ var (
 	LogFormat string
 	// LogLevelCLI log level
 	LogLevelCLI string
+	// LogFile enables always writing a full-verbosity debug log to a file
+	LogFile bool
 	// Timeout for how long a task runs
-	Timeout   string
+	Timeout string
+	// logFile is the file handle backing the always-on debug log, if enabled. Held here so
+	// Execute can close it once the command has finished running.
+	logFile   *os.File
 	distroCfg = types.DistroConfig{}
 )
 
@@ -158,6 +166,7 @@ func NewCargoshipCommand() *cobra.Command {
 	}
 	rootCmd.PersistentFlags().StringVar(&Timeout, RootTimeout, v.GetString(RootTimeout), lang.CmdInstallFlagTimeout)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
+	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), resolvedConfig.CachePath), zlang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), resolvedConfig.TempDirectory), zlang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, RootArchitecture, "a", resolvedConfig.Architecture, zlang.RootCmdFlagArch)
@@ -174,6 +183,12 @@ func NewCargoshipCommand() *cobra.Command {
 
 // Execute is the root execute logic
 func Execute(ctx context.Context) error {
+	defer func() {
+		if logFile != nil {
+			_ = logFile.Close() //nolint:errcheck
+		}
+	}()
+
 	_, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return nil
@@ -244,13 +259,23 @@ func unmarshalAndValidateConfig(configFile []byte, distroCfg *types.DistroConfig
 }
 
 func preRun(cmd *cobra.Command, _ []string) error {
+	logFilePath := ""
+	if LogFile {
+		logFilePath = defaultLogFilePath()
+	}
+
 	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
-	l, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled)
+	l, f, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled, logFilePath)
 	if err != nil {
 		return err
 	}
+	logFile = f
 	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
+
+	if f != nil {
+		l.Debug("writing full-verbosity debug log to file, regardless of --log-level", "path", f.Name())
+	}
 
 	// if --no-color is set, disable PTerm color in message prints
 	if IsColorDisabled {
@@ -267,15 +292,18 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// setupLogger handles creating a logger and setting it as the global default.
-func setupLogger(level, format string, isColor bool) (*slog.Logger, error) {
+// setupLogger handles creating a logger and setting it as the global default. When logFilePath
+// is non-empty, every log level is additionally written to that file as JSON, regardless of
+// what level is configured for the console -- the returned *os.File is the caller's to close
+// once logging is done.
+func setupLogger(level, format string, isColor bool, logFilePath string) (*slog.Logger, *os.File, error) {
 	// If we didn't get a level from config, fallback to "info"
 	if level == "" {
 		level = "info"
 	}
 	sLevel, err := logger.ParseLevel(level)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cfg := logger.Config{
 		Level:       sLevel,
@@ -285,9 +313,35 @@ func setupLogger(level, format string, isColor bool) (*slog.Logger, error) {
 	}
 	l, err := logger.New(cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	var f *os.File
+	if logFilePath != "" {
+		fileHandler, opened, err := logging.OpenFileHandler(logFilePath)
+		if err != nil {
+			// A log file we can't open shouldn't block the CLI from running; fall back to
+			// console-only logging.
+			l.Warn("failed to open log file, continuing without one", "path", logFilePath, "error", err)
+		} else {
+			f = opened
+			l = slog.New(logging.NewMultiHandler(l.Handler(), fileHandler))
+		}
+	}
+
 	logger.SetDefault(l)
-	l.Debug("logger successfully initialized", "cfg", cfg)
-	return l, nil
+	l.Debug("logger successfully initialized", "cfg", cfg, "logFile", logFilePath)
+	return l, f, nil
+}
+
+// defaultLogFilePath returns where the always-on debug log file is written: under the same
+// cache directory cargoship already uses for OCI artifacts, one file per invocation so
+// concurrent runs don't clobber each other's logs.
+func defaultLogFilePath() string {
+	cacheDir, err := config.GetAbsCachePath()
+	if err != nil || cacheDir == "" {
+		cacheDir = config.DefaultCachePath
+	}
+	name := fmt.Sprintf("cargoship-%s-%d.log", time.Now().Format("20060102-150405"), os.Getpid())
+	return filepath.Join(cacheDir, "logs", name)
 }

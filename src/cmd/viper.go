@@ -177,6 +177,7 @@ func setDefaults() {
 	v.SetDefault(configPath("LogFormat"), string(logger.FormatConsole))
 	v.SetDefault(configPath("TempDirectory"), "/tmp")
 	v.SetDefault(configPath("NoColor"), false)
+	v.SetDefault(configPath("LogFile"), false)
 
 	v.SetDefault(configPath("DistroOpts", "OCIConcurrency"), 6)
 	v.SetDefault(configPath("DistroOpts", "CreateOpts", "SkipSBOM"), false)
