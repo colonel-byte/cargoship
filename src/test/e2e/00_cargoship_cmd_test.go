@@ -1,0 +1,36 @@
+// Copyright 2026 colonel-byte
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package test provides e2e tests for cargoship
+package test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestCargoshipCommands(t *testing.T) {
+	t.Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
+
+	t.Run("cargoship version", func(t *testing.T) {
+		_, _, err := e2e.Cargoship(t, "version")
+		require.NoError(t, err)
+	})
+
+	t.Run("cargoship create package, amd64", func(t *testing.T) {
+		_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2/v1.35.0-rke2r1")
+		require.NoError(t, err)
+	})
+}

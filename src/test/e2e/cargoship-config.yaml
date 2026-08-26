@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=../../../schema/zarf-config-distro-schema.json
+log_level: info
+log_format: console
+tmp_dir: /tmp
+zarf_cache: ~/.zarf-cache
+timeout: 20m
+distro:
+  type: rke2
+  oci_concurrency: 10
+  concurrency: 300
+  worker_concurrency: 5
+  host_update: true
+  firewall_update: true
+  fapolicy: true
+  output: src/test/e2e
