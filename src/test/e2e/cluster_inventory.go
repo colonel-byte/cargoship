@@ -1,0 +1,130 @@
+// Copyright 2026 colonel-byte
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package test is for testing the cluster creation
+package test
+
+import (
+	"fmt"
+	"os"
+	"sort"
+	"strings"
+
+	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	goyaml "github.com/goccy/go-yaml"
+	blcluster "github.com/k0sproject/bootloose/pkg/cluster"
+	"github.com/k0sproject/rig"
+)
+
+const (
+	sshPort = 22
+	sshUser = "root"
+)
+
+// renderClusterInventory builds a ZarfCluster inventory from the live bootloose machines,
+// mapping kc*/kw* hostnames to controller/worker roles. ki* machines are intentionally
+// skipped: their purpose isn't wired into any cargoship code path yet.
+func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.ZarfCluster, error) {
+	machines, err := c.Inspect(nil)
+	if err != nil {
+		return apicluster.ZarfCluster{}, fmt.Errorf("failed to inspect bootloose cluster: %w", err)
+	}
+
+	var controllers, workers []*blcluster.Machine
+	for _, m := range machines {
+		switch {
+		case strings.HasPrefix(m.Hostname(), "kc"):
+			controllers = append(controllers, m)
+		case strings.HasPrefix(m.Hostname(), "kw"):
+			workers = append(workers, m)
+		}
+	}
+	if len(controllers) == 0 {
+		return apicluster.ZarfCluster{}, fmt.Errorf("no controller machines found in bootloose cluster")
+	}
+	sortByHostname(controllers)
+	sortByHostname(workers)
+
+	hosts := make(apicluster.ZarfHosts, 0, len(controllers)+len(workers))
+	for _, m := range controllers {
+		host, err := hostFromMachine(m, apicluster.RoleController, keyPath)
+		if err != nil {
+			return apicluster.ZarfCluster{}, err
+		}
+		hosts = append(hosts, host)
+	}
+	for _, m := range workers {
+		host, err := hostFromMachine(m, apicluster.RoleWorker, keyPath)
+		if err != nil {
+			return apicluster.ZarfCluster{}, err
+		}
+		hosts = append(hosts, host)
+	}
+
+	leaderIP := controllers[0].Status().IP
+	if leaderIP == "" {
+		return apicluster.ZarfCluster{}, fmt.Errorf("could not determine docker-bridge IP for leader controller %s", controllers[0].Hostname())
+	}
+
+	return apicluster.ZarfCluster{
+		Kind: "ZarfCluster",
+		Metadata: apicluster.ZarfClusterMetadata{
+			Name: "bootloose-e2e",
+		},
+		Spec: apicluster.ZarfClusterSpec{
+			Config: apicluster.ZarfClusterConfig{
+				LoadBalancer: leaderIP,
+			},
+			Hosts: hosts,
+		},
+	}, nil
+}
+
+func sortByHostname(machines []*blcluster.Machine) {
+	sort.Slice(machines, func(i, j int) bool {
+		return machines[i].Hostname() < machines[j].Hostname()
+	})
+}
+
+func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apicluster.ZarfHost, error) {
+	port, err := m.HostPort(sshPort)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SSH host port for %s: %w", m.Hostname(), err)
+	}
+	return &apicluster.ZarfHost{
+		Hostname: m.Hostname(),
+		Role:     role,
+		Connection: rig.Connection{
+			SSH: &rig.SSH{
+				Address: "127.0.0.1",
+				User:    sshUser,
+				Port:    port,
+				KeyPath: &keyPath,
+			},
+		},
+	}, nil
+}
+
+// writeClusterInventory marshals cluster to YAML (via the same library cargoship uses to
+// parse a ZarfCluster document) and writes it to path.
+func writeClusterInventory(cluster apicluster.ZarfCluster, path string) error {
+	b, err := goyaml.Marshal(cluster)
+	if err != nil {
+		return fmt.Errorf("failed to marshal cluster inventory: %w", err)
+	}
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		return fmt.Errorf("failed to write cluster inventory to %s: %w", path, err)
+	}
+	return nil
+}

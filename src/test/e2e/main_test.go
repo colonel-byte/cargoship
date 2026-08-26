@@ -96,6 +96,27 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		os.Exit(1)
 	}
+
+	keyPath, err := filepath.Abs(ubuntu.Cluster.PrivateKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	inv, err := renderClusterInventory(cluster, keyPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	invPath := filepath.Join(rootDir, "src/test/e2e/generated-cluster.yaml")
+	if err := writeClusterInventory(inv, invPath); err != nil {
+		log.Fatal(err)
+	}
+	e2e.ClusterConfigPath = invPath
+
+	// bootloose regenerates each container's SSH host key on every Create(), so ignore
+	// host key checking for the cargoship subprocesses this test binary spawns.
+	if err := os.Setenv("SSH_KNOWN_HOSTS", ""); err != nil {
+		log.Fatal(err)
+	}
+
 	code := m.Run()
 	if err := shutdown(cluster); err != nil {
 		os.Exit(1)

@@ -32,6 +32,9 @@ type CargoE2ETest struct {
 	Arch              string
 	ApplianceMode     bool
 	ApplianceModeKeep bool
+	// ClusterConfigPath is the absolute path to the generated ZarfCluster inventory YAML
+	// pointing at the bootloose-provisioned test cluster. Empty if no cluster was set up.
+	ClusterConfigPath string
 }
 
 // Cargoship executes a Cargoship command.

@@ -1,0 +1,49 @@
+kind: ZarfCluster
+metadata:
+  name: bootloose-e2e
+spec:
+  config:
+    loadbalancer: 172.17.0.2
+  hosts:
+  - ssh:
+      address: 127.0.0.1
+      user: root
+      port: 32777
+      keyPath: /home/ascii/git/golang/colonel-byte_cargoship/cluster-key
+    hostname: kc0
+    role: controller
+  - ssh:
+      address: 127.0.0.1
+      user: root
+      port: 32778
+      keyPath: /home/ascii/git/golang/colonel-byte_cargoship/cluster-key
+    hostname: kc1
+    role: controller
+  - ssh:
+      address: 127.0.0.1
+      user: root
+      port: 32779
+      keyPath: /home/ascii/git/golang/colonel-byte_cargoship/cluster-key
+    hostname: kc2
+    role: controller
+  - ssh:
+      address: 127.0.0.1
+      user: root
+      port: 32783
+      keyPath: /home/ascii/git/golang/colonel-byte_cargoship/cluster-key
+    hostname: kw0
+    role: worker
+  - ssh:
+      address: 127.0.0.1
+      user: root
+      port: 32784
+      keyPath: /home/ascii/git/golang/colonel-byte_cargoship/cluster-key
+    hostname: kw1
+    role: worker
+  - ssh:
+      address: 127.0.0.1
+      user: root
+      port: 32785
+      keyPath: /home/ascii/git/golang/colonel-byte_cargoship/cluster-key
+    hostname: kw2
+    role: worker
