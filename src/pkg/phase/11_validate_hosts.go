@@ -92,8 +92,8 @@ func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *clust
 	return nil
 }
 
-func (p *ValidateHosts) validateSudo(_ context.Context, h *cluster.ZarfHost) error {
-	return h.Configurer.CheckPrivilege(h)
+func (p *ValidateHosts) validateSudo(ctx context.Context, h *cluster.ZarfHost) error {
+	return h.CheckSudo(ctx)
 }
 
 func (p *ValidateHosts) validateConfigurer(_ context.Context, h *cluster.ZarfHost) error {
@@ -115,7 +115,7 @@ func (p *ValidateHosts) validateClockSkew(ctx context.Context) error {
 
 	// Collect skews relative to local time
 	err := p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
-		remote, err := h.Configurer.SystemTime(h)
+		remote, err := h.FS().SystemTime()
 		if err != nil {
 			return fmt.Errorf("failed to get time from %s: %w", h, err)
 		}

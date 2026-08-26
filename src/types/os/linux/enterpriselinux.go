@@ -25,9 +25,6 @@ import (
 	"strings"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/linux"
 )
 
 const (
@@ -49,21 +46,20 @@ const (
 
 // EnterpriseLinux is a base package for several RHEL-like enterprise linux distributions
 type EnterpriseLinux struct {
-	linux.EnterpriseLinux
 	configurer.Linux
 }
 
 // InstallPackage installs packages via dnf
-func (c *EnterpriseLinux) InstallPackage(h os.Host, s ...string) error {
-	if err := h.Execf("dnf install -y --nogpgcheck %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+func (c *EnterpriseLinux) InstallPackage(h configurer.Host, s ...string) error {
+	if err := h.Sudo().Exec("dnf install -y --nogpgcheck " + strings.Join(s, " ")); err != nil {
 		return fmt.Errorf("failed to install packages: %w", err)
 	}
 	return nil
 }
 
 // UninstallPackage uninstalls packages via dnf
-func (c *EnterpriseLinux) UninstallPackage(h os.Host, s ...string) error {
-	if err := h.Execf("dnf remove -y %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+func (c *EnterpriseLinux) UninstallPackage(h configurer.Host, s ...string) error {
+	if err := h.Sudo().Exec("dnf remove -y " + strings.Join(s, " ")); err != nil {
 		return fmt.Errorf("failed to uninstall packages: %w", err)
 	}
 	return nil

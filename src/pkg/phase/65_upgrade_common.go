@@ -22,7 +22,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/node"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -49,7 +48,7 @@ func (p *UpgradeHosts) ShouldRun() bool {
 func (p *UpgradeHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining nodes", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
 	})
 }
 
@@ -65,7 +64,7 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 	logger.From(ctx).Info("waiting for the service to start", "service", p.service, "host", h)
 
 	go func() {
-		err := h.Configurer.StartService(h, p.service)
+		err := h.StartService(ctx, p.service)
 		if err != nil {
 			logger.From(ctx).Warn("failed to start", "service", p.service, "host", h)
 		}
@@ -75,14 +74,14 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 		return err
 	}
 
-	return h.Configurer.EnableService(h, p.service)
+	return h.EnableService(ctx, p.service)
 }
 
 func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		out, err := p.leader.ExecOutput(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+		out, err := p.leader.Sudo().ExecOutput(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)))
 		if err != nil {
 			return err
 		}
@@ -94,5 +93,5 @@ func (p *UpgradeHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost
 }
 
 func (p *UpgradeHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
-	return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)))
 }

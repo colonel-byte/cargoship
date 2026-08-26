@@ -22,6 +22,7 @@ package phase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -30,7 +31,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -107,12 +107,12 @@ func (p *Lock) startTicker(ctx context.Context, h *cluster.ZarfHost) error {
 		for {
 			select {
 			case <-ticker.C:
-				if err := h.Configurer.Touch(h, lfp, time.Now()); err != nil {
+				if err := h.Sudo().FS().Touch(lfp, time.Now()); err != nil {
 					logger.From(ctx).Debug("failed to touch lock file", "host", h, "error", err)
 				}
 			case <-ctx.Done():
 				logger.From(ctx).Debug("fstopped lock cycle, removing file", "host", h)
-				if err := h.Configurer.DeleteFile(h, lfp); err != nil {
+				if err := h.DeleteFile(lfp); err != nil {
 					logger.From(ctx).Debug("failed to remove host lock file, may have been previously aborted or crashed. the start of next invocation may be delayed until it expires", "host", h, "error", err)
 				}
 				p.wg.Done()
@@ -125,29 +125,57 @@ func (p *Lock) startTicker(ctx context.Context, h *cluster.ZarfHost) error {
 }
 
 func (p *Lock) startLock(ctx context.Context, h *cluster.ZarfHost) error {
-	return retry.Times(ctx, 10, func(_ context.Context) error {
-		return p.tryLock(h)
+	return retry.Times(ctx, 10, func(ctx context.Context) error {
+		return p.tryLock(ctx, h)
 	})
 }
 
-func (p *Lock) tryLock(h *cluster.ZarfHost) error {
+// tryLock atomically creates the lock file with O_EXCL so a second cargoship
+// instance can never observe a half-written file. All reads/writes here use
+// h.Sudo().FS() -- the lock file may live in a root-owned directory
+// (/run/lock), and dropping sudo on any of these calls would silently fail
+// the existence/ownership checks below instead of erroring loudly.
+func (p *Lock) tryLock(ctx context.Context, h *cluster.ZarfHost) error {
 	lfp := h.Configurer.CTLLockFilePath(h)
 
-	if err := h.Configurer.UpsertFile(h, lfp, p.instanceID); err != nil {
-		stat, err := h.Configurer.Stat(h, lfp, exec.Sudo(h), exec.HideCommand())
-		if err != nil {
-			return fmt.Errorf("lock file disappeared: %w", err)
+	f, err := h.Sudo().FS().OpenFile(lfp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		if !errors.Is(err, os.ErrExist) {
+			return fmt.Errorf("failed to create lock file %s: %w", lfp, err)
 		}
-		content, err := h.Configurer.ReadFile(h, lfp)
-		if err != nil {
-			return fmt.Errorf("failed to read lock file:  %w", err)
+
+		// The file already exists -- check whether it belongs to us or is stale.
+		stat, statErr := h.Sudo().FS().Stat(lfp)
+		if statErr != nil {
+			return fmt.Errorf("lock file disappeared: %w", statErr)
+		}
+		content, readErr := h.ReadFile(lfp)
+		if readErr != nil {
+			return fmt.Errorf("failed to read lock file:  %w", readErr)
 		}
 		if content != p.instanceID {
 			if time.Since(stat.ModTime()) < 30*time.Second {
 				return fmt.Errorf("another instance of cargoship is currently operating on the host, delete %s or wait 30 seconds for it to expire", lfp)
 			}
-			return h.Configurer.DeleteFile(h, lfp)
+			return h.DeleteFile(lfp)
 		}
+		return nil
+	}
+
+	if _, err := f.Write([]byte(p.instanceID)); err != nil {
+		if closeErr := f.Close(); closeErr != nil {
+			logger.From(ctx).Debug("failed to close lock file after write error", "host", h, "error", closeErr)
+		}
+		if delErr := h.DeleteFile(lfp); delErr != nil {
+			logger.From(ctx).Debug("failed to remove lock file after write error", "host", h, "error", delErr)
+		}
+		return fmt.Errorf("failed to write lock file: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		if delErr := h.DeleteFile(lfp); delErr != nil {
+			logger.From(ctx).Debug("failed to remove lock file after close error", "host", h, "error", delErr)
+		}
+		return fmt.Errorf("failed to close lock file: %w", err)
 	}
 
 	return nil

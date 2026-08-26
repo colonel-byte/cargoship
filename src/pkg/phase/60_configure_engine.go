@@ -63,7 +63,7 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 	}
 
 	p.run.ControllerToken = ""
-	if p.run.Leader.Configurer.FileExist(p.run.Leader, p.Distro.JoinTokenPath()) {
+	if p.run.Leader.FileExist(p.Distro.JoinTokenPath()) {
 		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPath()); err == nil {
 			p.run.ControllerToken = token
 		} else {
@@ -78,7 +78,7 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 	}
 
 	p.run.AgentToken = ""
-	if p.run.Leader.Configurer.FileExist(p.run.Leader, p.Distro.JoinTokenPathAgent()) {
+	if p.run.Leader.FileExist(p.Distro.JoinTokenPathAgent()) {
 		if token, err := p.run.Leader.ReadFile(p.Distro.JoinTokenPathAgent()); err == nil {
 			p.run.AgentToken = token
 		} else {
@@ -112,5 +112,5 @@ func (p *ConfigureEngine) Run(ctx context.Context) error {
 
 func (p *ConfigureEngine) configureEngine(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("applying config", "host", h)
-	return p.Distro.ConfigureEngine(ctx, *h, p.run, *p.GetDistro())
+	return p.Distro.ConfigureEngine(ctx, h, p.run, *p.GetDistro())
 }

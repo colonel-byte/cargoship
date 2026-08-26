@@ -24,6 +24,7 @@ import (
 	"context"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/k0sproject/rig/v2/initsystem"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -49,11 +50,26 @@ func (p *DaemonReload) ShouldRun() bool {
 
 // Run the phase
 func (p *DaemonReload) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
 		logger.From(ctx).Info("reloading service manager", "host", h)
-		if err := h.Configurer.DaemonReload(h); err != nil {
+		if err := daemonReload(ctx, h); err != nil {
 			logger.From(ctx).Warn("failed to reload service manager", "host", h, "error", err)
 		}
 		return nil
 	})
+}
+
+// daemonReload triggers an explicit init system config reload (e.g. `systemctl
+// daemon-reload`) when the detected init system supports one. Not every init
+// system does (e.g. OpenRC), so a missing capability is not an error.
+func daemonReload(ctx context.Context, h *cluster.ZarfHost) error {
+	mgr, err := h.Sudo().ServiceManager()
+	if err != nil {
+		return err
+	}
+	reloader, ok := mgr.(initsystem.ServiceManagerReloader)
+	if !ok {
+		return nil
+	}
+	return reloader.DaemonReload(ctx, h.Sudo())
 }

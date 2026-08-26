@@ -33,22 +33,23 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/k0sproject/rig/exec"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.ZarfHost, dir, perm, owner string) error {
 	logger.From(ctx).Debug("ensuring directory exists", "host", h, "dir", dir)
-	if !h.Configurer.FileExist(h, dir) {
+	if !h.FileExist(dir) {
 		targetPerm := perm
 		if targetPerm == "" {
 			targetPerm = "0755"
 		}
 		err := p.Wet(h, fmt.Sprintf("create a directory for uploading: `mkdir -p \"%s\"`", dir), func() error {
+			mode := fs.FileMode(0o755)
 			if v, perr := strconv.ParseUint(targetPerm, 8, 32); perr == nil {
-				return h.SudoFsys().MkDirAll(dir, fs.FileMode(v))
+				mode = fs.FileMode(v)
 			}
-			return h.Configurer.MkDir(h, dir, exec.Sudo(h))
+			return h.Sudo().FS().MkdirAll(dir, mode)
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
@@ -57,7 +58,7 @@ func (p *GenericPhase) ensureDir(ctx context.Context, h *cluster.ZarfHost, dir, 
 
 	if owner != "" {
 		err := p.Wet(h, fmt.Sprintf("set owner for directory %s to %s", dir, owner), func() error {
-			return h.Configurer.Chown(h, dir, owner, exec.Sudo(h))
+			return h.Sudo().FS().Chown(dir, owner)
 		})
 		if err != nil {
 			return err
@@ -115,11 +116,11 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 					perm = fs.FileMode(v)
 				}
 			}
-			err = h.Upload(path.Join(f.Base, f.LocalSource.Path), target, perm, exec.Sudo(h), exec.LogError(true))
+			err = remotefs.Upload(h.Sudo().FS(), path.Join(f.Base, f.LocalSource.Path), target, remotefs.WithPermissions(perm))
 			if err != nil {
 				return err
 			}
-			return h.Touch(target, time.Unix(0, 0), exec.Sudo(h))
+			return h.Touch(target, time.Unix(0, 0))
 		})
 		if err != nil {
 			return err
@@ -147,7 +148,7 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v
 		if err != nil {
 			logger.From(ctx).Warn("got an", "error", err)
 		}
-		remoteFile, err := h.SudoFsys().OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(fileMode))
+		remoteFile, err := h.Sudo().FS().OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(fileMode))
 		if err != nil {
 			return err
 		}
@@ -172,7 +173,7 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v
 func (p *GenericPhase) applyFileMetadata(ctx context.Context, h *cluster.ZarfHost, dest, owner, perm string, timestamp *time.Time) error {
 	if owner != "" {
 		logger.From(ctx).Debug("setting owner", "host", h, "owner", owner, "destination", dest)
-		err := h.Configurer.Chown(h, dest, owner, exec.Sudo(h))
+		err := h.Sudo().FS().Chown(dest, owner)
 		if err != nil {
 			return err
 		}
@@ -188,7 +189,7 @@ func (p *GenericPhase) applyFileMetadata(ctx context.Context, h *cluster.ZarfHos
 
 	if timestamp != nil {
 		logger.From(ctx).Debug("setting touching", "host", h, "destination", dest)
-		err := h.Configurer.Touch(h, dest, *timestamp, exec.Sudo(h))
+		err := h.Touch(dest, *timestamp)
 		if err != nil {
 			return fmt.Errorf("failed to touch %s: %w", dest, err)
 		}
@@ -205,8 +206,7 @@ func chmodWithString(h *cluster.ZarfHost, path, perm string) error {
 }
 
 func chmodWithMode(h *cluster.ZarfHost, path string, mode fs.FileMode) error {
-	perm := fmt.Sprintf("%04o", uint32(mode)&0o7777)
-	return h.Configurer.Chmod(h, path, perm, exec.Sudo(h))
+	return h.Sudo().FS().Chmod(path, mode)
 }
 
 // stageTempPath returns a temp file path for the engine files on the host,

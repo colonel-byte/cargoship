@@ -21,7 +21,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -62,11 +61,11 @@ func (p *ConfigureFirewall) Explanation() string {
 // Prepare the phase
 func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, FIREWALLD)
+		return h.ServiceIsRunning(ctx, FIREWALLD)
 	})
 
 	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, FIREWALLD) && h.IsController()
+		return h.ServiceIsRunning(ctx, FIREWALLD) && h.IsController()
 	})
 
 	for _, h := range p.hosts {
@@ -128,13 +127,13 @@ func (p *ConfigureFirewall) configureFirewallNodes(_ context.Context, h *cluster
 }
 
 func (p *ConfigureFirewall) updateFirewallNode(_ context.Context, h *cluster.ZarfHost) error {
-	return h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-nodes", exec.Sudo(h))
+	return h.Sudo().Exec("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-nodes")
 }
 
 func (p *ConfigureFirewall) updateFirewallCluster(_ context.Context, h *cluster.ZarfHost) error {
-	return h.Execf("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-subnets", exec.Sudo(h))
+	return h.Sudo().Exec("firewall-cmd --permanent --zone=trusted --add-source=ipset:k8s-subnets")
 }
 
-func restartFirewall(_ context.Context, h *cluster.ZarfHost) (err error) {
-	return h.Configurer.RestartService(h, FIREWALLD)
+func restartFirewall(ctx context.Context, h *cluster.ZarfHost) (err error) {
+	return h.RestartService(ctx, FIREWALLD)
 }

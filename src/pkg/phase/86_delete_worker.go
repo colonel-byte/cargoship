@@ -25,7 +25,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -58,7 +57,7 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *
 		logger.From(ctx).Warn("failed when setting up common logic", "error", err)
 	}
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		err := p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+		err := p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)))
 		if err != nil {
 			return false
 		}

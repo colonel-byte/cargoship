@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -63,10 +64,14 @@ func (Generate) Schema() error {
 			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
 			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
 			keyNamer: func(s string) string {
-				if strings.ToLower(s) == "openssh" {
+				switch strings.ToLower(s) {
+				case "openssh":
 					return "openSSH"
+				case "winrm":
+					return "winRM"
+				default:
+					return strcase.LowerCamelCase(s)
 				}
-				return strcase.LowerCamelCase(s)
 			},
 		},
 		{
@@ -106,10 +111,33 @@ func (Generate) Schema() error {
 	return nil
 }
 
+// rigConfigDefName disambiguates rig v2's connection config types, which are
+// all named "Config" in their own sub-packages (protocol/ssh, protocol/openssh,
+// protocol/winrm). invopop/jsonschema keys $defs on the bare type name by
+// default, so without this they collide into a single $defs entry -- and since
+// winrm.Config embeds an *ssh.Config bastion field, reflecting any schema that
+// touches more than one of them silently produces the wrong shape for whichever
+// lost the collision (see winrm's "bastion" field, which would otherwise point
+// at winrm.Config's own fields instead of ssh.Config's).
+func rigConfigDefName(t reflect.Type) string {
+	if t.Name() == "Config" {
+		switch t.PkgPath() {
+		case "github.com/k0sproject/rig/v2/protocol/ssh":
+			return "SSHConfig"
+		case "github.com/k0sproject/rig/v2/protocol/openssh":
+			return "OpenSSHConfig"
+		case "github.com/k0sproject/rig/v2/protocol/winrm":
+			return "WinRMConfig"
+		}
+	}
+	return ""
+}
+
 func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]byte, error) {
 	reflector := jsonschema.Reflector{
 		ExpandedStruct: true,
 		KeyNamer:       key,
+		Namer:          rigConfigDefName,
 	}
 
 	typePath := filepath.Join(path...)
@@ -159,6 +187,34 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 					}
 				}
 			}
+		}
+	}
+
+	// rig v2's ClientWithConfig embeds a *named* CompositeConfig field tagged
+	// only `yaml:",inline"` -- a yaml-only convention that invopop/jsonschema
+	// (which reads json tags and only flattens true anonymous embeds) does not
+	// understand. So it surfaces as a nested "connectionConfig" property instead
+	// of being flattened, and rig's Client additionally promotes its embedded
+	// cmd.Runner interface as a spurious top-level "runner" property. Patch the
+	// generated schema to match the actual (flattened) YAML shape that rig and
+	// cargoship's own config loading expect: ssh/openSSH/winRM/localhost as
+	// direct ZarfHost properties, none of them required (a host sets exactly
+	// one of them), matching the schema's shape before the rig v2 migration.
+	if defObj, ok := schemaMap["$defs"].(map[string]any); ok {
+		if zarfHost, ok := defObj["ZarfHost"].(map[string]any); ok {
+			if hostProps, ok := zarfHost[propertiesKey].(map[string]any); ok {
+				if compositeConfig, ok := defObj["CompositeConfig"].(map[string]any); ok {
+					if ccProps, ok := compositeConfig[propertiesKey].(map[string]any); ok {
+						for k, v := range ccProps {
+							hostProps[k] = v
+						}
+					}
+				}
+				delete(hostProps, "connectionConfig")
+				delete(hostProps, "runner")
+			}
+			zarfHost["required"] = []string{"role"}
+			delete(defObj, "CompositeConfig")
 		}
 	}
 

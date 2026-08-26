@@ -47,7 +47,7 @@ func (p *ConfigureFirewallPolicy) Explanation() string {
 // Prepare the phase
 func (p *ConfigureFirewallPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, FIREWALLD) && len(h.Host.Policy) > 0
+		return h.ServiceIsRunning(ctx, FIREWALLD) && len(h.Host.Policy) > 0
 	})
 
 	logger.From(ctx).Info("nodes that need ports exposed", "nodes", len(p.hosts))

@@ -22,7 +22,6 @@ package phase
 
 import (
 	"context"
-	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -49,20 +48,19 @@ func (p *DetectOS) Run(ctx context.Context) error {
 		l := logger.From(ctx)
 
 		if err := h.ResolveConfigurer(); err != nil {
-			if h.OSVersion.IDLike != "" {
-				l.Debug("trying to find a fallback OS support module", "host", h, "osVersion", h.OSVersion.String(), "like", h.OSVersion.IDLike)
-				for id := range strings.SplitSeq(h.OSVersion.IDLike, " ") {
-					h.OSVersion.ID = id
+			if h.OSRelease != nil && len(h.OSRelease.IDLike) > 0 {
+				l.Debug("trying to find a fallback OS support module", "host", h, "osVersion", h.OSRelease.String(), "like", h.OSRelease.IDLike)
+				for _, id := range h.OSRelease.IDLike {
+					h.OSRelease.ID = id
 					if err := h.ResolveConfigurer(); err == nil {
-						l.Warn("OS support fallback", "host", h, "id", id, "osVersion", h.OSVersion.String())
+						l.Warn("OS support fallback", "host", h, "id", id, "osVersion", h.OSRelease.String())
 						return nil
 					}
 				}
 			}
 			return err
 		}
-		os := h.OSVersion.String()
-		l.Info("running", "host", h, "os", os)
+		l.Info("running", "host", h, "os", h.OSRelease.String())
 
 		return nil
 	})

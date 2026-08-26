@@ -1,22 +1,6 @@
 {
   "$defs": {
-    "Localhost": {
-      "additionalProperties": false,
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "enabled": {
-          "description": "Enabled must be true for the connection to be valid",
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "enabled"
-      ],
-      "type": "object"
-    },
-    "OpenSSH": {
+    "OpenSSHConfig": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -40,8 +24,8 @@
           "type": "string"
         },
         "options": {
-          "$ref": "#/$defs/OpenSSHOptions",
-          "description": "Additional SSH options as key-value pairs (e.g. StrictHostKeyChecking: false)"
+          "$ref": "#/$defs/OptionArguments",
+          "description": "Additional SSH options as ssh_config key-value pairs"
         },
         "port": {
           "description": "Optional SSH port",
@@ -59,10 +43,10 @@
       ],
       "type": "object"
     },
-    "OpenSSHOptions": {
+    "OptionArguments": {
       "type": "object"
     },
-    "SSH": {
+    "SSHConfig": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -73,16 +57,16 @@
           "type": "string"
         },
         "bastion": {
-          "$ref": "#/$defs/SSH",
+          "$ref": "#/$defs/SSHConfig",
           "description": "Optional bastion host"
         },
-        "hostKey": {
-          "description": "Optional known host key fingerprint",
+        "keyPath": {
+          "description": "Path to SSH private key",
           "type": "string"
         },
-        "keyPath": {
-          "description": "Optional path to private key",
-          "type": "string"
+        "options": {
+          "$ref": "#/$defs/OptionArguments",
+          "description": "Additional SSH options as ssh_config key-value pairs"
         },
         "port": {
           "default": 22,
@@ -103,7 +87,7 @@
       ],
       "type": "object"
     },
-    "WinRM": {
+    "WinRMConfig": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
@@ -114,7 +98,7 @@
           "type": "string"
         },
         "bastion": {
-          "$ref": "#/$defs/SSH",
+          "$ref": "#/$defs/SSHConfig",
           "description": "Optional SSH bastion"
         },
         "caCertPath": {
@@ -123,6 +107,7 @@
         },
         "certPath": {
           "description": "Path to client certificate",
+          "minLength": 1,
           "type": "string"
         },
         "insecure": {
@@ -132,15 +117,16 @@
         },
         "keyPath": {
           "description": "Path to client key",
+          "minLength": 1,
           "type": "string"
         },
         "password": {
           "description": "Password for WinRM authentication",
+          "minLength": 1,
           "type": "string"
         },
         "port": {
-          "default": 5985,
-          "description": "WinRM port",
+          "description": "WinRM port (default 5985; 5986 when useHTTPS is true)",
           "maximum": 65535,
           "minimum": 1,
           "type": "integer"
@@ -507,10 +493,10 @@
           "type": "string"
         },
         "localhost": {
-          "$ref": "#/$defs/Localhost"
+          "type": "boolean"
         },
         "openSSH": {
-          "$ref": "#/$defs/OpenSSH"
+          "$ref": "#/$defs/OpenSSHConfig"
         },
         "privateAddress": {
           "description": "overrides the discovered private address of the node.",
@@ -533,10 +519,10 @@
           "type": "string"
         },
         "ssh": {
-          "$ref": "#/$defs/SSH"
+          "$ref": "#/$defs/SSHConfig"
         },
-        "winRm": {
-          "$ref": "#/$defs/WinRM"
+        "winRM": {
+          "$ref": "#/$defs/WinRMConfig"
         }
       },
       "required": [

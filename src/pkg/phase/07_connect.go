@@ -28,7 +28,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
-	"github.com/k0sproject/rig"
+	rig "github.com/k0sproject/rig/v2"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -50,10 +50,10 @@ func (p *Connect) Explanation() string {
 // Run the phase
 func (p *Connect) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
-		return retry.Timeout(ctx, 10*time.Minute, func(_ context.Context) error {
-			if err := h.Connect(); err != nil {
+		return retry.Timeout(ctx, 10*time.Minute, func(ctx context.Context) error {
+			if err := h.Connect(ctx); err != nil {
 				logger.From(ctx).Debug("got the following", "host", h, "err", err)
-				if errors.Is(err, rig.ErrCantConnect) || strings.Contains(err.Error(), "host key mismatch") {
+				if errors.Is(err, rig.ErrNonRetryable) || strings.Contains(err.Error(), "host key mismatch") {
 					return errors.Join(retry.ErrAbort, err)
 				}
 				return err

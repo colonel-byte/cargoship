@@ -23,9 +23,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/k0sproject/dig"
-	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/log"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -80,7 +79,7 @@ const (
 // if `.spec.config.engine.manifest` is present we will create files under
 
 // ConfigureEngine does distro specific configuration on a host
-func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 
 	nodeConfig.DigMapping(config.EngineConfig)[keyNodeName] = host.Hostname
@@ -132,9 +131,9 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
 			if v, err := host.ExecOutput("getent passwd etcd"); err != nil && v == "" {
-				logger.From(ctx).Info("need to create an etcd user for profile", "host", host.Connection.String())
+				logger.From(ctx).Info("need to create an etcd user for profile", "host", host.String())
 				// need to relook into how to structure the `sudo` section
-				err := host.Execf("sudo useradd --no-create-home --shell /sbin/nologin --system --user-group etcd")
+				err := host.Exec("sudo useradd --no-create-home --shell /sbin/nologin --system --user-group etcd")
 				if err != nil {
 					logger.From(ctx).Warn("failed to create", "user", "etcd")
 				}
@@ -213,12 +212,12 @@ func (d *RancherCommon) DistroCmdf(template string, args ...any) string {
 }
 
 // RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
-func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
-	bin, err := host.Configurer.LookPath(&host, d.Binary)
+func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
+	bin, err := host.FS().LookPath(d.Binary)
 	if err != nil {
 		return "", ErrVersionNotDetected
 	}
-	out, err := host.ExecOutputf(`%s --version`, bin)
+	out, err := host.ExecOutput(fmt.Sprintf(`%s --version`, bin))
 	if err != nil {
 		return "", ErrVersionNotDetected
 	}
@@ -230,25 +229,32 @@ func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
 }
 
 func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall string) error {
-	log.Debugf("trying to stop %s", ser)
-	if h.Configurer.ServiceIsRunning(h, ser) {
-		if err := h.Configurer.StopService(h, ser); err != nil {
+	ctx := context.Background()
+	riglogger.Logger().Debug("trying to stop service", "service", ser)
+	svc, err := h.Sudo().Service(ser)
+	if err != nil {
+		return err
+	}
+	if svc.IsRunning(ctx) {
+		if err := svc.Stop(ctx); err != nil {
 			return err
 		}
 	}
 	cache := false
 	cacheFile := fmt.Sprintf("%s/agent/images/.cache.json", d.Data)
-	if h.Configurer.FileExist(h, cacheFile) {
+	if h.FileExist(cacheFile) {
 		cache = true
-		if err := h.Configurer.DeleteFile(h, cacheFile); err != nil {
+		if err := h.DeleteFile(cacheFile); err != nil {
 			return err
 		}
 	}
-	if h.Configurer.CommandExist(h, killall) {
-		return h.Exec(killall, exec.Sudo(h))
+	if h.FS().CommandExist(killall) {
+		return h.Sudo().Exec(killall)
 	}
 	if cache {
-		h.Configurer.Touch(h, cacheFile, time.Unix(0, 0)) //nolint:errcheck
+		if err := h.Touch(cacheFile, time.Unix(0, 0)); err != nil {
+			riglogger.Logger().Debug("failed to reset image cache timestamp", "path", cacheFile, "error", err)
+		}
 	}
 	return nil
 }

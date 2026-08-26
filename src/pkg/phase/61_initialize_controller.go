@@ -41,7 +41,7 @@ type InitializeControllers struct {
 // Prepare the phase
 func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UnknownVersion
+		return !h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UnknownVersion
 	})
 
 	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.control))
@@ -97,7 +97,7 @@ func (p *InitializeControllers) startService(ctx context.Context, h *cluster.Zar
 	logger.From(ctx).Info("waiting for the controller service to start", "service", p.Distro.GetControllerService(), "host", h)
 
 	go func() {
-		err := h.Configurer.StartService(h, p.Distro.GetControllerService())
+		err := h.StartService(ctx, p.Distro.GetControllerService())
 		if err != nil {
 			logger.From(ctx).Warn("failed to start", "service", p.Distro.GetControllerService(), "host", h)
 		}
@@ -107,5 +107,5 @@ func (p *InitializeControllers) startService(ctx context.Context, h *cluster.Zar
 		return err
 	}
 
-	return h.Configurer.EnableService(h, p.Distro.GetControllerService())
+	return h.EnableService(ctx, p.Distro.GetControllerService())
 }

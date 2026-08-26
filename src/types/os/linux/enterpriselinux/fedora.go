@@ -26,22 +26,20 @@ import (
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/colonel-byte/cargoship/src/types/os/linux"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 // Fedora provides OS support for Fedora
 type Fedora struct {
 	linux.EnterpriseLinux
-	configurer.Linux
 }
 
 var _ configurer.Configurer = (*Fedora)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == linux.OSKindELFedora && !strings.Contains(os.Name, linux.OSKindCoreOS)
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == linux.OSKindELFedora && !strings.Contains(r.Name, linux.OSKindCoreOS)
 		},
 		func() any {
 			return &Fedora{}

@@ -37,7 +37,7 @@ type InstallFapolicy struct {
 // Prepare the phase
 func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.fapolicydhosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.Configurer.ServiceIsRunning(h, FAPOLICYD)
+		return !h.ServiceIsRunning(ctx, FAPOLICYD)
 	})
 
 	logger.From(ctx).Info("number of systems without fapolicy", "hosts", len(p.fapolicydhosts))
@@ -67,12 +67,12 @@ func (p *InstallFapolicy) prepareHost(ctx context.Context, h *cluster.ZarfHost) 
 		logger.From(ctx).Warn("could not install", "host", h, "package", FAPOLICYD, "error", err)
 		return err
 	}
-	err = h.Configurer.EnableService(h, FAPOLICYD)
+	err = h.EnableService(ctx, FAPOLICYD)
 	if err != nil {
 		logger.From(ctx).Warn("could not enable fapolicyd", "host", h, "error", err)
 		return err
 	}
-	err = h.Configurer.StartService(h, FAPOLICYD)
+	err = h.StartService(ctx, FAPOLICYD)
 	if err != nil {
 		logger.From(ctx).Warn("could not start fapolicyd", "host", h, "error", err)
 		return err

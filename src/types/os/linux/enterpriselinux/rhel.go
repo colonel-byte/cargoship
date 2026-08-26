@@ -25,8 +25,7 @@ import (
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/colonel-byte/cargoship/src/types/os/linux"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 // RHEL provides OS support for RedHat Enterprise Linux
@@ -37,9 +36,9 @@ type RHEL struct {
 var _ configurer.Configurer = (*RHEL)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == linux.OSKindELRedHat && !strings.Contains(os.Name, linux.OSKindCoreOS)
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == linux.OSKindELRedHat && !strings.Contains(r.Name, linux.OSKindCoreOS)
 		},
 		func() any {
 			return &RHEL{}
