@@ -64,8 +64,8 @@ func TestMultiHandlerWithAttrsAppliesToEveryChild(t *testing.T) {
 	logger := slog.New(m).With("requestId", "abc123")
 	logger.Info("hello")
 
-	require.Contains(t, a.String(), "request_id=abc123")
-	require.Contains(t, b.String(), "request_id=abc123")
+	require.Contains(t, a.String(), "requestId=abc123")
+	require.Contains(t, b.String(), "requestId=abc123")
 }
 
 func TestMultiHandlerWithGroupAppliesToEveryChild(t *testing.T) {
