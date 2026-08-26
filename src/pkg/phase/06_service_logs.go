@@ -77,7 +77,7 @@ func writeServiceLogFile(h *cluster.ZarfHost, service, content string) (string, 
 		"%s-%s-%s.log",
 		serviceLogFilenameSanitizer.ReplaceAllString(h.String(), "_"),
 		serviceLogFilenameSanitizer.ReplaceAllString(service, "_"),
-		time.Now().Format("20060102-150405"),
+		time.Now().Format(config.TimeFormat),
 	)
 	path := filepath.Join(logsDir, name)
 

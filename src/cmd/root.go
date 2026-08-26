@@ -335,13 +335,14 @@ func setupLogger(level, format string, isColor bool, logFilePath string) (*slog.
 }
 
 // defaultLogFilePath returns where the always-on debug log file is written: under the same
-// cache directory cargoship already uses for OCI artifacts, one file per invocation so
-// concurrent runs don't clobber each other's logs.
+// cache directory cargoship already uses for OCI artifacts, named to the second. Invocations
+// started within the same second share/append to the same file since the name carries no PID
+// or other disambiguator.
 func defaultLogFilePath() string {
 	cacheDir, err := config.GetAbsCachePath()
 	if err != nil || cacheDir == "" {
 		cacheDir = config.DefaultCachePath
 	}
-	name := fmt.Sprintf("cargoship-%s-%d.log", time.Now().Format("20060102-150405"), os.Getpid())
+	name := fmt.Sprintf("cargoship-%s.log", time.Now().Format(config.TimeFormat))
 	return filepath.Join(cacheDir, "logs", name)
 }
