@@ -56,5 +56,5 @@ const (
 
 const (
 	// TimeFormat is the time.Time layout used for timestamps embedded in generated log file names.
-	TimeFormat = "2006.01.02-15.04.05"
+	TimeFormat = "2006.01.02-15.04.05.00"
 )

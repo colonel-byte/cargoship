@@ -274,7 +274,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	cmd.SetContext(ctx)
 
 	if f != nil {
-		l.Debug("writing full-verbosity debug log to file, regardless of --log-level", "path", f.Name())
+		l.Info("writing full-verbosity debug log to file, regardless of --log-level", "path", f.Name())
 	}
 
 	// if --no-color is set, disable PTerm color in message prints
