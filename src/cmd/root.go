@@ -273,10 +273,6 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
 
-	if f != nil {
-		l.Info("writing full-verbosity debug log to file, regardless of --log-level", "path", f.Name())
-	}
-
 	// if --no-color is set, disable PTerm color in message prints
 	if IsColorDisabled {
 		pterm.DisableColor()
@@ -286,6 +282,10 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	err = PrintViperConfigUsed(cmd.Context())
 	if err != nil {
 		return err
+	}
+
+	if f != nil {
+		l.Info("logging debug to", "path", f.Name())
 	}
 
 	l.Debug("using temporary directory", "tmpDir", config.CommonOptions.TempDirectory)
