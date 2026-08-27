@@ -23,6 +23,8 @@ package cluster
 
 import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/src/types"
+	"github.com/invopop/jsonschema"
 )
 
 // ZarfCluster is the root object of a cluster configuration document.
@@ -87,10 +89,23 @@ type ZarfClusterProfiles struct {
 	Engine ZarfHostEngine `json:"engine,omitempty"`
 }
 
+// ZarfClusterRegistrieName is the registry name in ZarfClusterRegistries. It's a named
+// type (rather than a bare string) solely so it can implement JSONSchemaExtend below and
+// suggest common registries in the generated schema; the config file is not restricted to those.
+type ZarfClusterRegistrieName string
+
+// JSONSchemaExtend adds CommonRegistries to the schema as examples, so editors can
+// suggest them for this string field without restricting it to just those values.
+func (ZarfClusterRegistrieName) JSONSchemaExtend(s *jsonschema.Schema) {
+	for _, registry := range types.CommonRegistries {
+		s.Examples = append(s.Examples, registry)
+	}
+}
+
 // ZarfClusterRegistries holds the credentials and pull proxy for one container registry.
 type ZarfClusterRegistries struct {
 	// Name identifies the registry.
-	Name string `json:"name"`
+	Name ZarfClusterRegistrieName `json:"name"`
 	// Authentication holds the credentials for the registry.
 	Authentication ZarfClusterRegistryAuth `json:"auth,omitempty"`
 	// Proxy holds the pull redirect settings for the registry.
@@ -115,6 +130,9 @@ type ZarfClusterRegistryAuth struct {
 type ZarfClusterRegistryProxy struct {
 	// URL is the registry address the engine pulls from instead of the original registry.
 	URL string `json:"url"`
+	// Rewrite maps a regex pattern to a replacement, transforming the image name (not the tag)
+	// before it is pulled from this mirror. See https://docs.rke2.io/install/private_registry#rewrites
+	Rewrite map[string]string `json:"rewrite,omitempty"`
 }
 
 // ZarfClusterFiles defines a file to write to a host.

@@ -67,6 +67,7 @@ const (
 	keyNodeTaint     = "node-taint"
 	keyPassword      = "password"
 	keyPodSec        = "pod-security-admission-config-file"
+	keyRewrite       = "rewrite"
 	keyServer        = "server"
 	keySpec          = "spec"
 	keyTLS           = "tls-san"
@@ -87,8 +88,8 @@ const (
 // if `.spec.config.engine.manifest` is present we will create files under
 // registries.yaml:
 // we look at the cluster document's `.spec.config.registries`, to determine registry mirrors and their credentials.
-// if any are present we write "/etc/rancher/(rke2|k3s)/registries.yaml" with a "mirrors" entry per registry, and a
-// "configs" entry with auth when credentials are set.
+// if any are present we write "/etc/rancher/(rke2|k3s)/registries.yaml" with a "mirrors" entry per registry, a
+// "rewrite" entry per mirror when `.proxy.rewrite` is set, and a "configs" entry with auth when credentials are set.
 
 // ConfigureEngine does distro specific configuration on a host
 func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
@@ -208,9 +209,13 @@ func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mappi
 	configs := dig.Mapping{}
 
 	for _, reg := range registries {
-		mirrors[reg.Name] = dig.Mapping{
+		mirror := dig.Mapping{
 			keyEndpoint: []string{reg.Proxy.URL},
 		}
+		if len(reg.Proxy.Rewrite) > 0 {
+			mirror[keyRewrite] = reg.Proxy.Rewrite
+		}
+		mirrors[string(reg.Name)] = mirror
 
 		if reg.Authentication != (cluster.ZarfClusterRegistryAuth{}) {
 			auth := dig.Mapping{}

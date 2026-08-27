@@ -303,6 +303,14 @@
         },
         "name": {
           "description": "identifies the registry.",
+          "examples": [
+            "docker.io",
+            "ghcr.io",
+            "quay.io",
+            "gcr.io",
+            "registry.k8s.io",
+            "public.ecr.aws"
+          ],
           "type": "string"
         },
         "proxy": {
@@ -357,6 +365,13 @@
         "^x-": {}
       },
       "properties": {
+        "rewrite": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps a regex pattern to a replacement, transforming the image name (not the tag)\nbefore it is pulled from this mirror. See https://docs.rke2.io/install/private_registry#rewrites",
+          "type": "object"
+        },
         "url": {
           "description": "is the registry address the engine pulls from instead of the original registry.",
           "type": "string"

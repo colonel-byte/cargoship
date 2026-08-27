@@ -17,6 +17,7 @@ package distrocfg
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -85,6 +86,36 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 					keyUsername:      "user",
 					keyPassword:      "pass",
 					keyIdentityToken: "tok",
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
+	}
+}
+
+func TestBuildRegistriesConfigWithRewrite(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "docker.io",
+			Proxy: cluster.ZarfClusterRegistryProxy{
+				URL: "mirror-docker-hub.example.com",
+				Rewrite: map[string]string{
+					"^rancher/(.*)": "mirrorproject/rancher-images/$1",
+				},
+			},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	want := dig.Mapping{
+		keyMirrors: dig.Mapping{
+			"docker.io": dig.Mapping{
+				keyEndpoint: []string{"mirror-docker-hub.example.com"},
+				keyRewrite: map[string]string{
+					"^rancher/(.*)": "mirrorproject/rancher-images/$1",
 				},
 			},
 		},
@@ -491,6 +522,59 @@ func TestConfigureEngineNoRegistriesSkipsFile(t *testing.T) {
 	registriesPath := filepath.Join(filepath.Dir(d.Config), "registries.yaml")
 	if _, written := cfg.files[registriesPath]; written {
 		t.Errorf("registries.yaml should not be written when no registries are configured")
+	}
+}
+
+// TestConfigureEngineWritesRegistriesGolden drives the full registries.yaml builder
+// through ConfigureEngine with a mirror+rewrite registry and an authenticated registry,
+// then diffs the written file byte-for-byte against testdata/registries.yaml -- update
+// that fixture (and reread the diff) if a deliberate change to buildRegistriesConfig's
+// output shape is made.
+func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name: "docker.io",
+				Proxy: cluster.ZarfClusterRegistryProxy{
+					URL: "mirror-docker-hub.example.com",
+					Rewrite: map[string]string{
+						"^rancher/(.*)": "mirrorproject/rancher-images/$1",
+					},
+				},
+			},
+			{
+				Name:  "ghcr.io",
+				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-ghcr.example.com"},
+				Authentication: cluster.ZarfClusterRegistryAuth{
+					Username: "user",
+					Password: "pass",
+					Token:    "tok",
+				},
+			},
+		},
+	}
+	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
+	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+
+	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
+		t.Fatalf("ConfigureEngine() error = %v", err)
+	}
+
+	registriesPath := filepath.Join(filepath.Dir(d.Config), "registries.yaml")
+	got, written := cfg.files[registriesPath]
+	if !written {
+		t.Fatalf("expected file %s to be written, files = %+v", registriesPath, cfg.files)
+	}
+
+	want, err := os.ReadFile("testdata/registries.yaml")
+	if err != nil {
+		t.Fatalf("failed to read golden file: %v", err)
+	}
+
+	if got != string(want) {
+		t.Errorf("registries.yaml = \n%s\nwant\n%s", got, want)
 	}
 }
 

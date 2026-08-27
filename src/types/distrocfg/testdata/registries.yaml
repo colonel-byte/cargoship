@@ -1,0 +1,16 @@
+---
+configs:
+  mirror-ghcr.example.com:
+    auth:
+      identitytoken: tok
+      password: pass
+      username: user
+mirrors:
+  docker.io:
+    endpoint:
+      - mirror-docker-hub.example.com
+    rewrite:
+      ^rancher/(.*): mirrorproject/rancher-images/$1
+  ghcr.io:
+    endpoint:
+      - mirror-ghcr.example.com
