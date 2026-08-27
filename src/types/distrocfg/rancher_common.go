@@ -115,7 +115,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 				return err
 			}
 		} else {
-			if value, err := host.ReadFile(d.JoinTokenPath()); err != nil {
+			if value, err := host.ReadFile(d.JoinTokenPath()); err == nil {
 				run.ControllerToken = value
 			}
 		}
@@ -164,7 +164,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			return err
 		}
 	} else {
-		if value, err := host.ReadFile(d.JoinTokenPathAgent()); err != nil {
+		if value, err := host.ReadFile(d.JoinTokenPathAgent()); err == nil {
 			run.AgentToken = value
 		}
 	}
