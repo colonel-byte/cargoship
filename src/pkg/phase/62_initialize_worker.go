@@ -102,18 +102,20 @@ func (p *InitializeWorkers) installDistro(ctx context.Context, h *cluster.ZarfHo
 }
 
 func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("waiting for the worker service to start", "service", p.Distro.GetWorkerService(), "host", h)
+	service := p.Distro.GetWorkerService()
+	logger.From(ctx).Info("waiting for the worker service to start", "service", service, "host", h)
 
+	startedAt := time.Now()
 	go func() {
-		err := h.StartService(ctx, p.Distro.GetWorkerService())
+		err := h.StartService(ctx, service)
 		if err != nil {
-			logger.From(ctx).Warn("failed to start", "service", p.Distro.GetWorkerService(), "host", h)
+			logger.From(ctx).Warn("failed to start", "service", service, "host", h)
 		}
 	}()
 
-	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetWorkerService())); err != nil {
-		return err
+	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, service)); err != nil {
+		return p.captureServiceLogsOnFailure(ctx, h, service, startedAt, err)
 	}
 
-	return h.EnableService(ctx, p.Distro.GetWorkerService())
+	return h.EnableService(ctx, service)
 }

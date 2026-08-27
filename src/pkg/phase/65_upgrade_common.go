@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/node"
@@ -63,6 +64,7 @@ func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.ZarfHost) e
 func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the service to start", "service", p.service, "host", h)
 
+	startedAt := time.Now()
 	go func() {
 		err := h.StartService(ctx, p.service)
 		if err != nil {
@@ -71,7 +73,7 @@ func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) er
 	}()
 
 	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.service)); err != nil {
-		return err
+		return p.captureServiceLogsOnFailure(ctx, h, p.service, startedAt, err)
 	}
 
 	return h.EnableService(ctx, p.service)

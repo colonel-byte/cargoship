@@ -94,18 +94,20 @@ func (p *InitializeControllers) installDistro(ctx context.Context, h *cluster.Za
 }
 
 func (p *InitializeControllers) startService(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("waiting for the controller service to start", "service", p.Distro.GetControllerService(), "host", h)
+	service := p.Distro.GetControllerService()
+	logger.From(ctx).Info("waiting for the controller service to start", "service", service, "host", h)
 
+	startedAt := time.Now()
 	go func() {
-		err := h.StartService(ctx, p.Distro.GetControllerService())
+		err := h.StartService(ctx, service)
 		if err != nil {
-			logger.From(ctx).Warn("failed to start", "service", p.Distro.GetControllerService(), "host", h)
+			logger.From(ctx).Warn("failed to start", "service", service, "host", h)
 		}
 	}()
 
-	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, p.Distro.GetControllerService())); err != nil {
-		return err
+	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, service)); err != nil {
+		return p.captureServiceLogsOnFailure(ctx, h, service, startedAt, err)
 	}
 
-	return h.EnableService(ctx, p.Distro.GetControllerService())
+	return h.EnableService(ctx, service)
 }

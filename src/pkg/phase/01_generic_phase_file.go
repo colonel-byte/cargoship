@@ -129,6 +129,15 @@ func (p *GenericPhase) uploadFile(ctx context.Context, h *cluster.ZarfHost, f *v
 		logger.From(ctx).Info("file already exists and hasn't been changed, skipping upload", "host", h, "file", target)
 	}
 
+	// f.Target may be a temporary staging path for executable files (see stageTempPath); the
+	// manifest should record where the file actually ends up, which OriginalTarget holds
+	// whenever staging is used.
+	manifestPath := target
+	if f.OriginalTarget != "" {
+		manifestPath = f.OriginalTarget
+	}
+	p.recordManifestEntry(ctx, h, f.Category, manifestPath)
+
 	modTime := time.Unix(0, 0)
 	return p.applyFileMetadata(ctx, h, f.Target, owner, f.LocalSource.PermMode, &modTime)
 }
@@ -166,6 +175,12 @@ func (p *GenericPhase) uploadData(ctx context.Context, h *cluster.ZarfHost, f *v
 	if err != nil {
 		return err
 	}
+
+	category := f.Category
+	if category == "" {
+		category = "data"
+	}
+	p.recordManifestEntry(ctx, h, category, dest)
 
 	return p.applyFileMetadata(ctx, h, dest, owner, "", nil)
 }

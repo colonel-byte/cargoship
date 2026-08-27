@@ -43,19 +43,28 @@ func (rigSlogHandler) Enabled(context.Context, slog.Level) bool {
 }
 
 // Handle implements slog.Handler.
+//
+// r's attrs are forwarded as-is rather than flattened into the message: structured sinks like
+// the --log-file JSON handler need the raw key-value pairs, not just a formatted string.
 func (h rigSlogHandler) Handle(ctx context.Context, r slog.Record) error {
 	l := logger.From(ctx)
 	msg := r.Message
 
+	args := make([]any, 0, r.NumAttrs())
+	r.Attrs(func(a slog.Attr) bool {
+		args = append(args, a)
+		return true
+	})
+
 	switch {
 	case r.Level >= slog.LevelError:
-		l.Error(msg)
+		l.Error(msg, args...)
 	case r.Level >= slog.LevelWarn:
-		l.Warn(msg)
+		l.Warn(msg, args...)
 	case r.Level >= slog.LevelInfo:
-		l.Info(msg)
+		l.Info(msg, args...)
 	default:
-		l.Debug(msg)
+		l.Debug(msg, args...)
 	}
 	return nil
 }

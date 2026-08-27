@@ -29,6 +29,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
@@ -49,6 +50,11 @@ type UploadFiles struct {
 	hosts    cluster.ZarfHosts
 	disFiles v1alpha1.ZarfFiles
 	imgFiles []v1alpha1.ZarfFile
+
+	// priorManifest holds each host's upload manifest as it was before this run touched it,
+	// captured in Prepare so Run can tell which images an upgrade no longer uploads (e.g. an
+	// image tag that was removed from the distro config, or renamed to a new version).
+	priorManifest map[*cluster.ZarfHost][]ManifestEntry
 }
 
 // Title for the phase
@@ -73,6 +79,11 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 		return (len(h.Files) + len(d.Spec.Config.Files) + len(p.manager.Distro.Spec.Config.ImagesConfig.Images)) > 0
 	})
 	p.disFiles = p.manager.Distro.Spec.Config.Files
+
+	p.priorManifest = make(map[*cluster.ZarfHost][]ManifestEntry, len(p.manager.Config.Spec.Hosts))
+	for _, h := range p.manager.Config.Spec.Hosts {
+		p.priorManifest[h] = p.readManifest(h)
+	}
 
 	err := os.MkdirAll(filepath.Join(p.manager.TempDirectory, config.TarBallDir), 0755)
 	if err != nil {
@@ -130,6 +141,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			Name:        tarBallName,
 			Target:      p.manager.Distro.Spec.Config.ImagesConfig.Path,
 			TargetIsDir: true,
+			Category:    "image",
 			LocalSource: v1alpha1.LocalFile{
 				Path: tarballPath,
 			},
@@ -154,7 +166,21 @@ func (p *UploadFiles) Run(ctx context.Context) error {
 		p.manager.Config.Spec.Hosts,
 		p.cleanUpOldTmpFiles,
 		p.uploadDistroFiles,
+		p.cleanStaleUploads,
 	)
+}
+
+// cleanStaleUploads removes images this run's upload left in the manifest from a previous
+// version but didn't re-upload itself, e.g. an image tag bumped by a version upgrade. The diff
+// is scoped to the "image" category: the engine binary phases run after this one and haven't
+// recorded their own files into h.Metadata.UploadedFiles yet, so comparing the full manifest
+// here would misread their files as stale and delete a still-in-use engine binary.
+func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
+	current := parseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
+	old := filterManifestByCategory(p.priorManifest[h], "image")
+	current = filterManifestByCategory(current, "image")
+	p.removeStaleManifestEntries(ctx, h, old, current)
+	return nil
 }
 
 func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHost) error {
@@ -209,6 +235,7 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 			Target:         target,
 			OriginalTarget: f.Target,
 			TargetIsDir:    f.TargetIsDir,
+			Category:       "file",
 			LocalSource: v1alpha1.LocalFile{
 				Path: filepath.Join(p.manager.TempDirectory, config.FilesDir, strconv.Itoa(i), filepath.Base(f.Target)),
 			},

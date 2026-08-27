@@ -144,7 +144,7 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 			logger.From(ctx).Warn("failed to remove engine config dir", "path", confPath, "error", err)
 		}
 	}
-	// TODO: remove binaries......
-	// need to sort and unique the results
+	p.cleanUploadManifest(ctx, h)
+
 	return nil
 }
