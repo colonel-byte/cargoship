@@ -48,23 +48,30 @@ const (
 	keyAPIVersion    = "apiVersion"
 	keyAgentToken    = "agent-token-file"
 	keyAudit         = "audit-policy-file"
+	keyAuth          = "auth"
 	keyCIDRPod       = "cluster-cidr"
 	keyCIDRSVC       = "service-cidr"
+	keyConfigs       = "configs"
 	keyDataDir       = "data-dir"
 	keyETCD          = "etcd-arg"
+	keyEndpoint      = "endpoint"
+	keyIdentityToken = "identitytoken"
 	keyKind          = "kind"
 	keyKubeAPI       = "kube-apiserver-arg"
 	keyKubeConMan    = "kube-controller-manager-arg"
 	keyKubeScheduler = "kube-scheduler-arg"
 	keyMetadata      = "metadata"
+	keyMirrors       = "mirrors"
 	keyNodeLabel     = "node-label"
 	keyNodeName      = "node-name"
 	keyNodeTaint     = "node-taint"
+	keyPassword      = "password"
 	keyPodSec        = "pod-security-admission-config-file"
 	keyServer        = "server"
 	keySpec          = "spec"
 	keyTLS           = "tls-san"
 	keyToken         = "token-file"
+	keyUsername      = "username"
 	//keep-sorted end
 )
 
@@ -78,6 +85,10 @@ const (
 // we look at `.spec.config.engine.podSecurity`, to determine the "pod security admission" that will be enforced by the kubelet. There is no validation done at this time, please reference: https://kubernetes.io/docs/concepts/security/pod-security-admission/
 // if `.spec.config.engine.podSecurity` is present we will add/overwrite "pod-security-admission-config-file" with the value of "/etc/rancher/(rke2|k3s)/pss.yaml"
 // if `.spec.config.engine.manifest` is present we will create files under
+// registries.yaml:
+// we look at the cluster document's `.spec.config.registries`, to determine registry mirrors and their credentials.
+// if any are present we write "/etc/rancher/(rke2|k3s)/registries.yaml" with a "mirrors" entry per registry, and a
+// "configs" entry with auth when credentials are set.
 
 // ConfigureEngine does distro specific configuration on a host
 func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
@@ -180,7 +191,47 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		}
 	}
 
+	if len(run.Registries) > 0 {
+		registries := filepath.Join(filepath.Dir(d.Config), "registries.yaml")
+		if err := d.writeYAML(ctx, host, buildRegistriesConfig(run.Registries), registries); err != nil {
+			logger.From(ctx).Warn("failed to write", "file", registries)
+		}
+	}
+
 	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
+}
+
+// buildRegistriesConfig builds the containerd hosts-config mapping (mirrors/configs) rke2 and
+// k3s read from registries.yaml, based on the registry mirrors configured in `.spec.config.registries`.
+func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mapping {
+	mirrors := dig.Mapping{}
+	configs := dig.Mapping{}
+
+	for _, reg := range registries {
+		mirrors[reg.Name] = dig.Mapping{
+			keyEndpoint: []string{reg.Proxy.URL},
+		}
+
+		if reg.Authentication != (cluster.ZarfClusterRegistryAuth{}) {
+			auth := dig.Mapping{}
+			if reg.Authentication.Username != "" {
+				auth[keyUsername] = reg.Authentication.Username
+			}
+			if reg.Authentication.Password != "" {
+				auth[keyPassword] = reg.Authentication.Password
+			}
+			if reg.Authentication.Token != "" {
+				auth[keyIdentityToken] = reg.Authentication.Token
+			}
+			configs[reg.Proxy.URL] = dig.Mapping{keyAuth: auth}
+		}
+	}
+
+	result := dig.Mapping{keyMirrors: mirrors}
+	if len(configs) > 0 {
+		result[keyConfigs] = configs
+	}
+	return result
 }
 
 // GetClusterCIDR returns a string array with the all the known cluster cidr blocks

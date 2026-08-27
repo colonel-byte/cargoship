@@ -57,6 +57,8 @@ type ZarfRuntimeMeta struct {
 	LoadBalancer string
 	// Leader is the controller host that stores the cluster join tokens.
 	Leader *ZarfHost
+	// Registries lists the container registries the cluster uses.
+	Registries []ZarfClusterRegistries
 }
 
 // ZarfClusterSpec holds the configuration and hosts for a cluster.

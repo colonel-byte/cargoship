@@ -56,6 +56,7 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 
 	p.run.ControllerTLS = append(p.run.ControllerTLS, c.Spec.Config.LoadBalancer)
 	p.run.LoadBalancer = c.Spec.Config.LoadBalancer
+	p.run.Registries = c.Spec.Config.Registries
 
 	for _, h := range p.control {
 		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.Hostname(h))
