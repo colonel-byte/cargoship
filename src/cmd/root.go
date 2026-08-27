@@ -76,6 +76,8 @@ const (
 	InstallUpdateFirewall = "update-firewall"
 	// InstallUpdateFAPolicyD flag
 	InstallUpdateFAPolicyD = "update-fapolicyd"
+	// InstallVaultPasswordFile flag
+	InstallVaultPasswordFile = "vault-password-file"
 )
 
 const (
@@ -155,6 +157,7 @@ func NewCargoshipCommand() *cobra.Command {
 	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
+	rootCmd.AddCommand(newVaultEncryptCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {

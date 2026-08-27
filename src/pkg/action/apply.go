@@ -49,6 +49,8 @@ type ApplyOptions struct {
 	WorkerConcurrent int
 	// UpdateKubeConfig whether to update the local config
 	UpdateKubeConfig bool
+	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
+	VaultPassword string
 }
 
 // Apply state logic
@@ -112,7 +114,8 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 
 			&phase.ConfigureEngine{
-				Distro: d,
+				Distro:        d,
+				VaultPassword: opts.VaultPassword,
 			},
 			&phase.InitializeControllers{
 				Distro: d,

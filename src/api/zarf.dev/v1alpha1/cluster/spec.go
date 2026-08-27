@@ -98,13 +98,17 @@ type ZarfClusterRegistries struct {
 }
 
 // ZarfClusterRegistryAuth holds the credentials for a container registry.
+// Username, Password, and Token may each be given in plaintext, or as an
+// Ansible Vault-encrypted string (the output of `ansible-vault encrypt_string`,
+// starting with "$ANSIBLE_VAULT"), in which case cargoship decrypts it at apply
+// time using the vault password given via --vault-password-file.
 type ZarfClusterRegistryAuth struct {
 	// Username is the login name for the remote registry.
-	Username string `json:"user,omitempty"`
+	Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256..."`
 	// Password is the login secret for the remote registry.
-	Password string `json:"pass,omitempty"`
+	Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256..."`
 	// Token authenticates to the remote registry instead of a username and password.
-	Token string `json:"token,omitempty"`
+	Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256..."`
 }
 
 // ZarfClusterRegistryProxy redirects pulls for a registry to a different URL.

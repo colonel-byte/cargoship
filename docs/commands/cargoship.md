@@ -35,5 +35,6 @@ cargoship COMMAND [flags]
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
+* [cargoship vault-encrypt](./cargoship_vault-encrypt.md)	 - Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

@@ -54,6 +54,8 @@ const (
 	CmdInstallFlagConfirm = "Confirm whether if to proceed with the install"
 	// CmdInstallFlagTimeout install flag timeout
 	CmdInstallFlagTimeout = "Set the timeout for how long functions will last."
+	// CmdInstallFlagVaultPasswordFile install flag vault password file
+	CmdInstallFlagVaultPasswordFile = "Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD environment variable."
 	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
 	// CmdInstallHostUpdate install flag host
@@ -74,6 +76,12 @@ const (
 	CmdSha256SumShort = "Generates a SHA256SUM for the given file"
 	// CmdSha256SumFlagExtractPath flag description
 	CmdSha256SumFlagExtractPath = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	// CmdVaultEncryptShort vault-encrypt short
+	CmdVaultEncryptShort = "Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields"
+	// CmdVaultEncryptLong vault-encrypt long
+	CmdVaultEncryptLong = "Encrypts VALUE with Ansible Vault, producing a $ANSIBLE_VAULT-prefixed string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal."
+	// CmdVaultEncryptFlagPasswordFile flag description
+	CmdVaultEncryptFlagPasswordFile = "Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD environment variable."
 	// CmdViperErrLoadingConfigFile error text
 	CmdViperErrLoadingConfigFile = "failed to load config file"
 	// RootCmdFlagLogFormat log format

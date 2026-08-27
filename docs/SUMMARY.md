@@ -6,6 +6,7 @@
 
 # Guides
 
+- [registry-override](guides/registry-override.md)
 - [setup-inv](guides/setup-inv.md)
 
 
@@ -23,6 +24,7 @@
   - [reset](commands/cargoship_reset.md)
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [sign](commands/cargoship_sign.md)
+  - [vault-encrypt](commands/cargoship_vault-encrypt.md)
   - [version](commands/cargoship_version.md)
 
 
