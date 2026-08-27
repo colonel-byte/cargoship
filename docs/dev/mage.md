@@ -53,6 +53,8 @@ The `Generate` namespace handles code-generation and repository asset updates:
 
 *   `Document` — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook `docs/SUMMARY.md` structure.
 *   `Schema` — Generates YAML-compatible JSON schemas in `schema/` from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.
+*   `PullEngineSource` — Fetches raw k3s/RKE2 source at pinned tags into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). The only `Generate` target that touches the network.
+*   `EngineConfig` — Statically parses raw engine source under `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)) to generate typed `config.yaml` structs per distro/version in `src/pkg/engineconfig/gen/`.
 
 ---
 
@@ -80,6 +82,7 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `docs/phases/*` | Auto-generated cluster phase descriptors | `Generate.Document` |
 | `docs/SUMMARY.md` | Compiled table of contents for mdBook | `Generate.Document` |
 | `schema/*.json` | JSON schemas for YAML validations | `Generate.Schema` |
+| `src/pkg/engineconfig/gen/*` | Typed engine `config.yaml` structs per distro/version | `Generate.EngineConfig` |
 
 ---
 

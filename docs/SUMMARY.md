@@ -42,6 +42,7 @@
 
 - [dagger](dev/dagger.md)
 - [mage](dev/mage.md)
+- [thirdparty-src](dev/thirdparty-src.md)
 
 
 -----------
