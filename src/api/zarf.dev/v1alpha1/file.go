@@ -58,6 +58,8 @@ type ZarfFile struct {
 	User string `json:"user,omitempty"`
 	// Base is the local directory cargoship joins with LocalSource.Path to find the file. Cargoship resolves it at runtime; it is not read from the config.
 	Base string `json:"-"`
+	// Category labels why cargoship is uploading this file, e.g. "engine", "image", "file", or "data". Cargoship records it in the remote upload manifest; it is not read from the config.
+	Category string `json:"-"`
 	// PermString is the octal permission string cargoship applies to the file. Cargoship derives it from PermMode at runtime.
 	PermString string `json:"-"`
 	// DirPermString is the octal permission string cargoship applies to the file's parent directory.
