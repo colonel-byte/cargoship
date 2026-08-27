@@ -238,6 +238,10 @@
       "$ref": "#/$defs/DistroOptions",
       "description": "are various options used by the command"
     },
+    "log_file": {
+      "description": "enables always writing a full-verbosity debug log to a file, regardless of LogLevel",
+      "type": "boolean"
+    },
     "log_format": {
       "default": "console",
       "description": "how the logs are displayed well running",

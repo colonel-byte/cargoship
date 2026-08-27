@@ -69,6 +69,7 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.

@@ -82,6 +82,8 @@ const (
 	RootCmdFlagLogLevel = "Log level when running cargoship. Valid options are: warn, info, debug, trace"
 	// RootCmdFlagNoColor no color
 	RootCmdFlagNoColor = "Disable terminal color codes in logging and stdout prints."
+	// RootCmdFlagLogFile log file
+	RootCmdFlagLogFile = "Always write a full-verbosity debug log to a file, regardless of --log-level."
 	// RootCmdShort root short
 	RootCmdShort = "CLI for cargoship installs"
 	// RootCmdUse root use
