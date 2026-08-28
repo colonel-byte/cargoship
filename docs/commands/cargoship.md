@@ -32,6 +32,7 @@ cargoship COMMAND [flags]
 * [cargoship prepare](./cargoship_prepare.md)	 - Prepares the nodes, including restarting the node if new kernel modules are enabled
 * [cargoship publish](./cargoship_publish.md)	 - Publish the Cargoship Package to an OCI registry
 * [cargoship pull](./cargoship_pull.md)	 - Pulls a Cargoship package from a remote registry and save to the local file system
+* [cargoship registry-sync](./cargoship_registry-sync.md)	 - Sync registry config to a cluster, draining and restarting the engine service on any node whose config has drifted
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package

@@ -120,17 +120,26 @@ func (r *Common) SetPath(key string, value string) error {
 	return nil
 }
 
-func (r *Common) writeYAML(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, path string) error {
+func marshalYAML(config dig.Mapping) ([]byte, error) {
 	buf := bytes.Buffer{}
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
 
 	if err := enc.Encode(config); err != nil {
+		return nil, err
+	}
+
+	return []byte("---\n" + buf.String()), nil
+}
+
+func (r *Common) writeYAML(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, path string) error {
+	out, err := marshalYAML(config)
+	if err != nil {
 		logger.From(ctx).Warn("failed to marshal yaml", "host", host)
 		return err
 	}
 
-	if err := host.WriteFile(path, "---\n"+buf.String(), "0600"); err != nil {
+	if err := host.WriteFile(path, string(out), "0600"); err != nil {
 		logger.From(ctx).Warn("failed to write file", "host", host)
 		return err
 	}

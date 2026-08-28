@@ -154,6 +154,7 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newInstallPrepareCommand())
 	rootCmd.AddCommand(newInstallResetCommand())
 	rootCmd.AddCommand(newInstallKubeConfigCommand())
+	rootCmd.AddCommand(newInstallRegistrySyncCommand())
 	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())

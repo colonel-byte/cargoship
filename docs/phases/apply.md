@@ -87,6 +87,14 @@
 
     - If the remote node is a worker and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node by the set concurrency limit
 
+1. Sync Registry Config Controller
+
+    - If the remote node is a controller and its registry config has drifted from the desired state, drain the node, stop the service, write the new registry config, start the service, and uncordon the node sequentially
+
+1. Sync Registry Config Worker
+
+    - If the remote node is a worker and its registry config has drifted from the desired state, drain the node, stop the service, write the new registry config, start the service, and uncordon the node by the set concurrency limit
+
 1. Updating kubeconfig file with the current cluster
 
     - If enabled, this will update the local kubeconfig with the admin creds for the current distro

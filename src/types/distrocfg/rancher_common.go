@@ -192,14 +192,39 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		}
 	}
 
-	if len(run.Registries) > 0 {
-		registries := filepath.Join(filepath.Dir(d.Config), "registries.yaml")
-		if err := d.writeYAML(ctx, host, buildRegistriesConfig(run.Registries), registries); err != nil {
-			logger.From(ctx).Warn("failed to write", "file", registries)
+	// Nodes that already have the engine running are left alone here; registry
+	// config changes on those are rolled out via ConfigureRegistries, which
+	// pairs the write with a drain/restart/uncordon of the node.
+	if len(run.Registries) > 0 && !d.registriesServiceRunning(&host) {
+		if err := d.ConfigureRegistries(ctx, host, run.Registries); err != nil {
+			logger.From(ctx).Warn("failed to write", "file", d.RegistriesConfigPath())
 		}
 	}
 
 	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
+}
+
+func (d *RancherCommon) registriesServiceRunning(h *cluster.ZarfHost) bool {
+	service := d.GetWorkerService()
+	if h.IsController() {
+		service = d.GetControllerService()
+	}
+	return h.Configurer.ServiceIsRunning(h, service)
+}
+
+// RegistriesConfigPath returns the full path to the registries config file used by the engine
+func (d *RancherCommon) RegistriesConfigPath() string {
+	return filepath.Join(filepath.Dir(d.Config), "registries.yaml")
+}
+
+// RenderRegistriesConfig returns the exact bytes ConfigureRegistries would write for the given registries, for diffing against a host's current file
+func (d *RancherCommon) RenderRegistriesConfig(registries []cluster.ZarfClusterRegistries) ([]byte, error) {
+	return marshalYAML(buildRegistriesConfig(registries))
+}
+
+// ConfigureRegistries writes the registries config file to a host
+func (d *RancherCommon) ConfigureRegistries(ctx context.Context, host cluster.ZarfHost, registries []cluster.ZarfClusterRegistries) error {
+	return d.writeYAML(ctx, host, buildRegistriesConfig(registries), d.RegistriesConfigPath())
 }
 
 // buildRegistriesConfig builds the containerd hosts-config mapping (mirrors/configs) rke2 and

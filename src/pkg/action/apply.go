@@ -135,6 +135,19 @@ func NewApply(opts ApplyOptions) *Apply {
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
+			&phase.RegistrySyncController{
+				RegistrySyncHosts: phase.RegistrySyncHosts{
+					Distro:        d,
+					VaultPassword: opts.VaultPassword,
+				},
+			},
+			&phase.RegistrySyncWorker{
+				RegistrySyncHosts: phase.RegistrySyncHosts{
+					Distro:        d,
+					VaultPassword: opts.VaultPassword,
+				},
+				WorkerConcurrent: opts.WorkerConcurrent,
+			},
 			&phase.KubeConfig{
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
