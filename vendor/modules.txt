@@ -1917,6 +1917,9 @@ github.com/sirupsen/logrus
 # github.com/sorairolake/lzip-go v0.3.8
 ## explicit; go 1.22
 github.com/sorairolake/lzip-go
+# github.com/sosedoff/ansible-vault-go v0.2.0
+## explicit; go 1.20
+github.com/sosedoff/ansible-vault-go
 # github.com/spf13/afero v1.15.0
 ## explicit; go 1.23.0
 github.com/spf13/afero
