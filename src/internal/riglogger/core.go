@@ -18,6 +18,7 @@ package riglogger
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/k0sproject/rig/log"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -30,27 +31,38 @@ type rigLogger struct {
 
 // Debugf implements log.Logger.
 func (l rigLogger) Debugf(msg string, args ...any) {
-	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...))
+	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...), argAttrs(args))
 }
 
 // Errorf implements log.Logger.
 func (l rigLogger) Errorf(msg string, args ...any) {
-	logger.From(l.ctx).Error(fmt.Sprintf(msg, args...))
+	logger.From(l.ctx).Error(fmt.Sprintf(msg, args...), argAttrs(args))
 }
 
 // Infof implements log.Logger.
 func (l rigLogger) Infof(msg string, args ...any) {
-	logger.From(l.ctx).Info(fmt.Sprintf(msg, args...))
+	logger.From(l.ctx).Info(fmt.Sprintf(msg, args...), argAttrs(args))
 }
 
 // Tracef implements log.Logger.
 func (l rigLogger) Tracef(msg string, args ...any) {
-	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...))
+	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...), argAttrs(args))
 }
 
 // Warnf implements log.Logger.
 func (l rigLogger) Warnf(msg string, args ...any) {
-	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args...))
+	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args...), argAttrs(args))
+}
+
+// argAttrs forwards rig's positional printf args as an "args" slog list so structured sinks
+// like the JSON file handler retain the raw values instead of only the single flattened message
+// string that fmt.Sprintf produces. When args is empty, a zero Attr is returned instead, which
+// handlers skip, so no empty "args" array is logged.
+func argAttrs(args []any) slog.Attr {
+	if len(args) == 0 {
+		return slog.Attr{}
+	}
+	return slog.Any("args", args)
 }
 
 // RigLogger overrides the rig.Log with our custom logger

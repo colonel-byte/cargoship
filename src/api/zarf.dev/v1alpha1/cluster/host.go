@@ -201,6 +201,10 @@ type ZarfHostMetadata struct {
 	NewConfig string
 	// Ready indicates whether the distro service is up and running.
 	Ready bool
+	// UploadedFiles lists "category\tpath" entries cargoship uploaded to this host during the
+	// current run. It is used to detect files a previous version left behind that the current
+	// upload no longer produces, e.g. an engine binary renamed by a version bump.
+	UploadedFiles []string
 }
 
 // requireConfigurer returns the resolved configurer for h, or an error if none has been resolved yet.
