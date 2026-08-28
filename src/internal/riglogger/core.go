@@ -54,16 +54,15 @@ func (l rigLogger) Warnf(msg string, args ...any) {
 	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args...), argAttrs(args))
 }
 
-// argAttrs turns rig's positional printf args into an "args" group of slog key-value pairs so
-// structured sinks like the JSON file handler retain each raw value instead of only the single
-// flattened message string that fmt.Sprintf produces. When args is empty, slog.Group returns a
-// zero Attr that handlers skip, so no empty "args" object is logged.
+// argAttrs forwards rig's positional printf args as an "args" slog list so structured sinks
+// like the JSON file handler retain the raw values instead of only the single flattened message
+// string that fmt.Sprintf produces. When args is empty, a zero Attr is returned instead, which
+// handlers skip, so no empty "args" array is logged.
 func argAttrs(args []any) slog.Attr {
-	pairs := make([]any, 0, len(args)*2)
-	for i, arg := range args {
-		pairs = append(pairs, fmt.Sprint(args[i]), arg)
+	if len(args) == 0 {
+		return slog.Attr{}
 	}
-	return slog.Group("args", pairs...)
+	return slog.Any("args", args)
 }
 
 // RigLogger overrides the rig.Log with our custom logger
