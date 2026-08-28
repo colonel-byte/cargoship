@@ -18,7 +18,7 @@ cargoship apply [Distro Package] [flags]
   -f, --update-fapolicyd             Whether to update all the host nodes fapolicyd configuration.
   -F, --update-firewall              Whether to update all the host nodes firewall configuration.
   -H, --update-hosts                 Whether to update all the host nodes /etc/hosts file.
-      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD environment variable.
+      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
   -w, --work-concurrency int         Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
 ```
 

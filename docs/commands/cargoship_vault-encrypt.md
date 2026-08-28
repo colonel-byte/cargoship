@@ -16,7 +16,7 @@ cargoship vault-encrypt [VALUE] [flags]
 
 ```
   -h, --help                         help for vault-encrypt
-      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD environment variable.
+      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 
 ### Options inherited from parent commands

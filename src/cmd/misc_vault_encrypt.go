@@ -57,7 +57,7 @@ func (o *vaultEncryptOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if password == "" {
-		return errors.New("no vault password found: set --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable")
+		return errors.New("no vault password found: set --vault-password-file or the CARGOSHIP_VAULT_PASSWORD/ANSIBLE_VAULT_PASSWORD environment variable")
 	}
 
 	value, err := readValue(cmd, args)

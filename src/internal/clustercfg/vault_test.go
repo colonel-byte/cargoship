@@ -50,6 +50,31 @@ func TestResolveVaultPasswordFromEnvVar(t *testing.T) {
 	}
 }
 
+func TestResolveVaultPasswordFromAnsibleEnvVar(t *testing.T) {
+	t.Setenv(AnsibleVaultPasswordEnvVar, "ansiblepass")
+
+	got, err := ResolveVaultPassword("")
+	if err != nil {
+		t.Fatalf("ResolveVaultPassword() error = %v", err)
+	}
+	if got != "ansiblepass" {
+		t.Errorf("ResolveVaultPassword() = %q, want %q", got, "ansiblepass")
+	}
+}
+
+func TestResolveVaultPasswordCargoshipEnvVarTakesPrecedenceOverAnsible(t *testing.T) {
+	t.Setenv(VaultPasswordEnvVar, "cargoshippass")
+	t.Setenv(AnsibleVaultPasswordEnvVar, "ansiblepass")
+
+	got, err := ResolveVaultPassword("")
+	if err != nil {
+		t.Fatalf("ResolveVaultPassword() error = %v", err)
+	}
+	if got != "cargoshippass" {
+		t.Errorf("ResolveVaultPassword() = %q, want %q", got, "cargoshippass")
+	}
+}
+
 func TestResolveVaultPasswordFileTakesPrecedence(t *testing.T) {
 	t.Setenv(VaultPasswordEnvVar, "envpass")
 	path := filepath.Join(t.TempDir(), "vault-pass")

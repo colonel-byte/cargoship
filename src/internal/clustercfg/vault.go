@@ -27,14 +27,20 @@ import (
 // password when no --vault-password-file flag is given.
 const VaultPasswordEnvVar = "CARGOSHIP_VAULT_PASSWORD"
 
+// AnsibleVaultPasswordEnvVar is a secondary environment variable checked for the
+// Ansible Vault password, used by ansible-vault itself. VaultPasswordEnvVar takes
+// precedence when both are set.
+const AnsibleVaultPasswordEnvVar = "ANSIBLE_VAULT_PASSWORD"
+
 // vaultHeader marks a registry auth field as Ansible Vault ciphertext produced
 // by `ansible-vault encrypt_string`.
 const vaultHeader = "$ANSIBLE_VAULT"
 
 // ResolveVaultPassword returns the Ansible Vault password to use for decrypting
 // registry credentials. If passwordFile is set, its contents are read and used.
-// Otherwise it falls back to the CARGOSHIP_VAULT_PASSWORD environment variable.
-// An empty return value with a nil error means no password was configured.
+// Otherwise it falls back to the CARGOSHIP_VAULT_PASSWORD environment variable,
+// then to ANSIBLE_VAULT_PASSWORD. An empty return value with a nil error means
+// no password was configured.
 func ResolveVaultPassword(passwordFile string) (string, error) {
 	if passwordFile != "" {
 		b, err := os.ReadFile(passwordFile)
@@ -43,7 +49,10 @@ func ResolveVaultPassword(passwordFile string) (string, error) {
 		}
 		return strings.TrimRight(string(b), "\r\n"), nil
 	}
-	return os.Getenv(VaultPasswordEnvVar), nil
+	if password := os.Getenv(VaultPasswordEnvVar); password != "" {
+		return password, nil
+	}
+	return os.Getenv(AnsibleVaultPasswordEnvVar), nil
 }
 
 // DecryptRegistryAuth decrypts any Ansible Vault-encrypted Username, Password,

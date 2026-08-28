@@ -16,7 +16,7 @@ cargoship engine-config-sync [flags]
       --confirm                      Confirm whether if to proceed with the install
   -D, --distro string                What type of distro that will have its engine config synced. Valid options are: 'rke2', 'k3s'.
   -h, --help                         help for engine-config-sync
-      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD environment variable.
+      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
   -w, --work-concurrency int         Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
 ```
 
