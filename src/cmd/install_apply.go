@@ -36,10 +36,12 @@ import (
 
 type installApplyOptions struct {
 	InstallCommon
-	workerCon         int
+	workerCon         string
 	hosts             bool
 	firewall          bool
 	fapolicy          bool
+	labelNodes        bool
+	updateKubeConfig  bool
 	vaultPasswordFile string
 }
 
@@ -62,7 +64,9 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
+	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
@@ -129,6 +133,8 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		ModifyHosts:      o.hosts,
 		WorkerConcurrent: o.workerCon,
 		ModifyFirewall:   o.firewall,
+		LabelNodes:       o.labelNodes,
+		UpdateKubeConfig: o.updateKubeConfig,
 		VaultPassword:    vaultPassword,
 	}
 

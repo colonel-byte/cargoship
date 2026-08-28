@@ -31,7 +31,7 @@ import (
 // UpgradeWorkers phase state
 type UpgradeWorkers struct {
 	UpgradeHosts
-	WorkerConcurrent int
+	WorkerConcurrent string
 }
 
 // Title for the phase
@@ -67,7 +67,7 @@ func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d 
 
 // Run the phase
 func (p *UpgradeWorkers) Run(ctx context.Context) error {
-	return p.batchedParallelWithMessage(
+	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"upgrading worker nodes",
 		p.hosts,

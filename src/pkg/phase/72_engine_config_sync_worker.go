@@ -26,7 +26,7 @@ import (
 // EngineConfigSyncWorker phase state
 type EngineConfigSyncWorker struct {
 	EngineConfigSyncHosts
-	WorkerConcurrent int
+	WorkerConcurrent string
 }
 
 // Title for the phase
@@ -71,7 +71,7 @@ func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfClu
 
 // Run the phase
 func (p *EngineConfigSyncWorker) Run(ctx context.Context) error {
-	return p.batchedParallelWithMessage(
+	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"syncing worker config",
 		p.hosts,
