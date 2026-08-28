@@ -1,10 +1,4 @@
-// Copyright 2023 k0sctl authors
 // Copyright 2026 colonel-byte
-//
-// This file contains code derived from k0sctl:
-// https://github.com/k0sproject/k0sctl
-//
-// Modifications Copyright 2026 colonel-byte.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,32 +17,44 @@ package cmd
 import (
 	"context"
 	"errors"
-	"os"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
+	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
+	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-type installApplyOptions struct {
+const (
+	// InstallEngineConfigSyncConfig flag
+	InstallEngineConfigSyncConfig = "config"
+	// InstallEngineConfigSyncConfirm flag
+	InstallEngineConfigSyncConfirm = "confirm"
+	// InstallEngineConfigSyncDistro flag
+	InstallEngineConfigSyncDistro = "distro"
+	// InstallEngineConfigSyncConcurrency flag
+	InstallEngineConfigSyncConcurrency = "concurrency"
+	// InstallEngineConfigSyncWorkConcurrency flag
+	InstallEngineConfigSyncWorkConcurrency = "work-concurrency"
+)
+
+type installEngineConfigSyncOptions struct {
 	InstallCommon
 	workerCon         int
-	hosts             bool
-	firewall          bool
-	fapolicy          bool
+	distro            string
 	vaultPasswordFile string
 }
 
-func newInstallApplyCommand() *cobra.Command {
-	o := installApplyOptions{}
+func newInstallEngineConfigSyncCommand() *cobra.Command {
+	o := installEngineConfigSyncOptions{}
 	cmd := &cobra.Command{
-		Use:     "apply [Distro Package]",
-		Args:    cobra.ExactArgs(1),
-		Short:   lang.CmdDistroApplyShort,
+		Use:     "engine-config-sync",
+		Args:    cobra.ExactArgs(0),
+		Short:   lang.CmdDistroEngineConfigSyncShort,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -56,13 +62,11 @@ func newInstallApplyCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
-	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
-	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
-	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
-	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, InstallEngineConfigSyncConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
+	cmd.Flags().StringVar(&o.config, InstallEngineConfigSyncConfig, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().StringVarP(&o.distro, InstallEngineConfigSyncDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagEngineConfigSyncDistro)
+	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().IntVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
@@ -79,12 +83,12 @@ func newInstallApplyCommand() *cobra.Command {
 
 	o.LogFormat = val
 
-	cmd.MarkFlagRequired(InstallConfig)
+	cmd.MarkFlagRequired(InstallEngineConfigSyncConfig)
 
 	return cmd
 }
 
-func (o *installApplyOptions) run(ctx context.Context, args []string) error {
+func (o *installEngineConfigSyncOptions) run(ctx context.Context, _ []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {
@@ -97,25 +101,23 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	manager, err := initManager(ctx, args[0], o.InstallCommon)
+	cluster, err := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
 	if err != nil {
-		l.Warn("failed to create manager", "err", err)
 		return err
 	}
-	// deletes the temp directory at the end of the apply phases
-	defer func() {
-		l.Debug("removing staging dir", "temp", manager.TempDirectory)
-		if err := os.RemoveAll(manager.TempDirectory); err != nil {
-			l.Warn("failed to remove", "folder", manager.TempDirectory)
-		}
-	}()
+
+	manager := &phase.Manager{
+		DistroID:          o.distro,
+		Concurrency:       o.concurrency,
+		ConcurrentUploads: o.concurrency,
+		Config:            &cluster,
+	}
 
 	d, err := time.ParseDuration(Timeout)
 	if err != nil {
 		l.Warn("failed to parse timeout", "err", err)
 		return err
 	}
-
 	manager.SetTimout(d)
 
 	vaultPassword, err := clustercfg.ResolveVaultPassword(o.vaultPasswordFile)
@@ -124,13 +126,11 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	applyOpts := action.ApplyOptions{
+	engineConfigSyncOpts := action.EngineConfigSyncOptions{
 		Manager:          manager,
-		ModifyHosts:      o.hosts,
 		WorkerConcurrent: o.workerCon,
-		ModifyFirewall:   o.firewall,
 		VaultPassword:    vaultPassword,
 	}
 
-	return action.NewApply(applyOpts).Run(ctx)
+	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)
 }

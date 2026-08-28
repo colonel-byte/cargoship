@@ -20,6 +20,19 @@ import (
 	orderedmap "github.com/pb33f/ordered-map/v2"
 )
 
+// CommonRegistries are suggested, non-exhaustive registry names used in generated
+// schemas -- editors with YAML/JSON schema support (e.g. the redhat.vscode-yaml
+// extension) offer them as autocomplete, for RegistryOverrideMap's registry_override
+// keys here and for ZarfClusterRegistrieName's registry name field in the cluster API.
+var CommonRegistries = []string{
+	"docker.io",
+	"ghcr.io",
+	"quay.io",
+	"gcr.io",
+	"registry.k8s.io",
+	"public.ecr.aws",
+}
+
 // DistroConfig holds the values for the `.`, or root, section of the config file
 type DistroConfig struct {
 	// CachePath is the folder where oras artifacts are stored
@@ -127,24 +140,12 @@ type ResetOptions struct{}
 // config file is not restricted to those.
 type RegistryOverrideMap map[string]string
 
-// commonRegistries are suggested, non-exhaustive property names for RegistryOverrideMap's
-// generated schema -- editors with YAML/JSON schema support (e.g. the redhat.vscode-yaml
-// extension) offer them as autocomplete for registry_override keys.
-var commonRegistries = []string{
-	"docker.io",
-	"ghcr.io",
-	"quay.io",
-	"gcr.io",
-	"registry.k8s.io",
-	"public.ecr.aws",
-}
-
-// JSONSchemaExtend adds commonRegistries to the schema's properties, alongside the
+// JSONSchemaExtend adds CommonRegistries to the schema's properties, alongside the
 // additionalProperties the reflector already set for the map[string]string element
 // type, so the suggestions are additive and don't restrict which keys are allowed.
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema) {
 	suggestions := orderedmap.New[string, *jsonschema.Schema]()
-	for _, registry := range commonRegistries {
+	for _, registry := range CommonRegistries {
 		suggestions.Set(registry, &jsonschema.Schema{Type: "string"})
 	}
 	s.Properties = suggestions
