@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e38d9f1.js";
+            window.path_to_searchindex_js = "../searchindex-3a3e135f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-7875e07e.js"></script>
+        <script src="../toc-7e62a918.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,14 +187,14 @@
 <pre><code>cargoship prepare [Distro Package] [flags]
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
-<pre><code>  -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string          Config file used to bootstrap a cluster.
-      --confirm                Confirm whether if to proceed with the install
-  -h, --help                   help for prepare
-  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
-  -F, --update-firewall        Whether to update all the host nodes firewall configuration.
-  -H, --update-hosts           Whether to update all the host nodes /etc/hosts file.
-  -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
+<pre><code>  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string             Config file used to bootstrap a cluster.
+      --confirm                   Confirm whether if to proceed with the install
+  -h, --help                      help for prepare
+  -f, --update-fapolicyd          Whether to update all the host nodes fapolicyd configuration.
+  -F, --update-firewall           Whether to update all the host nodes firewall configuration.
+  -H, --update-hosts              Whether to update all the host nodes /etc/hosts file.
+  -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
