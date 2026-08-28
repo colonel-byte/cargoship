@@ -35,12 +35,12 @@ const (
 	engineConfigOut  = "src/pkg/engineconfig/gen"
 
 	// rke2CommonFlagsFile holds RKE2's commonFlag []cli.Flag{...} literal, shared by both
-	// server.go and agent.go (appended on top of the wrapped k3s command and RKE2's own
+	// zz_server.go and zz_agent.go (appended on top of the wrapped k3s command and RKE2's own
 	// per-target additions).
-	rke2CommonFlagsFile = "root.go"
+	rke2CommonFlagsFile = "zz_root.go"
 	// rke2FlagOptsFile declares the copyFlag/dropFlag/hideFlag/ignoreFlag vars that a RKE2
 	// K3SFlagSet{...} literal's entries reference by bare identifier.
-	rke2FlagOptsFile = "k3sopts.go"
+	rke2FlagOptsFile = "zz_k3sopts.go"
 )
 
 // engineConfigTarget maps the source file name for one urfave/cli command to the struct it
@@ -52,8 +52,8 @@ type engineConfigTarget struct {
 }
 
 var engineConfigTargets = []engineConfigTarget{
-	{"server.go", "server", "ServerConfig"},
-	{"agent.go", "agent", "AgentConfig"},
+	{"zz_server.go", "server", "ServerConfig"},
+	{"zz_agent.go", "agent", "AgentConfig"},
 }
 
 var invalidPackageChars = regexp.MustCompile(`[^a-zA-Z0-9_]`)
@@ -198,7 +198,7 @@ func generateEngineConfigVersion(distro, version string) (map[string]bool, error
 }
 
 // generateRKE2ConfigVersion composes RKE2's real flag set instead of just extracting whatever
-// []cli.Flag{...} literal happens to be in server.go/agent.go. RKE2 doesn't declare its config
+// []cli.Flag{...} literal happens to be in zz_server.go/zz_agent.go. RKE2 doesn't declare its config
 // flags outright: it imports k3s's command and wraps it at runtime via
 // mustCmdFromK3S(cmd, K3SFlagSet{...}) (rke2FlagOptsFile/rke2CommonFlagsFile), which drops or
 // hides k3s flags by name, then appends a small RKE2-only literal (serverFlag/deprecatedFlags)

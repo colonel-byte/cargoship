@@ -7,11 +7,13 @@ from the rest of the repository.
 
 `thirdparty-src/<distro>/<version>/` holds raw, unmodified source files pulled from an
 upstream engine repo (k3s and RKE2) at an exact tag — e.g.
-`thirdparty-src/k3s/v1_35/{server.go,agent.go}`, pulled from k3s-io/k3s at tag
+`thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}`, pulled from k3s-io/k3s at tag
 `v1.35.3+k3s1`. `version` is truncated to the minor version (`v1_35`, not the full
 `v1.35.3-k3s1` patch tag): patch releases are assumed not to change the flag set, so one
-pull/generate covers every patch in that minor line. RKE2 additionally pulls `root.go`
-and `k3sopts.go` — see "RKE2's flag composition" below.
+pull/generate covers every patch in that minor line. RKE2 additionally pulls `zz_root.go`
+and `zz_k3sopts.go` — see "RKE2's flag composition" below. The `zz_` prefix marks these as
+pulled/tool-managed rather than hand-authored, the same convention used for the generated
+structs under `src/pkg/engineconfig/gen`.
 
 These files exist so `src/pkg/engineconfig/extract` can statically parse them with `go/ast`
 to recover the `urfave/cli` flag declarations k3s/RKE2 ships for a given version. That, in
@@ -47,27 +49,27 @@ from loading that module at all.
 thirdparty-src/
   <distro>/                  # k3s or rke2
     <version>/                # e.g. v1_35 (minor version only, see above)
-      server.go               # verbatim upstream source
-      agent.go
-      root.go                 # rke2 only -- commonFlag, shared by server/agent
-      k3sopts.go               # rke2 only -- K3SFlagOption/copyFlag/dropFlag/hideFlag
+      zz_server.go             # verbatim upstream source
+      zz_agent.go
+      zz_root.go               # rke2 only -- commonFlag, shared by server/agent
+      zz_k3sopts.go            # rke2 only -- K3SFlagOption/copyFlag/dropFlag/hideFlag
       SOURCE.txt               # repo, tag, resolved commit, and pulled file list
   go.mod                       # module boundary marker, see above
 ```
 
 ## RKE2's flag composition
 
-RKE2 doesn't declare its `config.yaml` flags outright the way k3s does. `server.go`/
-`agent.go` import k3s's own command and wrap it at runtime via
-`mustCmdFromK3S(cmd, K3SFlagSet{...})` (defined in `k3sopts.go`): a map, keyed by k3s flag
+RKE2 doesn't declare its `config.yaml` flags outright the way k3s does. `zz_server.go`/
+`zz_agent.go` import k3s's own command and wrap it at runtime via
+`mustCmdFromK3S(cmd, K3SFlagSet{...})` (defined in `zz_k3sopts.go`): a map, keyed by k3s flag
 name, of `copyFlag`/`dropFlag`/`hideFlag` (or an inline `{Usage: "...", Hide: true}`-style
 literal) saying whether that k3s flag survives into RKE2 at all, and whether it's hidden.
 RKE2 then appends a small literal of its own additions (`serverFlag`/`deprecatedFlags`)
-and a shared `commonFlag` literal declared in `root.go`.
+and a shared `commonFlag` literal declared in `zz_root.go`.
 
 `mage generate:engineConfig` reproduces this: for each RKE2 target it extracts the
 sibling k3s manifest (`thirdparty-src/k3s/<version>/`), applies the `K3SFlagSet` transform
-parsed from RKE2's `server.go`/`agent.go`, then appends RKE2's own additions and
+parsed from RKE2's `zz_server.go`/`zz_agent.go`, then appends RKE2's own additions and
 `commonFlag`. This is why an RKE2 version's pull must always be paired with a k3s pull at
 the same minor version.
 
@@ -122,8 +124,8 @@ mage generate:pullEngineSource
 ```
 
 This clones `k3s-io/k3s` at `v1.34.1+k3s1` and `rancher/rke2` at `v1.35.3+rke2r1`, writes
-`thirdparty-src/k3s/v1_34/{server.go,agent.go,SOURCE.txt}` and
-`thirdparty-src/rke2/v1_35/{server.go,agent.go,root.go,k3sopts.go,SOURCE.txt}`. Follow
+`thirdparty-src/k3s/v1_34/{zz_server.go,zz_agent.go,SOURCE.txt}` and
+`thirdparty-src/rke2/v1_35/{zz_server.go,zz_agent.go,zz_root.go,zz_k3sopts.go,SOURCE.txt}`. Follow
 with `mage generate:engineConfig` to generate structs for the new versions too. `destDir`
 is sanitized into a valid Go package name (dots become underscores) since it becomes the
 generated package's directory and name directly.
@@ -133,7 +135,7 @@ generated package's directory and name directly.
 `mage generate:engineConfig` walks every `thirdparty-src/<distro>/<version>/` directory
 and writes generated structs to `src/pkg/engineconfig/gen/<distro>/<version>/`. For k3s
 (and any distro that declares its flags outright) it parses whichever of
-`server.go`/`agent.go` it finds directly; for RKE2 it composes as described above. See
+`zz_server.go`/`zz_agent.go` it finds directly; for RKE2 it composes as described above. See
 `docs/dev/mage.md` for the broader `Generate` namespace.
 
 It also (re)writes `src/pkg/engineconfig/gen/zz_registry.go`, wiring every distro/version it
