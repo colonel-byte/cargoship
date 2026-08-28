@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 
 	"github.com/magefile/mage/mg"
@@ -74,13 +75,15 @@ func (Dagger) All() error {
 	if err := clean(); err != nil {
 		return err
 	}
-	return sh.RunV(
-		"dagger",
+	args := []string{
 		"call",
 		"--progress=tty",
 		"--interactive=false",
 		"build",
-		"export",
-		fmt.Sprintf("--path=%s", buildDir),
-	)
+	}
+	if n := os.Getenv("CARGOSHIP_DAGGER_CONCURRENCY"); n != "" {
+		args = append(args, fmt.Sprintf("--concurrency=%s", n))
+	}
+	args = append(args, "export", fmt.Sprintf("--path=%s", buildDir))
+	return sh.RunV("dagger", args...)
 }

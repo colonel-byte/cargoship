@@ -37,4 +37,7 @@ jobs:
           version: ${{ steps.dagger_version.outputs.version }}
           cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
           verb: call
-          args: build
+          # ubuntu-latest runners have 4 vCPUs; cap concurrency there so the 6 platform
+          # builds don't oversubscribe the runner and contend harder on the shared
+          # go-build cache volume than they need to.
+          args: build --concurrency=4

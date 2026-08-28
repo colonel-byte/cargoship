@@ -223,7 +223,14 @@ func invoke(ctx context.Context, parentJSON []byte, parentName string, fnName st
 					panic(fmt.Errorf("%s: %w", "failed to unmarshal input arg source", err))
 				}
 			}
-			return (*Cargoship).Build(&parent, ctx, source)
+			var concurrency int
+			if inputArgs["concurrency"] != nil {
+				err = json.Unmarshal([]byte(inputArgs["concurrency"]), &concurrency)
+				if err != nil {
+					panic(fmt.Errorf("%s: %w", "failed to unmarshal input arg concurrency", err))
+				}
+			}
+			return (*Cargoship).Build(&parent, ctx, source, concurrency)
 		case "BuildLocal":
 			var parent Cargoship
 			err = json.Unmarshal(parentJSON, &parent)

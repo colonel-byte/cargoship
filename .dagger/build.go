@@ -33,6 +33,11 @@ func (m *Cargoship) Build(
 	// +ignore=[".gitignore"]
 	// +defaultPath="."
 	source *dagger.Directory,
+	// Maximum number of platform builds to run concurrently. 0 runs all platforms at once
+	// (the previous, unbounded behavior).
+	// +optional
+	// +default=0
+	concurrency int,
 ) (*dagger.Directory, error) {
 	if !m.IsInitialized {
 		err := m.init(ctx, source)
@@ -47,6 +52,9 @@ func (m *Cargoship) Build(
 	goarch := []string{"amd64", "arm64"}
 
 	p := pool.New().WithErrors().WithContext(ctx)
+	if concurrency > 0 {
+		p = p.WithMaxGoroutines(concurrency)
+	}
 
 	for _, os := range goos {
 		for _, arch := range goarch {
