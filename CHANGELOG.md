@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.15.0](https://github.com/colonel-byte/cargoship/compare/v0.14.0...v0.15.0) (2026-08-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* add profile concurrency ([#219](https://github.com/colonel-byte/cargoship/issues/219))
+* allow registry overrides ([#215](https://github.com/colonel-byte/cargoship/issues/215))
+
+### Features
+
+* add profile concurrency ([#219](https://github.com/colonel-byte/cargoship/issues/219)) ([1abcc66](https://github.com/colonel-byte/cargoship/commit/1abcc66b9a50168c30fb9ac388a7a9800b4df872))
+* allow registry overrides ([#215](https://github.com/colonel-byte/cargoship/issues/215)) ([cac56ee](https://github.com/colonel-byte/cargoship/commit/cac56ee52a83071d4a0dbc414c5d9d4b25387ac9))
+
+
+### Bug Fixes
+
+* logging on rig ([#217](https://github.com/colonel-byte/cargoship/issues/217)) ([4e00e99](https://github.com/colonel-byte/cargoship/commit/4e00e9959943955149f8ded82075995e55a8cddf))
+
 ## [0.14.0](https://github.com/colonel-byte/cargoship/compare/v0.13.0...v0.14.0) (2026-08-27)
 
 
