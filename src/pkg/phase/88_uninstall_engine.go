@@ -45,7 +45,7 @@ var (
 type UninstallEngine struct {
 	GenericPhase
 	Distro           distrocfg.Distro
-	WorkerConcurrent int
+	WorkerConcurrent string
 	hosts            cluster.ZarfHosts
 }
 
@@ -68,7 +68,7 @@ func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _
 
 // Run the phase
 func (p *UninstallEngine) Run(ctx context.Context) error {
-	return p.batchedParallelWithMessage(
+	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"uninstalling engine files",
 		p.hosts,

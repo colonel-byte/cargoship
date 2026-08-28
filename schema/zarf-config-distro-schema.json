@@ -150,10 +150,21 @@
           "type": "string"
         },
         "worker_concurrency": {
-          "description": "number of worker nodes that will be upgraded at once",
-          "maximum": 1000,
-          "minimum": 0,
-          "type": "integer"
+          "description": "number of worker nodes that will be upgraded at once, as a fixed count\n(\"5\") or a percentage of the batch (\"25%\")",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
         }
       },
       "type": "object"

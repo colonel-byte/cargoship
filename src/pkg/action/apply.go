@@ -45,8 +45,9 @@ type ApplyOptions struct {
 	ModifyHosts bool
 	// ModifyFirewall updates the firewalld on the nodes
 	ModifyFirewall bool
-	// WorkerConcurrent number of workers that will be installed or upgraded at a time
-	WorkerConcurrent int
+	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
+	// count ("5") or a percentage of the batch ("25%")
+	WorkerConcurrent string
 	// UpdateKubeConfig whether to update the local config
 	UpdateKubeConfig bool
 }
@@ -62,10 +63,6 @@ func NewApply(opts ApplyOptions) *Apply {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
-	}
-
-	if opts.WorkerConcurrent < 0 {
-		opts.WorkerConcurrent = 0
 	}
 
 	if opts.Manager.Concurrency < 0 {

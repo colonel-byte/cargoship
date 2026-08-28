@@ -279,6 +279,23 @@
         "^x-": {}
       },
       "properties": {
+        "concurrency": {
+          "description": "limits how many hosts using this profile cargoship processes at once, e.g.\ndraining, upgrading, initializing, or uninstalling. It accepts a fixed count (\"1\") or a\npercentage of the hosts sharing this profile (\"25%\"). Empty falls back to the phase's\ndefault concurrency.",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
         "engine": {
           "$ref": "#/$defs/ZarfHostEngine",
           "description": "holds the node label and taint overrides applied to a host that selects this profile."

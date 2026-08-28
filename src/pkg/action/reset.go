@@ -40,8 +40,9 @@ type ResetOptions struct {
 	NoDrain bool
 	// DistroID is the type of Kubernetes engine that will be removed
 	DistroID string
-	// WorkerConcurrent number of workers that will be installed or upgraded at a time
-	WorkerConcurrent int
+	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
+	// count ("5") or a percentage of the batch ("25%")
+	WorkerConcurrent string
 }
 
 // Reset state logic

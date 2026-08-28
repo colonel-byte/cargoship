@@ -55,7 +55,7 @@ const (
 	// CmdInstallFlagTimeout install flag timeout
 	CmdInstallFlagTimeout = "Set the timeout for how long functions will last."
 	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
-	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
+	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. \"25%\"), set to 0 for unlimited."
 	// CmdInstallHostUpdate install flag host
 	CmdInstallHostUpdate = "Whether to update all the host nodes /etc/hosts file."
 	// CmdPackageCreateFlagOutput create flag output

@@ -6,6 +6,7 @@
 
 # Guides
 
+- [profile-concurrency](guides/profile-concurrency.md)
 - [setup-inv](guides/setup-inv.md)
 
 

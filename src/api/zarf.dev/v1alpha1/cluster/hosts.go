@@ -89,6 +89,34 @@ func (hosts ZarfHosts) Workers() ZarfHosts {
 	return hosts.WithRole(RoleWorker)
 }
 
+// ZarfHostGroup is a set of hosts that share the same profile.
+type ZarfHostGroup struct {
+	// Profile is the profile name shared by Hosts. Empty for hosts that selected no profile.
+	Profile string
+	// Hosts are the hosts that selected Profile, in their original relative order.
+	Hosts ZarfHosts
+}
+
+// GroupByProfile splits hosts into groups by their Profile field, preserving each host's
+// relative order within its group. Groups are ordered by each profile's first appearance in
+// hosts, so the result is deterministic.
+func (hosts ZarfHosts) GroupByProfile() []ZarfHostGroup {
+	var groups []ZarfHostGroup
+	index := make(map[string]int)
+
+	for _, h := range hosts {
+		i, ok := index[h.Profile]
+		if !ok {
+			i = len(groups)
+			index[h.Profile] = i
+			groups = append(groups, ZarfHostGroup{Profile: h.Profile})
+		}
+		groups[i].Hosts = append(groups[i].Hosts, h)
+	}
+
+	return groups
+}
+
 // Each runs each filter on every host, in the order given. It stops and returns the error if ctx is canceled or a filter returns an error.
 func (hosts ZarfHosts) Each(ctx context.Context, filters ...func(context.Context, *ZarfHost) error) error {
 	for _, filter := range filters {

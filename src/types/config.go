@@ -64,8 +64,9 @@ type DistroOptions struct {
 	FirewallUpdate bool `json:"firewall_update,omitempty" mapstructure:"firewall_update" jsonschema:"default=true"`
 	// HostUpdate whether we will update the etc host file
 	HostUpdate bool `json:"host_update,omitempty" mapstructure:"host_update" jsonschema:"default=true"`
-	// WorkerConcurrency number of worker nodes that will be upgraded at once
-	WorkerConcurrency int `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"minimum=0,maximum=1000"`
+	// WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
+	// ("5") or a percentage of the batch ("25%")
+	WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
 	// Retry number of retries we will try
 	Retry int `json:"retry,omitempty" mapstructure:"retry" jsonschema:"minimum=0"`
 	// Type of distro we are interacting with

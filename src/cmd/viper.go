@@ -195,7 +195,7 @@ func setDefaults() {
 	// these -- omitting any of them silently drops that key's env-var support.
 	v.SetDefault(configPath("Architecture"), "")
 	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
-	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), 0)
+	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")
