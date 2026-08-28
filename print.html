@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5725c58f.js";
+            window.path_to_searchindex_js = "searchindex-3e38d9f1.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2f72d095.js"></script>
+        <script src="toc-7875e07e.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -279,6 +279,74 @@ cargoship create ./distro-defs -o ./build/
 <li><a href="https://github.com/zarf-dev/zarf">zarf-dev/zarf</a> — For air-gapped image and file packaging and offline-first design.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="registry-override-guide"><a class="header" href="#registry-override-guide">Registry Override Guide</a></h1>
+<p>This guide explains how to redirect the images Cargoship pulls when creating a package, and how to authenticate to the resulting registry at apply time using an Ansible Vault-encrypted credential.</p>
+<h2 id="what-a-registry-override-does"><a class="header" href="#what-a-registry-override-does">What a Registry Override Does</a></h2>
+<p>By default, <code>cargoship create</code> pulls images from the registries referenced in your source manifests (e.g. <code>docker.io</code>, <code>ghcr.io</code>). A registry override rewrites the registry portion of an image reference at package-create time, so images are instead pulled from a mirror – for example an internal pull-through cache or an air-gapped registry.</p>
+<p>This only affects where <code>create</code> pulls <em>from</em>. It doesn’t touch the cluster the package is later applied to; for authenticating the cluster’s container engine to a registry, see <a href="#authenticating-to-the-registry">Authenticating to the Registry</a> below.</p>
+<h2 id="setting-an-override"><a class="header" href="#setting-an-override">Setting an Override</a></h2>
+<p>Overrides are specified as <code>source=override</code> pairs, either on the command line or in the config file.</p>
+<h3 id="flag"><a class="header" href="#flag">Flag</a></h3>
+<pre><code>cargoship create --registry-override docker.io=mirror.example.com
+</code></pre>
+<p>The flag is repeatable, so multiple registries can be overridden in one <code>create</code>:</p>
+<pre><code>cargoship create \
+  --registry-override docker.io=mirror.example.com \
+  --registry-override ghcr.io=mirror.example.com/ghcr
+</code></pre>
+<h3 id="config-file"><a class="header" href="#config-file">Config File</a></h3>
+<p>The same mapping can be set under <code>.distro.create.registry_override</code> in your config file, so it doesn’t need to be repeated on every invocation:</p>
+<pre><code class="language-yaml">distro:
+  create:
+    registry_override:
+      docker.io: mirror.example.com
+      ghcr.io: mirror.example.com/ghcr
+</code></pre>
+<p>Flag values take precedence over the config file when both are set.</p>
+<h2 id="prefix-matching"><a class="header" href="#prefix-matching">Prefix Matching</a></h2>
+<p>A source can be as broad as a registry (<code>docker.io</code>) or as narrow as a specific repository prefix (<code>docker.io/library</code>). When more than one override could match an image, the longest matching source wins:</p>
+<pre><code>cargoship create \
+  --registry-override docker.io=mirror.example.com \
+  --registry-override docker.io/library=mirror.example.com/library-cache
+</code></pre>
+<p>Here, <code>docker.io/library/nginx</code> resolves against the more specific <code>docker.io/library</code> override, while <code>docker.io/someorg/app</code> falls back to the broader <code>docker.io</code> override.</p>
+<h2 id="authenticating-to-the-registry"><a class="header" href="#authenticating-to-the-registry">Authenticating to the Registry</a></h2>
+<p>Once images are being pulled from your mirror, the cluster’s container engine also needs credentials for it at apply time. This is configured separately, in the cluster inventory file’s <code>.spec.config.registries</code> (see the <a href="#inventory-configuration-guide">inventory guide</a>):</p>
+<pre><code class="language-yaml">spec:
+  config:
+    registries:
+      - name: mirror.example.com
+        auth:
+          user: myuser
+          pass: hunter2
+</code></pre>
+<p>Writing <code>pass: hunter2</code> in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in <code>user</code>, <code>pass</code>, or <code>token</code> – any field starting with <code>$ANSIBLE_VAULT</code> is decrypted automatically when the package is applied.</p>
+<h3 id="encrypting-the-credential"><a class="header" href="#encrypting-the-credential">Encrypting the Credential</a></h3>
+<p>Use <code>cargoship vault-encrypt</code> to produce the encrypted value. It reads the plaintext from an argument, from stdin, or – if stdin is a terminal – prompts for it with hidden input so the secret is never echoed or left in shell history:</p>
+<pre><code>cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+Value to encrypt:
+$ANSIBLE_VAULT;1.1;AES256
+62306432326630316632646366363136303161316635343463306637643137646336363634363338
+...
+</code></pre>
+<p>Paste the resulting block into the inventory file:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    registries:
+      - name: mirror.example.com
+        auth:
+          user: myuser
+          pass: |
+            $ANSIBLE_VAULT;1.1;AES256
+            62306432326630316632646366363136303161316635343463306637643137646336363634363338
+            ...
+</code></pre>
+<h3 id="applying-with-the-vault-password"><a class="header" href="#applying-with-the-vault-password">Applying with the Vault Password</a></h3>
+<p><code>cargoship apply</code> needs the same vault password to decrypt the credential at run time, supplied the same way as encryption – via <code>--vault-password-file</code>, or the <code>CARGOSHIP_VAULT_PASSWORD</code> environment variable if the flag is omitted:</p>
+<pre><code>cargoship apply --vault-password-file ./vault-pass.txt cluster.tar.zst
+</code></pre>
+<p>If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, <code>apply</code> fails with an error naming the registry rather than silently treating the ciphertext as a literal username or password.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="inventory-configuration-guide"><a class="header" href="#inventory-configuration-guide">Inventory Configuration Guide</a></h1>
 <p>This guide explains how to author a cluster inventory file for bootstrapping or upgrading clusters with Cargoship.</p>
 <h2 id="basic-structure"><a class="header" href="#basic-structure">Basic Structure</a></h2>
@@ -350,6 +418,7 @@ metadata:
 <ul>
 <li><a href="#apply">cargoship apply</a>	 - Apply a config file to bootstrap and upgrade a cluster</li>
 <li><a href="#create">cargoship create</a>	 - Creates a Cargoship Package from a given directory or the current director</li>
+<li><a href="#engine-config-sync">cargoship engine-config-sync</a>	 - Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted</li>
 <li><a href="#kube-config">cargoship kube-config</a>	 - Get the admin kube-config for a control-plane node</li>
 <li><a href="#prepare">cargoship prepare</a>	 - Prepares the nodes, including restarting the node if new kernel modules are enabled</li>
 <li><a href="#publish">cargoship publish</a>	 - Publish the Cargoship Package to an OCI registry</li>
@@ -357,6 +426,7 @@ metadata:
 <li><a href="#reset">cargoship reset</a>	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine</li>
 <li><a href="#sha256sum">cargoship sha256sum</a>	 - Generates a SHA256SUM for the given file</li>
 <li><a href="#sign">cargoship sign</a>	 - Signs an existing Cargoship distro package</li>
+<li><a href="#vault-encrypt">cargoship vault-encrypt</a>	 - Encrypts a value with Ansible Vault, for use in a registry’s user/pass/token fields</li>
 <li><a href="#version">cargoship version</a>	 - Shows the version of the running binary</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -367,14 +437,15 @@ metadata:
 <pre><code>cargoship apply [Distro Package] [flags]
 </code></pre>
 <h3 id="options-1"><a class="header" href="#options-1">Options</a></h3>
-<pre><code>  -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string          Config file used to bootstrap a cluster.
-      --confirm                Confirm whether if to proceed with the install
-  -h, --help                   help for apply
-  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
-  -F, --update-firewall        Whether to update all the host nodes firewall configuration.
-  -H, --update-hosts           Whether to update all the host nodes /etc/hosts file.
-  -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
+<pre><code>  -c, --concurrency int              Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string                Config file used to bootstrap a cluster.
+      --confirm                      Confirm whether if to proceed with the install
+  -h, --help                         help for apply
+  -f, --update-fapolicyd             Whether to update all the host nodes fapolicyd configuration.
+  -F, --update-firewall              Whether to update all the host nodes firewall configuration.
+  -H, --update-hosts                 Whether to update all the host nodes /etc/hosts file.
+      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+  -w, --work-concurrency int         Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
@@ -427,16 +498,20 @@ metadata:
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="kube-config"><a href="#kube-config" class="header">kube-config</a></h1>
+<h1 id="engine-config-sync"><a href="#engine-config-sync" class="header">engine-config-sync</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-kube-config"><a class="header" href="#cargoship-kube-config">cargoship kube-config</a></h2>
-<p>Get the admin kube-config for a control-plane node</p>
-<pre><code>cargoship kube-config [flags]
+<h2 id="cargoship-engine-config-sync"><a class="header" href="#cargoship-engine-config-sync">cargoship engine-config-sync</a></h2>
+<p>Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted</p>
+<pre><code>cargoship engine-config-sync [flags]
 </code></pre>
 <h3 id="options-3"><a class="header" href="#options-3">Options</a></h3>
-<pre><code>      --config string   Config file used to bootstrap a cluster.
-  -D, --distro string   What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'.
-  -h, --help            help for kube-config
+<pre><code>  -c, --concurrency int              Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string                Config file used to bootstrap a cluster.
+      --confirm                      Confirm whether if to proceed with the install
+  -D, --distro string                What type of distro that will have its engine config synced. Valid options are: 'rke2', 'k3s'.
+  -h, --help                         help for engine-config-sync
+      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+  -w, --work-concurrency int         Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-2"><a class="header" href="#options-inherited-from-parent-commands-2">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
@@ -455,21 +530,16 @@ metadata:
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="prepare"><a href="#prepare" class="header">prepare</a></h1>
+<h1 id="kube-config"><a href="#kube-config" class="header">kube-config</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-prepare"><a class="header" href="#cargoship-prepare">cargoship prepare</a></h2>
-<p>Prepares the nodes, including restarting the node if new kernel modules are enabled</p>
-<pre><code>cargoship prepare [Distro Package] [flags]
+<h2 id="cargoship-kube-config"><a class="header" href="#cargoship-kube-config">cargoship kube-config</a></h2>
+<p>Get the admin kube-config for a control-plane node</p>
+<pre><code>cargoship kube-config [flags]
 </code></pre>
 <h3 id="options-4"><a class="header" href="#options-4">Options</a></h3>
-<pre><code>  -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string          Config file used to bootstrap a cluster.
-      --confirm                Confirm whether if to proceed with the install
-  -h, --help                   help for prepare
-  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
-  -F, --update-firewall        Whether to update all the host nodes firewall configuration.
-  -H, --update-hosts           Whether to update all the host nodes /etc/hosts file.
-  -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
+<pre><code>      --config string   Config file used to bootstrap a cluster.
+  -D, --distro string   What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'.
+  -h, --help            help for kube-config
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-3"><a class="header" href="#options-inherited-from-parent-commands-3">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
@@ -488,28 +558,21 @@ metadata:
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="publish"><a href="#publish" class="header">publish</a></h1>
+<h1 id="prepare"><a href="#prepare" class="header">prepare</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-publish"><a class="header" href="#cargoship-publish">cargoship publish</a></h2>
-<p>Publish the Cargoship Package to an OCI registry</p>
-<pre><code>cargoship publish [Package] [REPOSITORY] [flags]
+<h2 id="cargoship-prepare"><a class="header" href="#cargoship-prepare">cargoship prepare</a></h2>
+<p>Prepares the nodes, including restarting the node if new kernel modules are enabled</p>
+<pre><code>cargoship prepare [Distro Package] [flags]
 </code></pre>
 <h3 id="options-5"><a class="header" href="#options-5">Options</a></h3>
-<pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
-      --certificate-identity-regexp string      Regex variant of --certificate-identity
-      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
-      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
-  -c, --confirm                                 Confirms package publish without prompting. Skips prompt for the signing key password
-  -h, --help                                    help for publish
-      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
-  -k, --key string                              Path to public key file for validating signed packages
-      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --retries int                             Number of retries to perform for Cargoships operations like package publishes
-      --signing-key string                      Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
-      --signing-key-pass string                 Password to the private key used for publishing packages
-      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
-      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-      --verify verifyMode[=always]              Verify the Cargoship package signature (default if-possible)
+<pre><code>  -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string          Config file used to bootstrap a cluster.
+      --confirm                Confirm whether if to proceed with the install
+  -h, --help                   help for prepare
+  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
+  -F, --update-firewall        Whether to update all the host nodes firewall configuration.
+  -H, --update-hosts           Whether to update all the host nodes /etc/hosts file.
+  -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-4"><a class="header" href="#options-inherited-from-parent-commands-4">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
@@ -528,23 +591,25 @@ metadata:
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="pull"><a href="#pull" class="header">pull</a></h1>
+<h1 id="publish"><a href="#publish" class="header">publish</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-pull"><a class="header" href="#cargoship-pull">cargoship pull</a></h2>
-<p>Pulls a Cargoship package from a remote registry and save to the local file system</p>
-<pre><code>cargoship pull [Package] [flags]
+<h2 id="cargoship-publish"><a class="header" href="#cargoship-publish">cargoship publish</a></h2>
+<p>Publish the Cargoship Package to an OCI registry</p>
+<pre><code>cargoship publish [Package] [REPOSITORY] [flags]
 </code></pre>
 <h3 id="options-6"><a class="header" href="#options-6">Options</a></h3>
 <pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
-  -h, --help                                    help for pull
+  -c, --confirm                                 Confirms package publish without prompting. Skips prompt for the signing key password
+  -h, --help                                    help for publish
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string                           Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
-      --shasum string                           Shasum of the package to pull
+      --retries int                             Number of retries to perform for Cargoships operations like package publishes
+      --signing-key string                      Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string                 Password to the private key used for publishing packages
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
       --verify verifyMode[=always]              Verify the Cargoship package signature (default if-possible)
@@ -566,22 +631,26 @@ metadata:
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="reset"><a href="#reset" class="header">reset</a></h1>
+<h1 id="pull"><a href="#pull" class="header">pull</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-reset"><a class="header" href="#cargoship-reset">cargoship reset</a></h2>
-<p>Reset a cluster, stopping, uninstalling, and removing all data for a engine</p>
-<pre><code>cargoship reset [flags]
+<h2 id="cargoship-pull"><a class="header" href="#cargoship-pull">cargoship pull</a></h2>
+<p>Pulls a Cargoship package from a remote registry and save to the local file system</p>
+<pre><code>cargoship pull [Package] [flags]
 </code></pre>
 <h3 id="options-7"><a class="header" href="#options-7">Options</a></h3>
-<pre><code>  -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string          Config file used to bootstrap a cluster.
-      --confirm                Confirm whether if to proceed with the install
-  -D, --distro string          What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
-  -h, --help                   help for reset
-  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
-  -F, --update-firewall        Whether to update all the host nodes firewall configuration.
-  -H, --update-hosts           Whether to update all the host nodes /etc/hosts file.
-  -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
+<pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+  -h, --help                                    help for pull
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Path to public key file for validating signed packages
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string                           Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
+      --shasum string                           Shasum of the package to pull
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --verify verifyMode[=always]              Verify the Cargoship package signature (default if-possible)
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-6"><a class="header" href="#options-inherited-from-parent-commands-6">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
@@ -600,15 +669,22 @@ metadata:
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="sha256sum"><a href="#sha256sum" class="header">sha256sum</a></h1>
+<h1 id="reset"><a href="#reset" class="header">reset</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-sha256sum"><a class="header" href="#cargoship-sha256sum">cargoship sha256sum</a></h2>
-<p>Generates a SHA256SUM for the given file</p>
-<pre><code>cargoship sha256sum [ FILE | URL ] [flags]
+<h2 id="cargoship-reset"><a class="header" href="#cargoship-reset">cargoship reset</a></h2>
+<p>Reset a cluster, stopping, uninstalling, and removing all data for a engine</p>
+<pre><code>cargoship reset [flags]
 </code></pre>
 <h3 id="options-8"><a class="header" href="#options-8">Options</a></h3>
-<pre><code>  -e, --extract-path string   The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")
-  -h, --help                  help for sha256sum
+<pre><code>  -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string          Config file used to bootstrap a cluster.
+      --confirm                Confirm whether if to proceed with the install
+  -D, --distro string          What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
+  -h, --help                   help for reset
+  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
+  -F, --update-firewall        Whether to update all the host nodes firewall configuration.
+  -H, --update-hosts           Whether to update all the host nodes /etc/hosts file.
+  -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-7"><a class="header" href="#options-inherited-from-parent-commands-7">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
@@ -623,6 +699,33 @@ metadata:
       --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
 <h3 id="see-also-8"><a class="header" href="#see-also-8">SEE ALSO</a></h3>
+<ul>
+<li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="sha256sum"><a href="#sha256sum" class="header">sha256sum</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-sha256sum"><a class="header" href="#cargoship-sha256sum">cargoship sha256sum</a></h2>
+<p>Generates a SHA256SUM for the given file</p>
+<pre><code>cargoship sha256sum [ FILE | URL ] [flags]
+</code></pre>
+<h3 id="options-9"><a class="header" href="#options-9">Options</a></h3>
+<pre><code>  -e, --extract-path string   The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")
+  -h, --help                  help for sha256sum
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-8"><a class="header" href="#options-inherited-from-parent-commands-8">Options inherited from parent commands</a></h3>
+<pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --timeout string             Set the timeout for how long functions will last.
+      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+</code></pre>
+<h3 id="see-also-9"><a class="header" href="#see-also-9">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -653,7 +756,7 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./priv
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
 
 </code></pre>
-<h3 id="options-9"><a class="header" href="#options-9">Options</a></h3>
+<h3 id="options-10"><a class="header" href="#options-10">Options</a></h3>
 <pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
@@ -681,35 +784,6 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
       --verify verifyMode[=always]              Verify the Cargoship package signature (default if-possible)
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-8"><a class="header" href="#options-inherited-from-parent-commands-8">Options inherited from parent commands</a></h3>
-<pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --timeout string             Set the timeout for how long functions will last.
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
-</code></pre>
-<h3 id="see-also-9"><a class="header" href="#see-also-9">SEE ALSO</a></h3>
-<ul>
-<li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
-</ul>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="version"><a href="#version" class="header">version</a></h1>
-<!-- Page generated by Cargoship; DO NOT EDIT -->
-<h2 id="cargoship-version"><a class="header" href="#cargoship-version">cargoship version</a></h2>
-<p>Shows the version of the running binary</p>
-<h3 id="synopsis-1"><a class="header" href="#synopsis-1">Synopsis</a></h3>
-<p>Displays the version of the release that the current binary was built from.</p>
-<pre><code>cargoship version [flags]
-</code></pre>
-<h3 id="options-10"><a class="header" href="#options-10">Options</a></h3>
-<pre><code>  -h, --help                  help for version
-  -o, --output outputFormat   output format (yaml|json)
-</code></pre>
 <h3 id="options-inherited-from-parent-commands-9"><a class="header" href="#options-inherited-from-parent-commands-9">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
@@ -723,6 +797,64 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
       --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 </code></pre>
 <h3 id="see-also-10"><a class="header" href="#see-also-10">SEE ALSO</a></h3>
+<ul>
+<li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="vault-encrypt"><a href="#vault-encrypt" class="header">vault-encrypt</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-vault-encrypt"><a class="header" href="#cargoship-vault-encrypt">cargoship vault-encrypt</a></h2>
+<p>Encrypts a value with Ansible Vault, for use in a registry’s user/pass/token fields</p>
+<h3 id="synopsis-1"><a class="header" href="#synopsis-1">Synopsis</a></h3>
+<p>Encrypts VALUE with Ansible Vault, producing a $ANSIBLE_VAULT-prefixed string that cargoship decrypts automatically at apply time when placed in a registry’s user/pass/token field. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal.</p>
+<pre><code>cargoship vault-encrypt [VALUE] [flags]
+</code></pre>
+<h3 id="options-11"><a class="header" href="#options-11">Options</a></h3>
+<pre><code>  -h, --help                         help for vault-encrypt
+      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-10"><a class="header" href="#options-inherited-from-parent-commands-10">Options inherited from parent commands</a></h3>
+<pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --timeout string             Set the timeout for how long functions will last.
+      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+</code></pre>
+<h3 id="see-also-11"><a class="header" href="#see-also-11">SEE ALSO</a></h3>
+<ul>
+<li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="version"><a href="#version" class="header">version</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-version"><a class="header" href="#cargoship-version">cargoship version</a></h2>
+<p>Shows the version of the running binary</p>
+<h3 id="synopsis-2"><a class="header" href="#synopsis-2">Synopsis</a></h3>
+<p>Displays the version of the release that the current binary was built from.</p>
+<pre><code>cargoship version [flags]
+</code></pre>
+<h3 id="options-12"><a class="header" href="#options-12">Options</a></h3>
+<pre><code>  -h, --help                  help for version
+  -o, --output outputFormat   output format (yaml|json)
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-11"><a class="header" href="#options-inherited-from-parent-commands-11">Options inherited from parent commands</a></h3>
+<pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --timeout string             Set the timeout for how long functions will last.
+      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+</code></pre>
+<h3 id="see-also-12"><a class="header" href="#see-also-12">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-2">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -863,9 +995,86 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
 </ul>
 </li>
 <li>
+<p>Sync Registry Config Controller</p>
+<ul>
+<li>If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially</li>
+</ul>
+</li>
+<li>
+<p>Sync Registry Config Worker</p>
+<ul>
+<li>If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit</li>
+</ul>
+</li>
+<li>
 <p>Updating kubeconfig file with the current cluster</p>
 <ul>
 <li>If enabled, this will update the local kubeconfig with the admin creds for the current distro</li>
+</ul>
+</li>
+<li>
+<p>Release exclusive host lock</p>
+<ul>
+<li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
+</ul>
+</li>
+<li>
+<p>Disconnect from hosts</p>
+<ul>
+<li>Deletes any lingering temp files and disconnects from the remote node</li>
+</ul>
+</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="engine-config-sync-1"><a href="#engine-config-sync-1" class="header">engine-config-sync</a></h1>
+<h2 id="engine-config-sync-phases"><a class="header" href="#engine-config-sync-phases">engine-config-sync phases</a></h2>
+<ol>
+<li>
+<p>Connect to hosts</p>
+<ul>
+<li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
+</ul>
+</li>
+<li>
+<p>Detect host operating systems</p>
+<ul>
+<li>Gathers information about the remote host, including: OS and OS version</li>
+</ul>
+</li>
+<li>
+<p>Acquire exclusive host lock</p>
+<ul>
+<li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
+</ul>
+</li>
+<li>
+<p>Gather host facts</p>
+<ul>
+<li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
+</ul>
+</li>
+<li>
+<p>Validate hosts</p>
+<ul>
+<li>Verifying that each node in the cluster has a unique name and private address,</li>
+</ul>
+</li>
+<li>
+<p>Gathering facts about the distro installed</p>
+<ul>
+<li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
+</ul>
+</li>
+<li>
+<p>Sync Registry Config Controller</p>
+<ul>
+<li>If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially</li>
+</ul>
+</li>
+<li>
+<p>Sync Registry Config Worker</p>
+<ul>
+<li>If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit</li>
 </ul>
 </li>
 <li>
@@ -1242,6 +1451,15 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
 <pre><code class="language-sh">go run ./magefiles/core dagger:binary
 </code></pre>
 <p>Note that <code>magefiles/</code> itself remains its own <code>package main</code> for the <code>mage</code> CLI’s benefit; <code>core/core.go</code> is a separate package and binary, not part of that compiled unit.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
+<p>Cargoship’s Ansible Vault support (<code>cargoship vault-encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
+<ul>
+<li><strong>No decrypt support.</strong> <code>go-ansible</code>’s <code>vault/encrypt</code> package only exports an <code>EncryptString</code> type – there is no <code>Decrypt</code>/<code>DecryptString</code> anywhere in the module. Decryption is Cargoship’s actual requirement: <code>apply</code> has to transparently decrypt registry credentials on every run.</li>
+<li><strong>It wraps the same library anyway.</strong> <code>go-ansible</code>’s <code>EncryptString</code> uses <code>sosedoff/ansible-vault-go</code> internally for the crypto. Depending on <code>go-ansible</code> for encryption would still pull in <code>sosedoff/ansible-vault-go</code> as a transitive dependency, plus <code>spf13/afero</code> and <code>go-ansible</code>’s own password-reader abstraction – more surface area to replace logic Cargoship already has in <code>ResolveVaultPassword</code> (<code>src/internal/clustercfg/vault.go</code>), for no functional gain.</li>
+<li><strong>Wrong shape of library.</strong> <code>go-ansible</code>’s primary purpose is wrapping <code>ansible-playbook</code>/<code>ansible</code>/<code>ansible-galaxy</code> CLI execution as subprocesses. Cargoship needs neither Ansible nor Python installed on the machine running <code>apply</code> or <code>vault-encrypt</code> – <code>sosedoff/ansible-vault-go</code> is a native Go implementation of the vault cipher, so encrypting and decrypting single string values stays a pure in-process operation, consistent with Cargoship shipping as a single static binary.</li>
+</ul>
+<p>Net effect: switching would add a heavier, partially-redundant dependency, lose decrypt support outright, and reimplement functionality <code>sosedoff/ansible-vault-go</code> already provides directly.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
 <h2 id="0140-2026-08-27"><a class="header" href="#0140-2026-08-27"><a href="https://github.com/colonel-byte/cargoship/compare/v0.13.0...v0.14.0">0.14.0</a> (2026-08-27)</a></h2>
