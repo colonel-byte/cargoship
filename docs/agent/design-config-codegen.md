@@ -78,7 +78,7 @@ because they operate on different things:
     v1_35/...
 /extractor/        # our tool: go/ast walker, no third-party deps
 /gen/
-  v1_34/server_config.go, agent_config.go   # generated, zero deps
+  v1_34/zz_server_config.go, zz_agent_config.go   # generated, zero deps
   v1_35/...
   v1_36/...
 /versions.yaml      # manifest: version name -> upstream tag(s)
@@ -163,7 +163,7 @@ check existed. So: known distro/version -> unrecognized keys are dropped; unknow
 distro/version -> nothing is validated or removed. See "Open questions" below for what's
 still deferred.
 
-`gen.Registry` (`src/pkg/engineconfig/gen/registry.go`) is generated alongside the per-version
+`gen.Registry` (`src/pkg/engineconfig/gen/zz_registry.go`) is generated alongside the per-version
 structs by `mage generate:engineConfig` — every distro/version pull gets wired in automatically,
 with no hand-maintained import list to keep in sync.
 

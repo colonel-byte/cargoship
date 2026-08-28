@@ -308,7 +308,7 @@ func writeEngineConfig(outDir, pkgName string, t engineConfigTarget, manifest ex
 		return fmt.Errorf("generating %s: %w", t.target, err)
 	}
 
-	outPath := filepath.Join(outDir, t.target+"_config.go")
+	outPath := filepath.Join(outDir, "zz_"+t.target+"_config.go")
 	if err := os.WriteFile(outPath, src, 0o644); err != nil {
 		return err
 	}
@@ -407,7 +407,7 @@ func writeRegistry(entries []registryEntry) error {
 		return fmt.Errorf("formatting registry.go: %w", err)
 	}
 
-	outPath := filepath.Join(engineConfigOut, "registry.go")
+	outPath := filepath.Join(engineConfigOut, "zz_registry.go")
 	if err := os.WriteFile(outPath, src, 0o644); err != nil {
 		return err
 	}

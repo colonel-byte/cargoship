@@ -21,8 +21,8 @@ import (
 )
 
 // Entry holds the zero-value generated Server/Agent config structs for one distro/version, as
-// produced by mage generate:engineConfig. Registry (in the generated registry.go) is keyed by
-// distro id and minor-version package name (e.g. "v1_35").
+// produced by mage generate:engineConfig. Registry (in the generated zz_registry.go) is keyed
+// by distro id and minor-version package name (e.g. "v1_35").
 type Entry struct {
 	Server any
 	Agent  any
