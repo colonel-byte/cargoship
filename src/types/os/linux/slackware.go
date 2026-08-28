@@ -25,10 +25,7 @@ import (
 	"strings"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -39,15 +36,14 @@ const (
 // Slackware provides OS support for Slackware Linux
 type Slackware struct {
 	BaseLinux
-	os.Linux
 }
 
 var _ configurer.Configurer = (*Slackware)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == OSKindSlackware
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == OSKindSlackware
 		},
 		func() any {
 			return &Slackware{}
@@ -56,20 +52,12 @@ func init() {
 }
 
 // InstallPackage installs packages via slackpkg
-func (l *Slackware) InstallPackage(h os.Host, pkg ...string) error {
-	updatecmd, err := h.Sudo("slackpkg update")
-	if err != nil {
-		return err
-	}
-	installcmd, err := h.Sudo(fmt.Sprintf("slackpkg install --priority ADD %s", strings.Join(pkg, " ")))
-	if err != nil {
-		return err
-	}
-
-	return h.Execf("%s && %s", updatecmd, installcmd)
+func (l *Slackware) InstallPackage(h configurer.Host, pkg ...string) error {
+	cmd := fmt.Sprintf("slackpkg update && slackpkg install --priority ADD %s", strings.Join(pkg, " "))
+	return h.Sudo().Exec(cmd)
 }
 
 // UninstallPackage remove packages via slackpkg
-func (l *Slackware) UninstallPackage(h os.Host, pkg ...string) error {
-	return h.Exec(fmt.Sprintf("slackpkg remove %s", strings.Join(pkg, " ")), exec.Sudo(h))
+func (l *Slackware) UninstallPackage(h configurer.Host, pkg ...string) error {
+	return h.Sudo().Exec("slackpkg remove " + strings.Join(pkg, " "))
 }

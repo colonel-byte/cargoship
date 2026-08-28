@@ -52,7 +52,7 @@ func (p *InitializeWorkers) Explanation() string {
 // Prepare the phase
 func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.worker = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetWorkerService()) && !h.IsController()
+		return !h.ServiceIsRunning(ctx, p.Distro.GetWorkerService()) && !h.IsController()
 	})
 	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.worker))
 
@@ -107,7 +107,7 @@ func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHos
 
 	startedAt := time.Now()
 	go func() {
-		err := h.Configurer.StartService(h, service)
+		err := h.StartService(ctx, service)
 		if err != nil {
 			logger.From(ctx).Warn("failed to start", "service", service, "host", h)
 		}
@@ -117,5 +117,5 @@ func (p *InitializeWorkers) startService(ctx context.Context, h *cluster.ZarfHos
 		return p.captureServiceLogsOnFailure(ctx, h, service, startedAt, err)
 	}
 
-	return h.Configurer.EnableService(h, service)
+	return h.EnableService(ctx, service)
 }

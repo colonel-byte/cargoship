@@ -49,7 +49,7 @@ type Distro interface {
 	// ConfigPath returns the full path for the config directory used by the engine
 	ConfigPath() string
 	// ConfigureEngine does distro specific configuration on a host
-	ConfigureEngine(context.Context, cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
+	ConfigureEngine(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
 	// DataDirPath returns the full path for the data directory used by the engine
 	DataDirPath() string
 	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
@@ -66,11 +66,11 @@ type Distro interface {
 	// Distro's like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.
 	JoinTokenPathAgent() string
 	// KubeconfigPath returns the path to the admin config for a given
-	KubeconfigPath(cluster.ZarfHost, string) string
+	KubeconfigPath(*cluster.ZarfHost, string) string
 	// KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
-	KubectlCmdf(cluster.ZarfHost, string, string, ...any) string
+	KubectlCmdf(*cluster.ZarfHost, string, string, ...any) string
 	// RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
-	RunningVersion(cluster.ZarfHost) (string, error)
+	RunningVersion(*cluster.ZarfHost) (string, error)
 	// SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error
 	SetPath(key string, value string) error
 	// StopControllerService stops the controller service on the host

@@ -177,7 +177,7 @@ func (p *UploadFilesCommon) CleanUp(ctx context.Context) {
 		logger.From(ctx).Info("cleaning up binary tempfile", "host", h)
 		for _, f := range h.Metadata.BinaryTempFile {
 			logger.From(ctx).Debug("removing file", "file", f, "host", h)
-			if err := h.Configurer.DeleteFile(h, f); err != nil {
+			if err := h.DeleteFile(f); err != nil {
 				logger.From(ctx).Warn("failed to delete", "host", h, "file", f, "error", err)
 			}
 		}

@@ -22,7 +22,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -53,7 +52,7 @@ func (p *ConfigureFirewallPorts) Explanation() string {
 // Prepare the phase
 func (p *ConfigureFirewallPorts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, FIREWALLD) && len(h.Host.Ports) > 0
+		return h.ServiceIsRunning(ctx, FIREWALLD) && len(h.Host.Ports) > 0
 	})
 
 	logger.From(ctx).Info("nodes that need ports exposed", "nodes", len(p.hosts))
@@ -94,5 +93,5 @@ func (p *ConfigureFirewallPorts) configureFirewallPorts(_ context.Context, h *cl
 }
 
 func (p *ConfigureFirewallPorts) enableFirewallExposedPorts(_ context.Context, h *cluster.ZarfHost) error {
-	return h.Execf("firewall-cmd --permanent --zone=public --add-service=distro-exposed-ports", exec.Sudo(h))
+	return h.Sudo().Exec("firewall-cmd --permanent --zone=public --add-service=distro-exposed-ports")
 }

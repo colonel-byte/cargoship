@@ -39,7 +39,6 @@ import (
 	carch "github.com/colonel-byte/cargoship/src/pkg/oci/archive"
 	"github.com/containerd/containerd/v2/core/images/archive"
 	"github.com/containerd/platforms"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2/content/oci"
 )
@@ -197,14 +196,14 @@ func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHos
 		if f.TargetIsDir {
 			folder = f.Target
 		}
-		err := fs.WalkDir(h.SudoFsys(), folder, func(path string, d fs.DirEntry, err error) error {
+		err := fs.WalkDir(h.Sudo().FS(), folder, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				l.Debug(fmt.Sprintf("failed to walk %s", binary), "path", file, "error", err)
 				return nil
 			}
 			if !d.IsDir() && re.MatchString(d.Name()) {
 				l.Debug("cleaning up old engine binary upload temporary file", "host", h, "path", path)
-				if err := h.Configurer.DeleteFile(h, path); err != nil {
+				if err := h.DeleteFile(path); err != nil {
 					l.Warn("failed to delete", "host", h, "path", path, "error", err)
 				}
 				return nil
@@ -265,7 +264,7 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 			logger.From(ctx).Warn("failed to upload", "file", f.Name, "host", h, "error", err)
 		}
 		if f.Executable {
-			if err := h.Exec(fmt.Sprintf("chmod +x %s", f.Target), exec.Sudo(h)); err != nil {
+			if err := h.Sudo().Exec(fmt.Sprintf("chmod +x %s", f.Target)); err != nil {
 				logger.From(ctx).Warn("failed to add execute permission", "file", f, "host", h)
 			}
 		}

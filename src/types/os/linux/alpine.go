@@ -25,10 +25,7 @@ import (
 	"strings"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -43,16 +40,15 @@ type BaseLinux struct {
 
 // Alpine provides OS support for Alpine Linux
 type Alpine struct {
-	os.Linux
 	BaseLinux
 }
 
 var _ configurer.Configurer = (*Alpine)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == OSKindAlpine
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == OSKindAlpine
 		},
 		func() any {
 			return &Alpine{}
@@ -61,16 +57,16 @@ func init() {
 }
 
 // InstallPackage installs packages via apk
-func (l *Alpine) InstallPackage(h os.Host, pkg ...string) error {
-	return h.Execf("apk add --update %s", strings.Join(pkg, " "), exec.Sudo(h))
+func (l *Alpine) InstallPackage(h configurer.Host, pkg ...string) error {
+	return h.Sudo().Exec("apk add --update " + strings.Join(pkg, " "))
 }
 
 // UninstallPackage installs packages via apk
-func (l *Alpine) UninstallPackage(h os.Host, pkg ...string) error {
-	return h.Execf("apk del %s", strings.Join(pkg, " "), exec.Sudo(h))
+func (l *Alpine) UninstallPackage(h configurer.Host, pkg ...string) error {
+	return h.Sudo().Exec("apk del " + strings.Join(pkg, " "))
 }
 
 // Prepare will install required packages
-func (l *Alpine) Prepare(h os.Host) error {
+func (l *Alpine) Prepare(h configurer.Host) error {
 	return l.InstallPackage(h, "findutils", "coreutils")
 }

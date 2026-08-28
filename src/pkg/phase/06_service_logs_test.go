@@ -24,6 +24,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/config"
+	rig "github.com/k0sproject/rig/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -80,15 +81,21 @@ func TestWriteServiceLogFileDoesNotClobberConcurrentCalls(t *testing.T) {
 }
 
 func TestCaptureServiceLogsOnFailureReturnsOriginalErrorEvenWhenCaptureFails(t *testing.T) {
-	// An unresolved host (no connection configured) makes h.ExecOutput fail; the capture
-	// helper must still hand back the real wait error rather than swallowing or replacing it.
+	// A real localhost connection, but journalctl has no unit named "cargoship-test-nonexistent-service"
+	// to report on, so h.ExecOutput fails; the capture helper must still hand back the real wait
+	// error rather than swallowing or replacing it.
 	config.CommonOptions.CachePath = t.TempDir()
 
 	p := &GenericPhase{}
-	h := &cluster.ZarfHost{}
+	h := &cluster.ZarfHost{
+		ClientWithConfig: rig.ClientWithConfig{
+			ConnectionConfig: rig.CompositeConfig{Localhost: true},
+		},
+	}
+	require.NoError(t, h.Connect(context.Background()))
 	waitErr := errors.New("service k3s is not running")
 
-	err := p.captureServiceLogsOnFailure(context.Background(), h, "k3s", time.Now(), waitErr)
+	err := p.captureServiceLogsOnFailure(context.Background(), h, "cargoship-test-nonexistent-service", time.Now(), waitErr)
 
 	require.ErrorIs(t, err, waitErr)
 }

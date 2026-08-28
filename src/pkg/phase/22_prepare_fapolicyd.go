@@ -36,7 +36,7 @@ type PrepareFapolicy struct {
 // Prepare the phase
 func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.fapolicydhosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, FAPOLICYD)
+		return h.ServiceIsRunning(ctx, FAPOLICYD)
 	})
 
 	logger.From(ctx).Info("number of systems with fapolicy", "hosts", len(p.fapolicydhosts))
@@ -65,10 +65,10 @@ func (p *PrepareFapolicy) ShouldRun() bool {
 }
 
 func (p *PrepareFapolicy) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
-	err := h.Configurer.WriteFile(h, FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
+	err := h.WriteFile(FAPolicydRuleFile, p.manager.Distro.Spec.Config.OS.FAPolicyd, "0644")
 	if err != nil {
 		return err
 	}
 	logger.From(ctx).Info("wrote fapolicyd file, restarting serivce", "host", h)
-	return h.Configurer.RestartService(h, FAPOLICYD)
+	return h.RestartService(ctx, FAPOLICYD)
 }

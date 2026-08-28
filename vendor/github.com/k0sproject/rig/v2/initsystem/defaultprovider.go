@@ -1,0 +1,88 @@
+// Package initsystem provides a common interface for interacting with init systems like systemd, openrc, sysvinit, etc.
+package initsystem
+
+import (
+	"context"
+	"errors"
+	"io"
+	"sync"
+
+	"github.com/k0sproject/rig/v2/cmd"
+	"github.com/k0sproject/rig/v2/plumbing"
+)
+
+// ServiceManager defines the methods for interacting with an init system like OpenRC.
+type ServiceManager interface {
+	StartService(ctx context.Context, h cmd.ContextRunner, s string) error
+	StopService(ctx context.Context, h cmd.ContextRunner, s string) error
+	ServiceScriptPath(ctx context.Context, h cmd.ContextRunner, s string) (string, error)
+	EnableService(ctx context.Context, h cmd.ContextRunner, s string) error
+	DisableService(ctx context.Context, h cmd.ContextRunner, s string) error
+	ServiceIsRunning(ctx context.Context, h cmd.ContextRunner, s string) bool
+}
+
+// ServiceManagerLogReader is a servicemanager that supports reading service logs.
+type ServiceManagerLogReader interface {
+	ServiceLogs(ctx context.Context, h cmd.ContextRunner, s string, lines int) ([]string, error)
+}
+
+// ServiceManagerLogStreamer is an optional interface for init systems that can follow
+// service logs in real time. The method streams log output to w until ctx is cancelled
+// or an error occurs. Context cancellation is treated as a clean stop, not an error.
+type ServiceManagerLogStreamer interface {
+	StreamServiceLogs(ctx context.Context, h cmd.ContextRunner, s string, w io.Writer) error
+}
+
+// ServiceManagerRestarter is a servicemanager that supports direct restarts (instead of stop+start).
+type ServiceManagerRestarter interface {
+	RestartService(ctx context.Context, h cmd.ContextRunner, s string) error
+}
+
+// ServiceManagerReloader is a servicemanager that needs reloading (like systemd daemon-reload).
+type ServiceManagerReloader interface {
+	DaemonReload(ctx context.Context, h cmd.ContextRunner) error
+}
+
+// ServiceEnvironmentManager is a servicemanager that supports environment files (like systemd .env files).
+type ServiceEnvironmentManager interface {
+	ServiceEnvironmentPath(ctx context.Context, h cmd.ContextRunner, s string) (string, error)
+	ServiceEnvironmentContent(env map[string]string) string
+}
+
+// ServiceEnvironmentSetter is a servicemanager that can directly set environment variables for a
+// service without an intermediate file (e.g. Windows SCM via the registry).
+type ServiceEnvironmentSetter interface {
+	SetServiceEnvironment(ctx context.Context, h cmd.ContextRunner, s string, env map[string]string) error
+}
+
+var (
+	// DefaultRegistry is the default repository for init systems.
+	DefaultRegistry = sync.OnceValue(func() *Registry {
+		provider := NewRegistry()
+		RegisterSystemd(provider)
+		RegisterOpenRC(provider)
+		RegisterUpstart(provider)
+		RegisterSysVinit(provider)
+		RegisterWinSCM(provider)
+		RegisterRunit(provider)
+		RegisterLaunchd(provider)
+		return provider
+	})
+
+	// ErrNoInitSystem is returned when no supported init system is found.
+	ErrNoInitSystem = errors.New("no supported init system found")
+)
+
+// ServiceManagerProvider is a function that returns a ServiceManager given a runner.
+type ServiceManagerProvider func(cmd.ContextRunner) (ServiceManager, error)
+
+// Factory is a type alias for the plumbing.Factory type specialized for initsystem ServiceManagers.
+type Factory = plumbing.Factory[cmd.ContextRunner, ServiceManager]
+
+// Registry is a type alias for the plumbing.Provider type specialized for initsystem ServiceManagers.
+type Registry = plumbing.Provider[cmd.ContextRunner, ServiceManager]
+
+// NewRegistry returns a new Registry.
+func NewRegistry() *Registry {
+	return plumbing.NewProvider[cmd.ContextRunner, ServiceManager](ErrNoInitSystem)
+}

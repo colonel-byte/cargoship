@@ -24,9 +24,7 @@ import (
 	"errors"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -37,15 +35,14 @@ const (
 // Flatcar provides OS support for Flatcar systems
 type Flatcar struct {
 	BaseLinux
-	os.Linux
 }
 
 var _ configurer.Configurer = (*Flatcar)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == OSKindFlatcar
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == OSKindFlatcar
 		},
 		func() any {
 			return &Flatcar{}
@@ -54,11 +51,11 @@ func init() {
 }
 
 // InstallPackage installs packages but will throw an error
-func (l *Flatcar) InstallPackage(_ os.Host, _ ...string) error {
+func (l *Flatcar) InstallPackage(_ configurer.Host, _ ...string) error {
 	return errors.New("FlatcarContainerLinux does not support installing packages manually")
 }
 
 // UninstallPackage installs packages but will throw an error
-func (l *Flatcar) UninstallPackage(_ os.Host, _ ...string) error {
+func (l *Flatcar) UninstallPackage(_ configurer.Host, _ ...string) error {
 	return errors.New("FlatcarContainerLinux does not support removing packages manually")
 }
