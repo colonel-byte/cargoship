@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/node"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
@@ -28,25 +29,24 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// RegistrySyncHosts phase state
-type RegistrySyncHosts struct {
+// EngineConfigSyncHosts phase state
+type EngineConfigSyncHosts struct {
 	GenericPhase
 	Distro distrocfg.Distro
 	// VaultPassword decrypts Ansible Vault-encrypted registry credentials.
 	VaultPassword string
-	registries    []cluster.ZarfClusterRegistries
-	desired       []byte
+	desired       map[string][]byte
 	service       string
 	hosts         cluster.ZarfHosts
 	leader        *cluster.ZarfHost
 }
 
 // ShouldRun is true when there are hosts to sync
-func (p *RegistrySyncHosts) ShouldRun() bool {
+func (p *EngineConfigSyncHosts) ShouldRun() bool {
 	return len(p.hosts) > 0
 }
 
-func (p *RegistrySyncHosts) prepareLeader() error {
+func (p *EngineConfigSyncHosts) prepareLeader() error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
 	})
@@ -57,13 +57,13 @@ func (p *RegistrySyncHosts) prepareLeader() error {
 	return nil
 }
 
-func (p *RegistrySyncHosts) loadDesiredConfig(c *cluster.ZarfCluster) error {
+func (p *EngineConfigSyncHosts) loadDesiredConfig(c *cluster.ZarfCluster, dis distro.ZarfDistro) error {
 	if err := clustercfg.DecryptRegistryAuth(c, p.VaultPassword); err != nil {
 		return err
 	}
-	p.registries = c.Spec.Config.Registries
+	run := cluster.ZarfRuntimeMeta{Registries: c.Spec.Config.Registries}
 
-	desired, err := p.Distro.RenderRegistriesConfig(p.registries)
+	desired, err := p.Distro.DesiredFiles(cluster.ZarfHost{}, run, dis)
 	if err != nil {
 		return err
 	}
@@ -71,30 +71,36 @@ func (p *RegistrySyncHosts) loadDesiredConfig(c *cluster.ZarfCluster) error {
 	return nil
 }
 
-func (p *RegistrySyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
-	path := p.Distro.RegistriesConfigPath()
-	if !h.FileExist(path) {
-		return len(p.registries) > 0
+func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
+	for path, want := range p.desired {
+		if !h.FileExist(path) {
+			return true
+		}
+		current, err := h.ReadFile(path)
+		if err != nil || current != string(want) {
+			return true
+		}
 	}
-	current, err := h.ReadFile(path)
-	if err != nil {
-		return true
-	}
-	return current != string(p.desired)
+	return false
 }
 
-func (p *RegistrySyncHosts) writeRegistries(ctx context.Context, h *cluster.ZarfHost) error {
-	return p.Distro.ConfigureRegistries(ctx, *h, p.registries)
+func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHost) error {
+	for path, content := range p.desired {
+		if err := h.WriteFile(path, string(content), "0600"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (p *RegistrySyncHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining nodes", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
 		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 	})
 }
 
-func (p *RegistrySyncHosts) startService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) startService(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the service to start", "service", p.service, "host", h)
 
 	startedAt := time.Now()
@@ -112,7 +118,7 @@ func (p *RegistrySyncHosts) startService(ctx context.Context, h *cluster.ZarfHos
 	return h.Configurer.EnableService(h, p.service)
 }
 
-func (p *RegistrySyncHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
@@ -127,6 +133,6 @@ func (p *RegistrySyncHosts) waitForNodeReady(ctx context.Context, h *cluster.Zar
 	})
 }
 
-func (p *RegistrySyncHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
 	return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 }

@@ -578,6 +578,77 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 	}
 }
 
+func TestDesiredFilesEmpty(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	run := cluster.ZarfRuntimeMeta{}
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	if err != nil {
+		t.Fatalf("DesiredFiles() error = %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("DesiredFiles() = %+v, want empty map", got)
+	}
+}
+
+func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = dig.Mapping{
+		config.EngineAudit: dig.Mapping{
+			"rules": []string{"foo"},
+		},
+		config.EnginePSS: dig.Mapping{
+			"defaults": dig.Mapping{"enforce": "restricted"},
+		},
+	}
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name:  "docker.io",
+				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+			},
+		},
+	}
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	if err != nil {
+		t.Fatalf("DesiredFiles() error = %v", err)
+	}
+
+	registriesPath := filepath.Join(filepath.Dir(d.Config), "registries.yaml")
+	auditPath := filepath.Join(filepath.Dir(d.Config), "audit.yaml")
+	pssPath := filepath.Join(filepath.Dir(d.Config), "pss.yaml")
+
+	if len(got) != 3 {
+		t.Fatalf("DesiredFiles() = %d entries, want 3: %+v", len(got), got)
+	}
+
+	var auditYAML, pssYAML dig.Mapping
+	if err := yaml.Unmarshal(got[auditPath], &auditYAML); err != nil {
+		t.Fatalf("failed to unmarshal audit.yaml: %v", err)
+	}
+	if auditYAML.DigString(keyKind) != "Policy" || auditYAML.DigString(keyAPIVersion) != "audit.k8s.io/v1" {
+		t.Errorf("audit.yaml = %+v, want kind=Policy apiVersion=audit.k8s.io/v1", auditYAML)
+	}
+
+	if err := yaml.Unmarshal(got[pssPath], &pssYAML); err != nil {
+		t.Fatalf("failed to unmarshal pss.yaml: %v", err)
+	}
+	if pssYAML.DigString(keyKind) != "AdmissionConfiguration" || pssYAML.DigString(keyAPIVersion) != "apiserver.config.k8s.io/v1" {
+		t.Errorf("pss.yaml = %+v, want kind=AdmissionConfiguration apiVersion=apiserver.config.k8s.io/v1", pssYAML)
+	}
+
+	wantRegistries, err := marshalYAML(buildRegistriesConfig(run.Registries))
+	if err != nil {
+		t.Fatalf("marshalYAML() error = %v", err)
+	}
+	if string(got[registriesPath]) != string(wantRegistries) {
+		t.Errorf("registries.yaml = %s, want %s", got[registriesPath], wantRegistries)
+	}
+}
+
 func TestGetClusterCIDRDefaults(t *testing.T) {
 	d := newTestRancher()
 	dis := distro.ZarfDistro{}

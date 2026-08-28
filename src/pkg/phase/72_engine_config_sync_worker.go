@@ -23,25 +23,25 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// RegistrySyncWorker phase state
-type RegistrySyncWorker struct {
-	RegistrySyncHosts
+// EngineConfigSyncWorker phase state
+type EngineConfigSyncWorker struct {
+	EngineConfigSyncHosts
 	WorkerConcurrent int
 }
 
 // Title for the phase
-func (p *RegistrySyncWorker) Title() string {
+func (p *EngineConfigSyncWorker) Title() string {
 	return "Sync Registry Config Worker"
 }
 
 // Explanation about the current phase, used for documentation generation
-func (p *RegistrySyncWorker) Explanation() string {
-	return "If the remote node is a worker and its registry config has drifted from the desired state, drain the node, stop the service, write the new registry config, start the service, and uncordon the node by the set concurrency limit"
+func (p *EngineConfigSyncWorker) Explanation() string {
+	return "If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit"
 }
 
 // Prepare the phase
-func (p *RegistrySyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	if err := p.loadDesiredConfig(c); err != nil {
+func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+	if err := p.loadDesiredConfig(c, *d); err != nil {
 		return err
 	}
 	if err := p.prepareLeader(); err != nil {
@@ -64,28 +64,28 @@ func (p *RegistrySyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster
 	p.hosts = matched
 	p.service = p.Distro.GetWorkerService()
 
-	logger.From(ctx).Debug("number of workers that need registry config synced", "hosts", len(p.hosts))
+	logger.From(ctx).Debug("number of workers that need config synced", "hosts", len(p.hosts))
 
 	return nil
 }
 
 // Run the phase
-func (p *RegistrySyncWorker) Run(ctx context.Context) error {
+func (p *EngineConfigSyncWorker) Run(ctx context.Context) error {
 	return p.batchedParallelWithMessage(
 		ctx,
-		"syncing worker registry config",
+		"syncing worker config",
 		p.hosts,
 		p.WorkerConcurrent,
 		p.drainNode,
 		p.stopService,
-		p.writeRegistries,
+		p.writeFiles,
 		p.startService,
 		p.waitForNodeReady,
 		p.uncordonNode,
 	)
 }
 
-func (p *RegistrySyncWorker) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncWorker) stopService(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
 	return p.Distro.StopWorkerService(h)
 }

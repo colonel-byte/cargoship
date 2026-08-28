@@ -135,14 +135,14 @@ func NewApply(opts ApplyOptions) *Apply {
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
-			&phase.RegistrySyncController{
-				RegistrySyncHosts: phase.RegistrySyncHosts{
+			&phase.EngineConfigSyncController{
+				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
 					Distro:        d,
 					VaultPassword: opts.VaultPassword,
 				},
 			},
-			&phase.RegistrySyncWorker{
-				RegistrySyncHosts: phase.RegistrySyncHosts{
+			&phase.EngineConfigSyncWorker{
+				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
 					Distro:        d,
 					VaultPassword: opts.VaultPassword,
 				},

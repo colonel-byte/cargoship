@@ -24,8 +24,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// RegistrySyncOptions struct
-type RegistrySyncOptions struct {
+// EngineConfigSyncOptions struct
+type EngineConfigSyncOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
 	// WorkerConcurrent number of workers that will be synced at a time
@@ -34,14 +34,14 @@ type RegistrySyncOptions struct {
 	VaultPassword string
 }
 
-// RegistrySync state logic
-type RegistrySync struct {
-	RegistrySyncOptions
+// EngineConfigSync state logic
+type EngineConfigSync struct {
+	EngineConfigSyncOptions
 	Phases phase.Phases
 }
 
-// NewRegistrySync a registry-sync action object
-func NewRegistrySync(opts RegistrySyncOptions) *RegistrySync {
+// NewEngineConfigSync an engine-config-sync action object
+func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
@@ -58,8 +58,8 @@ func NewRegistrySync(opts RegistrySyncOptions) *RegistrySync {
 	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
 
 	lockPhase := &phase.Lock{}
-	return &RegistrySync{
-		RegistrySyncOptions: opts,
+	return &EngineConfigSync{
+		EngineConfigSyncOptions: opts,
 		Phases: phase.Phases{
 			&phase.Connect{},
 
@@ -71,14 +71,14 @@ func NewRegistrySync(opts RegistrySyncOptions) *RegistrySync {
 				Distro: d,
 			},
 
-			&phase.RegistrySyncController{
-				RegistrySyncHosts: phase.RegistrySyncHosts{
+			&phase.EngineConfigSyncController{
+				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
 					Distro:        d,
 					VaultPassword: opts.VaultPassword,
 				},
 			},
-			&phase.RegistrySyncWorker{
-				RegistrySyncHosts: phase.RegistrySyncHosts{
+			&phase.EngineConfigSyncWorker{
+				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
 					Distro:        d,
 					VaultPassword: opts.VaultPassword,
 				},
@@ -92,13 +92,13 @@ func NewRegistrySync(opts RegistrySyncOptions) *RegistrySync {
 }
 
 // Run the actions
-func (r RegistrySync) Run(ctx context.Context) error {
+func (r EngineConfigSync) Run(ctx context.Context) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	r.Manager.SetPhases(r.Phases)
 
 	if result := r.Manager.Run(ctx); result != nil {
-		l.Info("registry-sync failed", "error", result)
+		l.Info("engine-config-sync failed", "error", result)
 		return result
 	}
 

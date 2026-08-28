@@ -171,40 +171,31 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 	}
 
 	if len(nodeConfig.DigMapping(config.EngineAudit)) > 0 {
-		nodeConfig.DigMapping(config.EngineAudit)[keyKind] = "Policy"
-		nodeConfig.DigMapping(config.EngineAudit)[keyAPIVersion] = "audit.k8s.io/v1"
-		audit := filepath.Join(filepath.Dir(d.Config), "audit.yaml")
-		nodeConfig.DigMapping(config.EngineConfig)[keyAudit] = audit
-		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
-		if err != nil {
-			logger.From(ctx).Warn("failed to write", "file", audit)
-		}
+		nodeConfig.DigMapping(config.EngineConfig)[keyAudit] = filepath.Join(filepath.Dir(d.Config), "audit.yaml")
 	}
-
 	if len(nodeConfig.DigMapping(config.EnginePSS)) > 0 {
-		nodeConfig.DigMapping(config.EnginePSS)[keyKind] = "AdmissionConfiguration"
-		nodeConfig.DigMapping(config.EnginePSS)[keyAPIVersion] = "apiserver.config.k8s.io/v1"
-		pss := filepath.Join(filepath.Dir(d.Config), "pss.yaml")
-		nodeConfig.DigMapping(config.EngineConfig)[keyPodSec] = pss
-		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
-		if err != nil {
-			logger.From(ctx).Warn("failed to write", "file", pss)
-		}
+		nodeConfig.DigMapping(config.EngineConfig)[keyPodSec] = filepath.Join(filepath.Dir(d.Config), "pss.yaml")
 	}
 
-	// Nodes that already have the engine running are left alone here; registry
-	// config changes on those are rolled out via ConfigureRegistries, which
-	// pairs the write with a drain/restart/uncordon of the node.
-	if len(run.Registries) > 0 && !d.registriesServiceRunning(&host) {
-		if err := d.ConfigureRegistries(ctx, host, run.Registries); err != nil {
-			logger.From(ctx).Warn("failed to write", "file", d.RegistriesConfigPath())
+	// Nodes that already have the engine running are left alone here; config drift
+	// (registries/audit/pss) on those is rolled out via the engine-config-sync phases,
+	// which pair the write with a drain/restart/uncordon of the node.
+	if !d.engineServiceRunning(&host) {
+		desired, err := d.DesiredFiles(host, run, dis)
+		if err != nil {
+			logger.From(ctx).Warn("failed to render desired files", "host", host)
+		}
+		for path, content := range desired {
+			if err := host.WriteFile(path, string(content), "0600"); err != nil {
+				logger.From(ctx).Warn("failed to write", "file", path)
+			}
 		}
 	}
 
 	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
 }
 
-func (d *RancherCommon) registriesServiceRunning(h *cluster.ZarfHost) bool {
+func (d *RancherCommon) engineServiceRunning(h *cluster.ZarfHost) bool {
 	service := d.GetWorkerService()
 	if h.IsController() {
 		service = d.GetControllerService()
@@ -212,19 +203,43 @@ func (d *RancherCommon) registriesServiceRunning(h *cluster.ZarfHost) bool {
 	return h.Configurer.ServiceIsRunning(h, service)
 }
 
-// RegistriesConfigPath returns the full path to the registries config file used by the engine
-func (d *RancherCommon) RegistriesConfigPath() string {
-	return filepath.Join(filepath.Dir(d.Config), "registries.yaml")
-}
+// DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
+// the given host/run/dis, keyed by their full destination path. Content is identical across
+// hosts of the same run (no host-varying fields are involved), unlike config.yaml.
+func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string][]byte, error) {
+	files := map[string][]byte{}
 
-// RenderRegistriesConfig returns the exact bytes ConfigureRegistries would write for the given registries, for diffing against a host's current file
-func (d *RancherCommon) RenderRegistriesConfig(registries []cluster.ZarfClusterRegistries) ([]byte, error) {
-	return marshalYAML(buildRegistriesConfig(registries))
-}
+	if len(run.Registries) > 0 {
+		b, err := marshalYAML(buildRegistriesConfig(run.Registries))
+		if err != nil {
+			return nil, err
+		}
+		files[filepath.Join(filepath.Dir(d.Config), "registries.yaml")] = b
+	}
 
-// ConfigureRegistries writes the registries config file to a host
-func (d *RancherCommon) ConfigureRegistries(ctx context.Context, host cluster.ZarfHost, registries []cluster.ZarfClusterRegistries) error {
-	return d.writeYAML(ctx, host, buildRegistriesConfig(registries), d.RegistriesConfigPath())
+	nodeConfig := dis.Spec.Config.Engine.Dup()
+
+	if audit := nodeConfig.DigMapping(config.EngineAudit); len(audit) > 0 {
+		audit[keyKind] = "Policy"
+		audit[keyAPIVersion] = "audit.k8s.io/v1"
+		b, err := marshalYAML(audit)
+		if err != nil {
+			return nil, err
+		}
+		files[filepath.Join(filepath.Dir(d.Config), "audit.yaml")] = b
+	}
+
+	if pss := nodeConfig.DigMapping(config.EnginePSS); len(pss) > 0 {
+		pss[keyKind] = "AdmissionConfiguration"
+		pss[keyAPIVersion] = "apiserver.config.k8s.io/v1"
+		b, err := marshalYAML(pss)
+		if err != nil {
+			return nil, err
+		}
+		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = b
+	}
+
+	return files, nil
 }
 
 // buildRegistriesConfig builds the containerd hosts-config mapping (mirrors/configs) rke2 and

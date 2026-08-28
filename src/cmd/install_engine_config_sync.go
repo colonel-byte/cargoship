@@ -30,31 +30,31 @@ import (
 )
 
 const (
-	// InstallRegistrySyncConfig flag
-	InstallRegistrySyncConfig = "config"
-	// InstallRegistrySyncConfirm flag
-	InstallRegistrySyncConfirm = "confirm"
-	// InstallRegistrySyncDistro flag
-	InstallRegistrySyncDistro = "distro"
-	// InstallRegistrySyncConcurrency flag
-	InstallRegistrySyncConcurrency = "concurrency"
-	// InstallRegistrySyncWorkConcurrency flag
-	InstallRegistrySyncWorkConcurrency = "work-concurrency"
+	// InstallEngineConfigSyncConfig flag
+	InstallEngineConfigSyncConfig = "config"
+	// InstallEngineConfigSyncConfirm flag
+	InstallEngineConfigSyncConfirm = "confirm"
+	// InstallEngineConfigSyncDistro flag
+	InstallEngineConfigSyncDistro = "distro"
+	// InstallEngineConfigSyncConcurrency flag
+	InstallEngineConfigSyncConcurrency = "concurrency"
+	// InstallEngineConfigSyncWorkConcurrency flag
+	InstallEngineConfigSyncWorkConcurrency = "work-concurrency"
 )
 
-type installRegistrySyncOptions struct {
+type installEngineConfigSyncOptions struct {
 	InstallCommon
 	workerCon         int
 	distro            string
 	vaultPasswordFile string
 }
 
-func newInstallRegistrySyncCommand() *cobra.Command {
-	o := installRegistrySyncOptions{}
+func newInstallEngineConfigSyncCommand() *cobra.Command {
+	o := installEngineConfigSyncOptions{}
 	cmd := &cobra.Command{
-		Use:     "registry-sync",
+		Use:     "engine-config-sync",
 		Args:    cobra.ExactArgs(0),
-		Short:   lang.CmdDistroRegistrySyncShort,
+		Short:   lang.CmdDistroEngineConfigSyncShort,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -62,11 +62,11 @@ func newInstallRegistrySyncCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallRegistrySyncConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
-	cmd.Flags().StringVar(&o.config, InstallRegistrySyncConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallRegistrySyncDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagRegistrySyncDistro)
-	cmd.Flags().BoolVar(&o.confirm, InstallRegistrySyncConfirm, false, lang.CmdInstallFlagConfirm)
-	cmd.Flags().IntVarP(&o.workerCon, InstallRegistrySyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().IntVarP(&o.concurrency, InstallEngineConfigSyncConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
+	cmd.Flags().StringVar(&o.config, InstallEngineConfigSyncConfig, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().StringVarP(&o.distro, InstallEngineConfigSyncDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagEngineConfigSyncDistro)
+	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().IntVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
@@ -83,12 +83,12 @@ func newInstallRegistrySyncCommand() *cobra.Command {
 
 	o.LogFormat = val
 
-	cmd.MarkFlagRequired(InstallRegistrySyncConfig)
+	cmd.MarkFlagRequired(InstallEngineConfigSyncConfig)
 
 	return cmd
 }
 
-func (o *installRegistrySyncOptions) run(ctx context.Context, _ []string) error {
+func (o *installEngineConfigSyncOptions) run(ctx context.Context, _ []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {
@@ -126,11 +126,11 @@ func (o *installRegistrySyncOptions) run(ctx context.Context, _ []string) error 
 		return err
 	}
 
-	registrySyncOpts := action.RegistrySyncOptions{
+	engineConfigSyncOpts := action.EngineConfigSyncOptions{
 		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
 		VaultPassword:    vaultPassword,
 	}
 
-	return action.NewRegistrySync(registrySyncOpts).Run(ctx)
+	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)
 }

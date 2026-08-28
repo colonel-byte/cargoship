@@ -49,10 +49,13 @@ type Distro interface {
 	ConfigPath() string
 	// ConfigureEngine does distro specific configuration on a host
 	ConfigureEngine(context.Context, cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
-	// ConfigureRegistries writes the registries config file to a host
-	ConfigureRegistries(context.Context, cluster.ZarfHost, []cluster.ZarfClusterRegistries) error
 	// DataDirPath returns the full path for the data directory used by the engine
 	DataDirPath() string
+	// DesiredFiles returns the full set of engine config files (path -> desired content) this
+	// distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
+	// pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
+	// detect drift on an already-running host.
+	DesiredFiles(cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string][]byte, error)
 	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 	DistroCmdf(string, ...any) string
 	// GetClusterCIDR returns a string array with the all the known cluster cidr blocks
@@ -70,10 +73,6 @@ type Distro interface {
 	KubeconfigPath(cluster.ZarfHost, string) string
 	// KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
 	KubectlCmdf(cluster.ZarfHost, string, string, ...any) string
-	// RegistriesConfigPath returns the full path to the registries config file used by the engine
-	RegistriesConfigPath() string
-	// RenderRegistriesConfig returns the exact bytes ConfigureRegistries would write for the given registries, for diffing against a host's current file
-	RenderRegistriesConfig([]cluster.ZarfClusterRegistries) ([]byte, error)
 	// RunningVersion returns the version of the distro being ran, if the engine is not running it throws an "ErrVersionNotDetected" error
 	RunningVersion(cluster.ZarfHost) (string, error)
 	// SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an "ErrPathKey" error

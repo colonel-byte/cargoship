@@ -23,24 +23,24 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// RegistrySyncController phase state
-type RegistrySyncController struct {
-	RegistrySyncHosts
+// EngineConfigSyncController phase state
+type EngineConfigSyncController struct {
+	EngineConfigSyncHosts
 }
 
 // Title for the phase
-func (p *RegistrySyncController) Title() string {
+func (p *EngineConfigSyncController) Title() string {
 	return "Sync Registry Config Controller"
 }
 
 // Explanation about the current phase, used for documentation generation
-func (p *RegistrySyncController) Explanation() string {
-	return "If the remote node is a controller and its registry config has drifted from the desired state, drain the node, stop the service, write the new registry config, start the service, and uncordon the node sequentially"
+func (p *EngineConfigSyncController) Explanation() string {
+	return "If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially"
 }
 
 // Prepare the phase
-func (p *RegistrySyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	if err := p.loadDesiredConfig(c); err != nil {
+func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
+	if err := p.loadDesiredConfig(c, *d); err != nil {
 		return err
 	}
 	if err := p.prepareLeader(); err != nil {
@@ -63,28 +63,28 @@ func (p *RegistrySyncController) Prepare(ctx context.Context, c *cluster.ZarfClu
 	p.hosts = matched
 	p.service = p.Distro.GetControllerService()
 
-	logger.From(ctx).Debug("number of controllers that need registry config synced", "hosts", len(p.hosts))
+	logger.From(ctx).Debug("number of controllers that need config synced", "hosts", len(p.hosts))
 
 	return nil
 }
 
 // Run the phase
-func (p *RegistrySyncController) Run(ctx context.Context) error {
+func (p *EngineConfigSyncController) Run(ctx context.Context) error {
 	return p.batchedParallelWithMessage(
 		ctx,
-		"syncing controller registry config",
+		"syncing controller config",
 		p.hosts,
 		1,
 		p.drainNode,
 		p.stopService,
-		p.writeRegistries,
+		p.writeFiles,
 		p.startService,
 		p.waitForNodeReady,
 		p.uncordonNode,
 	)
 }
 
-func (p *RegistrySyncController) stopService(ctx context.Context, h *cluster.ZarfHost) error {
+func (p *EngineConfigSyncController) stopService(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the service to stop", "service", p.service, "host", h)
 	return p.Distro.StopControllerService(h)
 }

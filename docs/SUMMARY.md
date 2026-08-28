@@ -17,11 +17,11 @@
 - [cargoship](commands/cargoship.md)
   - [apply](commands/cargoship_apply.md)
   - [create](commands/cargoship_create.md)
+  - [engine-config-sync](commands/cargoship_engine-config-sync.md)
   - [kube-config](commands/cargoship_kube-config.md)
   - [prepare](commands/cargoship_prepare.md)
   - [publish](commands/cargoship_publish.md)
   - [pull](commands/cargoship_pull.md)
-  - [registry-sync](commands/cargoship_registry-sync.md)
   - [reset](commands/cargoship_reset.md)
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [sign](commands/cargoship_sign.md)
@@ -34,6 +34,7 @@
 # Phases
 
 - [apply](phases/apply.md)
+- [engine-config-sync](phases/engine-config-sync.md)
 - [kube-config](phases/kube-config.md)
 - [prepare](phases/prepare.md)
 - [reset](phases/reset.md)

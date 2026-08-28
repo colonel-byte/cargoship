@@ -38,8 +38,8 @@ const (
 	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for a engine"
 	// CmdDistroKubeConfigShort kube-config short
 	CmdDistroKubeConfigShort = "Get the admin kube-config for a control-plane node"
-	// CmdDistroRegistrySyncShort registry-sync short
-	CmdDistroRegistrySyncShort = "Sync registry config to a cluster, draining and restarting the engine service on any node whose config has drifted"
+	// CmdDistroEngineConfigSyncShort engine-config-sync short
+	CmdDistroEngineConfigSyncShort = "Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted"
 	// CmdInstallFapolicydUpdate install flag fapolicyd
 	CmdInstallFapolicydUpdate = "Whether to update all the host nodes fapolicyd configuration."
 	// CmdInstallFirewallUpdate install flag firewall
@@ -50,8 +50,8 @@ const (
 	CmdInstallFlagConfig = "Config file used to bootstrap a cluster."
 	// CmdInstallFlagResetDistro install flag config
 	CmdInstallFlagResetDistro = "What type of distro that will be reset. Valid options are: 'rke2', 'k3s'."
-	// CmdInstallFlagRegistrySyncDistro install flag config
-	CmdInstallFlagRegistrySyncDistro = "What type of distro that will have its registry config synced. Valid options are: 'rke2', 'k3s'."
+	// CmdInstallFlagEngineConfigSyncDistro install flag config
+	CmdInstallFlagEngineConfigSyncDistro = "What type of distro that will have its engine config synced. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagKubeConfigDistro kube-config flag config
 	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
