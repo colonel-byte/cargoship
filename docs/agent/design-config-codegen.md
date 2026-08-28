@@ -147,6 +147,26 @@ All pure Go, no network:
 | Per-version diffing / changelog view | ~half day (mostly free once manifests exist) |
 | Sparse source-pull tooling per version | ~1 day |
 
+## Consumption: wired into `src/types/distrocfg`
+
+`RancherCommon.ConfigureEngine` (`src/types/distrocfg/rancher_common.go`) looks up the
+generated struct for the node's distro (`d.ID`, i.e. `k3s`/`rke2`) and `dis.Spec.Version`,
+truncated to its minor release, via `gen.Lookup` (`src/pkg/engineconfig/gen/lookup.go`). If a
+match exists, every key in the resolved `config.yaml` map is checked against the matching
+`ServerConfig`/`AgentConfig` struct's `yaml` tags (`gen.Keys`, reflection-based) — server vs.
+agent selected by `host.IsController()` — and any key that isn't a real flag for that
+distro/version/target is logged as a warning (a likely typo or version mismatch) **and
+deleted** from the map before it's written. If no generated version matches (nobody has
+pulled/generated that minor line yet), it logs a warning once and leaves the config
+completely untouched — falling back to blindly writing every key exactly as before this
+check existed. So: known distro/version -> unrecognized keys are dropped; unknown
+distro/version -> nothing is validated or removed. See "Open questions" below for what's
+still deferred.
+
+`gen.Registry` (`src/pkg/engineconfig/gen/registry.go`) is generated alongside the per-version
+structs by `mage generate:engineConfig` — every distro/version pull gets wired in automatically,
+with no hand-maintained import list to keep in sync.
+
 ## Open questions / follow-ups
 
 - Do we want a validation layer that encodes the known cross-field
@@ -156,3 +176,7 @@ All pure Go, no network:
   releases when a flag changes mid-minor?
 - Should hidden/deprecated flags be emitted into generated structs at all,
   or tracked separately as metadata only?
+- The current consumer (`src/types/distrocfg`) drops unrecognized keys (with a warning) for
+  known distro/versions, but doesn't fail the build. Worth revisiting once there's confidence
+  false positives (e.g. a flag added in extraction but not yet in a resolvable form) are rare
+  enough to make a hard failure safe instead of a silent drop.

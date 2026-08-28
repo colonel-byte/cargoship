@@ -135,3 +135,12 @@ and writes generated structs to `src/pkg/engineconfig/gen/<distro>/<version>/`. 
 (and any distro that declares its flags outright) it parses whichever of
 `server.go`/`agent.go` it finds directly; for RKE2 it composes as described above. See
 `docs/dev/mage.md` for the broader `Generate` namespace.
+
+It also (re)writes `src/pkg/engineconfig/gen/registry.go`, wiring every distro/version it
+just generated into `gen.Registry` so nothing needs hand-maintaining as new versions are
+pulled. `src/types/distrocfg` (`RancherCommon.ConfigureEngine`) uses `gen.Lookup` to find
+the struct matching a node's distro and minor version, and drops (with a warning) any
+`config.yaml` key that isn't a real flag for it -- falling back to the previous
+unvalidated, pass-everything-through behavior with a warning if that distro/version was
+never pulled/generated. See "Consumption: wired into `src/types/distrocfg`" in
+`docs/agent/design-config-codegen.md` for the full picture.
