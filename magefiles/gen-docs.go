@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -34,8 +35,32 @@ type (
 	Generate mg.Namespace
 )
 
+// docsConfig is the repo's checked-in config, forced during doc generation so flag defaults
+// in generated docs are reproducible regardless of whatever the caller has set locally (e.g.
+// via direnv) -- this mirrors the CARGOSHIP_CONFIG=hack/config.yaml override used by the
+// pre-commit hook.
+const docsConfig = "hack/config.yaml"
+
+// docsConfigChildEnv marks a re-exec'd child process so it runs the real generation logic
+// instead of re-exec'ing again.
+const docsConfigChildEnv = "CARGOSHIP_MAGE_DOCS_CHILD"
+
 // Document creates the docs for this repo
 func (Generate) Document() error {
+	// src/cmd sets its flag defaults from CARGOSHIP_CONFIG the moment the package is
+	// imported (root.go's package-level `var rootCmd = NewCargoshipCommand()` and its
+	// func init() both call initViper(), which is a no-op after the first call). By the
+	// time this function body runs, that has already happened -- setting the env var here
+	// is too late. Re-exec mage as a child process with the env var set before the child's
+	// own cmd package initializes.
+	if os.Getenv(docsConfigChildEnv) != "1" {
+		c := exec.Command("mage", "generate:document")
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		c.Env = append(os.Environ(), "CARGOSHIP_CONFIG="+docsConfig, docsConfigChildEnv+"=1")
+		return c.Run()
+	}
+
 	rootCmd := cmd.NewCargoshipCommand()
 	rootCmd.DisableAutoGenTag = true
 

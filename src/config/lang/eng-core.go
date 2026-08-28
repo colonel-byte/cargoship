@@ -50,8 +50,6 @@ const (
 	CmdInstallFlagConfig = "Config file used to bootstrap a cluster."
 	// CmdInstallFlagResetDistro install flag config
 	CmdInstallFlagResetDistro = "What type of distro that will be reset. Valid options are: 'rke2', 'k3s'."
-	// CmdInstallFlagEngineConfigSyncDistro install flag config
-	CmdInstallFlagEngineConfigSyncDistro = "What type of distro that will have its engine config synced. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagKubeConfigDistro kube-config flag config
 	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
