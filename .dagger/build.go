@@ -22,10 +22,8 @@ package main
 import (
 	"context"
 	"dagger/cargoship/internal/dagger"
-	"fmt"
 
 	"github.com/sourcegraph/conc/pool"
-	_ "github.com/sourcegraph/conc/pool"
 )
 
 func (m *Cargoship) Build(
@@ -51,30 +49,28 @@ func (m *Cargoship) Build(
 	goos := []string{"linux", "darwin", "windows"}
 	goarch := []string{"amd64", "arm64"}
 
-	p := pool.New().WithErrors().WithContext(ctx)
+	p := pool.NewWithResults[*dagger.File]().WithErrors().WithContext(ctx)
 	if concurrency > 0 {
 		p = p.WithMaxGoroutines(concurrency)
 	}
 
 	for _, os := range goos {
 		for _, arch := range goarch {
-			// Defining binary file name
-			binName := fmt.Sprintf("cargoship_%s_%s", os, arch)
-			if os == "windows" {
-				binName += ".exe"
-			}
-			p.Go(func(ctx context.Context) error {
-				file := m.BuildLocal(ctx, os, arch, source)
-				buildDir = buildDir.WithFile(fmt.Sprintf("/%s", binName), file) // Adding file(bin) to dist directory
-				return nil
+			p.Go(func(ctx context.Context) (*dagger.File, error) {
+				return m.BuildLocal(ctx, os, arch, source), nil
 			})
 		}
 	}
 
-	err := p.Wait()
+	files, err := p.Wait()
 	if err != nil {
 		return nil, err
 	}
 
-	return buildDir, nil
+	// Merging all binaries into buildDir in a single call, rather than chaining
+	// buildDir = buildDir.WithFile(...) once per binary, keeps the resulting
+	// Directory's dependency graph flat instead of a 6-deep linear chain. The
+	// chained form forces the engine to resolve each build in series even
+	// though the builds themselves are independent.
+	return buildDir.WithFiles("/", files), nil
 }
