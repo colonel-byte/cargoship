@@ -50,8 +50,6 @@ const (
 	CmdInstallFlagConfig = "Config file used to bootstrap a cluster."
 	// CmdInstallFlagResetDistro install flag config
 	CmdInstallFlagResetDistro = "What type of distro that will be reset. Valid options are: 'rke2', 'k3s'."
-	// CmdInstallFlagEngineConfigSyncDistro install flag config
-	CmdInstallFlagEngineConfigSyncDistro = "What type of distro that will have its engine config synced. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagKubeConfigDistro kube-config flag config
 	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
@@ -61,9 +59,13 @@ const (
 	// CmdInstallFlagVaultPasswordFile install flag vault password file
 	CmdInstallFlagVaultPasswordFile = "Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
 	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
-	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited."
+	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. \"25%\"), set to 0 for unlimited."
 	// CmdInstallHostUpdate install flag host
 	CmdInstallHostUpdate = "Whether to update all the host nodes /etc/hosts file."
+	// CmdInstallLabelNodes install flag label nodes
+	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig."
+	// CmdInstallUpdateKubeConfig install flag update kubeconfig
+	CmdInstallUpdateKubeConfig = "Whether to update the local kubeconfig file with the admin creds for this cluster."
 	// CmdPackageCreateFlagOutput create flag output
 	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
 	// CmdPackageFlagConcurrency deploy flag concurrency

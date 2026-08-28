@@ -184,6 +184,8 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "Concurrency"), 30)
 	v.SetDefault(configPath("DistroOpts", "HostUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "FirewallUpdate"), false)
+	v.SetDefault(configPath("DistroOpts", "LabelNodes"), false)
+	v.SetDefault(configPath("DistroOpts", "UpdateKubeConfig"), true)
 
 	// The keys below have no real default value beyond the Go zero value -- they're
 	// registered anyway (not skipped) because v.Unmarshal(&resolvedConfig) only picks
@@ -195,7 +197,7 @@ func setDefaults() {
 	// these -- omitting any of them silently drops that key's env-var support.
 	v.SetDefault(configPath("Architecture"), "")
 	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
-	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), 0)
+	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")

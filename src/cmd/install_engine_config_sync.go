@@ -23,8 +23,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
-	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -34,8 +32,6 @@ const (
 	InstallEngineConfigSyncConfig = "config"
 	// InstallEngineConfigSyncConfirm flag
 	InstallEngineConfigSyncConfirm = "confirm"
-	// InstallEngineConfigSyncDistro flag
-	InstallEngineConfigSyncDistro = "distro"
 	// InstallEngineConfigSyncConcurrency flag
 	InstallEngineConfigSyncConcurrency = "concurrency"
 	// InstallEngineConfigSyncWorkConcurrency flag
@@ -44,16 +40,17 @@ const (
 
 type installEngineConfigSyncOptions struct {
 	InstallCommon
-	workerCon         int
-	distro            string
+	workerCon         string
+	labelNodes        bool
+	updateKubeConfig  bool
 	vaultPasswordFile string
 }
 
 func newInstallEngineConfigSyncCommand() *cobra.Command {
 	o := installEngineConfigSyncOptions{}
 	cmd := &cobra.Command{
-		Use:     "engine-config-sync",
-		Args:    cobra.ExactArgs(0),
+		Use:     "engine-config-sync [Distro Package]",
+		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDistroEngineConfigSyncShort,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -64,9 +61,10 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 
 	cmd.Flags().IntVarP(&o.concurrency, InstallEngineConfigSyncConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallEngineConfigSyncConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallEngineConfigSyncDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagEngineConfigSyncDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
-	cmd.Flags().IntVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
@@ -88,7 +86,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installEngineConfigSyncOptions) run(ctx context.Context, _ []string) error {
+func (o *installEngineConfigSyncOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {
@@ -101,16 +99,10 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, _ []string) er
 		return err
 	}
 
-	cluster, err := load.ClusterDefinition(ctx, o.config, load.ClusterOptions{})
+	manager, err := initManager(ctx, args[0], o.InstallCommon)
 	if err != nil {
+		l.Warn("failed to create manager", "err", err)
 		return err
-	}
-
-	manager := &phase.Manager{
-		DistroID:          o.distro,
-		Concurrency:       o.concurrency,
-		ConcurrentUploads: o.concurrency,
-		Config:            &cluster,
 	}
 
 	d, err := time.ParseDuration(Timeout)
@@ -130,6 +122,8 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, _ []string) er
 		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
 		VaultPassword:    vaultPassword,
+		LabelNodes:       o.labelNodes,
+		UpdateKubeConfig: o.updateKubeConfig,
 	}
 
 	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)

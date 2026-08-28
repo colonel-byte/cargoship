@@ -5,7 +5,7 @@
 Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted
 
 ```
-cargoship engine-config-sync [flags]
+cargoship engine-config-sync [Distro Package] [flags]
 ```
 
 ### Options
@@ -14,10 +14,11 @@ cargoship engine-config-sync [flags]
   -c, --concurrency int              Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                Config file used to bootstrap a cluster.
       --confirm                      Confirm whether if to proceed with the install
-  -D, --distro string                What type of distro that will have its engine config synced. Valid options are: 'rke2', 'k3s'.
   -h, --help                         help for engine-config-sync
+      --label-nodes                  Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig.
+      --update-kubeconfig            Whether to update the local kubeconfig file with the admin creds for this cluster. (default true)
       --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
-  -w, --work-concurrency int         Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
+  -w, --work-concurrency string      Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
 ```
 
 ### Options inherited from parent commands

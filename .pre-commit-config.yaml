@@ -70,4 +70,4 @@ repos:
         name: generate-docs
         language: system
         pass_filenames: false
-        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml mage generate:document"
+        entry: bash -c "CARGOSHIP_MAGE_DOCS_CHILD=1 CARGOSHIP_CONFIG=hack/config.yaml mage generate:document"

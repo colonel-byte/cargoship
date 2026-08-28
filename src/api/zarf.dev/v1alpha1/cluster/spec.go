@@ -22,6 +22,10 @@
 package cluster
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
@@ -87,6 +91,60 @@ type ZarfClusterProfiles struct {
 	Host ZarfHostConfig `json:"host,omitempty"`
 	// Engine holds the node label and taint overrides applied to a host that selects this profile.
 	Engine ZarfHostEngine `json:"engine,omitempty"`
+	// Concurrency limits how many hosts using this profile cargoship processes at once, e.g.
+	// draining, upgrading, initializing, or uninstalling. It accepts a fixed count ("1") or a
+	// percentage of the hosts sharing this profile ("25%"). Empty falls back to the phase's
+	// default concurrency.
+	Concurrency string `json:"concurrency,omitempty" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
+}
+
+// ResolveConcurrency returns the batch size cargoship should use for total hosts sharing this
+// profile. A fixed count is used as-is. A percentage (e.g. "25%") is scaled against total,
+// rounded up, and clamped to a minimum of 1 so a low percentage never collapses to 0, which
+// would otherwise be indistinguishable from "unlimited". An empty Concurrency falls back to
+// fallback, parsed the same way against total.
+func (p ZarfClusterProfiles) ResolveConcurrency(total int, fallback string) (int, error) {
+	c := strings.TrimSpace(p.Concurrency)
+	if c == "" {
+		c = fallback
+	}
+	return ParseConcurrency(c, total)
+}
+
+// ParseConcurrency parses a concurrency spec (a fixed count like "1", or a percentage like
+// "25%") against total, the number of hosts in the batch being sized. A fixed count is used
+// as-is; 0 or empty means unlimited. A percentage is scaled against total, rounded up, and
+// clamped to a minimum of 1 so a low percentage never collapses to 0, which would otherwise be
+// indistinguishable from "unlimited".
+func ParseConcurrency(value string, total int) (int, error) {
+	c := strings.TrimSpace(value)
+	if c == "" {
+		return 0, nil
+	}
+
+	if pct, ok := strings.CutSuffix(c, "%"); ok {
+		v, err := strconv.Atoi(strings.TrimSpace(pct))
+		if err != nil {
+			return 0, fmt.Errorf("invalid concurrency percentage %q: %w", value, err)
+		}
+		if v < 0 || v > 100 {
+			return 0, fmt.Errorf("invalid concurrency percentage %q: must be between 0 and 100", value)
+		}
+		scaled := (total*v + 99) / 100
+		if scaled < 1 {
+			scaled = 1
+		}
+		return scaled, nil
+	}
+
+	v, err := strconv.Atoi(c)
+	if err != nil {
+		return 0, fmt.Errorf("invalid concurrency %q: %w", value, err)
+	}
+	if v < 0 {
+		return 0, fmt.Errorf("invalid concurrency %q: must not be negative", value)
+	}
+	return v, nil
 }
 
 // ZarfClusterRegistrieName is the registry name in ZarfClusterRegistries. It's a named

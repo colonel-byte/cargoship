@@ -6,6 +6,7 @@
 
 # Guides
 
+- [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
 - [setup-inv](guides/setup-inv.md)
 

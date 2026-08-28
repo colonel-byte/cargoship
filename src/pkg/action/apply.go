@@ -45,10 +45,13 @@ type ApplyOptions struct {
 	ModifyHosts bool
 	// ModifyFirewall updates the firewalld on the nodes
 	ModifyFirewall bool
-	// WorkerConcurrent number of workers that will be installed or upgraded at a time
-	WorkerConcurrent int
+	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
+	// count ("5") or a percentage of the batch ("25%")
+	WorkerConcurrent string
 	// UpdateKubeConfig whether to update the local config
 	UpdateKubeConfig bool
+	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
+	LabelNodes bool
 	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
 	VaultPassword string
 }
@@ -64,10 +67,6 @@ func NewApply(opts ApplyOptions) *Apply {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
-	}
-
-	if opts.WorkerConcurrent < 0 {
-		opts.WorkerConcurrent = 0
 	}
 
 	if opts.Manager.Concurrency < 0 {
@@ -151,7 +150,10 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.KubeConfig{
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
-				Enabled:   true,
+				Enabled:   opts.UpdateKubeConfig,
+			},
+			&phase.LabelNodes{
+				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),
