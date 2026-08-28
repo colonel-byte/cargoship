@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.14.0](https://github.com/colonel-byte/cargoship/compare/v0.13.0...v0.14.0) (2026-08-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* add logging to file ([#213](https://github.com/colonel-byte/cargoship/issues/213))
+* add logic for keeping track of files uploaded ([#212](https://github.com/colonel-byte/cargoship/issues/212))
+* add registry overrides ([#211](https://github.com/colonel-byte/cargoship/issues/211))
+
+### Features
+
+* add ability to sign packages ([#208](https://github.com/colonel-byte/cargoship/issues/208)) ([3646edf](https://github.com/colonel-byte/cargoship/commit/3646edff8d641eabd9570db483b1c1eef5dd45bc))
+* add logging to file ([#213](https://github.com/colonel-byte/cargoship/issues/213)) ([b9ee105](https://github.com/colonel-byte/cargoship/commit/b9ee105cfc6f99d681c7f480e89b9961ee60ccb0))
+* add logic for keeping track of files uploaded ([#212](https://github.com/colonel-byte/cargoship/issues/212)) ([de757a9](https://github.com/colonel-byte/cargoship/commit/de757a9b0376a0d73bc53ba961651dc83e2dad29))
+* add registry overrides ([#211](https://github.com/colonel-byte/cargoship/issues/211)) ([cb65777](https://github.com/colonel-byte/cargoship/commit/cb65777bcf77f2c9bd6e0a8a43547d6380d1f6ac))
+* add the ability to create reproducible packages ([#209](https://github.com/colonel-byte/cargoship/issues/209)) ([2737a87](https://github.com/colonel-byte/cargoship/commit/2737a873bc441c4ef49eec1b45e9bdd4973a57f8))
+
 ## [0.13.0](https://github.com/colonel-byte/cargoship/compare/v0.12.0...v0.13.0) (2026-08-24)
 
 
