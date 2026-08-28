@@ -76,6 +76,10 @@ const (
 	InstallUpdateFirewall = "update-firewall"
 	// InstallUpdateFAPolicyD flag
 	InstallUpdateFAPolicyD = "update-fapolicyd"
+	// InstallLabelNodes flag
+	InstallLabelNodes = "label-nodes"
+	// InstallUpdateKubeConfig flag
+	InstallUpdateKubeConfig = "update-kubeconfig"
 	// InstallVaultPasswordFile flag
 	InstallVaultPasswordFile = "vault-password-file"
 )

@@ -99,6 +99,10 @@
 
     - If enabled, this will update the local kubeconfig with the admin creds for the current distro
 
+1. Labeling nodes with their profile group
+
+    - If enabled, this checks each node's node-role.kubernetes.io/<profile> label and adds it, set to "true", when missing or set to anything else
+
 1. Release exclusive host lock
 
     - Deletes the lock file from each node, allowing other `cargoships` to run

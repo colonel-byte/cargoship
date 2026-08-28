@@ -99,6 +99,16 @@
         "insecure_ignore_tlog": {
           "type": "string"
         },
+        "kubeconfig_update": {
+          "default": true,
+          "description": "whether we will update the local kubeconfig file with the admin creds for the cluster",
+          "type": "boolean"
+        },
+        "label_nodes": {
+          "default": true,
+          "description": "whether we will check and add the node-role.kubernetes.io/\u003cprofile\u003e label on nodes",
+          "type": "boolean"
+        },
         "oci_concurrency": {
           "description": "is how many concurrent oci artifacts that will be pushed at a time",
           "type": "integer"

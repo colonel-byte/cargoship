@@ -46,6 +46,8 @@ type installEngineConfigSyncOptions struct {
 	InstallCommon
 	workerCon         string
 	distro            string
+	labelNodes        bool
+	updateKubeConfig  bool
 	vaultPasswordFile string
 }
 
@@ -67,6 +69,8 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.distro, InstallEngineConfigSyncDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagEngineConfigSyncDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().StringVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
@@ -130,6 +134,8 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, _ []string) er
 		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
 		VaultPassword:    vaultPassword,
+		LabelNodes:       o.labelNodes,
+		UpdateKubeConfig: o.updateKubeConfig,
 	}
 
 	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)

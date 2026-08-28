@@ -50,6 +50,8 @@ type ApplyOptions struct {
 	WorkerConcurrent string
 	// UpdateKubeConfig whether to update the local config
 	UpdateKubeConfig bool
+	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
+	LabelNodes bool
 	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
 	VaultPassword string
 }
@@ -148,7 +150,10 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.KubeConfig{
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
-				Enabled:   true,
+				Enabled:   opts.UpdateKubeConfig,
+			},
+			&phase.LabelNodes{
+				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),

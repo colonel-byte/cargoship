@@ -114,7 +114,7 @@ func phaseDocs() []phaseDoc {
 		{
 			name: "engine-config-sync",
 			phases: action.NewEngineConfigSync(action.EngineConfigSyncOptions{
-				Manager: genDocsManagerNoConfig,
+				Manager: genDocsManager,
 			}).Phases,
 		},
 	}

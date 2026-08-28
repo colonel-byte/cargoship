@@ -33,6 +33,10 @@ type EngineConfigSyncOptions struct {
 	WorkerConcurrent string
 	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
 	VaultPassword string
+	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
+	LabelNodes bool
+	// UpdateKubeConfig whether to update the local kubeconfig file with the admin creds for the cluster
+	UpdateKubeConfig bool
 }
 
 // EngineConfigSync state logic
@@ -80,6 +84,14 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync {
 					VaultPassword: opts.VaultPassword,
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
+			},
+			&phase.KubeConfig{
+				Distro:    d,
+				ClusterID: opts.Manager.Config.Metadata.Name,
+				Enabled:   opts.UpdateKubeConfig,
+			},
+			&phase.LabelNodes{
+				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),
