@@ -30,6 +30,8 @@ builds:
       - -s
       - -w
       - -X github.com/colonel-byte/cargoship/src/config.CLIVersion={{.Version}}
+    gcflags:
+      - all=-l -B -C
     env:
       - CGO_ENABLED=0
     goos:

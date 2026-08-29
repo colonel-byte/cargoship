@@ -64,7 +64,7 @@ The `Generate` namespace handles code-generation and repository asset updates:
 *   **`dev.go`:** Defines convenience tasks under the `Dev` and `Test` namespaces.
 *   **`gen-docs.go`:** Performs Cobra command extraction and phase parser generation to update everything inside the `docs/` tree.
 *   **`gen-schema.go`:** Maps Go types to JSON schemas under `schema/`.
-*   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction.
+*   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
 *   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
 
 ---

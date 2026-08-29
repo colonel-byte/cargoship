@@ -55,6 +55,8 @@ Shared utilities in `.dagger/utils/utils.go` inject optimization and metadata fl
 *   `-s -w` linker flags to strip debug symbols and reduce binary size.
 *   `-X` variables to embed the `AppVersion` and current Git commit SHA into the binary configuration.
 
+`BuildLocal` also sets `CGO_ENABLED=0` and passes `-trimpath`. See [build-flags](build-flags.md) for the full rationale behind every flag and env var used across both the Dagger and Mage build paths.
+
 ### `Build`
 
 `Build` compiles Cargoship for all supported release platforms concurrently.

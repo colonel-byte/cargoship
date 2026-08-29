@@ -45,6 +45,7 @@
 
 # Development
 
+- [build-flags](dev/build-flags.md)
 - [dagger](dev/dagger.md)
 - [mage](dev/mage.md)
 - [vault-library-choice](dev/vault-library-choice.md)
