@@ -54,7 +54,7 @@ const (
 
 type installResetOptions struct {
 	InstallCommon
-	workerCon int
+	workerCon string
 	hosts     bool
 	firewall  bool
 	fapolicy  bool
@@ -81,7 +81,7 @@ func newInstallResetCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.hosts, InstallResetUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallResetUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallResetUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallResetWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringVarP(&o.workerCon, InstallResetWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {

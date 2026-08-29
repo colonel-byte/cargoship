@@ -11,14 +11,17 @@ cargoship apply [Distro Package] [flags]
 ### Options
 
 ```
-  -c, --concurrency int        Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string          Config file used to bootstrap a cluster.
-      --confirm                Confirm whether if to proceed with the install
-  -h, --help                   help for apply
-  -f, --update-fapolicyd       Whether to update all the host nodes fapolicyd configuration.
-  -F, --update-firewall        Whether to update all the host nodes firewall configuration.
-  -H, --update-hosts           Whether to update all the host nodes /etc/hosts file.
-  -w, --work-concurrency int   Maximum number of workers that will be installed or updated in parallel, set to 0 for unlimited.
+  -c, --concurrency int              Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string                Config file used to bootstrap a cluster.
+      --confirm                      Confirm whether if to proceed with the install
+  -h, --help                         help for apply
+      --label-nodes                  Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig.
+  -f, --update-fapolicyd             Whether to update all the host nodes fapolicyd configuration.
+  -F, --update-firewall              Whether to update all the host nodes firewall configuration.
+  -H, --update-hosts                 Whether to update all the host nodes /etc/hosts file.
+      --update-kubeconfig            Whether to update the local kubeconfig file with the admin creds for this cluster. (default true)
+      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+  -w, --work-concurrency string      Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
 ```
 
 ### Options inherited from parent commands

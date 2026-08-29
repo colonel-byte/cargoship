@@ -279,6 +279,23 @@
         "^x-": {}
       },
       "properties": {
+        "concurrency": {
+          "description": "limits how many hosts using this profile cargoship processes at once, e.g.\ndraining, upgrading, initializing, or uninstalling. It accepts a fixed count (\"1\") or a\npercentage of the hosts sharing this profile (\"25%\"). Empty falls back to the phase's\ndefault concurrency.",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
         "engine": {
           "$ref": "#/$defs/ZarfHostEngine",
           "description": "holds the node label and taint overrides applied to a host that selects this profile."
@@ -303,6 +320,14 @@
         },
         "name": {
           "description": "identifies the registry.",
+          "examples": [
+            "docker.io",
+            "ghcr.io",
+            "quay.io",
+            "gcr.io",
+            "registry.k8s.io",
+            "public.ecr.aws"
+          ],
           "type": "string"
         },
         "proxy": {
@@ -325,14 +350,26 @@
       "properties": {
         "pass": {
           "description": "is the login secret for the remote registry.",
+          "examples": [
+            "hunter2",
+            "$ANSIBLE_VAULT;1.1;AES256..."
+          ],
           "type": "string"
         },
         "token": {
           "description": "authenticates to the remote registry instead of a username and password.",
+          "examples": [
+            "abc123",
+            "$ANSIBLE_VAULT;1.1;AES256..."
+          ],
           "type": "string"
         },
         "user": {
           "description": "is the login name for the remote registry.",
+          "examples": [
+            "myuser",
+            "$ANSIBLE_VAULT;1.1;AES256..."
+          ],
           "type": "string"
         }
       },
@@ -345,6 +382,13 @@
         "^x-": {}
       },
       "properties": {
+        "rewrite": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps a regex pattern to a replacement, transforming the image name (not the tag)\nbefore it is pulled from this mirror. See https://docs.rke2.io/install/private_registry#rewrites",
+          "type": "object"
+        },
         "url": {
           "description": "is the registry address the engine pulls from instead of the original registry.",
           "type": "string"

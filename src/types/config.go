@@ -20,6 +20,19 @@ import (
 	orderedmap "github.com/pb33f/ordered-map/v2"
 )
 
+// CommonRegistries are suggested, non-exhaustive registry names used in generated
+// schemas -- editors with YAML/JSON schema support (e.g. the redhat.vscode-yaml
+// extension) offer them as autocomplete, for RegistryOverrideMap's registry_override
+// keys here and for ZarfClusterRegistrieName's registry name field in the cluster API.
+var CommonRegistries = []string{
+	"docker.io",
+	"ghcr.io",
+	"quay.io",
+	"gcr.io",
+	"registry.k8s.io",
+	"public.ecr.aws",
+}
+
 // DistroConfig holds the values for the `.`, or root, section of the config file
 type DistroConfig struct {
 	// CachePath is the folder where oras artifacts are stored
@@ -64,8 +77,13 @@ type DistroOptions struct {
 	FirewallUpdate bool `json:"firewall_update,omitempty" mapstructure:"firewall_update" jsonschema:"default=true"`
 	// HostUpdate whether we will update the etc host file
 	HostUpdate bool `json:"host_update,omitempty" mapstructure:"host_update" jsonschema:"default=true"`
-	// WorkerConcurrency number of worker nodes that will be upgraded at once
-	WorkerConcurrency int `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"minimum=0,maximum=1000"`
+	// LabelNodes whether we will check and add the node-role.kubernetes.io/<profile> label on nodes
+	LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
+	// UpdateKubeConfig whether we will update the local kubeconfig file with the admin creds for the cluster
+	UpdateKubeConfig bool `json:"kubeconfig_update,omitempty" mapstructure:"kubeconfig_update" jsonschema:"default=true"`
+	// WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
+	// ("5") or a percentage of the batch ("25%")
+	WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
 	// Retry number of retries we will try
 	Retry int `json:"retry,omitempty" mapstructure:"retry" jsonschema:"minimum=0"`
 	// Type of distro we are interacting with
@@ -127,24 +145,12 @@ type ResetOptions struct{}
 // config file is not restricted to those.
 type RegistryOverrideMap map[string]string
 
-// commonRegistries are suggested, non-exhaustive property names for RegistryOverrideMap's
-// generated schema -- editors with YAML/JSON schema support (e.g. the redhat.vscode-yaml
-// extension) offer them as autocomplete for registry_override keys.
-var commonRegistries = []string{
-	"docker.io",
-	"ghcr.io",
-	"quay.io",
-	"gcr.io",
-	"registry.k8s.io",
-	"public.ecr.aws",
-}
-
-// JSONSchemaExtend adds commonRegistries to the schema's properties, alongside the
+// JSONSchemaExtend adds CommonRegistries to the schema's properties, alongside the
 // additionalProperties the reflector already set for the map[string]string element
 // type, so the suggestions are additive and don't restrict which keys are allowed.
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema) {
 	suggestions := orderedmap.New[string, *jsonschema.Schema]()
-	for _, registry := range commonRegistries {
+	for _, registry := range CommonRegistries {
 		suggestions.Set(registry, &jsonschema.Schema{Type: "string"})
 	}
 	s.Properties = suggestions

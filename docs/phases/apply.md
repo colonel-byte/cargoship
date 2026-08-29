@@ -87,9 +87,21 @@
 
     - If the remote node is a worker and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node by the set concurrency limit
 
+1. Sync Registry Config Controller
+
+    - If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially
+
+1. Sync Registry Config Worker
+
+    - If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit
+
 1. Updating kubeconfig file with the current cluster
 
     - If enabled, this will update the local kubeconfig with the admin creds for the current distro
+
+1. Labeling nodes with their profile group
+
+    - If enabled, this checks each node's node-role.kubernetes.io/<profile> label and adds it, set to "true", when missing or set to anything else
 
 1. Release exclusive host lock
 

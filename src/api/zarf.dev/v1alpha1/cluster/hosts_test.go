@@ -70,3 +70,32 @@ func TestHostsEach(t *testing.T) {
 		require.ErrorContains(t, err, "test")
 	})
 }
+
+func TestGroupByProfile(t *testing.T) {
+	t.Run("groups by profile in first-appearance order", func(t *testing.T) {
+		infra1 := &ZarfHost{Role: "worker", Profile: "infra"}
+		worker1 := &ZarfHost{Role: "worker", Profile: "worker"}
+		infra2 := &ZarfHost{Role: "worker", Profile: "infra"}
+		none := &ZarfHost{Role: "worker"}
+		worker2 := &ZarfHost{Role: "worker", Profile: "worker"}
+
+		hosts := ZarfHosts{infra1, worker1, infra2, none, worker2}
+		groups := hosts.GroupByProfile()
+
+		require.Len(t, groups, 3)
+
+		require.Equal(t, "infra", groups[0].Profile)
+		require.Equal(t, ZarfHosts{infra1, infra2}, groups[0].Hosts)
+
+		require.Equal(t, "worker", groups[1].Profile)
+		require.Equal(t, ZarfHosts{worker1, worker2}, groups[1].Hosts)
+
+		require.Empty(t, groups[2].Profile)
+		require.Equal(t, ZarfHosts{none}, groups[2].Hosts)
+	})
+
+	t.Run("empty hosts returns no groups", func(t *testing.T) {
+		var hosts ZarfHosts
+		require.Empty(t, hosts.GroupByProfile())
+	})
+}

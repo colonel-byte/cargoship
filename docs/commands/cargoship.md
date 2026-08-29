@@ -28,6 +28,7 @@ cargoship COMMAND [flags]
 
 * [cargoship apply](./cargoship_apply.md)	 - Apply a config file to bootstrap and upgrade a cluster
 * [cargoship create](./cargoship_create.md)	 - Creates a Cargoship Package from a given directory or the current director
+* [cargoship engine-config-sync](./cargoship_engine-config-sync.md)	 - Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted
 * [cargoship kube-config](./cargoship_kube-config.md)	 - Get the admin kube-config for a control-plane node
 * [cargoship prepare](./cargoship_prepare.md)	 - Prepares the nodes, including restarting the node if new kernel modules are enabled
 * [cargoship publish](./cargoship_publish.md)	 - Publish the Cargoship Package to an OCI registry
@@ -35,5 +36,6 @@ cargoship COMMAND [flags]
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
+* [cargoship vault-encrypt](./cargoship_vault-encrypt.md)	 - Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

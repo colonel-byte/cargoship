@@ -22,7 +22,13 @@
 package cluster
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/src/types"
+	"github.com/invopop/jsonschema"
 )
 
 // ZarfCluster is the root object of a cluster configuration document.
@@ -57,6 +63,8 @@ type ZarfRuntimeMeta struct {
 	LoadBalancer string
 	// Leader is the controller host that stores the cluster join tokens.
 	Leader *ZarfHost
+	// Registries lists the container registries the cluster uses.
+	Registries []ZarfClusterRegistries
 }
 
 // ZarfClusterSpec holds the configuration and hosts for a cluster.
@@ -83,12 +91,79 @@ type ZarfClusterProfiles struct {
 	Host ZarfHostConfig `json:"host,omitempty"`
 	// Engine holds the node label and taint overrides applied to a host that selects this profile.
 	Engine ZarfHostEngine `json:"engine,omitempty"`
+	// Concurrency limits how many hosts using this profile cargoship processes at once, e.g.
+	// draining, upgrading, initializing, or uninstalling. It accepts a fixed count ("1") or a
+	// percentage of the hosts sharing this profile ("25%"). Empty falls back to the phase's
+	// default concurrency.
+	Concurrency string `json:"concurrency,omitempty" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`
+}
+
+// ResolveConcurrency returns the batch size cargoship should use for total hosts sharing this
+// profile. A fixed count is used as-is. A percentage (e.g. "25%") is scaled against total,
+// rounded up, and clamped to a minimum of 1 so a low percentage never collapses to 0, which
+// would otherwise be indistinguishable from "unlimited". An empty Concurrency falls back to
+// fallback, parsed the same way against total.
+func (p ZarfClusterProfiles) ResolveConcurrency(total int, fallback string) (int, error) {
+	c := strings.TrimSpace(p.Concurrency)
+	if c == "" {
+		c = fallback
+	}
+	return ParseConcurrency(c, total)
+}
+
+// ParseConcurrency parses a concurrency spec (a fixed count like "1", or a percentage like
+// "25%") against total, the number of hosts in the batch being sized. A fixed count is used
+// as-is; 0 or empty means unlimited. A percentage is scaled against total, rounded up, and
+// clamped to a minimum of 1 so a low percentage never collapses to 0, which would otherwise be
+// indistinguishable from "unlimited".
+func ParseConcurrency(value string, total int) (int, error) {
+	c := strings.TrimSpace(value)
+	if c == "" {
+		return 0, nil
+	}
+
+	if pct, ok := strings.CutSuffix(c, "%"); ok {
+		v, err := strconv.Atoi(strings.TrimSpace(pct))
+		if err != nil {
+			return 0, fmt.Errorf("invalid concurrency percentage %q: %w", value, err)
+		}
+		if v < 0 || v > 100 {
+			return 0, fmt.Errorf("invalid concurrency percentage %q: must be between 0 and 100", value)
+		}
+		scaled := (total*v + 99) / 100
+		if scaled < 1 {
+			scaled = 1
+		}
+		return scaled, nil
+	}
+
+	v, err := strconv.Atoi(c)
+	if err != nil {
+		return 0, fmt.Errorf("invalid concurrency %q: %w", value, err)
+	}
+	if v < 0 {
+		return 0, fmt.Errorf("invalid concurrency %q: must not be negative", value)
+	}
+	return v, nil
+}
+
+// ZarfClusterRegistrieName is the registry name in ZarfClusterRegistries. It's a named
+// type (rather than a bare string) solely so it can implement JSONSchemaExtend below and
+// suggest common registries in the generated schema; the config file is not restricted to those.
+type ZarfClusterRegistrieName string
+
+// JSONSchemaExtend adds CommonRegistries to the schema as examples, so editors can
+// suggest them for this string field without restricting it to just those values.
+func (ZarfClusterRegistrieName) JSONSchemaExtend(s *jsonschema.Schema) {
+	for _, registry := range types.CommonRegistries {
+		s.Examples = append(s.Examples, registry)
+	}
 }
 
 // ZarfClusterRegistries holds the credentials and pull proxy for one container registry.
 type ZarfClusterRegistries struct {
 	// Name identifies the registry.
-	Name string `json:"name"`
+	Name ZarfClusterRegistrieName `json:"name"`
 	// Authentication holds the credentials for the registry.
 	Authentication ZarfClusterRegistryAuth `json:"auth,omitempty"`
 	// Proxy holds the pull redirect settings for the registry.
@@ -96,19 +171,26 @@ type ZarfClusterRegistries struct {
 }
 
 // ZarfClusterRegistryAuth holds the credentials for a container registry.
+// Username, Password, and Token may each be given in plaintext, or as an
+// Ansible Vault-encrypted string (the output of `ansible-vault encrypt_string`,
+// starting with "$ANSIBLE_VAULT"), in which case cargoship decrypts it at apply
+// time using the vault password given via --vault-password-file.
 type ZarfClusterRegistryAuth struct {
 	// Username is the login name for the remote registry.
-	Username string `json:"user,omitempty"`
+	Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256..."`
 	// Password is the login secret for the remote registry.
-	Password string `json:"pass,omitempty"`
+	Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256..."`
 	// Token authenticates to the remote registry instead of a username and password.
-	Token string `json:"token,omitempty"`
+	Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256..."`
 }
 
 // ZarfClusterRegistryProxy redirects pulls for a registry to a different URL.
 type ZarfClusterRegistryProxy struct {
 	// URL is the registry address the engine pulls from instead of the original registry.
 	URL string `json:"url"`
+	// Rewrite maps a regex pattern to a replacement, transforming the image name (not the tag)
+	// before it is pulled from this mirror. See https://docs.rke2.io/install/private_registry#rewrites
+	Rewrite map[string]string `json:"rewrite,omitempty"`
 }
 
 // ZarfClusterFiles defines a file to write to a host.

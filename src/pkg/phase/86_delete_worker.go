@@ -33,7 +33,7 @@ import (
 type DeleteWorkers struct {
 	DeleteCommon
 	NoDrain          bool
-	WorkerConcurrent int
+	WorkerConcurrent string
 	hosts            cluster.ZarfHosts
 }
 
@@ -72,7 +72,7 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *
 // Run the phase
 func (p *DeleteWorkers) Run(ctx context.Context) error {
 	if !p.NoDrain {
-		err := p.batchedParallelWithMessage(
+		err := p.batchedParallelPerProfileWithMessage(
 			ctx,
 			"draining nodes",
 			p.hosts,
@@ -83,7 +83,7 @@ func (p *DeleteWorkers) Run(ctx context.Context) error {
 			logger.From(ctx).Warn("failed to drain node(s), continuing with removing nodes from cluster", "error", err)
 		}
 	}
-	return p.batchedParallelWithMessage(
+	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"deleting nodes",
 		p.hosts,

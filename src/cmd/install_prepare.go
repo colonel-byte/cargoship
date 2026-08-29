@@ -35,7 +35,7 @@ import (
 
 type installPrepareOptions struct {
 	InstallCommon
-	workerCon int
+	workerCon string
 	hosts     bool
 	firewall  bool
 	fapolicy  bool
@@ -60,7 +60,7 @@ func newInstallPrepareCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
