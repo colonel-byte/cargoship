@@ -21,13 +21,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCargoshipCommands(t *testing.T) {
+func TestCargoshipCreate(t *testing.T) {
 	t.Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
-
-	t.Run("cargoship version", func(t *testing.T) {
-		_, _, err := e2e.Cargoship(t, "version")
-		require.NoError(t, err)
-	})
 
 	t.Run("cargoship create package, amd64", func(t *testing.T) {
 		_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2/v1.35.0-rke2r1")

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -96,6 +97,9 @@ func (Dev) Digest(ctx context.Context) error {
 
 // EndToEnd runs the go testing the e2e suite
 func (Test) EndToEnd() error {
+	if err := stopBootlooseContainers(); err != nil {
+		return err
+	}
 	if err := daggerBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
 		return err
 	}
@@ -107,4 +111,20 @@ func (Test) EndToEnd() error {
 		"-count=1",
 		"-v",
 	)
+}
+
+// stopBootlooseContainers force-removes any leftover bootloose-managed containers (e.g. from
+// a previous e2e run that was killed before cluster teardown ran), so TestMain's bootloose
+// Create() isn't confused by stale/exited containers with the same names.
+func stopBootlooseContainers() error {
+	ids, err := sh.Output("docker", "ps", "-aq", "--filter", "label=io.k0sproject.bootloose.owner=bootloose")
+	if err != nil {
+		return err
+	}
+	ids = strings.TrimSpace(ids)
+	if ids == "" {
+		return nil
+	}
+	fmt.Println("Removing leftover bootloose containers")
+	return sh.RunV("docker", append([]string{"rm", "-f"}, strings.Fields(ids)...)...)
 }
