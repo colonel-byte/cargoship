@@ -50,7 +50,7 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 	t.Run("encrypts a value piped over stdin", func(t *testing.T) {
 		const value = "piped-secret"
 
-		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault-encrypt", "--vault-password-file", passwordFile)
+		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault-encrypt", "--vault-password-file", passwordFile, "--no-color")
 		cmd.Stdin = strings.NewReader(value + "\n")
 		out, err := cmd.Output()
 		require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 	})
 
 	t.Run("empty stdin errors", func(t *testing.T) {
-		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault-encrypt", "--vault-password-file", passwordFile)
+		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault-encrypt", "--vault-password-file", passwordFile, "--no-color")
 		cmd.Stdin = strings.NewReader("")
 		require.Error(t, cmd.Run())
 	})

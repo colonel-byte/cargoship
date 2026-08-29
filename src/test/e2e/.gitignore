@@ -2,3 +2,4 @@ cluster-key
 cluster-key.pub
 *.tar
 *.tar.gz
+generated-cluster.yaml

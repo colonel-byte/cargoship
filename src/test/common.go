@@ -23,6 +23,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
@@ -44,8 +45,11 @@ func (e2e *CargoE2ETest) Cargoship(t *testing.T, args ...string) (_ string, _ st
 
 // CargoInDir executes a Cargoship command in specific directory.
 func (e2e *CargoE2ETest) CargoInDir(t *testing.T, dir string, args ...string) (_ string, _ string, err error) {
+	if !slices.Contains(args, "--no-color") {
+		args = append(args, "--no-color")
+	}
 	if !slices.Contains(args, "--tmpdir") {
-		tmpdir, err := os.MkdirTemp("", "zarf-")
+		tmpdir, err := os.MkdirTemp(os.Getenv("CARGOSHIP_E2E_TMPDIR"), utils.TmpPathPrefix)
 		if err != nil {
 			return "", "", err
 		}

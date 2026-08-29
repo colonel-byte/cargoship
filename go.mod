@@ -13,6 +13,7 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/goccy/go-yaml v1.19.2
+	github.com/google/go-containerregistry v0.21.9
 	github.com/invopop/jsonschema v0.14.0
 	github.com/k0sproject/bootloose v0.9.6
 	github.com/k0sproject/dig v0.4.0
@@ -219,7 +220,6 @@ require (
 	github.com/google/certificate-transparency-go v1.3.3 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-containerregistry v0.21.9 // indirect
 	github.com/google/go-github/v88 v88.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect

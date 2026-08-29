@@ -20,6 +20,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -103,7 +105,18 @@ func (Test) EndToEnd() error {
 	if err := daggerBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
 		return err
 	}
-	return sh.RunV(
+	e2eTmpDir, err := filepath.Abs(filepath.Join(buildDir, "tmp"))
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(e2eTmpDir, 0o755); err != nil {
+		return err
+	}
+	return sh.RunWithV(
+		map[string]string{
+			"CARGOSHIP_E2E_TMPDIR": e2eTmpDir,
+			"TMPDIR":               e2eTmpDir,
+		},
 		"go",
 		"test",
 		"-timeout=1h",

@@ -45,9 +45,10 @@
 
 # Development
 
+- [choice-in-memory-oci-registry](dev/choice-in-memory-oci-registry.md)
+- [choice-vault-library](dev/choice-vault-library.md)
 - [dagger](dev/dagger.md)
 - [mage](dev/mage.md)
-- [vault-library-choice](dev/vault-library-choice.md)
 
 
 -----------
