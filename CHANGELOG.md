@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/colonel-byte/cargoship/compare/v0.15.0...v0.15.1) (2026-08-29)
+
+
+### Features
+
+* reduce binary ([#221](https://github.com/colonel-byte/cargoship/issues/221)) ([43a17fc](https://github.com/colonel-byte/cargoship/commit/43a17fc5e96d73277d82ced969b462a86876987a))
+
 ## [0.15.0](https://github.com/colonel-byte/cargoship/compare/v0.14.0...v0.15.0) (2026-08-28)
 
 
