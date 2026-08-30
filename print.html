@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5f769ad6.js";
+            window.path_to_searchindex_js = "searchindex-74ef8b54.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-555dbb5b.js"></script>
@@ -1529,7 +1529,7 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
 </ul>
 <p>The entry point of the automation layer is <code>magefiles/core/core.go</code>, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.</p>
 <h2 id="namespace-architecture"><a class="header" href="#namespace-architecture">Namespace Architecture</a></h2>
-<p>Mage targets are organized into logical Go namespaces to group related operations together.</p>
+<p>Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as <code>mage &lt;namespace&gt;:&lt;target&gt;</code>, and target names are case-insensitive, so <code>mage generate:document</code> and <code>mage generate:Document</code> are the same command. Run <code>mage -l</code> for the authoritative list on your checkout.</p>
 <h3 id="dagger-namespace"><a class="header" href="#dagger-namespace"><code>Dagger</code> Namespace</a></h3>
 <p>The <code>Dagger</code> namespace is the default target and the primary build path. It manages containerized and reproducible builds of the Cargoship binary:</p>
 <ul>
@@ -1539,27 +1539,53 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
 <li><code>Macamd64</code> / <code>Macarm64</code> — Compiles macOS binaries.</li>
 <li><code>All</code> — Compiles and exports all release binaries to <code>build/</code> concurrently.</li>
 </ul>
-<p>Running <code>mage</code> without arguments defaults to <code>Dagger.All</code>.</p>
+<pre><code class="language-sh">mage dagger:toolchain     # update the dagger build environment (run once, or after a dagger upgrade)
+mage dagger:binary        # build for this host's OS/arch
+mage dagger:linuxamd64    # build build/cargoship_linux_amd64
+mage dagger:linuxarm64    # build build/cargoship_linux_arm64
+mage dagger:macamd64      # build build/cargoship_darwin_amd64
+mage dagger:macarm64      # build build/cargoship_darwin_arm64
+mage dagger:all           # build every release binary into build/
+mage                      # same as `mage dagger:all` -- it is the default target
+</code></pre>
 <h3 id="build-namespace"><a class="header" href="#build-namespace"><code>Build</code> Namespace</a></h3>
-<p>The <code>Build</code> namespace mirrors the compilation targets of the <code>Dagger</code> namespace but bypasses containerization, executing compilation natively on the host’s Go toolchain. This path is intended for quick, local development.</p>
+<p>The <code>Build</code> namespace mirrors the compilation targets of the <code>Dagger</code> namespace but bypasses containerization, executing compilation natively on the host’s Go toolchain. This path is intended for quick, local development, and it is the one to use when Docker or Dagger is not available.</p>
+<pre><code class="language-sh">mage build:binary         # build for this host's OS/arch, no container
+mage build:linuxamd64
+mage build:linuxarm64
+mage build:macamd64
+mage build:macarm64
+mage build:all            # build every release binary into build/
+</code></pre>
 <h3 id="dev-namespace"><a class="header" href="#dev-namespace"><code>Dev</code> Namespace</a></h3>
 <p>The <code>Dev</code> namespace aggregates convenience tasks for day-to-day development:</p>
 <ul>
 <li><code>Clean</code> — Deletes local compilation artifacts and cleans the <code>build/</code> directory.</li>
 <li><code>Tidy</code> — Runs <code>go mod tidy</code> inside the workspace.</li>
-<li><code>ResolveImageDigest</code> — Resolves and logs specific container digests for validation.</li>
+<li><code>Vendor</code> — Runs <code>Tidy</code>, then <code>go mod vendor</code>. Use this rather than a bare <code>go mod vendor</code> after changing dependencies, so <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> are updated in one step.</li>
+<li><code>Digest</code> — Resolves <code>docker.io/library/alpine:latest</code> through the host’s Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.</li>
 </ul>
+<pre><code class="language-sh">mage dev:clean            # rm the build/ artifacts
+mage dev:tidy             # go mod tidy
+mage dev:vendor           # go mod tidy, then go mod vendor
+mage dev:digest           # print the alpine:latest digest, to check registry auth works
+</code></pre>
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
 <ul>
-<li><code>E2E</code> — Automatically compiles Cargoship via Dagger and executes the complete Go-based end-to-end test suite in verbose mode.</li>
+<li><code>EndToEnd</code> — Builds Cargoship for the host via Dagger, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.</li>
 </ul>
+<pre><code class="language-sh">mage test:endToEnd        # build via dagger, then run the e2e suite
+</code></pre>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
 <ul>
 <li><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</li>
 <li><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</li>
 </ul>
+<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
+mage generate:schema                    # regenerate schema/*.json from the Go API types
+</code></pre>
 <hr>
 <h2 id="file-by-file-reference"><a class="header" href="#file-by-file-reference">File-by-File Reference</a></h2>
 <ul>
