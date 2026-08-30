@@ -63,13 +63,11 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		require.Equal(t, value, decrypted)
 	})
 
-	t.Run("CARGOSHIP_VAULT_PASSWORD is used when the password file is empty", func(t *testing.T) {
+	t.Run("CARGOSHIP_VAULT_PASSWORD is used when the password file is omitted", func(t *testing.T) {
 		const value = "env-password-secret"
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
 
-		// The flag is marked required, so it still has to be present -- an empty value
-		// hands ResolveVaultPassword the fall-through to the environment.
-		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", "", value)
+		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", value)
 		require.NoError(t, err)
 
 		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
@@ -81,6 +79,21 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		const value = "ansible-env-password-secret"
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
 		t.Setenv("ANSIBLE_VAULT_PASSWORD", password)
+
+		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", value)
+		require.NoError(t, err)
+
+		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
+		require.NoError(t, err)
+		require.Equal(t, value, decrypted)
+	})
+
+	// Passing the flag with an empty value was the only way to reach the environment
+	// while --vault-password-file was still marked required. It has to keep working so
+	// scripts written against that behavior do not break.
+	t.Run("an empty password file flag still falls through to the environment", func(t *testing.T) {
+		const value = "empty-flag-secret"
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
 
 		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", "", value)
 		require.NoError(t, err)
@@ -94,8 +107,9 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
 		t.Setenv("ANSIBLE_VAULT_PASSWORD", "")
 
-		_, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", "", "value")
+		_, stderr, err := e2e.Cargoship(t, "vault-encrypt", "value")
 		require.Error(t, err)
+		require.Contains(t, stderr, "no vault password found")
 	})
 
 	t.Run("empty stdin errors", func(t *testing.T) {
@@ -106,15 +120,6 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 
 	t.Run("missing password file errors", func(t *testing.T) {
 		_, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", filepath.Join(t.TempDir(), "does-not-exist"), "value")
-		require.Error(t, err)
-	})
-
-	// --vault-password-file is marked required, so omitting it fails in cobra before
-	// ResolveVaultPassword ever consults the environment.
-	t.Run("missing password flag errors even with the env var set", func(t *testing.T) {
-		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
-
-		_, _, err := e2e.Cargoship(t, "vault-encrypt", "value")
 		require.Error(t, err)
 	})
 
