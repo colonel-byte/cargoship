@@ -46,8 +46,10 @@ func newVaultEncryptCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
+	// Not marked required: ResolveVaultPassword falls back to CARGOSHIP_VAULT_PASSWORD
+	// and ANSIBLE_VAULT_PASSWORD, which are unreachable if cobra rejects the command
+	// before RunE. run() errors when no password is found by any means.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
-	cmd.MarkFlagRequired(MiscVaultPasswordFile)
 
 	return cmd
 }
