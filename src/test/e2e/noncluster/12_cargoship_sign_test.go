@@ -81,7 +81,6 @@ func TestCargoshipSign(t *testing.T) {
 
 		// --verify=always makes the CLI check the existing signature before re-signing, so
 		// this run only succeeds if the signature validates against the matching key.
-		// The flag takes an optional value, so it must be passed as --verify=always.
 		_, _, err = e2e.Cargoship(t, "sign", signed,
 			"--signing-key", privPath, "--signing-key-pass", cosignKeyPassword, "-o", t.TempDir(),
 			"--overwrite", "--verify=always", "-k", pubPath)

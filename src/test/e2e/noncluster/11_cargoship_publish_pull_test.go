@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -83,6 +84,102 @@ func TestCargoshipPublish(t *testing.T) {
 	t.Run("one arg errors", func(t *testing.T) {
 		_, _, err := e2e.Cargoship(t, "publish", minimalPackage(t))
 		require.Error(t, err)
+	})
+}
+
+// TestCargoshipPublishVerify covers publish's verification flags. publish registers the
+// full verify flag set, but until the loader forwarded VerificationStrategy for local
+// package sources these flags were accepted and silently ignored, so an unverifiable
+// package published anyway.
+func TestCargoshipPublishVerify(t *testing.T) {
+	t.Run("verify always on an unsigned package errors before anything is published", func(t *testing.T) {
+		addr := test.SetupInMemoryRegistry(t)
+		dst, src := ociRefs(addr, "e2e-test")
+
+		_, stderr, err := e2e.Cargoship(t, "publish", minimalPackage(t), dst,
+			"--plain-http", "--confirm", "--verify=always")
+		require.Error(t, err)
+		require.Contains(t, stderr, "no verification material available")
+
+		// The failure must happen at load, before the package reaches the registry.
+		_, _, err = e2e.Cargoship(t, "pull", src, "--plain-http", "-o", t.TempDir())
+		require.Error(t, err, "nothing should have been pushed")
+	})
+
+	t.Run("unsigned package publishes when verification is not enforced", func(t *testing.T) {
+		addr := test.SetupInMemoryRegistry(t)
+		dst, _ := ociRefs(addr, "e2e-test")
+
+		_, _, err := e2e.Cargoship(t, "publish", minimalPackage(t), dst, "--plain-http", "--confirm")
+		require.NoError(t, err)
+	})
+
+	t.Run("verify always with the matching key publishes", func(t *testing.T) {
+		pkgPath, pubPath := signedPackage(t)
+		addr := test.SetupInMemoryRegistry(t)
+		dst, src := ociRefs(addr, "e2e-test")
+
+		_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst,
+			"--plain-http", "--confirm", "--verify=always", "-k", pubPath)
+		require.NoError(t, err)
+
+		pullDir := t.TempDir()
+		_, _, err = e2e.Cargoship(t, "pull", src, "--plain-http", "-o", pullDir, "--verify=always", "-k", pubPath)
+		require.NoError(t, err)
+		requireSinglePackage(t, pullDir)
+	})
+
+	t.Run("verify always with an unrelated key errors", func(t *testing.T) {
+		pkgPath, _ := signedPackage(t)
+		_, otherPubPath := cosignKeyPair(t)
+		addr := test.SetupInMemoryRegistry(t)
+		dst, _ := ociRefs(addr, "e2e-test")
+
+		_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst,
+			"--plain-http", "--confirm", "--verify=always", "-k", otherPubPath)
+		require.Error(t, err)
+	})
+
+	t.Run("verify never skips a signature that would not validate", func(t *testing.T) {
+		pkgPath, _ := signedPackage(t)
+		_, otherPubPath := cosignKeyPair(t)
+		addr := test.SetupInMemoryRegistry(t)
+		dst, _ := ociRefs(addr, "e2e-test")
+
+		_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst,
+			"--plain-http", "--confirm", "--verify=never", "-k", otherPubPath)
+		require.NoError(t, err)
+	})
+}
+
+// TestCargoshipVerifyFlagParsing pins how --verify takes its value. It carried a
+// NoOptDefVal, which made the space-separated form parse the mode as a positional
+// argument and fail with an argument-count error.
+func TestCargoshipVerifyFlagParsing(t *testing.T) {
+	t.Run("space-separated value is accepted", func(t *testing.T) {
+		pkgPath, pubPath := signedPackage(t)
+		addr := test.SetupInMemoryRegistry(t)
+		dst, _ := ociRefs(addr, "e2e-test")
+
+		_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst,
+			"--plain-http", "--confirm", "--verify", "always", "-k", pubPath)
+		require.NoError(t, err)
+	})
+
+	// Run directly rather than through e2e.Cargoship: that helper appends --no-color and
+	// --tmpdir, and a trailing --verify would consume the first of them as its value.
+	t.Run("without a value errors", func(t *testing.T) {
+		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath,
+			"pull", "oci://example.invalid/nope:0.0.1", "-o", t.TempDir(), "--no-color", "--verify")
+		out, err := cmd.CombinedOutput()
+		require.Error(t, err)
+		require.Contains(t, string(out), "flag needs an argument")
+	})
+
+	t.Run("an unknown mode errors", func(t *testing.T) {
+		_, stderr, err := e2e.Cargoship(t, "pull", "oci://example.invalid/nope:0.0.1", "-o", t.TempDir(), "--verify", "sometimes")
+		require.Error(t, err)
+		require.Contains(t, stderr, "must be never, if-possible, or always")
 	})
 }
 

@@ -110,7 +110,10 @@ func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroL
 		return nil, err
 	}
 	logger.From(ctx).Debug(tmpPath)
-	distroLayout, err := layout.LoadFromTar(ctx, tmpPath, layout.DistroLayoutOptions{})
+	distroLayout, err := layout.LoadFromTar(ctx, tmpPath, layout.DistroLayoutOptions{
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		VerificationStrategy: opts.VerificationStrategy,
+	})
 	if err != nil {
 		return nil, err
 	}
