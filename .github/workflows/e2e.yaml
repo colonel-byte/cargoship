@@ -57,6 +57,37 @@ jobs:
           name: cargoship
           path: cargoship
 
+  # Run the e2e group that needs no cluster: the misc and package command groups, which live
+  # in their own package so this job never compiles or runs anything bootloose-backed.
+  # -short additionally skips the example packages, which pull ~1.5GB of engine artifacts
+  # and images. The cluster group is not run here; it needs Docker and several minutes.
+  e2e-noncluster:
+    needs: build-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Download PR binary
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: cargoship
+          path: pr-binary
+
+      - name: Stage binary where the suite looks for it
+        run: |
+          mkdir -p build
+          mv pr-binary/cargoship "build/cargoship_$(go env GOOS)_$(go env GOARCH)"
+          chmod +x "build/cargoship_$(go env GOOS)_$(go env GOARCH)"
+
+      - name: Test
+        run: go test -mod=vendor -timeout 30m -count=1 -v -short ./src/test/e2e/noncluster/...
+
   # Compare the PR binary's size against the latest released binary and comment the diff on the PR
   binary-size:
     needs: build-e2e

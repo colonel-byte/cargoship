@@ -13,6 +13,7 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/goccy/go-yaml v1.19.2
+	github.com/google/go-containerregistry v0.21.9
 	github.com/invopop/jsonschema v0.14.0
 	github.com/k0sproject/dig v0.4.0
 	github.com/k0sproject/rig v0.21.11
@@ -23,6 +24,7 @@ require (
 	github.com/otiai10/copy v1.14.1
 	github.com/pb33f/ordered-map/v2 v2.3.1
 	github.com/pterm/pterm v0.12.83
+	github.com/sigstore/cosign/v3 v3.1.3
 	github.com/sosedoff/ansible-vault-go v0.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -217,7 +219,6 @@ require (
 	github.com/google/certificate-transparency-go v1.3.3 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-containerregistry v0.21.9 // indirect
 	github.com/google/go-github/v88 v88.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
@@ -331,7 +332,6 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
-	github.com/sigstore/cosign/v3 v3.1.3 // indirect
 	github.com/sigstore/protobuf-specs v0.5.1 // indirect
 	github.com/sigstore/rekor v1.5.4 // indirect
 	github.com/sigstore/rekor-tiles/v2 v2.3.0 // indirect
