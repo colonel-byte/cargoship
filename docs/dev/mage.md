@@ -15,7 +15,7 @@ The entry point of the automation layer is `magefiles/core/core.go`, which boots
 
 ## Namespace Architecture
 
-Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as `mage <namespace>:<target>`, and target names are case-insensitive, so `mage generate:document` and `mage generate:Document` are the same command. Run `mage -l` for the authoritative list on your checkout.
+Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as `mage <namespace>:<target>`, and target names are case-insensitive, so `mage generate:engineconfig` and `mage generate:engineConfig` are the same command. Run `mage -l` for the authoritative list on your checkout.
 
 ### `Dagger` Namespace
 
@@ -86,6 +86,7 @@ The `Generate` namespace handles code-generation and repository asset updates:
 *   `PullEngineSource` — Fetches raw k3s/RKE2 source at the tags pinned in `thirdparty-src/pins.json` into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). Touches the network.
 *   `LatestTag <distro> <vMAJOR.MINOR>` — Resolves the newest non-RC upstream tag for that minor line, pins it in `thirdparty-src/pins.json`, and re-pulls that version's source if the pin moved. Touches the network.
 *   `UpdatePins` — Runs `LatestTag` over every minor line already pinned in `thirdparty-src/pins.json`, refreshing each to its newest patch release. Touches the network.
+*   `EngineConfig` — Statically parses raw engine source under `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)) to generate typed `config.yaml` structs per distro/version in `src/pkg/engineconfig/gen/`.
 
 ```sh
 mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
@@ -95,6 +96,7 @@ mage generate:pullEngineSource          # re-pull every tag already pinned in th
 mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
 mage generate:latestTag k3s v1.31       # same, for a k3s minor line
 mage generate:updatePins                # bump every pinned minor line, both distros, to its newest patch
+mage generate:engineConfig              # regenerate src/pkg/engineconfig/gen/ from what is on disk
 ```
 
 `LatestTag` is also how a *new* minor line is added: pass a prefix that `thirdparty-src/pins.json` does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2's config is composed against k3s's flags at the same version:
@@ -102,7 +104,10 @@ mage generate:updatePins                # bump every pinned minor line, both dis
 ```sh
 mage generate:latestTag k3s v1.37
 mage generate:latestTag rke2 v1.37
+mage generate:engineConfig
 ```
+
+The usual order after any pin change is `updatePins` (or `latestTag`), then `engineConfig` — the first writes what the second reads, and only the pin-moving targets touch the network. `engineConfig` is fully offline.
 
 ---
 
@@ -117,7 +122,8 @@ mage generate:latestTag rke2 v1.37
 *   **`gen-engine-source.go`:** Holds `Generate.PullEngineSource` and the clone-and-copy logic behind it.
 *   **`gen-engine-latest-tag.go`:** Holds `Generate.LatestTag`.
 *   **`gen-engine-update-pins.go`:** Holds `Generate.UpdatePins`.
-*   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the `gen-engine-*.go` targets.
+*   **`gen-engine-config.go`:** Holds `Generate.EngineConfig`, including RKE2's flag composition against k3s.
+*   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the four `gen-engine-*.go` targets.
 *   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
 *   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
 
@@ -134,6 +140,7 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `docs/phases/*` | Auto-generated cluster phase descriptors | `Generate.Document` |
 | `docs/SUMMARY.md` | Compiled table of contents for mdBook | `Generate.Document` |
 | `schema/*.json` | JSON schemas for YAML validations | `Generate.Schema` |
+| `src/pkg/engineconfig/gen/*` | Typed engine `config.yaml` structs per distro/version | `Generate.EngineConfig` |
 | `thirdparty-src/<distro>/<minor>/*` | Raw pinned upstream k3s/RKE2 source | `Generate.PullEngineSource` / `Generate.LatestTag` |
 | `thirdparty-src/pins.json` | Pinned upstream tags | `Generate.LatestTag` / `Generate.UpdatePins` |
 
