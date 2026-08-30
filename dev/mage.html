@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-74ef8b54.js";
+            window.path_to_searchindex_js = "../searchindex-f90320f1.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-555dbb5b.js"></script>
+        <script src="../toc-a3419503.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -246,7 +246,22 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 <ul>
 <li><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</li>
 <li><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</li>
+<li><code>PullEngineSource</code> — Fetches raw k3s/RKE2 source at the tags pinned in <code>thirdparty-src/pins.json</code> into <code>thirdparty-src/</code> (see <a href="thirdparty-src.html">thirdparty-src</a>). Touches the network.</li>
+<li><code>LatestTag &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> — Resolves the newest non-RC upstream tag for that minor line, pins it in <code>thirdparty-src/pins.json</code>, and re-pulls that version’s source if the pin moved. Touches the network.</li>
+<li><code>UpdatePins</code> — Runs <code>LatestTag</code> over every minor line already pinned in <code>thirdparty-src/pins.json</code>, refreshing each to its newest patch release. Touches the network.</li>
 </ul>
+<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
+mage generate:schema                    # regenerate schema/*.json from the Go API types
+
+mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
+mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
+mage generate:latestTag k3s v1.31       # same, for a k3s minor line
+mage generate:updatePins                # bump every pinned minor line, both distros, to its newest patch
+</code></pre>
+<p><code>LatestTag</code> is also how a <em>new</em> minor line is added: pass a prefix that <code>thirdparty-src/pins.json</code> does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2’s config is composed against k3s’s flags at the same version:</p>
+<pre><code class="language-sh">mage generate:latestTag k3s v1.37
+mage generate:latestTag rke2 v1.37
+</code></pre>
 <pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
 </code></pre>
@@ -259,6 +274,10 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 <li><strong><code>dev.go</code>:</strong> Defines convenience tasks under the <code>Dev</code> and <code>Test</code> namespaces.</li>
 <li><strong><code>gen-docs.go</code>:</strong> Performs Cobra command extraction and phase parser generation to update everything inside the <code>docs/</code> tree.</li>
 <li><strong><code>gen-schema.go</code>:</strong> Maps Go types to JSON schemas under <code>schema/</code>.</li>
+<li><strong><code>gen-engine-source.go</code>:</strong> Holds <code>Generate.PullEngineSource</code> and the clone-and-copy logic behind it.</li>
+<li><strong><code>gen-engine-latest-tag.go</code>:</strong> Holds <code>Generate.LatestTag</code>.</li>
+<li><strong><code>gen-engine-update-pins.go</code>:</strong> Holds <code>Generate.UpdatePins</code>.</li>
+<li><strong><code>engine-pins.go</code>:</strong> Shared, target-free layer over <code>thirdparty-src/pins.json</code>: reading, writing, tag parsing, and tag resolution used by the <code>gen-engine-*.go</code> targets.</li>
 <li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See <a href="build-flags.html">build-flags</a> for what each flag/env var does and why.</li>
 <li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
 </ul>
@@ -276,6 +295,8 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 <tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>schema/*.json</code></td><td style="text-align: left">JSON schemas for YAML validations</td><td style="text-align: left"><code>Generate.Schema</code></td></tr>
+<tr><td style="text-align: left"><code>thirdparty-src/&lt;distro&gt;/&lt;minor&gt;/*</code></td><td style="text-align: left">Raw pinned upstream k3s/RKE2 source</td><td style="text-align: left"><code>Generate.PullEngineSource</code> / <code>Generate.LatestTag</code></td></tr>
+<tr><td style="text-align: left"><code>thirdparty-src/pins.json</code></td><td style="text-align: left">Pinned upstream tags</td><td style="text-align: left"><code>Generate.LatestTag</code> / <code>Generate.UpdatePins</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -304,7 +325,7 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../dev/vault-library-choice.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dev/thirdparty-src.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -318,7 +339,7 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../dev/vault-library-choice.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dev/thirdparty-src.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

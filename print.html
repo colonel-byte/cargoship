@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-74ef8b54.js";
+            window.path_to_searchindex_js = "searchindex-f90320f1.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-555dbb5b.js"></script>
+        <script src="toc-a3419503.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1582,7 +1582,22 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 <ul>
 <li><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</li>
 <li><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</li>
+<li><code>PullEngineSource</code> — Fetches raw k3s/RKE2 source at the tags pinned in <code>thirdparty-src/pins.json</code> into <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>). Touches the network.</li>
+<li><code>LatestTag &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> — Resolves the newest non-RC upstream tag for that minor line, pins it in <code>thirdparty-src/pins.json</code>, and re-pulls that version’s source if the pin moved. Touches the network.</li>
+<li><code>UpdatePins</code> — Runs <code>LatestTag</code> over every minor line already pinned in <code>thirdparty-src/pins.json</code>, refreshing each to its newest patch release. Touches the network.</li>
 </ul>
+<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
+mage generate:schema                    # regenerate schema/*.json from the Go API types
+
+mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
+mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
+mage generate:latestTag k3s v1.31       # same, for a k3s minor line
+mage generate:updatePins                # bump every pinned minor line, both distros, to its newest patch
+</code></pre>
+<p><code>LatestTag</code> is also how a <em>new</em> minor line is added: pass a prefix that <code>thirdparty-src/pins.json</code> does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2’s config is composed against k3s’s flags at the same version:</p>
+<pre><code class="language-sh">mage generate:latestTag k3s v1.37
+mage generate:latestTag rke2 v1.37
+</code></pre>
 <pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
 </code></pre>
@@ -1595,6 +1610,10 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 <li><strong><code>dev.go</code>:</strong> Defines convenience tasks under the <code>Dev</code> and <code>Test</code> namespaces.</li>
 <li><strong><code>gen-docs.go</code>:</strong> Performs Cobra command extraction and phase parser generation to update everything inside the <code>docs/</code> tree.</li>
 <li><strong><code>gen-schema.go</code>:</strong> Maps Go types to JSON schemas under <code>schema/</code>.</li>
+<li><strong><code>gen-engine-source.go</code>:</strong> Holds <code>Generate.PullEngineSource</code> and the clone-and-copy logic behind it.</li>
+<li><strong><code>gen-engine-latest-tag.go</code>:</strong> Holds <code>Generate.LatestTag</code>.</li>
+<li><strong><code>gen-engine-update-pins.go</code>:</strong> Holds <code>Generate.UpdatePins</code>.</li>
+<li><strong><code>engine-pins.go</code>:</strong> Shared, target-free layer over <code>thirdparty-src/pins.json</code>: reading, writing, tag parsing, and tag resolution used by the <code>gen-engine-*.go</code> targets.</li>
 <li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See <a href="#build-flags-and-environment">build-flags</a> for what each flag/env var does and why.</li>
 <li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
 </ul>
@@ -1612,6 +1631,8 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 <tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>schema/*.json</code></td><td style="text-align: left">JSON schemas for YAML validations</td><td style="text-align: left"><code>Generate.Schema</code></td></tr>
+<tr><td style="text-align: left"><code>thirdparty-src/&lt;distro&gt;/&lt;minor&gt;/*</code></td><td style="text-align: left">Raw pinned upstream k3s/RKE2 source</td><td style="text-align: left"><code>Generate.PullEngineSource</code> / <code>Generate.LatestTag</code></td></tr>
+<tr><td style="text-align: left"><code>thirdparty-src/pins.json</code></td><td style="text-align: left">Pinned upstream tags</td><td style="text-align: left"><code>Generate.LatestTag</code> / <code>Generate.UpdatePins</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -1631,6 +1652,67 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 <pre><code class="language-sh">go run ./magefiles/core dagger:binary
 </code></pre>
 <p>Note that <code>magefiles/</code> itself remains its own <code>package main</code> for the <code>mage</code> CLI’s benefit; <code>core/core.go</code> is a separate package and binary, not part of that compiled unit.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="third-party-engine-source-thirdparty-src"><a class="header" href="#third-party-engine-source-thirdparty-src">Third-Party Engine Source (<code>thirdparty-src/</code>)</a></h1>
+<p>This document explains what lives under <code>thirdparty-src/</code> and why it’s handled differently from the rest of the repository.</p>
+<h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
+<p><code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> holds raw, unmodified source files pulled from an upstream engine repo (k3s and RKE2) at an exact tag — e.g. <code>thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}</code>, pulled from k3s-io/k3s at tag <code>v1.35.3+k3s1</code>. <code>version</code> is truncated to the minor version (<code>v1_35</code>, not the full <code>v1.35.3-k3s1</code> patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. RKE2 additionally pulls <code>zz_root.go</code> and <code>zz_k3sopts.go</code> — see “RKE2’s flag composition” below. The <code>zz_</code> prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under <code>src/pkg/engineconfig/gen</code>.</p>
+<p>These files exist so <code>src/pkg/engineconfig/extract</code> can statically parse them with <code>go/ast</code> to recover the <code>urfave/cli</code> flag declarations k3s/RKE2 ships for a given version. That, in turn, lets <code>mage generate:engineConfig</code> (see <code>magefiles/gen-engine-config.go</code>) generate a typed Go struct describing the valid <code>config.yaml</code> keys for that version — see <code>docs/agent/design-config-codegen.md</code> for the full design rationale.</p>
+<h2 id="why-source-files-instead-of-a-module-dependency"><a class="header" href="#why-source-files-instead-of-a-module-dependency">Why source files instead of a module dependency</a></h2>
+<p>k3s and RKE2 are not safe to <code>go get</code>/import as library dependencies: their <code>go.mod</code> files carry <code>replace</code> directives that would leak into (and corrupt) this module’s own dependency graph (see golang/go#30354). Statically parsing their source text with <code>go/parser</code> sidesteps that entirely — the files are never compiled, never imported, and never linked into any Cargoship binary. They exist purely as text for the extractor to read.</p>
+<h2 id="why-thirdparty-src-has-its-own-gomod"><a class="header" href="#why-thirdparty-src-has-its-own-gomod">Why <code>thirdparty-src/</code> has its own <code>go.mod</code></a></h2>
+<p>Because these files reference packages (<code>github.com/urfave/cli/v2</code>, <code>github.com/k3s-io/k3s/pkg/version</code>, …) that this repository does not vendor, letting the main module’s tooling discover them causes real breakage: <code>go build ./...</code>, <code>go vet</code>, and IDE tooling (gopls) all try to resolve those imports and fail.</p>
+<p><code>thirdparty-src/go.mod</code> declares a separate, empty module so the Go toolchain treats <code>thirdparty-src/</code> as outside the main module boundary. <code>go build ./...</code>/<code>go vet</code> from the repo root no longer descend into it. IDEs still open a second module context for it, which can surface unresolved-import diagnostics on the files themselves; the workspace’s <code>.vscode/settings.json</code> sets <code>gopls.directoryFilters</code> to <code>-thirdparty-src</code> to stop gopls from loading that module at all.</p>
+<h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
+<pre><code>thirdparty-src/
+  &lt;distro&gt;/                  # k3s or rke2
+    &lt;version&gt;/                # e.g. v1_35 (minor version only, see above)
+      zz_server.go             # verbatim upstream source
+      zz_agent.go
+      zz_root.go               # rke2 only -- commonFlag, shared by server/agent
+      zz_k3sopts.go            # rke2 only -- K3SFlagOption/copyFlag/dropFlag/hideFlag
+      SOURCE.txt               # repo, tag, resolved commit, and pulled file list
+  pins.json                    # the pinned tags and file lists, see below
+  go.mod                       # module boundary marker, see above
+</code></pre>
+<h2 id="rke2s-flag-composition"><a class="header" href="#rke2s-flag-composition">RKE2’s flag composition</a></h2>
+<p>RKE2 doesn’t declare its <code>config.yaml</code> flags outright the way k3s does. <code>zz_server.go</code>/<code>zz_agent.go</code> import k3s’s own command and wrap it at runtime via <code>mustCmdFromK3S(cmd, K3SFlagSet{...})</code> (defined in <code>zz_k3sopts.go</code>): a map, keyed by k3s flag name, of <code>copyFlag</code>/<code>dropFlag</code>/<code>hideFlag</code> (or an inline <code>{Usage: "...", Hide: true}</code>-style literal) saying whether that k3s flag survives into RKE2 at all, and whether it’s hidden. RKE2 then appends a small literal of its own additions (<code>serverFlag</code>/<code>deprecatedFlags</code>) and a shared <code>commonFlag</code> literal declared in <code>zz_root.go</code>.</p>
+<p><code>mage generate:engineConfig</code> reproduces this: for each RKE2 target it extracts the sibling k3s manifest (<code>thirdparty-src/k3s/&lt;version&gt;/</code>), applies the <code>K3SFlagSet</code> transform parsed from RKE2’s <code>zz_server.go</code>/<code>zz_agent.go</code>, then appends RKE2’s own additions and <code>commonFlag</code>. This is why an RKE2 version’s pull must always be paired with a k3s pull at the same minor version.</p>
+<p>Some of <code>commonFlag</code>’s entries have a computed <code>Name</code> (a package constant, e.g. <code>images.KubeAPIServer</code>, or a concatenation like <code>podtemplate.KubeAPIServer + "-extra-mount"</code>) rather than a string literal. Those aren’t statically resolvable to a flag name without also pulling and evaluating <code>pkg/images</code>/<code>pkg/podtemplate</code>, so they’re listed in the generated file’s “not resolvable” comment block instead of silently guessed at or dropped.</p>
+<h2 id="pulling-a-new-version"><a class="header" href="#pulling-a-new-version">Pulling a new version</a></h2>
+<p><code>thirdparty-src/pins.json</code> is the single source of truth for what gets pulled: one entry per upstream repo, listing the files to copy and every tag to copy them at.</p>
+<pre><code class="language-json">{
+  "distros": [
+    {
+      "name": "k3s",
+      "repo": "https://github.com/k3s-io/k3s",
+      "files": ["pkg/cli/cmds/server.go", "pkg/cli/cmds/agent.go"],
+      "tags": ["v1.36.4+k3s1", "v1.35.8+k3s1"]
+    },
+    {
+      "name": "rke2",
+      "repo": "https://github.com/rancher/rke2",
+      "files": [
+        "pkg/cli/cmds/server.go",
+        "pkg/cli/cmds/agent.go",
+        "pkg/cli/cmds/root.go",
+        "pkg/cli/cmds/k3sopts.go"
+      ],
+      "tags": ["v1.36.3+rke2r1", "v1.35.7+rke2r1"]
+    }
+  ]
+}
+</code></pre>
+<p>There is no destination path in the manifest: it is derived from <code>name</code> plus the tag’s major.minor, so <code>k3s</code> at <code>v1.35.8+k3s1</code> always lands in <code>thirdparty-src/k3s/v1_35/</code>. That keeps the truncation rule described above from drifting out of sync with the tag it was truncated from. A tag that does not start with <code>vMAJOR.MINOR.PATCH</code> is rejected rather than guessed at.</p>
+<p><code>mage generate:pullEngineSource</code> reads the manifest and, for each pinned tag, clones <code>repo</code>@<code>tag</code> to a throwaway temp directory, copies out <code>files</code> verbatim into the derived directory (prefixed <code>zz_</code>), and writes <code>SOURCE.txt</code> recording the repo, tag, and resolved commit for traceability. It never runs <code>go get</code> or touches this repo’s module graph.</p>
+<p>You rarely need to edit <code>pins.json</code> by hand. <code>mage generate:latestTag &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> resolves the newest non-RC tag upstream publishes for that minor line, pins it — replacing whatever that line held, or adding the line newest-first if it is new — and re-pulls that version’s source if the pin moved, so the manifest and the committed files can never disagree. When nothing moved it prints <code>unchanged</code> and writes nothing.</p>
+<pre><code class="language-sh">mage generate:latestTag k3s v1.37   # start tracking a new minor line
+mage generate:updatePins            # refresh every line already pinned
+</code></pre>
+<p><code>generate:updatePins</code> runs that same cycle over every minor line in the manifest, which is the usual way to answer “are we behind upstream?”. Both targets touch the network, and both leave struct generation to you: follow with <code>mage generate:engineConfig</code> for any version that moved. The version directory name is sanitized into a valid Go package name (dots become underscores) since it becomes the generated package’s directory and name directly.</p>
+<h2 id="consuming-it"><a class="header" href="#consuming-it">Consuming it</a></h2>
+<p><code>mage generate:engineConfig</code> walks every <code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> directory and writes generated structs to <code>src/pkg/engineconfig/gen/&lt;distro&gt;/&lt;version&gt;/</code>. For k3s (and any distro that declares its flags outright) it parses whichever of <code>zz_server.go</code>/<code>zz_agent.go</code> it finds directly; for RKE2 it composes as described above. See <code>docs/dev/mage.md</code> for the broader <code>Generate</code> namespace.</p>
+<p>It also (re)writes <code>src/pkg/engineconfig/gen/zz_registry.go</code>, wiring every distro/version it just generated into <code>gen.Registry</code> so nothing needs hand-maintaining as new versions are pulled. <code>src/types/distrocfg</code> (<code>RancherCommon.ConfigureEngine</code>) uses <code>gen.Lookup</code> to find the struct matching a node’s distro and minor version, and drops (with a warning) any <code>config.yaml</code> key that isn’t a real flag for it – falling back to the previous unvalidated, pass-everything-through behavior with a warning if that distro/version was never pulled/generated. See “Consumption: wired into <code>src/types/distrocfg</code>” in <code>docs/agent/design-config-codegen.md</code> for the full picture.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
 <p>Cargoship’s Ansible Vault support (<code>cargoship vault-encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
