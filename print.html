@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9af8ca6c.js";
+            window.path_to_searchindex_js = "searchindex-32590a3f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a3419503.js"></script>
@@ -1580,12 +1580,35 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
 <ul>
-<li><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</li>
-<li><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</li>
-<li><code>PullEngineSource</code> — Fetches raw k3s/RKE2 source at the tags pinned in <code>thirdparty-src/pins.json</code> into <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>). Touches the network.</li>
-<li><code>LatestTag &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> — Resolves the newest non-RC upstream tag for that minor line, pins it in <code>thirdparty-src/pins.json</code>, and re-pulls that version’s source if the pin moved. Touches the network.</li>
-<li><code>UpdatePins</code> — Runs <code>LatestTag</code> over every minor line already pinned in <code>thirdparty-src/pins.json</code>, refreshing each to its newest patch release. Touches the network.</li>
-<li><code>EngineConfig</code> — Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>src/pkg/engineconfig/gen/</code>.</li>
+<li>
+<p><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</p>
+</li>
+<li>
+<p><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</p>
+</li>
+<li>
+<p><code>PullEngineSource</code> — Fetches raw k3s/RKE2 source at the tags pinned in <code>thirdparty-src/pins.json</code> into <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>). Touches the network.</p>
+</li>
+<li>
+<p><code>LatestTag &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> — Resolves the newest non-RC upstream tag for that minor line, pins it in <code>thirdparty-src/pins.json</code>, and re-pulls that version’s source if the pin moved. Touches the network.</p>
+</li>
+<li>
+<p><code>UpdatePins</code> — Runs <code>LatestTag</code> over every minor line already pinned in <code>thirdparty-src/pins.json</code>, refreshing each to its newest patch release. Touches the network.</p>
+</li>
+<li>
+<p><code>Examples</code> — Renders <code>magefiles/templates/&lt;distro&gt;-distro.yaml.tmpl</code> into <code>example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/v&lt;version&gt;/distro.yaml</code>, one flavor per CNI (<code>example/rke2-cilium/</code>, <code>example/rke2-canal/</code>, <code>example/k3s-flannel/</code>), grouped by minor line (<code>v1_35/</code>, matching <code>thirdparty-src/&lt;distro&gt;/</code> and <code>src/pkg/engineconfig/gen/&lt;distro&gt;/</code>) and creating those directories as needed. Per flavor it renders once per tag of that distro pinned in <code>thirdparty-src/pins.json</code> and once per example directory that flavor already has on disk, so a template edit reaches the older examples instead of leaving them to drift. Everything that varies between versions is derived from the tag, except <code>imageConfig.images</code> and the digests, which come from that release’s published assets. Touches the network.</p>
+<p>Distros and their flavors are declared together in <code>exampleDistros</code> in <code>magefiles/examples.go</code>. Flavors differ by more than their image list: cilium replaces kube-proxy (<code>disable-kube-proxy: true</code>) and is configured through an <code>rke2-cilium</code> HelmChartConfig manifest, while canal and flannel run alongside kube-proxy and carry no manifest of their own. Adding a CNI means adding a flavor entry there, and a <code>{{ if }}</code> in that distro’s template for anything specific to it.</p>
+<p>What differs between the distros themselves sits in three hooks on the distro entry, so the rendering itself stays single-copy: <code>derive</code> builds the URLs only that distro has, <code>probe</code> names the URL whose absence retires a build, and <code>fetch</code> pulls anything else only the release can answer. RKE2 installs versioned <code>rke2-common</code>/<code>server</code>/<code>agent</code> RPMs from <code>rpm.rancher.io</code> and splits its images across a core manifest plus one per CNI. k3s installs a single binary straight from its GitHub release, ships flannel inside that binary — so <code>k3s-images.txt</code> is the whole list and there is nothing per-CNI to fetch — and publishes <code>sha256sum-amd64.txt</code>, which is where the binary’s <code>shasum</code> comes from rather than downloading 70 MB per version to hash it. Both distros install their distro’s selinux policy RPM.</p>
+<p>k3s examples share one copy of the unit files and killall script, kept in <code>example/k3s/core/</code> and referenced as <code>../../../k3s/core/…</code>; relative <code>source</code> paths resolve against the directory holding <code>distro.yaml</code>.</p>
+<p>Each RPM entry also carries a <code>shasum</code>, so cargoship can verify the file it downloads. Hashing an RPM means downloading it, and <code>rke2-common</code> alone is around 29 MB, so the digests are cached in <code>example/shasums.json</code>. It is a committed map keyed by RPM file name, each entry holding the <code>url</code> it was fetched from and its <code>sha256</code>, so the file reads as an inventory of what the examples install. Only files missing from it are fetched, which makes a re-render free and a new release cost just its own four RPMs. An entry whose <code>url</code> no longer matches the one being rendered is re-hashed rather than trusted, so moving an RPM cannot hand back a stale digest. Delete an entry to force it to be re-hashed.</p>
+<p>Before rendering, each build’s <code>rke2-common</code> RPM is checked (a <code>HEAD</code>, and only for URLs the cache has never seen). Rancher supersedes an <code>rke2rN</code> with the next revision and removes the old RPMs, while the git tag and image manifests stay up — so a build can look renderable and still install nothing. Those are skipped, and any example already on disk for one is deleted, along with its minor line directory if that empties it. As of August 2026 that covers <code>v1.35.0+rke2r2</code> and <code>v1.35.3+rke2r2</code>, replaced by <code>rke2r3</code>, and <code>v1.34.3+rke2r2</code> and <code>v1.34.6+rke2r2</code> — use the <code>rke2r3</code> release of those patches. Nothing is remembered about a skip, so a build that comes back is rendered again on the next run; a build that goes away is only noticed while it is still pinned or still on disk. The <code>shasum</code> on an individual file is still allowed to be missing — that path now only covers the odd file a still-published build lost.</p>
+</li>
+<li>
+<p><code>ExampleLine &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> — Renders an example for <em>every</em> non-RC release on one minor line of that distro, rather than only the pinned one, so <code>rke2 v1.36</code> backfills <code>v1.36.0+rke2r1</code> through the newest <code>v1.36</code> release into <code>example/rke2-cilium/v1_36/</code> and <code>example/rke2-canal/v1_36/</code>. The leading <code>v</code> is optional. Once written, <code>Examples</code> keeps those files current, since it re-renders every example directory on disk. Touches the network.</p>
+</li>
+<li>
+<p><code>EngineConfig</code> — Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>src/pkg/engineconfig/gen/</code>.</p>
+</li>
 </ul>
 <pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
@@ -1595,13 +1618,17 @@ mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it
 mage generate:latestTag k3s v1.31       # same, for a k3s minor line
 mage generate:updatePins                # bump every pinned minor line, both distros, to its newest patch
 mage generate:engineConfig              # regenerate src/pkg/engineconfig/gen/ from what is on disk
+mage generate:examples                  # re-render every example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/*/distro.yaml
+mage generate:exampleLine rke2 v1.36    # render an example for every rke2 release on the 1.36 line
+mage generate:exampleLine k3s 1.36      # same for k3s -- the leading v is optional
 </code></pre>
 <p><code>LatestTag</code> is also how a <em>new</em> minor line is added: pass a prefix that <code>thirdparty-src/pins.json</code> does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2’s config is composed against k3s’s flags at the same version:</p>
 <pre><code class="language-sh">mage generate:latestTag k3s v1.37
 mage generate:latestTag rke2 v1.37
 mage generate:engineConfig
+mage generate:examples
 </code></pre>
-<p>The usual order after any pin change is <code>updatePins</code> (or <code>latestTag</code>), then <code>engineConfig</code> — the first writes what the second reads, and only the pin-moving targets touch the network. <code>engineConfig</code> is fully offline.</p>
+<p>The usual order after any pin change is <code>updatePins</code> (or <code>latestTag</code>), then <code>engineConfig</code>, then <code>examples</code> — the first two write what the next one reads, and only the pin-moving targets touch the network for source. <code>engineConfig</code> is fully offline.</p>
 <hr>
 <h2 id="file-by-file-reference"><a class="header" href="#file-by-file-reference">File-by-File Reference</a></h2>
 <ul>
@@ -1615,7 +1642,12 @@ mage generate:engineConfig
 <li><strong><code>gen-engine-latest-tag.go</code>:</strong> Holds <code>Generate.LatestTag</code>.</li>
 <li><strong><code>gen-engine-update-pins.go</code>:</strong> Holds <code>Generate.UpdatePins</code>.</li>
 <li><strong><code>gen-engine-config.go</code>:</strong> Holds <code>Generate.EngineConfig</code>, including RKE2’s flag composition against k3s.</li>
+<li><strong><code>gen-examples.go</code>:</strong> Holds <code>Generate.Examples</code>.</li>
+<li><strong><code>gen-example-line.go</code>:</strong> Holds <code>Generate.ExampleLine</code>.</li>
+<li><strong><code>examples.go</code>:</strong> Shared, target-free layer behind both example targets: what an example is rendered from (the tag-derived fields and the fetched image manifests) and how one is written.</li>
+<li><strong><code>example-shasums.go</code>:</strong> The <code>example/shasums.json</code> cache, and the <code>sha256</code> function the example template hashes its remote files with.</li>
 <li><strong><code>engine-pins.go</code>:</strong> Shared, target-free layer over <code>thirdparty-src/pins.json</code>: reading, writing, tag parsing, and tag resolution used by the four <code>gen-engine-*.go</code> targets.</li>
+<li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code> and <code>k3s-distro.yaml.tmpl</code>, one per distro that has examples.</li>
 <li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See <a href="#build-flags-and-environment">build-flags</a> for what each flag/env var does and why.</li>
 <li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
 </ul>
@@ -1636,6 +1668,8 @@ mage generate:engineConfig
 <tr><td style="text-align: left"><code>src/pkg/engineconfig/gen/*</code></td><td style="text-align: left">Typed engine <code>config.yaml</code> structs per distro/version</td><td style="text-align: left"><code>Generate.EngineConfig</code></td></tr>
 <tr><td style="text-align: left"><code>thirdparty-src/&lt;distro&gt;/&lt;minor&gt;/*</code></td><td style="text-align: left">Raw pinned upstream k3s/RKE2 source</td><td style="text-align: left"><code>Generate.PullEngineSource</code> / <code>Generate.LatestTag</code></td></tr>
 <tr><td style="text-align: left"><code>thirdparty-src/pins.json</code></td><td style="text-align: left">Pinned upstream tags</td><td style="text-align: left"><code>Generate.LatestTag</code> / <code>Generate.UpdatePins</code></td></tr>
+<tr><td style="text-align: left"><code>example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/*/distro.yaml</code></td><td style="text-align: left">Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line</td><td style="text-align: left"><code>Generate.Examples</code></td></tr>
+<tr><td style="text-align: left"><code>example/shasums.json</code></td><td style="text-align: left">Cached sha256 of every remote file the examples hash</td><td style="text-align: left"><code>Generate.Examples</code> / <code>Generate.ExampleLine</code></td></tr>
 </tbody>
 </table>
 </div>
