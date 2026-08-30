@@ -8,6 +8,22 @@ Sync engine config (registries, audit, and pod security) to a cluster, draining 
 cargoship engine-config-sync [Distro Package] [flags]
 ```
 
+### Examples
+
+```
+# Sync registry, audit, and pod security config to every node that has drifted
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
+
+# Decrypt vault-encrypted registry credentials with a password file
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --vault-password-file ./vault-pass.txt
+
+# Restart at most 25% of the workers at a time
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
+
+# Sync without touching the local kubeconfig
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --update-kubeconfig=false
+```
+
 ### Options
 
 ```

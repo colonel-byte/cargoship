@@ -38,11 +38,12 @@ func newVaultEncryptCommand() *cobra.Command {
 	o := vaultEncryptOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "vault-encrypt [VALUE]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: lang.CmdVaultEncryptShort,
-		Long:  lang.CmdVaultEncryptLong,
-		RunE:  o.run,
+		Use:     "vault-encrypt [VALUE]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   lang.CmdVaultEncryptShort,
+		Long:    lang.CmdVaultEncryptLong,
+		Example: lang.CmdVaultEncryptExample,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)

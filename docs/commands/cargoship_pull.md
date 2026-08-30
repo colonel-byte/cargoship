@@ -8,6 +8,25 @@ Pulls a Cargoship package from a remote registry and save to the local file syst
 cargoship pull [Package] [flags]
 ```
 
+### Examples
+
+```
+# Pull a package into the current directory
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0
+
+# Pull it into ./build/ instead
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --output ./build/
+
+# Check the downloaded package against a known checksum
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --shasum 4a4f1f5eb0a1e3f2c9b6d0b2b6a0d3f4c5e6a7b8c9d0e1f2a3b4c5d6e7f8a9b0
+
+# Refuse to keep the package unless a signature validates against this key
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --key ./public-key.pem
+
+# Require a keyless signature from a known identity and OIDC issuer
+$ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --certificate-identity signer@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 ### Options
 
 ```

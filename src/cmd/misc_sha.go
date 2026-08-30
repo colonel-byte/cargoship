@@ -47,6 +47,7 @@ func newSha256SumCommand() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Aliases: []string{"sum"},
 		Short:   lang.CmdSha256SumShort,
+		Example: lang.CmdSha256SumExample,
 		RunE:    o.run,
 	}
 

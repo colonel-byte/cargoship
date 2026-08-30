@@ -8,6 +8,22 @@ Reset a cluster, stopping, uninstalling, and removing all data for a engine
 cargoship reset [flags]
 ```
 
+### Examples
+
+```
+# Reset an RKE2 cluster, uninstalling the engine and removing its data
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
+
+# Reset a K3s cluster
+$ cargoship reset --config ./cargoship-config.yaml --distro k3s --confirm
+
+# Reset at most five hosts at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --concurrency 5
+
+# Reset workers 25% at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --work-concurrency 25%
+```
+
 ### Options
 
 ```

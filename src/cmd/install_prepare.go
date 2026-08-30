@@ -47,6 +47,7 @@ func newInstallPrepareCommand() *cobra.Command {
 		Use:     "prepare [Distro Package]",
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDistroPrepareShort,
+		Example: lang.CmdDistroPrepareExample,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
