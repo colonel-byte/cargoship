@@ -18,6 +18,8 @@ package test
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,8 +29,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 )
 
-// TestCargoshipSha256Sum exercises the `sha256sum` command against a plain file,
-// its `sum` alias, extracting a member out of an archive, and its error paths.
+// TestCargoshipSha256Sum exercises the `sha256sum` command against a plain file, a URL, its
+// `sum` alias, extracting a member out of an archive, and its error paths.
 func TestCargoshipSha256Sum(t *testing.T) {
 	t.Run("hashes a plain file", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "hello.txt")
@@ -48,17 +50,23 @@ func TestCargoshipSha256Sum(t *testing.T) {
 		require.Equal(t, sha256File(t, path), strings.TrimSpace(stdout))
 	})
 
+	t.Run("hashes a remote file over http", func(t *testing.T) {
+		const body = "downloaded by the sha256sum url branch\n"
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			//nolint:errcheck // test server write to an in-process client
+			w.Write([]byte(body))
+		}))
+		t.Cleanup(srv.Close)
+
+		sum := sha256.Sum256([]byte(body))
+
+		stdout, _, err := e2e.Cargoship(t, "sha256sum", srv.URL+"/artifact.txt")
+		require.NoError(t, err)
+		require.Equal(t, hex.EncodeToString(sum[:]), strings.TrimSpace(stdout))
+	})
+
 	t.Run("extract path hashes a file inside the archive", func(t *testing.T) {
-		// The package is git-ignored and left behind by a previous create run, and its
-		// name carries the CNI flavor of the example it was built from, so match on the
-		// pattern rather than on one fixed filename.
-		matches, err := filepath.Glob("src/test/e2e/cargoship-rancher-rke2-*-1.35.0-rke2r1.tar.zst")
-		require.NoError(t, err)
-		if len(matches) == 0 {
-			t.Skip("no built package in src/test/e2e, run TestCargoshipCreate first")
-		}
-		archivePath, err := filepath.Abs(matches[0])
-		require.NoError(t, err)
+		archivePath := minimalPackage(t)
 
 		extractDir := t.TempDir()
 		require.NoError(t, archive.Decompress(t.Context(), archivePath, extractDir, archive.DecompressOpts{
@@ -69,6 +77,22 @@ func TestCargoshipSha256Sum(t *testing.T) {
 		stdout, _, err := e2e.Cargoship(t, "sha256sum", "--extract-path", "checksums.txt", archivePath)
 		require.NoError(t, err)
 		require.Equal(t, want, strings.TrimSpace(stdout))
+	})
+
+	t.Run("-e shorthand hashes the same member", func(t *testing.T) {
+		archivePath := minimalPackage(t)
+
+		want, _, err := e2e.Cargoship(t, "sha256sum", "--extract-path", "distro.yaml", archivePath)
+		require.NoError(t, err)
+
+		stdout, _, err := e2e.Cargoship(t, "sha256sum", "-e", "distro.yaml", archivePath)
+		require.NoError(t, err)
+		require.Equal(t, strings.TrimSpace(want), strings.TrimSpace(stdout))
+	})
+
+	t.Run("extract path naming a missing member errors", func(t *testing.T) {
+		_, _, err := e2e.Cargoship(t, "sha256sum", "--extract-path", "not-in-the-archive.txt", minimalPackage(t))
+		require.Error(t, err)
 	})
 
 	t.Run("missing file errors", func(t *testing.T) {

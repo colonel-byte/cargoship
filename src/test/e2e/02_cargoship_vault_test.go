@@ -63,6 +63,41 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		require.Equal(t, value, decrypted)
 	})
 
+	t.Run("CARGOSHIP_VAULT_PASSWORD is used when the password file is empty", func(t *testing.T) {
+		const value = "env-password-secret"
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
+
+		// The flag is marked required, so it still has to be present -- an empty value
+		// hands ResolveVaultPassword the fall-through to the environment.
+		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", "", value)
+		require.NoError(t, err)
+
+		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
+		require.NoError(t, err)
+		require.Equal(t, value, decrypted)
+	})
+
+	t.Run("ANSIBLE_VAULT_PASSWORD is used when CARGOSHIP_VAULT_PASSWORD is unset", func(t *testing.T) {
+		const value = "ansible-env-password-secret"
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
+		t.Setenv("ANSIBLE_VAULT_PASSWORD", password)
+
+		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", "", value)
+		require.NoError(t, err)
+
+		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
+		require.NoError(t, err)
+		require.Equal(t, value, decrypted)
+	})
+
+	t.Run("no password anywhere errors", func(t *testing.T) {
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
+		t.Setenv("ANSIBLE_VAULT_PASSWORD", "")
+
+		_, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", "", "value")
+		require.Error(t, err)
+	})
+
 	t.Run("empty stdin errors", func(t *testing.T) {
 		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault-encrypt", "--vault-password-file", passwordFile, "--no-color")
 		cmd.Stdin = strings.NewReader("")
@@ -74,7 +109,11 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("missing password flag errors", func(t *testing.T) {
+	// --vault-password-file is marked required, so omitting it fails in cobra before
+	// ResolveVaultPassword ever consults the environment.
+	t.Run("missing password flag errors even with the env var set", func(t *testing.T) {
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
+
 		_, _, err := e2e.Cargoship(t, "vault-encrypt", "value")
 		require.Error(t, err)
 	})

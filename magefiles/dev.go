@@ -126,6 +126,35 @@ func (Test) EndToEnd() error {
 	)
 }
 
+// EndToEndFast runs the parts of the e2e suite that need neither a cluster nor the large
+// example packages -- the misc and package command groups. Mirrors the e2e-noncluster CI job.
+func (Test) EndToEndFast() error {
+	if err := daggerBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
+		return err
+	}
+	e2eTmpDir, err := filepath.Abs(filepath.Join(buildDir, "tmp"))
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(e2eTmpDir, 0o755); err != nil {
+		return err
+	}
+	return sh.RunWithV(
+		map[string]string{
+			"CARGOSHIP_E2E_TMPDIR": e2eTmpDir,
+			"TMPDIR":               e2eTmpDir,
+		},
+		"go",
+		"test",
+		"-timeout=30m",
+		"github.com/colonel-byte/cargoship/src/test/e2e",
+		"-count=1",
+		"-v",
+		"-short",
+		"-skip", "TestClusterLifecycle",
+	)
+}
+
 // stopBootlooseContainers force-removes any leftover bootloose-managed containers (e.g. from
 // a previous e2e run that was killed before cluster teardown ran), so TestMain's bootloose
 // Create() isn't confused by stale/exited containers with the same names.

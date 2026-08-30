@@ -18,11 +18,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/test"
 	"github.com/k0sproject/bootloose/pkg/cluster"
 	"github.com/k0sproject/bootloose/pkg/config"
+	"github.com/stretchr/testify/require"
 	zconfig "github.com/zarf-dev/zarf/src/config"
 )
 
@@ -74,8 +76,20 @@ var (
 	}
 )
 
+var (
+	// rootDir is the repo root, which TestMain chdirs into before running any test.
+	rootDir string //nolint:gochecknoglobals
+
+	// The bootloose cluster is provisioned lazily by requireCluster, so a run that only
+	// touches the misc and package commands never starts a container and needs no Docker.
+	clusterOnce    sync.Once        //nolint:gochecknoglobals
+	testCluster    *cluster.Cluster //nolint:gochecknoglobals
+	testClusterErr error            //nolint:gochecknoglobals
+)
+
 func TestMain(m *testing.M) {
-	rootDir, err := filepath.Abs("../../../")
+	var err error
+	rootDir, err = filepath.Abs("../../../")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,36 +106,56 @@ func TestMain(m *testing.M) {
 	if _, err := os.Stat(e2e.CargoBinPath); err != nil {
 		log.Fatalf("cargoship binary %s not found: %v", e2e.CargoBinPath, err)
 	}
-	cluster, err := setup(ubuntu)
-	if err != nil {
-		os.Exit(1)
-	}
-
-	keyPath, err := filepath.Abs(ubuntu.Cluster.PrivateKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-	inv, err := renderClusterInventory(cluster, keyPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	invPath := filepath.Join(rootDir, "src/test/e2e/generated-cluster.yaml")
-	if err := writeClusterInventory(inv, invPath); err != nil {
-		log.Fatal(err)
-	}
-	e2e.ClusterConfigPath = invPath
-
-	// bootloose regenerates each container's SSH host key on every Create(), so ignore
-	// host key checking for the cargoship subprocesses this test binary spawns.
-	if err := os.Setenv("SSH_KNOWN_HOSTS", ""); err != nil {
-		log.Fatal(err)
-	}
 
 	code := m.Run()
-	if err := shutdown(cluster); err != nil {
-		os.Exit(1)
+
+	if minimalPkgDir != "" {
+		if err := os.RemoveAll(minimalPkgDir); err != nil {
+			log.Printf("failed to remove %s: %v", minimalPkgDir, err)
+		}
+	}
+	if testCluster != nil {
+		if err := shutdown(testCluster); err != nil {
+			os.Exit(1)
+		}
 	}
 	os.Exit(code)
+}
+
+// requireCluster provisions the shared bootloose cluster on first use and points e2e at the
+// generated inventory. Tests that drive the install group call it from their setup; every
+// other test leaves Docker untouched.
+func requireCluster(t *testing.T) {
+	t.Helper()
+
+	clusterOnce.Do(func() {
+		testCluster, testClusterErr = setup(ubuntu)
+		if testClusterErr != nil {
+			return
+		}
+
+		keyPath, err := filepath.Abs(ubuntu.Cluster.PrivateKey)
+		if err != nil {
+			testClusterErr = err
+			return
+		}
+		inv, err := renderClusterInventory(testCluster, keyPath)
+		if err != nil {
+			testClusterErr = err
+			return
+		}
+		invPath := filepath.Join(rootDir, "src/test/e2e/generated-cluster.yaml")
+		if err := writeClusterInventory(inv, invPath); err != nil {
+			testClusterErr = err
+			return
+		}
+		e2e.ClusterConfigPath = invPath
+
+		// bootloose regenerates each container's SSH host key on every Create(), so ignore
+		// host key checking for the cargoship subprocesses this test binary spawns.
+		testClusterErr = os.Setenv("SSH_KNOWN_HOSTS", "")
+	})
+	require.NoError(t, testClusterErr)
 }
 
 func setup(config config.Config) (*cluster.Cluster, error) {

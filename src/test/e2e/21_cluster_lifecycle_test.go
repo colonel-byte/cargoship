@@ -46,6 +46,10 @@ func TestClusterLifecycle(t *testing.T) {
 
 func (s *ClusterLifecycleSuite) SetupSuite() {
 	t := s.T()
+	if testing.Short() {
+		t.Skip("cluster lifecycle needs a bootloose cluster and a real distro package")
+	}
+	requireCluster(t)
 	s.prevKubeconfig, s.hadPrevKube = os.LookupEnv("KUBECONFIG")
 	s.kubeconfigPath = filepath.Join(t.TempDir(), "config")
 	s.Require().NoError(os.Setenv("KUBECONFIG", s.kubeconfigPath))
