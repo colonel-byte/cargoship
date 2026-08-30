@@ -12,6 +12,22 @@ Encrypts VALUE with Ansible Vault, producing a $ANSIBLE_VAULT-prefixed string th
 cargoship vault-encrypt [VALUE] [flags]
 ```
 
+### Examples
+
+```
+# Encrypt a registry password for a config file's user/pass/token field
+$ cargoship vault-encrypt my-registry-password --vault-password-file ./vault-pass.txt
+
+# Omit the value to be prompted for it, with the input hidden
+$ cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+
+# Encrypt a value piped in on stdin
+$ printf my-registry-password | cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+
+# Encrypt the contents of a file
+$ cargoship vault-encrypt --vault-password-file ./vault-pass.txt < ./registry-token.txt
+```
+
 ### Options
 
 ```

@@ -67,6 +67,7 @@ func newInstallResetCommand() *cobra.Command {
 		Use:     "reset",
 		Args:    cobra.ExactArgs(0),
 		Short:   lang.CmdDistroResetShort,
+		Example: lang.CmdDistroResetExample,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

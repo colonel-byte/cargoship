@@ -38,10 +38,74 @@ jobs:
         run: go mod download
 
       - name: Build
-        run: go build -mod=vendor -ldflags="-s -w" -v -o cargoship main.go
+        run: go build -mod=vendor -a -trimpath -gcflags=all="-l -B -C" -ldflags="-s -w" -v -o cargoship main.go
+        env:
+          CGO_ENABLED: 0
 
       - name: Upload binary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cargoship
           path: cargoship
+
+  # Compare the PR binary's size against the latest released binary and comment the diff on the PR
+  binary-size:
+    needs: build-e2e
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download PR binary
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: cargoship
+          path: pr-binary
+
+      - name: Setup cargoship (latest release)
+        uses: colonel-byte/setup-cargoship@4da2adc72270551216e4c58daae04ea8e3391948 # v1.0.0
+
+      - name: Compare sizes
+        id: compare
+        run: |
+          chmod +x pr-binary/cargoship
+          pr_size=$(stat -L -c%s pr-binary/cargoship)
+          released_bin=$(command -v cargoship)
+          released_size=$(stat -L -c%s "$released_bin")
+
+          diff=$((pr_size - released_size))
+          pct=$(awk -v d="$diff" -v r="$released_size" 'BEGIN { printf "%.2f", (d / r) * 100 }')
+
+          human() { numfmt --to=iec --suffix=B "$1"; }
+
+          if [ "$diff" -ge 0 ]; then
+            symbol="+"
+            abs_diff="$diff"
+          else
+            symbol="-"
+            abs_diff=$((-diff))
+          fi
+
+          body=$(cat <<EOF
+          ## Binary size
+
+          | | Size |
+          | --- | --- |
+          | Latest release | $(human "$released_size") |
+          | This PR | $(human "$pr_size") |
+          | Difference | ${symbol}$(human "$abs_diff") (${pct}%) |
+          EOF
+          )
+
+          echo "$body" >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo "markdown<<MDEOF"
+            echo "$body"
+            echo "MDEOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        if: always()
+        with:
+          header: binary-size
+          message: ${{ steps.compare.outputs.markdown }}

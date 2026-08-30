@@ -8,6 +8,22 @@ Prepares the nodes, including restarting the node if new kernel modules are enab
 cargoship prepare [Distro Package] [flags]
 ```
 
+### Examples
+
+```
+# Prepare every node in the config for an install
+$ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
+
+# Update /etc/hosts, the firewall, and fapolicyd on every node
+$ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm -H -F -f
+
+# Prepare at most five hosts at a time
+$ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --concurrency 5
+
+# Prepare workers 25% at a time
+$ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
+```
+
 ### Options
 
 ```

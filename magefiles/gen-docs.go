@@ -185,6 +185,11 @@ func generateSummary() error {
 			regex:  `(.+)\.md`,
 		},
 		{
+			title:  "Agent",
+			folder: "agent",
+			regex:  `(.+)\.md`,
+		},
+		{
 			title:  "Misc",
 			folder: "misc",
 			regex:  `(.+)\.md`,
@@ -257,8 +262,11 @@ func linkHandler(link string) string {
 }
 
 func phaseComment(mk *markdown.Markdown, p phase.Phase) {
-	mk.OrderedList(p.Title())
-	mk.PlainTextf("    - %s", p.Explanation())
+	// The title and its explanation are one list item, so they go in as one block. Written
+	// as two, the writer sees an ordered list followed by a bullet list and separates them
+	// with the blank line a new list needs -- which splits every item from its explanation
+	// and renders the whole page as a loose list.
+	mk.OrderedList(fmt.Sprintf("%s\n    - %s", p.Title(), p.Explanation()))
 }
 
 // writePhaseDoc renders one docs/phases/<name>.md page listing each phase's title and explanation.

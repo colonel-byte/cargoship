@@ -15,7 +15,6 @@ cargoship sign PACKAGE_SOURCE [flags]
 ### Examples
 
 ```
-
 # Sign an unsigned package
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
 
@@ -30,7 +29,6 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./priv
 
 # Sign with a cloud KMS key
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
-
 ```
 
 ### Options

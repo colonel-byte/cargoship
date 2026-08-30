@@ -17,6 +17,7 @@ package distro
 
 import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
+	"github.com/invopop/jsonschema"
 	"github.com/k0sproject/dig"
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
@@ -137,6 +138,21 @@ type ZarfDistroOS struct {
 	Kernel []string `json:"kernel,omitempty"`
 	// Environment maps environment variables cargoship sets on the host.
 	Environment map[string]string `json:"env,omitempty"`
+}
+
+// JSONSchemaExtend widens sysctl values to accept numbers alongside strings, so
+// unquoted numeric values in YAML validate.
+func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema) {
+	sysctl, ok := s.Properties.Get("sysctl")
+	if !ok {
+		return
+	}
+	sysctl.AdditionalProperties = &jsonschema.Schema{
+		OneOf: []*jsonschema.Schema{
+			{Type: "string"},
+			{Type: "number"},
+		},
+	}
 }
 
 // IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.

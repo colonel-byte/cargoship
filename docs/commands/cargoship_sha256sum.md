@@ -8,6 +8,22 @@ Generates a SHA256SUM for the given file
 cargoship sha256sum [ FILE | URL ] [flags]
 ```
 
+### Examples
+
+```
+# Checksum a local file
+$ cargoship sha256sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
+
+# Checksum a remote file, downloading it first
+$ cargoship sha256sum https://example.com/artifact.tar.gz
+
+# Checksum one file inside an archive, for use with a component's files.extractPath
+$ cargoship sha256sum ./artifact.tar.gz --extract-path ./bin/tool
+
+# Same thing, using the shorter alias
+$ cargoship sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
+```
+
 ### Options
 
 ```

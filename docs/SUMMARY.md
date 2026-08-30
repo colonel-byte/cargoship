@@ -45,10 +45,19 @@
 
 # Development
 
+- [build-flags](dev/build-flags.md)
 - [choice-in-memory-oci-registry](dev/choice-in-memory-oci-registry.md)
-- [choice-vault-library](dev/choice-vault-library.md)
 - [dagger](dev/dagger.md)
 - [mage](dev/mage.md)
+- [thirdparty-src](dev/thirdparty-src.md)
+
+
+-----------
+
+# Agent
+
+- [choice-vault-library](agent/choice-vault-library.md)
+- [design-config-codegen](agent/design-config-codegen.md)
 
 
 -----------

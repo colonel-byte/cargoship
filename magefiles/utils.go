@@ -68,11 +68,12 @@ func hostBuildLocal(oper string, arch string) error {
 	env := map[string]string{}
 	env["GOOS"] = oper
 	env["GOARCH"] = arch
+	env["CGO_ENABLED"] = "0"
 
 	gc := build.GCFLags()
 	ld := build.LDFlags("0.0.0", "")
 
-	goBuild := fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
+	goBuild := fmt.Sprintf(`go build -a -trimpath -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
 
 	fmt.Println("executing:\n  " + goBuild)
 
