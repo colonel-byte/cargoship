@@ -239,15 +239,16 @@ func pinTag(pins *enginePins, distro, prefix string) (string, error) {
 	return tag, nil
 }
 
-func latestTag(repoURL, prefix string) (string, error) {
+// remoteTags lists every non-RC upstream tag on a minor line ("v1.36"), in the order git
+// ls-remote returned them. Touches the network.
+func remoteTags(repoURL, prefix string) ([]string, error) {
 	lsRemoteCmd := exec.Command("git", "ls-remote", "--tags", "--refs", repoURL)
 	out, err := lsRemoteCmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("git ls-remote: %w", err)
+		return nil, fmt.Errorf("git ls-remote: %w", err)
 	}
 
-	var best string
-	var bestVer [3]int
+	var tags []string
 	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
 		if line == "" {
 			continue
@@ -259,7 +260,29 @@ func latestTag(repoURL, prefix string) (string, error) {
 		if strings.Contains(strings.ToLower(tag), "rc") {
 			continue
 		}
+		if _, err := tagVersion(tag); err != nil {
+			continue
+		}
+		tags = append(tags, tag)
+	}
 
+	if len(tags) == 0 {
+		return nil, fmt.Errorf("no non-RC tag matching prefix %q found for %s", prefix, repoURL)
+	}
+	return tags, nil
+}
+
+// latestTag is the highest-versioned of those tags. Ties on version (the same patch
+// released twice, v1.36.1+rke2r1 and +rke2r2) keep the first one ls-remote listed.
+func latestTag(repoURL, prefix string) (string, error) {
+	tags, err := remoteTags(repoURL, prefix)
+	if err != nil {
+		return "", err
+	}
+
+	var best string
+	var bestVer [3]int
+	for _, tag := range tags {
 		ver, err := tagVersion(tag)
 		if err != nil {
 			continue
@@ -268,10 +291,6 @@ func latestTag(repoURL, prefix string) (string, error) {
 			best = tag
 			bestVer = ver
 		}
-	}
-
-	if best == "" {
-		return "", fmt.Errorf("no non-RC tag matching prefix %q found for %s", prefix, repoURL)
 	}
 	return best, nil
 }
