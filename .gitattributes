@@ -1,3 +1,4 @@
+src/pkg/engineconfig/gen/**/zz_*.go linguist-generated
 docs/commands/**/*.md linguist-generated
 docs/phases/**/*.md linguist-generated
 thirdparty-src/** linguist-vendored
