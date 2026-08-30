@@ -23,6 +23,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
 	"github.com/k0sproject/dig"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/log"
@@ -192,7 +193,36 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		}
 	}
 
+	d.validateEngineConfig(ctx, dis.Spec.Version, host.IsController(), nodeConfig.DigMapping(config.EngineConfig))
+
 	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
+}
+
+// validateEngineConfig drops any config.yaml keys that aren't part of the flag set
+// mage generate:engineConfig extracted for this distro at the given engine version's minor
+// release (see src/pkg/engineconfig/gen), warning about each one removed. If no generated
+// config exists for this distro/version -- e.g. a version nobody has pulled/generated yet --
+// there's nothing to check against, so it warns once and leaves cfg untouched, falling back to
+// writing it exactly as before this check existed.
+func (d *RancherCommon) validateEngineConfig(ctx context.Context, version string, isController bool, cfg dig.Mapping) {
+	entry, ok := gen.Lookup(d.ID, version)
+	if !ok {
+		logger.From(ctx).Warn("no generated engine config schema for this distro/version, skipping config key validation", "distro", d.ID, "version", version)
+		return
+	}
+
+	target := entry.Agent
+	if isController {
+		target = entry.Server
+	}
+
+	valid := gen.Keys(target)
+	for k := range cfg {
+		if _, ok := valid[k]; !ok {
+			logger.From(ctx).Warn("engine config key not recognized for this distro/version, dropping it from config.yaml", "distro", d.ID, "version", version, "key", k)
+			delete(cfg, k)
+		}
+	}
 }
 
 func (d *RancherCommon) engineServiceRunning(h *cluster.ZarfHost) bool {
