@@ -47,6 +47,7 @@
 
 - [build-flags](dev/build-flags.md)
 - [dagger](dev/dagger.md)
+- [e2e-tests](dev/e2e-tests.md)
 - [mage](dev/mage.md)
 - [thirdparty-src](dev/thirdparty-src.md)
 
@@ -55,6 +56,7 @@
 
 # Agent
 
+- [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 
