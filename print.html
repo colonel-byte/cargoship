@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-67193e13.js";
+            window.path_to_searchindex_js = "searchindex-a18bf790.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-bdbef8da.js"></script>
+        <script src="toc-d3ea4f82.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1593,6 +1593,71 @@ $ cargoship version -o json
 </ol>
 <p>Dagger in this repository is strictly focused on binary compilation; other repository tasks like documentation generation, YAML schema updates, and GitHub releases are managed separately through Mage, mdBook, and GoReleaser.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="running-the-end-to-end-tests"><a class="header" href="#running-the-end-to-end-tests">Running the End-to-End Tests</a></h1>
+<p>The e2e suites drive the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. They do not import the command packages, so what they prove is that the shipped binary behaves, not that the internals compile. Everything below is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it.</p>
+<h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
+<pre><code>src/test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
+src/test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
+src/test/bootstrap.go      TestMain's chdir-to-repo-root and binary lookup
+src/test/registry.go       in-process OCI registry used by the publish/pull/sign tests
+</code></pre>
+<p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary.</p>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<p>Build the binary first. The suites look for it at <code>build/cargoship_&lt;goos&gt;_&lt;goarch&gt;</code> and <code>TestMain</code> aborts immediately if it is missing:</p>
+<pre><code class="language-console">$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+</code></pre>
+<p>This is enough for the tests. A build without the release linker flags leaves <code>cargoship version</code> reporting the unset placeholder values, which the tests tolerate — they assert the fields are present and non-empty, not what they contain.</p>
+<p>The binary is <strong>not</strong> rebuilt by <code>go test</code>. After changing anything under <code>src/</code>, rebuild it, or you will be testing the previous binary against the new expectations.</p>
+<h2 id="running"><a class="header" href="#running">Running</a></h2>
+<pre><code class="language-console">$ go test -mod=vendor -count=1 ./src/test/e2e/noncluster/...            # the whole group, about 6 seconds
+$ go test -mod=vendor -count=1 -short ./src/test/e2e/noncluster/...     # same, minus the real example package
+$ go test -mod=vendor -count=1 -v -timeout=30m ./src/test/e2e/noncluster/...
+</code></pre>
+<ul>
+<li><code>-count=1</code> disables the test result cache. Without it, a green run is cached and a rebuilt binary will not re-trigger it, since the binary is not one of the inputs <code>go test</code> hashes.</li>
+<li><code>-short</code> skips <code>TestCargoshipCreateExample</code>, which builds <code>example/rke2-cilium</code> for real and downloads roughly 1.5GB of engine artifacts and images. Everything else uses <code>testdata/minimal</code>, an image-free distro that builds into a 386-byte package in milliseconds.</li>
+<li><code>-timeout</code> defaults to 10 minutes, which is ample for a <code>-short</code> run and not necessarily enough for a full one on a cold cache.</li>
+</ul>
+<h3 id="one-test-or-one-subtest"><a class="header" href="#one-test-or-one-subtest">One test, or one subtest</a></h3>
+<p>Subtests are named as sentences, and <code>go test</code> replaces spaces with underscores in the <code>-run</code> pattern:</p>
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -run TestCargoshipSign ./src/test/e2e/noncluster/...
+$ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_overwrite' ./src/test/e2e/noncluster/...
+</code></pre>
+<p><code>-run</code> takes a regular expression matched against each path element, so <code>-run 'TestCargoship(Publish|Pull)'</code> selects a couple of suites and <code>-run 'TestCargoshipSign/.*overwrite.*'</code> selects by substring when the exact name is a mouthful.</p>
+<p>Those patterns are unanchored, which bites here because several suite names are prefixes of others: <code>-run TestCargoshipSign</code> also runs <code>TestCargoshipSignedRoundTrip</code>, and <code>-run TestCargoshipPull</code> also runs <code>TestCargoshipPullHTTP</code>. Anchor both elements to isolate exactly one subtest:</p>
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires_overwrite$' ./src/test/e2e/noncluster/...
+</code></pre>
+<h2 id="environment-variables-1"><a class="header" href="#environment-variables-1">Environment variables</a></h2>
+<ul>
+<li><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> — parent directory for the temp dirs the harness creates, one per <code>e2e.Cargoship</code> call, plus the shared minimal package. Unset means the system temp directory. Point it at <code>build/tmp</code> to keep all test scratch inside the repo, which makes it easy to see what a run left behind: <code>CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...</code>.</li>
+<li><strong><code>TMPDIR</code></strong> — respected by the binary itself for anything it does not put under its own <code>--tmpdir</code>. Worth setting alongside the above for the same reason.</li>
+<li><strong><code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG</code></strong> — set to any non-empty value to keep the in-memory registry’s request log for passing tests as well as failing ones. See “Artifacts and logs” below.</li>
+<li><strong><code>CARGOSHIP_CONFIG</code></strong> — the config file the binary loads. Only <code>TestCargoshipCreateExample</code> sets it (to <code>src/test/e2e/cargoship-config.yaml</code>); every other test passes flags explicitly so that what is being tested is visible in the test.</li>
+</ul>
+<h2 id="seeing-what-the-binary-actually-did"><a class="header" href="#seeing-what-the-binary-actually-did">Seeing what the binary actually did</a></h2>
+<p><code>e2e.Cargoship</code> runs the binary with <code>exec.PrintCfg()</code>, so its stdout and stderr are written through to the test process’s stdout and stderr, not into <code>t.Log</code>. <code>go test</code> buffers that per package and prints it only when the package fails; add <code>-v</code> to see it as it happens.</p>
+<p>Two flags are appended to every invocation automatically: <code>--no-color</code>, so assertions are matching plain text, and <code>--tmpdir &lt;fresh dir&gt;</code>, removed when the call returns.</p>
+<h2 id="artifacts-and-logs"><a class="header" href="#artifacts-and-logs">Artifacts and logs</a></h2>
+<ul>
+<li><strong>In-memory registry log.</strong> The registry used by the publish, pull and sign tests writes one line per HTTP request to a file under the user cache directory, <code>~/.cache/cargoship/e2e-logs/registry-&lt;timestamp&gt;.log</code> (<code>$XDG_CACHE_HOME/cargoship/e2e-logs</code> if that is set), named the way the CLI names its own log files in <code>logs/</code>, rather than to stderr where it would bury the test output. A passing test deletes its log; a failing one keeps it and prints the path in the failure output. Set <code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG=1</code> to keep the logs of passing tests too — the path is then printed by <code>go test -v</code> for every test that started a registry. That log is usually what explains a publish or pull that failed for a non-obvious reason.</li>
+<li><strong>Example packages.</strong> <code>TestCargoshipCreateExample</code> writes where <code>src/test/e2e/cargoship-config.yaml</code> points it, <code>src/test/e2e/</code>. Those <code>.tar.zst</code> files are gitignored, and they are large — delete them when done.</li>
+<li><strong>Per-call temp dirs</strong> are removed when each <code>e2e.Cargoship</code> call returns, including on failure, so nothing the binary wrote under <code>--tmpdir</code> survives for inspection. To keep it, reproduce the command by hand as described below.</li>
+</ul>
+<h2 id="debugging-a-failure"><a class="header" href="#debugging-a-failure">Debugging a failure</a></h2>
+<p>The most useful property of this suite is that every test is a CLI invocation. When one fails, take the command from the test output and run it yourself against the same binary:</p>
+<pre><code class="language-console">$ ./build/cargoship_linux_amd64 sign path/to/package.tar.zst --signing-key cosign.key --verify=always -k cosign.pub --log-level debug
+</code></pre>
+<p>Now nothing is cleaned up, <code>--log-level debug</code> is available, and you can iterate without recompiling anything.</p>
+<p>A few things that have cost time before:</p>
+<ul>
+<li><strong><code>--verify</code> needs its value attached.</strong> It is declared with a cobra <code>NoOptDefVal</code>, so <code>--verify always</code> parses <code>always</code> as a positional argument and fails with <code>accepts 1 arg(s), received 2</code>. Use <code>--verify=always</code>.</li>
+<li><strong>A stale binary</strong> produces failures that make no sense against the source you are reading. Rebuild, then rerun with <code>-count=1</code>.</li>
+<li><strong>Signing keys are generated per test</strong>, so two calls to the keypair helper deliberately produce unrelated keys. A “verification failed” in a test that expects success usually means the wrong pair was threaded through.</li>
+</ul>
+<p>To step through the harness itself (not the binary, which is a separate process), delve works on the test package as usual:</p>
+<pre><code class="language-console">$ dlv test ./src/test/e2e/noncluster -- -test.run 'TestCargoshipPull' -test.v
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="mage-tasks-and-automation"><a class="header" href="#mage-tasks-and-automation">Mage Tasks and Automation</a></h1>
 <p>This document explains how Cargoship uses <a href="https://magefile.org/">Mage</a> to orchestrate build, test, and generation tasks.</p>
 <h2 id="overview-1"><a class="header" href="#overview-1">Overview</a></h2>
@@ -1776,7 +1841,7 @@ mage generate:examples
 <h2 id="why-thirdparty-src-has-its-own-gomod"><a class="header" href="#why-thirdparty-src-has-its-own-gomod">Why <code>thirdparty-src/</code> has its own <code>go.mod</code></a></h2>
 <p>Because these files reference packages (<code>github.com/urfave/cli/v2</code>, <code>github.com/k3s-io/k3s/pkg/version</code>, …) that this repository does not vendor, letting the main module’s tooling discover them causes real breakage: <code>go build ./...</code>, <code>go vet</code>, and IDE tooling (gopls) all try to resolve those imports and fail.</p>
 <p><code>thirdparty-src/go.mod</code> declares a separate, empty module so the Go toolchain treats <code>thirdparty-src/</code> as outside the main module boundary. <code>go build ./...</code>/<code>go vet</code> from the repo root no longer descend into it. IDEs still open a second module context for it, which can surface unresolved-import diagnostics on the files themselves; the workspace’s <code>.vscode/settings.json</code> sets <code>gopls.directoryFilters</code> to <code>-thirdparty-src</code> to stop gopls from loading that module at all.</p>
-<h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
+<h2 id="layout-1"><a class="header" href="#layout-1">Layout</a></h2>
 <pre><code>thirdparty-src/
   &lt;distro&gt;/                  # k3s or rke2
     &lt;version&gt;/                # e.g. v1_35 (minor version only, see above)
@@ -1826,6 +1891,17 @@ mage generate:updatePins            # refresh every line already pinned
 <h2 id="consuming-it"><a class="header" href="#consuming-it">Consuming it</a></h2>
 <p><code>mage generate:engineConfig</code> walks every <code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> directory and writes generated structs to <code>src/pkg/engineconfig/gen/&lt;distro&gt;/&lt;version&gt;/</code>. For k3s (and any distro that declares its flags outright) it parses whichever of <code>zz_server.go</code>/<code>zz_agent.go</code> it finds directly; for RKE2 it composes as described above. See <code>docs/dev/mage.md</code> for the broader <code>Generate</code> namespace.</p>
 <p>It also (re)writes <code>src/pkg/engineconfig/gen/zz_registry.go</code>, wiring every distro/version it just generated into <code>gen.Registry</code> so nothing needs hand-maintaining as new versions are pulled. <code>src/types/distrocfg</code> (<code>RancherCommon.ConfigureEngine</code>) uses <code>gen.Lookup</code> to find the struct matching a node’s distro and minor version, and drops (with a warning) any <code>config.yaml</code> key that isn’t a real flag for it – falling back to the previous unvalidated, pass-everything-through behavior with a warning if that distro/version was never pulled/generated. See “Consumption: wired into <code>src/types/distrocfg</code>” in <code>docs/agent/design-config-codegen.md</code> for the full picture.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-googlego-containerregistry-and-not-distributiondistribution-for-the-in-memory-test-registry"><a class="header" href="#why-googlego-containerregistry-and-not-distributiondistribution-for-the-in-memory-test-registry">Why google/go-containerregistry and not distribution/distribution for the in-memory test registry</a></h1>
+<p>Cargoship’s e2e suite needs a real OCI registry to publish/pull against without a network dependency or a live registry container. <code>src/test/registry.go</code> provides <code>test.SetupInMemoryRegistry(t)</code>, which starts one in-process on a random localhost port and tears it down via <code>t.Cleanup</code>.</p>
+<p>ORAS (<code>oras.land/oras-go/v2</code>) isn’t a candidate here at all – it’s the <em>client</em> library Cargoship already uses in <code>src/pkg/coci</code> to talk to registries. It has no server implementation, so it can’t be “the registry” in a test; it’s what the CLI uses to talk to whichever registry the test stands up.</p>
+<p>The zarf project’s own <code>src/test/testutil/registry.go</code> (this package is modeled on it) uses <a href="https://github.com/distribution/distribution"><code>github.com/distribution/distribution/v3</code></a> – the reference registry server implementation – with its <code>inmemory</code> storage driver. That was the first thing tried here, and it was rejected:</p>
+<ul>
+<li><strong>Dependency weight.</strong> <code>distribution/distribution/v3</code> wasn’t a dependency of Cargoship at all before this (only present transitively in <code>go.sum</code>, unused). Adding it as a direct import and running <code>go mod tidy</code> pulled in a large new indirect tree: Redis and Prometheus clients, several <code>go.opentelemetry.io/otel/exporters/*</code> packages, logging bridges, etc. – dependencies of the registry’s optional storage/metrics backends that Cargoship will never use for an in-memory test double.</li>
+<li><strong>It broke the build.</strong> That new tree included <code>go.opentelemetry.io/otel/log v0.21.0</code>, which is not API-compatible with the <code>go.opentelemetry.io/otel v1.45.0</code> core Cargoship already pins elsewhere. <code>go build ./...</code> failed inside <code>go.opentelemetry.io/otel/exporters/stdout/stdoutlog</code> (<code>undefined: log.Value</code>, <code>v.Kind undefined</code>, etc.) – a version-skew problem with no clean fix short of forcing otel versions across the whole module.</li>
+</ul>
+<p><a href="https://github.com/google/go-containerregistry"><code>github.com/google/go-containerregistry</code></a>’s <code>pkg/registry</code> package was used instead. It’s the same kind of thing Cargoship’s own crane-adjacent tooling already depends on transitively (it was in <code>go.sum</code> already, unused), so promoting it to a direct dependency added exactly one new package to <code>vendor/</code> and nothing else – <code>go mod tidy</code> only moved the existing entry from indirect to direct. <code>pkg/registry.New()</code> returns a plain <code>http.Handler</code> with no storage-backend options to drag in a dependency tree: wrap it in a stock <code>net/http.Server</code>, <code>Listen</code> on <code>:0</code>, done.</p>
+<p>Net effect: same job (an in-memory OCI-compliant registry for tests), zero new transitive dependencies, no build breakage.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
 <p>Cargoship’s Ansible Vault support (<code>cargoship vault-encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
