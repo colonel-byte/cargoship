@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package test provides e2e tests for cargoship
-package test
+package noncluster
 
 import (
 	"crypto/sha256"

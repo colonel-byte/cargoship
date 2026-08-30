@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package test provides e2e tests for cargoship
-package test
+package noncluster
 
 import (
 	"os"
@@ -27,7 +26,7 @@ import (
 
 // minimalDistroDir is the tiny, image-free distro definition used by the package-group
 // tests. Paths are relative to the repo root, which TestMain chdirs into.
-const minimalDistroDir = "src/test/e2e/testdata/minimal"
+const minimalDistroDir = "src/test/e2e/noncluster/testdata/minimal"
 
 // cosignKeyPassword is the passphrase protecting the ephemeral signing keys handed out
 // by cosignKeyPair.

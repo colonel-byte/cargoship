@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package cluster
 
 import (
 	"log"
@@ -22,10 +22,9 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/test"
-	"github.com/k0sproject/bootloose/pkg/cluster"
+	blcluster "github.com/k0sproject/bootloose/pkg/cluster"
 	"github.com/k0sproject/bootloose/pkg/config"
 	"github.com/stretchr/testify/require"
-	zconfig "github.com/zarf-dev/zarf/src/config"
 )
 
 const (
@@ -80,40 +79,23 @@ var (
 	// rootDir is the repo root, which TestMain chdirs into before running any test.
 	rootDir string //nolint:gochecknoglobals
 
-	// The bootloose cluster is provisioned lazily by requireCluster, so a run that only
-	// touches the misc and package commands never starts a container and needs no Docker.
-	clusterOnce    sync.Once        //nolint:gochecknoglobals
-	testCluster    *cluster.Cluster //nolint:gochecknoglobals
-	testClusterErr error            //nolint:gochecknoglobals
+	// The bootloose cluster is provisioned lazily by requireCluster rather than in TestMain,
+	// so a filtered run (-short, or -run against a test that never calls it) still starts no
+	// container and needs no Docker.
+	clusterOnce    sync.Once          //nolint:gochecknoglobals
+	testCluster    *blcluster.Cluster //nolint:gochecknoglobals
+	testClusterErr error              //nolint:gochecknoglobals
 )
 
 func TestMain(m *testing.M) {
 	var err error
-	rootDir, err = filepath.Abs("../../../")
+	e2e, rootDir, err = test.Bootstrap()
 	if err != nil {
 		log.Fatal(err)
-	}
-	if err := os.Chdir(rootDir); err != nil {
-		log.Fatal(err)
-	}
-
-	e2e.Arch = zconfig.GetArch()
-	cargoBinPath, err := filepath.Abs(filepath.Join("build", test.GetCLIName()))
-	if err != nil {
-		log.Fatal(err)
-	}
-	e2e.CargoBinPath = cargoBinPath
-	if _, err := os.Stat(e2e.CargoBinPath); err != nil {
-		log.Fatalf("cargoship binary %s not found: %v", e2e.CargoBinPath, err)
 	}
 
 	code := m.Run()
 
-	if minimalPkgDir != "" {
-		if err := os.RemoveAll(minimalPkgDir); err != nil {
-			log.Printf("failed to remove %s: %v", minimalPkgDir, err)
-		}
-	}
 	if testCluster != nil {
 		if err := shutdown(testCluster); err != nil {
 			os.Exit(1)
@@ -123,8 +105,7 @@ func TestMain(m *testing.M) {
 }
 
 // requireCluster provisions the shared bootloose cluster on first use and points e2e at the
-// generated inventory. Tests that drive the install group call it from their setup; every
-// other test leaves Docker untouched.
+// generated inventory.
 func requireCluster(t *testing.T) {
 	t.Helper()
 
@@ -144,7 +125,7 @@ func requireCluster(t *testing.T) {
 			testClusterErr = err
 			return
 		}
-		invPath := filepath.Join(rootDir, "src/test/e2e/generated-cluster.yaml")
+		invPath := filepath.Join(rootDir, "src/test/e2e/cluster/generated-cluster.yaml")
 		if err := writeClusterInventory(inv, invPath); err != nil {
 			testClusterErr = err
 			return
@@ -158,14 +139,14 @@ func requireCluster(t *testing.T) {
 	require.NoError(t, testClusterErr)
 }
 
-func setup(config config.Config) (*cluster.Cluster, error) {
-	cluster, err := cluster.New(config)
+func setup(config config.Config) (*blcluster.Cluster, error) {
+	cluster, err := blcluster.New(config)
 	if err != nil {
 		return nil, err
 	}
 	return cluster, cluster.Create()
 }
 
-func shutdown(cluster *cluster.Cluster) error {
+func shutdown(cluster *blcluster.Cluster) error {
 	return cluster.Delete()
 }

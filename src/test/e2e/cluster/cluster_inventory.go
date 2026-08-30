@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package test is for testing the cluster creation
-package test
+// Package cluster holds the e2e tests that need a real multi-node cluster: the install
+// command group, driven against containers provisioned by bootloose. Running it requires
+// Docker. The misc and package groups live in the sibling noncluster package.
+package cluster
 
 import (
 	"fmt"

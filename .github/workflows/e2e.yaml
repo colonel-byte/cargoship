@@ -48,10 +48,10 @@ jobs:
           name: cargoship
           path: cargoship
 
-  # Run the parts of the e2e suite that drive the built binary without a cluster: the misc
-  # and package command groups. The bootloose cluster is provisioned lazily by the suite, so
-  # skipping the lifecycle test here means no container is ever started. -short additionally
-  # skips the example packages, which pull ~1.5GB of engine artifacts and images.
+  # Run the e2e group that needs no cluster: the misc and package command groups, which live
+  # in their own package so this job never compiles or runs anything bootloose-backed.
+  # -short additionally skips the example packages, which pull ~1.5GB of engine artifacts
+  # and images. The cluster group is not run here; it needs Docker and several minutes.
   e2e-noncluster:
     needs: build-e2e
     runs-on: ubuntu-latest
@@ -77,7 +77,7 @@ jobs:
           chmod +x "build/cargoship_$(go env GOOS)_$(go env GOARCH)"
 
       - name: Test
-        run: go test -mod=vendor -timeout 30m -count=1 -v -short -skip TestClusterLifecycle ./src/test/e2e/
+        run: go test -mod=vendor -timeout 30m -count=1 -v -short ./src/test/e2e/noncluster/...
 
   # Compare the PR binary's size against the latest released binary and comment the diff on the PR
   binary-size:
