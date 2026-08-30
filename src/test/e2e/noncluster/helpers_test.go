@@ -84,6 +84,21 @@ func copyPackage(t *testing.T, src string) string {
 	return dst
 }
 
+// signedPackage signs the shared testdata package with a fresh key pair and returns the
+// path to the signed copy together with the public key that verifies it. The signed copy
+// lives in t.TempDir(), so callers may re-sign or overwrite it freely.
+func signedPackage(t *testing.T) (pkgPath string, pubPath string) {
+	t.Helper()
+
+	privPath, pubPath := cosignKeyPair(t)
+	outDir := t.TempDir()
+	_, _, err := e2e.Cargoship(t, "sign", minimalPackage(t),
+		"--signing-key", privPath, "--signing-key-pass", cosignKeyPassword, "-o", outDir)
+	require.NoError(t, err)
+
+	return requireSinglePackage(t, outDir), pubPath
+}
+
 // cosignKeyPair generates an ephemeral cosign key pair in t.TempDir() and returns the
 // private and public key paths. Keys are generated per call rather than committed, so the
 // signing tests carry no key material in the repo and two calls yield unrelated keys --
