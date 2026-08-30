@@ -146,7 +146,7 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`example-shasums.go`:** The `example/shasums.json` cache, and the `sha256` function the example template hashes its remote files with.
 *   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the four `gen-engine-*.go` targets.
 *   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl` and `k3s-distro.yaml.tmpl`, one per distro that has examples.
-*   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction.
+*   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
 *   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
 
 ---
