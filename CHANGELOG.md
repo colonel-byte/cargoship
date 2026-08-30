@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.16.0](https://github.com/colonel-byte/cargoship/compare/v0.15.1...v0.16.0) (2026-08-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* generate rke2 and k3s example packages per CNI flavor ([#228](https://github.com/colonel-byte/cargoship/issues/228))
+
+### Features
+
+* generate rke2 and k3s example packages per CNI flavor ([#228](https://github.com/colonel-byte/cargoship/issues/228)) ([d9e5c0d](https://github.com/colonel-byte/cargoship/commit/d9e5c0d2dec0be80a48cdac082b4d5f4fbb91126))
+* generate typed engine config structs per distro and version ([#226](https://github.com/colonel-byte/cargoship/issues/226)) ([c2649b3](https://github.com/colonel-byte/cargoship/commit/c2649b3e10c2f5f88139dd8d841dce70b76997db))
+* pull pinned k3s and rke2 source into thirdparty-src ([#225](https://github.com/colonel-byte/cargoship/issues/225)) ([b8ee106](https://github.com/colonel-byte/cargoship/commit/b8ee10659b87616d67108cacacf7dcdd66aca27e))
+* validate engine config keys against the generated schemas ([#227](https://github.com/colonel-byte/cargoship/issues/227)) ([b959ef5](https://github.com/colonel-byte/cargoship/commit/b959ef581a873d2188625daf8fac90ae845ecb50))
+
+
+### Documentation
+
+* add usage examples to every cargoship subcommand ([#230](https://github.com/colonel-byte/cargoship/issues/230)) ([d4d7528](https://github.com/colonel-byte/cargoship/commit/d4d7528940ee174847782d754f3a532743e309ed))
+* expand the mage target reference ([#224](https://github.com/colonel-byte/cargoship/issues/224)) ([84c60f7](https://github.com/colonel-byte/cargoship/commit/84c60f77bc3a0758b73b02c3ee66faaa8c2f8501))
+
+
+### CI/CD
+
+* add commit hash ([#231](https://github.com/colonel-byte/cargoship/issues/231)) ([b9ac48a](https://github.com/colonel-byte/cargoship/commit/b9ac48aacab5675b1af960d5503d60a2ee78a20a))
+
 ## [0.15.1](https://github.com/colonel-byte/cargoship/compare/v0.15.0...v0.15.1) (2026-08-29)
 
 
