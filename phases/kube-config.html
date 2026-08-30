@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-32590a3f.js";
+            window.path_to_searchindex_js = "../searchindex-11928320.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a3419503.js"></script>
+        <script src="../toc-bdbef8da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,44 +183,37 @@
                     <main>
                         <h2 id="kube-config-phases"><a class="header" href="#kube-config-phases">kube-config phases</a></h2>
 <ol>
-<li>
-<p>Connect to hosts</p>
+<li>Connect to hosts
 <ul>
 <li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
 </ul>
 </li>
-<li>
-<p>Detect host operating systems</p>
+<li>Detect host operating systems
 <ul>
 <li>Gathers information about the remote host, including: OS and OS version</li>
 </ul>
 </li>
-<li>
-<p>Acquire exclusive host lock</p>
+<li>Acquire exclusive host lock
 <ul>
 <li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
 </ul>
 </li>
-<li>
-<p>Gather host facts</p>
+<li>Gather host facts
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
 </ul>
 </li>
-<li>
-<p>Updating kubeconfig file with the current cluster</p>
+<li>Updating kubeconfig file with the current cluster
 <ul>
 <li>If enabled, this will update the local kubeconfig with the admin creds for the current distro</li>
 </ul>
 </li>
-<li>
-<p>Release exclusive host lock</p>
+<li>Release exclusive host lock
 <ul>
 <li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
 </ul>
 </li>
-<li>
-<p>Disconnect from hosts</p>
+<li>Disconnect from hosts
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
 </ul>

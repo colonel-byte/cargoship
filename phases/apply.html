@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-32590a3f.js";
+            window.path_to_searchindex_js = "../searchindex-11928320.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a3419503.js"></script>
+        <script src="../toc-bdbef8da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,170 +183,142 @@
                     <main>
                         <h2 id="apply-phases"><a class="header" href="#apply-phases">apply phases</a></h2>
 <ol>
-<li>
-<p>Connect to hosts</p>
+<li>Connect to hosts
 <ul>
 <li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
 </ul>
 </li>
-<li>
-<p>Detect host operating systems</p>
+<li>Detect host operating systems
 <ul>
 <li>Gathers information about the remote host, including: OS and OS version</li>
 </ul>
 </li>
-<li>
-<p>Acquire exclusive host lock</p>
+<li>Acquire exclusive host lock
 <ul>
 <li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
 </ul>
 </li>
-<li>
-<p>Gather host facts</p>
+<li>Gather host facts
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
 </ul>
 </li>
-<li>
-<p>Validate hosts</p>
+<li>Validate hosts
 <ul>
 <li>Verifying that each node in the cluster has a unique name and private address,</li>
 </ul>
 </li>
-<li>
-<p>Gathering facts about the distro installed</p>
+<li>Gathering facts about the distro installed
 <ul>
 <li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
 </ul>
 </li>
-<li>
-<p>Prepare hosts</p>
+<li>Prepare hosts
 <ul>
 <li>Updates the remote nodes; environment variables and sysctl</li>
 </ul>
 </li>
-<li>
-<p>Prepare hosts - Enterprise Linux support</p>
+<li>Prepare hosts - Enterprise Linux support
 <ul>
 <li>Installs container-selinux on systems that have SELinux enabled on them</li>
 </ul>
 </li>
-<li>
-<p>Prepare hosts - Enterprise Linux support - Fapolicyd</p>
+<li>Prepare hosts - Enterprise Linux support - Fapolicyd
 <ul>
 <li>Creates the distro supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules</li>
 </ul>
 </li>
-<li>
-<p>Updating hosts file for clusters nodes</p>
+<li>Updating hosts file for clusters nodes
 <ul>
 <li>If enabled, then this will modify the <code>/etc/hosts</code> file on the remote nodes with the fully qualified domain name for each node in the cluster</li>
 </ul>
 </li>
-<li>
-<p>Updating hosts firewalld service</p>
+<li>Updating hosts firewalld service
 <ul>
 <li>If enabled, then this will create a firewalld ipsets file with the known engine cidr blocks for the pod and service networks, and create a firewalld ipsets to allow each node in cluster to access all ports on the node</li>
 </ul>
 </li>
-<li>
-<p>Updating hosts firewalld ports</p>
+<li>Updating hosts firewalld ports
 <ul>
 <li>If enabled, this will open any ports in the <code>.ports</code> section for each remote node</li>
 </ul>
 </li>
-<li>
-<p>Updating hosts firewalld policies</p>
+<li>Updating hosts firewalld policies
 <ul>
 <li>If enabled, this create firewalld policies. This is controlled by the inventory file.</li>
 </ul>
 </li>
-<li>
-<p>Upload files to hosts</p>
+<li>Upload files to hosts
 <ul>
 <li>Uploads the distro agnostic files to each remote node</li>
 </ul>
 </li>
-<li>
-<p>Upload files to hosts – RPM</p>
+<li>Upload files to hosts – RPM
 <ul>
 <li>If the remote node is an Enterprise Linux and the Distro package includes any files for those systems</li>
 </ul>
 </li>
-<li>
-<p>Upload files to hosts – APT</p>
+<li>Upload files to hosts – APT
 <ul>
 <li>If the remote node is a Debian based Operating System and the Distro package includes any files for those systems</li>
 </ul>
 </li>
-<li>
-<p>Upload files to hosts – Binaries</p>
+<li>Upload files to hosts – Binaries
 <ul>
 <li>Catch all phase if the combination of Operating System and Distro don’t have other install methods</li>
 </ul>
 </li>
-<li>
-<p>Configure engine</p>
+<li>Configure engine
 <ul>
 <li>Runs distro specific operations</li>
 </ul>
 </li>
-<li>
-<p>Initialize Controller</p>
+<li>Initialize Controller
 <ul>
 <li>If the remote node does not have a running controller service, and is a controller, install the engine and start each service sequentially</li>
 </ul>
 </li>
-<li>
-<p>Initialize Worker</p>
+<li>Initialize Worker
 <ul>
 <li>If the remote node does not have a running worker service, and is not a controller, install the engine and start each service by the set concurrency limit</li>
 </ul>
 </li>
-<li>
-<p>Upgrade Controller</p>
+<li>Upgrade Controller
 <ul>
 <li>If the remote node is a controller and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node sequentially</li>
 </ul>
 </li>
-<li>
-<p>Upgrade Worker</p>
+<li>Upgrade Worker
 <ul>
 <li>If the remote node is a worker and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node by the set concurrency limit</li>
 </ul>
 </li>
-<li>
-<p>Sync Registry Config Controller</p>
+<li>Sync Registry Config Controller
 <ul>
 <li>If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially</li>
 </ul>
 </li>
-<li>
-<p>Sync Registry Config Worker</p>
+<li>Sync Registry Config Worker
 <ul>
 <li>If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit</li>
 </ul>
 </li>
-<li>
-<p>Updating kubeconfig file with the current cluster</p>
+<li>Updating kubeconfig file with the current cluster
 <ul>
 <li>If enabled, this will update the local kubeconfig with the admin creds for the current distro</li>
 </ul>
 </li>
-<li>
-<p>Labeling nodes with their profile group</p>
+<li>Labeling nodes with their profile group
 <ul>
 <li>If enabled, this checks each node’s node-role.kubernetes.io/<profile> label and adds it, set to “true”, when missing or set to anything else</profile></li>
 </ul>
 </li>
-<li>
-<p>Release exclusive host lock</p>
+<li>Release exclusive host lock
 <ul>
 <li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
 </ul>
 </li>
-<li>
-<p>Disconnect from hosts</p>
+<li>Disconnect from hosts
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
 </ul>

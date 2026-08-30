@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-32590a3f.js";
+            window.path_to_searchindex_js = "../searchindex-11928320.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a3419503.js"></script>
+        <script src="../toc-bdbef8da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,6 +185,19 @@
 <h2 id="cargoship-publish"><a class="header" href="#cargoship-publish">cargoship publish</a></h2>
 <p>Publish the Cargoship Package to an OCI registry</p>
 <pre><code>cargoship publish [Package] [REPOSITORY] [flags]
+</code></pre>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code># Publish a package to an OCI registry
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org
+
+# Publish and re-sign the package with a different key
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org --signing-key ./private-key.pem --confirm
+
+# Retry failed layer uploads over a slow link
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org --retries 3 --oci-concurrency 3
+
+# Refuse to publish unless the package carries a signature this key validates
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org --verify=always --key ./public-key.pem
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main

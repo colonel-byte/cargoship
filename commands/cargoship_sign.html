@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-32590a3f.js";
+            window.path_to_searchindex_js = "../searchindex-11928320.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a3419503.js"></script>
+        <script src="../toc-bdbef8da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -189,8 +189,7 @@
 <pre><code>cargoship sign PACKAGE_SOURCE [flags]
 </code></pre>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
-<pre><code>
-# Sign an unsigned package
+<pre><code># Sign an unsigned package
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
 
 # Re-sign with a new key (overwrite existing signature)
@@ -204,7 +203,6 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./priv
 
 # Sign with a cloud KMS key
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
-
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main

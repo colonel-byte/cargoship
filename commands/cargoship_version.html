@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-32590a3f.js";
+            window.path_to_searchindex_js = "../searchindex-11928320.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a3419503.js"></script>
+        <script src="../toc-bdbef8da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,6 +187,16 @@
 <h3 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h3>
 <p>Displays the version of the release that the current binary was built from.</p>
 <pre><code>cargoship version [flags]
+</code></pre>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code># Print the version of the running binary
+$ cargoship version
+
+# Print the full build information as YAML
+$ cargoship version --output yaml
+
+# Print it as JSON, for piping into jq
+$ cargoship version -o json
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>  -h, --help                  help for version

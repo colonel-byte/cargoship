@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-32590a3f.js";
+            window.path_to_searchindex_js = "../searchindex-11928320.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a3419503.js"></script>
+        <script src="../toc-bdbef8da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,6 +185,19 @@
 <h2 id="cargoship-reset"><a class="header" href="#cargoship-reset">cargoship reset</a></h2>
 <p>Reset a cluster, stopping, uninstalling, and removing all data for a engine</p>
 <pre><code>cargoship reset [flags]
+</code></pre>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code># Reset an RKE2 cluster, uninstalling the engine and removing its data
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
+
+# Reset a K3s cluster
+$ cargoship reset --config ./cargoship-config.yaml --distro k3s --confirm
+
+# Reset at most five hosts at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --concurrency 5
+
+# Reset workers 25% at a time
+$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --work-concurrency 25%
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>  -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)

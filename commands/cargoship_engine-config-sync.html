@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-32590a3f.js";
+            window.path_to_searchindex_js = "../searchindex-11928320.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a3419503.js"></script>
+        <script src="../toc-bdbef8da.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,6 +185,19 @@
 <h2 id="cargoship-engine-config-sync"><a class="header" href="#cargoship-engine-config-sync">cargoship engine-config-sync</a></h2>
 <p>Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted</p>
 <pre><code>cargoship engine-config-sync [Distro Package] [flags]
+</code></pre>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code># Sync registry, audit, and pod security config to every node that has drifted
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
+
+# Decrypt vault-encrypted registry credentials with a password file
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --vault-password-file ./vault-pass.txt
+
+# Restart at most 25% of the workers at a time
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
+
+# Sync without touching the local kubeconfig
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --update-kubeconfig=false
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>  -c, --concurrency int              Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
