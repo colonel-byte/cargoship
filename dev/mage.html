@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f90320f1.js";
+            window.path_to_searchindex_js = "../searchindex-9af8ca6c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-a3419503.js"></script>
@@ -193,7 +193,7 @@
 </ul>
 <p>The entry point of the automation layer is <code>magefiles/core/core.go</code>, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.</p>
 <h2 id="namespace-architecture"><a class="header" href="#namespace-architecture">Namespace Architecture</a></h2>
-<p>Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as <code>mage &lt;namespace&gt;:&lt;target&gt;</code>, and target names are case-insensitive, so <code>mage generate:document</code> and <code>mage generate:Document</code> are the same command. Run <code>mage -l</code> for the authoritative list on your checkout.</p>
+<p>Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as <code>mage &lt;namespace&gt;:&lt;target&gt;</code>, and target names are case-insensitive, so <code>mage generate:engineconfig</code> and <code>mage generate:engineConfig</code> are the same command. Run <code>mage -l</code> for the authoritative list on your checkout.</p>
 <h3 id="dagger-namespace"><a class="header" href="#dagger-namespace"><code>Dagger</code> Namespace</a></h3>
 <p>The <code>Dagger</code> namespace is the default target and the primary build path. It manages containerized and reproducible builds of the Cargoship binary:</p>
 <ul>
@@ -249,6 +249,7 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 <li><code>PullEngineSource</code> — Fetches raw k3s/RKE2 source at the tags pinned in <code>thirdparty-src/pins.json</code> into <code>thirdparty-src/</code> (see <a href="thirdparty-src.html">thirdparty-src</a>). Touches the network.</li>
 <li><code>LatestTag &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> — Resolves the newest non-RC upstream tag for that minor line, pins it in <code>thirdparty-src/pins.json</code>, and re-pulls that version’s source if the pin moved. Touches the network.</li>
 <li><code>UpdatePins</code> — Runs <code>LatestTag</code> over every minor line already pinned in <code>thirdparty-src/pins.json</code>, refreshing each to its newest patch release. Touches the network.</li>
+<li><code>EngineConfig</code> — Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="thirdparty-src.html">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>src/pkg/engineconfig/gen/</code>.</li>
 </ul>
 <pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
@@ -257,14 +258,14 @@ mage generate:pullEngineSource          # re-pull every tag already pinned in th
 mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
 mage generate:latestTag k3s v1.31       # same, for a k3s minor line
 mage generate:updatePins                # bump every pinned minor line, both distros, to its newest patch
+mage generate:engineConfig              # regenerate src/pkg/engineconfig/gen/ from what is on disk
 </code></pre>
 <p><code>LatestTag</code> is also how a <em>new</em> minor line is added: pass a prefix that <code>thirdparty-src/pins.json</code> does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2’s config is composed against k3s’s flags at the same version:</p>
 <pre><code class="language-sh">mage generate:latestTag k3s v1.37
 mage generate:latestTag rke2 v1.37
+mage generate:engineConfig
 </code></pre>
-<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
-mage generate:schema                    # regenerate schema/*.json from the Go API types
-</code></pre>
+<p>The usual order after any pin change is <code>updatePins</code> (or <code>latestTag</code>), then <code>engineConfig</code> — the first writes what the second reads, and only the pin-moving targets touch the network. <code>engineConfig</code> is fully offline.</p>
 <hr>
 <h2 id="file-by-file-reference"><a class="header" href="#file-by-file-reference">File-by-File Reference</a></h2>
 <ul>
@@ -277,7 +278,8 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 <li><strong><code>gen-engine-source.go</code>:</strong> Holds <code>Generate.PullEngineSource</code> and the clone-and-copy logic behind it.</li>
 <li><strong><code>gen-engine-latest-tag.go</code>:</strong> Holds <code>Generate.LatestTag</code>.</li>
 <li><strong><code>gen-engine-update-pins.go</code>:</strong> Holds <code>Generate.UpdatePins</code>.</li>
-<li><strong><code>engine-pins.go</code>:</strong> Shared, target-free layer over <code>thirdparty-src/pins.json</code>: reading, writing, tag parsing, and tag resolution used by the <code>gen-engine-*.go</code> targets.</li>
+<li><strong><code>gen-engine-config.go</code>:</strong> Holds <code>Generate.EngineConfig</code>, including RKE2’s flag composition against k3s.</li>
+<li><strong><code>engine-pins.go</code>:</strong> Shared, target-free layer over <code>thirdparty-src/pins.json</code>: reading, writing, tag parsing, and tag resolution used by the four <code>gen-engine-*.go</code> targets.</li>
 <li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See <a href="build-flags.html">build-flags</a> for what each flag/env var does and why.</li>
 <li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
 </ul>
@@ -295,6 +297,7 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 <tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>schema/*.json</code></td><td style="text-align: left">JSON schemas for YAML validations</td><td style="text-align: left"><code>Generate.Schema</code></td></tr>
+<tr><td style="text-align: left"><code>src/pkg/engineconfig/gen/*</code></td><td style="text-align: left">Typed engine <code>config.yaml</code> structs per distro/version</td><td style="text-align: left"><code>Generate.EngineConfig</code></td></tr>
 <tr><td style="text-align: left"><code>thirdparty-src/&lt;distro&gt;/&lt;minor&gt;/*</code></td><td style="text-align: left">Raw pinned upstream k3s/RKE2 source</td><td style="text-align: left"><code>Generate.PullEngineSource</code> / <code>Generate.LatestTag</code></td></tr>
 <tr><td style="text-align: left"><code>thirdparty-src/pins.json</code></td><td style="text-align: left">Pinned upstream tags</td><td style="text-align: left"><code>Generate.LatestTag</code> / <code>Generate.UpdatePins</code></td></tr>
 </tbody>
