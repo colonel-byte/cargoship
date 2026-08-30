@@ -25,7 +25,7 @@ func TestCargoshipCreate(t *testing.T) {
 	t.Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
 
 	t.Run("cargoship create package, amd64", func(t *testing.T) {
-		_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2/v1.35.0-rke2r1")
+		_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2-cilium/v1_35/v1.35.0-rke2r1")
 		require.NoError(t, err)
 	})
 }

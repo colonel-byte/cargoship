@@ -49,7 +49,15 @@ func TestCargoshipSha256Sum(t *testing.T) {
 	})
 
 	t.Run("extract path hashes a file inside the archive", func(t *testing.T) {
-		archivePath, err := filepath.Abs("src/test/e2e/cargoship-rancher-rke2-amd64-1.35.0-rke2r1.tar.zst")
+		// The package is git-ignored and left behind by a previous create run, and its
+		// name carries the CNI flavor of the example it was built from, so match on the
+		// pattern rather than on one fixed filename.
+		matches, err := filepath.Glob("src/test/e2e/cargoship-rancher-rke2-*-1.35.0-rke2r1.tar.zst")
+		require.NoError(t, err)
+		if len(matches) == 0 {
+			t.Skip("no built package in src/test/e2e, run TestCargoshipCreate first")
+		}
+		archivePath, err := filepath.Abs(matches[0])
 		require.NoError(t, err)
 
 		extractDir := t.TempDir()

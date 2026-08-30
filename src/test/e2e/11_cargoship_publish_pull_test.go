@@ -31,7 +31,7 @@ func TestCargoshipPublishPullRoundTrip(t *testing.T) {
 	t.Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
 
 	createDir := t.TempDir()
-	_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2/v1.35.0-rke2r1", "-o", createDir)
+	_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2-cilium/v1_35/v1.35.0-rke2r1", "-o", createDir)
 	require.NoError(t, err)
 
 	published, err := filepath.Glob(filepath.Join(createDir, "*.tar.zst"))
@@ -43,9 +43,10 @@ func TestCargoshipPublishPullRoundTrip(t *testing.T) {
 
 	// Publish always tags the package as "<repository>/<metadata.name>:<metadata.version>",
 	// regardless of the reference passed on the CLI, so the destination below resolves to
-	// "<addr>/e2e-test/rancher-rke2:1.35.0-rke2r1".
+	// "<addr>/e2e-test/rancher-rke2-cilium:1.35.0-rke2r1" -- the example's metadata.name carries
+	// the CNI flavor.
 	const (
-		packageName    = "rancher-rke2"
+		packageName    = "rancher-rke2-cilium"
 		packageVersion = "1.35.0-rke2r1"
 	)
 	dst := fmt.Sprintf("oci://%s/e2e-test", addr)

@@ -67,7 +67,7 @@ func (s *ClusterLifecycleSuite) Test_0_Prepare() {
 	t := s.T()
 
 	outDir := t.TempDir()
-	_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2/v1.35.0-rke2r1", "-o", outDir)
+	_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2-cilium/v1_35/v1.35.0-rke2r1", "-o", outDir)
 	s.Require().NoError(err)
 
 	matches, err := filepath.Glob(filepath.Join(outDir, "cargoship-*.tar.zst"))
