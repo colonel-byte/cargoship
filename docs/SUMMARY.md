@@ -55,6 +55,7 @@
 
 # Agent
 
+- [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 

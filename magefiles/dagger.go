@@ -77,7 +77,7 @@ func (Dagger) All() error {
 	return sh.RunV(
 		"dagger",
 		"call",
-		"--progress=tty",
+		daggerProgressFlag(),
 		"--interactive=false",
 		"build",
 		"export",
