@@ -20,9 +20,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -32,8 +29,7 @@ import (
 )
 
 type (
-	Dev  mg.Namespace
-	Test mg.Namespace
+	Dev mg.Namespace
 )
 
 // Clean removes build artifacts
@@ -94,41 +90,4 @@ func (Dev) Digest(ctx context.Context) error {
 	fmt.Print(desc.Digest)
 
 	return nil
-}
-
-// EndToEnd runs the whole e2e suite, including the example packages that pull ~1.5GB of
-// engine artifacts and images.
-func (Test) EndToEnd() error {
-	return runE2E("1h", "github.com/colonel-byte/cargoship/src/test/e2e/...")
-}
-
-// EndToEndNonCluster runs the group that needs no cluster: the misc and package command
-// groups. -short additionally skips the example packages, so this finishes in seconds.
-// Mirrors the e2e-noncluster CI job.
-func (Test) EndToEndNonCluster() error {
-	return runE2E("30m", "github.com/colonel-byte/cargoship/src/test/e2e/noncluster/...", "-short")
-}
-
-// runE2E builds the binary the e2e suites drive, then runs go test against pkg with the
-// temp directory both the suites and the binary under test write into.
-func runE2E(timeout string, pkg string, extra ...string) error {
-	if err := daggerBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
-		return err
-	}
-	e2eTmpDir, err := filepath.Abs(filepath.Join(buildDir, "tmp"))
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(e2eTmpDir, 0o755); err != nil {
-		return err
-	}
-	args := append([]string{"test", "-timeout=" + timeout, pkg, "-count=1", "-v"}, extra...)
-	return sh.RunWithV(
-		map[string]string{
-			"CARGOSHIP_E2E_TMPDIR": e2eTmpDir,
-			"TMPDIR":               e2eTmpDir,
-		},
-		"go",
-		args...,
-	)
 }
