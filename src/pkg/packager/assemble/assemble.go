@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,11 +40,13 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
 	"github.com/colonel-byte/cargoship/src/pkg/images"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/k0sproject/dig"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -71,10 +74,58 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
+// warnUnknownEngineConfig warns about engine config keys the distro version being packaged
+// does not recognize, so a typo is caught here rather than on every node at install time.
+//
+// This only ever warns. The generated schemas cover the versions whose source has been pulled
+// into this build, which is not necessarily the version a package targets, and a package that
+// carries a key this binary has never heard of is still a package worth building. Install
+// time keeps the authoritative check, where the key is narrowed to the role the node actually
+// plays and an unrecognized one is dropped from the config it writes.
+func warnUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
+	cfg := engineConfigKeys(d.Spec.Config.Engine[config.EngineConfig])
+	if len(cfg) == 0 {
+		return
+	}
+
+	l := logger.From(ctx)
+	entry, ok := gen.Lookup(d.Spec.Type, d.Spec.Version)
+	if !ok {
+		l.Debug("no generated engine config schema for this distro/version, skipping config key validation",
+			"distro", d.Spec.Type, "version", d.Spec.Version)
+		return
+	}
+
+	// A package installs controllers and workers alike, so a key either role accepts belongs
+	// here.
+	valid := gen.Keys(entry.Server)
+	maps.Copy(valid, gen.Keys(entry.Agent))
+
+	for _, k := range slices.Sorted(maps.Keys(cfg)) {
+		if _, ok := valid[k]; !ok {
+			l.Warn("engine config key not recognized for this distro/version, it will be dropped at install time",
+				"distro", d.Spec.Type, "version", d.Spec.Version, "key", k)
+		}
+	}
+}
+
+// engineConfigKeys is the engine config block, whichever map shape it was decoded into.
+func engineConfigKeys(v any) map[string]any {
+	switch m := v.(type) {
+	case dig.Mapping:
+		return m
+	case map[string]any:
+		return m
+	default:
+		return nil
+	}
+}
+
 // AssembleDistro creates the actual tarballs
 func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
+	warnUnknownEngineConfig(ctx, d)
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
