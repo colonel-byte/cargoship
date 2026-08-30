@@ -38,7 +38,11 @@ repos:
     rev: v1.2.0
     hooks:
       - id: addlicense
-        exclude: vendor/.*
+        exclude: |-
+          (?x)^(
+              vendor/.*|
+              thirdparty-src/.*
+          )$
         exclude_types:
           - yaml
         args:
