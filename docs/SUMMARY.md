@@ -49,7 +49,14 @@
 - [dagger](dev/dagger.md)
 - [mage](dev/mage.md)
 - [thirdparty-src](dev/thirdparty-src.md)
-- [vault-library-choice](dev/vault-library-choice.md)
+
+
+-----------
+
+# Agent
+
+- [choice-vault-library](agent/choice-vault-library.md)
+- [design-config-codegen](agent/design-config-codegen.md)
 
 
 -----------

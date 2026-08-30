@@ -8,6 +8,25 @@ Apply a config file to bootstrap and upgrade a cluster
 cargoship apply [Distro Package] [flags]
 ```
 
+### Examples
+
+```
+# Bootstrap or upgrade a cluster from a package and a config file
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
+
+# Decrypt vault-encrypted registry credentials with a password file
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --vault-password-file ./vault-pass.txt
+
+# Upgrade workers 25% at a time instead of all at once
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
+
+# Update /etc/hosts, the firewall, and fapolicyd on every node as part of the apply
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm -H -F -f
+
+# Add the node-role label to each node, and leave the local kubeconfig untouched
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --update-kubeconfig=false
+```
+
 ### Options
 
 ```

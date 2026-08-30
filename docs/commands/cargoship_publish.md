@@ -8,6 +8,22 @@ Publish the Cargoship Package to an OCI registry
 cargoship publish [Package] [REPOSITORY] [flags]
 ```
 
+### Examples
+
+```
+# Publish a package to an OCI registry
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org
+
+# Publish and re-sign the package with a different key
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org --signing-key ./private-key.pem --confirm
+
+# Retry failed layer uploads over a slow link
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org --retries 3 --oci-concurrency 3
+
+# Refuse to publish unless the package carries a signature this key validates
+$ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghcr.io/my-org --verify=always --key ./public-key.pem
+```
+
 ### Options
 
 ```

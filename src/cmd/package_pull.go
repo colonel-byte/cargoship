@@ -44,6 +44,7 @@ func newPackagePullCommand() *cobra.Command {
 		Use:     "pull [Package]",
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdPackagePullShort,
+		Example: lang.CmdPackagePullExample,
 		GroupID: lang.RootGroupPackageID,
 		PreRunE: o.preRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
