@@ -1,0 +1,3 @@
+docs/commands/**/*.md linguist-generated
+docs/phases/**/*.md linguist-generated
+thirdparty-src/** linguist-vendored

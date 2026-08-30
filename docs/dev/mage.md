@@ -83,10 +83,25 @@ The `Generate` namespace handles code-generation and repository asset updates:
 
 *   `Document` — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook `docs/SUMMARY.md` structure.
 *   `Schema` — Generates YAML-compatible JSON schemas in `schema/` from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.
+*   `PullEngineSource` — Fetches raw k3s/RKE2 source at the tags pinned in `thirdparty-src/pins.json` into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). Touches the network.
+*   `LatestTag <distro> <vMAJOR.MINOR>` — Resolves the newest non-RC upstream tag for that minor line, pins it in `thirdparty-src/pins.json`, and re-pulls that version's source if the pin moved. Touches the network.
+*   `UpdatePins` — Runs `LatestTag` over every minor line already pinned in `thirdparty-src/pins.json`, refreshing each to its newest patch release. Touches the network.
 
 ```sh
 mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
+
+mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
+mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
+mage generate:latestTag k3s v1.31       # same, for a k3s minor line
+mage generate:updatePins                # bump every pinned minor line, both distros, to its newest patch
+```
+
+`LatestTag` is also how a *new* minor line is added: pass a prefix that `thirdparty-src/pins.json` does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2's config is composed against k3s's flags at the same version:
+
+```sh
+mage generate:latestTag k3s v1.37
+mage generate:latestTag rke2 v1.37
 ```
 
 ---
@@ -99,6 +114,10 @@ mage generate:schema                    # regenerate schema/*.json from the Go A
 *   **`dev.go`:** Defines convenience tasks under the `Dev` and `Test` namespaces.
 *   **`gen-docs.go`:** Performs Cobra command extraction and phase parser generation to update everything inside the `docs/` tree.
 *   **`gen-schema.go`:** Maps Go types to JSON schemas under `schema/`.
+*   **`gen-engine-source.go`:** Holds `Generate.PullEngineSource` and the clone-and-copy logic behind it.
+*   **`gen-engine-latest-tag.go`:** Holds `Generate.LatestTag`.
+*   **`gen-engine-update-pins.go`:** Holds `Generate.UpdatePins`.
+*   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the `gen-engine-*.go` targets.
 *   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
 *   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
 
@@ -115,6 +134,8 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `docs/phases/*` | Auto-generated cluster phase descriptors | `Generate.Document` |
 | `docs/SUMMARY.md` | Compiled table of contents for mdBook | `Generate.Document` |
 | `schema/*.json` | JSON schemas for YAML validations | `Generate.Schema` |
+| `thirdparty-src/<distro>/<minor>/*` | Raw pinned upstream k3s/RKE2 source | `Generate.PullEngineSource` / `Generate.LatestTag` |
+| `thirdparty-src/pins.json` | Pinned upstream tags | `Generate.LatestTag` / `Generate.UpdatePins` |
 
 ---
 

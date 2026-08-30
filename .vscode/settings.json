@@ -8,4 +8,7 @@
     "-tags=mage"
   ],
   "git.ignoreLimitWarning": true,
+  "gopls": {
+    "directoryFilters": ["-thirdparty-src"]
+  },
 }
