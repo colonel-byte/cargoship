@@ -1,23 +1,36 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file is generated in magefiles/templates/k3s-distro.yaml.tmpl, versions may need to updated over time.
+
 ---
-# yaml-language-server: $schema=../../../schema/zarf-v1alpha1-distro-package-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
+apiVersion: zarf.dev/v1alpha1
 kind: ZarfDistro
 metadata:
-  name: rancher-k3s
-  version: 1.35.0-k3s1
+  name: rancher-k3s-flannel
+  version: 1.35.1-k3s1
   architecture: amd64
 spec:
   type: k3s
-  version: 1.35.0-k3s1
+  version: 1.35.1-k3s1
   config:
     engine:
       config:
-        # keep-sorted start block=yes
         cluster-cidr: 10.42.0.0/16
         cluster-domain: cluster.local
-        cni:
-          - cilium
         disable-cloud-controller: true
-        disable-kube-proxy: true
         embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB
@@ -49,7 +62,6 @@ spec:
         selinux: true
         service-cidr: 10.43.0.0/16
         write-kubeconfig-mode: "0600"
-        # keep-sorted end
       audit:
         rules:
           - level: None
@@ -101,30 +113,31 @@ spec:
         "kernel.panic": "10"
         "kernel.panic_on_oops": "1"
       fapolicyd: |
-        # Allow RKE2 to function
+        # Allow k3s to function
         allow perm=any all : dir=/opt/cni/
         allow perm=any all : dir=/run/k3s/
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
       files:
-        - source: https://github.com/k3s-io/k3s/releases/download/v1.35.0%2Bk3s1/k3s
+        - source: https://github.com/k3s-io/k3s/releases/download/v1.35.1%2Bk3s1/k3s
           target: /usr/local/bin/k3s
           executable: true
+          shasum: e406ca6e47673d747ab4665c90a9285615fe082e2593343725ed043ae163abbf
           selector:
             package: binary
-        - source: ../core/killall.sh
+        - source: ../../../k3s/core/killall.sh
           target: /usr/local/bin/k3s-killall.sh
           executable: true
           selector:
             package: binary
-        - source: ../core/server.service
+        - source: ../../../k3s/core/server.service
           target: /etc/systemd/system/k3s-server.service
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/k3s-server.service
           selector:
             package: binary
             profile: controller
-        - source: ../core/agent.service
+        - source: ../../../k3s/core/agent.service
           target: /etc/systemd/system/k3s-agent.service
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/k3s-agent.service
@@ -133,17 +146,18 @@ spec:
             profile: worker
         - source: https://rpm.rancher.io/k3s/latest/common/centos/9/noarch/k3s-selinux-1.6-1.el9.noarch.rpm
           target: /var/lib/rancher/k3s/rpm/k3s-selinux-1.6-1.el9.noarch.rpm
+          shasum: 1115a1223b0db998c7977c879f2a3a6f07a0c63240f68f6e3b665a7ae27c38f7
           selector:
             package: binary
     imageConfig:
       path: /var/lib/rancher/k3s/agent/images
       compression: none
       images:
-        - docker.io/rancher/klipper-helm:v0.9.12-build20251215
-        - docker.io/rancher/klipper-lb:v0.4.13
-        - docker.io/rancher/local-path-provisioner:v0.0.32
-        - docker.io/rancher/mirrored-coredns-coredns:1.13.1
+        - docker.io/rancher/klipper-helm:v0.9.14-build20260210
+        - docker.io/rancher/klipper-lb:v0.4.14
+        - docker.io/rancher/local-path-provisioner:v0.0.34
+        - docker.io/rancher/mirrored-coredns-coredns:1.14.1
         - docker.io/rancher/mirrored-library-busybox:1.37.0
-        - docker.io/rancher/mirrored-library-traefik:3.5.1
-        - docker.io/rancher/mirrored-metrics-server:v0.8.0
+        - docker.io/rancher/mirrored-library-traefik:3.6.7
+        - docker.io/rancher/mirrored-metrics-server:v0.8.1
         - docker.io/rancher/mirrored-pause:3.6

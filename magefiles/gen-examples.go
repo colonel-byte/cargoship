@@ -16,25 +16,21 @@ package main
 
 import (
 	"fmt"
+	"text/template"
 )
 
-// Examples renders every rke2 example distro.yaml from the shared template
+// Examples renders every example distro.yaml from the shared templates
 //
-// Renders every flavor in exampleFlavors -- one CNI each, into its own directory. Per
-// flavor it covers each rke2 tag in thirdparty-src/pins.json, so new examples appear as
-// Generate.UpdatePins moves the pins, plus every example directory that flavor already has
-// on disk, so an edit to magefiles/templates/rke2-distro.yaml.tmpl reaches the older
-// examples too rather than leaving them to drift. Examples are grouped by minor line --
-// creating <flavor dir>/<minor>/ as needed -- so one release line's examples stay together.
-// Everything that varies between versions is derived from the tag, except the image lists,
-// which are fetched from that release's published airgap manifests. Touches the network.
+// Renders every flavor of every distro in exampleDistros -- one CNI each, into its own
+// directory. Per flavor it covers each of that distro's tags in thirdparty-src/pins.json,
+// so new examples appear as Generate.UpdatePins moves the pins, plus every example directory
+// that flavor already has on disk, so an edit to a template reaches the older examples too
+// rather than leaving them to drift. Examples are grouped by minor line -- creating
+// <flavor dir>/<minor>/ as needed -- so one release line's examples stay together.
+// Everything that varies between versions is derived from the tag, except the image lists
+// and digests, which come from that release's published assets. Touches the network.
 func (Generate) Examples() error {
 	pins, err := readEnginePins()
-	if err != nil {
-		return err
-	}
-
-	d, err := pins.distro(exampleDistro)
 	if err != nil {
 		return err
 	}
@@ -51,28 +47,44 @@ func (Generate) Examples() error {
 		}
 	}()
 
-	tmpl, err := parseExampleTemplate(sums)
-	if err != nil {
-		return err
-	}
-
-	for _, f := range exampleFlavors {
-		tags, err := exampleTags(d.Tags, f)
+	for _, spec := range exampleDistros {
+		d, err := pins.distro(spec.name)
 		if err != nil {
 			return err
 		}
 
-		for _, tag := range tags {
-			path, err := writeExample(tmpl, d.Repo, tag, f, sums)
+		tmpl, err := parseExampleTemplate(spec, sums)
+		if err != nil {
+			return err
+		}
+
+		for _, f := range spec.flavors {
+			tags, err := exampleTags(d.Tags, spec, f)
 			if err != nil {
-				return fmt.Errorf("generating %s example for %s: %w", f.cni, tag, err)
+				return err
 			}
-			if path == "" {
-				fmt.Printf("Skipped %s %s: rpm.rancher.io no longer publishes its RPMs\n", f.cni, tag)
-				continue
+
+			for _, tag := range tags {
+				if err := renderExample(tmpl, d.Repo, tag, spec, f, sums); err != nil {
+					return err
+				}
 			}
-			fmt.Println("Generated " + path)
 		}
 	}
+	return nil
+}
+
+// renderExample writes one example and reports what it did, since a build upstream has
+// dropped is skipped rather than written.
+func renderExample(tmpl *template.Template, repoURL, tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) error {
+	path, err := writeExample(tmpl, repoURL, tag, spec, f, sums)
+	if err != nil {
+		return fmt.Errorf("generating %s %s example for %s: %w", spec.name, f.cni, tag, err)
+	}
+	if path == "" {
+		fmt.Printf("Skipped %s %s: upstream no longer publishes what it installs\n", f.cni, tag)
+		return nil
+	}
+	fmt.Println("Generated " + path)
 	return nil
 }

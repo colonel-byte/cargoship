@@ -31,7 +31,7 @@ import (
 // exampleShasumsPath is the committed url -> sha256 cache. Hashing an RPM means downloading
 // it, and rke2-common alone is ~29MB, so without a cache every example regeneration would
 // pull roughly a gigabyte. With one, only genuinely new releases are fetched.
-const exampleShasumsPath = "example/rke2-shasums.json"
+const exampleShasumsPath = "example/shasums.json"
 
 // exampleShasum is one hashed file: the URL it was fetched from, and what it hashed to.
 type exampleShasum struct {

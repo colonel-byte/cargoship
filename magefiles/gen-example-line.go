@@ -19,20 +19,27 @@ import (
 	"strings"
 )
 
-// ExampleLine renders an example for every release on one rke2 minor line
+// ExampleLine renders an example for every release on one minor line of a distro
 //
 // Where Generate.Examples re-renders what is already pinned or already on disk, this
-// backfills a whole line: it lists every non-RC rke2 tag on the given minor line and
-// renders each one, so "v1.36" covers v1.36.0+rke2r1 through the newest v1.36 release. The
-// examples land in each flavor's <flavor dir>/<minor>/, and Generate.Examples keeps them
-// current from then on, since it covers every example directory on disk. Touches the network.
+// backfills a whole line: it lists every non-RC tag of that distro on the given minor line
+// and renders each one, so "rke2 v1.36" covers v1.36.0+rke2r1 through the newest v1.36
+// release. The examples land in each of that distro's flavor directories, and
+// Generate.Examples keeps them current from then on, since it covers every example directory
+// on disk. Touches the network.
 //
-//	mage generate:exampleLine v1.36
-func (Generate) ExampleLine(prefix string) error {
+//	mage generate:exampleLine rke2 v1.36
+//	mage generate:exampleLine k3s 1.36
+func (Generate) ExampleLine(distro, prefix string) error {
 	// Accept "1.36" as well as "v1.36" -- upstream tags carry the v, but the minor line is
 	// as often written without it.
 	if !strings.HasPrefix(prefix, "v") {
 		prefix = "v" + prefix
+	}
+
+	spec, err := exampleDistroByName(distro)
+	if err != nil {
+		return err
 	}
 
 	pins, err := readEnginePins()
@@ -40,7 +47,7 @@ func (Generate) ExampleLine(prefix string) error {
 		return err
 	}
 
-	d, err := pins.distro(exampleDistro)
+	d, err := pins.distro(spec.name)
 	if err != nil {
 		return err
 	}
@@ -57,7 +64,7 @@ func (Generate) ExampleLine(prefix string) error {
 		}
 	}()
 
-	tmpl, err := parseExampleTemplate(sums)
+	tmpl, err := parseExampleTemplate(spec, sums)
 	if err != nil {
 		return err
 	}
@@ -70,18 +77,25 @@ func (Generate) ExampleLine(prefix string) error {
 		return err
 	}
 
-	for _, f := range exampleFlavors {
+	for _, f := range spec.flavors {
 		for _, tag := range tags {
-			path, err := writeExample(tmpl, d.Repo, tag, f, sums)
-			if err != nil {
-				return fmt.Errorf("generating %s example for %s: %w", f.cni, tag, err)
+			if err := renderExample(tmpl, d.Repo, tag, spec, f, sums); err != nil {
+				return err
 			}
-			if path == "" {
-				fmt.Printf("Skipped %s %s: rpm.rancher.io no longer publishes its RPMs\n", f.cni, tag)
-				continue
-			}
-			fmt.Println("Generated " + path)
 		}
 	}
 	return nil
+}
+
+// exampleDistroByName finds the spec a distro name asks for, listing the names that do work
+// when it is not one of them.
+func exampleDistroByName(name string) (exampleDistroSpec, error) {
+	var names []string
+	for _, spec := range exampleDistros {
+		if spec.name == name {
+			return spec, nil
+		}
+		names = append(names, spec.name)
+	}
+	return exampleDistroSpec{}, fmt.Errorf("unknown distro %q, want one of: %s", name, strings.Join(names, ", "))
 }

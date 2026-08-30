@@ -1,4 +1,8 @@
 {
+  "k3s-selinux-1.6-1.el9.noarch.rpm": {
+    "url": "https://rpm.rancher.io/k3s/latest/common/centos/9/noarch/k3s-selinux-1.6-1.el9.noarch.rpm",
+    "sha256": "1115a1223b0db998c7977c879f2a3a6f07a0c63240f68f6e3b665a7ae27c38f7"
+  },
   "rke2-agent-1.31.14~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.31/centos/9/x86_64/rke2-agent-1.31.14~rke2r1-0.el9.x86_64.rpm",
     "sha256": "cd3bd18eb2d2c491721780bdca824a9c65904537a80869d5d9fbf4ae8de0d18c"

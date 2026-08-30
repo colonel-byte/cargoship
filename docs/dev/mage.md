@@ -86,15 +86,19 @@ The `Generate` namespace handles code-generation and repository asset updates:
 *   `PullEngineSource` — Fetches raw k3s/RKE2 source at the tags pinned in `thirdparty-src/pins.json` into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). Touches the network.
 *   `LatestTag <distro> <vMAJOR.MINOR>` — Resolves the newest non-RC upstream tag for that minor line, pins it in `thirdparty-src/pins.json`, and re-pulls that version's source if the pin moved. Touches the network.
 *   `UpdatePins` — Runs `LatestTag` over every minor line already pinned in `thirdparty-src/pins.json`, refreshing each to its newest patch release. Touches the network.
-*   `Examples` — Renders `magefiles/templates/rke2-distro.yaml.tmpl` into `example/rke2-<cni>/<minor>/v<version>/distro.yaml`, one flavor per CNI (`example/rke2-cilium/`, `example/rke2-canal/`), grouped by minor line (`v1_35/`, matching `thirdparty-src/rke2/` and `src/pkg/engineconfig/gen/rke2/`) and creating those directories as needed. Per flavor it renders once per rke2 tag pinned in `thirdparty-src/pins.json` and once per example directory that flavor already has on disk, so a template edit reaches the older examples instead of leaving them to drift. Everything that varies between versions is derived from the tag, except `imageConfig.images`, which comes from that release's published airgap manifests (`rke2-images-core` plus the flavor's CNI manifest). Touches the network.
+*   `Examples` — Renders `magefiles/templates/<distro>-distro.yaml.tmpl` into `example/<distro>-<cni>/<minor>/v<version>/distro.yaml`, one flavor per CNI (`example/rke2-cilium/`, `example/rke2-canal/`, `example/k3s-flannel/`), grouped by minor line (`v1_35/`, matching `thirdparty-src/<distro>/` and `src/pkg/engineconfig/gen/<distro>/`) and creating those directories as needed. Per flavor it renders once per tag of that distro pinned in `thirdparty-src/pins.json` and once per example directory that flavor already has on disk, so a template edit reaches the older examples instead of leaving them to drift. Everything that varies between versions is derived from the tag, except `imageConfig.images` and the digests, which come from that release's published assets. Touches the network.
 
-    The flavors are declared in `exampleFlavors` in `magefiles/examples.go`, and they differ by more than their image list: cilium replaces kube-proxy (`disable-kube-proxy: true`) and is configured through an `rke2-cilium` HelmChartConfig manifest, while canal runs alongside kube-proxy and carries no manifest of its own. Adding a CNI means adding an entry there, and a `{{ if }}` in the template for anything specific to it.
+    Distros and their flavors are declared together in `exampleDistros` in `magefiles/examples.go`. Flavors differ by more than their image list: cilium replaces kube-proxy (`disable-kube-proxy: true`) and is configured through an `rke2-cilium` HelmChartConfig manifest, while canal and flannel run alongside kube-proxy and carry no manifest of their own. Adding a CNI means adding a flavor entry there, and a `{{ if }}` in that distro's template for anything specific to it.
 
-    Each RPM entry also carries a `shasum`, so cargoship can verify the file it downloads. Hashing an RPM means downloading it, and `rke2-common` alone is around 29 MB, so the digests are cached in `example/rke2-shasums.json`. It is a committed map keyed by RPM file name, each entry holding the `url` it was fetched from and its `sha256`, so the file reads as an inventory of what the examples install. Only files missing from it are fetched, which makes a re-render free and a new release cost just its own four RPMs. An entry whose `url` no longer matches the one being rendered is re-hashed rather than trusted, so moving an RPM cannot hand back a stale digest. Delete an entry to force it to be re-hashed.
+    What differs between the distros themselves sits in three hooks on the distro entry, so the rendering itself stays single-copy: `derive` builds the URLs only that distro has, `probe` names the URL whose absence retires a build, and `fetch` pulls anything else only the release can answer. RKE2 installs versioned `rke2-common`/`server`/`agent` RPMs from `rpm.rancher.io` and splits its images across a core manifest plus one per CNI. k3s installs a single binary straight from its GitHub release, ships flannel inside that binary — so `k3s-images.txt` is the whole list and there is nothing per-CNI to fetch — and publishes `sha256sum-amd64.txt`, which is where the binary's `shasum` comes from rather than downloading 70 MB per version to hash it. Both distros install their distro's selinux policy RPM.
+
+    k3s examples share one copy of the unit files and killall script, kept in `example/k3s/core/` and referenced as `../../../k3s/core/…`; relative `source` paths resolve against the directory holding `distro.yaml`.
+
+    Each RPM entry also carries a `shasum`, so cargoship can verify the file it downloads. Hashing an RPM means downloading it, and `rke2-common` alone is around 29 MB, so the digests are cached in `example/shasums.json`. It is a committed map keyed by RPM file name, each entry holding the `url` it was fetched from and its `sha256`, so the file reads as an inventory of what the examples install. Only files missing from it are fetched, which makes a re-render free and a new release cost just its own four RPMs. An entry whose `url` no longer matches the one being rendered is re-hashed rather than trusted, so moving an RPM cannot hand back a stale digest. Delete an entry to force it to be re-hashed.
 
     Before rendering, each build's `rke2-common` RPM is checked (a `HEAD`, and only for URLs the cache has never seen). Rancher supersedes an `rke2rN` with the next revision and removes the old RPMs, while the git tag and image manifests stay up — so a build can look renderable and still install nothing. Those are skipped, and any example already on disk for one is deleted, along with its minor line directory if that empties it. As of August 2026 that covers `v1.35.0+rke2r2` and `v1.35.3+rke2r2`, replaced by `rke2r3`, and `v1.34.3+rke2r2` and `v1.34.6+rke2r2` — use the `rke2r3` release of those patches. Nothing is remembered about a skip, so a build that comes back is rendered again on the next run; a build that goes away is only noticed while it is still pinned or still on disk. The `shasum` on an individual file is still allowed to be missing — that path now only covers the odd file a still-published build lost.
 
-*   `ExampleLine <vMAJOR.MINOR>` — Renders an example for *every* non-RC release on one rke2 minor line, rather than only the pinned one, so `v1.36` backfills `v1.36.0+rke2r1` through the newest `v1.36` release into `example/rke2-cilium/v1_36/` and `example/rke2-canal/v1_36/`. The leading `v` is optional. Once written, `Examples` keeps those files current, since it re-renders every example directory on disk. Touches the network.
+*   `ExampleLine <distro> <vMAJOR.MINOR>` — Renders an example for *every* non-RC release on one minor line of that distro, rather than only the pinned one, so `rke2 v1.36` backfills `v1.36.0+rke2r1` through the newest `v1.36` release into `example/rke2-cilium/v1_36/` and `example/rke2-canal/v1_36/`. The leading `v` is optional. Once written, `Examples` keeps those files current, since it re-renders every example directory on disk. Touches the network.
 *   `EngineConfig` — Statically parses raw engine source under `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)) to generate typed `config.yaml` structs per distro/version in `src/pkg/engineconfig/gen/`.
 
 ```sh
@@ -106,9 +110,9 @@ mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it
 mage generate:latestTag k3s v1.31       # same, for a k3s minor line
 mage generate:updatePins                # bump every pinned minor line, both distros, to its newest patch
 mage generate:engineConfig              # regenerate src/pkg/engineconfig/gen/ from what is on disk
-mage generate:examples                  # re-render every example/rke2-<cni>/<minor>/*/distro.yaml
-mage generate:exampleLine v1.36         # render an example for every release on the 1.36 line
-mage generate:exampleLine 1.36          # same -- the leading v is optional
+mage generate:examples                  # re-render every example/<distro>-<cni>/<minor>/*/distro.yaml
+mage generate:exampleLine rke2 v1.36    # render an example for every rke2 release on the 1.36 line
+mage generate:exampleLine k3s 1.36      # same for k3s -- the leading v is optional
 ```
 
 `LatestTag` is also how a *new* minor line is added: pass a prefix that `thirdparty-src/pins.json` does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2's config is composed against k3s's flags at the same version:
@@ -139,9 +143,9 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`gen-examples.go`:** Holds `Generate.Examples`.
 *   **`gen-example-line.go`:** Holds `Generate.ExampleLine`.
 *   **`examples.go`:** Shared, target-free layer behind both example targets: what an example is rendered from (the tag-derived fields and the fetched image manifests) and how one is written.
-*   **`example-shasums.go`:** The `example/rke2-shasums.json` cache, and the `sha256` function the example template hashes its remote files with.
+*   **`example-shasums.go`:** The `example/shasums.json` cache, and the `sha256` function the example template hashes its remote files with.
 *   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the four `gen-engine-*.go` targets.
-*   **`templates/`:** Text templates the generation targets render, currently `rke2-distro.yaml.tmpl`.
+*   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl` and `k3s-distro.yaml.tmpl`, one per distro that has examples.
 *   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction.
 *   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
 
@@ -161,8 +165,8 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `src/pkg/engineconfig/gen/*` | Typed engine `config.yaml` structs per distro/version | `Generate.EngineConfig` |
 | `thirdparty-src/<distro>/<minor>/*` | Raw pinned upstream k3s/RKE2 source | `Generate.PullEngineSource` / `Generate.LatestTag` |
 | `thirdparty-src/pins.json` | Pinned upstream tags | `Generate.LatestTag` / `Generate.UpdatePins` |
-| `example/rke2-<cni>/<minor>/*/distro.yaml` | Rendered rke2 example packages, one directory per CNI flavor, grouped by minor line | `Generate.Examples` |
-| `example/rke2-shasums.json` | Cached sha256 of every RPM the examples reference | `Generate.Examples` / `Generate.ExampleLine` |
+| `example/<distro>-<cni>/<minor>/*/distro.yaml` | Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line | `Generate.Examples` |
+| `example/shasums.json` | Cached sha256 of every remote file the examples hash | `Generate.Examples` / `Generate.ExampleLine` |
 
 ---
 
