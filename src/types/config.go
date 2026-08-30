@@ -112,8 +112,6 @@ type DistroOptions struct {
 
 // DistroCreateOptions holds the values for the `.distro.create` section of the config file
 type DistroCreateOptions struct {
-	// SkipSBOM whether we will scan the images or files
-	SkipSBOM bool `json:"skip_sbom,omitempty" mapstructure:"skip_sbom"`
 	// RegistryOverride maps a source registry to the registry cargoship uses instead
 	// when pulling images, for example {"docker.io": "mirror.example.com"}
 	RegistryOverride RegistryOverrideMap `json:"registry_override,omitempty" mapstructure:"-"` // mapstructure:"-": viper always splits a map key on "." when merging its settings tree, so a domain key like "docker.io" gets silently corrupted into a nested map; read directly from the config file instead (see initViper in cmd/viper.go)

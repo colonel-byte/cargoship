@@ -19,10 +19,6 @@
         "registry_override": {
           "$ref": "#/$defs/RegistryOverrideMap",
           "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"
-        },
-        "skip_sbom": {
-          "description": "whether we will scan the images or files",
-          "type": "boolean"
         }
       },
       "type": "object"

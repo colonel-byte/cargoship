@@ -99,8 +99,8 @@ $ cargoship create ./distro-defs --registry-override docker.io=mirror.example.co
 # Sign the package as it is built, without prompting for the key password
 $ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
 
-# Build a byte-identical package on every run, skipping SBOM generation
-$ cargoship create ./distro-defs --reproducible --skip-sbom`
+# Build a byte-identical package on every run
+$ cargoship create ./distro-defs --reproducible`
 
 	// CmdDistroPublishExample publish example
 	CmdDistroPublishExample = `# Publish a package to an OCI registry
