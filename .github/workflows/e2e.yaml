@@ -34,13 +34,22 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install dependencies
-        run: go mod download
-
       - name: Build
-        run: go build -mod=vendor -a -trimpath -gcflags=all="-l -B -C" -ldflags="-s -w" -v -o cargoship main.go
+        run: |
+          go build -mod=vendor -a -trimpath \
+            -gcflags=all="-l -B -C" \
+            -ldflags="-s -w \
+              -X github.com/colonel-byte/cargoship/src/config.CLIVersion=0.0.0 \
+              -X github.com/colonel-byte/cargoship/src/config.CLICommit=${GITHUB_SHA::8}" \
+            -v -o cargoship main.go
         env:
           CGO_ENABLED: 0
+          # Everything the build needs is vendored, so make any accidental network
+          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
 
       - name: Upload binary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
