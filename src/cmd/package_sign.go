@@ -91,7 +91,6 @@ func newPackageSignCommand() *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", resolvedConfig.DistroOpts.Retry, lang.CmdPackageFlagRetries)
 	o.verify = verifyModeIfPossible
 	cmd.Flags().VarP(&o.verify, "verify", "", lang.CmdPackageFlagVerify)
-	cmd.Flags().Lookup("verify").NoOptDefVal = string(verifyModeAlways)
 
 	cmd.Flags().BoolVar(&o.keyless, "keyless", false, zlang.CmdPackageSignFlagKeyless)
 	cmd.Flags().StringVar(&o.identityToken, "identity-token", "", zlang.CmdPackageSignFlagIdentityToken)
