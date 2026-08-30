@@ -47,6 +47,7 @@
 
 - [build-flags](dev/build-flags.md)
 - [dagger](dev/dagger.md)
+- [e2e-tests](dev/e2e-tests.md)
 - [mage](dev/mage.md)
 - [thirdparty-src](dev/thirdparty-src.md)
 
