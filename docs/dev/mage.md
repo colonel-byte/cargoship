@@ -15,7 +15,7 @@ The entry point of the automation layer is `magefiles/core/core.go`, which boots
 
 ## Namespace Architecture
 
-Mage targets are organized into logical Go namespaces to group related operations together.
+Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as `mage <namespace>:<target>`, and target names are case-insensitive, so `mage generate:document` and `mage generate:Document` are the same command. Run `mage -l` for the authoritative list on your checkout.
 
 ### `Dagger` Namespace
 
@@ -27,11 +27,29 @@ The `Dagger` namespace is the default target and the primary build path. It mana
 *   `Macamd64` / `Macarm64` — Compiles macOS binaries.
 *   `All` — Compiles and exports all release binaries to `build/` concurrently.
 
-Running `mage` without arguments defaults to `Dagger.All`.
+```sh
+mage dagger:toolchain     # update the dagger build environment (run once, or after a dagger upgrade)
+mage dagger:binary        # build for this host's OS/arch
+mage dagger:linuxamd64    # build build/cargoship_linux_amd64
+mage dagger:linuxarm64    # build build/cargoship_linux_arm64
+mage dagger:macamd64      # build build/cargoship_darwin_amd64
+mage dagger:macarm64      # build build/cargoship_darwin_arm64
+mage dagger:all           # build every release binary into build/
+mage                      # same as `mage dagger:all` -- it is the default target
+```
 
 ### `Build` Namespace
 
-The `Build` namespace mirrors the compilation targets of the `Dagger` namespace but bypasses containerization, executing compilation natively on the host's Go toolchain. This path is intended for quick, local development.
+The `Build` namespace mirrors the compilation targets of the `Dagger` namespace but bypasses containerization, executing compilation natively on the host's Go toolchain. This path is intended for quick, local development, and it is the one to use when Docker or Dagger is not available.
+
+```sh
+mage build:binary         # build for this host's OS/arch, no container
+mage build:linuxamd64
+mage build:linuxarm64
+mage build:macamd64
+mage build:macarm64
+mage build:all            # build every release binary into build/
+```
 
 ### `Dev` Namespace
 
@@ -39,13 +57,25 @@ The `Dev` namespace aggregates convenience tasks for day-to-day development:
 
 *   `Clean` — Deletes local compilation artifacts and cleans the `build/` directory.
 *   `Tidy` — Runs `go mod tidy` inside the workspace.
-*   `ResolveImageDigest` — Resolves and logs specific container digests for validation.
+*   `Vendor` — Runs `Tidy`, then `go mod vendor`. Use this rather than a bare `go mod vendor` after changing dependencies, so `go.mod`, `go.sum`, and `vendor/` are updated in one step.
+*   `Digest` — Resolves `docker.io/library/alpine:latest` through the host's Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.
+
+```sh
+mage dev:clean            # rm the build/ artifacts
+mage dev:tidy             # go mod tidy
+mage dev:vendor           # go mod tidy, then go mod vendor
+mage dev:digest           # print the alpine:latest digest, to check registry auth works
+```
 
 ### `Test` Namespace
 
 The `Test` namespace hosts the integration and validation suites:
 
-*   `E2E` — Automatically compiles Cargoship via Dagger and executes the complete Go-based end-to-end test suite in verbose mode.
+*   `EndToEnd` — Builds Cargoship for the host via Dagger, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.
+
+```sh
+mage test:endToEnd        # build via dagger, then run the e2e suite
+```
 
 ### `Generate` Namespace
 
@@ -53,6 +83,11 @@ The `Generate` namespace handles code-generation and repository asset updates:
 
 *   `Document` — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook `docs/SUMMARY.md` structure.
 *   `Schema` — Generates YAML-compatible JSON schemas in `schema/` from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.
+
+```sh
+mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
+mage generate:schema                    # regenerate schema/*.json from the Go API types
+```
 
 ---
 
