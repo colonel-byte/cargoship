@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a18bf790.js";
+            window.path_to_searchindex_js = "../searchindex-a61e1cd8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-d3ea4f82.js"></script>
@@ -199,8 +199,8 @@ $ cargoship create ./distro-defs --registry-override docker.io=mirror.example.co
 # Sign the package as it is built, without prompting for the key password
 $ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
 
-# Build a byte-identical package on every run, skipping SBOM generation
-$ cargoship create ./distro-defs --reproducible --skip-sbom
+# Build a byte-identical package on every run
+$ cargoship create ./distro-defs --reproducible
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>  -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
@@ -211,7 +211,6 @@ $ cargoship create ./distro-defs --reproducible --skip-sbom
       --reproducible                Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
       --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string     Password to the private key used for signing packages
-      --skip-sbom                   Skip generating SBOM for this package
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
