@@ -54,6 +54,7 @@ thirdparty-src/
       zz_root.go               # rke2 only -- commonFlag, shared by server/agent
       zz_k3sopts.go            # rke2 only -- K3SFlagOption/copyFlag/dropFlag/hideFlag
       SOURCE.txt               # repo, tag, resolved commit, and pulled file list
+  pins.json                    # the pinned tags and file lists, see below
   go.mod                       # module boundary marker, see above
 ```
 
@@ -82,53 +83,44 @@ guessed at or dropped.
 
 ## Pulling a new version
 
-Run `mage generate:pullEngineSource` — the only step in this workflow that touches the
-network. It reads the `engineSourcePulls` list in `magefiles/gen-engine-source.go`, clones
-each pinned `repoURL`@`tag` to a throwaway temp directory, copies out the requested files
-verbatim into `destDir`, and writes `SOURCE.txt` recording the repo, tag, and resolved
-commit for traceability. It never runs `go get` or touches this repo's module graph.
+`thirdparty-src/pins.json` is the single source of truth for what gets pulled: one entry per upstream repo, listing the files to copy and every tag to copy them at.
 
-To pull a new version, add an entry to `engineSourcePulls` and re-run the target. For
-example, to pull k3s `v1.34+k3s1` and RKE2 `v1.35+rke2r1`:
-
-```go
-var engineSourcePulls = []engineSourcePull{
-	{
-		repoURL: "https://github.com/k3s-io/k3s",
-		tag:     "v1.35.3+k3s1",
-		destDir: "thirdparty-src/k3s/v1_35",
-		files:   []string{"pkg/cli/cmds/server.go", "pkg/cli/cmds/agent.go"},
-	},
-	{
-		repoURL: "https://github.com/k3s-io/k3s",
-		tag:     "v1.34.1+k3s1",
-		destDir: "thirdparty-src/k3s/v1_34",
-		files:   []string{"pkg/cli/cmds/server.go", "pkg/cli/cmds/agent.go"},
-	},
-	{
-		repoURL: "https://github.com/rancher/rke2",
-		tag:     "v1.35.3+rke2r1",
-		destDir: "thirdparty-src/rke2/v1_35",
-		files: []string{
-			"pkg/cli/cmds/server.go",
-			"pkg/cli/cmds/agent.go",
-			"pkg/cli/cmds/root.go",
-			"pkg/cli/cmds/k3sopts.go",
-		},
-	},
+```json
+{
+  "distros": [
+    {
+      "name": "k3s",
+      "repo": "https://github.com/k3s-io/k3s",
+      "files": ["pkg/cli/cmds/server.go", "pkg/cli/cmds/agent.go"],
+      "tags": ["v1.36.4+k3s1", "v1.35.8+k3s1"]
+    },
+    {
+      "name": "rke2",
+      "repo": "https://github.com/rancher/rke2",
+      "files": [
+        "pkg/cli/cmds/server.go",
+        "pkg/cli/cmds/agent.go",
+        "pkg/cli/cmds/root.go",
+        "pkg/cli/cmds/k3sopts.go"
+      ],
+      "tags": ["v1.36.3+rke2r1", "v1.35.7+rke2r1"]
+    }
+  ]
 }
 ```
 
+There is no destination path in the manifest: it is derived from `name` plus the tag's major.minor, so `k3s` at `v1.35.8+k3s1` always lands in `thirdparty-src/k3s/v1_35/`. That keeps the truncation rule described above from drifting out of sync with the tag it was truncated from. A tag that does not start with `vMAJOR.MINOR.PATCH` is rejected rather than guessed at.
+
+`mage generate:pullEngineSource` reads the manifest and, for each pinned tag, clones `repo`@`tag` to a throwaway temp directory, copies out `files` verbatim into the derived directory (prefixed `zz_`), and writes `SOURCE.txt` recording the repo, tag, and resolved commit for traceability. It never runs `go get` or touches this repo's module graph.
+
+You rarely need to edit `pins.json` by hand. `mage generate:latestTag <distro> <vMAJOR.MINOR>` resolves the newest non-RC tag upstream publishes for that minor line, pins it — replacing whatever that line held, or adding the line newest-first if it is new — and re-pulls that version's source if the pin moved, so the manifest and the committed files can never disagree. When nothing moved it prints `unchanged` and writes nothing.
+
 ```sh
-mage generate:pullEngineSource
+mage generate:latestTag k3s v1.37   # start tracking a new minor line
+mage generate:updatePins            # refresh every line already pinned
 ```
 
-This clones `k3s-io/k3s` at `v1.34.1+k3s1` and `rancher/rke2` at `v1.35.3+rke2r1`, writes
-`thirdparty-src/k3s/v1_34/{zz_server.go,zz_agent.go,SOURCE.txt}` and
-`thirdparty-src/rke2/v1_35/{zz_server.go,zz_agent.go,zz_root.go,zz_k3sopts.go,SOURCE.txt}`. Follow
-with `mage generate:engineConfig` to generate structs for the new versions too. `destDir`
-is sanitized into a valid Go package name (dots become underscores) since it becomes the
-generated package's directory and name directly.
+`generate:updatePins` runs that same cycle over every minor line in the manifest, which is the usual way to answer "are we behind upstream?". Both targets touch the network, and both leave struct generation to you: follow with `mage generate:engineConfig` for any version that moved. The version directory name is sanitized into a valid Go package name (dots become underscores) since it becomes the generated package's directory and name directly.
 
 ## Consuming it
 

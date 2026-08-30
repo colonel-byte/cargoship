@@ -81,7 +81,7 @@ because they operate on different things:
   v1_34/zz_server_config.go, zz_agent_config.go   # generated, zero deps
   v1_35/...
   v1_36/...
-/versions.yaml      # manifest: version name -> upstream tag(s)
+/thirdparty-src/pins.json   # manifest: distro -> repo, files, upstream tags
 ```
 
 ## Workflow
@@ -93,7 +93,7 @@ because they operate on different things:
    <tag>:pkg/cli/cmds/server.go`, or a sparse/shallow checkout scoped to
    `pkg/cli/cmds`) — not the whole repo, not a buildable module.
 3. Commit those files under `thirdparty-src/<project>/<version>/`.
-4. Append an entry to `versions.yaml`.
+4. Append the tag to that distro's entry in `thirdparty-src/pins.json`.
 
 This is a small, auditable diff each time (a handful of files), not a
 dependency tree. `git diff` between two version directories is a
