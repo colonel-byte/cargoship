@@ -15,7 +15,11 @@
 package assemble
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +27,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/images"
+	"github.com/k0sproject/dig"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 func TestBuildTimestampReproducible(t *testing.T) {
@@ -114,5 +120,62 @@ func TestReproducibleAssemblyIsDeterministic(t *testing.T) {
 
 	if !reflect.DeepEqual(first.Build, second.Build) {
 		t.Fatalf("recordDistroMetadata not deterministic under Reproducible: true:\nfirst:  %+v\nsecond: %+v", first.Build, second.Build)
+	}
+}
+
+// warnEngineConfigContext gives warnUnknownEngineConfig a logger whose output can be read
+// back, since warning is the whole of what it does.
+func warnEngineConfigContext() (context.Context, *bytes.Buffer) {
+	buf := &bytes.Buffer{}
+	l := slog.New(slog.NewTextHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	return logger.WithContext(context.Background(), l), buf
+}
+
+func engineConfigDistro(version string, cfg dig.Mapping) distro.ZarfDistro {
+	d := distro.ZarfDistro{}
+	d.Spec.Type = "rke2"
+	d.Spec.Version = version
+	d.Spec.Config.Engine = dig.Mapping{config.EngineConfig: cfg}
+	return d
+}
+
+func TestWarnUnknownEngineConfigWarnsOnlyUnknownKeys(t *testing.T) {
+	ctx, buf := warnEngineConfigContext()
+
+	// cluster-cidr is a server-only key, so it also covers the check reading both roles.
+	warnUnknownEngineConfig(ctx, engineConfigDistro("1.36.4-rke2r1", dig.Mapping{
+		"cluster-cidr":  []string{"10.42.0.0/16"},
+		"server":        "https://localhost:9345",
+		"totally-typod": "value",
+	}))
+
+	out := buf.String()
+	if !strings.Contains(out, "key=totally-typod") {
+		t.Fatalf("warnUnknownEngineConfig did not warn about the unknown key: %s", out)
+	}
+	if strings.Contains(out, "key=cluster-cidr") || strings.Contains(out, "key=server") {
+		t.Fatalf("warnUnknownEngineConfig warned about a known key: %s", out)
+	}
+}
+
+func TestWarnUnknownEngineConfigUnknownVersionWarnsNothing(t *testing.T) {
+	ctx, buf := warnEngineConfigContext()
+
+	warnUnknownEngineConfig(ctx, engineConfigDistro("1.99.0-rke2r1", dig.Mapping{
+		"totally-typod": "value",
+	}))
+
+	if out := buf.String(); strings.Contains(out, "level=WARN") {
+		t.Fatalf("warnUnknownEngineConfig warned for a version it has no schema for: %s", out)
+	}
+}
+
+func TestWarnUnknownEngineConfigEmptyConfigWarnsNothing(t *testing.T) {
+	ctx, buf := warnEngineConfigContext()
+
+	warnUnknownEngineConfig(ctx, distro.ZarfDistro{})
+
+	if out := buf.String(); out != "" {
+		t.Fatalf("warnUnknownEngineConfig logged for a distro with no engine config: %s", out)
 	}
 }
