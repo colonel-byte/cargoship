@@ -23,7 +23,8 @@ package utils
 import "os"
 
 const (
-	tmpPathPrefix = "cargoship-"
+	// TmpPathPrefix is the shared prefix used for all temporary directories
+	TmpPathPrefix = "cargoship-"
 
 	// ReadWriteExecuteUser is used for any directory or executable not normally used by the end user or containing sensitive data
 	ReadWriteExecuteUser = 0700
@@ -36,7 +37,7 @@ func MakeTempDir(basePath string) (string, error) {
 			return "", err
 		}
 	}
-	tmp, err := os.MkdirTemp(basePath, tmpPathPrefix)
+	tmp, err := os.MkdirTemp(basePath, TmpPathPrefix)
 	if err != nil {
 		return "", err
 	}
