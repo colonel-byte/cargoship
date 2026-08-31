@@ -74,15 +74,15 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-// warnUnknownEngineConfig warns about engine config keys the distro version being packaged
-// does not recognize, so a typo is caught here rather than on every node at install time.
+// logUnknownEngineConfig logs engine config keys the distro version being packaged does not
+// recognize, so a typo is visible here rather than only on every node at install time.
 //
-// This only ever warns. The generated schemas cover the versions whose source has been pulled
-// into this build, which is not necessarily the version a package targets, and a package that
-// carries a key this binary has never heard of is still a package worth building. Install
+// This only ever logs, at debug. The generated schemas cover the versions whose source has been
+// pulled into this build, which is not necessarily the version a package targets, and a package
+// that carries a key this binary has never heard of is still a package worth building. Install
 // time keeps the authoritative check, where the key is narrowed to the role the node actually
 // plays and an unrecognized one is dropped from the config it writes.
-func warnUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
+func logUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
 	cfg := engineConfigKeys(d.Spec.Config.Engine[config.EngineConfig])
 	if len(cfg) == 0 {
 		return
@@ -103,7 +103,7 @@ func warnUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
 
 	for _, k := range slices.Sorted(maps.Keys(cfg)) {
 		if _, ok := valid[k]; !ok {
-			l.Warn("engine config key not recognized for this distro/version, it will be dropped at install time",
+			l.Debug("engine config key not recognized for this distro/version, it will be dropped at install time",
 				"distro", d.Spec.Type, "version", d.Spec.Version, "key", k)
 		}
 	}
@@ -125,7 +125,7 @@ func engineConfigKeys(v any) map[string]any {
 func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
-	warnUnknownEngineConfig(ctx, d)
+	logUnknownEngineConfig(ctx, d)
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {

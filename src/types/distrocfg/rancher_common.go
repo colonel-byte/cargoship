@@ -200,7 +200,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 // validateEngineConfig drops any config.yaml keys that aren't part of the flag set
 // mage generate:engineConfig extracted for this distro at the given engine version's minor
-// release (see src/pkg/engineconfig/gen), warning about each one removed. If no generated
+// release (see src/pkg/engineconfig/gen), logging each one removed at debug. If no generated
 // config exists for this distro/version -- e.g. a version nobody has pulled/generated yet --
 // there's nothing to check against, so it warns once and leaves cfg untouched, falling back to
 // writing it exactly as before this check existed.
@@ -219,7 +219,7 @@ func (d *RancherCommon) validateEngineConfig(ctx context.Context, version string
 	valid := gen.Keys(target)
 	for k := range cfg {
 		if _, ok := valid[k]; !ok {
-			logger.From(ctx).Warn("engine config key not recognized for this distro/version, dropping it from config.yaml", "distro", d.ID, "version", version, "key", k)
+			logger.From(ctx).Debug("engine config key not recognized for this distro/version, dropping it from config.yaml", "distro", d.ID, "version", version, "key", k)
 			delete(cfg, k)
 		}
 	}
