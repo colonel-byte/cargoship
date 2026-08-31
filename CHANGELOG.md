@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.17.0](https://github.com/colonel-byte/cargoship/compare/v0.16.0...v0.17.0) (2026-08-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* make package signature verification actually run on publish and local sources ([#236](https://github.com/colonel-byte/cargoship/issues/236))
+
+### Bug Fixes
+
+* add logging into debug on config ([#238](https://github.com/colonel-byte/cargoship/issues/238)) ([28a9aba](https://github.com/colonel-byte/cargoship/commit/28a9aba305574e8e6c13976fff3ec16a4362e06c))
+* make package signature verification actually run on publish and local sources ([#236](https://github.com/colonel-byte/cargoship/issues/236)) ([bc34895](https://github.com/colonel-byte/cargoship/commit/bc348957d657c2780fc68a5d363dc22cadf4166f))
+* remove no-op --skip-sbom flag, unblock vault-encrypt env fallbacks ([#235](https://github.com/colonel-byte/cargoship/issues/235)) ([8a5c5bc](https://github.com/colonel-byte/cargoship/commit/8a5c5bc3faa0f34f64c01c756dc518493bdcefe3))
+
+
+### CI/CD
+
+* add commit into mage build ([#237](https://github.com/colonel-byte/cargoship/issues/237)) ([abca83e](https://github.com/colonel-byte/cargoship/commit/abca83e06d0b5769cb3ba156523c944972391dd3))
+* update actions ([#232](https://github.com/colonel-byte/cargoship/issues/232)) ([c62b748](https://github.com/colonel-byte/cargoship/commit/c62b748a1f3bf4e79e0e60b58aae3082f902f537))
+
 ## [0.16.0](https://github.com/colonel-byte/cargoship/compare/v0.15.1...v0.16.0) (2026-08-30)
 
 
