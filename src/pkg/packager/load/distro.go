@@ -68,6 +68,11 @@ func DistroDefinition(ctx context.Context, distroPath string, _ DefinitionOption
 	return dis, nil
 }
 
-func validateDistro(_ context.Context, _ v1alpha1.ZarfDistro, _ string) error {
+func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, _ string) error {
+	// Reject an image compression format cargoship cannot write here, so a typo
+	// fails at build time instead of halfway through an apply.
+	if _, err := dis.Spec.Config.ImagesConfig.TarballSuffix(); err != nil {
+		return err
+	}
 	return nil
 }

@@ -17,6 +17,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0
 	github.com/k0sproject/dig v0.4.0
 	github.com/k0sproject/rig v0.21.11
+	github.com/klauspost/compress v1.19.2
 	github.com/magefile/mage v1.17.2
 	github.com/nao1215/markdown v1.0.0
 	github.com/opencontainers/go-digest v1.0.0
@@ -258,7 +259,6 @@ require (
 	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
-	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
