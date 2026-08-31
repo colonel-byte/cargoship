@@ -39,7 +39,7 @@ import (
 
 func testLoggerContext() (context.Context, *bytes.Buffer) {
 	buf := &bytes.Buffer{}
-	l := slog.New(slog.NewTextHandler(buf, nil))
+	l := slog.New(slog.NewTextHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	return logger.WithContext(context.Background(), l), buf
 }
 
@@ -64,6 +64,7 @@ func TestValidateEngineConfigKnownVersionDropsUnknownKeys(t *testing.T) {
 	require.NotContains(t, out, `key=node-name`)
 	require.Contains(t, out, "engine config key not recognized")
 	require.Contains(t, out, `key=totally-typod`)
+	require.NotContains(t, out, "level=WARN")
 }
 
 func TestValidateEngineConfigUnknownVersionBlindlyKeepsAllKeys(t *testing.T) {
