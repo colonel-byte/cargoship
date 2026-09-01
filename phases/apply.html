@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-df636931.js";
+            window.path_to_searchindex_js = "../searchindex-8b6b6166.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cd0e5a39.js"></script>
+        <script src="../toc-fba97644.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -205,7 +205,7 @@
 </li>
 <li>Validate hosts
 <ul>
-<li>Verifying that each node in the cluster has a unique name and private address,</li>
+<li>Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable,</li>
 </ul>
 </li>
 <li>Gathering facts about the distro installed
@@ -233,19 +233,9 @@
 <li>If enabled, then this will modify the <code>/etc/hosts</code> file on the remote nodes with the fully qualified domain name for each node in the cluster</li>
 </ul>
 </li>
-<li>Updating hosts firewalld service
+<li>Updating hosts firewall
 <ul>
-<li>If enabled, then this will create a firewalld ipsets file with the known engine cidr blocks for the pod and service networks, and create a firewalld ipsets to allow each node in cluster to access all ports on the node</li>
-</ul>
-</li>
-<li>Updating hosts firewalld ports
-<ul>
-<li>If enabled, this will open any ports in the <code>.ports</code> section for each remote node</li>
-</ul>
-</li>
-<li>Updating hosts firewalld policies
-<ul>
-<li>If enabled, this create firewalld policies. This is controlled by the inventory file.</li>
+<li>If enabled, this configures the firewall on each node that runs one, firewalld or ufw. It trusts every other node in the cluster along with the engine’s pod and service CIDRs, opens the ports in the <code>.host.ports</code> section, and applies the rules in the <code>.host.firewall.rules</code> section</li>
 </ul>
 </li>
 <li>Upload files to hosts

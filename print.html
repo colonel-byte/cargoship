@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-df636931.js";
+            window.path_to_searchindex_js = "searchindex-8b6b6166.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-cd0e5a39.js"></script>
+        <script src="toc-fba97644.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -279,6 +279,147 @@ cargoship create ./distro-defs -o ./build/
 <li><a href="https://github.com/zarf-dev/zarf">zarf-dev/zarf</a> — For air-gapped image and file packaging and offline-first design.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="host-firewall-configuration-guide"><a class="header" href="#host-firewall-configuration-guide">Host Firewall Configuration Guide</a></h1>
+<p>Cargoship configures the firewall on every node that runs one. It detects the firewall per node, so a single inventory can target a mix of Enterprise Linux hosts running firewalld and Debian or Ubuntu hosts running ufw. Firewall management is opt-in: it only runs when <code>cargoship install apply</code> is given the <code>--firewall</code> flag.</p>
+<p>Every node cargoship manages gets three things: the private address of every other node in the cluster is trusted, the engine’s pod and service CIDR blocks are trusted, and the ports listed in <code>.host.ports</code> are opened. Anything beyond that comes from the rules in <code>.host.firewall.rules</code>.</p>
+<h2 id="backends"><a class="header" href="#backends">Backends</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Backend</th><th>Detected when</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>firewalld</code></td><td>the <code>firewalld</code> service is running</td><td>Cluster trust is applied with ipsets in the <code>trusted</code> zone; ports become a <code>distro-exposed-ports</code> service on the <code>public</code> zone</td></tr>
+<tr><td><code>ufw</code></td><td><code>ufw</code> is installed and <code>ufw status</code> reports <code>active</code></td><td>Cluster trust and rules are applied with <code>ufw</code> commands; ports become a <code>cargoship-ports</code> application profile in <code>/etc/ufw/applications.d/cargoship</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Cargoship never runs <code>ufw enable</code>. A node whose ufw is inactive is left alone, because bringing up a default-deny firewall from a remote phase would cut the SSH connection cargoship is running over. Enable ufw yourself, with a rule that keeps SSH reachable, before pointing cargoship at the node.</p>
+<h2 id="ports"><a class="header" href="#ports">Ports</a></h2>
+<p>The <code>.host.ports</code> list is the simple case, and it works the same on both backends. It opens a port, or an inclusive port range, to any source:</p>
+<pre><code class="language-yaml">spec:
+  hosts:
+    - hostname: distro-kc01
+      role: controller
+      host:
+        ports:
+          - port: 6443
+            protocol: tcp
+          - port: 30000-32767
+            protocol: tcp
+</code></pre>
+<h2 id="rules"><a class="header" href="#rules">Rules</a></h2>
+<p>The <code>.host.firewall.rules</code> list is the backend-neutral rule model. Each rule needs an <code>action</code>; every other field is a match, and an omitted match means “any”.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td>Names the rule. It must be unique within a host, and cargoship uses it to name the files and rule comments it writes on the node. Cargoship derives one from the match fields when it is omitted</td></tr>
+<tr><td><code>action</code></td><td><code>allow</code>, <code>deny</code>, or <code>reject</code></td></tr>
+<tr><td><code>direction</code></td><td><code>in</code> (the default), <code>out</code>, or <code>forward</code></td></tr>
+<tr><td><code>source</code></td><td>The address or CIDR traffic comes from</td></tr>
+<tr><td><code>destination</code></td><td>The address or CIDR traffic goes to</td></tr>
+<tr><td><code>ingress</code></td><td>Where forward traffic enters. Forward rules only</td></tr>
+<tr><td><code>egress</code></td><td>Where forward traffic leaves. Forward rules only</td></tr>
+<tr><td><code>port</code></td><td>A port, or an inclusive <code>low-high</code> range. A port match also needs a <code>protocol</code></td></tr>
+<tr><td><code>protocol</code></td><td><code>tcp</code>, <code>udp</code>, <code>sctp</code>, or <code>dccp</code></td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-yaml">spec:
+  hosts:
+    - hostname: distro-kc01
+      role: controller
+      host:
+        firewall:
+          rules:
+            - name: allow-metrics
+              action: allow
+              source: 10.0.0.0/8
+              port: "9100"
+              protocol: tcp
+            - name: ingress-http
+              action: allow
+              direction: forward
+              ingress: public
+              egress: trusted
+              port: "80"
+              protocol: tcp
+</code></pre>
+<h3 id="rules-on-a-profile"><a class="header" href="#rules-on-a-profile">Rules on a profile</a></h3>
+<p>Rules can also be set on a profile, under <code>.spec.config.profiles.&lt;name&gt;.host.firewall.rules</code>. Every host that selects the profile gets them. This is the usual place for a rule that belongs to a role rather than to one machine, e.g. opening the API server port on every control-plane node.</p>
+<pre><code class="language-yaml">spec:
+  config:
+    profiles:
+      control:
+        host:
+          ports:
+            - port: 6443
+              protocol: tcp
+          firewall:
+            rules:
+              - name: allow-metrics
+                action: allow
+                source: 10.0.0.0/8
+                port: "9100"
+                protocol: tcp
+  hosts:
+    - hostname: distro-kc01
+      role: controller
+      profile: control
+      host:
+        firewall:
+          rules:
+            - name: allow-backup
+              action: allow
+              source: 10.0.9.4
+              port: "2049"
+              protocol: tcp
+</code></pre>
+<p>The host above ends up with both rules. Firewall rules union with the profile’s rather than replacing them, so a host can add one rule of its own without giving up the baseline its profile sets. Rules are matched by <code>name</code>, and a host rule wins over a profile rule of the same name – that is how a host overrides one rule from its profile, or turns a profile <code>allow</code> into a <code>deny</code> for itself.</p>
+<p>Rules with no <code>name</code> are matched by their fields instead, so a host that repeats a profile rule verbatim still only gets it once. Name your rules if you intend to override them.</p>
+<p>The rest of <code>.host</code> still replaces rather than unions: a host that lists any <code>ports</code> of its own inherits none of its profile’s, and the same holds for the legacy <code>policy</code> map.</p>
+<h3 id="how-rules-land-on-each-backend"><a class="header" href="#how-rules-land-on-each-backend">How rules land on each backend</a></h3>
+<p>The two backends express the same rule differently, and two fields mean something slightly different on each.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Rule</th><th>firewalld</th><th>ufw</th></tr>
+</thead>
+<tbody>
+<tr><td><code>direction: in</code> or <code>out</code> with an address match</td><td>A rich rule on the <code>public</code> zone</td><td><code>ufw allow in ...</code> / <code>ufw allow out ...</code></td></tr>
+<tr><td><code>direction: in</code> with only a port match</td><td><code>firewall-cmd --add-port</code> on the <code>public</code> zone. Only <code>action: allow</code> is expressible this way</td><td><code>ufw allow in from any to any port ...</code></td></tr>
+<tr><td><code>direction: forward</code></td><td>A policy file in <code>/etc/firewalld/policies</code>, where <code>ingress</code> and <code>egress</code> name <strong>zones</strong></td><td><code>ufw route allow ...</code>, where <code>ingress</code> and <code>egress</code> name <strong>interfaces</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>Because <code>ingress</code> and <code>egress</code> name zones on one backend and interfaces on the other, a forward rule is the one part of the model that is not portable across a mixed-OS cluster. Set forward rules on a profile that only matches hosts of one OS family.</p>
+<h2 id="idempotency"><a class="header" href="#idempotency">Idempotency</a></h2>
+<p>Both backends can be applied repeatedly without accumulating rules. On firewalld, cargoship writes the same ipset, service, and policy files each run and lets <code>firewall-cmd</code> skip what is already present. On ufw, cargoship records the rules it applied in <code>/var/lib/cargoship/ufw.rules</code>; on the next run, any rule in that file that the current inventory no longer asks for is deleted from ufw before the current rules are applied. Rules cargoship owns are tagged with a <code>cargoship:</code> comment, visible in <code>ufw status</code>, so they can be told apart from rules added by hand. Rules added by hand are never touched.</p>
+<h2 id="legacy-firewalld-policies"><a class="header" href="#legacy-firewalld-policies">Legacy firewalld policies</a></h2>
+<p>The older <code>.host.policy</code> map still works and is still firewalld-only. It maps a policy name to a firewalld policy written verbatim to <code>/etc/firewalld/policies/&lt;name&gt;.xml</code>:</p>
+<pre><code class="language-yaml">spec:
+  hosts:
+    - hostname: distro-kc01
+      role: controller
+      host:
+        policy:
+          k8s-forward:
+            target: ACCEPT
+            ingress:
+              name: public
+            egress:
+              name: trusted
+            ports:
+              - port: "80"
+                protocol: tcp
+</code></pre>
+<p>Prefer a <code>direction: forward</code> rule under <code>.host.firewall.rules</code> for new configuration; it does the same thing on firewalld and also works on ufw hosts.</p>
+<h2 id="adding-a-backend"><a class="header" href="#adding-a-backend">Adding a backend</a></h2>
+<p>A backend is a <code>firewall.Backend</code> implementation in <code>src/pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>src/pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="per-profile-update-concurrency"><a class="header" href="#per-profile-update-concurrency">Per-Profile Update Concurrency</a></h1>
 <p>This guide explains why a cluster admin may want to set a different concurrency limit per node
 profile, and how to configure it.</p>
@@ -427,6 +568,13 @@ metadata:
           ports:
             - port: 6443
               protocol: tcp
+          firewall:
+            rules:
+              - name: allow-metrics
+                action: allow
+                source: 10.0.0.0/8
+                port: "9100"
+                protocol: tcp
         engine:
           labels:
             adrp.xyz/purpose-control: "true"
@@ -445,6 +593,22 @@ metadata:
         keyPath: ~/.ssh/id_ed25519
       profile: control
       role: controller
+</code></pre>
+<h2 id="host-firewall"><a class="header" href="#host-firewall">Host Firewall</a></h2>
+<p>The optional <code>.host.firewall</code> section, on a host or on a profile, declares firewall rules cargoship applies to the node. Cargoship detects whether the node runs firewalld or ufw and renders the same rules onto either. A host’s own rules union with its profile’s, so the host below gets <code>allow-metrics</code> from the <code>control</code> profile as well as its own <code>allow-backup</code>. See the <a href="#host-firewall-configuration-guide">firewall guide</a> for the rule model and the per-backend details.</p>
+<pre><code class="language-yaml">spec:
+  hosts:
+    - hostname: distro-kc01
+      role: controller
+      profile: control
+      host:
+        firewall:
+          rules:
+            - name: allow-backup
+              action: allow
+              source: 10.0.9.4
+              port: "2049"
+              protocol: tcp
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="signing-packages"><a class="header" href="#signing-packages">Signing Packages</a></h1>
@@ -1282,7 +1446,7 @@ $ cargoship version -o json
 </li>
 <li>Validate hosts
 <ul>
-<li>Verifying that each node in the cluster has a unique name and private address,</li>
+<li>Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable,</li>
 </ul>
 </li>
 <li>Gathering facts about the distro installed
@@ -1310,19 +1474,9 @@ $ cargoship version -o json
 <li>If enabled, then this will modify the <code>/etc/hosts</code> file on the remote nodes with the fully qualified domain name for each node in the cluster</li>
 </ul>
 </li>
-<li>Updating hosts firewalld service
+<li>Updating hosts firewall
 <ul>
-<li>If enabled, then this will create a firewalld ipsets file with the known engine cidr blocks for the pod and service networks, and create a firewalld ipsets to allow each node in cluster to access all ports on the node</li>
-</ul>
-</li>
-<li>Updating hosts firewalld ports
-<ul>
-<li>If enabled, this will open any ports in the <code>.ports</code> section for each remote node</li>
-</ul>
-</li>
-<li>Updating hosts firewalld policies
-<ul>
-<li>If enabled, this create firewalld policies. This is controlled by the inventory file.</li>
+<li>If enabled, this configures the firewall on each node that runs one, firewalld or ufw. It trusts every other node in the cluster along with the engine’s pod and service CIDRs, opens the ports in the <code>.host.ports</code> section, and applies the rules in the <code>.host.firewall.rules</code> section</li>
 </ul>
 </li>
 <li>Upload files to hosts
@@ -1427,7 +1581,7 @@ $ cargoship version -o json
 </li>
 <li>Validate hosts
 <ul>
-<li>Verifying that each node in the cluster has a unique name and private address,</li>
+<li>Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable,</li>
 </ul>
 </li>
 <li>Gathering facts about the distro installed
@@ -1582,7 +1736,7 @@ $ cargoship version -o json
 </li>
 <li>Validate hosts
 <ul>
-<li>Verifying that each node in the cluster has a unique name and private address,</li>
+<li>Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable,</li>
 </ul>
 </li>
 <li>Gathering facts about the distro installed
