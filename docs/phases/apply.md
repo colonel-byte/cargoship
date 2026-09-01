@@ -8,7 +8,7 @@
 1. Gather host facts
     - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.
 1. Validate hosts
-    - Verifying that each node in the cluster has a unique name and private address, 
+    - Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable, 
 1. Gathering facts about the distro installed
     - Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running
 1. Prepare hosts
@@ -19,12 +19,8 @@
     - Creates the distro supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
 1. Updating hosts file for clusters nodes
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
-1. Updating hosts firewalld service
-    - If enabled, then this will create a firewalld ipsets file with the known engine cidr blocks for the pod and service networks, and create a firewalld ipsets to allow each node in cluster to access all ports on the node
-1. Updating hosts firewalld ports
-    - If enabled, this will open any ports in the `.ports` section for each remote node
-1. Updating hosts firewalld policies
-    - If enabled, this create firewalld policies. This is controlled by the inventory file.
+1. Updating hosts firewall
+    - If enabled, this configures the firewall on each node that runs one, firewalld or ufw. It trusts every other node in the cluster along with the engine's pod and service CIDRs, opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section
 1. Upload files to hosts
     - Uploads the distro agnostic files to each remote node
 1. Upload files to hosts -- RPM

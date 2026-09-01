@@ -86,14 +86,20 @@ type ZarfHost struct {
 // ZarfHostConfig defines the configuration for a specific host, including
 // firewall policies and the ports cargoship opens on the node.
 type ZarfHostConfig struct {
+	// Firewall holds the backend-neutral firewall rules cargoship renders onto whichever
+	// firewall the node runs, firewalld or ufw.
+	Firewall ZarfFirewallConfig `json:"firewall,omitempty"`
 	// Policy maps a policy name to a firewalld policy that allows traffic from one interface to another.
+	// It is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.
 	Policy map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
 	// Ports lists the ports and protocols cargoship opens on the node.
 	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
 }
 
-// Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c.
+// Merge copies Policy and Ports from update into c, for whichever of those fields are empty in
+// c, and unions update's firewall rules into c's.
 func (c *ZarfHostConfig) Merge(update ZarfHostConfig) {
+	c.Firewall.Merge(update.Firewall)
 	if len(c.Policy) == 0 && len(update.Policy) > 0 {
 		c.Policy = make(map[string]ZarfFirewallPolicyConfig)
 		maps.Copy(c.Policy, update.Policy)

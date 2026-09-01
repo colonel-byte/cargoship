@@ -421,6 +421,23 @@
       ],
       "type": "object"
     },
+    "ZarfFirewallConfig": {
+      "additionalProperties": false,
+      "description": "is the backend-neutral firewall configuration for a node.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "rules": {
+          "description": "lists the firewall rules cargoship applies to the node.",
+          "items": {
+            "$ref": "#/$defs/ZarfFirewallRule"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "ZarfFirewallPolicyConfig": {
       "additionalProperties": false,
       "description": "configures a firewalld policy that opens ports from one zone to another.",
@@ -493,6 +510,94 @@
       "required": [
         "protocol",
         "port"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallRule": {
+      "additionalProperties": false,
+      "description": "is a single backend-neutral firewall rule.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "action": {
+          "description": "is what cargoship does with traffic that matches the rule.",
+          "enum": [
+            "allow",
+            "deny",
+            "reject"
+          ],
+          "type": "string"
+        },
+        "destination": {
+          "description": "is the address or CIDR the traffic goes to.",
+          "examples": [
+            "10.42.0.0/16"
+          ],
+          "type": "string"
+        },
+        "direction": {
+          "default": "in",
+          "description": "selects which traffic the rule matches. It defaults to in.",
+          "enum": [
+            "in",
+            "out",
+            "forward"
+          ],
+          "type": "string"
+        },
+        "egress": {
+          "description": "names where forward traffic leaves. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "trusted"
+          ],
+          "type": "string"
+        },
+        "ingress": {
+          "description": "names where forward traffic enters. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "public"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the rule. Cargoship uses it to name the artifacts it writes on the\nnode, so it must be unique within a host. Cargoship generates one when it is empty.",
+          "examples": [
+            "allow-metrics"
+          ],
+          "type": "string"
+        },
+        "port": {
+          "description": "is the port number, or inclusive port range, the rule matches.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of traffic the rule matches.",
+          "enum": [
+            "tcp",
+            "udp",
+            "sctp",
+            "dccp"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "description": "is the address or CIDR the traffic comes from.",
+          "examples": [
+            "10.0.0.0/8"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
       ],
       "type": "object"
     },
@@ -595,11 +700,15 @@
         "^x-": {}
       },
       "properties": {
+        "firewall": {
+          "$ref": "#/$defs/ZarfFirewallConfig",
+          "description": "holds the backend-neutral firewall rules cargoship renders onto whichever\nfirewall the node runs, firewalld or ufw."
+        },
         "policy": {
           "additionalProperties": {
             "$ref": "#/$defs/ZarfFirewallPolicyConfig"
           },
-          "description": "maps a policy name to a firewalld policy that allows traffic from one interface to another.",
+          "description": "maps a policy name to a firewalld policy that allows traffic from one interface to another.\nIt is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.",
           "type": "object"
         },
         "ports": {
