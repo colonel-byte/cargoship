@@ -20,7 +20,7 @@
 1. Updating hosts file for clusters nodes
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
 1. Updating hosts firewall
-    - If enabled, this configures the firewall on each node that runs one, firewalld or ufw. It trusts every other node in the cluster along with the engine's pod and service CIDRs, opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section
+    - If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables. It trusts every other node in the cluster along with the engine's pod and service CIDRs, opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section
 1. Upload files to hosts
     - Uploads the distro agnostic files to each remote node
 1. Upload files to hosts -- RPM

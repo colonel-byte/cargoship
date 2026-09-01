@@ -19,7 +19,7 @@
 // pod and service CIDRs, the ports from the inventory's `.host.ports`, and the rules from the
 // inventory's `.host.firewall.rules`. A Backend translates that Plan into one firewall's own
 // dialect and applies it. Backends are matched to a node by Detect, so a single inventory can
-// target a mix of firewalld and ufw hosts.
+// target a mix of firewalld, ufw, and nftables hosts.
 package firewall
 
 import (
@@ -69,9 +69,13 @@ type Backend interface {
 }
 
 // backends are matched against a host in order, so the more specific backend comes first.
+// Nftables is last: firewalld and ufw are both front ends onto nftables, so a host running
+// either would match it as well, and the front end is the one an operator expects cargoship
+// to configure.
 var backends = []Backend{
 	&Firewalld{},
 	&UFW{},
+	&Nftables{},
 }
 
 // For returns the backend that manages h's firewall, or nil when the node runs no firewall

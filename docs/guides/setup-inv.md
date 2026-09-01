@@ -74,7 +74,7 @@ spec:
 
 ## Host Firewall
 
-The optional `.host.firewall` section, on a host or on a profile, declares firewall rules cargoship applies to the node. Cargoship detects whether the node runs firewalld or ufw and renders the same rules onto either. A host's own rules union with its profile's, so the host below gets `allow-metrics` from the `control` profile as well as its own `allow-backup`. See the [firewall guide](firewall.md) for the rule model and the per-backend details.
+The optional `.host.firewall` section, on a host or on a profile, declares firewall rules cargoship applies to the node. Cargoship detects whether the node runs firewalld, ufw, or nftables directly, and renders the same rules onto any of them. A host's own rules union with its profile's, so the host below gets `allow-metrics` from the `control` profile as well as its own `allow-backup`. See the [firewall guide](firewall.md) for the rule model and the per-backend details.
 
 ```yaml
 spec:

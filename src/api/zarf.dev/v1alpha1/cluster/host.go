@@ -87,7 +87,7 @@ type ZarfHost struct {
 // firewall policies and the ports cargoship opens on the node.
 type ZarfHostConfig struct {
 	// Firewall holds the backend-neutral firewall rules cargoship renders onto whichever
-	// firewall the node runs, firewalld or ufw.
+	// firewall the node runs, firewalld, ufw, or nftables.
 	Firewall ZarfFirewallConfig `json:"firewall,omitempty"`
 	// Policy maps a policy name to a firewalld policy that allows traffic from one interface to another.
 	// It is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.

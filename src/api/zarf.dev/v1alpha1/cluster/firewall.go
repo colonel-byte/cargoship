@@ -44,7 +44,7 @@ var portPattern = regexp.MustCompile(`^\d{1,5}(-\d{1,5})?$`)
 
 // ZarfFirewallConfig is the backend-neutral firewall configuration for a node. Cargoship
 // renders these rules onto whichever firewall backend the node runs, so a single inventory
-// can target both firewalld and ufw hosts.
+// can target firewalld, ufw, and nftables hosts alike.
 type ZarfFirewallConfig struct {
 	// Rules lists the firewall rules cargoship applies to the node.
 	Rules []ZarfFirewallRule `json:"rules,omitempty"`
