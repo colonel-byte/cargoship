@@ -53,9 +53,10 @@ func newInstallApplyCommand() *cobra.Command {
 		Short:   lang.CmdDistroApplyShort,
 		Example: lang.CmdDistroApplyExample,
 		GroupID: lang.RootGroupInstallID,
+		PreRunE: o.preRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
@@ -69,6 +70,8 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -89,7 +92,7 @@ func newInstallApplyCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installApplyOptions) run(ctx context.Context, args []string) error {
+func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {
@@ -102,7 +105,7 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	manager, err := initManager(ctx, args[0], o.InstallCommon)
+	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
 	if err != nil {
 		l.Warn("failed to create manager", "err", err)
 		return err
