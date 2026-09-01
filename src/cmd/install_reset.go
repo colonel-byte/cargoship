@@ -45,11 +45,11 @@ const (
 	// InstallResetWorkConcurrency flag
 	InstallResetWorkConcurrency = "work-concurrency"
 	// InstallResetUpdateHost flag
-	InstallResetUpdateHost = "update-hosts"
+	InstallResetUpdateHost = "hosts"
 	// InstallResetUpdateFirewall flag
-	InstallResetUpdateFirewall = "update-firewall"
+	InstallResetUpdateFirewall = "firewall"
 	// InstallResetUpdateFAPolicyD flag
-	InstallResetUpdateFAPolicyD = "update-fapolicyd"
+	InstallResetUpdateFAPolicyD = "fapolicyd"
 )
 
 type installResetOptions struct {
