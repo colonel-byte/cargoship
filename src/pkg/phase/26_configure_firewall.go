@@ -51,7 +51,7 @@ func (p *ConfigureFirewall) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *ConfigureFirewall) Explanation() string {
-	return "If enabled, this configures the firewall on each node that runs one, firewalld or ufw. " +
+	return "If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables. " +
 		"It trusts every other node in the cluster along with the engine's pod and service CIDRs, " +
 		"opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section"
 }

@@ -1,6 +1,6 @@
 # Host Firewall Configuration Guide
 
-Cargoship configures the firewall on every node that runs one. It detects the firewall per node, so a single inventory can target a mix of Enterprise Linux hosts running firewalld and Debian or Ubuntu hosts running ufw. Firewall management is opt-in: it only runs when `cargoship install apply` is given the `--firewall` flag.
+Cargoship configures the firewall on every node that runs one. It detects the firewall per node, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when `cargoship apply` is given the `--firewall` flag.
 
 Every node cargoship manages gets three things: the private address of every other node in the cluster is trusted, the engine's pod and service CIDR blocks are trusted, and the ports listed in `.host.ports` are opened. Anything beyond that comes from the rules in `.host.firewall.rules`.
 
@@ -10,12 +10,17 @@ Every node cargoship manages gets three things: the private address of every oth
 | --- | --- | --- |
 | `firewalld` | the `firewalld` service is running | Cluster trust is applied with ipsets in the `trusted` zone; ports become a `distro-exposed-ports` service on the `public` zone |
 | `ufw` | `ufw` is installed and `ufw status` reports `active` | Cluster trust and rules are applied with `ufw` commands; ports become a `cargoship-ports` application profile in `/etc/ufw/applications.d/cargoship` |
+| `nftables` | `nft` is installed and either the `nftables` service is running or the host has an `/etc/nftables.conf` or `/etc/sysconfig/nftables.conf` | Everything cargoship writes lives in one table, `inet cargoship`, rendered to `/etc/cargoship/nftables.nft` and loaded in a single transaction |
 
 Cargoship never runs `ufw enable`. A node whose ufw is inactive is left alone, because bringing up a default-deny firewall from a remote phase would cut the SSH connection cargoship is running over. Enable ufw yourself, with a rule that keeps SSH reachable, before pointing cargoship at the node.
 
+Backends are matched in the order above, and nftables is last on purpose: firewalld and ufw are both front ends onto nftables, so a host running either would match the nftables backend as well, and the front end is the one an operator expects cargoship to configure. The nftables backend is for the hosts that never had a front end -- Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all.
+
+A node whose only nftables content comes from kube-proxy or the CNI is deliberately not a match. Every node in a running cluster has a non-empty ruleset, so matching on that would claim hosts whose operator never configured a firewall at all.
+
 ## Ports
 
-The `.host.ports` list is the simple case, and it works the same on both backends. It opens a port, or an inclusive port range, to any source:
+The `.host.ports` list is the simple case, and it works the same on every backend. It opens a port, or an inclusive port range, to any source:
 
 ```yaml
 spec:
@@ -110,19 +115,29 @@ The rest of `.host` still replaces rather than unions: a host that lists any `po
 
 ### How rules land on each backend
 
-The two backends express the same rule differently, and two fields mean something slightly different on each.
+The backends express the same rule differently, and two fields mean something slightly different on each.
 
-| Rule | firewalld | ufw |
-| --- | --- | --- |
-| `direction: in` or `out` with an address match | A rich rule on the `public` zone | `ufw allow in ...` / `ufw allow out ...` |
-| `direction: in` with only a port match | `firewall-cmd --add-port` on the `public` zone. Only `action: allow` is expressible this way | `ufw allow in from any to any port ...` |
-| `direction: forward` | A policy file in `/etc/firewalld/policies`, where `ingress` and `egress` name **zones** | `ufw route allow ...`, where `ingress` and `egress` name **interfaces** |
+| Rule | firewalld | ufw | nftables |
+| --- | --- | --- | --- |
+| `direction: in` or `out` with an address match | A rich rule on the `public` zone | `ufw allow in ...` / `ufw allow out ...` | A rule in the `input` or `output` chain, matching on `ip saddr` or `ip6 saddr` |
+| `direction: in` with only a port match | `firewall-cmd --add-port` on the `public` zone. Only `action: allow` is expressible this way | `ufw allow in from any to any port ...` | A `tcp dport` or `udp dport` rule in the `input` chain |
+| `direction: forward` | A policy file in `/etc/firewalld/policies`, where `ingress` and `egress` name **zones** | `ufw route allow ...`, where `ingress` and `egress` name **interfaces** | A rule in the `forward` chain, where `ingress` and `egress` name **interfaces** matched with `iifname` and `oifname` |
 
-Because `ingress` and `egress` name zones on one backend and interfaces on the other, a forward rule is the one part of the model that is not portable across a mixed-OS cluster. Set forward rules on a profile that only matches hosts of one OS family.
+Because `ingress` and `egress` name zones on firewalld and interfaces on the other two, a forward rule is the one part of the model that is not portable across a mixed-OS cluster. Set forward rules on a profile that only matches hosts of one OS family.
 
 ## Idempotency
 
-Both backends can be applied repeatedly without accumulating rules. On firewalld, cargoship writes the same ipset, service, and policy files each run and lets `firewall-cmd` skip what is already present. On ufw, cargoship records the rules it applied in `/var/lib/cargoship/ufw.rules`; on the next run, any rule in that file that the current inventory no longer asks for is deleted from ufw before the current rules are applied. Rules cargoship owns are tagged with a `cargoship:` comment, visible in `ufw status`, so they can be told apart from rules added by hand. Rules added by hand are never touched.
+Every backend can be applied repeatedly without accumulating rules. On firewalld, cargoship writes the same ipset, service, and policy files each run and lets `firewall-cmd` skip what is already present. On ufw, cargoship records the rules it applied in `/var/lib/cargoship/ufw.rules`; on the next run, any rule in that file that the current inventory no longer asks for is deleted from ufw before the current rules are applied. Rules cargoship owns are tagged with a `cargoship:` comment, visible in `ufw status`, so they can be told apart from rules added by hand. Rules added by hand are never touched.
+
+On nftables, idempotency needs no state file: the rendered ruleset is cargoship's whole desired state, and it is loaded with an `add table`, `delete table`, and redefinition of `inet cargoship` in one transaction, so a rule the current inventory dropped is gone once the transaction commits. The `add` before the `delete` is what keeps the script working on a node cargoship has not configured before.
+
+## nftables and the cluster's own rules
+
+Kube-proxy in nftables mode, and every CNI, keep their service and network policy rules in the same subsystem cargoship writes to. Cargoship never flushes the ruleset and never reads or writes a table other than its own, because a global flush would break cluster networking until those components resynced.
+
+Two consequences are worth knowing. Every base chain cargoship writes has an `accept` policy, the same reason cargoship never runs `ufw enable`: a default-drop policy applied from a remote phase would cut the connection cargoship is running over. And an `accept` in cargoship's chain ends only that chain, not the netfilter hook, so a rule in an operator's own table can still drop traffic cargoship allowed. Unlike firewalld's trusted zone, cargoship's trust is not the last word on a packet.
+
+Cargoship's rules survive a reboot through an `include "/etc/cargoship/nftables.nft"` line added to whichever boot-time file the distro reads, `/etc/nftables.conf` or `/etc/sysconfig/nftables.conf`. That file is appended to, once, and never rewritten. A host with neither file gets a warning rather than an error: the rules are loaded for this boot, but nothing will reload them at the next one.
 
 ## Legacy firewalld policies
 
@@ -146,7 +161,7 @@ spec:
                 protocol: tcp
 ```
 
-Prefer a `direction: forward` rule under `.host.firewall.rules` for new configuration; it does the same thing on firewalld and also works on ufw hosts.
+Prefer a `direction: forward` rule under `.host.firewall.rules` for new configuration; it does the same thing on firewalld and also works on ufw and nftables hosts.
 
 ## Adding a backend
 

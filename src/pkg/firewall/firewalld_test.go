@@ -132,13 +132,15 @@ func TestSortedKeys(t *testing.T) {
 
 func TestBackendsOrder(t *testing.T) {
 	got := Backends()
-	require.Len(t, got, 2)
+	require.Len(t, got, 3)
 	require.Equal(t, FirewalldService, got[0].Name())
 	require.Equal(t, UFWService, got[1].Name())
+	require.Equal(t, NftablesService, got[2].Name())
 }
 
 func TestDetectWithoutAConfigurer(t *testing.T) {
 	require.False(t, (&Firewalld{}).Detect(&cluster.ZarfHost{}))
 	require.False(t, (&UFW{}).Detect(&cluster.ZarfHost{}))
+	require.False(t, (&Nftables{}).Detect(&cluster.ZarfHost{}))
 	require.Nil(t, For(&cluster.ZarfHost{}))
 }

@@ -702,7 +702,7 @@
       "properties": {
         "firewall": {
           "$ref": "#/$defs/ZarfFirewallConfig",
-          "description": "holds the backend-neutral firewall rules cargoship renders onto whichever\nfirewall the node runs, firewalld or ufw."
+          "description": "holds the backend-neutral firewall rules cargoship renders onto whichever\nfirewall the node runs, firewalld, ufw, or nftables."
         },
         "policy": {
           "additionalProperties": {
