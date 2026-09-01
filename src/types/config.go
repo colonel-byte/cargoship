@@ -72,15 +72,15 @@ type DistroOptions struct {
 	// Concurrency how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once
 	Concurrency int `json:"concurrency,omitempty" mapstructure:"concurrency" jsonschema:"minimum=0"`
 	// FAPolicyd whether we will update hosts with fapolicyd
-	FAPolicyd bool `json:"fapolicy,omitempty" mapstructure:"fapolicy" jsonschema:"default=true"`
+	FAPolicyd bool `json:"fapolicyd,omitempty" mapstructure:"fapolicyd" jsonschema:"default=true"`
 	// FirewallUpdate whether we will update the host firewall
-	FirewallUpdate bool `json:"firewall_update,omitempty" mapstructure:"firewall_update" jsonschema:"default=true"`
+	FirewallUpdate bool `json:"firewall,omitempty" mapstructure:"firewall" jsonschema:"default=true"`
 	// HostUpdate whether we will update the etc host file
-	HostUpdate bool `json:"host_update,omitempty" mapstructure:"host_update" jsonschema:"default=true"`
+	HostUpdate bool `json:"hosts,omitempty" mapstructure:"hosts" jsonschema:"default=true"`
 	// LabelNodes whether we will check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
 	// UpdateKubeConfig whether we will update the local kubeconfig file with the admin creds for the cluster
-	UpdateKubeConfig bool `json:"kubeconfig_update,omitempty" mapstructure:"kubeconfig_update" jsonschema:"default=true"`
+	UpdateKubeConfig bool `json:"kubeconfig,omitempty" mapstructure:"kubeconfig" jsonschema:"default=true"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
 	// ("5") or a percentage of the batch ("25%")
 	WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`

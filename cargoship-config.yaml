@@ -10,7 +10,7 @@ distro:
   oci_concurrency: 10
   concurrency: 300
   worker_concurrency: 5
-  host_update: true
-  firewall_update: true
-  fapolicy: true
+  hosts: true
+  firewall: true
+  fapolicyd: true
   output: ~/zarf
