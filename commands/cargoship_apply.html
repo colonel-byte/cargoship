@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1a6c4d05.js";
+            window.path_to_searchindex_js = "../searchindex-df636931.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-cd0e5a39.js"></script>
@@ -200,7 +200,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm -H -F -f
 
 # Add the node-role label to each node, and leave the local kubeconfig untouched
-$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --update-kubeconfig=false
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --kubeconfig=false
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
 <pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
@@ -210,15 +210,15 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
       --confirm                                 Confirm whether if to proceed with the install
+  -f, --fapolicyd                               Whether to update all the host nodes fapolicyd configuration.
+  -F, --firewall                                Whether to update all the host nodes firewall configuration.
   -h, --help                                    help for apply
+  -H, --hosts                                   Whether to update all the host nodes /etc/hosts file.
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
-      --label-nodes                             Whether to check and add the node-role.kubernetes.io/&lt;profile&gt; label on cluster nodes. Requires --update-kubeconfig.
+      --kubeconfig                              Whether to update the local kubeconfig file with the admin creds for this cluster. (default true)
+      --label-nodes                             Whether to check and add the node-role.kubernetes.io/&lt;profile&gt; label on cluster nodes. Requires --kubeconfig.
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
-  -f, --update-fapolicyd                        Whether to update all the host nodes fapolicyd configuration.
-  -F, --update-firewall                         Whether to update all the host nodes firewall configuration.
-  -H, --update-hosts                            Whether to update all the host nodes /etc/hosts file.
-      --update-kubeconfig                       Whether to update the local kubeconfig file with the admin creds for this cluster. (default true)
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
       --vault-password-file string              Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
       --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
