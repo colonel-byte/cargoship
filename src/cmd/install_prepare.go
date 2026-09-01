@@ -49,9 +49,10 @@ func newInstallPrepareCommand() *cobra.Command {
 		Short:   lang.CmdDistroPrepareShort,
 		Example: lang.CmdDistroPrepareExample,
 		GroupID: lang.RootGroupInstallID,
+		PreRunE: o.preRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
@@ -62,6 +63,8 @@ func newInstallPrepareCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -82,7 +85,7 @@ func newInstallPrepareCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installPrepareOptions) run(ctx context.Context, args []string) error {
+func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {
@@ -95,7 +98,7 @@ func (o *installPrepareOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	manager, err := initManager(ctx, args[0], o.InstallCommon)
+	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
 	if err != nil {
 		l.Warn("failed to create manager", "err", err)
 		return err

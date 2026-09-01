@@ -54,9 +54,10 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 		Short:   lang.CmdDistroEngineConfigSyncShort,
 		Example: lang.CmdDistroEngineConfigSyncExample,
 		GroupID: lang.RootGroupInstallID,
+		PreRunE: o.preRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
@@ -67,6 +68,8 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -87,7 +90,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installEngineConfigSyncOptions) run(ctx context.Context, args []string) error {
+func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
 	if !o.confirm {
@@ -100,7 +103,7 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, args []string)
 		return err
 	}
 
-	manager, err := initManager(ctx, args[0], o.InstallCommon)
+	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
 	if err != nil {
 		l.Warn("failed to create manager", "err", err)
 		return err
