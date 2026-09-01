@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.18.0](https://github.com/colonel-byte/cargoship/compare/v0.17.0...v0.18.0) (2026-09-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* add package verification ([#248](https://github.com/colonel-byte/cargoship/issues/248))
+
+### Features
+
+* add package verification ([#248](https://github.com/colonel-byte/cargoship/issues/248)) ([231030b](https://github.com/colonel-byte/cargoship/commit/231030b60eea38478c9903a0b8dc6025e0dcf01b))
+
+
+### Build
+
+* **deps:** Bump github.com/docker/docker-credential-helpers from 0.9.8 to 0.9.9 ([#241](https://github.com/colonel-byte/cargoship/issues/241)) ([0c0d8e8](https://github.com/colonel-byte/cargoship/commit/0c0d8e81b9834c8fe85a99f790a621898096a39d))
+* **deps:** Bump golangci-lint from v2.13.1 to 2.13.2 in the core group across 1 directory ([#239](https://github.com/colonel-byte/cargoship/issues/239)) ([e9bdab8](https://github.com/colonel-byte/cargoship/commit/e9bdab85d00a5086bb19ba0e7762aaba3af594b5))
+* **deps:** Bump google.golang.org/api from 0.293.0 to 0.295.0 ([#247](https://github.com/colonel-byte/cargoship/issues/247)) ([a42d408](https://github.com/colonel-byte/cargoship/commit/a42d408f32ddb7fd8c39b8d210566d324d93ebb8))
+* **deps:** Bump the core group across 1 directory with 2 updates ([#242](https://github.com/colonel-byte/cargoship/issues/242)) ([2d16203](https://github.com/colonel-byte/cargoship/commit/2d16203465a88c083b87a74d7a9cc9c792e775ac))
+* **deps:** Bump the cosign group across 1 directory with 20 updates ([#244](https://github.com/colonel-byte/cargoship/issues/244)) ([b31baad](https://github.com/colonel-byte/cargoship/commit/b31baad73a9b46b343a2b546bde450b5e783486c))
+* **deps:** Bump the k8s group across 1 directory with 7 updates ([#243](https://github.com/colonel-byte/cargoship/issues/243)) ([afb47df](https://github.com/colonel-byte/cargoship/commit/afb47df68d62f5da2260d44c0f68371fe698f68a))
+* **deps:** Bump the opentelemetry group across 1 directory with 11 updates ([#245](https://github.com/colonel-byte/cargoship/issues/245)) ([5d15c69](https://github.com/colonel-byte/cargoship/commit/5d15c695e518b4b6bce5598c0eee6f7340205edf))
+
 ## [0.17.0](https://github.com/colonel-byte/cargoship/compare/v0.16.0...v0.17.0) (2026-08-31)
 
 
