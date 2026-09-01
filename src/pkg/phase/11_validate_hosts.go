@@ -46,7 +46,7 @@ func (p *ValidateHosts) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *ValidateHosts) Explanation() string {
-	return "Verifying that each node in the cluster has a unique name and private address, "
+	return "Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable, "
 }
 
 // Run the phase
@@ -68,6 +68,7 @@ func (p *ValidateHosts) Run(ctx context.Context) error {
 		p.validateUniquePrivateAddress,
 		p.validateSudo,
 		p.validateConfigurer,
+		p.validateFirewallRules,
 	)
 	if err != nil {
 		return err
@@ -94,6 +95,14 @@ func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *clust
 
 func (p *ValidateHosts) validateSudo(_ context.Context, h *cluster.ZarfHost) error {
 	return h.Configurer.CheckPrivilege(h)
+}
+
+func (p *ValidateHosts) validateFirewallRules(_ context.Context, h *cluster.ZarfHost) error {
+	if err := h.Host.Firewall.Validate(); err != nil {
+		return fmt.Errorf("%s: %w", h, err)
+	}
+
+	return nil
 }
 
 func (p *ValidateHosts) validateConfigurer(_ context.Context, h *cluster.ZarfHost) error {

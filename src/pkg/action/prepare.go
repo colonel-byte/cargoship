@@ -40,7 +40,7 @@ type PrepareOptions struct {
 	NoDrain bool
 	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
 	ModifyHosts bool
-	// ModifyFirewall updates the firewalld on the nodes
+	// ModifyFirewall updates the firewall, firewalld or ufw, on the nodes
 	ModifyFirewall bool
 	// ModifyModules whether to update the host kernel modules
 	ModifyModules bool

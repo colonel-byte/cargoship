@@ -41,6 +41,13 @@ spec:
           ports:
             - port: 6443
               protocol: tcp
+          firewall:
+            rules:
+              - name: allow-metrics
+                action: allow
+                source: 10.0.0.0/8
+                port: "9100"
+                protocol: tcp
         engine:
           labels:
             adrp.xyz/purpose-control: "true"
@@ -63,4 +70,24 @@ spec:
         keyPath: ~/.ssh/id_ed25519
       profile: control
       role: controller
+```
+
+## Host Firewall
+
+The optional `.host.firewall` section, on a host or on a profile, declares firewall rules cargoship applies to the node. Cargoship detects whether the node runs firewalld or ufw and renders the same rules onto either. A host's own rules union with its profile's, so the host below gets `allow-metrics` from the `control` profile as well as its own `allow-backup`. See the [firewall guide](firewall.md) for the rule model and the per-backend details.
+
+```yaml
+spec:
+  hosts:
+    - hostname: distro-kc01
+      role: controller
+      profile: control
+      host:
+        firewall:
+          rules:
+            - name: allow-backup
+              action: allow
+              source: 10.0.9.4
+              port: "2049"
+              protocol: tcp
 ```

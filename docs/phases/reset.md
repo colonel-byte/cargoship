@@ -8,7 +8,7 @@
 1. Gather host facts
     - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.
 1. Validate hosts
-    - Verifying that each node in the cluster has a unique name and private address, 
+    - Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable, 
 1. Gathering facts about the distro installed
     - Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running
 1. Reset Worker
