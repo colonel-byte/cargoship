@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.19.0](https://github.com/colonel-byte/cargoship/compare/v0.18.0...v0.19.0) (2026-09-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* rework to add ufw support ([#249](https://github.com/colonel-byte/cargoship/issues/249))
+* drop the update- prefix from the host modification flags ([#250](https://github.com/colonel-byte/cargoship/issues/250))
+
+### Features
+
+* add an nftables firewall backend ([#251](https://github.com/colonel-byte/cargoship/issues/251)) ([7541115](https://github.com/colonel-byte/cargoship/commit/7541115416e50159d54e351de0f87cb959e35772))
+* drop the update- prefix from the host modification flags ([#250](https://github.com/colonel-byte/cargoship/issues/250)) ([39d0d47](https://github.com/colonel-byte/cargoship/commit/39d0d4734939093f563e81752f7ad3720584c0f9))
+* rework to add ufw support ([#249](https://github.com/colonel-byte/cargoship/issues/249)) ([8576563](https://github.com/colonel-byte/cargoship/commit/8576563efae70748eb21ba019651df29e979829b))
+
 ## [0.18.0](https://github.com/colonel-byte/cargoship/compare/v0.17.0...v0.18.0) (2026-09-01)
 
 
