@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8b6b6166.js";
+            window.path_to_searchindex_js = "searchindex-faae5d79.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-fba97644.js"></script>
+        <script src="toc-cde03310.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -280,7 +280,7 @@ cargoship create ./distro-defs -o ./build/
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="host-firewall-configuration-guide"><a class="header" href="#host-firewall-configuration-guide">Host Firewall Configuration Guide</a></h1>
-<p>Cargoship configures the firewall on every node that runs one. It detects the firewall per node, so a single inventory can target a mix of Enterprise Linux hosts running firewalld and Debian or Ubuntu hosts running ufw. Firewall management is opt-in: it only runs when <code>cargoship install apply</code> is given the <code>--firewall</code> flag.</p>
+<p>Cargoship configures the firewall on every node that runs one. It detects the firewall per node, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when <code>cargoship apply</code> is given the <code>--firewall</code> flag.</p>
 <p>Every node cargoship manages gets three things: the private address of every other node in the cluster is trusted, the engine’s pod and service CIDR blocks are trusted, and the ports listed in <code>.host.ports</code> are opened. Anything beyond that comes from the rules in <code>.host.firewall.rules</code>.</p>
 <h2 id="backends"><a class="header" href="#backends">Backends</a></h2>
 <div class="table-wrapper">
@@ -291,12 +291,15 @@ cargoship create ./distro-defs -o ./build/
 <tbody>
 <tr><td><code>firewalld</code></td><td>the <code>firewalld</code> service is running</td><td>Cluster trust is applied with ipsets in the <code>trusted</code> zone; ports become a <code>distro-exposed-ports</code> service on the <code>public</code> zone</td></tr>
 <tr><td><code>ufw</code></td><td><code>ufw</code> is installed and <code>ufw status</code> reports <code>active</code></td><td>Cluster trust and rules are applied with <code>ufw</code> commands; ports become a <code>cargoship-ports</code> application profile in <code>/etc/ufw/applications.d/cargoship</code></td></tr>
+<tr><td><code>nftables</code></td><td><code>nft</code> is installed and either the <code>nftables</code> service is running or the host has an <code>/etc/nftables.conf</code> or <code>/etc/sysconfig/nftables.conf</code></td><td>Everything cargoship writes lives in one table, <code>inet cargoship</code>, rendered to <code>/etc/cargoship/nftables.nft</code> and loaded in a single transaction</td></tr>
 </tbody>
 </table>
 </div>
 <p>Cargoship never runs <code>ufw enable</code>. A node whose ufw is inactive is left alone, because bringing up a default-deny firewall from a remote phase would cut the SSH connection cargoship is running over. Enable ufw yourself, with a rule that keeps SSH reachable, before pointing cargoship at the node.</p>
+<p>Backends are matched in the order above, and nftables is last on purpose: firewalld and ufw are both front ends onto nftables, so a host running either would match the nftables backend as well, and the front end is the one an operator expects cargoship to configure. The nftables backend is for the hosts that never had a front end – Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all.</p>
+<p>A node whose only nftables content comes from kube-proxy or the CNI is deliberately not a match. Every node in a running cluster has a non-empty ruleset, so matching on that would claim hosts whose operator never configured a firewall at all.</p>
 <h2 id="ports"><a class="header" href="#ports">Ports</a></h2>
-<p>The <code>.host.ports</code> list is the simple case, and it works the same on both backends. It opens a port, or an inclusive port range, to any source:</p>
+<p>The <code>.host.ports</code> list is the simple case, and it works the same on every backend. It opens a port, or an inclusive port range, to any source:</p>
 <pre><code class="language-yaml">spec:
   hosts:
     - hostname: distro-kc01
@@ -382,22 +385,27 @@ cargoship create ./distro-defs -o ./build/
 <p>Rules with no <code>name</code> are matched by their fields instead, so a host that repeats a profile rule verbatim still only gets it once. Name your rules if you intend to override them.</p>
 <p>The rest of <code>.host</code> still replaces rather than unions: a host that lists any <code>ports</code> of its own inherits none of its profile’s, and the same holds for the legacy <code>policy</code> map.</p>
 <h3 id="how-rules-land-on-each-backend"><a class="header" href="#how-rules-land-on-each-backend">How rules land on each backend</a></h3>
-<p>The two backends express the same rule differently, and two fields mean something slightly different on each.</p>
+<p>The backends express the same rule differently, and two fields mean something slightly different on each.</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Rule</th><th>firewalld</th><th>ufw</th></tr>
+<tr><th>Rule</th><th>firewalld</th><th>ufw</th><th>nftables</th></tr>
 </thead>
 <tbody>
-<tr><td><code>direction: in</code> or <code>out</code> with an address match</td><td>A rich rule on the <code>public</code> zone</td><td><code>ufw allow in ...</code> / <code>ufw allow out ...</code></td></tr>
-<tr><td><code>direction: in</code> with only a port match</td><td><code>firewall-cmd --add-port</code> on the <code>public</code> zone. Only <code>action: allow</code> is expressible this way</td><td><code>ufw allow in from any to any port ...</code></td></tr>
-<tr><td><code>direction: forward</code></td><td>A policy file in <code>/etc/firewalld/policies</code>, where <code>ingress</code> and <code>egress</code> name <strong>zones</strong></td><td><code>ufw route allow ...</code>, where <code>ingress</code> and <code>egress</code> name <strong>interfaces</strong></td></tr>
+<tr><td><code>direction: in</code> or <code>out</code> with an address match</td><td>A rich rule on the <code>public</code> zone</td><td><code>ufw allow in ...</code> / <code>ufw allow out ...</code></td><td>A rule in the <code>input</code> or <code>output</code> chain, matching on <code>ip saddr</code> or <code>ip6 saddr</code></td></tr>
+<tr><td><code>direction: in</code> with only a port match</td><td><code>firewall-cmd --add-port</code> on the <code>public</code> zone. Only <code>action: allow</code> is expressible this way</td><td><code>ufw allow in from any to any port ...</code></td><td>A <code>tcp dport</code> or <code>udp dport</code> rule in the <code>input</code> chain</td></tr>
+<tr><td><code>direction: forward</code></td><td>A policy file in <code>/etc/firewalld/policies</code>, where <code>ingress</code> and <code>egress</code> name <strong>zones</strong></td><td><code>ufw route allow ...</code>, where <code>ingress</code> and <code>egress</code> name <strong>interfaces</strong></td><td>A rule in the <code>forward</code> chain, where <code>ingress</code> and <code>egress</code> name <strong>interfaces</strong> matched with <code>iifname</code> and <code>oifname</code></td></tr>
 </tbody>
 </table>
 </div>
-<p>Because <code>ingress</code> and <code>egress</code> name zones on one backend and interfaces on the other, a forward rule is the one part of the model that is not portable across a mixed-OS cluster. Set forward rules on a profile that only matches hosts of one OS family.</p>
+<p>Because <code>ingress</code> and <code>egress</code> name zones on firewalld and interfaces on the other two, a forward rule is the one part of the model that is not portable across a mixed-OS cluster. Set forward rules on a profile that only matches hosts of one OS family.</p>
 <h2 id="idempotency"><a class="header" href="#idempotency">Idempotency</a></h2>
-<p>Both backends can be applied repeatedly without accumulating rules. On firewalld, cargoship writes the same ipset, service, and policy files each run and lets <code>firewall-cmd</code> skip what is already present. On ufw, cargoship records the rules it applied in <code>/var/lib/cargoship/ufw.rules</code>; on the next run, any rule in that file that the current inventory no longer asks for is deleted from ufw before the current rules are applied. Rules cargoship owns are tagged with a <code>cargoship:</code> comment, visible in <code>ufw status</code>, so they can be told apart from rules added by hand. Rules added by hand are never touched.</p>
+<p>Every backend can be applied repeatedly without accumulating rules. On firewalld, cargoship writes the same ipset, service, and policy files each run and lets <code>firewall-cmd</code> skip what is already present. On ufw, cargoship records the rules it applied in <code>/var/lib/cargoship/ufw.rules</code>; on the next run, any rule in that file that the current inventory no longer asks for is deleted from ufw before the current rules are applied. Rules cargoship owns are tagged with a <code>cargoship:</code> comment, visible in <code>ufw status</code>, so they can be told apart from rules added by hand. Rules added by hand are never touched.</p>
+<p>On nftables, idempotency needs no state file: the rendered ruleset is cargoship’s whole desired state, and it is loaded with an <code>add table</code>, <code>delete table</code>, and redefinition of <code>inet cargoship</code> in one transaction, so a rule the current inventory dropped is gone once the transaction commits. The <code>add</code> before the <code>delete</code> is what keeps the script working on a node cargoship has not configured before.</p>
+<h2 id="nftables-and-the-clusters-own-rules"><a class="header" href="#nftables-and-the-clusters-own-rules">nftables and the cluster’s own rules</a></h2>
+<p>Kube-proxy in nftables mode, and every CNI, keep their service and network policy rules in the same subsystem cargoship writes to. Cargoship never flushes the ruleset and never reads or writes a table other than its own, because a global flush would break cluster networking until those components resynced.</p>
+<p>Two consequences are worth knowing. Every base chain cargoship writes has an <code>accept</code> policy, the same reason cargoship never runs <code>ufw enable</code>: a default-drop policy applied from a remote phase would cut the connection cargoship is running over. And an <code>accept</code> in cargoship’s chain ends only that chain, not the netfilter hook, so a rule in an operator’s own table can still drop traffic cargoship allowed. Unlike firewalld’s trusted zone, cargoship’s trust is not the last word on a packet.</p>
+<p>Cargoship’s rules survive a reboot through an <code>include "/etc/cargoship/nftables.nft"</code> line added to whichever boot-time file the distro reads, <code>/etc/nftables.conf</code> or <code>/etc/sysconfig/nftables.conf</code>. That file is appended to, once, and never rewritten. A host with neither file gets a warning rather than an error: the rules are loaded for this boot, but nothing will reload them at the next one.</p>
 <h2 id="legacy-firewalld-policies"><a class="header" href="#legacy-firewalld-policies">Legacy firewalld policies</a></h2>
 <p>The older <code>.host.policy</code> map still works and is still firewalld-only. It maps a policy name to a firewalld policy written verbatim to <code>/etc/firewalld/policies/&lt;name&gt;.xml</code>:</p>
 <pre><code class="language-yaml">spec:
@@ -416,7 +424,7 @@ cargoship create ./distro-defs -o ./build/
               - port: "80"
                 protocol: tcp
 </code></pre>
-<p>Prefer a <code>direction: forward</code> rule under <code>.host.firewall.rules</code> for new configuration; it does the same thing on firewalld and also works on ufw hosts.</p>
+<p>Prefer a <code>direction: forward</code> rule under <code>.host.firewall.rules</code> for new configuration; it does the same thing on firewalld and also works on ufw and nftables hosts.</p>
 <h2 id="adding-a-backend"><a class="header" href="#adding-a-backend">Adding a backend</a></h2>
 <p>A backend is a <code>firewall.Backend</code> implementation in <code>src/pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>src/pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -595,7 +603,7 @@ metadata:
       role: controller
 </code></pre>
 <h2 id="host-firewall"><a class="header" href="#host-firewall">Host Firewall</a></h2>
-<p>The optional <code>.host.firewall</code> section, on a host or on a profile, declares firewall rules cargoship applies to the node. Cargoship detects whether the node runs firewalld or ufw and renders the same rules onto either. A host’s own rules union with its profile’s, so the host below gets <code>allow-metrics</code> from the <code>control</code> profile as well as its own <code>allow-backup</code>. See the <a href="#host-firewall-configuration-guide">firewall guide</a> for the rule model and the per-backend details.</p>
+<p>The optional <code>.host.firewall</code> section, on a host or on a profile, declares firewall rules cargoship applies to the node. Cargoship detects whether the node runs firewalld, ufw, or nftables directly, and renders the same rules onto any of them. A host’s own rules union with its profile’s, so the host below gets <code>allow-metrics</code> from the <code>control</code> profile as well as its own <code>allow-backup</code>. See the <a href="#host-firewall-configuration-guide">firewall guide</a> for the rule model and the per-backend details.</p>
 <pre><code class="language-yaml">spec:
   hosts:
     - hostname: distro-kc01
@@ -1476,7 +1484,7 @@ $ cargoship version -o json
 </li>
 <li>Updating hosts firewall
 <ul>
-<li>If enabled, this configures the firewall on each node that runs one, firewalld or ufw. It trusts every other node in the cluster along with the engine’s pod and service CIDRs, opens the ports in the <code>.host.ports</code> section, and applies the rules in the <code>.host.firewall.rules</code> section</li>
+<li>If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables. It trusts every other node in the cluster along with the engine’s pod and service CIDRs, opens the ports in the <code>.host.ports</code> section, and applies the rules in the <code>.host.firewall.rules</code> section</li>
 </ul>
 </li>
 <li>Upload files to hosts
@@ -2255,6 +2263,38 @@ mage generate:updatePins            # refresh every line already pinned
 </ul>
 <p><a href="https://github.com/google/go-containerregistry"><code>github.com/google/go-containerregistry</code></a>’s <code>pkg/registry</code> package was used instead. It’s the same kind of thing Cargoship’s own crane-adjacent tooling already depends on transitively (it was in <code>go.sum</code> already, unused), so promoting it to a direct dependency added exactly one new package to <code>vendor/</code> and nothing else – <code>go mod tidy</code> only moved the existing entry from indirect to direct. <code>pkg/registry.New()</code> returns a plain <code>http.Handler</code> with no storage-backend options to drag in a dependency tree: wrap it in a stock <code>net/http.Server</code>, <code>Listen</code> on <code>:0</code>, done.</p>
 <p>Net effect: same job (an in-memory OCI-compliant registry for tests), zero new transitive dependencies, no build breakage.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table"><a class="header" href="#why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table">Why the nftables backend shells out to <code>nft</code> and owns a single table</a></h1>
+<p>Cargoship’s firewall support (<code>cargoship apply --firewall</code>) renders a backend-neutral <code>firewall.Plan</code> onto whichever firewall a node runs. <code>firewalld</code> and <code>ufw</code> cover Enterprise Linux and Debian-family hosts that use a front end. The <code>nftables</code> backend (<code>src/pkg/firewall/nftables.go</code>) covers the rest: Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all. Several design choices there are not obvious from the code, and each had an alternative that was considered and rejected.</p>
+<h2 id="shelling-out-to-nft-rather-than-talking-netlink"><a class="header" href="#shelling-out-to-nft-rather-than-talking-netlink">Shelling out to <code>nft</code> rather than talking netlink</a></h2>
+<p><a href="https://github.com/google/nftables"><code>github.com/google/nftables</code></a> is the native Go netlink client for the same subsystem, and it would give typed rule construction instead of string rendering. It was not used:</p>
+<ul>
+<li><strong>It runs in the wrong process.</strong> Cargoship configures hosts over SSH; every other backend, and every other host-modification phase, works by executing a command on the remote node through <code>rig</code>. A netlink library would only configure the <em>local</em> machine, so using it would mean shipping and bootstrapping a helper binary onto every node – a distribution problem cargoship does not otherwise have.</li>
+<li><strong>New dependency for no gain.</strong> <code>google/nftables</code> is not in <code>go.sum</code> at all today, and it pulls <code>mdlayher/netlink</code> and <code>vishvananda/netns</code> with it. <code>nft</code> is already present on any host that qualifies for this backend, since <code>Detect</code> requires it.</li>
+<li><strong>The rendered ruleset is the auditable artifact.</strong> Cargoship writes <code>/etc/cargoship/nftables.nft</code> and loads it. An operator can read exactly what cargoship intends to apply, diff it between runs, and load it by hand. A netlink client leaves nothing behind to read.</li>
+</ul>
+<p>The cost is that rule construction is string formatting, so rendering bugs are not caught by the compiler. That is why <code>Apply</code> runs <code>nft -c -f</code> before <code>nft -f</code>: <code>-c</code> parses and validates without loading, so a malformed ruleset fails before it can land on a node cargoship may no longer be able to reach.</p>
+<h2 id="replacing-one-owned-table-instead-of-reconciling-against-a-state-file"><a class="header" href="#replacing-one-owned-table-instead-of-reconciling-against-a-state-file">Replacing one owned table instead of reconciling against a state file</a></h2>
+<p>The ufw backend records the rules it applied in <code>/var/lib/cargoship/ufw.rules</code> and, on the next run, deletes the recorded rules the current inventory no longer asks for. That is necessary there because ufw has no way to express “these are all my rules, replace them”.</p>
+<p>nftables does. <code>add table inet cargoship</code>, <code>delete table inet cargoship</code>, then the table’s full definition, submitted as one <code>nft -f</code> transaction, atomically replaces everything cargoship owns. A rule dropped from the inventory is gone when the transaction commits, with no record of the previous run needed and no window in which the node has partial rules. The <code>add</code> before the <code>delete</code> is not redundant: <code>delete table</code> on a table that does not exist is an error, and <code>add</code> on one that does is a no-op, so the pair makes the script work on a node cargoship has never configured.</p>
+<p>Deleting nothing is also how teardown works. An empty plan renders just the add/delete pair, which removes cargoship’s table and leaves the host’s own rules untouched.</p>
+<h2 id="never-flushing-the-ruleset-and-never-reading-another-table"><a class="header" href="#never-flushing-the-ruleset-and-never-reading-another-table">Never flushing the ruleset, and never reading another table</a></h2>
+<p>The reflex when writing an nftables integration is <code>flush ruleset</code>. That would be actively harmful here. Kube-proxy in nftables mode keeps its service and endpoint rules in this same subsystem, and so does every CNI that implements network policy. A global flush would break cluster networking until each of those components noticed and resynced – on a node cargoship is in the middle of configuring, quite possibly the node it is reaching the rest of the cluster through.</p>
+<p>So cargoship writes one table and reads none. Nothing outside <code>inet cargoship</code> is inspected or modified, which also means an operator’s own tables survive an apply untouched.</p>
+<h2 id="policy-accept-on-every-base-chain"><a class="header" href="#policy-accept-on-every-base-chain"><code>policy accept</code> on every base chain</a></h2>
+<p>Every base chain cargoship writes has an accept policy. This is the same constraint that stops cargoship from running <code>ufw enable</code>: a default-drop policy applied from a remote phase would cut the SSH connection cargoship is running over, and the node would be unreachable with the phase half-finished.</p>
+<p>There is a consequence worth stating plainly, because it makes the nftables backend weaker than the others in one respect. An <code>accept</code> verdict ends cargoship’s chain, not the netfilter hook – other base chains at other priorities still see the packet. So a rule in an operator’s own table can drop traffic that a cargoship rule allowed. Firewalld’s trusted zone is the last word on a packet; cargoship’s nftables rules are not. A <code>deny</code> or <code>reject</code> rule does terminate evaluation, so the restrictive direction behaves as written; only the permissive direction is advisory.</p>
+<h2 id="detecting-on-the-service-or-a-conf-file-not-on-a-non-empty-ruleset"><a class="header" href="#detecting-on-the-service-or-a-conf-file-not-on-a-non-empty-ruleset">Detecting on the service or a conf file, not on a non-empty ruleset</a></h2>
+<p><code>Detect</code> requires <code>nft</code> to exist, and then either the <code>nftables</code> service to be running or one of <code>/etc/nftables.conf</code> and <code>/etc/sysconfig/nftables.conf</code> to be present. Probing both paths rather than branching on the distro type keeps the check independent of <code>src/types/os</code>, since the split is Debian/Arch/Alpine versus Enterprise Linux/SUSE and does not line up with anything else cargoship distinguishes hosts by.</p>
+<p>The tempting alternative – treat a non-empty ruleset as evidence of a host firewall – was rejected because it is true on every node of a running cluster. Kube-proxy and the CNI populate the ruleset on hosts whose operator never configured a firewall at all, and claiming those hosts would mean applying rules where the inventory’s author expected none.</p>
+<p>The gap that leaves is real and deliberate: a CoreOS or Flatcar node with <code>nft</code> present but no nftables service and no conf file does not match, and gets no firewall configuration. Widening the check to close that gap reopens the false-positive problem above, so the conservative direction was chosen.</p>
+<h2 id="matching-last"><a class="header" href="#matching-last">Matching last</a></h2>
+<p>The backend order in <code>src/pkg/firewall/firewall.go</code> is firewalld, ufw, nftables. firewalld and ufw are both front ends onto nftables, so a host running either would satisfy the nftables <code>Detect</code> as well. The front end is the one an operator expects cargoship to configure – rules written underneath it would be invisible to <code>firewall-cmd</code> and <code>ufw status</code>, and a front-end reload could tear them out. Putting nftables last makes it the fallback it is meant to be.</p>
+<h2 id="persisting-with-an-include-line"><a class="header" href="#persisting-with-an-include-line">Persisting with an <code>include</code> line</a></h2>
+<p>Cargoship’s rules are loaded into the running ruleset by <code>nft -f</code>, which does not survive a reboot. Persistence is an <code>include "/etc/cargoship/nftables.nft"</code> line appended once to whichever boot-time file the distro reads.</p>
+<p>The alternative, dumping <code>nft list ruleset</code> into that file, would capture kube-proxy’s and the CNI’s rules along with cargoship’s and replay them at boot as static rules – stale ones, describing services that may no longer exist. Appending an include leaves the operator’s file otherwise intact, keeps cargoship’s contribution in one identifiable place, and stays correct when cargoship’s ruleset is regenerated. A host with neither conf file gets a warning rather than an error: the rules are loaded for this boot, but nothing will reload them at the next one.</p>
+<h2 id="one-inet-table-rather-than-separate-ip-and-ip6-tables"><a class="header" href="#one-inet-table-rather-than-separate-ip-and-ip6-tables">One <code>inet</code> table rather than separate <code>ip</code> and <code>ip6</code> tables</a></h2>
+<p>The <code>inet</code> family covers IPv4 and IPv6 in a single table, so a plan renders one table, one set of chains, and one transaction regardless of what the cluster’s addressing looks like. The cost is that address matches must name their family explicitly – <code>ip saddr</code> versus <code>ip6 saddr</code> – and that trusted addresses split into two sets, <code>cluster_v4</code> and <code>cluster_v6</code>, since a set has one type. Both are handled in rendering (<code>nftAddrFamily</code>, <code>nftSplitFamilies</code>) and are cheaper than maintaining two parallel tables and deciding which of them a dual-stack plan belongs in.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
 <p>Cargoship’s Ansible Vault support (<code>cargoship vault-encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
