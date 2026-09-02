@@ -21,20 +21,29 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
 $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
 
 # Sync without touching the local kubeconfig
-$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --update-kubeconfig=false
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --kubeconfig=false
 ```
 
 ### Options
 
 ```
-  -c, --concurrency int              Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
-      --config string                Config file used to bootstrap a cluster.
-      --confirm                      Confirm whether if to proceed with the install
-  -h, --help                         help for engine-config-sync
-      --label-nodes                  Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig.
-      --update-kubeconfig            Whether to update the local kubeconfig file with the admin creds for this cluster. (default true)
-      --vault-password-file string   Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
-  -w, --work-concurrency string      Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
+      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+  -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
+      --config string                           Config file used to bootstrap a cluster.
+      --confirm                                 Confirm whether if to proceed with the install
+  -h, --help                                    help for engine-config-sync
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Path to public key file for validating signed packages
+      --kubeconfig                              Whether to update the local kubeconfig file with the admin creds for this cluster. (default true)
+      --label-nodes                             Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --kubeconfig.
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --vault-password-file string              Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+      --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
+  -w, --work-concurrency string                 Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
 ```
 
 ### Options inherited from parent commands

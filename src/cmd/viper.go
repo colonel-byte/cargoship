@@ -180,7 +180,6 @@ func setDefaults() {
 	v.SetDefault(configPath("LogFile"), false)
 
 	v.SetDefault(configPath("DistroOpts", "OCIConcurrency"), 6)
-	v.SetDefault(configPath("DistroOpts", "CreateOpts", "SkipSBOM"), false)
 	v.SetDefault(configPath("DistroOpts", "Concurrency"), 30)
 	v.SetDefault(configPath("DistroOpts", "HostUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "FirewallUpdate"), false)

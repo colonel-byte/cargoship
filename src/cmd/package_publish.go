@@ -59,7 +59,7 @@ func newPackagePublishCommand() *cobra.Command {
 		PreRunE: o.preRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
@@ -76,7 +76,7 @@ func newPackagePublishCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *packagePublishOptions) run(ctx context.Context, args []string) error {
+func (o *packagePublishOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	distroSource := args[0]
 
@@ -101,9 +101,11 @@ func (o *packagePublishOptions) run(ctx context.Context, args []string) error {
 	}
 
 	loadOpts := distro.LoadOptions{
-		CachePath:    cachePath,
-		Architecture: config.CLIArch,
-		Output:       config.CommonOptions.TempDirectory,
+		CachePath:            cachePath,
+		Architecture:         config.CLIArch,
+		Output:               config.CommonOptions.TempDirectory,
+		VerificationStrategy: o.verify.toStrategy(),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 	}
 
 	distroLayout, err := distro.Load(ctx, distroSource, loadOpts)

@@ -18,7 +18,7 @@
 # pull ~1.5GB of engine artifacts and images and belong in the heavy, non-short tests.
 
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-distro-package-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfDistro
 metadata:

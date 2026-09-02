@@ -19,10 +19,6 @@
         "registry_override": {
           "$ref": "#/$defs/RegistryOverrideMap",
           "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"
-        },
-        "skip_sbom": {
-          "description": "whether we will scan the images or files",
-          "type": "boolean"
         }
       },
       "type": "object"
@@ -81,17 +77,17 @@
           "$ref": "#/$defs/DistroDeployOptions",
           "description": "are options used by the deploy subcommand"
         },
-        "fapolicy": {
+        "fapolicyd": {
           "default": true,
           "description": "whether we will update hosts with fapolicyd",
           "type": "boolean"
         },
-        "firewall_update": {
+        "firewall": {
           "default": true,
           "description": "whether we will update the host firewall",
           "type": "boolean"
         },
-        "host_update": {
+        "hosts": {
           "default": true,
           "description": "whether we will update the etc host file",
           "type": "boolean"
@@ -99,7 +95,7 @@
         "insecure_ignore_tlog": {
           "type": "string"
         },
-        "kubeconfig_update": {
+        "kubeconfig": {
           "default": true,
           "description": "whether we will update the local kubeconfig file with the admin creds for the cluster",
           "type": "boolean"

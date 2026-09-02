@@ -42,7 +42,7 @@ $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --certifi
       --shasum string                           Shasum of the package to pull
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-      --verify verifyMode[=always]              Verify the Cargoship package signature (default if-possible)
+      --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
 ```
 
 ### Options inherited from parent commands

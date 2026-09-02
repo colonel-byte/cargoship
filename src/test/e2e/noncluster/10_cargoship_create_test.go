@@ -105,6 +105,14 @@ func TestCargoshipCreate(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	// --skip-sbom was removed because distro.Create hardcoded SkipSBOM and never read
+	// the flag. Assert it is gone rather than silently accepted again.
+	t.Run("skip-sbom is not a flag", func(t *testing.T) {
+		_, stderr, err := e2e.Cargoship(t, "create", minimalDistroDir, "-o", t.TempDir(), "--skip-sbom")
+		require.Error(t, err)
+		require.Contains(t, stderr, "unknown flag: --skip-sbom")
+	})
+
 	t.Run("nonexistent directory errors", func(t *testing.T) {
 		_, _, err := e2e.Cargoship(t, "create", filepath.Join(t.TempDir(), "nope"), "-o", t.TempDir())
 		require.Error(t, err)

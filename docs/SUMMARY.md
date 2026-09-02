@@ -6,9 +6,11 @@
 
 # Guides
 
+- [firewall](guides/firewall.md)
 - [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
 - [setup-inv](guides/setup-inv.md)
+- [signing-packages](guides/signing-packages.md)
 
 
 -----------
@@ -46,8 +48,8 @@
 # Development
 
 - [build-flags](dev/build-flags.md)
-- [choice-in-memory-oci-registry](dev/choice-in-memory-oci-registry.md)
 - [dagger](dev/dagger.md)
+- [e2e-tests](dev/e2e-tests.md)
 - [mage](dev/mage.md)
 - [thirdparty-src](dev/thirdparty-src.md)
 
@@ -56,6 +58,8 @@
 
 # Agent
 
+- [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
+- [choice-nftables-backend](agent/choice-nftables-backend.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 

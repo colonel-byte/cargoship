@@ -35,7 +35,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm -H -F -f
 
 # Add the node-role label to each node, and leave the local kubeconfig untouched
-$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --update-kubeconfig=false`
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --kubeconfig=false`
 
 	// CmdDistroPrepareExample prepare example
 	CmdDistroPrepareExample = `# Prepare every node in the config for an install
@@ -84,7 +84,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
 $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
 
 # Sync without touching the local kubeconfig
-$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --update-kubeconfig=false`
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --kubeconfig=false`
 
 	// CmdDistroCreateExample create example
 	CmdDistroCreateExample = `# Build a package from the definition in the current directory
@@ -99,8 +99,8 @@ $ cargoship create ./distro-defs --registry-override docker.io=mirror.example.co
 # Sign the package as it is built, without prompting for the key password
 $ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
 
-# Build a byte-identical package on every run, skipping SBOM generation
-$ cargoship create ./distro-defs --reproducible --skip-sbom`
+# Build a byte-identical package on every run
+$ cargoship create ./distro-defs --reproducible`
 
 	// CmdDistroPublishExample publish example
 	CmdDistroPublishExample = `# Publish a package to an OCI registry

@@ -63,7 +63,7 @@ const (
 	// CmdInstallHostUpdate install flag host
 	CmdInstallHostUpdate = "Whether to update all the host nodes /etc/hosts file."
 	// CmdInstallLabelNodes install flag label nodes
-	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig."
+	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --kubeconfig."
 	// CmdInstallUpdateKubeConfig install flag update kubeconfig
 	CmdInstallUpdateKubeConfig = "Whether to update the local kubeconfig file with the admin creds for this cluster."
 	// CmdPackageCreateFlagOutput create flag output
