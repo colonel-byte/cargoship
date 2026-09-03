@@ -16,6 +16,7 @@
 package distro
 
 import (
+	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/invopop/jsonschema"
 	"github.com/k0sproject/dig"
@@ -40,8 +41,10 @@ type ZarfDistro struct {
 type ZarfDistroMetadata struct {
 	// Uncompressed disables compression for this package when true.
 	Uncompressed bool `json:"uncompressed,omitempty"`
-	// Architecture is the CPU architecture this distro package targets.
-	Architecture string `json:"architecture,omitempty" jsonschema:"default=amd64,enum=amd64,enum=arm64"`
+	// Architecture is the CPU architecture this distro package targets. Use Architectures to target more than one.
+	Architecture api.Arch `json:"architecture,omitempty" jsonschema:"default=amd64"`
+	// Architectures lists the CPU architectures this distro package targets. It supersedes Architecture, which stays valid for a package targeting a single architecture.
+	Architectures api.Arches `json:"architectures,omitempty"`
 	// Name identifies the distro package.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 	// Description explains what this distro package does.
@@ -66,8 +69,10 @@ type ZarfDistroMetadata struct {
 
 // ZarfDistroBuildData holds information recorded when the package was built.
 type ZarfDistroBuildData struct {
-	// Architecture is the CPU architecture used to build the package.
-	Architecture string `json:"architecture,omitempty"`
+	// Architecture is the CPU architecture used to build the package. Populated only when the package targets a single architecture.
+	Architecture api.Arch `json:"architecture,omitempty"`
+	// Architectures lists the CPU architectures used to build the package.
+	Architectures api.Arches `json:"architectures,omitempty"`
 	// Timestamp is the time the package was created.
 	Timestamp string `json:"timestamp,omitempty"`
 	// Version records the distro version used to build the package.
@@ -153,6 +158,30 @@ func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema) {
 			{Type: "number"},
 		},
 	}
+}
+
+// Arches returns the CPU architectures the package targets. It prefers Architectures and falls
+// back to the single Architecture field, so callers never have to know which one the package set.
+func (m ZarfDistroMetadata) Arches() api.Arches {
+	if len(m.Architectures) > 0 {
+		return m.Architectures
+	}
+	if m.Architecture == "" {
+		return nil
+	}
+	return api.Arches{m.Architecture}
+}
+
+// Arches returns the CPU architectures the package was built for. It prefers Architectures and
+// falls back to the single Architecture field.
+func (b ZarfDistroBuildData) Arches() api.Arches {
+	if len(b.Architectures) > 0 {
+		return b.Architectures
+	}
+	if b.Architecture == "" {
+		return nil
+	}
+	return api.Arches{b.Architecture}
 }
 
 // IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.

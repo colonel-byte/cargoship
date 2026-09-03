@@ -167,7 +167,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			Arch:                  d.Metadata.Architecture,
+			Arch:                  string(d.Metadata.Architecture),
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
 			PlainHTTP:             opts.PlainHTTP,
