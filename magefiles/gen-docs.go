@@ -145,18 +145,27 @@ func phaseDocs() []phaseDoc {
 	}
 }
 
+// printExcludedNote marks the sections that docs/css/print.css hides from
+// print.html, so the omission is visible to anyone reading SUMMARY.md.
+const printExcludedNote = "<!-- Excluded from the print page (print.html) by docs/css/print.css. -->"
+
 func generateSummary() error {
 	fmt.Println("docs/SUMMARY.md")
 	var builder strings.Builder
 
 	md := markdown.NewMarkdown(&builder)
 
+	// Section order matters beyond the sidebar: docs/css/print.css drops
+	// everything from the first Development chapter to the end of the document
+	// out of the print page, so Development, Agent and Misc have to stay last,
+	// in that order. Anything added after them is excluded from print too.
 	summary := []struct {
 		title  string
 		folder string
 		regex  string
 		indent bool
 		extra  string
+		note   string
 	}{
 		{
 			title: "Index",
@@ -183,22 +192,29 @@ func generateSummary() error {
 			title:  "Development",
 			folder: "dev",
 			regex:  `(.+)\.md`,
+			note:   printExcludedNote,
 		},
 		{
 			title:  "Agent",
 			folder: "agent",
 			regex:  `(.+)\.md`,
+			note:   printExcludedNote,
 		},
 		{
 			title:  "Misc",
 			folder: "misc",
 			regex:  `(.+)\.md`,
+			note:   printExcludedNote,
 		},
 	}
 
 	for i, item := range summary {
 		md = md.H1(item.title)
 		md = md.PlainText("")
+		if item.note != "" {
+			md = md.PlainText(item.note)
+			md = md.PlainText("")
+		}
 		if item.extra != "" {
 			md = md.PlainText(item.extra)
 		}
