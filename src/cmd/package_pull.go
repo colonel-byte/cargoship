@@ -24,6 +24,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/spf13/cobra"
@@ -88,7 +89,7 @@ func (o *packagePullOptions) run(ctx context.Context, args []string) error {
 		SHASum:               o.shasum,
 		VerificationStrategy: o.verify.toStrategy(),
 		VerifyBlobOptions:    o.buildVerifyBlobOptions(nil, v),
-		Architecture:         zconfig.GetArch(),
+		Architecture:         config.CLIArch,
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,

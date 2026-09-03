@@ -44,10 +44,28 @@ func TestResolveArchitectures(t *testing.T) {
 			want:     api.Arches{api.Arch(runtime.GOARCH)},
 		},
 		{
-			name:      "a request does not override a scalar architecture",
+			name:      "a request fills in an unset architecture",
+			metadata:  distro.ZarfDistroMetadata{},
+			requested: "arm64",
+			want:      api.Arches{"arm64"},
+		},
+		{
+			name:      "a request matching the scalar architecture is accepted",
+			metadata:  distro.ZarfDistroMetadata{Architecture: "arm64"},
+			requested: "arm64",
+			want:      api.Arches{"arm64"},
+		},
+		{
+			name:      "a request conflicting with the scalar architecture is an error",
 			metadata:  distro.ZarfDistroMetadata{Architecture: "amd64"},
 			requested: "arm64",
-			want:      api.Arches{"amd64"},
+			wantErr:   "not targeted by this package, which targets amd64",
+		},
+		{
+			name:      "an unsupported request is rejected for a scalar architecture",
+			metadata:  distro.ZarfDistroMetadata{Architecture: "amd64"},
+			requested: "x86_64",
+			wantErr:   "invalid platform operating system architecture",
 		},
 		{
 			name:     "a list is taken at its word",
