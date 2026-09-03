@@ -18,7 +18,9 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -80,6 +82,81 @@ func TestRecordDistroMetadataReproducible(t *testing.T) {
 	}
 	if want := "registry.example.com"; got.Build.RegistryOverrides["docker.io"] != want {
 		t.Errorf("Build.RegistryOverrides[docker.io] = %q, want %q", got.Build.RegistryOverrides["docker.io"], want)
+	}
+}
+
+func TestRecordDistroMetadataArchitectures(t *testing.T) {
+	tests := []struct {
+		name         string
+		metadata     distro.ZarfDistroMetadata
+		wantArches   api.Arches
+		wantScalar   api.Arch
+		scalarReason string
+	}{
+		{
+			name:         "a scalar architecture is recorded in both fields",
+			metadata:     distro.ZarfDistroMetadata{Architecture: api.ArchAMD64},
+			wantArches:   api.Arches{api.ArchAMD64},
+			wantScalar:   api.ArchAMD64,
+			scalarReason: "a single architecture package keeps the scalar older readers look for",
+		},
+		{
+			name:         "a single entry list is recorded in both fields",
+			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{api.ArchARM64}},
+			wantArches:   api.Arches{api.ArchARM64},
+			wantScalar:   api.ArchARM64,
+			scalarReason: "a single architecture package keeps the scalar older readers look for",
+		},
+		{
+			name:         "several architectures leave the scalar empty",
+			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
+			wantArches:   api.Arches{api.ArchAMD64, api.ArchARM64},
+			wantScalar:   "",
+			scalarReason: "no single architecture describes what the package carries",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := recordDistroMetadata(distro.ZarfDistro{Metadata: tt.metadata}, AssembleOptions{})
+
+			if !slices.Equal(got.Build.Architectures, tt.wantArches) {
+				t.Errorf("Build.Architectures = %v, want %v", got.Build.Architectures, tt.wantArches)
+			}
+			if got.Build.Architecture != tt.wantScalar {
+				t.Errorf("Build.Architecture = %q, want %q: %s", got.Build.Architecture, tt.wantScalar, tt.scalarReason)
+			}
+		})
+	}
+}
+
+func TestImageDirForArch(t *testing.T) {
+	tests := []struct {
+		name      string
+		arch      api.Arch
+		archCount int
+		want      string
+	}{
+		{
+			name:      "a single architecture keeps the flat images directory",
+			arch:      api.ArchAMD64,
+			archCount: 1,
+			want:      filepath.Join("build", "images"),
+		},
+		{
+			name:      "several architectures get one directory each",
+			arch:      api.ArchARM64,
+			archCount: 2,
+			want:      filepath.Join("build", "images", "arm64"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := imageDirForArch("build", tt.arch, tt.archCount); got != tt.want {
+				t.Errorf("imageDirForArch() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

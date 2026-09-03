@@ -27,11 +27,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
+
+// ingestDir is the directory ORAS uses to stage image layers while it pulls them.
+const ingestDir = "ingest"
 
 // NewDistroLayout returns an DistroLayout object
 func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout {
@@ -61,13 +65,38 @@ func (d *DistroLayout) GetImageDirPath() string {
 	return filepath.Join(d.dirPath, config.ImagesDir)
 }
 
-// FileName returns the name of the Zarf package should have when exported to the file system
+// GetImageDirPathForArch returns the image directory holding arch's images. A package targeting
+// several architectures keeps one OCI layout per architecture under images. Anything else, which
+// includes every package built before multi-arch support, keeps a single flat images directory, so
+// that is what this falls back to.
+func (d *DistroLayout) GetImageDirPathForArch(arch api.Arch) string {
+	if arch == "" {
+		return d.GetImageDirPath()
+	}
+
+	archPath := filepath.Join(d.dirPath, config.ImagesDir, string(arch))
+	if info, err := os.Stat(archPath); err == nil && info.IsDir() {
+		return archPath
+	}
+
+	return d.GetImageDirPath()
+}
+
+// FileName returns the name of the Zarf package should have when exported to the file system. A
+// package targeting several architectures takes multi in the architecture position, since no single
+// architecture describes what it carries.
 func (d *DistroLayout) FileName() (string, error) {
-	if d.Distro.Build.Architecture == "" {
+	arches := d.Distro.Build.Arches()
+	if len(arches) == 0 {
 		return "", errors.New("package must include a build architecture")
 	}
 
-	name := fmt.Sprintf("cargoship-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
+	arch := string(arches[0])
+	if len(arches) > 1 {
+		arch = config.MultiArch
+	}
+
+	name := fmt.Sprintf("cargoship-%s-%s", d.Distro.Metadata.Name, arch)
 	if d.Distro.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, d.Distro.Metadata.Version)
 	}
@@ -89,9 +118,8 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (stri
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
-	// Removes ingest directory that is only used for caching the images with ORAS
-	err = os.Remove(filepath.Join(d.dirPath, "images", "ingest"))
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	// Removes ingest directories that are only used for caching the images with ORAS
+	if err := d.removeIngestDirs(); err != nil {
 		return "", err
 	}
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
@@ -118,4 +146,31 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (stri
 	}
 
 	return tarballPath, nil
+}
+
+// removeIngestDirs removes the ingest directories ORAS leaves behind when it caches image layers.
+// A multi-arch package has one per architecture directory, so this walks the images directory
+// rather than assuming a single flat layout.
+func (d *DistroLayout) removeIngestDirs() error {
+	imagesPath := d.GetImageDirPath()
+	ingestDirs := []string{filepath.Join(imagesPath, ingestDir)}
+
+	entries, err := os.ReadDir(imagesPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == ingestDir {
+			continue
+		}
+		ingestDirs = append(ingestDirs, filepath.Join(imagesPath, entry.Name(), ingestDir))
+	}
+
+	for _, dir := range ingestDirs {
+		if err := os.Remove(dir); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+
+	return nil
 }

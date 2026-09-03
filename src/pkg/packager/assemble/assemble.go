@@ -165,18 +165,22 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 
 	if len(componentImages) > 0 {
-		pullOpts := images.PullOptions{
-			OCIConcurrency:        opts.OCIConcurrency,
-			Arch:                  string(d.Metadata.Architecture),
-			RegistryOverrides:     opts.RegistryOverrides,
-			CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
-			PlainHTTP:             opts.PlainHTTP,
-			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		}
-		l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
-		_, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
-		if err != nil {
-			return nil, err
+		arches := d.Metadata.Arches()
+		for _, arch := range arches {
+			pullOpts := images.PullOptions{
+				OCIConcurrency:        opts.OCIConcurrency,
+				Arch:                  string(arch),
+				RegistryOverrides:     opts.RegistryOverrides,
+				CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
+				PlainHTTP:             opts.PlainHTTP,
+				InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+			}
+			imagesPath := imageDirForArch(buildPath, arch, len(arches))
+			l.Info("pulling images too", "path", imagesPath, "architecture", arch)
+			_, err := images.Pull(ctx, componentImages, imagesPath, pullOpts)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -317,8 +321,27 @@ func buildTimestamp(reproducible bool) time.Time {
 	return time.Now()
 }
 
+// imageDirForArch returns the directory an architecture's images belong in. A package targeting a
+// single architecture keeps the flat images directory it has always used. A package targeting
+// several needs one directory per architecture, because the OCI store tags its contents by image
+// reference, so two platforms of the same reference in one layout would leave the tag pointing at
+// whichever pull finished last.
+func imageDirForArch(buildPath string, arch api.Arch, archCount int) string {
+	if archCount < 2 {
+		return filepath.Join(buildPath, config.ImagesDir)
+	}
+
+	return filepath.Join(buildPath, config.ImagesDir, string(arch))
+}
+
 func recordDistroMetadata(distro distro.ZarfDistro, opts AssembleOptions) distro.ZarfDistro {
-	distro.Build.Architecture = distro.Metadata.Architecture
+	arches := distro.Metadata.Arches()
+	distro.Build.Architectures = arches
+	// The scalar stays populated for a single architecture package so that readers which only know
+	// about it, such as an older cargoship, still see the architecture they expect.
+	if len(arches) == 1 {
+		distro.Build.Architecture = arches[0]
+	}
 	distro.Build.Timestamp = buildTimestamp(opts.Reproducible).Format(api.BuildTimestampFormat)
 	distro.Build.Version = distro.Metadata.Version
 	distro.Build.Reproducible = opts.Reproducible
