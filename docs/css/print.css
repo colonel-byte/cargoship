@@ -84,9 +84,7 @@
 
   p,
   li,
-  blockquote,
-  td,
-  th {
+  blockquote {
     overflow-wrap: anywhere;
   }
 
@@ -150,6 +148,44 @@
   table thead th {
     padding: 2px 8px;
     vertical-align: top;
+    text-align: left;
+  }
+
+  /* break-word, not anywhere: `anywhere` is counted in the min-content width
+   * of a cell, so an auto-layout table collapses the column to one character
+   * and hyphenates every identifier in it. break-word breaks only words that
+   * cannot fit a line on their own, and leaves column sizing alone.
+   */
+  table td,
+  table th {
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+  }
+
+  /* The first column of every table names a thing – a backend, a field, a rule
+   * – so give them all the same width. Without it, auto layout squeezes the
+   * name column below its own min-content width to make room for the long
+   * paths in the wider columns, and the names hyphenate.
+   */
+  table th:first-child,
+  table td:first-child {
+    width: 7em;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  table th:first-child code,
+  table td:first-child code {
+    white-space: nowrap;
+  }
+
+  /* Long paths in the wider columns are what squeezes the name column, so let
+   * them break anywhere rather than holding the column open.
+   */
+  table td:not(:first-child) code,
+  table th:not(:first-child) code {
+    overflow-wrap: anywhere;
   }
 
   pre,
@@ -178,13 +214,16 @@
     word-break: break-word;
   }
 
-  /* To exclude more trailing sections from print, replace #changelog with the
-   * heading ID of the first section you want to omit, or duplicate this rule
-   * with another heading ID to hide everything from that heading onward.
+  /* Everything from docs/dev/* onward is dropped from the print page: dev,
+   * agent, and the changelog are the last three sections of SUMMARY.md, so one
+   * rule covers them. The print page is one flat run of siblings, hence the
+   * `~ *`. The ID is the mdBook slug of that chapter's own H1 – if the title is
+   * reworded, this has to be reworded with it. To keep dev but drop only the
+   * tail, point this at the first heading you do want omitted.
    */
-  div[style*="break-before: page"]:has(+ #changelog),
-  #changelog,
-  #changelog ~ * {
+  div[style*="break-before: page"]:has(+ #build-flags-and-environment),
+  #build-flags-and-environment,
+  #build-flags-and-environment ~ * {
     display: none !important;
   }
 }
