@@ -66,12 +66,12 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 	if err != nil {
 		return v1alpha1.ZarfDistro{}, err
 	}
-	dis, err = resolveArchitectures(dis, opts.Architecture)
+	dis, declared, err := resolveArchitectures(dis, opts.Architecture)
 	if err != nil {
 		return v1alpha1.ZarfDistro{}, err
 	}
 
-	err = validateDistro(ctx, dis, disPath.ManifestFile)
+	err = validateDistro(ctx, dis, declared, disPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfDistro{}, err
 	}
@@ -86,33 +86,39 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 // the architectures list is taken at its word, and requested narrows that list to one entry. It is
 // an error to narrow to an architecture the package does not target, because the file entries for
 // it were never packaged.
-func resolveArchitectures(dis v1alpha1.ZarfDistro, requested string) (v1alpha1.ZarfDistro, error) {
+//
+// It returns the narrowed package alongside the architectures the definition declared, which is
+// what the file selectors have to be validated against: a definition narrowed to amd64 still
+// carries the arm64 entries it was written with, and those entries are not a mistake.
+func resolveArchitectures(dis v1alpha1.ZarfDistro, requested string) (v1alpha1.ZarfDistro, api.Arches, error) {
 	if len(dis.Metadata.Architectures) == 0 {
 		dis.Metadata.Architecture = api.Arch(config.GetArch(string(dis.Metadata.Architecture)))
-		return dis, nil
+		return dis, dis.Metadata.Arches(), nil
 	}
 
+	declared := dis.Metadata.Architectures
+
 	if requested == "" {
-		return dis, nil
+		return dis, declared, nil
 	}
 
 	arch, err := api.ParseArch(requested)
 	if err != nil {
-		return dis, err
+		return dis, declared, err
 	}
 
-	if !slices.Contains(dis.Metadata.Architectures, arch) {
-		return dis, fmt.Errorf("architecture %q is not targeted by this package, which targets %s",
-			arch, api.FormatArches(dis.Metadata.Architectures))
+	if !slices.Contains(declared, arch) {
+		return dis, declared, fmt.Errorf("architecture %q is not targeted by this package, which targets %s",
+			arch, api.FormatArches(declared))
 	}
 
 	dis.Metadata.Architectures = api.Arches{arch}
 
-	return dis, nil
+	return dis, declared, nil
 }
 
-func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, path string) error {
-	if err := validateArchitectures(dis); err != nil {
+func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, declared api.Arches, path string) error {
+	if err := validateArchitectures(dis, declared); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 
@@ -120,10 +126,12 @@ func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, path string) err
 }
 
 // validateArchitectures checks that the package targets a sane set of architectures, and that no
-// file selects an architecture outside that set. The second check turns a typo such as x86_64 into
-// a build time error rather than a file that silently never uploads.
-func validateArchitectures(dis v1alpha1.ZarfDistro) error {
-	arches := dis.Metadata.Arches()
+// file selects an architecture the definition never declared. The second check turns a typo such as
+// x86_64 into a build time error rather than a file that silently never uploads. It is checked
+// against the declared architectures rather than what the package was narrowed to, so that
+// narrowing a multi-architecture definition to one architecture is not itself an error.
+func validateArchitectures(dis v1alpha1.ZarfDistro, declared api.Arches) error {
+	arches := declared
 	if len(arches) == 0 {
 		return errors.New("package must target at least one architecture")
 	}
@@ -145,7 +153,7 @@ func validateArchitectures(dis v1alpha1.ZarfDistro) error {
 		}
 		for _, arch := range f.Selector.Arch {
 			if !slices.Contains(arches, arch) {
-				return fmt.Errorf("file %q selects architecture %q, but the package targets %s",
+				return fmt.Errorf("file %q selects architecture %q, but the package declares %s",
 					f.Target, arch, api.FormatArches(arches))
 			}
 		}

@@ -31,7 +31,10 @@ func TestResolveArchitectures(t *testing.T) {
 		metadata  distro.ZarfDistroMetadata
 		requested string
 		want      api.Arches
-		wantErr   string
+		// wantDeclared is what the definition listed before narrowing. Cases that leave it empty
+		// do not check it.
+		wantDeclared api.Arches
+		wantErr      string
 	}{
 		{
 			name:     "scalar architecture is left alone",
@@ -55,10 +58,11 @@ func TestResolveArchitectures(t *testing.T) {
 			want:     api.Arches{"amd64", "arm64"},
 		},
 		{
-			name:      "a request narrows a list",
-			metadata:  distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
-			requested: "arm64",
-			want:      api.Arches{"arm64"},
+			name:         "a request narrows a list but keeps what was declared",
+			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
+			requested:    "arm64",
+			want:         api.Arches{"arm64"},
+			wantDeclared: api.Arches{"amd64", "arm64"},
 		},
 		{
 			name:      "an unsupported request is rejected",
@@ -76,7 +80,7 @@ func TestResolveArchitectures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := resolveArchitectures(distro.ZarfDistro{Metadata: tt.metadata}, tt.requested)
+			got, declared, err := resolveArchitectures(distro.ZarfDistro{Metadata: tt.metadata}, tt.requested)
 			if tt.wantErr != "" {
 				if err == nil {
 					t.Fatalf("resolveArchitectures() = nil error, want one containing %q", tt.wantErr)
@@ -91,6 +95,9 @@ func TestResolveArchitectures(t *testing.T) {
 			}
 			if arches := got.Metadata.Arches(); !slices.Equal(arches, tt.want) {
 				t.Errorf("architectures = %v, want %v", arches, tt.want)
+			}
+			if tt.wantDeclared != nil && !slices.Equal(declared, tt.wantDeclared) {
+				t.Errorf("declared architectures = %v, want %v", declared, tt.wantDeclared)
 			}
 		})
 	}
@@ -113,9 +120,12 @@ func TestValidateArchitectures(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		distro  distro.ZarfDistro
-		wantErr string
+		name string
+		// declared is what the definition listed before any narrowing. It defaults to what the
+		// distro itself targets when a case leaves it empty.
+		declared api.Arches
+		distro   distro.ZarfDistro
+		wantErr  string
 	}{
 		{
 			name: "a multi architecture package with matching selectors",
@@ -151,7 +161,16 @@ func TestValidateArchitectures(t *testing.T) {
 				v1alpha1.ZarfFiles{archFile("/opt/a", "aarch64")},
 				nil,
 			),
-			wantErr: "but the package targets amd64",
+			wantErr: "but the package declares amd64",
+		},
+		{
+			name: "a package narrowed to one architecture keeps the other's selectors",
+			distro: withFiles(
+				distro.ZarfDistroMetadata{Architectures: api.Arches{"amd64"}},
+				v1alpha1.ZarfFiles{archFile("/opt/a", "amd64"), archFile("/opt/b", "arm64")},
+				nil,
+			),
+			declared: api.Arches{"amd64", "arm64"},
 		},
 		{
 			name: "an os file selecting an architecture the package does not target",
@@ -160,13 +179,17 @@ func TestValidateArchitectures(t *testing.T) {
 				nil,
 				v1alpha1.ZarfFiles{archFile("/opt/c", "arm64")},
 			),
-			wantErr: "but the package targets amd64",
+			wantErr: "but the package declares amd64",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateArchitectures(tt.distro)
+			declared := tt.declared
+			if declared == nil {
+				declared = tt.distro.Metadata.Arches()
+			}
+			err := validateArchitectures(tt.distro, declared)
 			if tt.wantErr == "" {
 				if err != nil {
 					t.Fatalf("validateArchitectures() unexpected error: %v", err)
