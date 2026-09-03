@@ -214,6 +214,20 @@
     word-break: break-word;
   }
 
+  /* The commands and phases chapters are dense reference material – flag lists
+   * and step lists – so print their body text smaller. Those two are the last
+   * sections that print, so this runs from the first commands chapter to the
+   * end of the visible document, the same flat-sibling trick used below.
+   * Headings are left alone: shrinking them here would flatten the hierarchy,
+   * since these font sizes are relative to the shared parent, not to each
+   * element's own default. #cargoship-2 is docs/commands/cargoship.md; it
+   * carries the -2 because the index page has a `Cargoship` heading earlier in
+   * the page.
+   */
+  #cargoship-2 ~ :is(p, ul, ol, dl, pre, table, blockquote) {
+    font-size: 0.80em;
+  }
+
   /* Everything from docs/dev/* onward is dropped from the print page: dev,
    * agent, and the changelog are the last three sections of SUMMARY.md, so one
    * rule covers them. The print page is one flat run of siblings, hence the
