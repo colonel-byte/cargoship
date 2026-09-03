@@ -15,8 +15,6 @@
 package layout
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -89,71 +87,5 @@ func TestDistroLayoutFileName(t *testing.T) {
 				t.Errorf("FileName() = %q, want %q", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestGetImageDirPathForArch(t *testing.T) {
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "images", "arm64"), 0o755); err != nil {
-		t.Fatalf("failed to create the per architecture image directory: %v", err)
-	}
-
-	d := NewDistroLayout(root, v1alpha1.ZarfDistro{})
-
-	tests := []struct {
-		name string
-		arch api.Arch
-		want string
-	}{
-		{
-			name: "an architecture with its own directory",
-			arch: api.ArchARM64,
-			want: filepath.Join(root, "images", "arm64"),
-		},
-		{
-			name: "an architecture without one falls back to the flat directory",
-			arch: api.ArchAMD64,
-			want: filepath.Join(root, "images"),
-		},
-		{
-			name: "no architecture falls back to the flat directory",
-			want: filepath.Join(root, "images"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := d.GetImageDirPathForArch(tt.arch); got != tt.want {
-				t.Errorf("GetImageDirPathForArch(%q) = %q, want %q", tt.arch, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestRemoveIngestDirs(t *testing.T) {
-	root := t.TempDir()
-	dirs := []string{
-		filepath.Join(root, "images", "ingest"),
-		filepath.Join(root, "images", "amd64", "ingest"),
-		filepath.Join(root, "images", "arm64", "ingest"),
-		filepath.Join(root, "images", "arm64", "blobs"),
-	}
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatalf("failed to create %s: %v", dir, err)
-		}
-	}
-
-	if err := NewDistroLayout(root, v1alpha1.ZarfDistro{}).removeIngestDirs(); err != nil {
-		t.Fatalf("removeIngestDirs() unexpected error: %v", err)
-	}
-
-	for _, dir := range dirs[:3] {
-		if _, err := os.Stat(dir); !os.IsNotExist(err) {
-			t.Errorf("%s still exists, want it removed", dir)
-		}
-	}
-	if _, err := os.Stat(dirs[3]); err != nil {
-		t.Errorf("%s was removed, want it left alone: %v", dirs[3], err)
 	}
 }

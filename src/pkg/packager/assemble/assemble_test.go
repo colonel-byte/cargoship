@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -130,31 +129,33 @@ func TestRecordDistroMetadataArchitectures(t *testing.T) {
 	}
 }
 
-func TestImageDirForArch(t *testing.T) {
+func TestArchStrings(t *testing.T) {
 	tests := []struct {
-		name      string
-		arch      api.Arch
-		archCount int
-		want      string
+		name   string
+		arches api.Arches
+		want   []string
 	}{
 		{
-			name:      "a single architecture keeps the flat images directory",
-			arch:      api.ArchAMD64,
-			archCount: 1,
-			want:      filepath.Join("build", "images"),
+			name: "no architectures",
+			want: []string{},
 		},
 		{
-			name:      "several architectures get one directory each",
-			arch:      api.ArchARM64,
-			archCount: 2,
-			want:      filepath.Join("build", "images", "arm64"),
+			name:   "one architecture",
+			arches: api.Arches{api.ArchAMD64},
+			want:   []string{"amd64"},
+		},
+		{
+			name:   "several architectures keep their order",
+			arches: api.Arches{api.ArchARM64, api.ArchAMD64},
+			want:   []string{"arm64", "amd64"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := imageDirForArch("build", tt.arch, tt.archCount); got != tt.want {
-				t.Errorf("imageDirForArch() = %q, want %q", got, tt.want)
+			got := archStrings(tt.arches)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("archStrings(%v) = %v, want %v", tt.arches, got, tt.want)
 			}
 		})
 	}

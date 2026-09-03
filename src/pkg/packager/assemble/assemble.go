@@ -166,21 +166,19 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 
 	if len(componentImages) > 0 {
 		arches := d.Metadata.Arches()
-		for _, arch := range arches {
-			pullOpts := images.PullOptions{
-				OCIConcurrency:        opts.OCIConcurrency,
-				Arch:                  string(arch),
-				RegistryOverrides:     opts.RegistryOverrides,
-				CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
-				PlainHTTP:             opts.PlainHTTP,
-				InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-			}
-			imagesPath := imageDirForArch(buildPath, arch, len(arches))
-			l.Info("pulling images too", "path", imagesPath, "architecture", arch)
-			_, err := images.Pull(ctx, componentImages, imagesPath, pullOpts)
-			if err != nil {
-				return nil, err
-			}
+		pullOpts := images.PullOptions{
+			OCIConcurrency:        opts.OCIConcurrency,
+			Arches:                archStrings(arches),
+			RegistryOverrides:     opts.RegistryOverrides,
+			CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
+			PlainHTTP:             opts.PlainHTTP,
+			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		}
+		imagesPath := filepath.Join(buildPath, config.ImagesDir)
+		l.Info("pulling images too", "path", imagesPath, "architectures", api.FormatArches(arches))
+		_, err := images.Pull(ctx, componentImages, imagesPath, pullOpts)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -321,17 +319,15 @@ func buildTimestamp(reproducible bool) time.Time {
 	return time.Now()
 }
 
-// imageDirForArch returns the directory an architecture's images belong in. A package targeting a
-// single architecture keeps the flat images directory it has always used. A package targeting
-// several needs one directory per architecture, because the OCI store tags its contents by image
-// reference, so two platforms of the same reference in one layout would leave the tag pointing at
-// whichever pull finished last.
-func imageDirForArch(buildPath string, arch api.Arch, archCount int) string {
-	if archCount < 2 {
-		return filepath.Join(buildPath, config.ImagesDir)
+// archStrings converts the architectures a package targets into the plain strings the image puller
+// takes. Every architecture is pulled into the one images directory, where an image that resolves to
+// more than one manifest is stored as an index.
+func archStrings(arches api.Arches) []string {
+	out := make([]string, 0, len(arches))
+	for _, arch := range arches {
+		out = append(out, string(arch))
 	}
-
-	return filepath.Join(buildPath, config.ImagesDir, string(arch))
+	return out
 }
 
 func recordDistroMetadata(distro distro.ZarfDistro, opts AssembleOptions) distro.ZarfDistro {

@@ -62,9 +62,9 @@
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
+- [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
-- [choice-per-arch-image-dirs](agent/choice-per-arch-image-dirs.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 
