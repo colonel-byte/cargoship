@@ -98,7 +98,7 @@ func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.R
 func pushToRemote(ctx context.Context, layout *layout.DistroLayout, ref registry.Reference, opts PublishOptions) error {
 	arch := layout.Distro.Metadata.Architecture
 	// Set platform
-	platform := oci.PlatformForArch(arch)
+	platform := oci.PlatformForArch(string(arch))
 
 	cacheMod, err := coci.GetOCICacheModifier(ctx, opts.CachePath)
 	if err != nil {

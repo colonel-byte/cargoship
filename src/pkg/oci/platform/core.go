@@ -17,27 +17,26 @@
 package platform
 
 import (
-	"fmt"
-
-	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/api"
 )
 
 var (
 	// ErrUnknownArch is returned when a Arch is not one of the supported architectures.
-	ErrUnknownArch = fmt.Errorf("invalid platform operating system architecture")
+	ErrUnknownArch = api.ErrUnknownArch
 )
 
-// Arch names a CPU architecture an image volume can target.
-type Arch string
+// Arch names a CPU architecture an image volume can target. It aliases the API type so a package
+// definition and an OCI platform cannot drift apart on what an architecture is.
+type Arch = api.Arch
 
 // These are the supported architectures.
 const (
 	// ArchAMD64 is the amd64 architecture.
-	ArchAMD64 Arch = config.OSArchAMD64
+	ArchAMD64 = api.ArchAMD64
 	// ArchARM64 is the arm64 architecture.
-	ArchARM64 Arch = config.OSArchARM64
+	ArchARM64 = api.ArchARM64
 	// ArchRISCV is the riscv architecture.
-	ArchRISCV Arch = config.OSArchRISCV
+	ArchRISCV = api.ArchRISCV
 )
 
 // ValidateArch checks if the given platform operating system architecture format is valid.
@@ -45,10 +44,5 @@ const (
 // format: the Arch to validate.
 // error: an error if the architecture format is invalid, otherwise nil.
 func ValidateArch(format Arch) error {
-	switch format {
-	case ArchAMD64, ArchARM64, ArchRISCV:
-		return nil
-	default:
-		return ErrUnknownArch
-	}
+	return format.Validate()
 }
