@@ -30,9 +30,9 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api"
 	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/cfg"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -81,30 +81,42 @@ func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOpt
 
 // resolveArchitectures settles which architectures the package targets.
 //
-// A package that only sets the single architecture field keeps the historical behaviour, where an
-// unset value falls back to the architecture of the machine running cargoship. A package that sets
-// the architectures list is taken at its word, and requested narrows that list to one entry. It is
-// an error to narrow to an architecture the package does not target, because the file entries for
-// it were never packaged.
+// A definition that names no architecture at all takes the requested one, falling back to the
+// architecture of the machine running cargoship. A definition that does name architectures is taken
+// at its word: a request narrows the architectures list to a single entry, and a request that the
+// package does not target is an error rather than an override, because the file entries for that
+// architecture were never packaged.
 //
 // It returns the narrowed package alongside the architectures the definition declared, which is
 // what the file selectors have to be validated against: a definition narrowed to amd64 still
 // carries the arm64 entries it was written with, and those entries are not a mistake.
 func resolveArchitectures(dis v1alpha1.ZarfDistro, requested string) (v1alpha1.ZarfDistro, api.Arches, error) {
+	var arch api.Arch
+	if requested != "" {
+		parsed, err := api.ParseArch(requested)
+		if err != nil {
+			return dis, dis.Metadata.Arches(), err
+		}
+		arch = parsed
+	}
+
 	if len(dis.Metadata.Architectures) == 0 {
-		dis.Metadata.Architecture = api.Arch(config.GetArch(string(dis.Metadata.Architecture)))
+		if dis.Metadata.Architecture == "" {
+			dis.Metadata.Architecture = api.Arch(config.GetArch(string(arch)))
+			return dis, dis.Metadata.Arches(), nil
+		}
+		if arch != "" && arch != dis.Metadata.Architecture {
+			return dis, dis.Metadata.Arches(), fmt.Errorf("architecture %q is not targeted by this package, which targets %s",
+				arch, dis.Metadata.Architecture)
+		}
+
 		return dis, dis.Metadata.Arches(), nil
 	}
 
 	declared := dis.Metadata.Architectures
 
-	if requested == "" {
+	if arch == "" {
 		return dis, declared, nil
-	}
-
-	arch, err := api.ParseArch(requested)
-	if err != nil {
-		return dis, declared, err
 	}
 
 	if !slices.Contains(declared, arch) {
