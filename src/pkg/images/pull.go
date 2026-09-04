@@ -27,6 +27,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -315,6 +317,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		}
 	}
 
+	if err := sortIndexFile(filepath.Join(destinationDirectory, ocispec.ImageIndexFile)); err != nil {
+		return nil, err
+	}
+
 	l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
 	return imagesWithManifests, nil
@@ -356,7 +362,16 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-	l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+	// A multi architecture pull saves one manifest per architecture under the same reference, so the
+	// architecture is what tells two otherwise identical lines apart. A bare manifest from a registry
+	// carries no platform, and that is the single architecture case where there is nothing to tell
+	// apart, so the field is left off rather than reported as unknown.
+	saveArgs := []any{"name", imageInfo.registryOverrideRef}
+	if imageInfo.manifestDesc.Platform != nil && imageInfo.manifestDesc.Platform.Architecture != "" {
+		saveArgs = append(saveArgs, "architecture", imageInfo.manifestDesc.Platform.Architecture)
+	}
+	saveArgs = append(saveArgs, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+	l.Info("saving image", saveArgs...)
 	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("failed to create oci formatted directory: %w", err)
@@ -498,6 +513,46 @@ func ensurePlatform(ctx context.Context, src content.Fetcher, desc ocispec.Descr
 	platform := image.Platform
 	desc.Platform = &platform
 	return desc, nil
+}
+
+// sortIndexFile rewrites the store's index.json with its entries ordered by digest. Oras builds
+// that list by ranging over a map, so two runs that pull exactly the same images write the same
+// entries in a different order. The file ships inside the package and is covered by checksums.txt,
+// so the order has to be pinned for a package to be reproducible. Entry order carries no meaning to
+// a reader of the layout, which is why this can be done for every build rather than only for
+// --reproducible.
+func sortIndexFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("failed to read the image index: %w", err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read the image index: %w", err)
+	}
+	var index ocispec.Index
+	if err := json.Unmarshal(b, &index); err != nil {
+		return fmt.Errorf("failed to unmarshal the image index: %w", err)
+	}
+
+	// Two entries share a digest when one image is tagged under more than one reference, so the
+	// reference name breaks the tie.
+	sort.SliceStable(index.Manifests, func(i, j int) bool {
+		if index.Manifests[i].Digest != index.Manifests[j].Digest {
+			return index.Manifests[i].Digest < index.Manifests[j].Digest
+		}
+		return index.Manifests[i].Annotations[ocispec.AnnotationRefName] <
+			index.Manifests[j].Annotations[ocispec.AnnotationRefName]
+	})
+
+	sorted, err := json.Marshal(index)
+	if err != nil {
+		return fmt.Errorf("failed to marshal the image index: %w", err)
+	}
+	if err := os.WriteFile(path, sorted, info.Mode().Perm()); err != nil {
+		return fmt.Errorf("failed to write the image index: %w", err)
+	}
+	return nil
 }
 
 // platformKey renders a platform as the os/arch/variant string used to order an index.

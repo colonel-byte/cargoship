@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -288,5 +290,93 @@ func TestPlatformKey(t *testing.T) {
 				t.Errorf("platformKey() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// tagAll pushes one manifest per architecture into a fresh store in dir and tags each one, in the
+// order given, which is how a pull leaves the layout on disk.
+func tagAll(ctx context.Context, t *testing.T, dir string, arches []string) {
+	t.Helper()
+
+	store, err := oci.NewWithContext(ctx, dir)
+	if err != nil {
+		t.Fatalf("failed to create the store: %v", err)
+	}
+	for _, arch := range arches {
+		desc := pushManifest(ctx, t, store, arch)
+		if err := store.Tag(ctx, desc, "example.com/image:"+arch); err != nil {
+			t.Fatalf("failed to tag %s: %v", arch, err)
+		}
+	}
+}
+
+func TestSortIndexFileOrdersEntriesByDigest(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	tagAll(ctx, t, dir, []string{"amd64", "arm64", "s390x"})
+
+	path := filepath.Join(dir, ocispec.ImageIndexFile)
+	if err := sortIndexFile(path); err != nil {
+		t.Fatalf("sortIndexFile() unexpected error: %v", err)
+	}
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read the index: %v", err)
+	}
+	var index ocispec.Index
+	if err := json.Unmarshal(b, &index); err != nil {
+		t.Fatalf("failed to unmarshal the index: %v", err)
+	}
+
+	if index.SchemaVersion != 2 {
+		t.Errorf("schemaVersion = %d, want 2", index.SchemaVersion)
+	}
+	if index.MediaType != ocispec.MediaTypeImageIndex {
+		t.Errorf("mediaType = %q, want %q", index.MediaType, ocispec.MediaTypeImageIndex)
+	}
+	// Oras records every manifest twice, once under its tag and once under its digest, but only the
+	// tagged entry keeps the reference annotation.
+	if len(index.Manifests) != 3 {
+		t.Fatalf("index holds %d manifests, want 3", len(index.Manifests))
+	}
+	for i := 1; i < len(index.Manifests); i++ {
+		if index.Manifests[i-1].Digest > index.Manifests[i].Digest {
+			t.Errorf("manifest %d has digest %s, which sorts before %s", i, index.Manifests[i].Digest, index.Manifests[i-1].Digest)
+		}
+	}
+	for _, desc := range index.Manifests {
+		if desc.Annotations[ocispec.AnnotationRefName] == "" {
+			t.Errorf("manifest %s lost its reference annotation", desc.Digest)
+		}
+	}
+}
+
+func TestSortIndexFileIsIndependentOfTagOrder(t *testing.T) {
+	ctx := context.Background()
+	read := func(arches []string) []byte {
+		dir := t.TempDir()
+		tagAll(ctx, t, dir, arches)
+		path := filepath.Join(dir, ocispec.ImageIndexFile)
+		if err := sortIndexFile(path); err != nil {
+			t.Fatalf("sortIndexFile() unexpected error: %v", err)
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("failed to read the index: %v", err)
+		}
+		return b
+	}
+
+	first := read([]string{"amd64", "arm64", "s390x"})
+	second := read([]string{"s390x", "amd64", "arm64"})
+	if !bytes.Equal(first, second) {
+		t.Errorf("index.json differs between two pulls of the same images:\n%s\n%s", first, second)
+	}
+}
+
+func TestSortIndexFileWithoutAnIndexErrors(t *testing.T) {
+	if err := sortIndexFile(filepath.Join(t.TempDir(), ocispec.ImageIndexFile)); err == nil {
+		t.Error("sortIndexFile() = nil error, want one for a missing index")
 	}
 }

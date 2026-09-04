@@ -19,6 +19,12 @@ The store is content addressed, so the architectures share every blob they have 
 
 Each entry in the index carries a platform. A descriptor resolved through a registry's own index already has one; a registry that serves a bare manifest does not, so `ensurePlatform` reads the platform out of the image config, which is where the registry would have read it from as well. The manifests are sorted by platform before the index is marshalled, so two builds from the same inputs produce the same index digest and `--reproducible` keeps working.
 
+## Ordering the layout's index.json
+
+Oras builds `images/index.json` by ranging over its map of tags, so the entries land in a different order on every run even when the pull fetched exactly the same images. That file ships inside the package and is covered by `checksums.txt`, so the order alone was enough to make two otherwise identical builds differ. After the last image is tagged, `sortIndexFile` rewrites the file with its entries ordered by digest, breaking ties on the reference annotation for an image tagged under more than one name.
+
+Entry order carries no meaning to anything that reads the layout, so the sort runs on every build rather than only under `--reproducible`. The flag stays what it always was: it pins the recorded build timestamp. Note that this only orders the index. Layer order inside a manifest is fixed by whoever built the image, since the manifest digest depends on it.
+
 ## Selecting a platform when uploading
 
 `src/pkg/phase/50_uploadfiles.go` resolves the image reference against the package's store and exports a tarball for the node. With an index in the store, `resolveImageManifest` picks the child manifest matching the platform and hands that descriptor to `archive.Export`, so the exported tarball holds exactly one platform and looks the same as one exported from a single-architecture package.
