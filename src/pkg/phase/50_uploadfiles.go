@@ -22,12 +22,14 @@ package phase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +42,10 @@ import (
 	"github.com/containerd/containerd/v2/core/images/archive"
 	"github.com/containerd/platforms"
 	"github.com/k0sproject/rig/exec"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
 )
 
@@ -99,6 +104,10 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 
 	store := &carch.OciArchiveStore{Root: imagesPath, Src: src}
 
+	// TODO(#258): DefaultStrict is the architecture cargoship itself runs on. Apply time selection
+	// has to use the architecture of the host being uploaded to, which is a per host tarball.
+	hostPlatform := platforms.DefaultStrict()
+
 	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), ".tar")
 		tarballPath := filepath.Join(p.manager.TempDirectory, config.TarBallDir, tarBallName)
@@ -106,6 +115,11 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 		desc, err := src.Resolve(ctx, i)
 		if err != nil {
 			return err
+		}
+
+		desc, err = resolveImageManifest(ctx, src, desc, hostPlatform)
+		if err != nil {
+			return fmt.Errorf("failed to select a manifest for image %s: %w", i, err)
 		}
 
 		desc.URLs = []string{
@@ -122,7 +136,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			store,
 			writer,
 			archive.WithManifest(desc, i),
-			archive.WithPlatform(platforms.DefaultStrict()),
+			archive.WithPlatform(hostPlatform),
 		)
 		if err != nil {
 			logger.From(ctx).Warn("failed to create archive", "error", err)
@@ -150,6 +164,50 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 	}
 
 	return nil
+}
+
+// resolveImageManifest picks the manifest to export for an image. An image pulled for a single
+// architecture is tagged as a manifest and comes back unchanged. An image pulled for several is
+// tagged as an index, so the manifest matching the platform is chosen out of it here rather than
+// left to archive.Export: the exporter filters an index's children by platform but still writes the
+// whole index blob into the tarball, which would leave the tarball referencing blobs for a platform
+// it deliberately left out.
+func resolveImageManifest(ctx context.Context, src *oci.Store, desc ocispec.Descriptor, matcher platforms.MatchComparer) (ocispec.Descriptor, error) {
+	if !images.IsIndex(desc.MediaType) {
+		return desc, nil
+	}
+
+	indexBytes, err := content.FetchAll(ctx, src, desc)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to read image index %s: %w", desc.Digest, err)
+	}
+	var index ocispec.Index
+	if err := json.Unmarshal(indexBytes, &index); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to parse image index %s: %w", desc.Digest, err)
+	}
+
+	matches := []ocispec.Descriptor{}
+	available := []string{}
+	for _, child := range index.Manifests {
+		if child.Platform == nil {
+			continue
+		}
+		available = append(available, platforms.Format(*child.Platform))
+		if matcher.Match(*child.Platform) {
+			matches = append(matches, child)
+		}
+	}
+	if len(matches) == 0 {
+		return ocispec.Descriptor{}, fmt.Errorf("image index %s holds no manifest for this platform, it holds %s",
+			desc.Digest, strings.Join(available, ", "))
+	}
+	// An index can hold more than one manifest a platform accepts, for example an arm64 variant the
+	// host can run alongside the plain arm64 build, so the matcher orders them by preference.
+	sort.SliceStable(matches, func(i, j int) bool {
+		return matcher.Less(*matches[i].Platform, *matches[j].Platform)
+	})
+
+	return matches[0], nil
 }
 
 // ShouldRun is true when there are workers

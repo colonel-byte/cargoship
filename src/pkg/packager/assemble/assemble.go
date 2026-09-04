@@ -165,16 +165,18 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 
 	if len(componentImages) > 0 {
+		arches := d.Metadata.Arches()
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			Arch:                  string(d.Metadata.Architecture),
+			Arches:                archStrings(arches),
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
 			PlainHTTP:             opts.PlainHTTP,
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		}
-		l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
-		_, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
+		imagesPath := filepath.Join(buildPath, config.ImagesDir)
+		l.Info("pulling images too", "path", imagesPath, "architectures", api.FormatArches(arches))
+		_, err := images.Pull(ctx, componentImages, imagesPath, pullOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -317,8 +319,25 @@ func buildTimestamp(reproducible bool) time.Time {
 	return time.Now()
 }
 
+// archStrings converts the architectures a package targets into the plain strings the image puller
+// takes. Every architecture is pulled into the one images directory, where an image that resolves to
+// more than one manifest is stored as an index.
+func archStrings(arches api.Arches) []string {
+	out := make([]string, 0, len(arches))
+	for _, arch := range arches {
+		out = append(out, string(arch))
+	}
+	return out
+}
+
 func recordDistroMetadata(distro distro.ZarfDistro, opts AssembleOptions) distro.ZarfDistro {
-	distro.Build.Architecture = distro.Metadata.Architecture
+	arches := distro.Metadata.Arches()
+	distro.Build.Architectures = arches
+	// The scalar stays populated for a single architecture package so that readers which only know
+	// about it, such as an older cargoship, still see the architecture they expect.
+	if len(arches) == 1 {
+		distro.Build.Architecture = arches[0]
+	}
 	distro.Build.Timestamp = buildTimestamp(opts.Reproducible).Format(api.BuildTimestampFormat)
 	distro.Build.Version = distro.Metadata.Version
 	distro.Build.Reproducible = opts.Reproducible

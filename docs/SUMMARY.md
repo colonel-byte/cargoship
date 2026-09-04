@@ -62,6 +62,7 @@
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
+- [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
 - [choice-vault-library](agent/choice-vault-library.md)
