@@ -104,12 +104,18 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 
 	store := &carch.OciArchiveStore{Root: imagesPath, Src: src}
 
+	compression := p.manager.Distro.Spec.Config.ImagesConfig.Compression
+	tarSuffix, err := p.manager.Distro.Spec.Config.ImagesConfig.TarballSuffix()
+	if err != nil {
+		return err
+	}
+
 	// TODO(#258): DefaultStrict is the architecture cargoship itself runs on. Apply time selection
 	// has to use the architecture of the host being uploaded to, which is a per host tarball.
 	hostPlatform := platforms.DefaultStrict()
 
 	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
-		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), ".tar")
+		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), tarSuffix)
 		tarballPath := filepath.Join(p.manager.TempDirectory, config.TarBallDir, tarBallName)
 
 		desc, err := src.Resolve(ctx, i)
@@ -131,15 +137,29 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			return err
 		}
 
+		compressor, err := imageCompressWriter(compression, writer)
+		if err != nil {
+			if cerr := writer.Close(); cerr != nil {
+				logger.From(ctx).Warn("failed to close writer", "error", cerr)
+			}
+			return err
+		}
+
 		err = archive.Export(
 			ctx,
 			store,
-			writer,
+			compressor,
 			archive.WithManifest(desc, i),
 			archive.WithPlatform(hostPlatform),
 		)
 		if err != nil {
 			logger.From(ctx).Warn("failed to create archive", "error", err)
+		}
+
+		// The compressor has to be closed before the file so its trailer lands in the tarball.
+		err = compressor.Close()
+		if err != nil {
+			logger.From(ctx).Warn("failed to close compressor", "compression", compression, "error", err)
 		}
 
 		err = writer.Close()
