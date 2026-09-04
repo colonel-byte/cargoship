@@ -15,8 +15,10 @@
 package distro
 
 import (
+	"slices"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,4 +44,68 @@ func TestTarballSuffix(t *testing.T) {
 func TestTarballSuffixUnsupported(t *testing.T) {
 	_, err := ZarfDistroImageConfig{Compression: "bzip2"}.TarballSuffix()
 	require.ErrorContains(t, err, `unsupported image compression "bzip2"`)
+}
+
+func TestMetadataArches(t *testing.T) {
+	tests := []struct {
+		name string
+		meta ZarfDistroMetadata
+		want api.Arches
+	}{
+		{
+			name: "list wins over scalar",
+			meta: ZarfDistroMetadata{Architecture: "amd64", Architectures: api.Arches{"arm64"}},
+			want: api.Arches{"arm64"},
+		},
+		{
+			name: "falls back to scalar",
+			meta: ZarfDistroMetadata{Architecture: "amd64"},
+			want: api.Arches{"amd64"},
+		},
+		{
+			name: "empty when neither is set",
+			meta: ZarfDistroMetadata{},
+			want: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.meta.Arches(); !slices.Equal(got, tt.want) {
+				t.Errorf("Arches() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildDataArches(t *testing.T) {
+	tests := []struct {
+		name  string
+		build ZarfDistroBuildData
+		want  api.Arches
+	}{
+		{
+			name:  "list wins over scalar",
+			build: ZarfDistroBuildData{Architecture: "amd64", Architectures: api.Arches{"amd64", "arm64"}},
+			want:  api.Arches{"amd64", "arm64"},
+		},
+		{
+			name:  "falls back to scalar",
+			build: ZarfDistroBuildData{Architecture: "arm64"},
+			want:  api.Arches{"arm64"},
+		},
+		{
+			name:  "empty when neither is set",
+			build: ZarfDistroBuildData{},
+			want:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.build.Arches(); !slices.Equal(got, tt.want) {
+				t.Errorf("Arches() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

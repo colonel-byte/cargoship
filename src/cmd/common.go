@@ -31,6 +31,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
+	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -42,6 +43,10 @@ type InstallCommon struct {
 	confirm     bool
 	logLevel    string
 	LogFormat   string
+	// packageVerifyFlags carries the signature verification flags for the install
+	// commands that load a package through initManager. Commands that do not load a
+	// package (reset, kube-config) embed InstallCommon but never register these flags.
+	packageVerifyFlags
 }
 
 var plainHTTP bool
@@ -81,7 +86,7 @@ func getCachePath(ctx context.Context) (string, error) {
 	return config.GetAbsCachePath()
 }
 
-func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*phase.Manager, error) {
+func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt InstallCommon) (*phase.Manager, error) {
 	path, err := filepath.Abs(opt.config)
 	if err != nil {
 		return nil, err
@@ -102,9 +107,11 @@ func initManager(ctx context.Context, distroPath string, opt InstallCommon) (*ph
 	}
 
 	loadOpts := distro.LoadOptions{
-		CachePath:    cachePath,
-		Architecture: config.CLIArch,
-		Output:       config.CommonOptions.TempDirectory,
+		CachePath:            cachePath,
+		Architecture:         config.CLIArch,
+		Output:               config.CommonOptions.TempDirectory,
+		VerificationStrategy: opt.verify.toStrategy(),
+		VerifyBlobOptions:    opt.buildVerifyBlobOptions(cmd, v),
 	}
 
 	distroLayout, err := distro.Load(ctx, distroPath, loadOpts)

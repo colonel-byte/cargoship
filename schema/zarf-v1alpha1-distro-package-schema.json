@@ -1,11 +1,26 @@
 {
   "$defs": {
+    "Arches": {
+      "items": {
+        "enum": [
+          "amd64",
+          "arm64",
+          "riscv64"
+        ],
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
     "BinarySelector": {
       "additionalProperties": false,
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
+        "arch": {
+          "$ref": "#/$defs/Arches"
+        },
         "package": {
           "enum": [
             "rpm",
@@ -358,8 +373,17 @@
       },
       "properties": {
         "architecture": {
-          "description": "is the CPU architecture used to build the package.",
+          "description": "is the CPU architecture used to build the package. Populated only when the package targets a single architecture.",
+          "enum": [
+            "amd64",
+            "arm64",
+            "riscv64"
+          ],
           "type": "string"
+        },
+        "architectures": {
+          "$ref": "#/$defs/Arches",
+          "description": "lists the CPU architectures used to build the package."
         },
         "provenanceFiles": {
           "description": "lists files in the package that checksums.txt does not cover.\nThese are files added after cargoship generates checksums, for example signature files.\nThe signed distro.yaml authenticates this list.",
@@ -472,12 +496,17 @@
         },
         "architecture": {
           "default": "amd64",
-          "description": "is the CPU architecture this distro package targets.",
+          "description": "is the CPU architecture this distro package targets. Use Architectures to target more than one.",
           "enum": [
             "amd64",
-            "arm64"
+            "arm64",
+            "riscv64"
           ],
           "type": "string"
+        },
+        "architectures": {
+          "$ref": "#/$defs/Arches",
+          "description": "lists the CPU architectures this distro package targets. It supersedes Architecture, which stays valid for a package targeting a single architecture."
         },
         "athors": {
           "description": "sets the OCI annotation for the contact details of the people or organization responsible for the image.",

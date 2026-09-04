@@ -39,6 +39,9 @@ type CreateOptions struct {
 	OCIConcurrency int
 	CachePath      string
 	IsInteractive  bool
+	// Architecture narrows a package that targets several architectures down to a single one.
+	// A package that targets one architecture ignores it.
+	Architecture string
 	// Reproducible pins Build.Timestamp to config.Timestamp instead of the
 	// current time, and is recorded on Build.Reproducible, so identical package
 	// inputs produce byte-identical output.
@@ -55,6 +58,7 @@ type CreateOptions struct {
 func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (string, error) {
 	loadOpts := load.DefinitionOptions{
 		CachePath:     opts.CachePath,
+		Architecture:  opts.Architecture,
 		RemoteOptions: opts.RemoteOptions,
 	}
 	distro, err := load.DistroDefinition(ctx, distroPath, loadOpts)

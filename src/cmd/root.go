@@ -71,15 +71,15 @@ const (
 	// InstallWorkConcurrency flag
 	InstallWorkConcurrency = "work-concurrency"
 	// InstallUpdateHost flag
-	InstallUpdateHost = "update-hosts"
+	InstallUpdateHost = "hosts"
 	// InstallUpdateFirewall flag
-	InstallUpdateFirewall = "update-firewall"
+	InstallUpdateFirewall = "firewall"
 	// InstallUpdateFAPolicyD flag
-	InstallUpdateFAPolicyD = "update-fapolicyd"
+	InstallUpdateFAPolicyD = "fapolicyd"
 	// InstallLabelNodes flag
 	InstallLabelNodes = "label-nodes"
 	// InstallUpdateKubeConfig flag
-	InstallUpdateKubeConfig = "update-kubeconfig"
+	InstallUpdateKubeConfig = "kubeconfig"
 	// InstallVaultPasswordFile flag
 	InstallVaultPasswordFile = "vault-password-file"
 )

@@ -6,9 +6,11 @@
 
 # Guides
 
+- [firewall](guides/firewall.md)
 - [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
 - [setup-inv](guides/setup-inv.md)
+- [signing-packages](guides/signing-packages.md)
 
 
 -----------
@@ -45,6 +47,8 @@
 
 # Development
 
+<!-- Excluded from the print page (print.html) by docs/css/print.css. -->
+
 - [build-flags](dev/build-flags.md)
 - [dagger](dev/dagger.md)
 - [e2e-tests](dev/e2e-tests.md)
@@ -56,7 +60,11 @@
 
 # Agent
 
+<!-- Excluded from the print page (print.html) by docs/css/print.css. -->
+
+- [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
+- [choice-nftables-backend](agent/choice-nftables-backend.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 
@@ -64,5 +72,7 @@
 -----------
 
 # Misc
+
+<!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [changelog](misc/changelog.md)

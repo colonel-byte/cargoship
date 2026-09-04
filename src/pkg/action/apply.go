@@ -43,7 +43,7 @@ type ApplyOptions struct {
 	NoDrain bool
 	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
 	ModifyHosts bool
-	// ModifyFirewall updates the firewalld on the nodes
+	// ModifyFirewall updates the firewall, firewalld, ufw, or nftables, on the nodes
 	ModifyFirewall bool
 	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
 	// count ("5") or a percentage of the batch ("25%")
@@ -96,12 +96,6 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 			&phase.ConfigureFirewall{
 				Distro:  d,
-				Enabled: opts.ModifyFirewall,
-			},
-			&phase.ConfigureFirewallPorts{
-				Enabled: opts.ModifyFirewall,
-			},
-			&phase.ConfigureFirewallPolicy{
 				Enabled: opts.ModifyFirewall,
 			},
 

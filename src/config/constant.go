@@ -20,6 +20,8 @@ const (
 	FilesDir = "files"
 	// ImagesDir string key
 	ImagesDir = "images"
+	// MultiArch is the architecture name a package uses when it targets more than one architecture.
+	MultiArch = "multi"
 	// OSDir string key
 	OSDir = "os"
 	// SelectorAPT string key
