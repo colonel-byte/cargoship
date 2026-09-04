@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/containerd/platforms"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
@@ -177,5 +178,61 @@ func TestResolveImageManifestSkipsChildrenWithoutAPlatform(t *testing.T) {
 	}
 	if got.Digest != arm64Desc.Digest {
 		t.Errorf("digest = %q, want the arm64 manifest %q", got.Digest, arm64Desc.Digest)
+	}
+}
+
+// TestPackageExportPlatformFollowsThePackage is the regression test for exporting against the
+// architecture of the machine running cargoship. Both architectures are asserted, so whichever one
+// the test happens to run on, the other proves the matcher is not reading runtime.GOARCH.
+func TestPackageExportPlatformFollowsThePackage(t *testing.T) {
+	for _, arch := range []api.Arch{api.ArchAMD64, api.ArchARM64, api.ArchRISCV} {
+		t.Run(string(arch), func(t *testing.T) {
+			matcher := packageExportPlatform(api.Arches{arch})
+
+			if !matcher.Match(ocispec.Platform{OS: "linux", Architecture: string(arch)}) {
+				t.Errorf("matcher does not match linux/%s, which is what the package targets", arch)
+			}
+
+			other := api.ArchAMD64
+			if arch == api.ArchAMD64 {
+				other = api.ArchARM64
+			}
+			if matcher.Match(ocispec.Platform{OS: "linux", Architecture: string(other)}) {
+				t.Errorf("matcher matches linux/%s, which the package does not target", other)
+			}
+		})
+	}
+}
+
+// TestPackageExportPlatformIsAlwaysLinux pins the OS to the host being uploaded to rather than the
+// one cargoship runs on, so building from macOS does not select against darwin.
+func TestPackageExportPlatformIsAlwaysLinux(t *testing.T) {
+	matcher := packageExportPlatform(api.Arches{api.ArchAMD64})
+
+	if matcher.Match(ocispec.Platform{OS: "darwin", Architecture: "amd64"}) {
+		t.Error("matcher matches darwin/amd64, but image tarballs are only ever imported on Linux")
+	}
+}
+
+// TestPackageExportPlatformWithoutASingleArch covers the cases packageExportPlatform cannot answer
+// on its own: a package carrying several architectures needs a matcher per host, and one carrying
+// none has nothing to pin to. Both keep the previous behaviour until TODO(#258) lands.
+func TestPackageExportPlatformWithoutASingleArch(t *testing.T) {
+	local := ocispec.Platform{OS: "linux", Architecture: "amd64"}
+
+	for _, tt := range []struct {
+		name   string
+		arches api.Arches
+	}{
+		{name: "several architectures", arches: api.Arches{api.ArchAMD64, api.ArchARM64}},
+		{name: "no architecture", arches: nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := packageExportPlatform(tt.arches).Match(local)
+			want := platforms.DefaultStrict().Match(local)
+			if got != want {
+				t.Errorf("Match(linux/amd64) = %v, want %v, matching the DefaultStrict fallback", got, want)
+			}
+		})
 	}
 }

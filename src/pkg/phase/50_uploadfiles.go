@@ -34,6 +34,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
@@ -104,9 +105,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 
 	store := &carch.OciArchiveStore{Root: imagesPath, Src: src}
 
-	// TODO(#258): DefaultStrict is the architecture cargoship itself runs on. Apply time selection
-	// has to use the architecture of the host being uploaded to, which is a per host tarball.
-	hostPlatform := platforms.DefaultStrict()
+	exportPlatform := packageExportPlatform(p.manager.Distro.Build.Arches())
 
 	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), ".tar")
@@ -117,7 +116,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			return err
 		}
 
-		desc, err = resolveImageManifest(ctx, src, desc, hostPlatform)
+		desc, err = resolveImageManifest(ctx, src, desc, exportPlatform)
 		if err != nil {
 			return fmt.Errorf("failed to select a manifest for image %s: %w", i, err)
 		}
@@ -136,7 +135,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			store,
 			writer,
 			archive.WithManifest(desc, i),
-			archive.WithPlatform(hostPlatform),
+			archive.WithPlatform(exportPlatform),
 		)
 		if err != nil {
 			logger.From(ctx).Warn("failed to create archive", "error", err)
@@ -164,6 +163,33 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 	}
 
 	return nil
+}
+
+// imageExportOS is the operating system of every platform cargoship exports an image tarball for.
+// The tarballs are imported by an engine agent on a Linux host, so the OS never follows the machine
+// running cargoship, which may well be macOS.
+const imageExportOS = "linux"
+
+// packageExportPlatform returns the matcher used to pick and export image manifests.
+//
+// The architecture comes from the package rather than from platforms.DefaultStrict(), which
+// describes the machine running cargoship. Building an amd64 package on an arm64 workstation
+// otherwise selects a manifest against the workstation's architecture, and writes a tarball no node
+// in the cluster can use.
+//
+// A package targeting several architectures has no single answer here, so it keeps the previous
+// behaviour for now.
+func packageExportPlatform(arches api.Arches) platforms.MatchComparer {
+	if len(arches) != 1 {
+		// TODO(#258): a multi-architecture package needs one tarball per host architecture, so the
+		// matcher has to be chosen per host at upload time rather than once for the whole package.
+		return platforms.DefaultStrict()
+	}
+
+	return platforms.OnlyStrict(ocispec.Platform{
+		OS:           imageExportOS,
+		Architecture: string(arches[0]),
+	})
 }
 
 // resolveImageManifest picks the manifest to export for an image. An image pulled for a single
