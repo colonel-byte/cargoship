@@ -50,3 +50,8 @@ func init() {
 func (r *RHEL) String() string {
 	return "Red Hat Enterprise Linux"
 }
+
+// PreferredFirewall reports that RHEL ships firewalld as its firewall front end.
+func (r *RHEL) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}

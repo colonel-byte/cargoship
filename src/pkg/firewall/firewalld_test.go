@@ -142,5 +142,17 @@ func TestDetectWithoutAConfigurer(t *testing.T) {
 	require.False(t, (&Firewalld{}).Detect(&cluster.ZarfHost{}))
 	require.False(t, (&UFW{}).Detect(&cluster.ZarfHost{}))
 	require.False(t, (&Nftables{}).Detect(&cluster.ZarfHost{}))
-	require.Nil(t, For(&cluster.ZarfHost{}))
+	require.Nil(t, Select(&cluster.ZarfHost{}).Backend)
+	require.Nil(t, Select(&cluster.ZarfHost{}).Skipped)
+}
+
+func TestInstalledWithoutAConfigurer(t *testing.T) {
+	require.False(t, (&Firewalld{}).Installed(&cluster.ZarfHost{}))
+	require.False(t, (&UFW{}).Installed(&cluster.ZarfHost{}))
+	require.False(t, (&Nftables{}).Installed(&cluster.ZarfHost{}))
+}
+
+func TestPreferredFirewallWithoutAConfigurer(t *testing.T) {
+	require.Empty(t, preferredFirewall(nil))
+	require.Empty(t, preferredFirewall(&cluster.ZarfHost{}))
 }

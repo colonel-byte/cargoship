@@ -102,6 +102,15 @@ func (n *Nftables) Detect(h *cluster.ZarfHost) bool {
 	return nftConfPath(h) != ""
 }
 
+// Installed is true when the nft command is present on h.
+func (n *Nftables) Installed(h *cluster.ZarfHost) bool {
+	if h == nil || h.Configurer == nil {
+		return false
+	}
+
+	return h.Configurer.CommandExist(h, "nft")
+}
+
 // Apply renders p as a complete ruleset, checks it, and loads it in one transaction. The
 // table is replaced rather than edited, so rules cargoship applied on an earlier run that p no
 // longer contains are gone once the transaction commits.

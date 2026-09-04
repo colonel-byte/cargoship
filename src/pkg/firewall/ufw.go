@@ -76,6 +76,15 @@ func (u *UFW) Detect(h *cluster.ZarfHost) bool {
 	return strings.Contains(strings.ToLower(out), "status: active")
 }
 
+// Installed is true when ufw is present on h, active or not.
+func (u *UFW) Installed(h *cluster.ZarfHost) bool {
+	if h == nil || h.Configurer == nil {
+		return false
+	}
+
+	return h.Configurer.CommandExist(h, UFWService)
+}
+
 // Apply reconciles the node's ufw rules with p and reloads ufw. Rules cargoship applied on an
 // earlier run that p no longer contains are deleted.
 func (u *UFW) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {

@@ -51,7 +51,8 @@ func (p *ConfigureFirewall) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *ConfigureFirewall) Explanation() string {
-	return "If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables. " +
+	return "If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables, " +
+		"preferring the front end the node's OS ships. " +
 		"It trusts every other node in the cluster along with the engine's pod and service CIDRs, " +
 		"opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section"
 }
@@ -61,11 +62,16 @@ func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 	p.backends = make(map[string]firewall.Backend)
 
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		backend := firewall.For(h)
-		if backend == nil {
+		selection := firewall.Select(h)
+		if selection.Backend == nil {
+			if selection.Skipped != nil {
+				logger.From(ctx).Info("node's firewall is installed but not running, leaving it alone",
+					"node", h.String(), "firewall", selection.Skipped.Name())
+			}
+
 			return false
 		}
-		p.backends[h.String()] = backend
+		p.backends[h.String()] = selection.Backend
 
 		return true
 	})
