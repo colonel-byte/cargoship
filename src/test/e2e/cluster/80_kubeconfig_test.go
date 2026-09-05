@@ -26,6 +26,8 @@ import (
 // KUBECONFIG at: it names the cluster, points at the load balancer address the inventory
 // declared, and carries the client certificate. Test_ZZ1 then uses that same file to talk to
 // the cluster, which is the real proof the credentials work.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) kubeConfig() {
 	s.T().Helper()
 
@@ -63,5 +65,11 @@ func (s *phaseWalk) kubeConfig() {
 // Test_80_KubeConfig writes the admin credentials for the cluster the install created.
 func (s *ApplyPhaseSuite) Test_80_KubeConfig() {
 	s.requireEngine()
+	s.kubeConfig()
+}
+
+// Test_80_KubeConfig rewrites the credentials once the cluster has grown, proving the join did
+// not leave the local kubeconfig pointing at something that no longer answers.
+func (s *JoinPhaseSuite) Test_80_KubeConfig() {
 	s.kubeConfig()
 }

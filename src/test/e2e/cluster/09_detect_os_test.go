@@ -56,6 +56,8 @@ func expectedOSID(hostname string) string {
 // family and assert that the routing matches what the hosts report; if the cluster quietly
 // lost a family those assertions would still pass, having tested nothing. Failing here
 // instead points at the cause rather than at a phase that no longer covers a branch.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) detectOS() {
 	s.T().Helper()
 
@@ -90,5 +92,11 @@ func uniqueOSIDs() map[string]struct{} {
 }
 
 func (s *ApplyPhaseSuite) Test_09_DetectOS() {
+	s.detectOS()
+}
+
+// Test_09_DetectOS resolves the new node's configurer, and re-checks that the cluster still
+// runs every OS family now that a machine has been added to it.
+func (s *JoinPhaseSuite) Test_09_DetectOS() {
 	s.detectOS()
 }

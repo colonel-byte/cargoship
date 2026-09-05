@@ -31,3 +31,29 @@ func (s *ApplyPhaseSuite) Test_12_GatherFactsDistro() {
 			"%s: reports an engine version before anything was installed", host)
 	}
 }
+
+// Test_12_GatherFactsDistro is where the join walk diverges from both the install and the
+// upgrade. The nodes the install bootstrapped report the version it put there, and the machine
+// being joined reports none, because nothing has ever been installed on it. That one host
+// differs from the rest is what hands it, and only it, to the initialize phase in Test_62.
+//
+// The version the established nodes report is the version this walk's package carries, so
+// nothing here is older than the package and the upgrade phases stay out of the join.
+func (s *JoinPhaseSuite) Test_12_GatherFactsDistro() {
+	s.runPhase(&phase.GatherFactsDistro{Distro: s.harness.distro})
+
+	for _, host := range s.harness.engineHosts() {
+		if s.isJoined(host) {
+			s.Require().Equalf(phase.UnknownVersion, host.Metadata.DistroVersion,
+				"%s: the machine being joined reports an engine version before anything installed one", host)
+			continue
+		}
+		s.Require().Equalf(installedVersion, host.Metadata.DistroVersion,
+			"%s: not running the version the install walk put there", host)
+	}
+
+	for _, host := range s.harness.uploadOnly() {
+		s.Require().Equalf(phase.UnknownVersion, host.Metadata.DistroVersion,
+			"%s: an upload-only host reports an engine version", host)
+	}
+}

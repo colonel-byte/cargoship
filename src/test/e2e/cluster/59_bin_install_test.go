@@ -31,6 +31,8 @@ import (
 // inventory: an Alpine host belongs to neither the Enterprise Linux nor the Debian family, so
 // it is the one host this phase claims as the path it is rather than as a fallback for a host
 // the RPM and APT phases declined. The next phase drops those hosts.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) binUploadFiles() {
 	s.T().Helper()
 
@@ -83,5 +85,11 @@ func (s *phaseWalk) stagedOrPresent(host *apicluster.ZarfHost, path string) bool
 
 // Test_59_BINUploadFiles stages the engine and the install hook the initialize phases call.
 func (s *ApplyPhaseSuite) Test_59_BINUploadFiles() {
+	s.binUploadFiles()
+}
+
+// Test_59_BINUploadFiles stages the engine and the install hook on the joining machine, which
+// is the hook Test_62 runs to bring it into the cluster.
+func (s *JoinPhaseSuite) Test_59_BINUploadFiles() {
 	s.binUploadFiles()
 }

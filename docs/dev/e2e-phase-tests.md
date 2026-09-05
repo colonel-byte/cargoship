@@ -2,7 +2,7 @@
 
 The cluster suite in `src/test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `src/pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
 
-One top-level test, `TestClusterPhases`, runs the `apply` walk against the cluster it provisions. It is a subtest rather than a top-level test because later walks against the same cluster -- an upgrade, a reset -- hang off the same parent and have to run in a fixed order after it.
+One top-level test, `TestClusterPhases`, runs two walks against the same cluster in the order they work in: `apply` installs the distro, and `join` starts one more machine and walks the same phase list to bring it into the running cluster. A new phase needs a test in the apply walk, and usually one in the join walk too -- see [Adding the join half](#adding-the-join-half).
 
 For why the suite is built this way, see [choice-phase-e2e-tests](../agent/choice-phase-e2e-tests.md). For running the e2e suites generally, see [e2e-tests](e2e-tests.md).
 
@@ -48,7 +48,7 @@ func (s *ApplyPhaseSuite) Test_NN_YourPhase() {
 
 Use `s.Require()` rather than `s.Assert()`. These tests are ordered and stateful, so continuing after a failed assertion produces noise about state the failed assertion already told you was wrong.
 
-Each assertion body lives on `phaseWalk`, the embedded type `ApplyPhaseSuite` is built from, with a one-line `Test_NN` method on the suite calling it. That is more indirection than one walk needs on its own, and it is what lets a second walk over the same phases reuse the body rather than copy it. Testify collects methods by their `Test` prefix, so the shared method is called, not run as a test of its own. Start a shared body with `s.T().Helper()`.
+Each assertion body lives on `phaseWalk`, the embedded type both suites are built from, with a one-line `Test_NN` method on each suite calling it. Testify collects methods by their `Test` prefix, so the shared method is called, not run as a test of its own. Start a shared body with `s.T().Helper()`.
 
 ## What the harness gives you
 
@@ -128,9 +128,32 @@ This matters when adding a phase:
 
 `s.harness.engineWorkers()` exists for the one case where order is not obvious: a test that runs before the drop but is only meaningful for hosts that join.
 
+## Adding the join half
+
+`JoinPhaseSuite` walks the same phase list a second time, against the cluster the apply walk installed and one machine larger. It carries the same package at the same version, so nothing routes to the upgrade phases and the only host with work left is the one that just appeared. It is the only coverage of apply against a cluster that already exists.
+
+So a new phase usually needs a join test as well. Which kind depends on what it does the second time:
+
+*   **The phase does the same thing either way** -- an upload phase, a config render, anything that does not read what is already running. Move the body to an unexported method on `phaseWalk` and give each suite a one-line `Test_NN` method calling it. `50_uploadfiles_test.go` is the worked example.
+
+*   **The phase behaves differently** -- anything gated on what the hosts report. Write two methods with the same name, one per suite, in the same file. `61_initialize_controller_test.go` is the worked example: the apply walk requires `ran(p)`, the join walk requires `!ran(p)` because the control plane is already up, and each says in its comment why.
+
+```go
+// Test_NN_YourPhase, on the join walk, <what is different and why>.
+func (s *JoinPhaseSuite) Test_NN_YourPhase() {
+	p := &phase.YourPhase{Distro: s.harness.distro}
+	s.runPhase(p)
+	s.Require().False(ran(p), "<the routing this proves>")
+}
+```
+
+Phases that assert over the whole matrix of hosts are worth a second look here rather than treating as repetition: `Test_25` and `Test_26` on the join walk are what prove the *established* nodes learned about the new one, not only that the new node learned about them.
+
+The join machine is `kwf3`, a Fedora worker, provisioned on first use by `requireJoinMachine`. A Fedora worker is deliberate: the new node then comes through the SELinux, fapolicyd, firewalld and dnf branches on its own rather than inheriting anything the apply walk proved on the nodes beside it.
+
 ## Prerequisites and running it
 
-The suite needs Docker and a real distro package, and it is not fast: it provisions ten containers and installs rke2 onto nine of them. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
+The suite needs Docker and a real distro package, and it is not fast: it provisions ten containers, installs rke2 onto nine of them, and then starts an eleventh and joins it. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
 
 ```console
 $ go test -mod=vendor -count=1 -v -timeout=105m ./src/test/e2e/cluster/...
@@ -146,15 +169,15 @@ $ mage test:endToEndCluster
 
 ### In CI
 
-`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions ten containers and installs rke2 onto nine of them, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `src/pkg/phase`, `src/pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
+`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions eleven containers and installs rke2 onto ten of them, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `src/pkg/phase`, `src/pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
 
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare step calls `action.NewPrepare`. That is what makes the two workflows independent, which is the point of the split.
 
-The job frees disk before it starts, because nine containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
+The job frees disk before it starts, because ten containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
 
 ## Things that will cost you time
 
 *   **You cannot run one phase test on its own.** `-run 'TestClusterPhases/apply/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
 *   **The first failure stops the rest.** `SetupTest` skips every remaining step once one has failed, so the output names one phase rather than twenty-five. If the first failure looks like a symptom, it is the cause -- everything after it was skipped, not passed.
 *   **Constants the phase package keeps unexported.** Where a path is not exported, the test file redeclares it with a comment saying where it came from (`uploadManifestPath` in `50_uploadfiles_test.go`, `sysctlConfPath` in `20_prepare_host_test.go`). Prefer exporting from `phase` when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.
-*   **Ten containers is a lot of memory.** Nine of them each run an rke2 node, which is the reason this suite is not part of the default `go test ./...` path.
+*   **Eleven containers is a lot of memory.** Ten of them each run an rke2 node, which is the reason this suite is not part of the default `go test ./...` path.
