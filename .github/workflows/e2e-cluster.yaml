@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     # The suite's own timeout is below this, so an overrun is reported as a Go test failure
     # naming the phase it was in rather than as a cancelled job.
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,8 +59,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # The package the suite builds runs to gigabytes, on top of ten container images, which
-      # is more than the ~14GB a hosted runner leaves free comfortably holds. None of what is
+      # The package the suite builds and stages on ten nodes runs to gigabytes, which is more
+      # than the ~14GB a hosted runner leaves free comfortably holds. None of what is
       # removed here is used by this job. The tool cache is deliberately left alone: setup-go
       # puts the toolchain there.
       - name: Free disk space
@@ -72,7 +72,7 @@ jobs:
 
       - name: Test
         run: >-
-          go test -mod=vendor -count=1 -v -timeout=40m
+          go test -mod=vendor -count=1 -v -timeout=55m
           ./src/test/e2e/cluster/...
         env:
           # Everything the test build needs is vendored, so make any accidental network

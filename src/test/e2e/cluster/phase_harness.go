@@ -237,6 +237,19 @@ func (h *phaseHarness) uploadOnly() apicluster.ZarfHosts {
 	return h.hosts().Filter(isUploadOnly)
 }
 
+// carriesFilesFor reports whether the package under test ships any OS file for the given
+// package-manager selector (config.SelectorRPM, SelectorAPT, SelectorBIN). The upload phases
+// route on it, and a package that carries nothing for a selector makes its phase a no-op even
+// on hosts of the matching family, so a test has to know which of the two it is looking at.
+func (h *phaseHarness) carriesFilesFor(selector string) bool {
+	for _, f := range h.manager.Distro.Spec.Config.OS.Files {
+		if f.Selector.Package == selector {
+			return true
+		}
+	}
+	return false
+}
+
 // readOnHosts reads path from every host, keyed by host string, so a test can assert on the
 // same file across the whole cluster.
 func readOnHosts(hosts apicluster.ZarfHosts, path string) (map[string]string, error) {
