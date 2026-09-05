@@ -32,6 +32,38 @@ func (s *ApplyPhaseSuite) Test_12_GatherFactsDistro() {
 	}
 }
 
+// Test_12_GatherFactsDistro is where the upgrade walk starts to diverge from the install one.
+// Every host that runs the engine now reports the version the apply walk installed, and that
+// it is older than the package this walk carries is the fact the rest of the walk turns on:
+// it is what keeps the initialize phases away from a running cluster in Test_61 and Test_62,
+// and what hands those hosts to the upgrade phases in Test_66 and Test_67.
+//
+// The upload-only host still reports unknown. It never had an engine installed, so the
+// version check is also the reason the upgrade phases leave it alone -- though by then it has
+// been dropped from the manager anyway.
+func (s *UpgradePhaseSuite) Test_12_GatherFactsDistro() {
+	s.runPhase(&phase.GatherFactsDistro{Distro: s.harness.distro})
+
+	// VersionLess is the comparison the upgrade phases' own Prepare makes. Calling it here,
+	// rather than comparing the strings, means this test cannot disagree with the routing it
+	// is asserting. It reads no manager state, so a zero-valued phase is enough.
+	compare := &phase.GenericPhase{}
+	packaged := s.harness.manager.Distro.Spec.Version
+
+	for _, host := range s.harness.engineHosts() {
+		s.Require().Equalf(installedVersion, host.Metadata.DistroVersion,
+			"%s: not running the version the install walk put there", host)
+		s.Require().Truef(compare.VersionLess(host, packaged),
+			"%s: runs %s, which the upgrade phases do not consider older than the packaged %s",
+			host, host.Metadata.DistroVersion, packaged)
+	}
+
+	for _, host := range s.harness.uploadOnly() {
+		s.Require().Equalf(phase.UnknownVersion, host.Metadata.DistroVersion,
+			"%s: an upload-only host reports an engine version", host)
+	}
+}
+
 // Test_12_GatherFactsDistro is where the join walk diverges from both the install and the
 // upgrade. The nodes the install bootstrapped report the version it put there, and the machine
 // being joined reports none, because nothing has ever been installed on it. That one host
