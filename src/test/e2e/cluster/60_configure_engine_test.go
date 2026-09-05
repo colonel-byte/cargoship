@@ -29,6 +29,8 @@ import (
 // makes that hold: InitializeWorkers claims every worker whose agent is not already running,
 // with no OS gate, so a test that merely declined to assert on the host would still have
 // watched the phase try to install rke2 on it.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) configureEngine() {
 	s.T().Helper()
 
@@ -53,5 +55,13 @@ func (s *phaseWalk) configureEngine() {
 
 // Test_60_ConfigureEngine renders the engine config before the cluster is started.
 func (s *ApplyPhaseSuite) Test_60_ConfigureEngine() {
+	s.configureEngine()
+}
+
+// Test_60_ConfigureEngine renders the engine config on the joining machine before it is
+// started, and re-renders it on the nodes already running. The assertion that each config
+// names its own host is what rules out the failure this phase is most able to cause on a join:
+// a new node handed a config naming a node that already exists.
+func (s *JoinPhaseSuite) Test_60_ConfigureEngine() {
 	s.configureEngine()
 }
