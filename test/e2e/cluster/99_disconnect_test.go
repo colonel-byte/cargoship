@@ -45,6 +45,11 @@ func (s *ApplyPhaseSuite) Test_99_Disconnect() {
 	s.disconnect()
 }
 
+// Test_99_Disconnect closes out the upgrade walk.
+func (s *UpgradePhaseSuite) Test_99_Disconnect() {
+	s.disconnect()
+}
+
 // Test_99_Disconnect closes out the join walk.
 func (s *JoinPhaseSuite) Test_99_Disconnect() {
 	s.disconnect()

@@ -41,9 +41,10 @@ var (
 // new machine through what the install took the others through, and leaves the running nodes
 // alone while it does.
 //
-// It runs after the apply walk, and the package it carries is the one that walk installed, at
-// installedVersion. So the established nodes already run the packaged version, nothing routes
-// to the upgrade phases, and the only host with work left is the new one.
+// It runs between the apply and the upgrade walks, so the package it carries is the one the
+// apply walk installed, at installedVersion. That is the difference between this walk and the
+// upgrade one: here the established nodes already run the packaged version, so nothing routes
+// to the upgrade phases and the only host with work left is the new one.
 //
 // Most phases assert the same thing they assert on the install, and share their body with the
 // apply walk through phaseWalk. The phases that differ are the ones that route on what is
@@ -60,8 +61,9 @@ var (
 // about the new one -- an /etc/hosts entry and a firewall rule on every node, not just on the
 // node that joined.
 //
-// The lock phases are left out: they are asserted in the apply walk, and holding a lock across
-// a second walk against the same hosts tests the lock file rather than the join.
+// The lock phases are left out, for the reason the upgrade walk leaves them out: they are
+// asserted in the apply walk, and holding a lock across a second walk against the same hosts
+// tests the lock file rather than the join.
 type JoinPhaseSuite struct {
 	phaseWalk
 	// joined is the host the walk added, resolved from the inventory in Test_05.
