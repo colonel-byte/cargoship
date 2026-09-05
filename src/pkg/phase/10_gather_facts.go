@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -116,4 +117,24 @@ func (p *GatherFacts) setupProfileOverrides(ctx context.Context, h *cluster.Zarf
 	logger.From(ctx).Info("testing", "host", h, "profile", h.Profile)
 
 	return nil
+}
+
+// hostArch returns a host's CPU architecture as a typed api.Arch.
+//
+// h.Arch caches the value the configurer detected, which Linux.Arch has already mapped onto the
+// names cargoship uses, so this is a lookup rather than another round trip once investigateHost has
+// run. ParseArch then rejects an architecture cargoship cannot target, such as the arm reported for
+// a 32-bit host.
+func hostArch(h *cluster.ZarfHost) (api.Arch, error) {
+	raw, err := h.Arch()
+	if err != nil {
+		return "", err
+	}
+
+	arch, err := api.ParseArch(raw)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", h, err)
+	}
+
+	return arch, nil
 }

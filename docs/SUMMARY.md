@@ -47,6 +47,8 @@
 
 # Development
 
+<!-- Excluded from the print page (print.html) by docs/css/print.css. -->
+
 - [build-flags](dev/build-flags.md)
 - [dagger](dev/dagger.md)
 - [e2e-tests](dev/e2e-tests.md)
@@ -58,6 +60,9 @@
 
 # Agent
 
+<!-- Excluded from the print page (print.html) by docs/css/print.css. -->
+
+- [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
 - [choice-vault-library](agent/choice-vault-library.md)
@@ -67,5 +72,7 @@
 -----------
 
 # Misc
+
+<!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [changelog](misc/changelog.md)

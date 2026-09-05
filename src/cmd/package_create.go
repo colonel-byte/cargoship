@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/images"
@@ -147,6 +148,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	l.Debug("parsed registry overrides", "overrides", registryOverrides)
 
 	opt := distro.CreateOptions{
+		Architecture:       config.CLIArch,
 		CachePath:          cachePath,
 		IsInteractive:      !o.confirm,
 		OCIConcurrency:     o.ociConcurrency,

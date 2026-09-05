@@ -22,13 +22,17 @@ package load
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
+	"slices"
 	"time"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	v1alpha1 "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/cfg"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -36,11 +40,15 @@ import (
 // DefinitionOptions are the optional parameters to load.PackageDefinition
 type DefinitionOptions struct {
 	CachePath string
+	// Architecture narrows a package that targets several architectures down to a single one.
+	// A package that targets one architecture ignores it: the definition already names the only
+	// architecture it carries files for.
+	Architecture string
 	types.RemoteOptions
 }
 
 // DistroDefinition returns a ZarfDistro object
-func DistroDefinition(ctx context.Context, distroPath string, _ DefinitionOptions) (v1alpha1.ZarfDistro, error) {
+func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.DistroDefinition", "path", distroPath)
@@ -58,9 +66,12 @@ func DistroDefinition(ctx context.Context, distroPath string, _ DefinitionOption
 	if err != nil {
 		return v1alpha1.ZarfDistro{}, err
 	}
-	dis.Metadata.Architecture = config.GetArch(dis.Metadata.Architecture)
+	dis, declared, err := resolveArchitectures(dis, opts.Architecture)
+	if err != nil {
+		return v1alpha1.ZarfDistro{}, err
+	}
 
-	err = validateDistro(ctx, dis, disPath.ManifestFile)
+	err = validateDistro(ctx, dis, declared, disPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfDistro{}, err
 	}
@@ -68,6 +79,97 @@ func DistroDefinition(ctx context.Context, distroPath string, _ DefinitionOption
 	return dis, nil
 }
 
-func validateDistro(_ context.Context, _ v1alpha1.ZarfDistro, _ string) error {
+// resolveArchitectures settles which architectures the package targets.
+//
+// A definition that names no architecture at all takes the requested one, falling back to the
+// architecture of the machine running cargoship. A definition that does name architectures is taken
+// at its word: a request narrows the architectures list to a single entry, and a request that the
+// package does not target is an error rather than an override, because the file entries for that
+// architecture were never packaged.
+//
+// It returns the narrowed package alongside the architectures the definition declared, which is
+// what the file selectors have to be validated against: a definition narrowed to amd64 still
+// carries the arm64 entries it was written with, and those entries are not a mistake.
+func resolveArchitectures(dis v1alpha1.ZarfDistro, requested string) (v1alpha1.ZarfDistro, api.Arches, error) {
+	var arch api.Arch
+	if requested != "" {
+		parsed, err := api.ParseArch(requested)
+		if err != nil {
+			return dis, dis.Metadata.Arches(), err
+		}
+		arch = parsed
+	}
+
+	if len(dis.Metadata.Architectures) == 0 {
+		if dis.Metadata.Architecture == "" {
+			dis.Metadata.Architecture = api.Arch(config.GetArch(string(arch)))
+			return dis, dis.Metadata.Arches(), nil
+		}
+		if arch != "" && arch != dis.Metadata.Architecture {
+			return dis, dis.Metadata.Arches(), fmt.Errorf("architecture %q is not targeted by this package, which targets %s",
+				arch, dis.Metadata.Architecture)
+		}
+
+		return dis, dis.Metadata.Arches(), nil
+	}
+
+	declared := dis.Metadata.Architectures
+
+	if arch == "" {
+		return dis, declared, nil
+	}
+
+	if !slices.Contains(declared, arch) {
+		return dis, declared, fmt.Errorf("architecture %q is not targeted by this package, which targets %s",
+			arch, api.FormatArches(declared))
+	}
+
+	dis.Metadata.Architectures = api.Arches{arch}
+
+	return dis, declared, nil
+}
+
+func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, declared api.Arches, path string) error {
+	if err := validateArchitectures(dis, declared); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+
+	return nil
+}
+
+// validateArchitectures checks that the package targets a sane set of architectures, and that no
+// file selects an architecture the definition never declared. The second check turns a typo such as
+// x86_64 into a build time error rather than a file that silently never uploads. It is checked
+// against the declared architectures rather than what the package was narrowed to, so that
+// narrowing a multi-architecture definition to one architecture is not itself an error.
+func validateArchitectures(dis v1alpha1.ZarfDistro, declared api.Arches) error {
+	arches := declared
+	if len(arches) == 0 {
+		return errors.New("package must target at least one architecture")
+	}
+
+	seen := make(map[api.Arch]struct{}, len(arches))
+	for _, arch := range arches {
+		if err := arch.Validate(); err != nil {
+			return fmt.Errorf("architecture %w", err)
+		}
+		if _, ok := seen[arch]; ok {
+			return fmt.Errorf("architecture %q is listed more than once", arch)
+		}
+		seen[arch] = struct{}{}
+	}
+
+	for _, f := range slices.Concat(dis.Spec.Config.Files, dis.Spec.Config.OS.Files) {
+		if f == nil {
+			continue
+		}
+		for _, arch := range f.Selector.Arch {
+			if !slices.Contains(arches, arch) {
+				return fmt.Errorf("file %q selects architecture %q, but the package declares %s",
+					f.Target, arch, api.FormatArches(arches))
+			}
+		}
+	}
+
 	return nil
 }

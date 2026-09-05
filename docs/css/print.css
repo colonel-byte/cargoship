@@ -1,0 +1,243 @@
+/**
+ * Copyright 2026 colonel-byte
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@page {
+  margin: 0.4in;
+}
+
+@media print {
+  html,
+  body {
+    font-size: 1.35rem;
+    line-height: 1.25;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  #mdbook-content,
+  .content,
+  .page {
+    padding: 0;
+  }
+
+  .content main {
+    max-width: none;
+  }
+
+  .content main > :first-child {
+    margin-top: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.1;
+    margin-block-end: 0.3em;
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  h2,
+  h3,
+  h4,
+  h5 {
+    margin-block-start: 1em;
+  }
+
+  .header + .header h3,
+  .header + .header h4,
+  .header + .header h5 {
+    margin-block-start: 0.6em;
+  }
+
+  p,
+  ol,
+  ul {
+    line-height: 1.25;
+    margin-block: 0.35em;
+    orphans: 3;
+    widows: 3;
+  }
+
+  p,
+  li,
+  blockquote {
+    overflow-wrap: anywhere;
+  }
+
+  ul,
+  ol {
+    padding-inline-start: 1.4em;
+  }
+
+  li + li {
+    margin-block-start: 0.1em;
+  }
+
+  li,
+  blockquote,
+  .warning,
+  img,
+  svg {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  hr {
+    margin: 0.9em 0;
+  }
+
+  blockquote,
+  .warning {
+    margin: 0.6em 0;
+    padding: 0 0.8em;
+  }
+
+  .table-wrapper {
+    display: block;
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100%;
+    font-size: 0.9em;
+    table-layout: auto;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tr,
+  td,
+  th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  table td,
+  table thead th {
+    padding: 2px 8px;
+    vertical-align: top;
+    text-align: left;
+  }
+
+  /* break-word, not anywhere: `anywhere` is counted in the min-content width
+   * of a cell, so an auto-layout table collapses the column to one character
+   * and hyphenates every identifier in it. break-word breaks only words that
+   * cannot fit a line on their own, and leaves column sizing alone.
+   */
+  table td,
+  table th {
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+  }
+
+  /* The first column of every table names a thing – a backend, a field, a rule
+   * – so give them all the same width. Without it, auto layout squeezes the
+   * name column below its own min-content width to make room for the long
+   * paths in the wider columns, and the names hyphenate.
+   */
+  table th:first-child,
+  table td:first-child {
+    width: 7em;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  table th:first-child code,
+  table td:first-child code {
+    white-space: nowrap;
+  }
+
+  /* Long paths in the wider columns are what squeezes the name column, so let
+   * them break anywhere rather than holding the column open.
+   */
+  table td:not(:first-child) code,
+  table th:not(:first-child) code {
+    overflow-wrap: anywhere;
+  }
+
+  pre,
+  .hljs {
+    font-size: 0.85em;
+    line-height: 1.2;
+    padding: 0.6em;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  pre code,
+  .hljs code {
+    white-space: inherit;
+  }
+
+  code {
+    font-size: 0.85em;
+  }
+
+  a {
+    word-break: break-word;
+  }
+
+  /* The commands and phases chapters are dense reference material – flag lists
+   * and step lists – so print their body text smaller. Those two are the last
+   * sections that print, so this runs from the first commands chapter to the
+   * end of the visible document, the same flat-sibling trick used below.
+   * Headings are left alone: shrinking them here would flatten the hierarchy,
+   * since these font sizes are relative to the shared parent, not to each
+   * element's own default. #cargoship-2 is docs/commands/cargoship.md; it
+   * carries the -2 because the index page has a `Cargoship` heading earlier in
+   * the page.
+   */
+  #cargoship-2 ~ :is(p, ul, ol, dl, pre, table, blockquote) {
+    font-size: 0.80em;
+  }
+
+  /* Everything from docs/dev/* onward is dropped from the print page: dev,
+   * agent, and the changelog are the last three sections of SUMMARY.md, so one
+   * rule covers them. The print page is one flat run of siblings, hence the
+   * `~ *`. The ID is the mdBook slug of that chapter's own H1 – if the title is
+   * reworded, this has to be reworded with it. To keep dev but drop only the
+   * tail, point this at the first heading you do want omitted.
+   */
+  div[style*="break-before: page"]:has(+ #build-flags-and-environment),
+  #build-flags-and-environment,
+  #build-flags-and-environment ~ * {
+    display: none !important;
+  }
+}

@@ -50,7 +50,7 @@ func (p *LabelNodes) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *LabelNodes) Explanation() string {
-	return "If enabled, this checks each node's node-role.kubernetes.io/<profile> label and adds it, set to \"true\", when missing or set to anything else"
+	return "If enabled, this checks each node's `node-role.kubernetes.io/<profile>` label and adds it, set to \"true\", when missing or set to anything else"
 }
 
 // Prepare the phase
