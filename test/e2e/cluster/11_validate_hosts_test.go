@@ -22,6 +22,8 @@ import (
 // hosts collide or whose architecture the package does not carry, so passing it is most of
 // the assertion; the rest re-checks the two properties it enforces against the facts the
 // previous phase gathered.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) validateHosts() {
 	s.T().Helper()
 
@@ -43,5 +45,11 @@ func (s *phaseWalk) validateHosts() {
 }
 
 func (s *ApplyPhaseSuite) Test_11_ValidateHosts() {
+	s.validateHosts()
+}
+
+// Test_11_ValidateHosts is the check that the new machine does not collide with a node that is
+// already in the cluster, which is the failure an added node is most likely to bring.
+func (s *JoinPhaseSuite) Test_11_ValidateHosts() {
 	s.validateHosts()
 }

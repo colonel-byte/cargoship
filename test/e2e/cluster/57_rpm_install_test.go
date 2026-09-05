@@ -26,6 +26,8 @@ import (
 // phase/50 staged. Whether the Fedora nodes gain anything depends on the package -- an rke2
 // package installs from a tarball and carries no RPM -- so that half is asserted against
 // what the package actually ships rather than assumed.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) rpmUploadFiles() {
 	s.T().Helper()
 
@@ -59,5 +61,11 @@ func (s *phaseWalk) rpmUploadFiles() {
 
 // Test_57_RPMUploadFiles routes the install's RPM uploads.
 func (s *ApplyPhaseSuite) Test_57_RPMUploadFiles() {
+	s.rpmUploadFiles()
+}
+
+// Test_57_RPMUploadFiles routes the join's RPM uploads. The machine being joined is a Fedora
+// worker, so it is on the claimed side of the split rather than the untouched one.
+func (s *JoinPhaseSuite) Test_57_RPMUploadFiles() {
 	s.rpmUploadFiles()
 }

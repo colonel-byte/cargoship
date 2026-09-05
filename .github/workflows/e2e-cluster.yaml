@@ -8,12 +8,13 @@ name: E2E cluster
 # e2e.yaml so that its trigger, its concurrency group and its time budget are independent of the
 # checks that do run on every push.
 #
-# The engine-bootstrap half -- installing k3s and bringing the cluster up -- is not run here.
-# It is not reliable enough on a free hosted runner to be a required check, even after switching
-# from a three-controller rke2 topology to a single-controller k3s one to remove the etcd raft
-# quorum timeouts that motivated that switch. It still exists and is still worth running: on a
-# local box, with `mage test:endToEndCluster`. See docs/dev/e2e-phase-tests.md and
-# docs/agent/choice-e2e-stage-split.md for the reasoning and the local instructions.
+# The engine-bootstrap half -- installing k3s and bringing the cluster up, then joining a machine
+# to the running cluster -- is not run here. It is not reliable enough on a free hosted runner to
+# be a required check, even after switching from a three-controller rke2 topology to a
+# single-controller k3s one to remove the etcd raft quorum timeouts that motivated that switch.
+# It still exists and is still worth running: on a local box, with `mage test:endToEndCluster`.
+# See docs/dev/e2e-phase-tests.md and docs/agent/choice-e2e-stage-split.md for the reasoning and
+# the local instructions.
 #
 # The one job below runs on demand from the Actions tab and on every pull request -- no label
 # needed. It used to sit behind an "e2e-cluster" label alongside a second, full-install job while

@@ -24,6 +24,8 @@ import (
 // Debian side of the cluster: it claims the Ubuntu replicas and must leave the Fedora ones
 // untouched. As with RPM, an rke2 package carries no .deb, so the phase is expected to record
 // nothing -- what it must never do is drop what phase/50 already staged.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) aptUploadFiles() {
 	s.T().Helper()
 
@@ -70,5 +72,11 @@ func (s *phaseWalk) aptUploadFiles() {
 
 // Test_58_APTUploadFiles routes the install's APT uploads.
 func (s *ApplyPhaseSuite) Test_58_APTUploadFiles() {
+	s.aptUploadFiles()
+}
+
+// Test_58_APTUploadFiles routes the join's APT uploads, on the same split: the joining machine
+// runs Fedora, so this phase has to leave it alone.
+func (s *JoinPhaseSuite) Test_58_APTUploadFiles() {
 	s.aptUploadFiles()
 }

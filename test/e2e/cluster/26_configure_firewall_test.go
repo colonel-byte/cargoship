@@ -32,6 +32,8 @@ var firewallDump = map[string]string{ //nolint:gochecknoglobals
 // each node's own firewall now names every peer's private address. A node running no
 // firewall is not a failure -- the phase is meant to skip it -- so the test asserts the gate
 // matches what the hosts run and stops there when none do.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) configureFirewall() {
 	s.T().Helper()
 
@@ -74,5 +76,11 @@ func (s *phaseWalk) configureFirewall() {
 }
 
 func (s *ApplyPhaseSuite) Test_26_ConfigureFirewall() {
+	s.configureFirewall()
+}
+
+// Test_26_ConfigureFirewall is the other one: every established node's own firewall dump has to
+// name the new node's address, not just the new node's firewall naming theirs.
+func (s *JoinPhaseSuite) Test_26_ConfigureFirewall() {
 	s.configureFirewall()
 }

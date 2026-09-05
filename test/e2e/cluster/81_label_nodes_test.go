@@ -30,6 +30,8 @@ const nodeRoleLabel = "node-role.kubernetes.io/"
 // the API server: every host that declares a profile has a node carrying that label set to
 // "true". The generated inventory gives each host a profile matching its role, so this is
 // the controller/worker split as the cluster sees it.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) labelNodes() {
 	s.T().Helper()
 
@@ -67,5 +69,11 @@ func (s *phaseWalk) labelNodes() {
 // Test_81_LabelNodes marks each node with the profile the inventory gave its host.
 func (s *ApplyPhaseSuite) Test_81_LabelNodes() {
 	s.requireEngine()
+	s.labelNodes()
+}
+
+// Test_81_LabelNodes labels the node that just joined, which is also the first assertion that
+// the API server has registered it at all.
+func (s *JoinPhaseSuite) Test_81_LabelNodes() {
 	s.labelNodes()
 }
