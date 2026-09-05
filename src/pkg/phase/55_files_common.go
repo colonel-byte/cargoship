@@ -148,28 +148,6 @@ func (p *UploadFilesCommon) filesFor(ctx context.Context, byArch map[api.Arch][]
 	return byArch[arch]
 }
 
-// hostArches lists the distinct architectures of the hosts this phase still uploads to, in the
-// order the cluster declares them.
-//
-// It reads p.control and p.workers as they stand, so a phase that narrows those lists first, as the
-// RPM and APT phases do, only builds file sets for architectures it will actually upload.
-func (p *UploadFilesCommon) hostArches(ctx context.Context) api.Arches {
-	var arches api.Arches
-
-	for _, h := range slices.Concat(p.control, p.workers) {
-		arch, err := hostArch(h)
-		if err != nil {
-			logger.From(ctx).Warn("could not determine the host architecture, skipping it", "host", h, "error", err)
-			continue
-		}
-		if !slices.Contains(arches, arch) {
-			arches = append(arches, arch)
-		}
-	}
-
-	return arches
-}
-
 // ShouldRun is true when there are workers
 func (p *UploadFilesCommon) ShouldRun() bool {
 	return (len(p.control) + len(p.workers)) > 0
@@ -178,7 +156,9 @@ func (p *UploadFilesCommon) ShouldRun() bool {
 // getProfileFiles groups the files this phase uploads by the architecture of the host receiving
 // them, so a cluster of mixed CPUs gets the right binaries on each node.
 func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) map[api.Arch][]v1alpha1.ZarfFile {
-	arches := p.hostArches(ctx)
+	// p.control and p.workers are read as they stand, so a phase that narrows them first, as the
+	// RPM and APT phases do, only builds file sets for architectures it will actually upload.
+	arches := hostArches(ctx, slices.Concat(p.control, p.workers))
 	byArch := make(map[api.Arch][]v1alpha1.ZarfFile, len(arches))
 
 	for _, arch := range arches {

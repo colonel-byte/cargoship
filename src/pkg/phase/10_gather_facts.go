@@ -23,6 +23,7 @@ package phase
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -137,4 +138,27 @@ func hostArch(h *cluster.ZarfHost) (api.Arch, error) {
 	}
 
 	return arch, nil
+}
+
+// hostArches lists the distinct architectures of a set of hosts, in the order the cluster declares
+// them.
+//
+// A host whose architecture cannot be resolved is skipped rather than failing the set. ValidateHosts
+// has already failed the run for a host the package does not carry, so a host reaching here without
+// an architecture simply receives nothing built for one.
+func hostArches(ctx context.Context, hosts cluster.ZarfHosts) api.Arches {
+	var arches api.Arches
+
+	for _, h := range hosts {
+		arch, err := hostArch(h)
+		if err != nil {
+			logger.From(ctx).Warn("could not determine the host architecture, skipping it", "host", h, "error", err)
+			continue
+		}
+		if !slices.Contains(arches, arch) {
+			arches = append(arches, arch)
+		}
+	}
+
+	return arches
 }
