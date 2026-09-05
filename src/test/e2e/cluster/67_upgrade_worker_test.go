@@ -36,3 +36,33 @@ func (s *ApplyPhaseSuite) Test_67_UpgradeWorkers() {
 			"%s: %s stopped running", host, service)
 	}
 }
+
+// Test_67_UpgradeWorkers is the worker half of the upgrade, and the only place
+// phase/67_upgrade_worker.go is asserted to have run. It does per worker what the controller
+// phase did per controller, in batches of WorkerConcurrent rather than one at a time, so the
+// assertions are the same three: it claimed the hosts, each runs the packaged version, and
+// none was left stopped or cordoned.
+//
+// The upload-only host is not among them. Test_60 dropped it from the manager, which is what
+// keeps a phase that drains and restarts an engine away from a node that never ran one.
+func (s *UpgradePhaseSuite) Test_67_UpgradeWorkers() {
+	p := &phase.UpgradeWorkers{
+		UpgradeHosts:     phase.UpgradeHosts{Distro: s.harness.distro},
+		WorkerConcurrent: s.harness.opts.WorkerConcurrent,
+	}
+	s.runPhase(p)
+	s.Require().True(ran(p), "the workers run an older version but the upgrade phase skipped them")
+
+	service := s.harness.distro.GetWorkerService()
+	for _, host := range s.harness.workers() {
+		s.Require().Truef(host.Configurer.ServiceIsRunning(host, service),
+			"%s: %s did not come back up after the upgrade", host, service)
+
+		version, err := s.harness.distro.RunningVersion(*host)
+		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
+		s.Require().Equalf(s.harness.manager.Distro.Spec.Version, version,
+			"%s: still running the version the upgrade was meant to replace", host)
+	}
+
+	s.requireSchedulable(s.harness.workers())
+}

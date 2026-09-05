@@ -299,36 +299,43 @@ var (
 	// fullClusterConfigPath is the inventory holding every machine, including the upload-only
 	// Alpine node. The phase harness is built from it, because the upload phases are meant to
 	// see that node. e2e.ClusterConfigPath points at the cluster-only inventory instead: the
-	// whole-action steps run prepare, apply and reset, which would try to install the engine
-	// on a host that cannot run it.
+	// whole-action steps run prepare and apply, which would try to install the engine on a
+	// host that cannot run it.
 	fullClusterConfigPath string //nolint:gochecknoglobals
 
 	// kubeconfigPath is the file KUBECONFIG points at for the whole run. TestMain owns it
 	// rather than a suite, because the suites hand the cluster to each other: the apply walk
-	// writes it and the join walk runs against the cluster it names.
+	// writes it and the upgrade walk rewrites it against the upgraded control plane.
 	kubeconfigPath string //nolint:gochecknoglobals
 )
 
-// TestClusterPhases runs the two walks in the only order they work in. The apply walk installs
-// the distro on the shared bootloose cluster and the join walk adds a machine to what it
-// installed. They share one cluster and one kubeconfig, so they are subtests of one parent
-// rather than two top-level tests whose order would depend on declaration order.
+// TestClusterPhases runs the three walks in the only order they work in. The apply walk
+// installs the distro on the shared bootloose cluster, the join walk adds a machine to it, and
+// the upgrade walk moves that cluster to a newer package. They share one cluster and one
+// kubeconfig, so they are subtests of one parent rather than three top-level tests whose order
+// would depend on declaration order.
+//
+// The join walk runs before the upgrade rather than after it so that the upgrade has to carry
+// the node that joined late as well as the nodes the install bootstrapped.
 func TestClusterPhases(t *testing.T) {
 	if !t.Run("apply", func(t *testing.T) { suite.Run(t, new(ApplyPhaseSuite)) }) {
-		t.Log("apply failed: the join walk needs the cluster it installs")
+		t.Log("apply failed: the join and upgrade walks both need the cluster it installs")
 		return
 	}
 
-	// The join walk starts from the cluster the apply walk installed, so a stage-only run has
-	// nothing for it to act on. The apply walk skips its own engine steps one at a time; this
-	// one is skipped whole, because reaching it would mean provisioning the extra machine and
-	// walking every phase again to arrive at a suite of uniformly skipped tests.
+	// The later walks start from the cluster the apply walk installed, so a stage-only run has
+	// nothing for them to act on. The apply walk skips its own engine steps one at a time; these
+	// are skipped whole, because reaching them would mean provisioning the extra machine and
+	// walking every phase again to arrive at suites of uniformly skipped tests.
 	if stageOnly() {
-		t.Log("stage-only run: the join walk needs a started cluster")
+		t.Log("stage-only run: the join and upgrade walks both need a started cluster")
 		return
 	}
 
+	// The later walks run whatever the walk before them did, and TestMain deletes the
+	// containers either way.
 	t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
+	t.Run("upgrade", func(t *testing.T) { suite.Run(t, new(UpgradePhaseSuite)) })
 }
 
 func TestMain(m *testing.M) {
