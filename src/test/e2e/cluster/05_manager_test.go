@@ -41,10 +41,15 @@ const (
 	clusterWorkers     = 6
 )
 
-// applyTimeout bounds the retry loops the phases run through manager.RetryTimeout. It
-// matches the `timeout` in src/test/e2e/cargoship-config.yaml, which is what the CLI-driven
-// steps in this suite use.
-const applyTimeout = 20 * time.Minute
+// applyTimeout bounds the retry loops the phases run through manager.RetryTimeout, and
+// applyConcurrency and applyWorkerConcurrent are the widths the phases act on the cluster
+// at. All three are shared with the actions in cluster_lifecycle_test.go, so a phase run one
+// at a time and the same phase run inside a full apply see identical settings.
+const (
+	applyTimeout          = 20 * time.Minute
+	applyConcurrency      = 300
+	applyWorkerConcurrent = "5"
+)
 
 // ApplyPhaseSuite walks the apply phase list one phase at a time against the shared
 // bootloose cluster, asserting the artifact each phase leaves on the hosts before the next
@@ -149,12 +154,12 @@ func (s *ApplyPhaseSuite) runPhase(p phase.Phase) {
 // because the upload phases are meant to see the upload-only host.
 func (s *ApplyPhaseSuite) Test_05_Manager() {
 	harness, err := newPhaseHarness(s.ctx, s.pkgPath, fullClusterConfigPath, phaseHarnessOptions{
-		Concurrency:      300,
+		Concurrency:      applyConcurrency,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-		WorkerConcurrent: "5",
+		WorkerConcurrent: applyWorkerConcurrent,
 		Timeout:          applyTimeout,
 	})
 	s.Require().NoError(err)

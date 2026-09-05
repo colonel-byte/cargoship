@@ -60,7 +60,9 @@ jobs:
   # Run the e2e group that needs no cluster: the misc and package command groups, which live
   # in their own package so this job never compiles or runs anything bootloose-backed.
   # -short additionally skips the example packages, which pull ~1.5GB of engine artifacts
-  # and images. The cluster group is not run here; it needs Docker and several minutes.
+  # and images. The cluster group is not run here at all: it needs Docker, provisions ten
+  # containers and installs rke2 onto nine of them, so it lives in its own workflow,
+  # e2e-cluster.yaml, on its own trigger.
   e2e-noncluster:
     needs: build-e2e
     runs-on: ubuntu-latest

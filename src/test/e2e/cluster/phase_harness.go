@@ -75,9 +75,83 @@ type phaseHarnessOptions struct {
 	Timeout time.Duration
 }
 
-// newPhaseHarness loads pkgPath and configPath into a manager the phase tests can step
-// through one phase at a time.
-func newPhaseHarness(ctx context.Context, pkgPath, configPath string, opts phaseHarnessOptions) (*phaseHarness, error) {
+// cachePath fills in the cache and temp-directory defaults the CLI's root command fills in
+// before any command runs, and returns the absolute cache path the loaders take.
+func cachePath() (string, error) {
+	if config.CommonOptions.CachePath == "" {
+		config.CommonOptions.CachePath = config.DefaultCachePath
+	}
+	if config.CommonOptions.TempDirectory == "" {
+		config.CommonOptions.TempDirectory = os.TempDir()
+	}
+	return config.GetAbsCachePath()
+}
+
+// newManager builds the manager the install commands build, from the same two inputs: the
+// inventory at configPath through load.ClusterDefinition and the package at pkgPath through
+// distro.Load. It returns the distro module alongside it, the value the actions hand to
+// every distro-aware phase.
+//
+// The manager owns the extracted package at manager.TempDirectory. The caller removes it,
+// the way each command does on the way out.
+func newManager(
+	ctx context.Context,
+	pkgPath, configPath string,
+	concurrency int,
+	timeout time.Duration,
+) (*phase.Manager, distrocfg.Distro, error) {
+	if err := riglogger.RigLogger(ctx); err != nil {
+		return nil, nil, fmt.Errorf("failed to route rig logs: %w", err)
+	}
+
+	inventory, err := load.ClusterDefinition(ctx, configPath, load.ClusterOptions{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load cluster inventory %s: %w", configPath, err)
+	}
+
+	cache, err := cachePath()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	layout, err := distro.Load(ctx, pkgPath, distro.LoadOptions{
+		CachePath:    cache,
+		Architecture: config.CLIArch,
+		Output:       config.CommonOptions.TempDirectory,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load distro package %s: %w", pkgPath, err)
+	}
+
+	dis, err := distroModule(layout.Distro.Spec.Type)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if concurrency < 0 {
+		concurrency = 0
+	}
+
+	manager := &phase.Manager{
+		Config:            &inventory,
+		Distro:            &layout.Distro,
+		DistroID:          layout.Distro.Spec.Type,
+		TempDirectory:     layout.DirPath(),
+		Concurrency:       concurrency,
+		ConcurrentUploads: concurrency,
+		Writer:            os.Stdout,
+	}
+	if timeout > 0 {
+		manager.SetTimout(timeout)
+	}
+
+	return manager, dis, nil
+}
+
+// newBareManager builds the manager reset and kube-config build: an inventory and a distro
+// ID, with no package loaded, because neither action installs anything. It has no temp
+// directory, so there is nothing for the caller to clean up.
+func newBareManager(ctx context.Context, configPath, distroID string, concurrency int) (*phase.Manager, error) {
 	if err := riglogger.RigLogger(ctx); err != nil {
 		return nil, fmt.Errorf("failed to route rig logs: %w", err)
 	}
@@ -87,58 +161,45 @@ func newPhaseHarness(ctx context.Context, pkgPath, configPath string, opts phase
 		return nil, fmt.Errorf("failed to load cluster inventory %s: %w", configPath, err)
 	}
 
-	if config.CommonOptions.CachePath == "" {
-		config.CommonOptions.CachePath = config.DefaultCachePath
-	}
-	if config.CommonOptions.TempDirectory == "" {
-		config.CommonOptions.TempDirectory = os.TempDir()
+	if concurrency < 0 {
+		concurrency = 0
 	}
 
-	cachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return nil, err
-	}
+	return &phase.Manager{
+		Config:            &inventory,
+		DistroID:          distroID,
+		Concurrency:       concurrency,
+		ConcurrentUploads: concurrency,
+		Writer:            os.Stdout,
+	}, nil
+}
 
-	layout, err := distro.Load(ctx, pkgPath, distro.LoadOptions{
-		CachePath:    cachePath,
-		Architecture: config.CLIArch,
-		Output:       config.CommonOptions.TempDirectory,
-	})
+// distroModule resolves a distro type to the module the phases are built with.
+func distroModule(distroType string) (distrocfg.Distro, error) {
+	builder, err := registry.GetDistroModuleBuilder(distroType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load distro package %s: %w", pkgPath, err)
-	}
-
-	builder, err := registry.GetDistroModuleBuilder(layout.Distro.Spec.Type)
-	if err != nil {
-		return nil, fmt.Errorf("no distro module for %q: %w", layout.Distro.Spec.Type, err)
+		return nil, fmt.Errorf("no distro module for %q: %w", distroType, err)
 	}
 	dis, ok := builder().(distrocfg.Distro)
 	if !ok {
-		return nil, fmt.Errorf("distro module for %q does not implement distrocfg.Distro", layout.Distro.Spec.Type)
+		return nil, fmt.Errorf("distro module for %q does not implement distrocfg.Distro", distroType)
 	}
+	return dis, nil
+}
 
-	if opts.Concurrency < 0 {
-		opts.Concurrency = 0
-	}
-
-	manager := &phase.Manager{
-		Config:            &inventory,
-		Distro:            &layout.Distro,
-		DistroID:          layout.Distro.Spec.Type,
-		TempDirectory:     layout.DirPath(),
-		Concurrency:       opts.Concurrency,
-		ConcurrentUploads: opts.Concurrency,
-		Writer:            os.Stdout,
-	}
-	if opts.Timeout > 0 {
-		manager.SetTimout(opts.Timeout)
+// newPhaseHarness loads pkgPath and configPath into a manager the phase tests can step
+// through one phase at a time.
+func newPhaseHarness(ctx context.Context, pkgPath, configPath string, opts phaseHarnessOptions) (*phaseHarness, error) {
+	manager, dis, err := newManager(ctx, pkgPath, configPath, opts.Concurrency, opts.Timeout)
+	if err != nil {
+		return nil, err
 	}
 
 	return &phaseHarness{
 		manager: manager,
 		distro:  dis,
 		lock:    &phase.Lock{},
-		tempDir: layout.DirPath(),
+		tempDir: manager.TempDirectory,
 		opts:    opts,
 	}, nil
 }

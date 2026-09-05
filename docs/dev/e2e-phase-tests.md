@@ -15,7 +15,7 @@ Testify runs suite methods in lexicographic order of the method name, so the num
 
 That order matches apply's everywhere except the lock. Apply takes the lock third, right after OS detection, and holds it for the whole run; `phase/91_lock.go`'s number puts it after the install instead, with `phase/92_unlock.go` right behind it. The lock test still asserts what the phase writes on each host. What it no longer does is hold the lock across the phases in between, so a phase that misbehaves while the cluster is locked is not something this suite would see.
 
-Steps that are not phases -- creating the package, `prepare`, the health check, `reset` -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` through `Test_ZZ4` sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`. Those steps shell out to the binary and are given `e2e.ClusterConfigPath`, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.
+Steps that are not phases -- creating the package, `prepare`, the health check, `reset` -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` through `Test_ZZ4` sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`. Those steps run whole actions rather than single phases -- `distro.Create`, `action.NewPrepare`, `action.NewApply`, `action.NewReset`, `action.NewKubeConfig` -- each with its own manager, and are given `e2e.ClusterConfigPath`, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.
 
 ## Adding a phase
 
@@ -126,14 +126,13 @@ This matters when adding a phase:
 
 ## Prerequisites and running it
 
-The suite needs Docker, the built binary, and a real distro package, and it is not fast: it provisions ten containers and installs rke2 onto nine of them.
+The suite needs Docker and a real distro package, and it is not fast: it provisions ten containers and installs rke2 onto nine of them. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
 
 ```console
-$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
 $ go test -mod=vendor -count=1 -v -timeout=60m ./src/test/e2e/cluster/...
 ```
 
-Or through mage, which also clears leftover containers from a run that was killed before teardown:
+Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:
 
 ```console
 $ mage test:endToEndCluster
@@ -141,10 +140,17 @@ $ mage test:endToEndCluster
 
 `-short` skips the whole suite. `TestMain` deletes the bootloose cluster on the way out even when tests fail.
 
+### In CI
+
+`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions ten containers and installs rke2 onto nine of them, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `src/pkg/phase`, `src/pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
+
+The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare, apply, reset and kube-config steps call the matching `action.New*` entry points. That is what makes the two workflows independent, which is the point of the split.
+
+The job frees disk before it starts, because nine containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
+
 ## Things that will cost you time
 
 *   **You cannot run one phase test on its own.** `-run 'TestApplyPhases/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
 *   **The first failure stops the rest.** `SetupTest` skips every remaining step once one has failed, so the output names one phase rather than twenty-five. If the first failure looks like a symptom, it is the cause -- everything after it was skipped, not passed.
-*   **A stale binary.** `Test_00_CreatePackage` shells out to `build/cargoship_<goos>_<goarch>`. Rebuild after touching `src/`, and use `-count=1`.
 *   **Constants the phase package keeps unexported.** Where a path is not exported, the test file redeclares it with a comment saying where it came from (`uploadManifestPath` in `50_uploadfiles_test.go`, `sysctlConfPath` in `20_prepare_host_test.go`). Prefer exporting from `phase` when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.
 *   **Ten containers is a lot of memory.** Nine of them each run an rke2 node, which is the reason this suite is not part of the default `go test ./...` path.

@@ -17,40 +17,61 @@ package cluster
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"time"
 
+	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/action"
+	"github.com/colonel-byte/cargoship/src/pkg/distro"
+	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/test"
 )
 
 // This file holds the steps of ApplyPhaseSuite that are not apply phases: building the
-// package the phases install, the CLI-driven prepare that runs ahead of apply, and the
-// checks that close the run out once every phase has been asserted. The phases themselves
-// live in the numbered files mirroring src/pkg/phase, and take their method number from
-// that file. These steps have no phase number to take, so they use the two ends of the
-// ordering: Test_00 and Test_01 sort before every phase, and Test_ZZ1 onwards sort after
-// every phase, because a letter sorts after a digit.
+// package the phases install, the prepare that runs ahead of apply, and the checks that
+// close the run out once every phase has been asserted. The phases themselves live in the
+// numbered files mirroring src/pkg/phase, and take their method number from that file.
+// These steps have no phase number to take, so they use the two ends of the ordering:
+// Test_00 and Test_01 sort before every phase, and Test_ZZ1 onwards sort after every phase,
+// because a letter sorts after a digit.
+//
+// Every step here calls the same package the matching CLI command calls -- distro.Create for
+// create, action.NewPrepare for prepare, and so on -- rather than shelling out to a built
+// binary, so the suite runs from a bare checkout with nothing under build/. Each one builds
+// its own manager and removes its own temp directory, the way a separate CLI process would.
+
+// examplePackage is the distro definition the suite packages and installs.
+const examplePackage = "example/rke2-cilium/v1_35/v1.35.0-rke2r1"
 
 // Test_00_CreatePackage builds the distro package every later step installs.
 func (s *ApplyPhaseSuite) Test_00_CreatePackage() {
 	t := s.T()
 
-	outDir := t.TempDir()
-	_, _, err := e2e.Cargoship(t, "--no-color", "create", "example/rke2-cilium/v1_35/v1.35.0-rke2r1", "-o", outDir)
+	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	matches, err := filepath.Glob(filepath.Join(outDir, "cargoship-*.tar.zst"))
+	pkgPath, err := distro.Create(s.ctx, examplePackage, t.TempDir(), distro.CreateOptions{
+		Architecture: config.CLIArch,
+		CachePath:    cache,
+	})
 	s.Require().NoError(err)
-	s.Require().Len(matches, 1)
-	s.pkgPath = matches[0]
+	s.Require().FileExists(pkgPath)
+	s.pkgPath = pkgPath
 }
 
-// Test_01_Prepare runs the prepare command, the separate phase list that readies the hosts
-// before apply. It is driven through the CLI because it is its own action, not part of the
-// apply order this suite walks.
+// Test_01_Prepare runs the prepare action, the separate phase list that readies the hosts
+// before apply. It runs whole rather than phase by phase because it is its own action, not
+// part of the apply order this suite walks.
 func (s *ApplyPhaseSuite) Test_01_Prepare() {
-	t := s.T()
-	_, _, err := e2e.Cargoship(t, "--no-color", "prepare", s.pkgPath, "--config", e2e.ClusterConfigPath, "--confirm")
+	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
+	defer cleanup()
+
+	err := action.NewPrepare(action.PrepareOptions{
+		Manager:        manager,
+		ModifyHosts:    true,
+		ModifyFirewall: true,
+		ModifyModules:  true,
+	}).Run(s.ctx)
 	s.Require().NoError(err)
 }
 
@@ -63,30 +84,80 @@ func (s *ApplyPhaseSuite) Test_ZZ1_ClusterHealthy() {
 	s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, 5*time.Minute))
 }
 
-// Test_ZZ2_ApplyIsIdempotent re-runs the whole apply through the CLI against the
-// already-bootstrapped cluster, proving the manager routes through the upgrade phases
-// instead of re-initializing.
+// Test_ZZ2_ApplyIsIdempotent re-runs the whole apply against the already-bootstrapped
+// cluster, proving the manager routes through the upgrade phases instead of re-initializing.
+// It is also the only step that exercises action.NewApply's own wiring, since the phase
+// tests build each phase themselves.
 func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
-	t := s.T()
-	_, _, err := e2e.Cargoship(t, "--no-color", "apply", s.pkgPath, "--config", e2e.ClusterConfigPath, "--confirm")
+	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
+	defer cleanup()
+
+	err := action.NewApply(action.ApplyOptions{
+		Manager:          manager,
+		ModifyHosts:      true,
+		ModifyFirewall:   true,
+		WorkerConcurrent: applyWorkerConcurrent,
+		UpdateKubeConfig: true,
+		LabelNodes:       true,
+	}).Run(s.ctx)
 	s.Require().NoError(err)
 }
 
 // Test_ZZ3_Reset tears the distro back off the nodes. It is the last destructive step, and
 // the only place reset runs, since every other cluster test depends on the install.
 func (s *ApplyPhaseSuite) Test_ZZ3_Reset() {
-	t := s.T()
-	_, _, err := e2e.Cargoship(t, "--no-color", "reset", "--config", e2e.ClusterConfigPath, "--confirm")
+	manager := s.newBareManager(e2e.ClusterConfigPath)
+
+	err := action.NewReset(action.ResetOptions{
+		Manager:          manager,
+		WorkerConcurrent: applyWorkerConcurrent,
+		NoWait:           true,
+		NoDrain:          true,
+	}).Run(s.ctx)
 	s.Require().NoError(err)
 }
 
 // Test_ZZ4_PostReset confirms kube-config can no longer find a running controller once the
 // distro has been torn down.
 func (s *ApplyPhaseSuite) Test_ZZ4_PostReset() {
-	t := s.T()
-	_, _, err := e2e.Cargoship(t, "--no-color", "kube-config", "--config", e2e.ClusterConfigPath)
+	manager := s.newBareManager(e2e.ClusterConfigPath)
+	manager.Config.Spec.Hosts = apicluster.ZarfHosts{manager.Config.Spec.Hosts.Controllers().First()}
+
+	// The action fails partway through its phase list, so its own Disconnect phase never
+	// runs and the SSH connection it opened has to be closed here.
+	defer func() {
+		for _, host := range manager.Config.Spec.Hosts {
+			host.Disconnect()
+		}
+	}()
+
+	err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager}).Run(s.ctx)
 	s.Require().Error(err)
 
 	_, err = os.Stat(s.kubeconfigPath)
 	s.Require().NoError(err)
+}
+
+// newManager builds a package-loading manager for one of the actions above, along with the
+// cleanup that removes the package it extracted. Each action gets its own, because each CLI
+// command gets its own.
+func (s *ApplyPhaseSuite) newManager(configPath string) (*phase.Manager, func()) {
+	s.T().Helper()
+
+	manager, _, err := newManager(s.ctx, s.pkgPath, configPath, applyConcurrency, applyTimeout)
+	s.Require().NoError(err)
+
+	return manager, func() { s.NoError(os.RemoveAll(manager.TempDirectory)) }
+}
+
+// newBareManager builds a manager for the actions that load no package. It takes the distro
+// ID from the manager the phase tests read out of the package, which is where the CLI's
+// --distro flag default comes from too.
+func (s *ApplyPhaseSuite) newBareManager(configPath string) *phase.Manager {
+	s.T().Helper()
+
+	manager, err := newBareManager(s.ctx, configPath, s.harness.manager.DistroID, applyConcurrency)
+	s.Require().NoError(err)
+
+	return manager
 }

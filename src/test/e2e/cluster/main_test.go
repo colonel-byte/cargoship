@@ -129,14 +129,16 @@ var (
 	// fullClusterConfigPath is the inventory holding every machine, including the upload-only
 	// Alpine node. The phase harness is built from it, because the upload phases are meant to
 	// see that node. e2e.ClusterConfigPath points at the cluster-only inventory instead: the
-	// CLI steps run apply and reset, which would try to install the engine on a host that
-	// cannot run it.
+	// whole-action steps run prepare, apply and reset, which would try to install the engine
+	// on a host that cannot run it.
 	fullClusterConfigPath string //nolint:gochecknoglobals
 )
 
 func TestMain(m *testing.M) {
 	var err error
-	e2e, rootDir, err = test.Bootstrap()
+	// This suite calls the cargoship packages directly rather than shelling out, so it needs
+	// the chdir into the repo root and the architecture, but no binary under build/.
+	e2e, rootDir, err = test.BootstrapInProcess()
 	if err != nil {
 		log.Fatal(err)
 	}
