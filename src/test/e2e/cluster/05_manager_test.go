@@ -78,7 +78,7 @@ const (
 // Steps that are not phases have no phase number to borrow: package create and prepare run
 // first as Test_00 and Test_01, and the health and idempotency checks run last as Test_ZZ1
 // and Test_ZZ2, "ZZ" sorting after every two-digit number. They live in
-// cluster_lifecycle_test.go.
+// cluster_lifecycle_test.go, alongside ResetSuite.
 //
 // Every phase test shares one phaseHarness, so they are ordered and stateful by design.
 // Running a single phase with -run will fail: its predecessors never connected the hosts.
@@ -96,10 +96,10 @@ const (
 // an engine -- so a stage-only run still takes the lock, releases it and disconnects cleanly, and
 // still fails if any of that regresses. See stageOnlyEnvVar for why the halves are separated.
 //
-// The suite is one of three walks TestClusterPhases runs against the same cluster, in the only
+// The suite is one of four walks TestClusterPhases runs against the same cluster, in the only
 // order they work in: this one installs, JoinPhaseSuite adds a machine to what it installed,
-// and UpgradePhaseSuite moves the whole cluster to a newer package. A stage-only run installs
-// nothing, so it runs this walk alone.
+// UpgradePhaseSuite moves the whole cluster to a newer package, and ResetSuite takes it off
+// again. A stage-only run installs nothing, so it runs this walk alone.
 type ApplyPhaseSuite struct {
 	phaseWalk
 }

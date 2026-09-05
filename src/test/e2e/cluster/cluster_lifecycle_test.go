@@ -17,22 +17,28 @@ package cluster
 import (
 	"context"
 	"os"
+	"testing"
 	"time"
 
+	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/test"
+	"github.com/stretchr/testify/suite"
 )
 
 // This file holds the steps of ApplyPhaseSuite that are not apply phases: building the
-// package the phases install, the prepare that runs ahead of apply, and the checks that close
-// the run out once every phase has been asserted. The phases themselves live in the numbered
-// files mirroring src/pkg/phase, and take their method number from that file. These steps have
-// no phase number to take, so they use the two ends of the ordering: Test_00 and Test_01 sort
-// before every phase, and Test_ZZ1 onwards sort after every phase, because a letter sorts
-// after a digit.
+// package the phases install, the prepare that runs ahead of apply, and the checks that
+// close the run out once every phase has been asserted. The phases themselves live in the
+// numbered files mirroring src/pkg/phase, and take their method number from that file.
+// These steps have no phase number to take, so they use the two ends of the ordering:
+// Test_00 and Test_01 sort before every phase, and Test_ZZ1 onwards sort after every phase,
+// because a letter sorts after a digit.
+//
+// It also holds ResetSuite, the teardown walk, which runs after the upgrade walk rather than
+// at the end of the apply one.
 //
 // Every step here calls the same package the matching CLI command calls -- distro.Create for
 // create, action.NewPrepare for prepare, and so on -- rather than shelling out to a built
@@ -41,8 +47,8 @@ import (
 
 // examplePackage is the distro definition the suite packages and installs, and
 // installedVersion is the engine version it ships. The version is spelled out rather than read
-// back from the package, so that the manager step compares the loaded package against
-// something that did not come from the same file it is testing.
+// back from the package so that the upgrade walk has something to compare against that does
+// not come from the same file it is testing.
 const (
 	examplePackage   = "example/rke2-cilium/v1_35/v1.35.0-rke2r1"
 	installedVersion = "1.35.0-rke2r1"
@@ -123,4 +129,88 @@ func (s *ApplyPhaseSuite) newManager(configPath string) (*phase.Manager, func())
 	s.Require().NoError(err)
 
 	return manager, func() { s.NoError(os.RemoveAll(manager.TempDirectory)) }
+}
+
+// ResetSuite tears the distro back off the nodes and confirms what that leaves behind. It is
+// the last of the four walks TestClusterPhases runs, and the only place reset runs, because
+// every other cluster test depends on the install still being there.
+//
+// It is its own suite rather than two more Test_ZZ methods on ApplyPhaseSuite so that the join
+// and upgrade walks can run in between. Neither step loads a package -- reset and kube-config both
+// build a bare manager -- so it needs no harness and no package path, only the distro ID.
+type ResetSuite struct {
+	suite.Suite
+	ctx context.Context
+	// stepFailed short-circuits the post-reset check when the reset itself failed, which
+	// would otherwise report a second failure about a cluster that was never torn down.
+	stepFailed bool
+}
+
+func (s *ResetSuite) SetupSuite() {
+	if testing.Short() {
+		s.T().Skip("reset needs a bootloose cluster with the distro installed")
+	}
+
+	ctx, err := phaseCtx(context.Background())
+	s.Require().NoError(err)
+	s.ctx = ctx
+}
+
+func (s *ResetSuite) SetupTest() {
+	if s.stepFailed {
+		s.T().Skip("skipping: an earlier reset step failed")
+	}
+	s.T().Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
+}
+
+func (s *ResetSuite) TearDownTest() {
+	if s.T().Failed() {
+		s.stepFailed = true
+	}
+}
+
+// Test_1_Reset removes the distro from every node in the inventory.
+func (s *ResetSuite) Test_1_Reset() {
+	manager := s.newBareManager(e2e.ClusterConfigPath)
+
+	err := action.NewReset(action.ResetOptions{
+		Manager:          manager,
+		WorkerConcurrent: applyWorkerConcurrent,
+		NoWait:           true,
+		NoDrain:          true,
+	}).Run(s.ctx)
+	s.Require().NoError(err)
+}
+
+// Test_2_PostReset confirms kube-config can no longer find a running controller once the
+// distro has been torn down, and that it leaves the kubeconfig it cannot refresh in place.
+func (s *ResetSuite) Test_2_PostReset() {
+	manager := s.newBareManager(e2e.ClusterConfigPath)
+	manager.Config.Spec.Hosts = apicluster.ZarfHosts{manager.Config.Spec.Hosts.Controllers().First()}
+
+	// The action fails partway through its phase list, so its own Disconnect phase never
+	// runs and the SSH connection it opened has to be closed here.
+	defer func() {
+		for _, host := range manager.Config.Spec.Hosts {
+			host.Disconnect()
+		}
+	}()
+
+	err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager}).Run(s.ctx)
+	s.Require().Error(err)
+
+	_, err = os.Stat(kubeconfigPath)
+	s.Require().NoError(err)
+}
+
+// newBareManager builds a manager for the actions that load no package. The distro ID is
+// spelled out rather than read from a package, which is also where the CLI's --distro flag
+// default comes from.
+func (s *ResetSuite) newBareManager(configPath string) *phase.Manager {
+	s.T().Helper()
+
+	manager, err := newBareManager(s.ctx, configPath, distroID, applyConcurrency)
+	s.Require().NoError(err)
+
+	return manager
 }
