@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -76,6 +77,20 @@ var (
 	// machine that receives uploads and never joins. Nine cluster nodes is enough that the
 	// worker concurrency batching in the initialize and upgrade phases runs more than one
 	// batch at the WorkerConcurrent the suite sets, which a six-node cluster did not.
+	//
+	// Every machine is privileged, which is what lets the engine run in a container at all:
+	// the engine mounts filesystems, loads kernel modules and runs its own containerd, none of
+	// which an unprivileged container is allowed to do. It is also what lets the prepare phase
+	// finish. That phase runs `sysctl --system`, which applies every file in the image's own
+	// sysctl.d directories as well as the one cargoship writes, and the Fedora image ships
+	// defaults for keys that are not network namespaced -- vm.max_map_count, kernel.pid_max,
+	// fs.protected_symlinks. Unprivileged, /proc/sys is mounted read only, those keys are
+	// refused, and sysctl exits 1 even though the file cargoship wrote applied cleanly.
+	//
+	// The cost is that the settings land on the kernel of whatever machine runs the tests,
+	// because those keys are shared with the host. That is the same bargain every
+	// engine-in-Docker test harness makes, and the values are the distro defaults the nodes
+	// would set anyway.
 	mixedOS = config.Config{
 		Cluster: config.Cluster{
 			Name:       "cargoship-e2e",
@@ -87,6 +102,7 @@ var (
 				Spec: &config.Machine{
 					Name:         bootKC,
 					Image:        bootUbuntu,
+					Privileged:   true,
 					PortMappings: ports,
 				},
 			},
@@ -95,6 +111,7 @@ var (
 				Spec: &config.Machine{
 					Name:         bootKCF,
 					Image:        bootFedora,
+					Privileged:   true,
 					PortMappings: ports,
 				},
 			},
@@ -103,6 +120,7 @@ var (
 				Spec: &config.Machine{
 					Name:         bootKW,
 					Image:        bootUbuntu,
+					Privileged:   true,
 					PortMappings: ports,
 				},
 			},
@@ -111,6 +129,7 @@ var (
 				Spec: &config.Machine{
 					Name:         bootKWF,
 					Image:        bootFedora,
+					Privileged:   true,
 					PortMappings: ports,
 				},
 			},
@@ -119,6 +138,7 @@ var (
 				Spec: &config.Machine{
 					Name:         bootKWA,
 					Image:        bootAlpine,
+					Privileged:   true,
 					PortMappings: ports,
 				},
 			},
@@ -306,7 +326,52 @@ func setup(config config.Config) (*blcluster.Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cluster, cluster.Create()
+	if err := cluster.Create(); err != nil {
+		return nil, err
+	}
+	return cluster, detachHostsFile(cluster)
+}
+
+// detachHostsFileScript replaces the bind mount Docker puts over /etc/hosts with an ordinary
+// file holding the same lines. It does nothing when /etc/hosts is already an ordinary file, so
+// that it can run again over machines an earlier call already handled -- which is what the
+// join walk does when it grows the cluster.
+const detachHostsFileScript = `
+if grep -q ' /etc/hosts ' /proc/mounts; then
+	cp /etc/hosts /tmp/hosts.detach &&
+	umount /etc/hosts &&
+	cat /tmp/hosts.detach > /etc/hosts &&
+	rm -f /tmp/hosts.detach
+fi
+`
+
+// detachHostsFile runs that script on every machine in the cluster.
+//
+// Docker bind mounts a file it owns over /etc/hosts in every container, and a bind-mounted
+// file cannot be replaced from inside: phase/25_modify_hosts_file.go writes a temp file and
+// installs it over /etc/hosts, which is what a host expects and what fails here with EBUSY.
+// The failure is the container, not the phase, and it is not even reported consistently --
+// the Ubuntu image's install prints the error and exits 0, so the same broken write passes
+// there and fails on Fedora and Alpine.
+//
+// Undoing the mount leaves the file it was covering, with the addresses Docker had already
+// written into it, and the nodes can then rewrite it the way a real host would. What is given
+// up is Docker's own upkeep of that file, which matters only if a machine's address changes
+// while the cluster is up. Nothing in the suite restarts a machine, and the phase under test
+// is the one that maintains those entries from then on.
+func detachHostsFile(c *blcluster.Cluster) error {
+	machines, err := c.Inspect(nil)
+	if err != nil {
+		return fmt.Errorf("failed to list the cluster's machines: %w", err)
+	}
+	for _, machine := range machines {
+		name := machine.ContainerName()
+		out, err := exec.Command("docker", "exec", name, "sh", "-c", detachHostsFileScript).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to detach /etc/hosts on %s: %w: %s", name, err, out)
+		}
+	}
+	return nil
 }
 
 func shutdown(cluster *blcluster.Cluster) error {

@@ -54,12 +54,17 @@ const (
 	installedVersion = "1.35.0-rke2r1"
 )
 
-// Test_00_CreatePackage builds the distro package every later step installs.
+// Test_00_CreatePackage builds the distro package every later step installs. It builds it
+// from a copy of the example definition with the sysctls a container cannot apply removed:
+// see containerSafeDefinition.
 func (s *ApplyPhaseSuite) Test_00_CreatePackage() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	pkgPath, err := distro.Create(s.ctx, examplePackage, s.pkgDir, distro.CreateOptions{
+	definition, err := containerSafeDefinition(examplePackage, s.pkgDir)
+	s.Require().NoError(err)
+
+	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
 		Architecture: config.CLIArch,
 		CachePath:    cache,
 	})

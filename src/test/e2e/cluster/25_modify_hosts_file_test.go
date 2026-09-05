@@ -64,8 +64,14 @@ func (s *phaseWalk) modifyHosts() {
 			"%s: entries are not marked with %q", host, hostsFileComment)
 
 		// The file is only useful if the resolver agrees with it.
+		//
+		// The query is ahostsv4 rather than hosts because a host asked for its own name is a
+		// special case: systemd's myhostname NSS module answers it too, and `getent hosts`
+		// returns that module's ::1 rather than the address in the file. Restricting the query
+		// to IPv4 is what makes a node's entry for itself readable the same way as its entry
+		// for its peers, and every address in this inventory is IPv4.
 		for _, peer := range s.harness.hosts() {
-			out, err := host.ExecOutput(fmt.Sprintf("getent hosts %s", peer.Configurer.Hostname(peer)))
+			out, err := host.ExecOutput(fmt.Sprintf("getent ahostsv4 %s", peer.Configurer.Hostname(peer)))
 			s.Require().NoErrorf(err, "%s: cannot resolve %s", host, peer)
 			s.Require().Containsf(out, peer.PrivateAddress,
 				"%s: resolved %s to something other than %s", host, peer, peer.PrivateAddress)

@@ -15,8 +15,7 @@
 package cluster
 
 import (
-	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
@@ -24,9 +23,18 @@ import (
 // sysctlConfPath is where phase/20_prepare_host.go renders the distro's sysctl settings.
 const sysctlConfPath = "/etc/sysctl.d/99-cargoship.conf"
 
-// prepareHosts covers phase/20_prepare_host.go. It pushes the distro's environment
-// and sysctl settings onto each node, so the assertion is that the rendered file is on every
-// host and that the kernel is actually running the values it names, not just storing them.
+// prepareHosts covers phase/20_prepare_host.go. It pushes the distro's environment and sysctl
+// settings onto each node, so the assertion is that the rendered file is on every host and
+// names every setting the package asked for, at the value it asked for.
+//
+// The kernel values themselves are deliberately not read back. The nodes are Docker
+// containers, which share the host kernel: the sysctls this phase writes are not namespaced,
+// so a container cannot change them and `sysctl -n` there reports whatever the machine running
+// the tests is set to. Asserting on that would be asserting on the developer's or the runner's
+// kernel rather than on anything the phase did -- it fails on a correct phase and passes on a
+// broken one whenever the host happens to already match. What the phase controls, and all it
+// controls from inside a container, is the file, so that is what is checked. The phase still
+// runs `sysctl --system` itself, and a failure there fails the phase and so fails runPhase.
 //
 // Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) prepareHosts() {
@@ -44,13 +52,16 @@ func (s *phaseWalk) prepareHosts() {
 
 	for _, host := range s.harness.hosts() {
 		content := rendered[host.String()]
-		for key, want := range sysctls {
-			s.Require().Containsf(content, key, "%s: %s does not mention %s", host, sysctlConfPath, key)
+		s.Require().NotEmptyf(content, "%s: %s is empty", host, sysctlConfPath)
 
-			live, err := host.ExecOutput(fmt.Sprintf("sysctl -n %s", key))
-			s.Require().NoErrorf(err, "%s: failed to read sysctl %s", host, key)
-			s.Require().Equalf(want, strings.TrimSpace(live),
-				"%s: sysctl %s was written but not applied", host, key)
+		for key, want := range sysctls {
+			// The phase renders one line per setting and pads it through a tabwriter, so the
+			// spacing around the "=" is whatever the longest key in the package made it.
+			// Matching the whole line rather than the key keeps the value part of the
+			// assertion: a file naming every key at the wrong value would otherwise pass.
+			line := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(key) + `\s+=\s+` + regexp.QuoteMeta(want) + `\s*$`)
+			s.Require().Regexpf(line, content,
+				"%s: %s does not set %s to %s", host, sysctlConfPath, key, want)
 		}
 	}
 }

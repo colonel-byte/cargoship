@@ -108,7 +108,10 @@ func (s *UpgradePhaseSuite) Test_00_UpgradePackage() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	pkgPath, err := distro.Create(s.ctx, exampleUpgradePackage, s.pkgDir, distro.CreateOptions{
+	definition, err := containerSafeDefinition(exampleUpgradePackage, s.pkgDir)
+	s.Require().NoError(err)
+
+	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
 		Architecture: config.CLIArch,
 		CachePath:    cache,
 	})

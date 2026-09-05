@@ -15,6 +15,10 @@
 package cluster
 
 import (
+	"fmt"
+	"strings"
+
+	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
 
@@ -52,10 +56,31 @@ func (s *phaseWalk) binUploadFiles() {
 		entries := s.manifestOn(host)
 		s.Require().NotEmptyf(entries, "%s: upload manifest is empty", host)
 		for _, path := range entries {
-			s.Require().Truef(host.FileExist(path),
-				"%s: manifest claims %s but it is not on the host", host, path)
+			s.Require().Truef(s.stagedOrPresent(host, path),
+				"%s: manifest claims %s but neither it nor a staged copy is on the host", host, path)
 		}
 	}
+}
+
+// stagedOrPresent reports whether the file the manifest records at path is on host, either
+// where the manifest says it will end up or at the temp path it is staged as until then.
+//
+// The manifest records where a file is going, not where it currently is. An executable is
+// uploaded to "<target>.tmp.<nanos>" -- stageTempPath in phase/01_generic_phase_file.go -- and
+// the install hook this phase hands the host is what moves it into place, which does not happen
+// until the initialize phases call that hook. Every file this phase uploads is an executable,
+// so asserting on the target alone would assert that a later phase has already run.
+func (s *phaseWalk) stagedOrPresent(host *apicluster.ZarfHost, path string) bool {
+	s.T().Helper()
+
+	if host.FileExist(path) {
+		return true
+	}
+	// The trailing "true" keeps a glob that matches nothing from failing the command, which is
+	// the answer "no staged copy" rather than an error.
+	out, err := host.ExecOutput(fmt.Sprintf("ls -1d %s.tmp.* 2>/dev/null; true", path))
+	s.Require().NoError(err)
+	return strings.TrimSpace(out) != ""
 }
 
 // Test_59_BINUploadFiles stages the engine and the install hook the initialize phases call.

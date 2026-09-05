@@ -30,6 +30,10 @@ import (
 
 // Configurer defines the per-host operations required for managing a host.
 type Configurer interface {
+	// ApplySysctl loads the sysctl settings in the file at the given path into the running
+	// kernel. The path is passed rather than assumed because not every OS can apply the whole
+	// of /etc/sysctl.d in one command.
+	ApplySysctl(os.Host, string) error
 	// Arch returns the host processor architecture in the format engine expects it
 	Arch(os.Host) (string, error)
 	// Base returns the base part of a path
