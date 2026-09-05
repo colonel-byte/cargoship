@@ -6,12 +6,13 @@ The e2e suites drive the **built `cargoship` binary** as a subprocess, the same 
 
 ```
 src/test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
+src/test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), walked one apply phase at a time
 src/test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 src/test/bootstrap.go      TestMain's chdir-to-repo-root and binary lookup
 src/test/registry.go       in-process OCI registry used by the publish/pull/sign tests
 ```
 
-The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The `noncluster` package starts no containers and makes no network calls: it needs nothing but the binary.
+The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The `noncluster` package starts no containers and makes no network calls: it needs nothing but the binary. The `cluster` package needs Docker and takes tens of minutes; everything below is about `noncluster`, and [e2e-phase-tests](e2e-phase-tests.md) covers the cluster suite and how to extend it when a phase is added.
 
 ## Prerequisites
 

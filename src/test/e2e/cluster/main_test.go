@@ -27,11 +27,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// The cluster deliberately runs three OS families. Several apply phases route on the family --
+// the RPM, APT and BIN upload phases, SELinux, fapolicyd, the firewall backend -- and a
+// single-family cluster leaves every branch it does not match untested, with the gate
+// assertions passing vacuously. Fedora brings the dnf/rpm and firewalld paths the Debian image
+// never exercises. Alpine is neither family, which is the only way the BIN upload phase gets
+// tested as the path it is rather than as a fallback; it does not run the engine, see
+// uploadOnlyPrefix in cluster_inventory.go.
 const (
 	bootUbuntu = "ghcr.io/colonel-byte/bootloose/ubuntu-26:latest"
-	bootKC     = "kc%d"
-	bootKI     = "ki%d"
-	bootKW     = "kw%d"
+	bootFedora = "ghcr.io/colonel-byte/bootloose/fedora-44:latest"
+	bootAlpine = "ghcr.io/colonel-byte/bootloose/alpine-3.23:latest"
+)
+
+// Machine name templates. The inventory maps a machine to a role by prefix, "kc" for
+// controller and "kw" for worker, so the trailing letter marks the image without needing a
+// second lookup: kc0, kc1, kcf0, kw0, kw1, kw2, kwf0, kwf1, kwf2, kwa0.
+const (
+	bootKC  = "kc%d"
+	bootKCF = "kcf%d"
+	bootKW  = "kw%d"
+	bootKWF = "kwf%d"
+	// bootKWA is built from uploadOnlyPrefix so that the name the machines get and the prefix
+	// the inventory tests for cannot drift apart.
+	bootKWA = uploadOnlyPrefix + "%d"
 )
 
 var (
@@ -41,14 +60,19 @@ var (
 			ContainerPort: 22,
 		},
 	}
-	ubuntu = config.Config{
+	// mixedOS provisions ten machines: a nine-node cluster of three controllers and six
+	// workers with each role split across the Ubuntu and Fedora images, plus one Alpine
+	// machine that receives uploads and never joins. Nine cluster nodes is enough that the
+	// worker concurrency batching in the initialize and upgrade phases runs more than one
+	// batch at the WorkerConcurrent the suite sets, which a six-node cluster did not.
+	mixedOS = config.Config{
 		Cluster: config.Cluster{
-			Name:       "ubuntu",
+			Name:       "cargoship-e2e",
 			PrivateKey: "cluster-key",
 		},
 		Machines: []config.MachineReplicas{
 			{
-				Count: 3,
+				Count: 2,
 				Spec: &config.Machine{
 					Name:         bootKC,
 					Image:        bootUbuntu,
@@ -56,10 +80,10 @@ var (
 				},
 			},
 			{
-				Count: 3,
+				Count: 1,
 				Spec: &config.Machine{
-					Name:         bootKI,
-					Image:        bootUbuntu,
+					Name:         bootKCF,
+					Image:        bootFedora,
 					PortMappings: ports,
 				},
 			},
@@ -68,6 +92,22 @@ var (
 				Spec: &config.Machine{
 					Name:         bootKW,
 					Image:        bootUbuntu,
+					PortMappings: ports,
+				},
+			},
+			{
+				Count: 3,
+				Spec: &config.Machine{
+					Name:         bootKWF,
+					Image:        bootFedora,
+					PortMappings: ports,
+				},
+			},
+			{
+				Count: 1,
+				Spec: &config.Machine{
+					Name:         bootKWA,
+					Image:        bootAlpine,
 					PortMappings: ports,
 				},
 			},
@@ -85,6 +125,13 @@ var (
 	clusterOnce    sync.Once          //nolint:gochecknoglobals
 	testCluster    *blcluster.Cluster //nolint:gochecknoglobals
 	testClusterErr error              //nolint:gochecknoglobals
+
+	// fullClusterConfigPath is the inventory holding every machine, including the upload-only
+	// Alpine node. The phase harness is built from it, because the upload phases are meant to
+	// see that node. e2e.ClusterConfigPath points at the cluster-only inventory instead: the
+	// CLI steps run apply and reset, which would try to install the engine on a host that
+	// cannot run it.
+	fullClusterConfigPath string //nolint:gochecknoglobals
 )
 
 func TestMain(m *testing.M) {
@@ -110,12 +157,12 @@ func requireCluster(t *testing.T) {
 	t.Helper()
 
 	clusterOnce.Do(func() {
-		testCluster, testClusterErr = setup(ubuntu)
+		testCluster, testClusterErr = setup(mixedOS)
 		if testClusterErr != nil {
 			return
 		}
 
-		keyPath, err := filepath.Abs(ubuntu.Cluster.PrivateKey)
+		keyPath, err := filepath.Abs(mixedOS.Cluster.PrivateKey)
 		if err != nil {
 			testClusterErr = err
 			return
@@ -125,8 +172,17 @@ func requireCluster(t *testing.T) {
 			testClusterErr = err
 			return
 		}
-		invPath := filepath.Join(rootDir, "src/test/e2e/cluster/generated-cluster.yaml")
-		if err := writeClusterInventory(inv, invPath); err != nil {
+		invDir := filepath.Join(rootDir, "src/test/e2e/cluster")
+
+		fullPath := filepath.Join(invDir, "generated-cluster-full.yaml")
+		if err := writeClusterInventory(inv, fullPath); err != nil {
+			testClusterErr = err
+			return
+		}
+		fullClusterConfigPath = fullPath
+
+		invPath := filepath.Join(invDir, "generated-cluster.yaml")
+		if err := writeClusterInventory(engineHosts(inv), invPath); err != nil {
 			testClusterErr = err
 			return
 		}

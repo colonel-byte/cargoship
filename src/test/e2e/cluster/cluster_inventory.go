@@ -34,9 +34,33 @@ const (
 	sshUser = "root"
 )
 
+// uploadOnlyPrefix marks the machines that are in the inventory to receive uploads and
+// nothing more. rke2 links against glibc, so the Alpine node cannot run the engine: it is
+// there because the BIN upload phase is the one path that claims a host belonging to neither
+// the Enterprise Linux nor the Debian family, and without such a host that phase is only ever
+// exercised as a fallback for hosts the other two declined.
+//
+// The prefix starts with the worker prefix, so renderClusterInventory gives these machines the
+// worker role without a special case -- which is what the upload phases key on. Everything
+// from the engine configuration onwards excludes them; see phaseHarness.dropUploadOnlyHosts.
+const uploadOnlyPrefix = "kwa"
+
+// isUploadOnly reports whether a host is in the inventory only to receive uploads.
+func isUploadOnly(h *apicluster.ZarfHost) bool {
+	return strings.HasPrefix(h.Hostname, uploadOnlyPrefix)
+}
+
+// engineHosts returns the hosts that join the cluster, which is every host that is not
+// upload-only. This is the inventory the CLI-driven steps are given.
+func engineHosts(c apicluster.ZarfCluster) apicluster.ZarfCluster {
+	c.Spec.Hosts = c.Spec.Hosts.Filter(func(h *apicluster.ZarfHost) bool { return !isUploadOnly(h) })
+	return c
+}
+
 // renderClusterInventory builds a ZarfCluster inventory from the live bootloose machines,
-// mapping kc*/kw* hostnames to controller/worker roles. ki* machines are intentionally
-// skipped: their purpose isn't wired into any cargoship code path yet.
+// mapping kc*/kw* hostnames to controller/worker roles. The Fedora replicas are named kcf*
+// and kwf*, so the same two prefixes claim them and the OS family never has to be part of
+// the mapping. A machine whose name matches neither prefix is skipped rather than guessed at.
 func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.ZarfCluster, error) {
 	machines, err := c.Inspect(nil)
 	if err != nil {
@@ -107,6 +131,11 @@ func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apiclu
 	return &apicluster.ZarfHost{
 		Hostname: m.Hostname(),
 		Role:     role,
+		// The profile doubles as the node-role.kubernetes.io/<profile> label the LabelNodes
+		// phase writes, so giving each host a profile matching its role is what makes that
+		// phase observable. It is not mapped to an entry in the cluster's profile config, which
+		// leaves per-profile concurrency on its default.
+		Profile: role,
 		Connection: rig.Connection{
 			SSH: &rig.SSH{
 				Address: "127.0.0.1",
