@@ -21,6 +21,8 @@ import (
 // engineConfigSyncWorker covers phase/72_engine_config_sync_worker.go, the worker
 // half of the drift check. As with the controller half, a cluster this suite just configured
 // has nothing to sync.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) engineConfigSyncWorker() {
 	s.T().Helper()
 
@@ -41,5 +43,11 @@ func (s *phaseWalk) engineConfigSyncWorker() {
 // Test_72_EngineConfigSyncWorker checks the worker half after the install.
 func (s *ApplyPhaseSuite) Test_72_EngineConfigSyncWorker() {
 	s.requireEngine()
+	s.engineConfigSyncWorker()
+}
+
+// Test_72_EngineConfigSyncWorker checks the worker half after the join, now that the joined
+// worker is one of the workers it walks.
+func (s *JoinPhaseSuite) Test_72_EngineConfigSyncWorker() {
 	s.engineConfigSyncWorker()
 }

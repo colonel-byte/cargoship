@@ -25,6 +25,8 @@ import (
 //
 // It carries no requireEngine. Both assertions hold whether or not the engine was started,
 // and this is the phase that closes out a stage-only walk.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) disconnect() {
 	s.T().Helper()
 
@@ -40,5 +42,10 @@ func (s *phaseWalk) disconnect() {
 
 // Test_99_Disconnect closes out the install walk.
 func (s *ApplyPhaseSuite) Test_99_Disconnect() {
+	s.disconnect()
+}
+
+// Test_99_Disconnect closes out the join walk.
+func (s *JoinPhaseSuite) Test_99_Disconnect() {
 	s.disconnect()
 }

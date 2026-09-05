@@ -94,6 +94,28 @@ It cannot run the engine: rke2 links against glibc and Alpine is musl. Three thi
 
 **There are two generated inventory files.** `generated-cluster-full.yaml` has all ten machines and is what the harness is built from; `generated-cluster.yaml` has the nine that join and is what `e2e.ClusterConfigPath` points at. The whole-action steps -- `Test_01_Prepare` and `Test_ZZ2_ApplyIsIdempotent` -- load that path, because an action has no notion of an upload-only host and would try to install the engine on Alpine. A single file with an annotation the loader ignores was considered and rejected: it would put a test-only concept into the inventory schema.
 
+## Two walks against one cluster, in one parent test
+
+The suite runs two suites rather than one: `ApplyPhaseSuite` installs the distro and `JoinPhaseSuite` adds a machine to what it installed. They share one bootloose cluster and one kubeconfig, and they only work in that order.
+
+Go runs top-level test functions in the order they are declared across the package's files, sorted by file name -- which is an ordering nobody declared and that a renamed file silently changes. So there is one top-level test, `TestClusterPhases` in `main_test.go`, and the walks are `t.Run` subtests of it. The apply subtest's result is checked: if the install failed there is no cluster for the join to walk, and the run returns rather than reporting two failures for one cause.
+
+`kubeconfigPath` moved to `TestMain` for the same reason. Both walks touch the same file, and a suite-owned `t.TempDir()` would have been deleted between them.
+
+## What the join walk covers that the install cannot
+
+Apply against a cluster that already exists routes differently from apply against nine bare machines, and the install walk cannot exercise that: on a fresh install every host is new. The join walk is what does. It starts one more machine, rewrites both inventories to name it, and walks the same phase list carrying the same package at the same version.
+
+**The new machine is a Fedora worker, `kwf3`.** A fourth replica of an existing template rather than a template of its own, because bootloose names a machine by formatting its template's name with the replica index and a second template would start counting from zero and collide with `kwf0`. Fedora rather than Ubuntu so that the node has to come through the SELinux, fapolicyd, firewalld and dnf branches on its own, rather than inheriting anything the apply walk already proved on the nodes beside it. A worker rather than a controller because adding a controller to a running control plane is a different operation with a different failure mode, and the phase list treats it as one.
+
+**It runs at the installed version, not a newer one.** A join is not an upgrade. Carrying the same package is what makes the established nodes report the packaged version, so the upgrade phases claim nothing and the initialize phases claim exactly one host -- which is the routing the walk exists to assert. `Test_62` requires that the new machine and only the new machine was claimed.
+
+**The phases that assert over the whole matrix earn their place twice.** `Test_25` and `Test_26` assert every peer's entry on every host, so on the join walk they are what proves the *established* nodes learned about the new one. A join that configured only the joining node would pass any assertion written from the new node's point of view.
+
+**The lock phases are left out**, as they are asserted in the apply walk and holding a lock across a second walk against the same hosts tests the lock file rather than the join.
+
+**The machine is provisioned on first use, not in `TestMain`.** A run that never reaches the join walk starts one fewer container. The new cluster object replaces `testCluster`, because bootloose finds a cluster's machines by walking the config it was built from rather than by asking Docker: the object built from the ten-machine config would leave the eleventh container behind on shutdown.
+
 ## Profiles on the generated inventory
 
 The generated bootloose inventory set no `Profile`, which makes `LabelNodes` a no-op: it iterates hosts, skips those with an empty profile, and would have labelled nothing. Each host now gets a profile equal to its role.

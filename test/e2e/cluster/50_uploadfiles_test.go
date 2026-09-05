@@ -29,6 +29,8 @@ const uploadManifestPath = "/var/lib/cargoship/manifest.txt"
 // uploadFiles covers phase/50_uploadfiles.go. It stages the package's images and
 // files on the nodes and records each one in the upload manifest, so the assertion is that
 // the manifest exists, is not empty, and that every path it claims is really on the host.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) uploadFiles() {
 	s.T().Helper()
 
@@ -71,5 +73,12 @@ func (s *phaseWalk) manifestOn(host *apicluster.ZarfHost) []string {
 
 // Test_50_UploadFiles stages the package on the hosts for the install.
 func (s *ApplyPhaseSuite) Test_50_UploadFiles() {
+	s.uploadFiles()
+}
+
+// Test_50_UploadFiles stages the package on the joining machine, and re-stages it on the nodes
+// that already carry it: apply makes no distinction between a host that has the files and a
+// host that does not, so neither does the join walk.
+func (s *JoinPhaseSuite) Test_50_UploadFiles() {
 	s.uploadFiles()
 }
