@@ -23,10 +23,29 @@ import (
 )
 
 // Bootstrap chdirs into the repo root and returns a CargoE2ETest pointed at the binary
-// built for this platform, along with the root it moved into. Each e2e suite calls this
-// from TestMain: the suites spell every path (example distros, config files, testdata)
+// built for this platform, along with the root it moved into. Suites that drive the CLI
+// call this from TestMain: they spell every path (example distros, config files, testdata)
 // relative to the repo root, and the binary under test is looked up under build/.
 func Bootstrap() (CargoE2ETest, string, error) {
+	e2e, root, err := BootstrapInProcess()
+	if err != nil {
+		return CargoE2ETest{}, "", err
+	}
+
+	e2e.CargoBinPath = filepath.Join(root, "build", GetCLIName())
+	if _, err := os.Stat(e2e.CargoBinPath); err != nil {
+		return CargoE2ETest{}, "", fmt.Errorf("cargoship binary %s not found, build it first: %w", e2e.CargoBinPath, err)
+	}
+
+	return e2e, root, nil
+}
+
+// BootstrapInProcess does what Bootstrap does without requiring a built binary, for suites
+// that call the packages directly instead of shelling out to the CLI. Those suites still
+// need the chdir and the architecture, but nothing under build/, so they can run from a
+// bare checkout. The returned CargoE2ETest has no CargoBinPath and its Cargoship helpers
+// will not work.
+func BootstrapInProcess() (CargoE2ETest, string, error) {
 	root, err := RepoRoot()
 	if err != nil {
 		return CargoE2ETest{}, "", err
@@ -35,15 +54,7 @@ func Bootstrap() (CargoE2ETest, string, error) {
 		return CargoE2ETest{}, "", err
 	}
 
-	e2e := CargoE2ETest{
-		Arch:         zconfig.GetArch(),
-		CargoBinPath: filepath.Join(root, "build", GetCLIName()),
-	}
-	if _, err := os.Stat(e2e.CargoBinPath); err != nil {
-		return CargoE2ETest{}, "", fmt.Errorf("cargoship binary %s not found, build it first: %w", e2e.CargoBinPath, err)
-	}
-
-	return e2e, root, nil
+	return CargoE2ETest{Arch: zconfig.GetArch()}, root, nil
 }
 
 // RepoRoot walks up from the working directory to the directory holding go.mod, so a

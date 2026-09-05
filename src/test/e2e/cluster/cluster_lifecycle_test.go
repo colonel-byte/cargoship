@@ -1,0 +1,91 @@
+// Copyright 2026 colonel-byte
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cluster
+
+import (
+	"os"
+
+	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/action"
+	"github.com/colonel-byte/cargoship/src/pkg/distro"
+	"github.com/colonel-byte/cargoship/src/pkg/phase"
+)
+
+// This file holds the steps of ApplyPhaseSuite that are not apply phases: building the
+// package the phases install, and the prepare that runs ahead of apply. The phases themselves
+// live in the numbered files mirroring src/pkg/phase, and take their method number from that
+// file. These steps have no phase number to take, so they use the low end of the ordering:
+// Test_00 and Test_01 sort before every phase.
+//
+// Every step here calls the same package the matching CLI command calls -- distro.Create for
+// create, action.NewPrepare for prepare, and so on -- rather than shelling out to a built
+// binary, so the suite runs from a bare checkout with nothing under build/. Each one builds
+// its own manager and removes its own temp directory, the way a separate CLI process would.
+
+// examplePackage is the distro definition the suite packages and installs, and
+// installedVersion is the engine version it ships. The version is spelled out rather than read
+// back from the package, so that the manager step compares the loaded package against
+// something that did not come from the same file it is testing.
+const (
+	examplePackage   = "example/rke2-cilium/v1_35/v1.35.0-rke2r1"
+	installedVersion = "1.35.0-rke2r1"
+)
+
+// Test_00_CreatePackage builds the distro package every later step installs. It builds it
+// from a copy of the example definition with the sysctls a container cannot apply removed:
+// see containerSafeDefinition.
+func (s *ApplyPhaseSuite) Test_00_CreatePackage() {
+	cache, err := cachePath()
+	s.Require().NoError(err)
+
+	definition, err := containerSafeDefinition(examplePackage, s.pkgDir)
+	s.Require().NoError(err)
+
+	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
+		Architecture: config.CLIArch,
+		CachePath:    cache,
+	})
+	s.Require().NoError(err)
+	s.Require().FileExists(pkgPath)
+	s.pkgPath = pkgPath
+}
+
+// Test_01_Prepare runs the prepare action, the separate phase list that readies the hosts
+// before apply. It runs whole rather than phase by phase because it is its own action, not
+// part of the apply order this suite walks.
+func (s *ApplyPhaseSuite) Test_01_Prepare() {
+	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
+	defer cleanup()
+
+	err := action.NewPrepare(action.PrepareOptions{
+		Manager:        manager,
+		ModifyHosts:    true,
+		ModifyFirewall: true,
+		ModifyModules:  true,
+	}).Run(s.ctx)
+	s.Require().NoError(err)
+}
+
+// newManager builds a package-loading manager for one of the actions above, along with the
+// cleanup that removes the package it extracted. Each action gets its own, because each CLI
+// command gets its own.
+func (s *ApplyPhaseSuite) newManager(configPath string) (*phase.Manager, func()) {
+	s.T().Helper()
+
+	manager, _, err := newManager(s.ctx, s.pkgPath, configPath, applyConcurrency, applyTimeout)
+	s.Require().NoError(err)
+
+	return manager, func() { s.NoError(os.RemoveAll(manager.TempDirectory)) }
+}
