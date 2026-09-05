@@ -1,12 +1,12 @@
 # Host Firewall Configuration Guide
 
-Cargoship configures the firewall on every node that runs one. It detects the firewall per node, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when `cargoship apply` is given the `--firewall` flag.
+Cargoship configures the firewall on every node that runs one. It picks the firewall per node, from the node's operating system and from what is running on it, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when `cargoship apply` is given the `--firewall` flag.
 
 Every node cargoship manages gets three things: the private address of every other node in the cluster is trusted, the engine's pod and service CIDR blocks are trusted, and the ports listed in `.host.ports` are opened. Anything beyond that comes from the rules in `.host.firewall.rules`.
 
 ## Backends
 
-| Backend | Detected when | Notes |
+| Backend | Used when | Notes |
 | --- | --- | --- |
 | `firewalld` | the `firewalld` service is running | Cluster trust is applied with ipsets in the `trusted` zone; ports become a `distro-exposed-ports` service on the `public` zone |
 | `ufw` | `ufw` is installed and `ufw status` reports `active` | Cluster trust and rules are applied with `ufw` commands; ports become a `cargoship-ports` application profile in `/etc/ufw/applications.d/cargoship` |
@@ -14,9 +14,24 @@ Every node cargoship manages gets three things: the private address of every oth
 
 Cargoship never runs `ufw enable`. A node whose ufw is inactive is left alone, because bringing up a default-deny firewall from a remote phase would cut the SSH connection cargoship is running over. Enable ufw yourself, with a rule that keeps SSH reachable, before pointing cargoship at the node.
 
-Backends are matched in the order above, and nftables is last on purpose: firewalld and ufw are both front ends onto nftables, so a host running either would match the nftables backend as well, and the front end is the one an operator expects cargoship to configure. The nftables backend is for the hosts that never had a front end -- Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all.
-
 A node whose only nftables content comes from kube-proxy or the CNI is deliberately not a match. Every node in a running cluster has a non-empty ruleset, so matching on that would claim hosts whose operator never configured a firewall at all.
+
+### Choosing a backend
+
+The node's operating system decides first. Each OS module names the firewall front end its distribution ships: firewalld on Enterprise Linux and SUSE, ufw on Debian and Ubuntu. Distributions that ship no front end -- Alpine, Arch, CoreOS, Flatcar, Slackware -- name none.
+
+| The node's OS ships | And that front end is | Cargoship configures |
+| --- | --- | --- |
+| firewalld or ufw | running | that front end |
+| firewalld or ufw | installed, but stopped or inactive | nothing on the node |
+| firewalld or ufw | not installed | whichever backend matches, in the order above |
+| no front end | -- | whichever backend matches, in the order above |
+
+The second row is the deliberate part. An operator who installed a front end and left it down has made a decision about the node's firewall posture, and cargoship does not take that decision away: it neither starts the service nor reaches past the stopped front end to write rules into the nftables underneath it, where the front end would overwrite them the moment it came up. Cargoship logs the node it skipped, and the apply continues.
+
+This affects a stock Ubuntu node, which ships ufw installed and inactive. Run `ufw enable` on those nodes, with a rule that keeps SSH reachable, before `cargoship apply --firewall`.
+
+The fallback match runs in the table order above, and nftables is last on purpose: firewalld and ufw are both front ends onto nftables, so a host running either would match the nftables backend as well. The nftables backend is for the hosts that never had a front end -- Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all.
 
 ## Ports
 
@@ -165,4 +180,6 @@ Prefer a `direction: forward` rule under `.host.firewall.rules` for new configur
 
 ## Adding a backend
 
-A backend is a `firewall.Backend` implementation in `src/pkg/firewall`: a `Name`, a `Detect` that reports whether the backend manages a given node, and an `Apply` that makes the node match a `firewall.Plan`. Register it in the `backends` list in `src/pkg/firewall/firewall.go`, in match order, and the apply phase picks it up with no further wiring.
+A backend is a `firewall.Backend` implementation in `src/pkg/firewall`: a `Name`, a `Detect` that reports whether the backend manages a given node, an `Installed` that reports whether the firewall is present on the node at all, and an `Apply` that makes the node match a `firewall.Plan`. Register it in the `backends` list in `src/pkg/firewall/firewall.go`, in match order, and the apply phase picks it up with no further wiring.
+
+A backend that is a distribution's own front end also needs the OS modules for that distribution to return its `Name` from `PreferredFirewall`, in `src/types/os/linux`. That method is declared on each leaf OS module rather than on a shared base such as `EnterpriseLinux`, because those modules embed both their base and `configurer.Linux` at the same depth, which leaves a method promoted from either one ambiguous.

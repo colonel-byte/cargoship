@@ -52,3 +52,8 @@ func init() {
 func (r *Fedora) String() string {
 	return "Fedora Linux"
 }
+
+// PreferredFirewall reports that Fedora ships firewalld as its firewall front end.
+func (r *Fedora) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}

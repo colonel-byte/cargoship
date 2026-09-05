@@ -63,3 +63,8 @@ func (c Debian) UninstallPackage(h os.Host, s ...string) error {
 	}
 	return nil
 }
+
+// PreferredFirewall reports that Debian ships ufw as its firewall front end. Ubuntu inherits it.
+func (c Debian) PreferredFirewall() string {
+	return configurer.FirewallUFW
+}

@@ -49,3 +49,8 @@ func init() {
 func (r *OracleLinux) String() string {
 	return "Oracle Linux"
 }
+
+// PreferredFirewall reports that Oracle Linux ships firewalld as its firewall front end.
+func (r *OracleLinux) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}

@@ -60,3 +60,8 @@ func init() {
 func (l *AmazonLinux) String() string {
 	return "Amazon Linux"
 }
+
+// PreferredFirewall reports that Amazon Linux ships firewalld as its firewall front end.
+func (l *AmazonLinux) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}

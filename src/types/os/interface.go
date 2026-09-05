@@ -85,6 +85,10 @@ type Configurer interface {
 	MoveFile(os.Host, string, string) error
 	// OSKind returns the identifier for Linux hosts
 	OSKind() string
+	// PreferredFirewall names the firewall front end this distribution ships, e.g. firewalld on
+	// Enterprise Linux and ufw on Debian. It returns an empty string when the distribution has no
+	// front end of its own.
+	PreferredFirewall() string
 	// PrivateAddress resolves internal ip from private interface
 	PrivateAddress(os.Host, string, string) (string, error)
 	// PrivateInterface tries to find a private network interface
