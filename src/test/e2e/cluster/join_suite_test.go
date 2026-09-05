@@ -80,6 +80,7 @@ func (s *JoinPhaseSuite) SetupSuite() {
 	ctx, err := phaseCtx(context.Background())
 	s.Require().NoError(err)
 	s.ctx = ctx
+	s.pkgDir = t.TempDir()
 
 	config.CLIArch = e2e.Arch
 	config.CommonOptions.TempDirectory = os.TempDir()
@@ -102,7 +103,7 @@ func (s *JoinPhaseSuite) Test_00_JoinMachine() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	pkgPath, err := distro.Create(s.ctx, examplePackage, t.TempDir(), distro.CreateOptions{
+	pkgPath, err := distro.Create(s.ctx, examplePackage, s.pkgDir, distro.CreateOptions{
 		Architecture: config.CLIArch,
 		CachePath:    cache,
 	})

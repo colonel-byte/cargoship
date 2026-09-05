@@ -103,6 +103,7 @@ func (s *ApplyPhaseSuite) SetupSuite() {
 	ctx, err := phaseCtx(context.Background())
 	s.Require().NoError(err)
 	s.ctx = ctx
+	s.pkgDir = t.TempDir()
 
 	config.CLIArch = e2e.Arch
 	config.CommonOptions.TempDirectory = os.TempDir()

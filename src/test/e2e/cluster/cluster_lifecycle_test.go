@@ -56,12 +56,10 @@ const (
 
 // Test_00_CreatePackage builds the distro package every later step installs.
 func (s *ApplyPhaseSuite) Test_00_CreatePackage() {
-	t := s.T()
-
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	pkgPath, err := distro.Create(s.ctx, examplePackage, t.TempDir(), distro.CreateOptions{
+	pkgPath, err := distro.Create(s.ctx, examplePackage, s.pkgDir, distro.CreateOptions{
 		Architecture: config.CLIArch,
 		CachePath:    cache,
 	})

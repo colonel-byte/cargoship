@@ -43,6 +43,11 @@ type phaseWalk struct {
 	harness *phaseHarness
 	ctx     context.Context
 	pkgPath string
+	// pkgDir is where the walk's package is created. It is taken in SetupSuite rather than in
+	// the step that creates the package, because a TempDir taken inside a suite method is
+	// removed when that method's subtest ends -- which is before the manager step that loads
+	// the package runs, and the failure it produces names the package, not the directory.
+	pkgDir string
 	// phaseFailed short-circuits the remaining steps once one fails. Without it a single
 	// broken phase reports as twenty failures and buries the one that matters.
 	phaseFailed bool

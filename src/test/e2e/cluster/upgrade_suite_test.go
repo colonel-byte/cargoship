@@ -88,6 +88,7 @@ func (s *UpgradePhaseSuite) SetupSuite() {
 	ctx, err := phaseCtx(context.Background())
 	s.Require().NoError(err)
 	s.ctx = ctx
+	s.pkgDir = t.TempDir()
 
 	config.CLIArch = e2e.Arch
 	config.CommonOptions.TempDirectory = os.TempDir()
@@ -104,12 +105,10 @@ func (s *UpgradePhaseSuite) TearDownSuite() {
 // that the upload phases see the upload-only host again -- an upgrade has to replace what it
 // staged there too, even though the host never runs the engine.
 func (s *UpgradePhaseSuite) Test_00_UpgradePackage() {
-	t := s.T()
-
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	pkgPath, err := distro.Create(s.ctx, exampleUpgradePackage, t.TempDir(), distro.CreateOptions{
+	pkgPath, err := distro.Create(s.ctx, exampleUpgradePackage, s.pkgDir, distro.CreateOptions{
 		Architecture: config.CLIArch,
 		CachePath:    cache,
 	})
