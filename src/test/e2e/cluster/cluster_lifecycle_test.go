@@ -15,19 +15,24 @@
 package cluster
 
 import (
+	"context"
 	"os"
+	"time"
 
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/src/test"
 )
 
 // This file holds the steps of ApplyPhaseSuite that are not apply phases: building the
-// package the phases install, and the prepare that runs ahead of apply. The phases themselves
-// live in the numbered files mirroring src/pkg/phase, and take their method number from that
-// file. These steps have no phase number to take, so they use the low end of the ordering:
-// Test_00 and Test_01 sort before every phase.
+// package the phases install, the prepare that runs ahead of apply, and the checks that close
+// the run out once every phase has been asserted. The phases themselves live in the numbered
+// files mirroring src/pkg/phase, and take their method number from that file. These steps have
+// no phase number to take, so they use the two ends of the ordering: Test_00 and Test_01 sort
+// before every phase, and Test_ZZ1 onwards sort after every phase, because a letter sorts
+// after a digit.
 //
 // Every step here calls the same package the matching CLI command calls -- distro.Create for
 // create, action.NewPrepare for prepare, and so on -- rather than shelling out to a built
@@ -74,6 +79,34 @@ func (s *ApplyPhaseSuite) Test_01_Prepare() {
 		ModifyHosts:    true,
 		ModifyFirewall: true,
 		ModifyModules:  true,
+	}).Run(s.ctx)
+	s.Require().NoError(err)
+}
+
+// Test_ZZ1_ClusterHealthy waits for every node the inventory named to report Ready, proving
+// the phases the suite just walked produced a working cluster and not only the right files.
+func (s *ApplyPhaseSuite) Test_ZZ1_ClusterHealthy() {
+	t := s.T()
+	cs, err := e2e.KubeClient(t)
+	s.Require().NoError(err)
+	s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, 5*time.Minute))
+}
+
+// Test_ZZ2_ApplyIsIdempotent re-runs the whole apply against the already-bootstrapped
+// cluster, proving the manager routes through the upgrade phases instead of re-initializing.
+// It is also the only step that exercises action.NewApply's own wiring, since the phase
+// tests build each phase themselves.
+func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
+	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
+	defer cleanup()
+
+	err := action.NewApply(action.ApplyOptions{
+		Manager:          manager,
+		ModifyHosts:      true,
+		ModifyFirewall:   true,
+		WorkerConcurrent: applyWorkerConcurrent,
+		UpdateKubeConfig: true,
+		LabelNodes:       true,
 	}).Run(s.ctx)
 	s.Require().NoError(err)
 }

@@ -49,7 +49,7 @@ type phaseHarness struct {
 	lock *phase.Lock
 	// tempDir is the extracted distro package. The harness owns it and close removes it.
 	tempDir string
-	// dropped holds the upload-only hosts once they have been removed from the
+	// dropped holds the upload-only hosts once dropUploadOnlyHosts has removed them from the
 	// manager. They are kept so close can disconnect them: the Disconnect phase only sees the
 	// hosts still on the manager.
 	dropped apicluster.ZarfHosts
@@ -227,7 +227,7 @@ func (h *phaseHarness) workers() apicluster.ZarfHosts {
 }
 
 // engineWorkers returns the workers that run the engine, so the upload-only hosts are left
-// out.
+// out. Before dropUploadOnlyHosts this differs from workers; after it, the two agree.
 func (h *phaseHarness) engineWorkers() apicluster.ZarfHosts {
 	return h.workers().Filter(func(host *apicluster.ZarfHost) bool { return !isUploadOnly(host) })
 }
@@ -235,6 +235,36 @@ func (h *phaseHarness) engineWorkers() apicluster.ZarfHosts {
 // uploadOnly returns the hosts that are in the inventory to receive uploads and nothing more.
 func (h *phaseHarness) uploadOnly() apicluster.ZarfHosts {
 	return h.hosts().Filter(isUploadOnly)
+}
+
+// dropUploadOnlyHosts removes the upload-only hosts from the manager, which is what stops the
+// phases from the engine configuration onwards from acting on a host that cannot run the
+// engine. It is called once, after the last upload phase, and returns what it removed.
+//
+// Removing them from the manager rather than teaching each test to skip them is deliberate:
+// InitializeWorkers claims every non-controller host whose agent is not already running, with
+// no OS gate, so a test that merely declined to assert on the Alpine node would still have
+// watched the phase try to install rke2 on it.
+func (h *phaseHarness) dropUploadOnlyHosts() apicluster.ZarfHosts {
+	dropped := h.uploadOnly()
+	if len(dropped) == 0 {
+		return nil
+	}
+	h.manager.Config.Spec.Hosts = h.hosts().Filter(func(host *apicluster.ZarfHost) bool {
+		return !isUploadOnly(host)
+	})
+	h.dropped = append(h.dropped, dropped...)
+	return dropped
+}
+
+// lockFileContent is what the Lock phase writes into the lock file on every host: the
+// hostname of the machine running the phases and the PID of this test binary.
+func lockFileContent() (string, error) {
+	hn, err := os.Hostname()
+	if err != nil {
+		hn = "unknown"
+	}
+	return fmt.Sprintf("%s-%d", hn, os.Getpid()), nil
 }
 
 // carriesFilesFor reports whether the package under test ships any OS file for the given

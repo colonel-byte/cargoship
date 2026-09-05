@@ -68,19 +68,25 @@ const (
 // phase findable from the phase.
 //
 // Testify runs suite methods in method-name order, so that number is also the order the
-// phases run in here, and it is the order apply runs them in.
+// phases run in here. It matches the order apply runs them in everywhere except the lock:
+// apply takes the lock third, right after OS detection, and holds it for the whole run,
+// whereas phase/91_lock.go's number puts it after the install. The suite still asserts what
+// the phase leaves on the hosts, it just no longer holds the lock across the phases in
+// between. Every other phase is in the same relative position apply puts it in.
 //
 // Steps that are not phases have no phase number to borrow: package create and prepare run
-// first as Test_00 and Test_01, "00" and "01" sorting before every phase in the list. They
-// live in cluster_lifecycle_test.go.
+// first as Test_00 and Test_01, and the health and idempotency checks run last as Test_ZZ1
+// and Test_ZZ2, "ZZ" sorting after every two-digit number. They live in
+// cluster_lifecycle_test.go.
 //
 // Every phase test shares one phaseHarness, so they are ordered and stateful by design.
 // Running a single phase with -run will fail: its predecessors never connected the hosts.
 //
-// Not every host in the inventory joins the cluster. The Alpine host belongs to neither of
-// the OS families the upload phases key on, which is what it is in the inventory for, and it
-// never runs the engine. It is a worker like any other to the phases in this walk, so every
-// one of them sees all ten hosts.
+// Not every host in the inventory joins the cluster. The Alpine host is there so that the BIN
+// upload phase is tested on a host belonging to neither OS family the other upload phases
+// claim, and Test_60_ConfigureEngine drops it before the first phase that touches the engine.
+// So the phases up to and including Test_59 see ten hosts and everything after them sees
+// nine.
 type ApplyPhaseSuite struct {
 	phaseWalk
 }

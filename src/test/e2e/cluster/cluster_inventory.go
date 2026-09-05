@@ -42,7 +42,7 @@ const (
 //
 // The prefix starts with the worker prefix, so renderClusterInventory gives these machines the
 // worker role without a special case -- which is what the upload phases key on. Everything
-// from the engine configuration onwards has to exclude them again.
+// from the engine configuration onwards excludes them; see phaseHarness.dropUploadOnlyHosts.
 const uploadOnlyPrefix = "kwa"
 
 // isUploadOnly reports whether a host is in the inventory only to receive uploads.
