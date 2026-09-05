@@ -20,13 +20,17 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 )
 
-// Test_57_RPMUploadFiles covers phase/57_rpm_install.go. The phase claims only Enterprise
+// rpmUploadFiles covers phase/57_rpm_install.go. The phase claims only Enterprise
 // Linux hosts, which on this cluster means the Fedora replicas, so the assertion is the
 // split: the Ubuntu nodes come out byte-identical, and the Fedora nodes keep everything
 // phase/50 staged. Whether the Fedora nodes gain anything depends on the package -- an rke2
 // package installs from a tarball and carries no RPM -- so that half is asserted against
 // what the package actually ships rather than assumed.
-func (s *ApplyPhaseSuite) Test_57_RPMUploadFiles() {
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
+func (s *phaseWalk) rpmUploadFiles() {
+	s.T().Helper()
+
 	enterprise := s.harness.hosts().Filter(utils.FilterEnterpriseLinux)
 	s.Require().NotEmpty(enterprise,
 		"no Enterprise Linux host in the cluster, the RPM phase would be untested")
@@ -53,4 +57,14 @@ func (s *ApplyPhaseSuite) Test_57_RPMUploadFiles() {
 		s.Require().Subsetf(after, before[host.String()],
 			"%s: the RPM phase dropped files an earlier upload phase staged", host)
 	}
+}
+
+// Test_57_RPMUploadFiles routes the install's RPM uploads.
+func (s *ApplyPhaseSuite) Test_57_RPMUploadFiles() {
+	s.rpmUploadFiles()
+}
+
+// Test_57_RPMUploadFiles routes the upgrade's RPM uploads, on the same split.
+func (s *UpgradePhaseSuite) Test_57_RPMUploadFiles() {
+	s.rpmUploadFiles()
 }

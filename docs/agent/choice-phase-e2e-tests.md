@@ -26,13 +26,13 @@ The numbers are now the source file's, in both places: `25_modify_hosts_file_tes
 
 That is the cost, and it is worth naming precisely. `Test_91_Lock` still asserts the thing the phase is responsible for: a lock file on every host holding this process's instance ID, removed again by `Test_92_Unlock`. What is no longer covered is the lock being *held* while the other phases run, so a phase that misbehaved against a locked cluster would not be caught here. Nothing in the current phase list reads the lock, and `Test_ZZ2_ApplyIsIdempotent` runs a real `cargoship apply`, which takes the lock in its proper place. Special-casing the lock -- running it early under a method name that does not match its file -- was considered and rejected: it reintroduces the two-number problem for one phase, which is the shape of thing that is forgotten and then misread.
 
-Steps that are not phases have no source file to take a number from. They use the ends of the ordering instead: `Test_00_CreatePackage` and `Test_01_Prepare` sort before every phase number, `Test_ZZ1` through `Test_ZZ4` sort after every phase number because a letter sorts after a digit.
+Steps that are not phases have no source file to take a number from. They use the ends of the ordering instead: `Test_00_CreatePackage` and `Test_01_Prepare` sort before every phase number, `Test_ZZ1` and `Test_ZZ2` sort after every phase number because a letter sorts after a digit.
 
 ## One shared harness, and tests that cannot run alone
 
 Phases communicate through the hosts. `DetectOS` resolves a `Configurer` and hangs it on the host; `GatherFacts` fills in `Metadata`; `Connect` leaves a live SSH connection that every later phase reuses; the upload phases record `Metadata.Install` for the initialize phases to call. Running a phase in isolation means reconstructing all of that, which means reimplementing its predecessors.
 
-So there is one `phaseHarness` for the whole suite, built once in `Test_05_Manager`, and the phase tests are ordered and stateful by design. `go test -run 'TestApplyPhases/Test_25_ModifyHosts'` does not work and is not meant to: the hosts were never connected. This is stated in the suite doc comment because it is the first thing someone debugging a failure will try.
+So there is one `phaseHarness` for the whole suite, built once in `Test_05_Manager`, and the phase tests are ordered and stateful by design. `go test -run 'TestClusterPhases/apply/Test_25_ModifyHosts'` does not work and is not meant to: the hosts were never connected. This is stated in the suite doc comment because it is the first thing someone debugging a failure will try.
 
 The harness builds its manager from exactly the inputs `action.NewApply` uses -- `load.ClusterDefinition` for the inventory, `distro.Load` for the package, `registry.GetDistroModuleBuilder` for the distro module -- so the phases see the state they would see under a real apply. `phase.Manager.Run` is called once per phase with a single-element `Phases`, which is safe because `Run` calls `defaults.Set` each time and that is idempotent.
 
@@ -60,7 +60,7 @@ Instead those tests compute what the hosts report -- how many have SELinux enabl
 
 ## Stopping after the first failure
 
-Thirty-three ordered, stateful tests mean one broken early phase produces thirty-two downstream failures that say nothing. `TearDownTest` records the failure and `SetupTest` skips the rest, so the output names one phase. Teardown of the containers is unaffected -- `TestMain` deletes the bootloose cluster regardless -- so this costs nothing but the coverage that was already lost.
+Thirty-one ordered, stateful tests mean one broken early phase produces thirty downstream failures that say nothing. `TearDownTest` records the failure and `SetupTest` skips the rest, so the output names one phase. Teardown of the containers is unaffected -- `TestMain` deletes the bootloose cluster regardless -- so this costs nothing but the coverage that was already lost.
 
 ## Nine nodes across two OS families
 
@@ -86,9 +86,43 @@ It cannot run the engine: rke2 links against glibc and Alpine is musl. Three thi
 
 **It is removed from the manager after the last upload phase, rather than skipped by each later test.** `Test_60_ConfigureEngine` calls `harness.dropUploadOnlyHosts()` before it runs anything. Skipping was tried first and is not sufficient: `InitializeWorkers.Prepare` claims every non-controller host whose agent is not already running, with no OS gate at all, so a test that merely declined to assert on the Alpine host would still have watched the phase spend its retry budget trying to install rke2 on it. Removing the host from `manager.Config.Spec.Hosts` is the only thing that stops the phase from selecting it. The harness keeps what it dropped so that `close` can disconnect it, since the Disconnect phase only sees the hosts still on the manager.
 
-**There are two generated inventory files.** `generated-cluster-full.yaml` has all ten machines and is what the harness is built from; `generated-cluster.yaml` has the nine that join and is what `e2e.ClusterConfigPath` points at. The whole-action steps -- `Test_01_Prepare`, `Test_ZZ2_ApplyIsIdempotent`, `Test_ZZ3_Reset`, `Test_ZZ4_PostReset` -- load that path, because an action has no notion of an upload-only host and would try to install the engine on Alpine. A single file with an annotation the loader ignores was considered and rejected: it would put a test-only concept into the inventory schema.
+**There are two generated inventory files.** `generated-cluster-full.yaml` has all ten machines and is what the harness is built from; `generated-cluster.yaml` has the nine that join and is what `e2e.ClusterConfigPath` points at. The whole-action steps -- `Test_01_Prepare`, `Test_ZZ2_ApplyIsIdempotent`, and `ResetSuite`'s two -- load that path, because an action has no notion of an upload-only host and would try to install the engine on Alpine. A single file with an annotation the loader ignores was considered and rejected: it would put a test-only concept into the inventory schema.
 
 The boundary is worth stating plainly, because it is the thing a future phase can break without any test failing: **phases 50 through 59 see ten hosts, everything after them sees nine.** A new upload phase belongs before the drop. Anything that installs, starts or queries the engine belongs after it.
+
+## Three walks against one cluster, in one parent test
+
+The suite now runs three suites rather than one: `ApplyPhaseSuite` installs the distro, `UpgradePhaseSuite` walks the same phases again with a newer package, and `ResetSuite` takes the distro back off. They share one bootloose cluster and one kubeconfig, and they only work in that order.
+
+Go runs top-level test functions in the order they are declared across the package's files, sorted by file name -- which is an ordering nobody declared and that a renamed file silently changes. So there is one top-level test, `TestClusterPhases` in `main_test.go`, and the three walks are `t.Run` subtests of it. The apply subtest's result is checked: if the install failed there is no cluster for the other two to walk, and the run returns rather than reporting three failures for one cause. The upgrade subtest's result is not checked, because a half-upgraded cluster is still something reset has to be able to tear down.
+
+That is also why `reset` is no longer `Test_ZZ3`/`Test_ZZ4` on the apply suite. Reset has to run last, and the upgrade walk has to run in between, so the two steps moved into `ResetSuite`. It loads no package -- reset and kube-config both build a bare manager -- so it needs neither a harness nor a package path, only the `distroID` constant.
+
+`kubeconfigPath` moved to `TestMain` for the same reason. All three walks touch the same file: the apply walk writes it, the upgrade walk rewrites it against the upgraded control plane, and the reset walk asserts it survives a teardown that can no longer reach a controller. A suite-owned `t.TempDir()` would have been deleted between them.
+
+## Walking the upgrade, and where it starts
+
+On a fresh install `phase/66_upgrade_controller.go` and `phase/67_upgrade_worker.go` claim no hosts, and the config-sync phases find no drift. The apply walk asserts exactly that -- correctly, it is the routing that matters -- but it means the code inside those phases was never executed by any test. Draining a node, stopping the service, running the install hook, waiting for Ready and uncordoning is the most destructive sequence in the phase list and the only one with no coverage at all.
+
+`UpgradePhaseSuite` closes that. It builds a second package from `example/rke2-cilium/v1_35/v1.35.0-rke2r3` and walks the phases against the cluster the apply walk left running.
+
+**The target is the next patch of the same minor version.** `v1.35.0-rke2r1` and `v1.35.0-rke2r3` differ in the engine tarball, three RPM URLs and the container image tags, and in nothing else. The next minor, `v1.35.1-rke2r1`, also moves Cilium from 1.18.4 to 1.19.0, which adds a CNI upgrade and a second set of image pulls to a walk that is testing neither. The upgrade phases route on `VersionLess`, which compares the prerelease identifier, so `r1 < r3` is a real upgrade as far as every phase under test is concerned.
+
+**It starts at `GatherFactsDistro`, not at `Connect`.** Connect, DetectOS, GatherFacts and ValidateHosts do the same work against the same hosts they did during the install, and the apply walk already asserts each of them one phase at a time. Repeating that costs runtime and adds no assertion that could fail differently, so they run as a single `Test_01_Reconnect` step whose only job is to hand the rest of the walk a connected inventory. From `Test_12_GatherFactsDistro` on, every phase gets its own method, because from there on every phase behaves differently than it did on the install.
+
+**The lock phases are left out.** They are asserted in the apply walk, and taking the lock again for a second walk against the same hosts would be testing the lock file, not the upgrade.
+
+**The assertions that differ are the point.** `Test_12` is where the divergence starts: the hosts now report the installed version, and the test asserts it is `VersionLess` than the packaged one *by calling the same comparison the phases' own `Prepare` calls*, so the test cannot disagree with the routing it is asserting. `Test_61` and `Test_62` must claim nothing, which is the inverse of the apply walk's assertion and the check that an initialize phase never re-bootstraps a live node. `Test_66` and `Test_67` are the only place the upgrade phases are asserted to have run, and they check all three outcomes of the sequence: the service came back up, `RunningVersion` is now the packaged version, and the node is not left cordoned. That last one is worth having on its own -- a node left `Unschedulable` looks healthy from the host side, service running and version correct, and only shows up later as a cluster that will not schedule.
+
+Where the two walks assert the same thing -- the upload phases, the engine config, the kubeconfig, the labels, disconnect -- the body lives once, as an unexported method on the shared `phaseWalk` that both suites embed, and each suite's `Test_NN` method is a one-line call to it. Testify collects methods by their `Test` prefix, so an unexported method is shared rather than run twice. Duplicating those bodies was the alternative, and it would have meant ten pairs of assertions that have to be kept in step by hand.
+
+## The upgrade is opt-in
+
+The upgrade walk runs only when `CARGOSHIP_E2E_UPGRADE` is set, and in CI only on a `workflow_dispatch` input or the `e2e-cluster-upgrade` label.
+
+The install walk already sits close to what a hosted `ubuntu-latest` runner can do: nine rke2 nodes on four cores and 16GB, with the workflow deleting several gigabytes of preinstalled toolchains to make the images fit in the ~14GB the runner leaves free. The upgrade imports a second complete set of engine images into all nine containerd stores, so it roughly doubles the disk and adds tens of minutes. Making it unconditional would mean every run of this workflow pays for it, including the runs that only want to know the install still works.
+
+Running it by default and skipping in CI was the alternative. It was rejected because it inverts which environment is the odd one out: the failure mode is a suite that passes locally and cannot run in the place the label was added to make it run. A single environment variable, read in `SetupSuite`, is checked in one place and skips with a message naming the variable.
 
 ## Profiles on the generated inventory
 

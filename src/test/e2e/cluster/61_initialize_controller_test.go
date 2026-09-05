@@ -42,3 +42,25 @@ func (s *ApplyPhaseSuite) Test_61_InitializeControllers() {
 			"%s: running an engine version the package did not ship", host)
 	}
 }
+
+// Test_61_InitializeControllers, on the upgrade walk, must claim nothing. The phase's Prepare
+// takes controllers whose service is not running and whose version is unknown, so a controller
+// that is up and reporting a version is not its business -- and if it were, this phase would
+// re-bootstrap a live control plane rather than upgrade it. The assertion is that it skips and
+// that the control plane is still up for Test_66 to upgrade.
+func (s *UpgradePhaseSuite) Test_61_InitializeControllers() {
+	p := &phase.InitializeControllers{Distro: s.harness.distro}
+	s.runPhase(p)
+	s.Require().False(ran(p), "the initialize phase claimed controllers that are already running")
+
+	service := s.harness.distro.GetControllerService()
+	for _, host := range s.harness.controllers() {
+		s.Require().Truef(host.Configurer.ServiceIsRunning(host, service),
+			"%s: %s stopped running", host, service)
+
+		version, err := s.harness.distro.RunningVersion(*host)
+		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
+		s.Require().Equalf(installedVersion, version,
+			"%s: something upgraded the engine before the upgrade phase ran", host)
+	}
+}

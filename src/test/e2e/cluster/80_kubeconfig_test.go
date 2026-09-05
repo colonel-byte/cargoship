@@ -21,12 +21,16 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Test_80_KubeConfig covers phase/80_kubeconfig.go. It writes the admin credentials for the
+// kubeConfig covers phase/80_kubeconfig.go. It writes the admin credentials for the
 // cluster into the local kubeconfig, so the assertion is on the file this test binary points
 // KUBECONFIG at: it names the cluster, points at the load balancer address the inventory
 // declared, and carries the client certificate. Test_ZZ1 then uses that same file to talk to
 // the cluster, which is the real proof the credentials work.
-func (s *ApplyPhaseSuite) Test_80_KubeConfig() {
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
+func (s *phaseWalk) kubeConfig() {
+	s.T().Helper()
+
 	clusterID := s.harness.manager.Config.Metadata.Name
 
 	p := &phase.KubeConfig{
@@ -41,7 +45,7 @@ func (s *ApplyPhaseSuite) Test_80_KubeConfig() {
 		return
 	}
 
-	cfg, err := clientcmd.LoadFromFile(s.kubeconfigPath)
+	cfg, err := clientcmd.LoadFromFile(kubeconfigPath)
 	s.Require().NoError(err)
 
 	s.Require().Equal(clusterID, cfg.CurrentContext)
@@ -56,4 +60,15 @@ func (s *ApplyPhaseSuite) Test_80_KubeConfig() {
 	s.Require().Contains(cfg.AuthInfos, admin)
 	s.Require().NotEmpty(cfg.AuthInfos[admin].ClientCertificateData)
 	s.Require().NotEmpty(cfg.AuthInfos[admin].ClientKeyData)
+}
+
+// Test_80_KubeConfig writes the admin credentials for the cluster the install created.
+func (s *ApplyPhaseSuite) Test_80_KubeConfig() {
+	s.kubeConfig()
+}
+
+// Test_80_KubeConfig rewrites the credentials against the upgraded control plane, proving the
+// upgrade did not leave the local kubeconfig pointing at something that no longer answers.
+func (s *UpgradePhaseSuite) Test_80_KubeConfig() {
+	s.kubeConfig()
 }

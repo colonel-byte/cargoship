@@ -258,6 +258,12 @@ func (h *phaseHarness) engineWorkers() apicluster.ZarfHosts {
 	return h.workers().Filter(func(host *apicluster.ZarfHost) bool { return !isUploadOnly(host) })
 }
 
+// engineHosts returns the hosts that run the engine, so every host minus the upload-only ones.
+// Before dropUploadOnlyHosts this differs from hosts; after it, the two agree.
+func (h *phaseHarness) engineHosts() apicluster.ZarfHosts {
+	return h.hosts().Filter(func(host *apicluster.ZarfHost) bool { return !isUploadOnly(host) })
+}
+
 // uploadOnly returns the hosts that are in the inventory to receive uploads and nothing more.
 func (h *phaseHarness) uploadOnly() apicluster.ZarfHosts {
 	return h.hosts().Filter(isUploadOnly)

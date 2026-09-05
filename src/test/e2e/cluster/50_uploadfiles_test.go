@@ -26,10 +26,14 @@ import (
 // moves, this test should fail rather than quietly stop checking anything.
 const uploadManifestPath = "/var/lib/cargoship/manifest.txt"
 
-// Test_50_UploadFiles covers phase/50_uploadfiles.go. It stages the package's images and
+// uploadFiles covers phase/50_uploadfiles.go. It stages the package's images and
 // files on the nodes and records each one in the upload manifest, so the assertion is that
 // the manifest exists, is not empty, and that every path it claims is really on the host.
-func (s *ApplyPhaseSuite) Test_50_UploadFiles() {
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
+func (s *phaseWalk) uploadFiles() {
+	s.T().Helper()
+
 	p := &phase.UploadFiles{}
 	s.runPhase(p)
 	s.Require().True(ran(p), "nothing to upload from a package that carries images")
@@ -47,7 +51,7 @@ func (s *ApplyPhaseSuite) Test_50_UploadFiles() {
 
 // manifestOn returns the paths the upload manifest on host records, one per line as
 // "category\tpath".
-func (s *ApplyPhaseSuite) manifestOn(host *apicluster.ZarfHost) []string {
+func (s *phaseWalk) manifestOn(host *apicluster.ZarfHost) []string {
 	s.T().Helper()
 
 	if !host.FileExist(uploadManifestPath) {
@@ -65,4 +69,15 @@ func (s *ApplyPhaseSuite) manifestOn(host *apicluster.ZarfHost) []string {
 		paths = append(paths, path)
 	}
 	return paths
+}
+
+// Test_50_UploadFiles stages the package on the hosts for the install.
+func (s *ApplyPhaseSuite) Test_50_UploadFiles() {
+	s.uploadFiles()
+}
+
+// Test_50_UploadFiles stages the newer package over what the install left, which is what
+// gives the upgrade phases something newer to install.
+func (s *UpgradePhaseSuite) Test_50_UploadFiles() {
+	s.uploadFiles()
 }

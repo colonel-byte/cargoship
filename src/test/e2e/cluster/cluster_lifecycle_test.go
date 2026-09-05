@@ -17,6 +17,7 @@ package cluster
 import (
 	"context"
 	"os"
+	"testing"
 	"time"
 
 	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -25,6 +26,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/test"
+	"github.com/stretchr/testify/suite"
 )
 
 // This file holds the steps of ApplyPhaseSuite that are not apply phases: building the
@@ -35,13 +37,22 @@ import (
 // Test_00 and Test_01 sort before every phase, and Test_ZZ1 onwards sort after every phase,
 // because a letter sorts after a digit.
 //
+// It also holds ResetSuite, the teardown walk, which runs after the upgrade walk rather than
+// at the end of the apply one.
+//
 // Every step here calls the same package the matching CLI command calls -- distro.Create for
 // create, action.NewPrepare for prepare, and so on -- rather than shelling out to a built
 // binary, so the suite runs from a bare checkout with nothing under build/. Each one builds
 // its own manager and removes its own temp directory, the way a separate CLI process would.
 
-// examplePackage is the distro definition the suite packages and installs.
-const examplePackage = "example/rke2-cilium/v1_35/v1.35.0-rke2r1"
+// examplePackage is the distro definition the suite packages and installs, and
+// installedVersion is the engine version it ships. The version is spelled out rather than read
+// back from the package so that the upgrade walk has something to compare against that does
+// not come from the same file it is testing.
+const (
+	examplePackage   = "example/rke2-cilium/v1_35/v1.35.0-rke2r1"
+	installedVersion = "1.35.0-rke2r1"
+)
 
 // Test_00_CreatePackage builds the distro package every later step installs.
 func (s *ApplyPhaseSuite) Test_00_CreatePackage() {
@@ -103,9 +114,58 @@ func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
 	s.Require().NoError(err)
 }
 
-// Test_ZZ3_Reset tears the distro back off the nodes. It is the last destructive step, and
-// the only place reset runs, since every other cluster test depends on the install.
-func (s *ApplyPhaseSuite) Test_ZZ3_Reset() {
+// newManager builds a package-loading manager for one of the actions above, along with the
+// cleanup that removes the package it extracted. Each action gets its own, because each CLI
+// command gets its own.
+func (s *ApplyPhaseSuite) newManager(configPath string) (*phase.Manager, func()) {
+	s.T().Helper()
+
+	manager, _, err := newManager(s.ctx, s.pkgPath, configPath, applyConcurrency, applyTimeout)
+	s.Require().NoError(err)
+
+	return manager, func() { s.NoError(os.RemoveAll(manager.TempDirectory)) }
+}
+
+// ResetSuite tears the distro back off the nodes and confirms what that leaves behind. It is
+// the last of the three walks TestClusterPhases runs, and the only place reset runs, because
+// every other cluster test depends on the install still being there.
+//
+// It is its own suite rather than two more Test_ZZ methods on ApplyPhaseSuite so that the
+// upgrade walk can run in between. Neither step loads a package -- reset and kube-config both
+// build a bare manager -- so it needs no harness and no package path, only the distro ID.
+type ResetSuite struct {
+	suite.Suite
+	ctx context.Context
+	// stepFailed short-circuits the post-reset check when the reset itself failed, which
+	// would otherwise report a second failure about a cluster that was never torn down.
+	stepFailed bool
+}
+
+func (s *ResetSuite) SetupSuite() {
+	if testing.Short() {
+		s.T().Skip("reset needs a bootloose cluster with the distro installed")
+	}
+
+	ctx, err := phaseCtx(context.Background())
+	s.Require().NoError(err)
+	s.ctx = ctx
+}
+
+func (s *ResetSuite) SetupTest() {
+	if s.stepFailed {
+		s.T().Skip("skipping: an earlier reset step failed")
+	}
+	s.T().Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
+}
+
+func (s *ResetSuite) TearDownTest() {
+	if s.T().Failed() {
+		s.stepFailed = true
+	}
+}
+
+// Test_1_Reset removes the distro from every node in the inventory.
+func (s *ResetSuite) Test_1_Reset() {
 	manager := s.newBareManager(e2e.ClusterConfigPath)
 
 	err := action.NewReset(action.ResetOptions{
@@ -117,9 +177,9 @@ func (s *ApplyPhaseSuite) Test_ZZ3_Reset() {
 	s.Require().NoError(err)
 }
 
-// Test_ZZ4_PostReset confirms kube-config can no longer find a running controller once the
-// distro has been torn down.
-func (s *ApplyPhaseSuite) Test_ZZ4_PostReset() {
+// Test_2_PostReset confirms kube-config can no longer find a running controller once the
+// distro has been torn down, and that it leaves the kubeconfig it cannot refresh in place.
+func (s *ResetSuite) Test_2_PostReset() {
 	manager := s.newBareManager(e2e.ClusterConfigPath)
 	manager.Config.Spec.Hosts = apicluster.ZarfHosts{manager.Config.Spec.Hosts.Controllers().First()}
 
@@ -134,29 +194,17 @@ func (s *ApplyPhaseSuite) Test_ZZ4_PostReset() {
 	err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager}).Run(s.ctx)
 	s.Require().Error(err)
 
-	_, err = os.Stat(s.kubeconfigPath)
+	_, err = os.Stat(kubeconfigPath)
 	s.Require().NoError(err)
 }
 
-// newManager builds a package-loading manager for one of the actions above, along with the
-// cleanup that removes the package it extracted. Each action gets its own, because each CLI
-// command gets its own.
-func (s *ApplyPhaseSuite) newManager(configPath string) (*phase.Manager, func()) {
+// newBareManager builds a manager for the actions that load no package. The distro ID is
+// spelled out rather than read from a package, which is also where the CLI's --distro flag
+// default comes from.
+func (s *ResetSuite) newBareManager(configPath string) *phase.Manager {
 	s.T().Helper()
 
-	manager, _, err := newManager(s.ctx, s.pkgPath, configPath, applyConcurrency, applyTimeout)
-	s.Require().NoError(err)
-
-	return manager, func() { s.NoError(os.RemoveAll(manager.TempDirectory)) }
-}
-
-// newBareManager builds a manager for the actions that load no package. It takes the distro
-// ID from the manager the phase tests read out of the package, which is where the CLI's
-// --distro flag default comes from too.
-func (s *ApplyPhaseSuite) newBareManager(configPath string) *phase.Manager {
-	s.T().Helper()
-
-	manager, err := newBareManager(s.ctx, configPath, s.harness.manager.DistroID, applyConcurrency)
+	manager, err := newBareManager(s.ctx, configPath, distroID, applyConcurrency)
 	s.Require().NoError(err)
 
 	return manager

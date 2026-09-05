@@ -17,14 +17,16 @@ package cluster
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/stretchr/testify/suite"
 )
+
+// distroID is the distro the suite installs, and the value the CLI's --distro flag would
+// carry. The steps that build a manager with no package loaded need it spelled out, because
+// there is no package for them to read it from.
+const distroID = "rke2"
 
 // Node counts for the generated inventory, see the bootloose config in main_test.go: kc0,
 // kc1, kcf0 are controllers and kw0-2, kwf0-2, kwa0 are workers, with the "f" replicas
@@ -70,9 +72,9 @@ const (
 // between. Every other phase is in the same relative position apply puts it in.
 //
 // Steps that are not phases have no phase number to borrow: package create and prepare run
-// first as Test_00 and Test_01, and the health, idempotency and reset checks run last as
-// Test_ZZ1 through Test_ZZ4, "ZZ" sorting after every two-digit number. They live in
-// cluster_lifecycle_test.go.
+// first as Test_00 and Test_01, and the health and idempotency checks run last as Test_ZZ1
+// and Test_ZZ2, "ZZ" sorting after every two-digit number. They live in
+// cluster_lifecycle_test.go, alongside ResetSuite.
 //
 // Every phase test shares one phaseHarness, so they are ordered and stateful by design.
 // Running a single phase with -run will fail: its predecessors never connected the hosts.
@@ -82,21 +84,12 @@ const (
 // claim, and Test_60_ConfigureEngine drops it before the first phase that touches the engine.
 // So the phases up to and including Test_59 see ten hosts and everything after them sees
 // nine.
+//
+// The suite is one of three walks TestClusterPhases runs against the same cluster, in the
+// only order they work in: this one installs, UpgradePhaseSuite moves the install to a newer
+// package, and ResetSuite takes it off again.
 type ApplyPhaseSuite struct {
-	suite.Suite
-	harness        *phaseHarness
-	ctx            context.Context
-	pkgPath        string
-	kubeconfigPath string
-	prevKubeconfig string
-	hadPrevKube    bool
-	// phaseFailed short-circuits the remaining steps once one fails. Without it a single
-	// broken phase reports as twenty failures and buries the one that matters.
-	phaseFailed bool
-}
-
-func TestApplyPhases(t *testing.T) {
-	suite.Run(t, new(ApplyPhaseSuite))
+	phaseWalk
 }
 
 func (s *ApplyPhaseSuite) SetupSuite() {
@@ -112,40 +105,12 @@ func (s *ApplyPhaseSuite) SetupSuite() {
 
 	config.CLIArch = e2e.Arch
 	config.CommonOptions.TempDirectory = os.TempDir()
-
-	s.prevKubeconfig, s.hadPrevKube = os.LookupEnv("KUBECONFIG")
-	s.kubeconfigPath = filepath.Join(t.TempDir(), "config")
-	s.Require().NoError(os.Setenv("KUBECONFIG", s.kubeconfigPath))
 }
 
 func (s *ApplyPhaseSuite) TearDownSuite() {
 	if s.harness != nil {
 		s.NoError(s.harness.close(s.ctx))
 	}
-	if s.hadPrevKube {
-		s.NoError(os.Setenv("KUBECONFIG", s.prevKubeconfig))
-		return
-	}
-	s.NoError(os.Unsetenv("KUBECONFIG"))
-}
-
-func (s *ApplyPhaseSuite) SetupTest() {
-	if s.phaseFailed {
-		s.T().Skip("skipping: an earlier step in the apply order failed")
-	}
-	s.T().Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
-}
-
-func (s *ApplyPhaseSuite) TearDownTest() {
-	if s.T().Failed() {
-		s.phaseFailed = true
-	}
-}
-
-// runPhase executes one phase and fails the current test if it errors.
-func (s *ApplyPhaseSuite) runPhase(p phase.Phase) {
-	s.T().Helper()
-	s.Require().NoError(s.harness.run(s.ctx, p), "phase %q failed", p.Title())
 }
 
 // Test_05_Manager builds the manager the phase tests step through, from the same inputs
@@ -165,7 +130,8 @@ func (s *ApplyPhaseSuite) Test_05_Manager() {
 	s.Require().NoError(err)
 	s.harness = harness
 
-	s.Require().Equal("rke2", s.harness.manager.DistroID)
+	s.Require().Equal(distroID, s.harness.manager.DistroID)
+	s.Require().Equal(installedVersion, s.harness.manager.Distro.Spec.Version)
 	s.Require().Len(s.harness.hosts(), inventoryHostCount)
 	s.Require().Len(s.harness.controllers(), clusterControllers)
 	s.Require().Len(s.harness.engineWorkers(), clusterWorkers)

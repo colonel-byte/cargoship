@@ -2,6 +2,8 @@
 
 The cluster suite in `src/test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `src/pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
 
+One top-level test, `TestClusterPhases`, runs three walks against the same cluster in the order they work in: `apply` installs the distro, `upgrade` walks the same phases again with a newer package, and `reset` takes the distro back off. A new phase needs a test in the apply walk, and usually one in the upgrade walk too -- see [Adding the upgrade half](#adding-the-upgrade-half).
+
 For why the suite is built this way, see [choice-phase-e2e-tests](../agent/choice-phase-e2e-tests.md). For running the e2e suites generally, see [e2e-tests](e2e-tests.md).
 
 ## One number per phase
@@ -15,7 +17,7 @@ Testify runs suite methods in lexicographic order of the method name, so the num
 
 That order matches apply's everywhere except the lock. Apply takes the lock third, right after OS detection, and holds it for the whole run; `phase/91_lock.go`'s number puts it after the install instead, with `phase/92_unlock.go` right behind it. The lock test still asserts what the phase writes on each host. What it no longer does is hold the lock across the phases in between, so a phase that misbehaves while the cluster is locked is not something this suite would see.
 
-Steps that are not phases -- creating the package, `prepare`, the health check, `reset` -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` through `Test_ZZ4` sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`. Those steps run whole actions rather than single phases -- `distro.Create`, `action.NewPrepare`, `action.NewApply`, `action.NewReset`, `action.NewKubeConfig` -- each with its own manager, and are given `e2e.ClusterConfigPath`, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.
+Steps that are not phases -- creating the package, `prepare`, the health check -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` onwards sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`, alongside `ResetSuite`, which is the whole of the `reset` walk. Those steps run whole actions rather than single phases -- `distro.Create`, `action.NewPrepare`, `action.NewApply`, `action.NewReset`, `action.NewKubeConfig` -- each with its own manager, and are given `e2e.ClusterConfigPath`, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.
 
 ## Adding a phase
 
@@ -124,6 +126,55 @@ This matters when adding a phase:
 
 `s.harness.engineWorkers()` exists for the one case where order is not obvious: a test that runs before the drop but is only meaningful for hosts that join.
 
+## Adding the upgrade half
+
+`UpgradePhaseSuite` walks the same phase list a second time, against the cluster the apply walk installed, with a package one patch release newer. It is what covers the code inside `phase/66_upgrade_controller.go` and `phase/67_upgrade_worker.go`: on a fresh install those phases claim no hosts, so the apply walk can only ever assert that they did nothing.
+
+It starts at `Test_12_GatherFactsDistro`. Connect, DetectOS, GatherFacts and ValidateHosts run as a single `Test_01_Reconnect` step, because the apply walk already asserts them one at a time and they behave identically the second time round. The lock phases are left out for the same reason.
+
+So a new phase needs an upgrade test if it is numbered `12` or higher. Which kind depends on what it does the second time:
+
+*   **The phase does the same thing either way** -- an upload phase, a config render, anything that does not read the installed version. Move the body to an unexported method on `phaseWalk` and give each suite a one-line `Test_NN` method calling it. `50_uploadfiles_test.go` is the worked example. Testify collects methods by their `Test` prefix, so the shared method is called, not run as a test of its own. Start the shared body with `s.T().Helper()`.
+
+*   **The phase behaves differently** -- anything gated on the version the hosts report. Write two methods with the same name, one per suite, in the same file. `61_initialize_controller_test.go` is the worked example: the apply walk requires `ran(p)`, the upgrade walk requires `!ran(p)`, and each says in its comment why.
+
+```go
+// Test_NN_YourPhase, on the upgrade walk, <what is different and why>.
+func (s *UpgradePhaseSuite) Test_NN_YourPhase() {
+	p := &phase.YourPhase{Distro: s.harness.distro}
+	s.runPhase(p)
+	s.Require().False(ran(p), "<the routing this proves>")
+}
+```
+
+Two things the upgrade tests use that the apply ones do not:
+
+| | |
+|---|---|
+| `installedVersion` | the version the apply walk put on the cluster, so what a host should report *before* the upgrade phase runs |
+| `s.harness.manager.Distro.Spec.Version` | the version the upgrade package carries, so what it should report after |
+| `s.harness.engineHosts()` | every host that runs the engine, so `hosts()` minus the upload-only ones -- the upload-only host still reports `phase.UnknownVersion` |
+| `s.requireSchedulable(hosts)` | asserts each host's node is registered and not left cordoned, which is what the drain/uncordon half of an upgrade has to leave behind |
+
+Assert version routing by calling the phases' own comparison rather than comparing strings:
+
+```go
+compare := &phase.GenericPhase{}
+s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version))
+```
+
+`VersionLess` reads no manager state, so a zero-valued phase is enough, and using it means the test cannot disagree with the routing it is asserting.
+
+### Running it
+
+The upgrade walk is off unless `CARGOSHIP_E2E_UPGRADE` is set. It installs a second complete set of engine images onto all nine nodes, which roughly doubles the disk the run needs and adds tens of minutes.
+
+```console
+$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=165m ./src/test/e2e/cluster/...
+```
+
+Without it, `TestClusterPhases/upgrade` skips with a message naming the variable, and the reset walk runs against the installed cluster as before.
+
 ## Prerequisites and running it
 
 The suite needs Docker and a real distro package, and it is not fast: it provisions ten containers and installs rke2 onto nine of them. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
@@ -135,14 +186,17 @@ $ go test -mod=vendor -count=1 -v -timeout=60m ./src/test/e2e/cluster/...
 Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:
 
 ```console
-$ mage test:endToEndCluster
+$ mage test:endToEndCluster           # install and reset
+$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in between
 ```
 
-`-short` skips the whole suite. `TestMain` deletes the bootloose cluster on the way out even when tests fail.
+`-short` skips the whole suite, and `CARGOSHIP_E2E_UPGRADE` adds the upgrade walk. `TestMain` deletes the bootloose cluster on the way out even when tests fail.
 
 ### In CI
 
 `.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions ten containers and installs rke2 onto nine of them, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `src/pkg/phase`, `src/pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
+
+The upgrade walk is a second opt-in on top of that: the `upgrade` input when dispatching by hand, or the `e2e-cluster-upgrade` label on a pull request. Either one implies the install walk, sets `CARGOSHIP_E2E_UPGRADE` for the job and raises its budget from 90 to 180 minutes. Use it on a PR that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.
 
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare, apply, reset and kube-config steps call the matching `action.New*` entry points. That is what makes the two workflows independent, which is the point of the split.
 
@@ -150,7 +204,7 @@ The job frees disk before it starts, because nine containerd image stores do not
 
 ## Things that will cost you time
 
-*   **You cannot run one phase test on its own.** `-run 'TestApplyPhases/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
+*   **You cannot run one phase test on its own.** `-run 'TestClusterPhases/apply/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
 *   **The first failure stops the rest.** `SetupTest` skips every remaining step once one has failed, so the output names one phase rather than twenty-five. If the first failure looks like a symptom, it is the cause -- everything after it was skipped, not passed.
 *   **Constants the phase package keeps unexported.** Where a path is not exported, the test file redeclares it with a comment saying where it came from (`uploadManifestPath` in `50_uploadfiles_test.go`, `sysctlConfPath` in `20_prepare_host_test.go`). Prefer exporting from `phase` when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.
 *   **Ten containers is a lot of memory.** Nine of them each run an rke2 node, which is the reason this suite is not part of the default `go test ./...` path.

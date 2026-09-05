@@ -18,7 +18,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
 
-// Test_59_BINUploadFiles covers phase/59_bin_install.go, the catch-all upload phase for a
+// binUploadFiles covers phase/59_bin_install.go, the catch-all upload phase for a
 // distro that ships neither RPMs nor debs -- which is how rke2 installs. It stages the
 // engine and hands each host the install hook the initialize phases later call, so the
 // assertion is that every host came out of it with a hook and with its staged files present.
@@ -27,7 +27,11 @@ import (
 // inventory: an Alpine host belongs to neither the Enterprise Linux nor the Debian family, so
 // it is the one host this phase claims as the path it is rather than as a fallback for a host
 // the RPM and APT phases declined. The next phase drops those hosts.
-func (s *ApplyPhaseSuite) Test_59_BINUploadFiles() {
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
+func (s *phaseWalk) binUploadFiles() {
+	s.T().Helper()
+
 	s.runPhase(&phase.BINUploadFiles{Distro: s.harness.distro})
 
 	uploadOnly := s.harness.uploadOnly()
@@ -52,4 +56,15 @@ func (s *ApplyPhaseSuite) Test_59_BINUploadFiles() {
 				"%s: manifest claims %s but it is not on the host", host, path)
 		}
 	}
+}
+
+// Test_59_BINUploadFiles stages the engine and the install hook the initialize phases call.
+func (s *ApplyPhaseSuite) Test_59_BINUploadFiles() {
+	s.binUploadFiles()
+}
+
+// Test_59_BINUploadFiles stages the newer engine and replaces the install hook, which is the
+// hook the upgrade phases run rather than the initialize ones.
+func (s *UpgradePhaseSuite) Test_59_BINUploadFiles() {
+	s.binUploadFiles()
 }

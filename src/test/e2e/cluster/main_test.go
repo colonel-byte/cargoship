@@ -25,6 +25,7 @@ import (
 	blcluster "github.com/k0sproject/bootloose/pkg/cluster"
 	"github.com/k0sproject/bootloose/pkg/config"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 // The cluster deliberately runs three OS families. Several apply phases route on the family --
@@ -132,7 +133,30 @@ var (
 	// whole-action steps run prepare, apply and reset, which would try to install the engine
 	// on a host that cannot run it.
 	fullClusterConfigPath string //nolint:gochecknoglobals
+
+	// kubeconfigPath is the file KUBECONFIG points at for the whole run. TestMain owns it
+	// rather than a suite, because the suites hand the cluster to each other: the apply walk
+	// writes it, the upgrade walk rewrites it, and the reset walk asserts it survives a
+	// teardown that can no longer reach a controller.
+	kubeconfigPath string //nolint:gochecknoglobals
 )
+
+// TestClusterPhases runs the three walks in the only order they work in. The apply walk
+// installs the distro on the shared bootloose cluster, the upgrade walk moves that cluster to
+// a newer package, and the reset walk takes the distro back off. They share one cluster and
+// one kubeconfig, so they are subtests of one parent rather than three top-level tests whose
+// order would depend on declaration order.
+func TestClusterPhases(t *testing.T) {
+	if !t.Run("apply", func(t *testing.T) { suite.Run(t, new(ApplyPhaseSuite)) }) {
+		t.Log("apply failed: the upgrade and reset walks both need the cluster it installs")
+		return
+	}
+
+	// The reset walk runs whatever the upgrade did. A half-upgraded cluster is still a cluster
+	// reset has to be able to tear down, and TestMain deletes the containers either way.
+	t.Run("upgrade", func(t *testing.T) { suite.Run(t, new(UpgradePhaseSuite)) })
+	t.Run("reset", func(t *testing.T) { suite.Run(t, new(ResetSuite)) })
+}
 
 func TestMain(m *testing.M) {
 	var err error
@@ -143,7 +167,20 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	kubeDir, err := os.MkdirTemp("", "cargoship-e2e-kube")
+	if err != nil {
+		log.Fatal(err)
+	}
+	kubeconfigPath = filepath.Join(kubeDir, "config")
+	if err := os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
+		log.Fatal(err)
+	}
+
 	code := m.Run()
+
+	if err := os.RemoveAll(kubeDir); err != nil {
+		log.Print(err)
+	}
 
 	if testCluster != nil {
 		if err := shutdown(testCluster); err != nil {

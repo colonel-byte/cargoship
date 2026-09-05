@@ -25,12 +25,16 @@ import (
 // nodeRoleLabel is the label prefix phase/81_label_nodes.go adds each host's profile under.
 const nodeRoleLabel = "node-role.kubernetes.io/"
 
-// Test_81_LabelNodes covers phase/81_label_nodes.go. It reads each host's profile from the
+// labelNodes covers phase/81_label_nodes.go. It reads each host's profile from the
 // inventory and marks the matching Kubernetes node with it, so the assertion goes through
 // the API server: every host that declares a profile has a node carrying that label set to
 // "true". The generated inventory gives each host a profile matching its role, so this is
 // the controller/worker split as the cluster sees it.
-func (s *ApplyPhaseSuite) Test_81_LabelNodes() {
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
+func (s *phaseWalk) labelNodes() {
+	s.T().Helper()
+
 	p := &phase.LabelNodes{Enabled: s.harness.opts.UpdateKubeConfig && s.harness.opts.LabelNodes}
 	s.runPhase(p)
 	s.Require().Equal(s.harness.opts.UpdateKubeConfig && s.harness.opts.LabelNodes, ran(p),
@@ -60,4 +64,15 @@ func (s *ApplyPhaseSuite) Test_81_LabelNodes() {
 		s.Require().Equalf("true", labels[name][nodeRoleLabel+host.Profile],
 			"%s: node is not labelled %s", host, nodeRoleLabel+host.Profile)
 	}
+}
+
+// Test_81_LabelNodes marks each node with the profile the inventory gave its host.
+func (s *ApplyPhaseSuite) Test_81_LabelNodes() {
+	s.labelNodes()
+}
+
+// Test_81_LabelNodes re-applies the labels, which is also a check that every node is still
+// registered with the API server after being drained and restarted.
+func (s *UpgradePhaseSuite) Test_81_LabelNodes() {
+	s.labelNodes()
 }

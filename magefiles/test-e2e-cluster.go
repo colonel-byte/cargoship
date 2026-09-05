@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/magefile/mage/sh"
@@ -32,6 +33,20 @@ func (Test) EndToEndCluster() error {
 		return err
 	}
 	return runE2ENoBuild("1h", "github.com/colonel-byte/cargoship/src/test/e2e/cluster/...")
+}
+
+// EndToEndClusterUpgrade runs the same group with the upgrade walk turned on, which installs
+// the example distro and then upgrades the cluster to the next patch release one phase at a
+// time. It roughly doubles the disk and the runtime of EndToEndCluster, which is why it is a
+// separate target rather than the default.
+func (Test) EndToEndClusterUpgrade() error {
+	if err := stopBootlooseContainers(); err != nil {
+		return err
+	}
+	if err := os.Setenv("CARGOSHIP_E2E_UPGRADE", "1"); err != nil {
+		return err
+	}
+	return runE2ENoBuild("3h", "github.com/colonel-byte/cargoship/src/test/e2e/cluster/...")
 }
 
 // stopBootlooseContainers force-removes any leftover bootloose-managed containers (e.g. from

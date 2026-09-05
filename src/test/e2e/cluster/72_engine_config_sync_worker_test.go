@@ -18,10 +18,14 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
 
-// Test_72_EngineConfigSyncWorker covers phase/72_engine_config_sync_worker.go, the worker
+// engineConfigSyncWorker covers phase/72_engine_config_sync_worker.go, the worker
 // half of the drift check. As with the controller half, a cluster this suite just configured
 // has nothing to sync.
-func (s *ApplyPhaseSuite) Test_72_EngineConfigSyncWorker() {
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
+func (s *phaseWalk) engineConfigSyncWorker() {
+	s.T().Helper()
+
 	p := &phase.EngineConfigSyncWorker{
 		EngineConfigSyncHosts: phase.EngineConfigSyncHosts{Distro: s.harness.distro},
 		WorkerConcurrent:      s.harness.opts.WorkerConcurrent,
@@ -34,4 +38,14 @@ func (s *ApplyPhaseSuite) Test_72_EngineConfigSyncWorker() {
 		s.Require().Truef(host.Configurer.ServiceIsRunning(host, service),
 			"%s: %s stopped running", host, service)
 	}
+}
+
+// Test_72_EngineConfigSyncWorker checks the worker half after the install.
+func (s *ApplyPhaseSuite) Test_72_EngineConfigSyncWorker() {
+	s.engineConfigSyncWorker()
+}
+
+// Test_72_EngineConfigSyncWorker checks the worker half after the upgrade.
+func (s *UpgradePhaseSuite) Test_72_EngineConfigSyncWorker() {
+	s.engineConfigSyncWorker()
 }

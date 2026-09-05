@@ -20,11 +20,15 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 )
 
-// Test_58_APTUploadFiles covers phase/58_apt_install.go, the mirror of the RPM phase for the
+// aptUploadFiles covers phase/58_apt_install.go, the mirror of the RPM phase for the
 // Debian side of the cluster: it claims the Ubuntu replicas and must leave the Fedora ones
 // untouched. As with RPM, an rke2 package carries no .deb, so the phase is expected to record
 // nothing -- what it must never do is drop what phase/50 already staged.
-func (s *ApplyPhaseSuite) Test_58_APTUploadFiles() {
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
+func (s *phaseWalk) aptUploadFiles() {
+	s.T().Helper()
+
 	debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 	s.Require().NotEmpty(debian,
 		"no Debian host in the cluster, the APT phase would be untested")
@@ -51,4 +55,14 @@ func (s *ApplyPhaseSuite) Test_58_APTUploadFiles() {
 		s.Require().Subsetf(after, before[host.String()],
 			"%s: the APT phase dropped files an earlier upload phase staged", host)
 	}
+}
+
+// Test_58_APTUploadFiles routes the install's APT uploads.
+func (s *ApplyPhaseSuite) Test_58_APTUploadFiles() {
+	s.aptUploadFiles()
+}
+
+// Test_58_APTUploadFiles routes the upgrade's APT uploads, on the same split.
+func (s *UpgradePhaseSuite) Test_58_APTUploadFiles() {
+	s.aptUploadFiles()
 }

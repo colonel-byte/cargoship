@@ -6,7 +6,7 @@ The `noncluster` e2e suite drives the **built `cargoship` binary** as a subproce
 
 ```
 src/test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
-src/test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), walked one apply phase at a time
+src/test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), walked one phase at a time -- install, optionally upgrade, then reset
 src/test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 src/test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
 src/test/registry.go       in-process OCI registry used by the publish/pull/sign tests
