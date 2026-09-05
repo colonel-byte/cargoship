@@ -49,3 +49,9 @@ func (s *ApplyPhaseSuite) Test_72_EngineConfigSyncWorker() {
 func (s *UpgradePhaseSuite) Test_72_EngineConfigSyncWorker() {
 	s.engineConfigSyncWorker()
 }
+
+// Test_72_EngineConfigSyncWorker checks the worker half after the join, now that the joined
+// worker is one of the workers it walks.
+func (s *JoinPhaseSuite) Test_72_EngineConfigSyncWorker() {
+	s.engineConfigSyncWorker()
+}

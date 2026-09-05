@@ -127,11 +127,11 @@ func (s *ApplyPhaseSuite) newManager(configPath string) (*phase.Manager, func())
 }
 
 // ResetSuite tears the distro back off the nodes and confirms what that leaves behind. It is
-// the last of the three walks TestClusterPhases runs, and the only place reset runs, because
+// the last of the four walks TestClusterPhases runs, and the only place reset runs, because
 // every other cluster test depends on the install still being there.
 //
-// It is its own suite rather than two more Test_ZZ methods on ApplyPhaseSuite so that the
-// upgrade walk can run in between. Neither step loads a package -- reset and kube-config both
+// It is its own suite rather than two more Test_ZZ methods on ApplyPhaseSuite so that the join
+// and upgrade walks can run in between. Neither step loads a package -- reset and kube-config both
 // build a bare manager -- so it needs no harness and no package path, only the distro ID.
 type ResetSuite struct {
 	suite.Suite

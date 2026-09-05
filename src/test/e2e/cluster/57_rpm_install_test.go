@@ -68,3 +68,9 @@ func (s *ApplyPhaseSuite) Test_57_RPMUploadFiles() {
 func (s *UpgradePhaseSuite) Test_57_RPMUploadFiles() {
 	s.rpmUploadFiles()
 }
+
+// Test_57_RPMUploadFiles routes the join's RPM uploads. The machine being joined is a Fedora
+// worker, so it is on the claimed side of the split rather than the untouched one.
+func (s *JoinPhaseSuite) Test_57_RPMUploadFiles() {
+	s.rpmUploadFiles()
+}

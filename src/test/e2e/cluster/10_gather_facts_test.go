@@ -20,10 +20,14 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
 
-// Test_10_GatherFacts covers phase/10_gather_facts.go. It fills in the host metadata the
+// gatherFacts covers phase/10_gather_facts.go. It fills in the host metadata the
 // later phases key off -- hostname, architecture, private address -- so the assertion is
 // that every host came back with all three and that they match what bootloose provisioned.
-func (s *ApplyPhaseSuite) Test_10_GatherFacts() {
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
+func (s *phaseWalk) gatherFacts() {
+	s.T().Helper()
+
 	s.runPhase(&phase.GatherFacts{})
 
 	for _, host := range s.harness.hosts() {
@@ -38,4 +42,14 @@ func (s *ApplyPhaseSuite) Test_10_GatherFacts() {
 			"%s: private address %q is not an IP", host, host.PrivateAddress)
 		s.Require().NotEmptyf(host.PrivateInterface, "%s: no private interface discovered", host)
 	}
+}
+
+func (s *ApplyPhaseSuite) Test_10_GatherFacts() {
+	s.gatherFacts()
+}
+
+// Test_10_GatherFacts discovers the new node's address, which every later phase writes into
+// the other nodes' host files and firewalls.
+func (s *JoinPhaseSuite) Test_10_GatherFacts() {
+	s.gatherFacts()
 }

@@ -66,3 +66,9 @@ func (s *ApplyPhaseSuite) Test_58_APTUploadFiles() {
 func (s *UpgradePhaseSuite) Test_58_APTUploadFiles() {
 	s.aptUploadFiles()
 }
+
+// Test_58_APTUploadFiles routes the join's APT uploads, on the same split: the joining machine
+// runs Fedora, so this phase has to leave it alone.
+func (s *JoinPhaseSuite) Test_58_APTUploadFiles() {
+	s.aptUploadFiles()
+}

@@ -24,10 +24,14 @@ import (
 // sysctlConfPath is where phase/20_prepare_host.go renders the distro's sysctl settings.
 const sysctlConfPath = "/etc/sysctl.d/99-cargoship.conf"
 
-// Test_20_PrepareHosts covers phase/20_prepare_host.go. It pushes the distro's environment
+// prepareHosts covers phase/20_prepare_host.go. It pushes the distro's environment
 // and sysctl settings onto each node, so the assertion is that the rendered file is on every
 // host and that the kernel is actually running the values it names, not just storing them.
-func (s *ApplyPhaseSuite) Test_20_PrepareHosts() {
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
+func (s *phaseWalk) prepareHosts() {
+	s.T().Helper()
+
 	s.runPhase(&phase.PrepareHosts{})
 
 	sysctls := s.harness.manager.Distro.Spec.Config.OS.Sysctl
@@ -49,4 +53,13 @@ func (s *ApplyPhaseSuite) Test_20_PrepareHosts() {
 				"%s: sysctl %s was written but not applied", host, key)
 		}
 	}
+}
+
+func (s *ApplyPhaseSuite) Test_20_PrepareHosts() {
+	s.prepareHosts()
+}
+
+// Test_20_PrepareHosts applies the kernel settings to the new node.
+func (s *JoinPhaseSuite) Test_20_PrepareHosts() {
+	s.prepareHosts()
 }

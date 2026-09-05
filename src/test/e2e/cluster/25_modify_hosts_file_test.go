@@ -27,11 +27,15 @@ const hostsFilePath = "/etc/hosts"
 // can tell cargoship's lines from the ones the image shipped with.
 const hostsFileComment = "added by cargoship"
 
-// Test_25_ModifyHosts covers phase/25_modify_hosts_file.go. The phase makes every node
+// modifyHosts covers phase/25_modify_hosts_file.go. The phase makes every node
 // resolve every other node by name, so the assertion is the full matrix: each host's
 // /etc/hosts carries an entry for each host in the cluster, tagged with cargoship's comment,
 // and the name actually resolves on the node.
-func (s *ApplyPhaseSuite) Test_25_ModifyHosts() {
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
+func (s *phaseWalk) modifyHosts() {
+	s.T().Helper()
+
 	p := &phase.ModifyHosts{Enabled: s.harness.opts.ModifyHosts}
 	s.runPhase(p)
 	s.Require().Equal(s.harness.opts.ModifyHosts, ran(p), "phase did not follow its enabled flag")
@@ -67,4 +71,15 @@ func (s *ApplyPhaseSuite) Test_25_ModifyHosts() {
 				"%s: resolved %s to something other than %s", host, peer, peer.PrivateAddress)
 		}
 	}
+}
+
+func (s *ApplyPhaseSuite) Test_25_ModifyHosts() {
+	s.modifyHosts()
+}
+
+// Test_25_ModifyHosts is one of the two assertions that the cluster learned about the new node
+// rather than only the new node learning about the cluster: the matrix is over every host, so
+// every established node has to resolve the new one before this passes.
+func (s *JoinPhaseSuite) Test_25_ModifyHosts() {
+	s.modifyHosts()
 }

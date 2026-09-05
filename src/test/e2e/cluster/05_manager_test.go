@@ -85,9 +85,10 @@ const (
 // So the phases up to and including Test_59 see ten hosts and everything after them sees
 // nine.
 //
-// The suite is one of three walks TestClusterPhases runs against the same cluster, in the
-// only order they work in: this one installs, UpgradePhaseSuite moves the install to a newer
-// package, and ResetSuite takes it off again.
+// The suite is one of four walks TestClusterPhases runs against the same cluster, in the only
+// order they work in: this one installs, JoinPhaseSuite adds a machine to what it installed,
+// UpgradePhaseSuite moves the whole cluster to a newer package, and ResetSuite takes it off
+// again.
 type ApplyPhaseSuite struct {
 	phaseWalk
 }

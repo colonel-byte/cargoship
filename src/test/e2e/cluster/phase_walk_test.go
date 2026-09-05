@@ -24,17 +24,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// phaseWalk is what ApplyPhaseSuite and UpgradePhaseSuite have in common: one harness, one
-// context, and the rule that the first failure stops the rest. Both walk the same phase list
-// against the same cluster, one phase at a time, asserting what each phase left on the hosts.
+// phaseWalk is what ApplyPhaseSuite, JoinPhaseSuite and UpgradePhaseSuite have in common: one
+// harness, one context, and the rule that the first failure stops the rest. Each walks the same
+// phase list against the same cluster, one phase at a time, asserting what each phase left on
+// the hosts.
 //
-// It also carries the assertions the two walks share. A phase whose observable result is the
-// same whether it is installing or upgrading -- the upload phases, the engine config, the
-// kubeconfig -- has its body here as an unexported method, and each suite's Test_NN method is
-// a one-line call to it. Testify only collects methods whose name begins with "Test", so a
-// method here is shared rather than run twice.
+// It also carries the assertions the walks share. A phase whose observable result is the same
+// whether it is installing, joining a node or upgrading -- the upload phases, the engine
+// config, the kubeconfig -- has its body here as an unexported method, and each suite's Test_NN
+// method is a one-line call to it. Testify only collects methods whose name begins with "Test",
+// so a method here is shared rather than run once per suite that embeds it.
 //
-// Where the two walks differ, they differ for a reason worth reading -- the version the hosts
+// Where the walks differ, they differ for a reason worth reading -- the version the hosts
 // report, which of the initialize and upgrade phases claims them -- and those assertions stay
 // in the suite they belong to.
 type phaseWalk struct {

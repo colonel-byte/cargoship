@@ -18,11 +18,15 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
 
-// Test_22_PrepareFapolicy covers phase/22_prepare_fapolicyd.go. Like the SELinux phase it is
+// prepareFapolicy covers phase/22_prepare_fapolicyd.go. Like the SELinux phase it is
 // gated on what the hosts run: it only fires where fapolicyd is running and the package
 // carries a rule set. The assertion is that the gate matches the hosts, and that the rule
 // file lands where it fires.
-func (s *ApplyPhaseSuite) Test_22_PrepareFapolicy() {
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
+func (s *phaseWalk) prepareFapolicy() {
+	s.T().Helper()
+
 	var fapolicyd int
 	for _, host := range s.harness.hosts() {
 		if host.Configurer.ServiceIsRunning(host, phase.FAPOLICYD) {
@@ -47,4 +51,13 @@ func (s *ApplyPhaseSuite) Test_22_PrepareFapolicy() {
 		s.Require().Truef(host.FileExist(phase.FAPolicydRuleFile),
 			"%s: no rule file at %s", host, phase.FAPolicydRuleFile)
 	}
+}
+
+func (s *ApplyPhaseSuite) Test_22_PrepareFapolicy() {
+	s.prepareFapolicy()
+}
+
+// Test_22_PrepareFapolicy re-checks the fapolicyd gate with the new node in the cluster.
+func (s *JoinPhaseSuite) Test_22_PrepareFapolicy() {
+	s.prepareFapolicy()
 }

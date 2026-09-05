@@ -130,7 +130,10 @@ func (s *UpgradePhaseSuite) Test_00_UpgradePackage() {
 	s.harness = harness
 
 	s.Require().Equal(distroID, s.harness.manager.DistroID)
-	s.Require().Len(s.harness.hosts(), inventoryHostCount)
+	// The join walk ran before this one and left its machine in the inventory, so the count
+	// the upgrade expects is the joined one: an upgrade that saw only the ten hosts the
+	// install saw would leave the node that joined last on the old engine.
+	s.Require().Len(s.harness.hosts(), joinInventoryHostCount)
 	s.Require().NotEqual(installedVersion, s.harness.manager.Distro.Spec.Version,
 		"the upgrade package ships the version the cluster already runs, so nothing would upgrade")
 }
@@ -158,5 +161,5 @@ func (s *UpgradePhaseSuite) Test_ZZ1_ClusterHealthy() {
 	t := s.T()
 	cs, err := e2e.KubeClient(t)
 	s.Require().NoError(err)
-	s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, 5*time.Minute))
+	s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, joinClusterNodeCount, 5*time.Minute))
 }

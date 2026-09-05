@@ -81,3 +81,10 @@ func (s *ApplyPhaseSuite) Test_50_UploadFiles() {
 func (s *UpgradePhaseSuite) Test_50_UploadFiles() {
 	s.uploadFiles()
 }
+
+// Test_50_UploadFiles stages the package on the joining machine, and re-stages it on the nodes
+// that already carry it: apply makes no distinction between a host that has the files and a
+// host that does not, so neither does the join walk.
+func (s *JoinPhaseSuite) Test_50_UploadFiles() {
+	s.uploadFiles()
+}

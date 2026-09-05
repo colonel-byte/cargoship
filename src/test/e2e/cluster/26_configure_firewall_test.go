@@ -27,12 +27,16 @@ var firewallDump = map[string]string{ //nolint:gochecknoglobals
 	firewall.NftablesService:  "nft list ruleset",
 }
 
-// Test_26_ConfigureFirewall covers phase/26_configure_firewall.go. The phase trusts every
+// configureFirewall covers phase/26_configure_firewall.go. The phase trusts every
 // other node in the cluster on whichever firewall the node runs, so the assertion is that
 // each node's own firewall now names every peer's private address. A node running no
 // firewall is not a failure -- the phase is meant to skip it -- so the test asserts the gate
 // matches what the hosts run and stops there when none do.
-func (s *ApplyPhaseSuite) Test_26_ConfigureFirewall() {
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
+func (s *phaseWalk) configureFirewall() {
+	s.T().Helper()
+
 	backends := make(map[string]firewall.Backend, len(s.harness.hosts()))
 	for _, host := range s.harness.hosts() {
 		if b := firewall.For(host); b != nil {
@@ -69,4 +73,14 @@ func (s *ApplyPhaseSuite) Test_26_ConfigureFirewall() {
 				"%s: %s does not trust %s", host, backend.Name(), peer)
 		}
 	}
+}
+
+func (s *ApplyPhaseSuite) Test_26_ConfigureFirewall() {
+	s.configureFirewall()
+}
+
+// Test_26_ConfigureFirewall is the other one: every established node's own firewall dump has to
+// name the new node's address, not just the new node's firewall naming theirs.
+func (s *JoinPhaseSuite) Test_26_ConfigureFirewall() {
+	s.configureFirewall()
 }

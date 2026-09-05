@@ -76,3 +76,9 @@ func (s *ApplyPhaseSuite) Test_81_LabelNodes() {
 func (s *UpgradePhaseSuite) Test_81_LabelNodes() {
 	s.labelNodes()
 }
+
+// Test_81_LabelNodes labels the node that just joined, which is also the first assertion that
+// the API server has registered it at all.
+func (s *JoinPhaseSuite) Test_81_LabelNodes() {
+	s.labelNodes()
+}

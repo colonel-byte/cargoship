@@ -20,9 +20,13 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
 
-// Test_07_Connect covers phase/07_connect.go, the first phase apply runs. Every later phase
+// connect covers phase/07_connect.go, the first phase apply runs. Every later phase
 // test reuses the SSH connections it opens.
-func (s *ApplyPhaseSuite) Test_07_Connect() {
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
+func (s *phaseWalk) connect() {
+	s.T().Helper()
+
 	s.runPhase(&phase.Connect{})
 
 	for _, host := range s.harness.hosts() {
@@ -30,4 +34,13 @@ func (s *ApplyPhaseSuite) Test_07_Connect() {
 		s.Require().NoErrorf(err, "%s: not reachable after the connect phase", host)
 		s.Require().Equal("connected", strings.TrimSpace(out))
 	}
+}
+
+func (s *ApplyPhaseSuite) Test_07_Connect() {
+	s.connect()
+}
+
+// Test_07_Connect opens the connections for the join walk, including the new machine's first.
+func (s *JoinPhaseSuite) Test_07_Connect() {
+	s.connect()
 }

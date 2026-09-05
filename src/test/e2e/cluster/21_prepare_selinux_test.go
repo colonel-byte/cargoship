@@ -18,12 +18,16 @@ import (
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
 
-// Test_21_PrepareSelinux covers phase/21_prepare_selinux.go. The phase only runs on hosts
+// prepareSelinux covers phase/21_prepare_selinux.go. The phase only runs on hosts
 // reporting SELinux enabled. Whether any do depends on the container runtime rather than on
 // the image -- a Fedora container gets no /sys/fs/selinux of its own unless the host shares
 // one -- so the assertion is that the phase agrees with what the hosts report: skipped when
 // no host has SELinux, and installing container-selinux everywhere when some host does.
-func (s *ApplyPhaseSuite) Test_21_PrepareSelinux() {
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
+func (s *phaseWalk) prepareSelinux() {
+	s.T().Helper()
+
 	var selinux int
 	for _, host := range s.harness.hosts() {
 		if host.Configurer.SELinuxEnabled(host) {
@@ -47,4 +51,13 @@ func (s *ApplyPhaseSuite) Test_21_PrepareSelinux() {
 		s.Require().Truef(host.Configurer.CommandExist(host, "semodule"),
 			"%s: SELinux host did not get the container-selinux tooling", host)
 	}
+}
+
+func (s *ApplyPhaseSuite) Test_21_PrepareSelinux() {
+	s.prepareSelinux()
+}
+
+// Test_21_PrepareSelinux re-checks the SELinux gate with the new node in the cluster.
+func (s *JoinPhaseSuite) Test_21_PrepareSelinux() {
+	s.prepareSelinux()
 }
