@@ -57,13 +57,15 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *
 	if err := p.DeleteCommon.Prepare(ctx, c, d); err != nil {
 		logger.From(ctx).Warn("failed when setting up common logic", "error", err)
 	}
-	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		err := p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
-		if err != nil {
-			return false
-		}
-		return !h.IsController()
-	})
+	if p.leader != nil {
+		p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+			err := p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+			if err != nil {
+				return false
+			}
+			return !h.IsController()
+		})
+	}
 	logger.From(ctx).Debug("number of systems that need to be reset", "hosts", len(p.hosts))
 
 	return nil

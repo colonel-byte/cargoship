@@ -148,6 +148,32 @@ func newManager(
 	return manager, dis, nil
 }
 
+// newBareManager builds the manager reset and kube-config build: an inventory and a distro
+// ID, with no package loaded, because neither action installs anything. It has no temp
+// directory, so there is nothing for the caller to clean up.
+func newBareManager(ctx context.Context, configPath, distroID string, concurrency int) (*phase.Manager, error) {
+	if err := riglogger.RigLogger(ctx); err != nil {
+		return nil, fmt.Errorf("failed to route rig logs: %w", err)
+	}
+
+	inventory, err := load.ClusterDefinition(ctx, configPath, load.ClusterOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cluster inventory %s: %w", configPath, err)
+	}
+
+	if concurrency < 0 {
+		concurrency = 0
+	}
+
+	return &phase.Manager{
+		Config:            &inventory,
+		DistroID:          distroID,
+		Concurrency:       concurrency,
+		ConcurrentUploads: concurrency,
+		Writer:            os.Stdout,
+	}, nil
+}
+
 // distroModule resolves a distro type to the module the phases are built with.
 func distroModule(distroType string) (distrocfg.Distro, error) {
 	builder, err := registry.GetDistroModuleBuilder(distroType)
