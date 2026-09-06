@@ -20,6 +20,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -63,7 +65,33 @@ var (
 			ContainerPort: 22,
 		},
 	}
-	// mixedOS provisions ten machines: a nine-node cluster of three controllers and six
+	// engineData mounts a Docker volume over the engine's data directory on every machine.
+	//
+	// The engine runs its own containerd, whose default snapshotter is overlayfs, and overlayfs
+	// cannot be stacked on itself: given an upperdir that is already on an overlay mount the
+	// kernel refuses with EINVAL. Whether that happens depends on the storage driver of the
+	// Docker running the nodes. With overlay2 -- the default, and what a GitHub hosted runner
+	// uses -- a container's root filesystem is an overlay mount, so containerd's snapshotter
+	// lands on one and the engine never gets past "server is not ready".
+	//
+	// An anonymous volume is not part of that root filesystem. Docker backs it with a directory
+	// on whatever filesystem holds /var/lib/docker, so the snapshotter gets a plain one and
+	// mounts normally. This is the same arrangement kind's node image makes with its VOLUME
+	// declaration, for the same reason.
+	//
+	// The volume is anonymous rather than named on purpose: a named volume would carry one
+	// run's engine state into the next, and every walk here assumes it starts from nodes with
+	// no engine on them. The cost is that the volumes outlive `docker rm -f`, which does not
+	// remove them -- stopBootlooseContainers in magefiles/test-e2e-cluster.go passes -v so a
+	// local run does not accumulate them.
+	engineData = []config.Volume{
+		{
+			Type:        "volume",
+			Destination: "/var/lib/rancher",
+		},
+	}
+	// mixedOS provisions ten machines, and is what a full walk runs against -- a stage-only
+	// run uses stageOS instead. It is a nine-node cluster of three controllers and six
 	// workers with each role split across the Ubuntu and Fedora images, plus one Alpine
 	// machine that receives uploads and never joins. Nine cluster nodes is enough that the
 	// worker concurrency batching in the initialize and upgrade phases runs more than one
@@ -95,6 +123,7 @@ var (
 					Image:        bootUbuntu,
 					Privileged:   true,
 					PortMappings: ports,
+					Volumes:      engineData,
 				},
 			},
 			{
@@ -104,6 +133,7 @@ var (
 					Image:        bootFedora,
 					Privileged:   true,
 					PortMappings: ports,
+					Volumes:      engineData,
 				},
 			},
 			{
@@ -113,6 +143,7 @@ var (
 					Image:        bootUbuntu,
 					Privileged:   true,
 					PortMappings: ports,
+					Volumes:      engineData,
 				},
 			},
 			{
@@ -122,6 +153,7 @@ var (
 					Image:        bootFedora,
 					Privileged:   true,
 					PortMappings: ports,
+					Volumes:      engineData,
 				},
 			},
 			{
@@ -131,11 +163,116 @@ var (
 					Image:        bootAlpine,
 					Privileged:   true,
 					PortMappings: ports,
+					Volumes:      engineData,
 				},
 			},
 		},
 	}
+
+	// stageOS is the inventory a stage-only run provisions instead: one machine per family per
+	// role, and the upload-only Alpine node. It is half the containers of mixedOS and half the
+	// uploads, which is what makes the stage job cheap enough to be worth running on its own.
+	//
+	// Five is the floor rather than three, because the upload phases route on family and role
+	// together -- APTUploadFiles.Prepare filters p.control and p.workers by both -- and the file
+	// list is picked per role. With one machine per family each family has to take a single
+	// role, and the other role's host set for that family is empty, so half the cells the
+	// upload phases branch on go unvisited. That is the axis the bug in phase/55's host
+	// claiming lived on, so it is the one cell a smaller inventory must not lose.
+	//
+	// Nothing else the staging phases do is sensitive to how many machines there are. The
+	// upload batching that mixedOS's ten machines justify is bounded by applyConcurrency, which
+	// is 300, so every host already goes in one batch; and the WorkerConcurrent batching is
+	// only reached in the initialize and upgrade phases, which a stage-only run skips.
+	stageOS = config.Config{
+		Cluster: config.Cluster{
+			Name:       "cargoship-e2e",
+			PrivateKey: "cluster-key",
+		},
+		Machines: []config.MachineReplicas{
+			{Count: 1, Spec: stageMachine(bootKC, bootUbuntu)},
+			{Count: 1, Spec: stageMachine(bootKCF, bootFedora)},
+			{Count: 1, Spec: stageMachine(bootKW, bootUbuntu)},
+			{Count: 1, Spec: stageMachine(bootKWF, bootFedora)},
+			{Count: 1, Spec: stageMachine(bootKWA, bootAlpine)},
+		},
+	}
 )
+
+// stageMachine is one machine of stageOS. Every machine there differs only in its name and its
+// image, and the rest is what mixedOS gives its machines and for the same reasons: see the
+// comments on mixedOS for the privilege, and on engineData for the volume.
+func stageMachine(name, image string) *config.Machine {
+	return &config.Machine{
+		Name:         name,
+		Image:        image,
+		Privileged:   true,
+		PortMappings: ports,
+		Volumes:      engineData,
+	}
+}
+
+// clusterConfig is the inventory this run provisions: the smaller one when the run was asked for
+// the staging phases only, and the full one otherwise.
+func clusterConfig() config.Config {
+	if stageOnly() {
+		return stageOS
+	}
+	return mixedOS
+}
+
+// clusterCounts is how many hosts of each kind a bootloose config produces, split the way the
+// suite asserts on them. Deriving these from the config rather than writing them down twice is
+// what lets the same assertions hold against either inventory.
+type clusterCounts struct {
+	inventory   int
+	uploadOnly  int
+	controllers int
+	// workers counts the hosts that run the engine, so it leaves out the upload-only machines
+	// even though renderClusterInventory gives them the worker role.
+	workers int
+}
+
+// countsFor reads those counts off a bootloose config, by the same name prefixes
+// renderClusterInventory maps to roles. The upload-only prefix is tested first because it
+// begins with the worker prefix.
+func countsFor(cfg config.Config) clusterCounts {
+	var c clusterCounts
+	for _, m := range cfg.Machines {
+		c.inventory += m.Count
+		switch {
+		case strings.HasPrefix(m.Spec.Name, uploadOnlyPrefix):
+			c.uploadOnly += m.Count
+		case strings.HasPrefix(m.Spec.Name, "kc"):
+			c.controllers += m.Count
+		case strings.HasPrefix(m.Spec.Name, "kw"):
+			c.workers += m.Count
+		}
+	}
+	return c
+}
+
+// stageOnlyEnvVar stops the run at the boundary phase/60 draws. The phases up to and including
+// it stage files and render the engine config onto the nodes without starting anything; every
+// phase after it installs, starts or queries the engine. It is off by default, so a local run
+// walks everything.
+//
+// The two halves are worth separating because they cost different amounts and depend on
+// different things. The staging half finishes in about three minutes and asks nothing of the
+// machine beyond Docker. The engine half brings up a nine-node rke2 cluster, which wants more
+// CPU than a hosted runner has, and needs a container runtime nested inside the node
+// containers -- see engineData for what that costs. Turning this on is how a runner that
+// cannot give the engine half what it needs still covers the phases that do not need it.
+//
+// The walk does not reach those phases yet, so for now setting this selects stageOS and nothing
+// else. The per-phase skip arrives with the phases it skips.
+const stageOnlyEnvVar = "CARGOSHIP_E2E_STAGE_ONLY"
+
+// stageOnly reports whether the run was asked to stop before the engine phases.
+func stageOnly() bool {
+	on, err := strconv.ParseBool(os.Getenv(stageOnlyEnvVar))
+	return err == nil && on
+}
 
 var (
 	// rootDir is the repo root, which TestMain chdirs into before running any test.
@@ -188,7 +325,7 @@ func requireCluster(t *testing.T) {
 	t.Helper()
 
 	clusterOnce.Do(func() {
-		testCluster, testClusterErr = setup(mixedOS)
+		testCluster, testClusterErr = setup(clusterConfig())
 		if testClusterErr != nil {
 			return
 		}
@@ -207,7 +344,7 @@ func requireCluster(t *testing.T) {
 // reads: the full one the phase harness is built from, and the engine-only one the CLI-driven
 // steps are given.
 func writeInventories(c *blcluster.Cluster) error {
-	keyPath, err := filepath.Abs(mixedOS.Cluster.PrivateKey)
+	keyPath, err := filepath.Abs(clusterConfig().Cluster.PrivateKey)
 	if err != nil {
 		return err
 	}

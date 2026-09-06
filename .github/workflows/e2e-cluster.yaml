@@ -12,6 +12,14 @@ name: E2E cluster
 # "e2e-cluster" label. Add that label to a pull request that touches src/pkg/phase,
 # src/pkg/action or the inventory handling. The trigger lists "labeled" explicitly: without
 # it, adding the label to an open pull request would not start a run until the next push.
+#
+# There are two jobs behind that trigger, and they run the same suite against different
+# inventories. e2e-cluster-stage provisions five machines and asks for the staging phases only;
+# e2e-cluster provisions ten and walks everything. The first takes minutes and the second takes
+# tens of them, which is the whole reason they are separate -- see
+# docs/agent/choice-e2e-stage-split.md. Both are label gated for now. The intent is to drop the
+# gate on the stage job once a few runs show what it costs and how reliable it is, so that the
+# phases it does cover run on every pull request.
 on:
   workflow_dispatch:
   pull_request:
@@ -38,10 +46,78 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # One job, and no build step: the suite calls the cargoship packages directly -- distro.Create
-  # to build the package and action.NewPrepare around the phase walk -- so there is no binary
-  # for this workflow to produce or download. That is what makes it independent of e2e.yaml,
-  # which is the point of the split.
+  # The staging half of the suite, over the five-machine inventory: it uploads the package and
+  # renders the engine config without starting an engine anywhere. No build step -- the suite
+  # calls the cargoship packages directly, distro.Create to build the package and
+  # action.NewPrepare around the phase walk, so there is no binary for this workflow to produce
+  # or download. That is what makes it independent of e2e.yaml, which is the point of the split.
+  e2e-cluster-stage:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e-cluster')
+    runs-on: ubuntu-latest
+    # Half the machines and half the uploads of the full job, and it starts no engine, so this
+    # wants a fraction of the budget. The suite's own timeout is below it for the same reason as
+    # in the full job.
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Half the nodes of the full job, but the package is the same size and every node still
+      # receives it, so the disk this frees is needed here too.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Test
+        run: >-
+          go test -mod=vendor -count=1 -v -timeout=25m
+          ./src/test/e2e/cluster/...
+        env:
+          # Provision the five-machine inventory and stop before the engine phases. See
+          # stageOnlyEnvVar in src/test/e2e/cluster/main_test.go.
+          CARGOSHIP_E2E_STAGE_ONLY: "1"
+          # Everything the test build needs is vendored, so make any accidental network
+          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          CGO_ENABLED: 0
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      # Same reasoning as the full job's diagnostics step below.
+      - name: Collect node diagnostics
+        if: failure()
+        run: |
+          df -h /
+          free -h
+          docker ps -a
+          for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
+            name=$(docker inspect -f '{{.Name}}' "$c")
+            echo "::group::$name"
+            docker logs --tail 200 "$c" 2>&1 || true
+            echo "::endgroup::"
+          done
+
+      - name: Remove leftover bootloose containers
+        if: always()
+        run: |
+          ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
+          if [ -n "$ids" ]; then
+            docker rm -fv $ids
+          fi
+
+  # The full walk, over the ten-machine inventory. No build step here either, and for the same
+  # reason as the stage job above.
   e2e-cluster:
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -107,11 +183,12 @@ jobs:
 
       # TestMain deletes the cluster even when tests fail, but not when the job is cancelled
       # or the test binary is killed, and a hosted runner is discarded anyway -- this is here
-      # so the same workflow behaves on a self-hosted runner, where it is not.
+      # so the same workflow behaves on a self-hosted runner, where it is not. The -v is what
+      # takes the anonymous volumes with the containers; see engineData.
       - name: Remove leftover bootloose containers
         if: always()
         run: |
           ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
           if [ -n "$ids" ]; then
-            docker rm -f $ids
+            docker rm -fv $ids
           fi
