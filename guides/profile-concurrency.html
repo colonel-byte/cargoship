@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-95fa432b.js";
+            window.path_to_searchindex_js = "../searchindex-c33d309e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-b3da4eb0.js"></script>
+        <script src="../toc-9a34b427.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,26 +183,16 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="per-profile-update-concurrency"><a class="header" href="#per-profile-update-concurrency">Per-Profile Update Concurrency</a></h1>
-<p>This guide explains why a cluster admin may want to set a different concurrency limit per node
-profile, and how to configure it.</p>
+<p>This guide explains why a cluster admin may want to set a different concurrency limit per node profile, and how to configure it.</p>
 <h2 id="the-problem-with-one-global-concurrency-limit"><a class="header" href="#the-problem-with-one-global-concurrency-limit">The problem with one global concurrency limit</a></h2>
-<p><code>-c/--concurrency</code> and <code>-w/--work-concurrency</code> cap how many hosts, or how many workers, Cargoship
-touches at once, but that limit applies flat across the whole cluster. A cluster is rarely
-uniform, though. It often mixes roles with very different blast radii if something goes wrong
-mid-update:</p>
+<p><code>-c/--concurrency</code> and <code>-w/--work-concurrency</code> cap how many hosts, or how many workers, Cargoship touches at once, but that limit applies flat across the whole cluster. A cluster is rarely uniform, though. It often mixes roles with very different blast radii if something goes wrong mid-update:</p>
 <ul>
-<li><strong>Infra nodes</strong> may run stateful services, ingress, or storage where taking more than one down
-at a time risks an outage or data unavailability.</li>
-<li><strong>General worker nodes</strong> may be numerous, stateless, and behind a load balancer, where updating
-a quarter of them at once is safe and finishes far faster than one at a time.</li>
+<li><strong>Infra nodes</strong> may run stateful services, ingress, or storage where taking more than one down at a time risks an outage or data unavailability.</li>
+<li><strong>General worker nodes</strong> may be numerous, stateless, and behind a load balancer, where updating a quarter of them at once is safe and finishes far faster than one at a time.</li>
 </ul>
-<p>A single global limit forces a tradeoff: set it low enough to protect the sensitive infra nodes,
-and worker upgrades crawl; set it high enough for fast worker upgrades, and infra nodes risk being
-updated too aggressively.</p>
+<p>A single global limit forces a tradeoff: set it low enough to protect the sensitive infra nodes, and worker upgrades crawl; set it high enough for fast worker upgrades, and infra nodes risk being updated too aggressively.</p>
 <h2 id="setting-concurrency-per-profile"><a class="header" href="#setting-concurrency-per-profile">Setting concurrency per profile</a></h2>
-<p>Every profile under <code>.spec.config.profiles</code> accepts its own <code>concurrency</code>, which overrides the
-CLI’s <code>-c</code>/<code>-w</code> value for hosts using that profile only. It accepts either a fixed count or a
-percentage of the hosts that share the profile:</p>
+<p>Every profile under <code>.spec.config.profiles</code> accepts its own <code>concurrency</code>, which overrides the CLI’s <code>-c</code>/<code>-w</code> value for hosts using that profile only. It accepts either a fixed count or a percentage of the hosts that share the profile:</p>
 <pre><code class="language-yaml">spec:
   config:
     profiles:
@@ -214,24 +204,16 @@ percentage of the hosts that share the profile:</p>
 <p>With this configuration:</p>
 <ul>
 <li>Hosts with <code>profile: infra</code> are always updated one at a time, regardless of the <code>-w</code> flag value.</li>
-<li>Hosts with <code>profile: worker</code> are updated 25% at a time, rounded up, with a minimum batch size of
-1 so a small worker pool never stalls at “0 at a time.”</li>
-<li>A profile that sets no <code>concurrency</code> (or a host with no profile) falls back to the <code>-w</code> flag
-value, same as before this feature existed.</li>
+<li>Hosts with <code>profile: worker</code> are updated 25% at a time, rounded up, with a minimum batch size of 1 so a small worker pool never stalls at “0 at a time.”</li>
+<li>A profile that sets no <code>concurrency</code> (or a host with no profile) falls back to the <code>-w</code> flag value, same as before this feature existed.</li>
 </ul>
-<p>A percentage is resolved against the number of hosts in that profile, not the whole cluster, so
-<code>25%</code> on a 4-host <code>worker</code> profile means 1 host at a time, and <code>25%</code> on a 40-host <code>worker</code> profile
-means 10 at a time.</p>
-<p>This applies everywhere Cargoship batches worker operations: initializing, upgrading, draining,
-deleting, and uninstalling the engine.</p>
+<p>A percentage is resolved against the number of hosts in that profile, not the whole cluster, so <code>25%</code> on a 4-host <code>worker</code> profile means 1 host at a time, and <code>25%</code> on a 40-host <code>worker</code> profile means 10 at a time.</p>
+<p>This applies everywhere Cargoship batches worker operations: initializing, upgrading, draining, deleting, and uninstalling the engine.</p>
 <h2 id="choosing-values"><a class="header" href="#choosing-values">Choosing values</a></h2>
 <ul>
-<li>Use a fixed low count (<code>"1"</code>, <code>"2"</code>) for profiles running singleton or quorum-sensitive
-services, where losing more than N nodes at once breaks availability.</li>
-<li>Use a percentage (<code>"25%"</code>, <code>"50%"</code>) for horizontally scaled, stateless profiles where speed
-matters more than caution, and the remaining capacity can absorb the load while a batch updates.</li>
-<li>Use <code>"100%"</code> (or leave <code>concurrency</code> unset with <code>-w 0</code>) for profiles where all hosts can safely
-update simultaneously, e.g. a dev/test cluster.</li>
+<li>Use a fixed low count (<code>"1"</code>, <code>"2"</code>) for profiles running singleton or quorum-sensitive services, where losing more than N nodes at once breaks availability.</li>
+<li>Use a percentage (<code>"25%"</code>, <code>"50%"</code>) for horizontally scaled, stateless profiles where speed matters more than caution, and the remaining capacity can absorb the load while a batch updates.</li>
+<li>Use <code>"100%"</code> (or leave <code>concurrency</code> unset with <code>-w 0</code>) for profiles where all hosts can safely update simultaneously, e.g. a dev/test cluster.</li>
 </ul>
 
                     </main>

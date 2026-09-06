@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-95fa432b.js";
+            window.path_to_searchindex_js = "searchindex-c33d309e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b3da4eb0.js"></script>
+        <script src="toc-9a34b427.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -430,26 +430,16 @@ cargoship create ./distro-defs -o ./build/
 <p>A backend is a <code>firewall.Backend</code> implementation in <code>src/pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>src/pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="per-profile-update-concurrency"><a class="header" href="#per-profile-update-concurrency">Per-Profile Update Concurrency</a></h1>
-<p>This guide explains why a cluster admin may want to set a different concurrency limit per node
-profile, and how to configure it.</p>
+<p>This guide explains why a cluster admin may want to set a different concurrency limit per node profile, and how to configure it.</p>
 <h2 id="the-problem-with-one-global-concurrency-limit"><a class="header" href="#the-problem-with-one-global-concurrency-limit">The problem with one global concurrency limit</a></h2>
-<p><code>-c/--concurrency</code> and <code>-w/--work-concurrency</code> cap how many hosts, or how many workers, Cargoship
-touches at once, but that limit applies flat across the whole cluster. A cluster is rarely
-uniform, though. It often mixes roles with very different blast radii if something goes wrong
-mid-update:</p>
+<p><code>-c/--concurrency</code> and <code>-w/--work-concurrency</code> cap how many hosts, or how many workers, Cargoship touches at once, but that limit applies flat across the whole cluster. A cluster is rarely uniform, though. It often mixes roles with very different blast radii if something goes wrong mid-update:</p>
 <ul>
-<li><strong>Infra nodes</strong> may run stateful services, ingress, or storage where taking more than one down
-at a time risks an outage or data unavailability.</li>
-<li><strong>General worker nodes</strong> may be numerous, stateless, and behind a load balancer, where updating
-a quarter of them at once is safe and finishes far faster than one at a time.</li>
+<li><strong>Infra nodes</strong> may run stateful services, ingress, or storage where taking more than one down at a time risks an outage or data unavailability.</li>
+<li><strong>General worker nodes</strong> may be numerous, stateless, and behind a load balancer, where updating a quarter of them at once is safe and finishes far faster than one at a time.</li>
 </ul>
-<p>A single global limit forces a tradeoff: set it low enough to protect the sensitive infra nodes,
-and worker upgrades crawl; set it high enough for fast worker upgrades, and infra nodes risk being
-updated too aggressively.</p>
+<p>A single global limit forces a tradeoff: set it low enough to protect the sensitive infra nodes, and worker upgrades crawl; set it high enough for fast worker upgrades, and infra nodes risk being updated too aggressively.</p>
 <h2 id="setting-concurrency-per-profile"><a class="header" href="#setting-concurrency-per-profile">Setting concurrency per profile</a></h2>
-<p>Every profile under <code>.spec.config.profiles</code> accepts its own <code>concurrency</code>, which overrides the
-CLI’s <code>-c</code>/<code>-w</code> value for hosts using that profile only. It accepts either a fixed count or a
-percentage of the hosts that share the profile:</p>
+<p>Every profile under <code>.spec.config.profiles</code> accepts its own <code>concurrency</code>, which overrides the CLI’s <code>-c</code>/<code>-w</code> value for hosts using that profile only. It accepts either a fixed count or a percentage of the hosts that share the profile:</p>
 <pre><code class="language-yaml">spec:
   config:
     profiles:
@@ -461,24 +451,16 @@ percentage of the hosts that share the profile:</p>
 <p>With this configuration:</p>
 <ul>
 <li>Hosts with <code>profile: infra</code> are always updated one at a time, regardless of the <code>-w</code> flag value.</li>
-<li>Hosts with <code>profile: worker</code> are updated 25% at a time, rounded up, with a minimum batch size of
-1 so a small worker pool never stalls at “0 at a time.”</li>
-<li>A profile that sets no <code>concurrency</code> (or a host with no profile) falls back to the <code>-w</code> flag
-value, same as before this feature existed.</li>
+<li>Hosts with <code>profile: worker</code> are updated 25% at a time, rounded up, with a minimum batch size of 1 so a small worker pool never stalls at “0 at a time.”</li>
+<li>A profile that sets no <code>concurrency</code> (or a host with no profile) falls back to the <code>-w</code> flag value, same as before this feature existed.</li>
 </ul>
-<p>A percentage is resolved against the number of hosts in that profile, not the whole cluster, so
-<code>25%</code> on a 4-host <code>worker</code> profile means 1 host at a time, and <code>25%</code> on a 40-host <code>worker</code> profile
-means 10 at a time.</p>
-<p>This applies everywhere Cargoship batches worker operations: initializing, upgrading, draining,
-deleting, and uninstalling the engine.</p>
+<p>A percentage is resolved against the number of hosts in that profile, not the whole cluster, so <code>25%</code> on a 4-host <code>worker</code> profile means 1 host at a time, and <code>25%</code> on a 40-host <code>worker</code> profile means 10 at a time.</p>
+<p>This applies everywhere Cargoship batches worker operations: initializing, upgrading, draining, deleting, and uninstalling the engine.</p>
 <h2 id="choosing-values"><a class="header" href="#choosing-values">Choosing values</a></h2>
 <ul>
-<li>Use a fixed low count (<code>"1"</code>, <code>"2"</code>) for profiles running singleton or quorum-sensitive
-services, where losing more than N nodes at once breaks availability.</li>
-<li>Use a percentage (<code>"25%"</code>, <code>"50%"</code>) for horizontally scaled, stateless profiles where speed
-matters more than caution, and the remaining capacity can absorb the load while a batch updates.</li>
-<li>Use <code>"100%"</code> (or leave <code>concurrency</code> unset with <code>-w 0</code>) for profiles where all hosts can safely
-update simultaneously, e.g. a dev/test cluster.</li>
+<li>Use a fixed low count (<code>"1"</code>, <code>"2"</code>) for profiles running singleton or quorum-sensitive services, where losing more than N nodes at once breaks availability.</li>
+<li>Use a percentage (<code>"25%"</code>, <code>"50%"</code>) for horizontally scaled, stateless profiles where speed matters more than caution, and the remaining capacity can absorb the load while a batch updates.</li>
+<li>Use <code>"100%"</code> (or leave <code>concurrency</code> unset with <code>-w 0</code>) for profiles where all hosts can safely update simultaneously, e.g. a dev/test cluster.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="registry-override-guide"><a class="header" href="#registry-override-guide">Registry Override Guide</a></h1>
@@ -1955,17 +1937,126 @@ $ cargoship version -o json
 </ol>
 <p>Dagger in this repository is strictly focused on binary compilation; other repository tasks like documentation generation, YAML schema updates, and GitHub releases are managed separately through Mage, mdBook, and GoReleaser.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
+<p>The cluster suite in <code>src/test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>src/pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
+<p>One top-level test, <code>TestClusterPhases</code>, runs the <code>apply</code> walk against the cluster it provisions. It is a subtest rather than a top-level test because later walks against the same cluster – an upgrade, a reset – hang off the same parent and have to run in a fixed order after it.</p>
+<p>For why the suite is built this way, see <a href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">choice-phase-e2e-tests</a>. For running the e2e suites generally, see <a href="#running-the-end-to-end-tests">e2e-tests</a>.</p>
+<h2 id="one-number-per-phase"><a class="header" href="#one-number-per-phase">One number per phase</a></h2>
+<p>A phase is identified by its source file’s number, and that number is used twice:</p>
+<ul>
+<li><strong>The test file name mirrors the phase’s source file.</strong> A test for <code>src/pkg/phase/25_modify_hosts_file.go</code> goes in <code>src/test/e2e/cluster/25_modify_hosts_file_test.go</code>. Same number, same name, one file each.</li>
+<li><strong>The method name carries the same number.</strong> That file contains <code>Test_25_ModifyHosts</code>.</li>
+</ul>
+<p>Testify runs suite methods in lexicographic order of the method name, so the number is also the order the phases run in here. The numbers are zero-padded to two digits, which makes lexicographic order numeric order.</p>
+<p>Steps that are not phases – creating the package, <code>prepare</code> – have no phase number to take, so they use the low end of the ordering: <code>Test_00</code> and <code>Test_01</code> sort before every phase. They live in <code>cluster_lifecycle_test.go</code>. Those steps run whole actions rather than single phases – <code>distro.Create</code>, <code>action.NewPrepare</code> – each with its own manager, and are given <code>e2e.ClusterConfigPath</code>, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.</p>
+<h2 id="adding-a-phase"><a class="header" href="#adding-a-phase">Adding a phase</a></h2>
+<p>Take the new phase’s file number for both the test file and the method. Nothing else is renumbered: inserting <code>phase/23_something.go</code> gives you <code>23_something_test.go</code> containing <code>Test_23_Something</code>, and it lands between <code>Test_22_PrepareFapolicy</code> and <code>Test_25_ModifyHosts</code> on its own.</p>
+<p>If a phase is renumbered in <code>src/pkg/phase</code>, rename its test file and its method to match, and check that its new number still puts it after everything it depends on – the number is the ordering, so a phase that moves in the source moves here too.</p>
+<h2 id="writing-the-test"><a class="header" href="#writing-the-test">Writing the test</a></h2>
+<p>Start from the phase’s source file and ask what an operator would look at to confirm it did its job. That is the assertion. A phase returning <code>nil</code> is not evidence of anything – read the host back.</p>
+<p>A minimal test:</p>
+<pre><code class="language-go">// Test_NN_YourPhase covers phase/NN_your_phase.go. &lt;One or two sentences on what the phase
+// does and, therefore, what artifact this asserts.&gt;
+func (s *ApplyPhaseSuite) Test_NN_YourPhase() {
+	s.runPhase(&amp;phase.YourPhase{Distro: s.harness.distro})
+
+	for _, host := range s.harness.hosts() {
+		s.Require().Truef(host.FileExist(someArtifactPath),
+			"%s: nothing at %s", host, someArtifactPath)
+	}
+}
+</code></pre>
+<p><code>s.runPhase</code> runs the phase through the shared manager and fails the test if it errors. Do not call <code>s.harness.run</code> directly unless you need the error itself.</p>
+<p>Use <code>s.Require()</code> rather than <code>s.Assert()</code>. These tests are ordered and stateful, so continuing after a failed assertion produces noise about state the failed assertion already told you was wrong.</p>
+<p>Each assertion body lives on <code>phaseWalk</code>, the embedded type <code>ApplyPhaseSuite</code> is built from, with a one-line <code>Test_NN</code> method on the suite calling it. That is more indirection than one walk needs on its own, and it is what lets a second walk over the same phases reuse the body rather than copy it. Testify collects methods by their <code>Test</code> prefix, so the shared method is called, not run as a test of its own. Start a shared body with <code>s.T().Helper()</code>.</p>
+<h2 id="what-the-harness-gives-you"><a class="header" href="#what-the-harness-gives-you">What the harness gives you</a></h2>
+<p><code>phase_harness.go</code> holds everything shared. The pieces a new test is likely to want:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th></th></tr>
+</thead>
+<tbody>
+<tr><td><code>s.harness.hosts()</code></td><td>every host currently on the manager</td></tr>
+<tr><td><code>s.harness.controllers()</code> / <code>s.harness.workers()</code></td><td>the role split</td></tr>
+<tr><td><code>s.harness.engineWorkers()</code></td><td>the workers that join the cluster, so <code>workers()</code> minus the upload-only hosts</td></tr>
+<tr><td><code>s.harness.uploadOnly()</code></td><td>the hosts that receive uploads and never join</td></tr>
+<tr><td><code>s.harness.manager</code></td><td>the live <code>phase.Manager</code>, for <code>Distro</code>, <code>DistroID</code>, <code>TempDirectory</code></td></tr>
+<tr><td><code>s.harness.distro</code></td><td>the distro module, for phases that take a <code>Distro</code> field</td></tr>
+<tr><td><code>s.harness.opts</code></td><td>the apply options the suite runs with (<code>ModifyHosts</code>, <code>ModifyFirewall</code>, <code>WorkerConcurrent</code>, …)</td></tr>
+<tr><td><code>readOnHosts(hosts, path)</code></td><td>reads one path on every host, keyed by host string</td></tr>
+<tr><td><code>ran(p)</code></td><td>whether the manager executed the phase or skipped it</td></tr>
+</tbody>
+</table>
+</div>
+<p>For anything else, the hosts carry a live <code>rig</code> connection: <code>host.ExecOutput</code>, <code>host.ReadFile</code>, <code>host.FileExist</code>, and <code>host.Configurer</code> are all available and are how most assertions are written.</p>
+<h2 id="phases-that-are-expected-to-skip"><a class="header" href="#phases-that-are-expected-to-skip">Phases that are expected to skip</a></h2>
+<p>Some phases legitimately do nothing on this cluster – SELinux where the runtime exposes none, fapolicyd when no host runs it, config sync when nothing has drifted. Do not write a test that asserts nothing; assert the <em>gate</em> instead. Compute what the hosts report, then require that <code>ran(p)</code> matches it:</p>
+<pre><code class="language-go">var fapolicyd int
+for _, host := range s.harness.hosts() {
+	if host.Configurer.ServiceIsRunning(host, phase.FAPOLICYD) {
+		fapolicyd++
+	}
+}
+carriesRules := s.harness.manager.Distro.Spec.Config.OS.FAPolicyd != ""
+
+p := &amp;phase.PrepareFapolicy{}
+s.runPhase(p)
+s.Require().Equalf(fapolicyd &gt; 0 &amp;&amp; carriesRules, ran(p),
+	"phase ran=%v with %d fapolicyd hosts and rules=%v", ran(p), fapolicyd, carriesRules)
+
+if !ran(p) {
+	return
+}
+// ... assert the artifact where it did fire
+</code></pre>
+<p>This tests the routing, which is the part most likely to break, and it keeps working when the cluster gains a host that does trip the gate. <code>21_prepare_selinux_test.go</code> and <code>22_prepare_fapolicyd_test.go</code> are the worked examples.</p>
+<p><code>ran(p)</code> is only meaningful <em>after</em> <code>s.runPhase</code>, because the manager calls <code>Prepare</code> first and most gates are computed there.</p>
+<h2 id="phases-that-route-on-the-os-family"><a class="header" href="#phases-that-route-on-the-os-family">Phases that route on the OS family</a></h2>
+<p>The cluster runs three OS families on purpose. Nine of the machines join the cluster – three controllers and six workers, each role split between Ubuntu (<code>kc0</code>, <code>kc1</code>, <code>kw0</code>-<code>kw2</code>) and Fedora (<code>kcf0</code>, <code>kwf0</code>-<code>kwf2</code>) – and a tenth, <code>kwa0</code>, runs Alpine. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.</p>
+<p>Derive the host set from the same filters the phase uses, so the test cannot disagree with it:</p>
+<pre><code class="language-go">enterprise := s.harness.hosts().Filter(utils.FilterEnterpriseLinux)
+debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
+</code></pre>
+<p>Then assert the split: the hosts the phase claims got what it promises, the hosts it does not came back unchanged.</p>
+<p>Require the set you are testing to be non-empty. If someone collapses the cluster to one image, that turns a test which silently stopped covering anything into a failure that says so.</p>
+<h2 id="the-upload-only-host"><a class="header" href="#the-upload-only-host">The upload-only host</a></h2>
+<p>Alpine is neither Enterprise Linux nor Debian, so both of the filters above decline it. That is why it is in the inventory: it is the only host that reaches a phase’s fallback branch as the fallback rather than as the path every host happens to take.</p>
+<p>It cannot run rke2, which links against glibc, so it never joins the cluster. A phase that installs, starts, configures or queries the engine must not see it at all: those hosts have to come off the manager before the first such phase runs, and <code>s.harness.uploadOnly()</code> is what identifies them.</p>
+<p>Do not “fix” a phase that fails on Alpine by skipping the host in the assertion. The phases select their own hosts in <code>Prepare</code>, with no OS gate in most cases, so the phase will still have run against it and spent its retry budget there. If a phase genuinely cannot run on a host, that host must not be on the manager when the phase runs.</p>
+<p><code>s.harness.engineWorkers()</code> is <code>workers()</code> without those hosts, for a test that runs while they are still on the manager but is only meaningful for the hosts that join.</p>
+<h2 id="prerequisites-and-running-it"><a class="header" href="#prerequisites-and-running-it">Prerequisites and running it</a></h2>
+<p>The suite needs Docker and a real distro package. It needs no prebuilt binary – every step calls the cargoship packages directly, so a bare checkout is enough.</p>
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=40m ./src/test/e2e/cluster/...
+</code></pre>
+<p>Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:</p>
+<pre><code class="language-console">$ mage test:endToEndCluster
+</code></pre>
+<p><code>-short</code> skips the whole suite. <code>TestMain</code> deletes the bootloose cluster on the way out even when tests fail.</p>
+<h3 id="in-ci"><a class="header" href="#in-ci">In CI</a></h3>
+<p><code>.github/workflows/e2e-cluster.yaml</code> runs it, on its own trigger and separate from <code>e2e.yaml</code>, which is what runs on every pull request. This one does not: it provisions ten containers, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled <code>e2e-cluster</code>. Add that label to a PR touching <code>src/pkg/phase</code>, <code>src/pkg/action</code> or the inventory handling; the trigger listens for <code>labeled</code>, so labelling an open PR starts a run without needing a push.</p>
+<p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare step calls <code>action.NewPrepare</code>. That is what makes the two workflows independent, which is the point of the split.</p>
+<p>The job frees disk before it starts, because ten containers and the images they unpack do not fit in what a hosted runner leaves free. If it fails with hosts that never come back, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one.</p>
+<h2 id="things-that-will-cost-you-time"><a class="header" href="#things-that-will-cost-you-time">Things that will cost you time</a></h2>
+<ul>
+<li><strong>You cannot run one phase test on its own.</strong> <code>-run 'TestClusterPhases/apply/Test_25_ModifyHosts'</code> fails: the hosts were never connected, because <code>Test_07_Connect</code> and <code>Test_09_DetectOS</code> are earlier methods that <code>-run</code> filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.</li>
+<li><strong>The first failure stops the rest.</strong> <code>SetupTest</code> skips every remaining step once one has failed, so the output names one phase rather than all of them. If the first failure looks like a symptom, it is the cause – everything after it was skipped, not passed.</li>
+<li><strong>Constants the phase package keeps unexported.</strong> Where a path is not exported, the test file redeclares it with a comment saying where it came from (<code>sysctlConfPath</code> in <code>20_prepare_host_test.go</code>). Prefer exporting from <code>phase</code> when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.</li>
+<li><strong>Ten containers is a lot of memory.</strong> That is the reason this suite is not part of the default <code>go test ./...</code> path.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="running-the-end-to-end-tests"><a class="header" href="#running-the-end-to-end-tests">Running the End-to-End Tests</a></h1>
-<p>The e2e suites drive the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. They do not import the command packages, so what they prove is that the shipped binary behaves, not that the internals compile. Everything below is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it.</p>
+<p>The <code>noncluster</code> e2e suite drives the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. It does not import the command packages, so what it proves is that the shipped binary behaves, not that the internals compile. Everything below is about that suite and is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it. The <code>cluster</code> suite is the other way round – it calls the cargoship packages directly and needs no binary at all; see <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a>.</p>
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
 <pre><code>src/test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
+src/test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), with the apply phases walked one phase at a time
 src/test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
-src/test/bootstrap.go      TestMain's chdir-to-repo-root and binary lookup
+src/test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
 src/test/registry.go       in-process OCI registry used by the publish/pull/sign tests
 </code></pre>
-<p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary.</p>
+<p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary. The <code>cluster</code> package needs Docker and takes tens of minutes, and needs no binary; everything below is about <code>noncluster</code>, and <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a> covers the cluster suite and how to extend it when a phase is added.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
-<p>Build the binary first. The suites look for it at <code>build/cargoship_&lt;goos&gt;_&lt;goarch&gt;</code> and <code>TestMain</code> aborts immediately if it is missing:</p>
+<p>Build the binary first. The suite looks for it at <code>build/cargoship_&lt;goos&gt;_&lt;goarch&gt;</code> and <code>TestMain</code> aborts immediately if it is missing:</p>
 <pre><code class="language-console">$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
 </code></pre>
 <p>This is enough for the tests. A build without the release linker flags leaves <code>cargoship version</code> reporting the unset placeholder values, which the tests tolerate — they assert the fields are present and non-empty, not what they contain.</p>
@@ -2323,6 +2414,57 @@ mage generate:updatePins            # refresh every line already pinned
 <p>The alternative, dumping <code>nft list ruleset</code> into that file, would capture kube-proxy’s and the CNI’s rules along with cargoship’s and replay them at boot as static rules – stale ones, describing services that may no longer exist. Appending an include leaves the operator’s file otherwise intact, keeps cargoship’s contribution in one identifiable place, and stays correct when cargoship’s ruleset is regenerated. A host with neither conf file gets a warning rather than an error: the rules are loaded for this boot, but nothing will reload them at the next one.</p>
 <h2 id="one-inet-table-rather-than-separate-ip-and-ip6-tables"><a class="header" href="#one-inet-table-rather-than-separate-ip-and-ip6-tables">One <code>inet</code> table rather than separate <code>ip</code> and <code>ip6</code> tables</a></h2>
 <p>The <code>inet</code> family covers IPv4 and IPv6 in a single table, so a plan renders one table, one set of chains, and one transaction regardless of what the cluster’s addressing looks like. The cost is that address matches must name their family explicitly – <code>ip saddr</code> versus <code>ip6 saddr</code> – and that trusted addresses split into two sets, <code>cluster_v4</code> and <code>cluster_v6</code>, since a set has one type. Both are handled in rendering (<code>nftAddrFamily</code>, <code>nftSplitFamilies</code>) and are cheaper than maintaining two parallel tables and deciding which of them a dual-stack plan belongs in.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time"><a class="header" href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">Why the cluster e2e suite steps through the apply phases one at a time</a></h1>
+<p>The cluster suite (<code>src/test/e2e/cluster</code>) used to be a lifecycle test: provision a bootloose cluster, run <code>cargoship apply</code> once, then check that the cluster came up. It proved that apply works end to end and nothing else. When a phase left the wrong artifact behind but the install still succeeded – a <code>/etc/hosts</code> entry written with the wrong address that DNS happened to cover, a lock file that was never cleaned up, a firewall rule that named the wrong peer – the suite stayed green. When it did fail, the failure was “the cluster is not healthy” and the phase responsible had to be found by reading the log.</p>
+<p>The suite now drives the apply phase list in-process, one phase at a time, and asserts what each phase left on the hosts before the next one runs. This document records the choices that shape it, because several of them look arbitrary in the code and each had an alternative worth stating.</p>
+<h2 id="replacing-the-cli-apply-rather-than-adding-to-it"><a class="header" href="#replacing-the-cli-apply-rather-than-adding-to-it">Replacing the CLI apply rather than adding to it</a></h2>
+<p>The obvious way to add phase-level coverage is to leave the existing <code>cargoship apply</code> test alone and add a second suite beside it. That was rejected: a bootloose cluster is the expensive part of the run, and installing rke2 onto it twice costs several minutes and a lot of memory for coverage that overlaps almost entirely.</p>
+<p>So the phase walk <em>is</em> the install. <code>Test_00_CreatePackage</code> builds the package and <code>Test_01_Prepare</code> readies the hosts, and the phase tests then perform the install one phase at a time.</p>
+<p>None of these steps shell out. <code>Test_00_CreatePackage</code> calls <code>distro.Create</code> and <code>Test_01_Prepare</code> calls <code>action.NewPrepare</code>, each with its own manager built the way the matching command builds one and its own temp directory to remove. The suite was written against the CLI first, and the binary turned out to be doing nothing the packages could not: it cost a build step in CI, a rebuild-before-you-run rule, and a class of confusing failure where a stale binary disagreed with the source being read. What is lost is coverage of the cobra layer – flag parsing, <code>--confirm</code>, the config file resolution – which <code>src/test/e2e/noncluster</code> covers against the real binary and does so in seconds.</p>
+<p>The cost is that the phase tests do not test <code>action.NewApply</code>. If a phase were dropped from the list in <code>src/pkg/action/apply.go</code>, the phase tests would keep passing, because they build their own list. Keeping the two lists in sync is done by hand, from the ordering comment in the suite doc. A generated list, read from <code>action</code> and iterated, was considered and rejected: it would make the assertions dynamic, and the whole point is that each phase has a hand-written assertion about the artifact it leaves.</p>
+<h2 id="one-number-per-phase-taken-from-srcpkgphase"><a class="header" href="#one-number-per-phase-taken-from-srcpkgphase">One number per phase, taken from <code>src/pkg/phase</code></a></h2>
+<p>Testify runs suite methods in lexicographic order of the method name, which is the only ordering mechanism available. So the method name has to carry a number, and there were two candidates: the phase’s position in the apply order, or the number of its source file.</p>
+<p>The suite first used the apply order, on the grounds that the point of the suite is to reproduce what apply does. It made the test for <code>phase/25_modify_hosts_file.go</code> a method called <code>Test_12_ModifyHosts</code> living in <code>25_modify_hosts_file_test.go</code>, and every file in the package carried two numbers that disagreed. Inserting a phase anywhere but the end renumbered every method after it, which is a large diff that says nothing, and cross-references between test comments had to be renumbered with it.</p>
+<p>The numbers are now the source file’s, in both places: <code>25_modify_hosts_file_test.go</code> contains <code>Test_25_ModifyHosts</code>. One number per phase, so the test for a phase is findable from the phase and the ordering needs no separate bookkeeping. Adding a phase adds a file and a method and renumbers nothing.</p>
+<p><code>src/pkg/phase</code> numbers its files by rough category – <code>20</code>-<code>26</code> prepare the host, <code>50</code>-<code>59</code> upload, <code>60</code>-<code>72</code> install and sync, <code>80</code>-<code>81</code> finish, <code>91</code>-<code>92</code> lock and unlock – and that ordering agrees with apply’s for every phase but the lock, which apply takes third and the file number puts after the install.</p>
+<p>Steps that are not phases have no source file to take a number from. They use the ends of the ordering instead: <code>Test_00_CreatePackage</code> and <code>Test_01_Prepare</code> sort before every phase number, and anything that has to run after every phase takes a <code>Test_ZZ</code> name, because a letter sorts after a digit.</p>
+<h2 id="one-shared-harness-and-tests-that-cannot-run-alone"><a class="header" href="#one-shared-harness-and-tests-that-cannot-run-alone">One shared harness, and tests that cannot run alone</a></h2>
+<p>Phases communicate through the hosts. <code>DetectOS</code> resolves a <code>Configurer</code> and hangs it on the host; <code>GatherFacts</code> fills in <code>Metadata</code>; <code>Connect</code> leaves a live SSH connection that every later phase reuses. Running a phase in isolation means reconstructing all of that, which means reimplementing its predecessors.</p>
+<p>So there is one <code>phaseHarness</code> for the whole suite, built once in <code>Test_05_Manager</code>, and the phase tests are ordered and stateful by design. <code>go test -run 'TestClusterPhases/apply/Test_25_ModifyHosts'</code> does not work and is not meant to: the hosts were never connected. This is stated in the suite doc comment because it is the first thing someone debugging a failure will try.</p>
+<p>The harness builds its manager from exactly the inputs <code>action.NewApply</code> uses – <code>load.ClusterDefinition</code> for the inventory, <code>distro.Load</code> for the package, <code>registry.GetDistroModuleBuilder</code> for the distro module – so the phases see the state they would see under a real apply. <code>phase.Manager.Run</code> is called once per phase with a single-element <code>Phases</code>, which is safe because <code>Run</code> calls <code>defaults.Set</code> each time and that is idempotent.</p>
+<p>The assertion bodies live on <code>phaseWalk</code>, an unexported type <code>ApplyPhaseSuite</code> embeds, with a one-line <code>Test_NN</code> method on the suite calling each one. For a single walk that is more indirection than it needs; it is there because further walks over the same phase list – an upgrade against the installed cluster, a join of a new node – assert the same things and would otherwise have to copy the bodies and keep them in step by hand. Testify collects methods by their <code>Test</code> prefix, so an unexported method on the embedded type is shared rather than run as a test of its own.</p>
+<h2 id="asserting-the-artifact-not-the-return-code"><a class="header" href="#asserting-the-artifact-not-the-return-code">Asserting the artifact, not the return code</a></h2>
+<p>A phase that returns <code>nil</code> has not necessarily done anything. Every assertion in the suite reads the host back over SSH and checks the thing an operator would check:</p>
+<ul>
+<li>every host’s detected <code>os-release</code> ID matching the image its machine was built from, and every family the bootloose config provisions being present</li>
+<li>the rendered <code>/etc/sysctl.d/99-cargoship.conf</code> naming every setting the package carries, at the value it carries</li>
+<li>every peer’s private address, long hostname and short hostname in every host’s <code>/etc/hosts</code>, plus <code>getent hosts &lt;peer&gt;</code> resolving to the right address – the full matrix, because a broken loop that writes only the first peer passes any spot check</li>
+</ul>
+<p>Reading through SSH rather than through the phase’s own state is deliberate: a phase that records success in <code>Metadata</code> without touching the host would otherwise pass.</p>
+<p>The sysctl test is the one place where the artifact is the file and not the effect. The nodes are containers sharing the host kernel, and the settings the phase writes are not namespaced, so <code>sysctl -n</code> there reports whatever the machine running the tests is set to: asserting on it would fail a correct phase and pass a broken one whenever the host already matched. The phase still runs <code>sysctl --system</code> itself, and a failure there fails the phase.</p>
+<h2 id="phases-that-legitimately-do-nothing-assert-the-gate"><a class="header" href="#phases-that-legitimately-do-nothing-assert-the-gate">Phases that legitimately do nothing assert the gate</a></h2>
+<p>Several phases are expected to skip on this cluster: SELinux and fapolicyd where neither is active, and later the config-sync phases when nothing has drifted. Asserting nothing there would be a test that cannot fail.</p>
+<p>Instead those tests compute what the hosts report – how many have SELinux enabled, how many run fapolicyd, whether the package carries a rule set – and assert that <code>ran(p)</code> matches. That tests the routing logic, which is the part most likely to break, and it keeps working when the cluster changes: adding an image with SELinux enabled turns the same assertion into a check that the phase fires and installs <code>container-selinux</code>.</p>
+<p><code>ran(p)</code> type-asserts <code>interface{ ShouldRun() bool }</code> and is only meaningful after <code>harness.run</code>, because the manager calls <code>Prepare</code> first and most gates are computed there. The manager’s own list of executed phases is unexported, which is why the gate is re-derived rather than read back.</p>
+<h2 id="stopping-after-the-first-failure"><a class="header" href="#stopping-after-the-first-failure">Stopping after the first failure</a></h2>
+<p>Ordered, stateful tests mean one broken early phase produces a run of downstream failures that say nothing. <code>TearDownTest</code> records the failure and <code>SetupTest</code> skips the rest, so the output names one phase. Teardown of the containers is unaffected – <code>TestMain</code> deletes the bootloose cluster regardless – so this costs nothing but the coverage that was already lost.</p>
+<h2 id="nine-nodes-across-two-os-families"><a class="header" href="#nine-nodes-across-two-os-families">Nine nodes across two OS families</a></h2>
+<p>The cluster was six usable nodes on one Ubuntu image (with three further machines provisioned and never wired into the inventory). It is now nine: three controllers and six workers, each role split between Ubuntu and Fedora.</p>
+<p>The OS mix is the substantive part. The apply phase list routes on OS family in at least five places – the RPM and APT upload phases, SELinux, fapolicyd, and the firewall backend – and on a single-family cluster the branch that does not match is never taken. Worse, the gate assertions described above <em>pass</em> in that case, so the suite reports coverage it does not have.</p>
+<p>To keep that from silently regressing, <code>Test_09_DetectOS</code> asserts that every family the bootloose config provisions is present, and that each host’s detected <code>os-release</code> ID matches the image its machine was built from. If someone collapses the cluster back to one image, the failure names that cause rather than showing up as a phase test that quietly stopped covering a branch.</p>
+<p>Nine nodes rather than six also puts more than one batch through the worker concurrency path: the initialize phases batch workers at <code>WorkerConcurrent</code>, which the suite sets to <code>5</code>, and six workers is the first count that makes that a real batching decision.</p>
+<p>Both images are the project’s own: <code>ghcr.io/colonel-byte/bootloose/ubuntu-26</code> and <code>ghcr.io/colonel-byte/bootloose/fedora-44</code>. The Fedora replicas are named <code>kcf*</code> and <code>kwf*</code> so that the inventory’s existing <code>kc</code>/<code>kw</code> prefix mapping claims them without the OS family entering the mapping at all.</p>
+<h2 id="a-tenth-machine-that-receives-uploads-and-never-joins"><a class="header" href="#a-tenth-machine-that-receives-uploads-and-never-joins">A tenth machine that receives uploads and never joins</a></h2>
+<p>Two of the three upload phases are reached by an OS-family filter. The third, <code>phase/59_bin_install.go</code>, is what a host gets when neither of the other two claims it – which on an all-Ubuntu, all-Fedora cluster meant every host, because rke2 ships as neither an RPM nor a deb. The phase would be exercised as the path every host happens to take, not as the fallback it is written to be, and nothing in the suite would notice if the two family filters started claiming hosts they should not.</p>
+<p>The cluster therefore also provisions one <code>ghcr.io/colonel-byte/bootloose/alpine-3.23</code> machine. Alpine is neither Enterprise Linux nor Debian, so <code>utils.FilterEnterpriseLinux</code> and <code>utils.FilterDebianLinux</code> both decline it and it reaches the BIN phase as the only host that had nowhere else to go.</p>
+<p>It cannot run the engine: rke2 links against glibc and Alpine is musl. Three things follow from that, and each had an alternative.</p>
+<p><strong>The host is a worker in the inventory, not a role of its own.</strong> The upload phases select by role, so a host with no role would not have been claimed and the whole point would be lost. It is named <code>kwa0</code>, which the inventory’s <code>kw</code> prefix maps to the worker role with no special case, and <code>uploadOnlyPrefix</code> in <code>cluster_inventory.go</code> is what marks it as more than a worker. The name template in <code>main_test.go</code> is built from that same constant so the two cannot drift.</p>
+<p><strong>It has to be removed from the manager before the engine phases, rather than skipped by each later test.</strong> Skipping was tried first and is not sufficient: <code>InitializeWorkers.Prepare</code> claims every non-controller host whose agent is not already running, with no OS gate at all, so a test that merely declined to assert on the Alpine host would still have watched the phase spend its retry budget trying to install rke2 on it. Taking it off <code>manager.Config.Spec.Hosts</code> is the only thing that stops the phase from selecting it, and the harness keeps what it dropped so that <code>close</code> can disconnect it, since the Disconnect phase only sees the hosts still on the manager.</p>
+<p><strong>There are two generated inventory files.</strong> <code>generated-cluster-full.yaml</code> has all ten machines and is what the harness is built from; <code>generated-cluster.yaml</code> has the nine that join and is what <code>e2e.ClusterConfigPath</code> points at. The whole-action steps load that path, because an action has no notion of an upload-only host and would try to install the engine on Alpine. A single file with an annotation the loader ignores was considered and rejected: it would put a test-only concept into the inventory schema.</p>
+<h2 id="profiles-on-the-generated-inventory"><a class="header" href="#profiles-on-the-generated-inventory">Profiles on the generated inventory</a></h2>
+<p>The generated bootloose inventory set no <code>Profile</code>, which makes <code>LabelNodes</code> a no-op: it iterates hosts, skips those with an empty profile, and would have labelled nothing. Each host now gets a profile equal to its role.</p>
+<p>This was checked against every other consumer of <code>Profile</code> before making the change. <code>GatherFacts.setupProfileOverrides</code> looks the profile up in <code>Spec.Config.Profiles</code> and does nothing when it is absent. The per-profile concurrency grouping resolves through <code>ZarfClusterProfiles.ResolveConcurrency</code>, which falls back to the caller’s value for an unmapped profile. The file selectors in <code>55_files_common.go</code> compare against the <em>role</em> constants passed by the RPM/APT/BIN phases, never against <code>h.Profile</code>. So the profile is inert everywhere except the phase it makes observable, which is what makes it safe to set.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
 <p>Cargoship’s Ansible Vault support (<code>cargoship vault-encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
