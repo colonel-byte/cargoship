@@ -2,7 +2,7 @@
 
 The cluster suite in `src/test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `src/pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
 
-One top-level test, `TestClusterPhases`, runs two walks against the same cluster in the order they work in: `apply` installs the distro, and `join` starts one more machine and walks the same phase list to bring it into the running cluster. A new phase needs a test in the apply walk, and usually one in the join walk too -- see [Adding the join half](#adding-the-join-half).
+One top-level test, `TestClusterPhases`, runs three walks against the same cluster in the order they work in: `apply` installs the distro, `join` starts one more machine and brings it into the running cluster, and `upgrade` walks the same phases again with a newer package. A new phase needs a test in the apply walk, and usually one in each of the others too -- see [Adding the join half](#adding-the-join-half) and [Adding the upgrade half](#adding-the-upgrade-half).
 
 For why the suite is built this way, see [choice-phase-e2e-tests](../agent/choice-phase-e2e-tests.md). For running the e2e suites generally, see [e2e-tests](e2e-tests.md).
 
@@ -48,7 +48,7 @@ func (s *ApplyPhaseSuite) Test_NN_YourPhase() {
 
 Use `s.Require()` rather than `s.Assert()`. These tests are ordered and stateful, so continuing after a failed assertion produces noise about state the failed assertion already told you was wrong.
 
-Each assertion body lives on `phaseWalk`, the embedded type both suites are built from, with a one-line `Test_NN` method on each suite calling it. Testify collects methods by their `Test` prefix, so the shared method is called, not run as a test of its own. Start a shared body with `s.T().Helper()`.
+Each assertion body lives on `phaseWalk`, the embedded type every suite is built from, with a one-line `Test_NN` method on each suite calling it. Testify collects methods by their `Test` prefix, so the shared method is called, not run as a test of its own. Start a shared body with `s.T().Helper()`.
 
 ## What the harness gives you
 
@@ -151,6 +151,51 @@ Phases that assert over the whole matrix of hosts are worth a second look here r
 
 The join machine is `kwf3`, a Fedora worker, provisioned on first use by `requireJoinMachine`. A Fedora worker is deliberate: the new node then comes through the SELinux, fapolicyd, firewalld and dnf branches on its own rather than inheriting anything the apply walk proved on the nodes beside it.
 
+## Adding the upgrade half
+
+`UpgradePhaseSuite` walks the same phase list a third time, against the cluster the apply and join walks left running, with a package one patch release newer. It is what covers the code inside `phase/66_upgrade_controller.go` and `phase/67_upgrade_worker.go`: on a fresh install those phases claim no hosts, so the apply walk can only ever assert that they did nothing.
+
+It starts at `Test_12_GatherFactsDistro`. Connect, DetectOS, GatherFacts and ValidateHosts run as a single `Test_01_Reconnect` step, because the apply walk already asserts them one at a time and they behave identically the second time round. The lock phases are left out for the same reason they are left out of the join walk.
+
+So a new phase needs an upgrade test if it is numbered `12` or higher, and the two kinds are the same two the join walk has: a shared body on `phaseWalk` where the phase does the same thing either way, and a method per suite where it does not. `61_initialize_controller_test.go` is the worked example again -- the apply walk requires `ran(p)`, the upgrade walk requires `!ran(p)`, because an initialize phase that claimed a running node would re-bootstrap a live cluster.
+
+```go
+// Test_NN_YourPhase, on the upgrade walk, <what is different and why>.
+func (s *UpgradePhaseSuite) Test_NN_YourPhase() {
+	p := &phase.YourPhase{Distro: s.harness.distro}
+	s.runPhase(p)
+	s.Require().False(ran(p), "<the routing this proves>")
+}
+```
+
+Four things the upgrade tests use that the others do not:
+
+| | |
+|---|---|
+| `installedVersion` | the version the apply walk put on the cluster, so what a host should report *before* the upgrade phase runs |
+| `s.harness.manager.Distro.Spec.Version` | the version the upgrade package carries, so what it should report after |
+| `s.harness.engineHosts()` | every host that runs the engine, so `hosts()` minus the upload-only ones -- the upload-only host still reports `phase.UnknownVersion` |
+| `s.requireSchedulable(hosts)` | asserts each host's node is registered and not left cordoned, which is what the drain/uncordon half of an upgrade has to leave behind |
+
+Assert version routing by calling the phases' own comparison rather than comparing strings:
+
+```go
+compare := &phase.GenericPhase{}
+s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version))
+```
+
+`VersionLess` reads no manager state, so a zero-valued phase is enough, and using it means the test cannot disagree with the routing it is asserting.
+
+### Running it
+
+The upgrade walk is off unless `CARGOSHIP_E2E_UPGRADE` is set. It installs a second complete set of engine images onto every node, which roughly doubles the disk the run needs and adds tens of minutes.
+
+```console
+$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./src/test/e2e/cluster/...
+```
+
+Without it, `TestClusterPhases/upgrade` skips with a message naming the variable.
+
 ## Prerequisites and running it
 
 The suite needs Docker and a real distro package, and it is not fast: it provisions ten containers, installs rke2 onto nine of them, and then starts an eleventh and joins it. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
@@ -162,18 +207,21 @@ $ go test -mod=vendor -count=1 -v -timeout=105m ./src/test/e2e/cluster/...
 Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:
 
 ```console
-$ mage test:endToEndCluster
+$ mage test:endToEndCluster           # the install and join walks
+$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk after them
 ```
 
-`-short` skips the whole suite. `TestMain` deletes the bootloose cluster on the way out even when tests fail.
+`-short` skips the whole suite, and `CARGOSHIP_E2E_UPGRADE` adds the upgrade walk. `TestMain` deletes the bootloose cluster on the way out even when tests fail.
 
 ### In CI
 
 `.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions eleven containers and installs rke2 onto ten of them, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `src/pkg/phase`, `src/pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
 
+The upgrade walk is a second opt-in on top of that: the `upgrade` input when dispatching by hand, or the `e2e-cluster-upgrade` label on a pull request. Either one implies the install and join walks, sets `CARGOSHIP_E2E_UPGRADE` for the job and raises its budget from 120 to 210 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.
+
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare step calls `action.NewPrepare`. That is what makes the two workflows independent, which is the point of the split.
 
-The job frees disk before it starts, because ten containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
+The job frees disk before it starts, because ten containerd image stores do not fit in what a hosted runner leaves free, and the upgrade walk imports a second set on top of the first. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
 
 ## Things that will cost you time
 

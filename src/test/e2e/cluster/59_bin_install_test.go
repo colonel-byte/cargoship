@@ -88,6 +88,12 @@ func (s *ApplyPhaseSuite) Test_59_BINUploadFiles() {
 	s.binUploadFiles()
 }
 
+// Test_59_BINUploadFiles stages the newer engine and replaces the install hook, which is the
+// hook the upgrade phases run rather than the initialize ones.
+func (s *UpgradePhaseSuite) Test_59_BINUploadFiles() {
+	s.binUploadFiles()
+}
+
 // Test_59_BINUploadFiles stages the engine and the install hook on the joining machine, which
 // is the hook Test_62 runs to bring it into the cluster.
 func (s *JoinPhaseSuite) Test_59_BINUploadFiles() {

@@ -16,21 +16,28 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
+	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/stretchr/testify/suite"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// phaseWalk is what a walk over the phase list is made of: one harness, one context, and the
-// rule that the first failure stops the rest. A walk steps through the phases against the
-// cluster one at a time, asserting what each phase left on the hosts. ApplyPhaseSuite embeds
-// it and is the walk that installs the distro.
+// phaseWalk is what ApplyPhaseSuite, JoinPhaseSuite and UpgradePhaseSuite have in common: one
+// harness, one context, and the rule that the first failure stops the rest. Each walks the same
+// phase list against the same cluster, one phase at a time, asserting what each phase left on
+// the hosts.
 //
-// It also carries the assertions themselves. A phase whose observable result does not depend
-// on what the walk is doing to the cluster has its body here as an unexported method, and the
-// suite's Test_NN method is a one-line call to it. Testify only collects methods whose name
-// begins with "Test", so a method here is shared rather than run once per suite that embeds
-// it. Assertions that hold only for one walk stay in the suite they belong to.
+// It also carries the assertions the walks share. A phase whose observable result is the same
+// whether it is installing, joining a node or upgrading -- the upload phases, the engine
+// config, the kubeconfig -- has its body here as an unexported method, and each suite's Test_NN
+// method is a one-line call to it. Testify only collects methods whose name begins with "Test",
+// so a method here is shared rather than run once per suite that embeds it.
+//
+// Where the walks differ, they differ for a reason worth reading -- the version the hosts
+// report, which of the initialize and upgrade phases claims them -- and those assertions stay
+// in the suite they belong to.
 type phaseWalk struct {
 	suite.Suite
 	harness *phaseHarness
@@ -72,4 +79,29 @@ func (s *phaseWalk) requireEngine() {
 func (s *phaseWalk) runPhase(p phase.Phase) {
 	s.T().Helper()
 	s.Require().NoError(s.harness.run(s.ctx, p), "phase %q failed", p.Title())
+}
+
+// requireSchedulable asserts that each of the given hosts has a registered node the scheduler
+// will still place pods on. It is what the upgrade phases have to leave behind: they drain and
+// cordon a node before replacing the engine on it, and a node left cordoned is the failure
+// that a running service and a correct version both look fine next to.
+func (s *phaseWalk) requireSchedulable(hosts apicluster.ZarfHosts) {
+	s.T().Helper()
+
+	cs, err := e2e.KubeClient(s.T())
+	s.Require().NoError(err)
+
+	nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	s.Require().NoError(err)
+
+	unschedulable := make(map[string]bool, len(nodes.Items))
+	for _, node := range nodes.Items {
+		unschedulable[strings.ToLower(node.Name)] = node.Spec.Unschedulable
+	}
+
+	for _, host := range hosts {
+		name := strings.ToLower(host.Metadata.Hostname)
+		s.Require().Containsf(unschedulable, name, "%s: no node registered as %q", host, name)
+		s.Require().Falsef(unschedulable[name], "%s: left cordoned after the upgrade", host)
+	}
 }
