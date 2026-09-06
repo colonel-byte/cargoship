@@ -56,7 +56,10 @@ type UploadFiles struct {
 
 	hosts    cluster.ZarfHosts
 	disFiles v1alpha1.ZarfFiles
-	imgFiles []v1alpha1.ZarfFile
+	// imgFiles holds the image tarballs to upload, keyed by the architecture of the host
+	// receiving them. An image pulled for several architectures is exported once per
+	// architecture the cluster actually runs, into its own directory under the tarball dir.
+	imgFiles map[api.Arch][]v1alpha1.ZarfFile
 
 	// priorManifest holds each host's upload manifest as it was before this run touched it,
 	// captured in Prepare so Run can tell which images an upgrade no longer uploads (e.g. an
@@ -92,11 +95,6 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 		p.priorManifest[h] = p.readManifest(h)
 	}
 
-	err := os.MkdirAll(filepath.Join(p.manager.TempDirectory, config.TarBallDir), 0755)
-	if err != nil {
-		return err
-	}
-
 	imagesPath := filepath.Join(p.manager.TempDirectory, config.ImagesDir)
 	src, err := oci.NewWithContext(ctx, imagesPath)
 	if err != nil {
@@ -105,11 +103,37 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 
 	store := &carch.OciArchiveStore{Root: imagesPath, Src: src}
 
-	exportPlatform := packageExportPlatform(p.manager.Distro.Build.Arches())
+	// Tarballs are built for the architectures the cluster actually runs rather than every
+	// architecture the package carries, so applying a multi-architecture package to a cluster of
+	// one architecture does not pay to export images nobody uploads.
+	arches := hostArches(ctx, p.manager.Config.Spec.Hosts)
+	p.imgFiles = make(map[api.Arch][]v1alpha1.ZarfFile, len(arches))
+
+	for _, arch := range arches {
+		if err := p.exportImagesForArch(ctx, src, store, arch); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// exportImagesForArch writes one image tarball per configured image for a single architecture.
+//
+// Each architecture gets its own directory under the tarball dir. The tarball name is derived from
+// the image reference alone, so two architectures of the same image would otherwise be written to
+// the same path, and the exporter opens tarballs for appending.
+func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, store *carch.OciArchiveStore, arch api.Arch) error {
+	exportPlatform := imageExportPlatform(arch)
+
+	tarBallDir := filepath.Join(p.manager.TempDirectory, config.TarBallDir, string(arch))
+	if err := os.MkdirAll(tarBallDir, 0755); err != nil {
+		return err
+	}
 
 	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
 		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), ".tar")
-		tarballPath := filepath.Join(p.manager.TempDirectory, config.TarBallDir, tarBallName)
+		tarballPath := filepath.Join(tarBallDir, tarBallName)
 
 		desc, err := src.Resolve(ctx, i)
 		if err != nil {
@@ -118,7 +142,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 
 		desc, err = resolveImageManifest(ctx, src, desc, exportPlatform)
 		if err != nil {
-			return fmt.Errorf("failed to select a manifest for image %s: %w", i, err)
+			return fmt.Errorf("failed to select a %s manifest for image %s: %w", arch, i, err)
 		}
 
 		desc.URLs = []string{
@@ -151,7 +175,7 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 			return err
 		}
 
-		p.imgFiles = append(p.imgFiles, v1alpha1.ZarfFile{
+		p.imgFiles[arch] = append(p.imgFiles[arch], v1alpha1.ZarfFile{
 			Name:        tarBallName,
 			Target:      p.manager.Distro.Spec.Config.ImagesConfig.Path,
 			TargetIsDir: true,
@@ -170,25 +194,16 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 // running cargoship, which may well be macOS.
 const imageExportOS = "linux"
 
-// packageExportPlatform returns the matcher used to pick and export image manifests.
+// imageExportPlatform returns the matcher used to pick and export image manifests for one host
+// architecture.
 //
-// The architecture comes from the package rather than from platforms.DefaultStrict(), which
-// describes the machine running cargoship. Building an amd64 package on an arm64 workstation
-// otherwise selects a manifest against the workstation's architecture, and writes a tarball no node
-// in the cluster can use.
-//
-// A package targeting several architectures has no single answer here, so it keeps the previous
-// behaviour for now.
-func packageExportPlatform(arches api.Arches) platforms.MatchComparer {
-	if len(arches) != 1 {
-		// TODO(#258): a multi-architecture package needs one tarball per host architecture, so the
-		// matcher has to be chosen per host at upload time rather than once for the whole package.
-		return platforms.DefaultStrict()
-	}
-
+// The architecture comes from the cluster rather than from platforms.DefaultStrict(), which
+// describes the machine running cargoship. Selecting against the workstation writes a tarball no
+// node in the cluster can use as soon as the two differ.
+func imageExportPlatform(arch api.Arch) platforms.MatchComparer {
 	return platforms.OnlyStrict(ocispec.Platform{
 		OS:           imageExportOS,
-		Architecture: string(arches[0]),
+		Architecture: string(arch),
 	})
 }
 
@@ -244,7 +259,9 @@ func (p *UploadFiles) ShouldRun() bool {
 // Run the phase
 func (p *UploadFiles) Run(ctx context.Context) error {
 	logger.From(ctx).Info("needing to upload files", "count", len(p.disFiles))
-	logger.From(ctx).Info("needing to upload images", "count", len(p.imgFiles))
+	for arch, files := range p.imgFiles {
+		logger.From(ctx).Info("needing to upload images", "arch", arch, "count", len(files))
+	}
 
 	return p.parallelDoUpload(
 		ctx,
@@ -367,8 +384,9 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 		}
 	}
 
-	for i, f := range p.imgFiles {
-		logger.From(ctx).Debug("image", "num", i+1, "count", len(p.imgFiles))
+	images := p.imgFiles[arch]
+	for i, f := range images {
+		logger.From(ctx).Debug("image", "num", i+1, "count", len(images), "arch", arch)
 		if err := p.uploadFile(ctx, h, &f); err != nil {
 			logger.From(ctx).Warn("failed to upload", "file", f.Name, "host", h, "error", err)
 		}
