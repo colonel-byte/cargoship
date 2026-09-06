@@ -24,6 +24,7 @@ import (
 // the workers actually registered as nodes is checked once the whole order is done, in
 // Test_ZZ1.
 func (s *ApplyPhaseSuite) Test_62_InitializeWorkers() {
+	s.requireEngine()
 	p := &phase.InitializeWorkers{
 		Distro:           s.harness.distro,
 		WorkerConcurrent: s.harness.opts.WorkerConcurrent,

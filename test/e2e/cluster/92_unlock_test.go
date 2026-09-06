@@ -19,6 +19,9 @@ package cluster
 // the one that stops the tickers keeping the lock file alive. The assertion is that the file
 // is gone from every host afterwards: a lock left behind delays the next run by 30 seconds
 // on every node.
+//
+// Like Test_91 it carries no requireEngine, and for the same reason. A stage-only walk that
+// took the lock and did not release it would leave the next run to wait it out.
 func (s *ApplyPhaseSuite) Test_92_Unlock() {
 	s.runPhase(s.harness.lock.UnlockPhase())
 

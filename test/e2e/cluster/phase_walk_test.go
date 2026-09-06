@@ -59,6 +59,15 @@ func (s *phaseWalk) TearDownTest() {
 	}
 }
 
+// requireEngine skips a step that installs, starts or queries the engine, on a run that was
+// asked for the staging phases only. See stageOnly.
+func (s *phaseWalk) requireEngine() {
+	s.T().Helper()
+	if stageOnly() {
+		s.T().Skip("stage-only run: this step needs a started engine")
+	}
+}
+
 // runPhase executes one phase and fails the current test if it errors.
 func (s *phaseWalk) runPhase(p phase.Phase) {
 	s.T().Helper()

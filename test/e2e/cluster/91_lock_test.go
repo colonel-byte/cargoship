@@ -21,6 +21,9 @@ package cluster
 //
 // The lock is a file on each host holding the instance ID of the process that took it, so
 // the assertion is that the file exists on every host and names this test binary.
+//
+// It carries no requireEngine, on purpose: writing and reading that file needs a connected
+// host and nothing else, so this runs on a stage-only walk as well as a full one.
 func (s *ApplyPhaseSuite) Test_91_Lock() {
 	s.runPhase(s.harness.lock)
 

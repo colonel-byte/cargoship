@@ -40,5 +40,6 @@ func (s *phaseWalk) engineConfigSyncWorker() {
 
 // Test_72_EngineConfigSyncWorker checks the worker half after the install.
 func (s *ApplyPhaseSuite) Test_72_EngineConfigSyncWorker() {
+	s.requireEngine()
 	s.engineConfigSyncWorker()
 }

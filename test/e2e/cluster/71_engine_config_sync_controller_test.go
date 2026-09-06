@@ -41,5 +41,6 @@ func (s *phaseWalk) engineConfigSyncController() {
 
 // Test_71_EngineConfigSyncController checks for drift after the install.
 func (s *ApplyPhaseSuite) Test_71_EngineConfigSyncController() {
+	s.requireEngine()
 	s.engineConfigSyncController()
 }
