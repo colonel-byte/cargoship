@@ -71,6 +71,8 @@ func hostBuildLocal(oper string, arch string) error {
 	env["GOOS"] = oper
 	env["GOARCH"] = arch
 	env["CGO_ENABLED"] = "0"
+	// Build with Go's native FIPS 140-3 crypto module enabled.
+	env["GOFIPS140"] = "latest"
 
 	gc := build.GCFLags()
 	ld := build.LDFlags(config.UnsetCLIVersion, gitCommit())

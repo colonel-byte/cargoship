@@ -52,7 +52,17 @@ func (m *Cargoship) BuildLocal(
 		WithWorkdir("/src").
 		WithEnvVariable("GOOS", os).
 		WithEnvVariable("GOARCH", arch).
-		WithEnvVariable("CGO_ENABLED", "0")
+		WithEnvVariable("CGO_ENABLED", "0").
+		// Everything the build needs (deps, go.sum checksums) is already in /src/vendor,
+		// so the build must never need network -- force any accidental reach-out (module
+		// fetch, sumdb lookup, toolchain auto-download) to fail fast instead of silently
+		// succeeding.
+		WithEnvVariable("GOFLAGS", "-mod=vendor").
+		WithEnvVariable("GOPROXY", "off").
+		WithEnvVariable("GOSUMDB", "off").
+		WithEnvVariable("GOTOOLCHAIN", "local").
+		// Build with Go's native FIPS 140-3 crypto module enabled.
+		WithEnvVariable("GOFIPS140", "latest")
 
 	gitCommit, _ := builder.WithExec([]string{"git", "rev-parse", "--short", "HEAD", "--always"}).Stdout(ctx)
 

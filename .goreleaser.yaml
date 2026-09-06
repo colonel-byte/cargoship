@@ -35,6 +35,7 @@ builds:
       - all=-l -B -C
     env:
       - CGO_ENABLED=0
+      - GOFIPS140=latest
     goos:
       - linux
       - darwin
