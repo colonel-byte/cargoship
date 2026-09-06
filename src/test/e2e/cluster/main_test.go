@@ -58,6 +58,15 @@ const (
 	bootKWA = uploadOnlyPrefix + "%d"
 )
 
+// joinFedoraWorkers is how many kwf* machines exist once the join walk has added one, and
+// joinHostname is the machine it adds. The join walk is the only walk that starts from a
+// machine the install never saw, so a Fedora worker is what it adds: the new node then has to
+// come through the SELinux, fapolicyd, firewalld and dnf branches on its own rather than
+// inheriting anything the apply walk already proved on the nodes beside it.
+const joinFedoraWorkers = 4
+
+var joinHostname = fmt.Sprintf(bootKWF, joinFedoraWorkers-1) //nolint:gochecknoglobals
+
 var (
 	e2e   test.CargoE2ETest //nolint:gochecknoglobals
 	ports = []config.PortMapping{
@@ -282,6 +291,11 @@ var (
 	testCluster    *blcluster.Cluster //nolint:gochecknoglobals
 	testClusterErr error              //nolint:gochecknoglobals
 
+	// The join walk's machine is provisioned the same way, on first use, so that a run that
+	// never reaches the join walk starts one fewer container.
+	joinOnce sync.Once //nolint:gochecknoglobals
+	joinErr  error     //nolint:gochecknoglobals
+
 	// fullClusterConfigPath is the inventory holding every machine, including the upload-only
 	// Alpine node. The phase harness is built from it, because the upload phases are meant to
 	// see that node. e2e.ClusterConfigPath points at the cluster-only inventory instead: the
@@ -290,16 +304,31 @@ var (
 	fullClusterConfigPath string //nolint:gochecknoglobals
 
 	// kubeconfigPath is the file KUBECONFIG points at for the whole run. TestMain owns it
-	// rather than a suite, so that the kubeconfig the apply walk writes outlives the suite
-	// that wrote it and the walks that follow can be handed the same cluster.
+	// rather than a suite, because the suites hand the cluster to each other: the apply walk
+	// writes it and the join walk runs against the cluster it names.
 	kubeconfigPath string //nolint:gochecknoglobals
 )
 
-// TestClusterPhases runs the apply walk against the shared bootloose cluster. It is a subtest
-// rather than a top-level test because the walks that will run after it take the cluster this
-// one leaves behind, and a subtest is what fixes the order they run in.
+// TestClusterPhases runs the two walks in the only order they work in. The apply walk installs
+// the distro on the shared bootloose cluster and the join walk adds a machine to what it
+// installed. They share one cluster and one kubeconfig, so they are subtests of one parent
+// rather than two top-level tests whose order would depend on declaration order.
 func TestClusterPhases(t *testing.T) {
-	t.Run("apply", func(t *testing.T) { suite.Run(t, new(ApplyPhaseSuite)) })
+	if !t.Run("apply", func(t *testing.T) { suite.Run(t, new(ApplyPhaseSuite)) }) {
+		t.Log("apply failed: the join walk needs the cluster it installs")
+		return
+	}
+
+	// The join walk starts from the cluster the apply walk installed, so a stage-only run has
+	// nothing for it to act on. The apply walk skips its own engine steps one at a time; this
+	// one is skipped whole, because reaching it would mean provisioning the extra machine and
+	// walking every phase again to arrive at a suite of uniformly skipped tests.
+	if stageOnly() {
+		t.Log("stage-only run: the join walk needs a started cluster")
+		return
+	}
+
+	t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
 }
 
 func TestMain(m *testing.M) {
@@ -355,9 +384,50 @@ func requireCluster(t *testing.T) {
 	require.NoError(t, testClusterErr)
 }
 
-// writeInventories renders the live bootloose machines into the two inventory files the walk
-// reads: the full one the phase harness is built from, and the engine-only one the CLI-driven
-// steps are given.
+// requireJoinMachine adds the machine the join walk joins to the cluster, and rewrites both
+// inventories so that every later walk sees it. It is the same bootloose config with one more
+// Fedora worker in it: CreateMachine skips a container that already exists, so the call
+// creates kwf3 and leaves the ten machines the apply walk installed running.
+//
+// The new cluster object replaces testCluster. bootloose finds a cluster's machines by walking
+// the config it was built from rather than by asking Docker, so the object built from the
+// ten-machine config would leave the eleventh container behind on shutdown.
+func requireJoinMachine(t *testing.T) {
+	t.Helper()
+	requireCluster(t)
+
+	joinOnce.Do(func() {
+		cluster, err := setup(withJoinMachine(clusterConfig()))
+		if err != nil {
+			joinErr = err
+			return
+		}
+		testCluster = cluster
+		joinErr = writeInventories(cluster)
+	})
+	require.NoError(t, joinErr)
+}
+
+// withJoinMachine returns cfg with one more Fedora worker in it. It raises the count on the
+// template the other Fedora workers come from rather than adding a second template, because
+// bootloose names a machine by formatting its template's name with the replica index: a
+// second template would start counting from zero again and collide with kwf0.
+func withJoinMachine(cfg config.Config) config.Config {
+	machines := make([]config.MachineReplicas, len(cfg.Machines))
+	copy(machines, cfg.Machines)
+	for i := range machines {
+		if machines[i].Spec.Name == bootKWF {
+			machines[i].Count = joinFedoraWorkers
+		}
+	}
+	cfg.Machines = machines
+	return cfg
+}
+
+// writeInventories renders the live bootloose machines into the two inventory files the walks
+// read: the full one the phase harness is built from, and the engine-only one the CLI-driven
+// steps are given. The join walk calls it a second time, once its machine is up, so that both
+// files name the node it added.
 func writeInventories(c *blcluster.Cluster) error {
 	keyPath, err := filepath.Abs(clusterConfig().Cluster.PrivateKey)
 	if err != nil {
@@ -397,7 +467,8 @@ func setup(config config.Config) (*blcluster.Cluster, error) {
 
 // detachHostsFileScript replaces the bind mount Docker puts over /etc/hosts with an ordinary
 // file holding the same lines. It does nothing when /etc/hosts is already an ordinary file, so
-// that it can run again over machines an earlier call already handled.
+// that it can run again over machines an earlier call already handled -- which is what the
+// join walk does when it grows the cluster.
 const detachHostsFileScript = `
 if grep -q ' /etc/hosts ' /proc/mounts; then
 	cp /etc/hosts /tmp/hosts.detach &&

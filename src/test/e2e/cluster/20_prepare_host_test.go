@@ -35,6 +35,8 @@ const sysctlConfPath = "/etc/sysctl.d/99-cargoship.conf"
 // broken one whenever the host happens to already match. What the phase controls, and all it
 // controls from inside a container, is the file, so that is what is checked. The phase still
 // runs `sysctl --system` itself, and a failure there fails the phase and so fails runPhase.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) prepareHosts() {
 	s.T().Helper()
 
@@ -65,5 +67,10 @@ func (s *phaseWalk) prepareHosts() {
 }
 
 func (s *ApplyPhaseSuite) Test_20_PrepareHosts() {
+	s.prepareHosts()
+}
+
+// Test_20_PrepareHosts applies the kernel settings to the new node.
+func (s *JoinPhaseSuite) Test_20_PrepareHosts() {
 	s.prepareHosts()
 }

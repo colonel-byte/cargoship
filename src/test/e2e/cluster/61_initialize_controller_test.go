@@ -43,3 +43,24 @@ func (s *ApplyPhaseSuite) Test_61_InitializeControllers() {
 			"%s: running an engine version the package did not ship", host)
 	}
 }
+
+// Test_61_InitializeControllers, on the join walk, must claim nothing. The join adds a worker,
+// and every controller is up and reporting a version, which is what the phase's Prepare
+// excludes -- claiming one here would re-bootstrap a live control plane in order to add a node
+// to it.
+func (s *JoinPhaseSuite) Test_61_InitializeControllers() {
+	p := &phase.InitializeControllers{Distro: s.harness.distro}
+	s.runPhase(p)
+	s.Require().False(ran(p), "the initialize phase claimed controllers that are already running")
+
+	service := s.harness.distro.GetControllerService()
+	for _, host := range s.harness.controllers() {
+		s.Require().Truef(host.Configurer.ServiceIsRunning(host, service),
+			"%s: %s stopped running", host, service)
+
+		version, err := s.harness.distro.RunningVersion(*host)
+		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
+		s.Require().Equalf(installedVersion, version,
+			"%s: the join changed the engine version on a controller", host)
+	}
+}

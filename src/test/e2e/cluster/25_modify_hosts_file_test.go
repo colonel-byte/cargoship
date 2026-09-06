@@ -31,6 +31,8 @@ const hostsFileComment = "added by cargoship"
 // resolve every other node by name, so the assertion is the full matrix: each host's
 // /etc/hosts carries an entry for each host in the cluster, tagged with cargoship's comment,
 // and the name actually resolves on the node.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) modifyHosts() {
 	s.T().Helper()
 
@@ -78,5 +80,12 @@ func (s *phaseWalk) modifyHosts() {
 }
 
 func (s *ApplyPhaseSuite) Test_25_ModifyHosts() {
+	s.modifyHosts()
+}
+
+// Test_25_ModifyHosts is one of the two assertions that the cluster learned about the new node
+// rather than only the new node learning about the cluster: the matrix is over every host, so
+// every established node has to resolve the new one before this passes.
+func (s *JoinPhaseSuite) Test_25_ModifyHosts() {
 	s.modifyHosts()
 }
