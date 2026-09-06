@@ -1,0 +1,117 @@
+---
+name: E2E cluster
+
+# The install group, src/test/e2e/cluster, which provisions a bootloose cluster of ten Docker
+# machines and walks the apply phase list one phase at a time against it. It needs Docker and
+# takes minutes rather than seconds, so it is not part of every pull request the way e2e.yaml
+# is. It has its own workflow rather than a gated job in e2e.yaml so that its trigger, its
+# concurrency group and its time budget are independent of the checks that do run on every
+# push.
+#
+# It runs on demand from the Actions tab, and automatically on a pull request carrying the
+# "e2e-cluster" label. Add that label to a pull request that touches src/pkg/phase,
+# src/pkg/action or the inventory handling. The trigger lists "labeled" explicitly: without
+# it, adding the label to an open pull request would not start a run until the next push.
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-cluster-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # One job, and no build step: the suite calls the cargoship packages directly -- distro.Create
+  # to build the package and action.NewPrepare around the phase walk -- so there is no binary
+  # for this workflow to produce or download. That is what makes it independent of e2e.yaml,
+  # which is the point of the split.
+  e2e-cluster:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e-cluster')
+    runs-on: ubuntu-latest
+    # The suite's own timeout is below this, so an overrun is reported as a Go test failure
+    # naming the phase it was in rather than as a cancelled job.
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # The package the suite builds runs to gigabytes, on top of ten container images, which
+      # is more than the ~14GB a hosted runner leaves free comfortably holds. None of what is
+      # removed here is used by this job. The tool cache is deliberately left alone: setup-go
+      # puts the toolchain there.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Test
+        run: >-
+          go test -mod=vendor -count=1 -v -timeout=40m
+          ./src/test/e2e/cluster/...
+        env:
+          # Everything the test build needs is vendored, so make any accidental network
+          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          CGO_ENABLED: 0
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      # Most of what explains a failure is already in the -v output above: the suite stops at
+      # the first failing phase and the phase logs are written through to stdout. This
+      # step covers the two things that are not, and that a phase failure does not distinguish
+      # between -- a full disk and an exhausted runner.
+      #
+      # The container loop usually finds nothing, because TestMain deletes the cluster on the
+      # way out even when tests fail. It is here for the case where it did not get that far:
+      # the test binary killed by the OOM reaper, or a Delete that itself failed. When it does
+      # find containers, their logs are the only account of what the node was doing.
+      - name: Collect node diagnostics
+        if: failure()
+        run: |
+          df -h /
+          free -h
+          docker ps -a
+          for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
+            name=$(docker inspect -f '{{.Name}}' "$c")
+            echo "::group::$name"
+            docker logs --tail 200 "$c" 2>&1 || true
+            echo "::endgroup::"
+          done
+
+      # TestMain deletes the cluster even when tests fail, but not when the job is cancelled
+      # or the test binary is killed, and a hosted runner is discarded anyway -- this is here
+      # so the same workflow behaves on a self-hosted runner, where it is not.
+      - name: Remove leftover bootloose containers
+        if: always()
+        run: |
+          ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
+          if [ -n "$ids" ]; then
+            docker rm -f $ids
+          fi

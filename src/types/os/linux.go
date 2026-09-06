@@ -61,6 +61,14 @@ func (l *Linux) OSKind() string {
 // add functions to base Linux package that call functions in the rig/os.Linux package,
 // you can however write those functions in the distro-configurers.
 
+// ApplySysctl loads every sysctl file the OS reads at boot, which includes the file at path.
+// Applying them all rather than only that file keeps a setting cargoship overrides from being
+// re-applied at its old value by a file later in the load order, and matches what the host
+// does on its next boot.
+func (l *Linux) ApplySysctl(h os.Host, _ string) error {
+	return h.Exec("sysctl --system", exec.Sudo(h))
+}
+
 // Quote wraps shellescape.Quote for consumers that need OS-aware escaping
 func (l *Linux) Quote(value string) string {
 	return shellescape.Quote(value)

@@ -30,12 +30,19 @@ type (
 	Test mg.Namespace
 )
 
-// runE2E builds the binary the e2e suites drive, then runs go test against pkg with the
-// temp directory both the suites and the binary under test write into.
+// runE2E builds the binary the suite drives, then runs go test against pkg. Use it for the
+// suites that shell out to the CLI; a suite that calls the packages directly wants
+// runE2ENoBuild instead.
 func runE2E(timeout string, pkg string, extra ...string) error {
 	if err := daggerBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
 		return err
 	}
+	return runE2ENoBuild(timeout, pkg, extra...)
+}
+
+// runE2ENoBuild runs go test against pkg with the temp directory the e2e suites write into,
+// and builds nothing.
+func runE2ENoBuild(timeout string, pkg string, extra ...string) error {
 	e2eTmpDir, err := filepath.Abs(filepath.Join(buildDir, "tmp"))
 	if err != nil {
 		return err
