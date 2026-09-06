@@ -2,10 +2,10 @@
 name: E2E cluster
 
 # The install group, src/test/e2e/cluster, which provisions a bootloose cluster of ten Docker
-# machines and walks the apply phase list one phase at a time against it. It needs Docker and
-# takes minutes rather than seconds, so it is not part of every pull request the way e2e.yaml
-# is. It has its own workflow rather than a gated job in e2e.yaml so that its trigger, its
-# concurrency group and its time budget are independent of the checks that do run on every
+# machines and walks the apply phase list one phase at a time against it. It installs rke2
+# onto nine of them and takes tens of minutes, so it is not part of every pull request the way
+# e2e.yaml is. It has its own workflow rather than a gated job in e2e.yaml so that its trigger,
+# its concurrency group and its time budget are independent of the checks that do run on every
 # push.
 #
 # It runs on demand from the Actions tab, and automatically on a pull request carrying the
@@ -49,8 +49,9 @@ jobs:
   # The staging half of the suite, over the five-machine inventory: it uploads the package and
   # renders the engine config without starting an engine anywhere. No build step -- the suite
   # calls the cargoship packages directly, distro.Create to build the package and
-  # action.NewPrepare around the phase walk, so there is no binary for this workflow to produce
-  # or download. That is what makes it independent of e2e.yaml, which is the point of the split.
+  # action.NewPrepare and action.NewApply around the phase walk, so there is no binary for this
+  # workflow to produce or download. That is what makes it independent of e2e.yaml, which is the
+  # point of the split.
   e2e-cluster-stage:
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -94,7 +95,8 @@ jobs:
           GOSUMDB: "off"
           GOTOOLCHAIN: local
 
-      # Same reasoning as the full job's diagnostics step below.
+      # Same reasoning as the full job's diagnostics step below, minus the journalctl: nothing
+      # on these nodes was started, so there is no engine unit to read.
       - name: Collect node diagnostics
         if: failure()
         run: |
@@ -125,7 +127,7 @@ jobs:
     runs-on: ubuntu-latest
     # The suite's own timeout is below this, so an overrun is reported as a Go test failure
     # naming the phase it was in rather than as a cancelled job.
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -148,7 +150,7 @@ jobs:
 
       - name: Test
         run: >-
-          go test -mod=vendor -count=1 -v -timeout=55m
+          go test -mod=vendor -count=1 -v -timeout=105m
           ./src/test/e2e/cluster/...
         env:
           # Everything the test build needs is vendored, so make any accidental network
@@ -178,6 +180,7 @@ jobs:
             name=$(docker inspect -f '{{.Name}}' "$c")
             echo "::group::$name"
             docker logs --tail 200 "$c" 2>&1 || true
+            docker exec "$c" journalctl -u rke2-server -u rke2-agent --no-pager -n 200 2>&1 || true
             echo "::endgroup::"
           done
 

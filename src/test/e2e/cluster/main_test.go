@@ -263,9 +263,6 @@ func countsFor(cfg config.Config) clusterCounts {
 // CPU than a hosted runner has, and needs a container runtime nested inside the node
 // containers -- see engineData for what that costs. Turning this on is how a runner that
 // cannot give the engine half what it needs still covers the phases that do not need it.
-//
-// The walk does not reach those phases yet, so for now setting this selects stageOS and nothing
-// else. The per-phase skip arrives with the phases it skips.
 const stageOnlyEnvVar = "CARGOSHIP_E2E_STAGE_ONLY"
 
 // stageOnly reports whether the run was asked to stop before the engine phases.
@@ -291,6 +288,11 @@ var (
 	// whole-action steps run prepare, apply and reset, which would try to install the engine
 	// on a host that cannot run it.
 	fullClusterConfigPath string //nolint:gochecknoglobals
+
+	// kubeconfigPath is the file KUBECONFIG points at for the whole run. TestMain owns it
+	// rather than a suite, so that the kubeconfig the apply walk writes outlives the suite
+	// that wrote it and the walks that follow can be handed the same cluster.
+	kubeconfigPath string //nolint:gochecknoglobals
 )
 
 // TestClusterPhases runs the apply walk against the shared bootloose cluster. It is a subtest
@@ -309,7 +311,20 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	kubeDir, err := os.MkdirTemp("", "cargoship-e2e-kube")
+	if err != nil {
+		log.Fatal(err)
+	}
+	kubeconfigPath = filepath.Join(kubeDir, "config")
+	if err := os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
+		log.Fatal(err)
+	}
+
 	code := m.Run()
+
+	if err := os.RemoveAll(kubeDir); err != nil {
+		log.Print(err)
+	}
 
 	if testCluster != nil {
 		if err := shutdown(testCluster); err != nil {
