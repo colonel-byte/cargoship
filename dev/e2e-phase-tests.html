@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33d309e.js";
+            window.path_to_searchindex_js = "../searchindex-740be238.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-9a34b427.js"></script>
@@ -228,6 +228,7 @@ func (s *ApplyPhaseSuite) Test_NN_YourPhase() {
 <tr><td><code>s.harness.uploadOnly()</code></td><td>the hosts that receive uploads and never join</td></tr>
 <tr><td><code>s.harness.manager</code></td><td>the live <code>phase.Manager</code>, for <code>Distro</code>, <code>DistroID</code>, <code>TempDirectory</code></td></tr>
 <tr><td><code>s.harness.distro</code></td><td>the distro module, for phases that take a <code>Distro</code> field</td></tr>
+<tr><td><code>s.harness.carriesFilesFor(selector)</code></td><td>whether the package ships OS files for <code>config.SelectorRPM</code> / <code>SelectorAPT</code> / <code>SelectorBIN</code></td></tr>
 <tr><td><code>s.harness.opts</code></td><td>the apply options the suite runs with (<code>ModifyHosts</code>, <code>ModifyFirewall</code>, <code>WorkerConcurrent</code>, …)</td></tr>
 <tr><td><code>readOnHosts(hosts, path)</code></td><td>reads one path on every host, keyed by host string</td></tr>
 <tr><td><code>ran(p)</code></td><td>whether the manager executed the phase or skipped it</td></tr>
@@ -263,16 +264,16 @@ if !ran(p) {
 <pre><code class="language-go">enterprise := s.harness.hosts().Filter(utils.FilterEnterpriseLinux)
 debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 </code></pre>
-<p>Then assert the split: the hosts the phase claims got what it promises, the hosts it does not came back unchanged.</p>
+<p>Then assert the split: the hosts the phase claims got what it promises, the hosts it does not came back unchanged. <code>57_rpm_install_test.go</code> and <code>58_apt_install_test.go</code> are the worked examples.</p>
 <p>Require the set you are testing to be non-empty. If someone collapses the cluster to one image, that turns a test which silently stopped covering anything into a failure that says so.</p>
 <h2 id="the-upload-only-host"><a class="header" href="#the-upload-only-host">The upload-only host</a></h2>
-<p>Alpine is neither Enterprise Linux nor Debian, so both of the filters above decline it. That is why it is in the inventory: it is the only host that reaches a phase’s fallback branch as the fallback rather than as the path every host happens to take.</p>
-<p>It cannot run rke2, which links against glibc, so it never joins the cluster. A phase that installs, starts, configures or queries the engine must not see it at all: those hosts have to come off the manager before the first such phase runs, and <code>s.harness.uploadOnly()</code> is what identifies them.</p>
+<p>Alpine is neither Enterprise Linux nor Debian, so both of the filters above decline it and it falls through to the BIN upload phase. That is why it is in the inventory: without it, <code>59_bin_install.go</code> is only ever exercised as the path every host happens to take, never as the fallback it is written to be.</p>
+<p>It cannot run rke2, which links against glibc, so it never joins the cluster. An upload phase that is meant to claim it should assert against <code>s.harness.uploadOnly()</code> explicitly. A phase that installs, starts, configures or queries the engine must not see it at all: those hosts have to come off the manager before the first such phase runs.</p>
 <p>Do not “fix” a phase that fails on Alpine by skipping the host in the assertion. The phases select their own hosts in <code>Prepare</code>, with no OS gate in most cases, so the phase will still have run against it and spent its retry budget there. If a phase genuinely cannot run on a host, that host must not be on the manager when the phase runs.</p>
 <p><code>s.harness.engineWorkers()</code> is <code>workers()</code> without those hosts, for a test that runs while they are still on the manager but is only meaningful for the hosts that join.</p>
 <h2 id="prerequisites-and-running-it"><a class="header" href="#prerequisites-and-running-it">Prerequisites and running it</a></h2>
 <p>The suite needs Docker and a real distro package. It needs no prebuilt binary – every step calls the cargoship packages directly, so a bare checkout is enough.</p>
-<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=40m ./src/test/e2e/cluster/...
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=55m ./src/test/e2e/cluster/...
 </code></pre>
 <p>Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:</p>
 <pre><code class="language-console">$ mage test:endToEndCluster
@@ -281,12 +282,12 @@ debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 <h3 id="in-ci"><a class="header" href="#in-ci">In CI</a></h3>
 <p><code>.github/workflows/e2e-cluster.yaml</code> runs it, on its own trigger and separate from <code>e2e.yaml</code>, which is what runs on every pull request. This one does not: it provisions ten containers, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled <code>e2e-cluster</code>. Add that label to a PR touching <code>src/pkg/phase</code>, <code>src/pkg/action</code> or the inventory handling; the trigger listens for <code>labeled</code>, so labelling an open PR starts a run without needing a push.</p>
 <p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare step calls <code>action.NewPrepare</code>. That is what makes the two workflows independent, which is the point of the split.</p>
-<p>The job frees disk before it starts, because ten containers and the images they unpack do not fit in what a hosted runner leaves free. If it fails with hosts that never come back, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one.</p>
+<p>The job frees disk before it starts, because ten containers, the images they unpack and the package staged onto each of them do not fit in what a hosted runner leaves free. If it fails with hosts that never come back, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one.</p>
 <h2 id="things-that-will-cost-you-time"><a class="header" href="#things-that-will-cost-you-time">Things that will cost you time</a></h2>
 <ul>
 <li><strong>You cannot run one phase test on its own.</strong> <code>-run 'TestClusterPhases/apply/Test_25_ModifyHosts'</code> fails: the hosts were never connected, because <code>Test_07_Connect</code> and <code>Test_09_DetectOS</code> are earlier methods that <code>-run</code> filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.</li>
 <li><strong>The first failure stops the rest.</strong> <code>SetupTest</code> skips every remaining step once one has failed, so the output names one phase rather than all of them. If the first failure looks like a symptom, it is the cause – everything after it was skipped, not passed.</li>
-<li><strong>Constants the phase package keeps unexported.</strong> Where a path is not exported, the test file redeclares it with a comment saying where it came from (<code>sysctlConfPath</code> in <code>20_prepare_host_test.go</code>). Prefer exporting from <code>phase</code> when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.</li>
+<li><strong>Constants the phase package keeps unexported.</strong> Where a path is not exported, the test file redeclares it with a comment saying where it came from (<code>uploadManifestPath</code> in <code>50_uploadfiles_test.go</code>, <code>sysctlConfPath</code> in <code>20_prepare_host_test.go</code>). Prefer exporting from <code>phase</code> when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.</li>
 <li><strong>Ten containers is a lot of memory.</strong> That is the reason this suite is not part of the default <code>go test ./...</code> path.</li>
 </ul>
 
