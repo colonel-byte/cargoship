@@ -26,9 +26,11 @@ The gate is `stageOnlyEnvVar`, read through `strconv.ParseBool`, under the `CARG
 
 It is a function rather than a package variable so that it reads the environment when asked rather than at package init, which is what lets a caller set it in process -- `mage test:endToEndClusterStage` does exactly that.
 
-## The engine steps are skipped one at a time
+## Two granularities of skip
 
-`ApplyPhaseSuite` is gated per method rather than as a whole. Each of `Test_61` through `Test_81` begins with `requireEngine()`, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.
+`ApplyPhaseSuite` is skipped per method. Each of `Test_61` through `Test_81` begins with `requireEngine()`, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.
+
+The join walk is skipped whole, in `TestClusterPhases`. It starts from the cluster the apply walk installed -- there is nothing to join when nothing was started -- so gating it method by method would produce a suite of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.
 
 ## The phases after the engine still run
 

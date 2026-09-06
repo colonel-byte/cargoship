@@ -319,6 +319,15 @@ func TestClusterPhases(t *testing.T) {
 		return
 	}
 
+	// The join walk starts from the cluster the apply walk installed, so a stage-only run has
+	// nothing for it to act on. The apply walk skips its own engine steps one at a time; this
+	// one is skipped whole, because reaching it would mean provisioning the extra machine and
+	// walking every phase again to arrive at a suite of uniformly skipped tests.
+	if stageOnly() {
+		t.Log("stage-only run: the join walk needs a started cluster")
+		return
+	}
+
 	t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
 }
 
@@ -388,7 +397,7 @@ func requireJoinMachine(t *testing.T) {
 	requireCluster(t)
 
 	joinOnce.Do(func() {
-		cluster, err := setup(withJoinMachine(mixedOS))
+		cluster, err := setup(withJoinMachine(clusterConfig()))
 		if err != nil {
 			joinErr = err
 			return
