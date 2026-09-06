@@ -29,10 +29,10 @@ import (
 // Node counts once the join walk's machine is in the inventory: one more Fedora worker than
 // the apply walk saw, which is one more host, one more worker and one more node in the
 // cluster. The upload-only count and the controller count do not move.
-const (
-	joinInventoryHostCount = inventoryHostCount + 1
-	joinClusterNodeCount   = clusterNodeCount + 1
-	joinClusterWorkers     = clusterWorkers + 1
+var (
+	joinInventoryHostCount = inventoryHostCount + 1 //nolint:gochecknoglobals
+	joinClusterNodeCount   = clusterNodeCount + 1   //nolint:gochecknoglobals
+	joinClusterWorkers     = clusterWorkers + 1     //nolint:gochecknoglobals
 )
 
 // JoinPhaseSuite walks the apply phase list a second time, against a cluster that is already
