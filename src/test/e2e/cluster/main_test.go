@@ -263,9 +263,6 @@ func countsFor(cfg config.Config) clusterCounts {
 // CPU than a hosted runner has, and needs a container runtime nested inside the node
 // containers -- see engineData for what that costs. Turning this on is how a runner that
 // cannot give the engine half what it needs still covers the phases that do not need it.
-//
-// The walk does not reach those phases yet, so for now setting this selects stageOS and nothing
-// else. The per-phase skip arrives with the phases it skips.
 const stageOnlyEnvVar = "CARGOSHIP_E2E_STAGE_ONLY"
 
 // stageOnly reports whether the run was asked to stop before the engine phases.

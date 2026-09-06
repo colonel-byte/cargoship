@@ -24,6 +24,7 @@ import (
 // none of them. The assertion is that it stays out of the way and leaves the control plane
 // Test_61 started running.
 func (s *ApplyPhaseSuite) Test_66_UpgradeController() {
+	s.requireEngine()
 	p := &phase.UpgradeController{UpgradeHosts: phase.UpgradeHosts{Distro: s.harness.distro}}
 	s.runPhase(p)
 	s.Require().False(ran(p), "the upgrade phase claimed controllers that were just installed")

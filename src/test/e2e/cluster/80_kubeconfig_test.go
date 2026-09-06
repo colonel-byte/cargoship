@@ -62,5 +62,6 @@ func (s *phaseWalk) kubeConfig() {
 
 // Test_80_KubeConfig writes the admin credentials for the cluster the install created.
 func (s *ApplyPhaseSuite) Test_80_KubeConfig() {
+	s.requireEngine()
 	s.kubeConfig()
 }
