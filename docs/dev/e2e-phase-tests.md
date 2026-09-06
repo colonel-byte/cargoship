@@ -60,6 +60,7 @@ Each assertion body lives on `phaseWalk`, the embedded type `ApplyPhaseSuite` is
 | `s.harness.uploadOnly()` | the hosts that receive uploads and never join |
 | `s.harness.manager` | the live `phase.Manager`, for `Distro`, `DistroID`, `TempDirectory` |
 | `s.harness.distro` | the distro module, for phases that take a `Distro` field |
+| `s.harness.carriesFilesFor(selector)` | whether the package ships OS files for `config.SelectorRPM` / `SelectorAPT` / `SelectorBIN` |
 | `s.harness.opts` | the apply options the suite runs with (`ModifyHosts`, `ModifyFirewall`, `WorkerConcurrent`, ...) |
 | `readOnHosts(hosts, path)` | reads one path on every host, keyed by host string |
 | `ran(p)` | whether the manager executed the phase or skipped it |
@@ -105,15 +106,15 @@ enterprise := s.harness.hosts().Filter(utils.FilterEnterpriseLinux)
 debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 ```
 
-Then assert the split: the hosts the phase claims got what it promises, the hosts it does not came back unchanged.
+Then assert the split: the hosts the phase claims got what it promises, the hosts it does not came back unchanged. `57_rpm_install_test.go` and `58_apt_install_test.go` are the worked examples.
 
 Require the set you are testing to be non-empty. If someone collapses the cluster to one image, that turns a test which silently stopped covering anything into a failure that says so.
 
 ## The upload-only host
 
-Alpine is neither Enterprise Linux nor Debian, so both of the filters above decline it. That is why it is in the inventory: it is the only host that reaches a phase's fallback branch as the fallback rather than as the path every host happens to take.
+Alpine is neither Enterprise Linux nor Debian, so both of the filters above decline it and it falls through to the BIN upload phase. That is why it is in the inventory: without it, `59_bin_install.go` is only ever exercised as the path every host happens to take, never as the fallback it is written to be.
 
-It cannot run rke2, which links against glibc, so it never joins the cluster. A phase that installs, starts, configures or queries the engine must not see it at all: those hosts have to come off the manager before the first such phase runs, and `s.harness.uploadOnly()` is what identifies them.
+It cannot run rke2, which links against glibc, so it never joins the cluster. An upload phase that is meant to claim it should assert against `s.harness.uploadOnly()` explicitly. A phase that installs, starts, configures or queries the engine must not see it at all: those hosts have to come off the manager before the first such phase runs.
 
 Do not "fix" a phase that fails on Alpine by skipping the host in the assertion. The phases select their own hosts in `Prepare`, with no OS gate in most cases, so the phase will still have run against it and spent its retry budget there. If a phase genuinely cannot run on a host, that host must not be on the manager when the phase runs.
 
@@ -124,7 +125,7 @@ Do not "fix" a phase that fails on Alpine by skipping the host in the assertion.
 The suite needs Docker and a real distro package. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
 
 ```console
-$ go test -mod=vendor -count=1 -v -timeout=40m ./src/test/e2e/cluster/...
+$ go test -mod=vendor -count=1 -v -timeout=55m ./src/test/e2e/cluster/...
 ```
 
 Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:
@@ -141,11 +142,11 @@ $ mage test:endToEndCluster
 
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare step calls `action.NewPrepare`. That is what makes the two workflows independent, which is the point of the split.
 
-The job frees disk before it starts, because ten containers and the images they unpack do not fit in what a hosted runner leaves free. If it fails with hosts that never come back, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one.
+The job frees disk before it starts, because ten containers, the images they unpack and the package staged onto each of them do not fit in what a hosted runner leaves free. If it fails with hosts that never come back, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one.
 
 ## Things that will cost you time
 
 *   **You cannot run one phase test on its own.** `-run 'TestClusterPhases/apply/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
 *   **The first failure stops the rest.** `SetupTest` skips every remaining step once one has failed, so the output names one phase rather than all of them. If the first failure looks like a symptom, it is the cause -- everything after it was skipped, not passed.
-*   **Constants the phase package keeps unexported.** Where a path is not exported, the test file redeclares it with a comment saying where it came from (`sysctlConfPath` in `20_prepare_host_test.go`). Prefer exporting from `phase` when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.
+*   **Constants the phase package keeps unexported.** Where a path is not exported, the test file redeclares it with a comment saying where it came from (`uploadManifestPath` in `50_uploadfiles_test.go`, `sysctlConfPath` in `20_prepare_host_test.go`). Prefer exporting from `phase` when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.
 *   **Ten containers is a lot of memory.** That is the reason this suite is not part of the default `go test ./...` path.

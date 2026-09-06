@@ -43,6 +43,8 @@ A phase that returns `nil` has not necessarily done anything. Every assertion in
 - every host's detected `os-release` ID matching the image its machine was built from, and every family the bootloose config provisions being present
 - the rendered `/etc/sysctl.d/99-cargoship.conf` naming every setting the package carries, at the value it carries
 - every peer's private address, long hostname and short hostname in every host's `/etc/hosts`, plus `getent hosts <peer>` resolving to the right address -- the full matrix, because a broken loop that writes only the first peer passes any spot check
+- the firewall's own dump (`firewall-cmd --list-all`, `ufw status verbose`, `nft list ruleset`) naming each peer, rather than the phase's idea of what it wrote
+- every path the upload manifest claims present on the host, or staged beside it under the temporary name the install hook will move
 
 Reading through SSH rather than through the phase's own state is deliberate: a phase that records success in `Metadata` without touching the host would otherwise pass.
 
@@ -64,7 +66,7 @@ Ordered, stateful tests mean one broken early phase produces a run of downstream
 
 The cluster was six usable nodes on one Ubuntu image (with three further machines provisioned and never wired into the inventory). It is now nine: three controllers and six workers, each role split between Ubuntu and Fedora.
 
-The OS mix is the substantive part. The apply phase list routes on OS family in at least five places -- the RPM and APT upload phases, SELinux, fapolicyd, and the firewall backend -- and on a single-family cluster the branch that does not match is never taken. Worse, the gate assertions described above *pass* in that case, so the suite reports coverage it does not have.
+The OS mix is the substantive part. The apply phase list routes on OS family in at least five places -- the RPM and APT upload phases, SELinux, fapolicyd, and the firewall backend -- and on a single-family cluster the branch that does not match is never taken. Worse, the gate assertions described above *pass* in that case, so the suite reports coverage it does not have. With both families present, `Test_57_RPMUploadFiles` and `Test_58_APTUploadFiles` each assert a real split: the family they claim keeps what was staged, the family they do not comes back byte-identical.
 
 To keep that from silently regressing, `Test_09_DetectOS` asserts that every family the bootloose config provisions is present, and that each host's detected `os-release` ID matches the image its machine was built from. If someone collapses the cluster back to one image, the failure names that cause rather than showing up as a phase test that quietly stopped covering a branch.
 
@@ -74,9 +76,9 @@ Both images are the project's own: `ghcr.io/colonel-byte/bootloose/ubuntu-26` an
 
 ## A tenth machine that receives uploads and never joins
 
-Two of the three upload phases are reached by an OS-family filter. The third, `phase/59_bin_install.go`, is what a host gets when neither of the other two claims it -- which on an all-Ubuntu, all-Fedora cluster meant every host, because rke2 ships as neither an RPM nor a deb. The phase would be exercised as the path every host happens to take, not as the fallback it is written to be, and nothing in the suite would notice if the two family filters started claiming hosts they should not.
+Two of the three upload phases are reached by an OS-family filter. The third, `phase/59_bin_install.go`, is what a host gets when neither of the other two claims it -- which on an all-Ubuntu, all-Fedora cluster meant every host, because rke2 ships as neither an RPM nor a deb. So the phase was being exercised as the path every host happens to take, not as the fallback it is written to be, and nothing in the suite would have noticed if the two family filters had started claiming hosts they should not.
 
-The cluster therefore also provisions one `ghcr.io/colonel-byte/bootloose/alpine-3.23` machine. Alpine is neither Enterprise Linux nor Debian, so `utils.FilterEnterpriseLinux` and `utils.FilterDebianLinux` both decline it and it reaches the BIN phase as the only host that had nowhere else to go.
+The cluster therefore also provisions one `ghcr.io/colonel-byte/bootloose/alpine-3.23` machine. Alpine is neither Enterprise Linux nor Debian, so `utils.FilterEnterpriseLinux` and `utils.FilterDebianLinux` both decline it and it reaches the BIN phase as the only host that had nowhere else to go. `Test_59_BINUploadFiles` asserts against it by name.
 
 It cannot run the engine: rke2 links against glibc and Alpine is musl. Three things follow from that, and each had an alternative.
 
