@@ -53,6 +53,7 @@
 - [dagger](dev/dagger.md)
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
+- [fips-build](dev/fips-build.md)
 - [mage](dev/mage.md)
 - [thirdparty-src](dev/thirdparty-src.md)
 
