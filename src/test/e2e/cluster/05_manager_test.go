@@ -33,14 +33,17 @@ const distroID = "rke2"
 // running Fedora, the "a" replica Alpine and the rest Ubuntu.
 //
 // The Alpine host is a worker in the inventory, because that is what the upload phases key
-// on, but it never joins the cluster. So there are two counts: everything the upload phases
-// see, and everything that runs the engine.
-const (
-	inventoryHostCount = 10
-	uploadOnlyCount    = 1
-	clusterNodeCount   = inventoryHostCount - uploadOnlyCount
-	clusterControllers = 3
-	clusterWorkers     = 6
+// on, but it never joins the cluster. So the counts are split: everything the upload phases
+// see, and the controllers and workers that will run the engine.
+//
+// They are read off whichever bootloose config this run provisions rather than written down,
+// because a stage-only run provisions the smaller one. See clusterConfig.
+var (
+	applyCounts        = countsFor(clusterConfig()) //nolint:gochecknoglobals
+	inventoryHostCount = applyCounts.inventory      //nolint:gochecknoglobals
+	uploadOnlyCount    = applyCounts.uploadOnly     //nolint:gochecknoglobals
+	clusterControllers = applyCounts.controllers    //nolint:gochecknoglobals
+	clusterWorkers     = applyCounts.workers        //nolint:gochecknoglobals
 )
 
 // applyTimeout bounds the retry loops the phases run through manager.RetryTimeout, and
