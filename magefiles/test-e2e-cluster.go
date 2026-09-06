@@ -34,6 +34,13 @@ func (Test) EndToEndCluster() error {
 	return runE2ENoBuild("1h", "github.com/colonel-byte/cargoship/src/test/e2e/cluster/...")
 }
 
+// CleanCluster removes the containers a bootloose cluster left behind. EndToEndCluster does
+// this before it runs, so this target is for the run that was killed partway through and left
+// nine nodes holding memory, or for looking at what a failed run left and then clearing it.
+func (Test) CleanCluster() error {
+	return stopBootlooseContainers()
+}
+
 // stopBootlooseContainers force-removes any leftover bootloose-managed containers (e.g. from
 // a previous e2e run that was killed before cluster teardown ran), so requireCluster's bootloose
 // Create() isn't confused by stale/exited containers with the same names.
