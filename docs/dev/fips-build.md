@@ -31,13 +31,24 @@ This was chosen over the older, Google-internal `GOEXPERIMENT=boringcrypto` mech
 *   It's explicitly documented upstream as unsupported outside Google, with no compatibility guarantees between Go versions.
 *   `GOFIPS140` is native (no cgo, no C toolchain needed, no prebuilt platform-specific blob), works identically across every OS/arch Cargoship targets, and is the path Go's own documentation now recommends.
 
-`GOFIPS140=latest` is set unconditionally (not behind a flag or opt-in target) in all three places Cargoship compiles binaries:
+`GOFIPS140=latest` is set unconditionally (not behind a flag or opt-in target) in both development build paths, and in the FIPS half of the release build:
 
 | Build path | File | Notes |
 | :--- | :--- | :--- |
 | Dev-box host build | `magefiles/utils.go` (`hostBuildLocal`) | Set alongside `GOOS`/`GOARCH` in the build's env map. |
 | Dagger container build | `.dagger/build-local.go` (`BuildLocal`) | Set on the builder container, same as the network-isolation env vars above. |
-| Release build | `.goreleaser.yaml` (`builds[0].env`) | Set alongside the existing `CGO_ENABLED=0`. |
+| Release build | `.goreleaser.yaml` (`cargoship-fips` build) | Set alongside the existing `CGO_ENABLED=0`. |
+
+### Release artifacts: FIPS and non-FIPS
+
+Releases ship every OS/arch target twice, from two GoReleaser build definitions that are identical except for `GOFIPS140`:
+
+| Variant | Build id | Archive | Package |
+| :--- | :--- | :--- | :--- |
+| Stock crypto | `cargoship` | `cargoship_<Os>_<Arch>.tar.gz` | `cargoship` |
+| FIPS 140-3 | `cargoship-fips` | `cargoship_fips_<Os>_<Arch>.tar.gz` | `cargoship-fips` |
+
+Both install the binary as `cargoship`, so the two packages declare `provides: cargoship` and conflict with each other — only one can be installed at a time. Use the verification steps below to confirm which variant an artifact is.
 
 ### Verifying a binary was built with FIPS 140-3 enabled
 
