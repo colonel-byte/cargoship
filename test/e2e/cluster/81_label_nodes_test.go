@@ -66,5 +66,6 @@ func (s *phaseWalk) labelNodes() {
 
 // Test_81_LabelNodes marks each node with the profile the inventory gave its host.
 func (s *ApplyPhaseSuite) Test_81_LabelNodes() {
+	s.requireEngine()
 	s.labelNodes()
 }
