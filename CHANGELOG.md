@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.19.1](https://github.com/colonel-byte/cargoship/compare/v0.19.0...v0.19.1) (2026-09-06)
+
+
+### Features
+
+* assemble multi-arch packages with an OCI image index ([#263](https://github.com/colonel-byte/cargoship/issues/263)) ([db8d106](https://github.com/colonel-byte/cargoship/commit/db8d106e0710e4dbd835143512b44e9bb2d00716))
+* assert the firewall and the three upload phases ([#272](https://github.com/colonel-byte/cargoship/issues/272)) ([e5bc4c2](https://github.com/colonel-byte/cargoship/commit/e5bc4c2cd7e89fb71a0b6defb1cf52324c93b794))
+* reject a host the package carries no architecture for ([#267](https://github.com/colonel-byte/cargoship/issues/267)) ([fe73d68](https://github.com/colonel-byte/cargoship/commit/fe73d68f237935a562958925c127ea13eea37c29))
+* run the staging phases against a smaller cluster in CI ([#293](https://github.com/colonel-byte/cargoship/issues/293)) ([2b62d54](https://github.com/colonel-byte/cargoship/commit/2b62d54cfe65e6c5bb482b6ea66ab6e16bc5dd54))
+* start work on multi-arch support ([#261](https://github.com/colonel-byte/cargoship/issues/261)) ([d5661d1](https://github.com/colonel-byte/cargoship/commit/d5661d11b090f81dc10fbfcfe4cf8af6a3501a46))
+* walk the apply phases against a live cluster, through ModifyHosts ([#271](https://github.com/colonel-byte/cargoship/issues/271)) ([5886029](https://github.com/colonel-byte/cargoship/commit/5886029296576fd359dc1ac7c4ec42ebdeb96b3b))
+
+
+### Bug Fixes
+
+* export image tarballs for the package architecture ([#266](https://github.com/colonel-byte/cargoship/issues/266)) ([dbe65d7](https://github.com/colonel-byte/cargoship/commit/dbe65d7fa8bb12243566ee443e896955678c408a))
+* honour --architecture on package create and package pull ([#262](https://github.com/colonel-byte/cargoship/issues/262)) ([4665c85](https://github.com/colonel-byte/cargoship/commit/4665c850b71f89d0f7472e659f805fd70f313217))
+
+
+### Documentation
+
+* play with cleaner print-able ([#254](https://github.com/colonel-byte/cargoship/issues/254)) ([c751bf4](https://github.com/colonel-byte/cargoship/commit/c751bf4a4f661fc006772eafd3a34723190d82e1))
+
+
+### CI/CD
+
+* add extra label for release ([#295](https://github.com/colonel-byte/cargoship/issues/295)) ([fb865a0](https://github.com/colonel-byte/cargoship/commit/fb865a0f98fa8e3c2114d100bda3e50b43aaf7a4))
+
 ## [0.19.0](https://github.com/colonel-byte/cargoship/compare/v0.18.0...v0.19.0) (2026-09-01)
 
 
