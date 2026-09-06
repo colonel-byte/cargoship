@@ -38,6 +38,16 @@ The join and upgrade walks are skipped whole, in `TestClusterPhases`. Each start
 
 That matters more than it looks. A lock left behind delays the next run by thirty seconds on every node, and a stage-only walk that took the lock and skipped the release would do exactly that to the run after it. The three tests are commented to say they are ungated on purpose, so that a later change adding `requireEngine()` to everything after 60 has to argue with a comment first.
 
+## The engine steps are skipped one at a time
+
+`ApplyPhaseSuite` is gated per method rather than as a whole. Each of `Test_61` through `Test_81` begins with `requireEngine()`, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.
+
+## The phases after the engine still run
+
+`Test_91_Lock`, `Test_92_Unlock` and `Test_99_Disconnect` carry no `requireEngine()`, and that is deliberate rather than an oversight. The lock is a file on each host holding the instance ID of the process that took it; unlock removes it; disconnect clears the staged binary paths and drops the SSH connections. All three need a connected host and none needs an engine, so all three run on a stage-only walk and fail it if they regress.
+
+That matters more than it looks. A lock left behind delays the next run by thirty seconds on every node, and a stage-only walk that took the lock and skipped the release would do exactly that to the run after it. The three tests are commented to say they are ungated on purpose, so that a later change adding `requireEngine()` to everything after 60 has to argue with a comment first.
+
 ## Five machines, not three and not ten
 
 The full walk provisions ten machines for reasons [choice-phase-e2e-tests](choice-phase-e2e-tests.md) sets out: three controllers, six workers, both roles split across Ubuntu and Fedora, plus the Alpine upload-only node. A stage-only run provisions five -- one Ubuntu controller, one Fedora controller, one Ubuntu worker, one Fedora worker, and the Alpine node.
