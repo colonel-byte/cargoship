@@ -22,6 +22,7 @@ import (
 // phase, a fresh install leaves it nothing to claim, so the assertion is that it skips and
 // leaves the agents Test_62 started running.
 func (s *ApplyPhaseSuite) Test_67_UpgradeWorkers() {
+	s.requireEngine()
 	p := &phase.UpgradeWorkers{
 		UpgradeHosts:     phase.UpgradeHosts{Distro: s.harness.distro},
 		WorkerConcurrent: s.harness.opts.WorkerConcurrent,

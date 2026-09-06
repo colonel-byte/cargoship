@@ -1,22 +1,22 @@
 # Why the cluster e2e suite splits into a staging half and an engine half
 
-The cluster suite (`src/test/e2e/cluster`) walks the apply phase list one phase at a time against a bootloose cluster, as [choice-phase-e2e-tests](choice-phase-e2e-tests.md) describes. That suite is now two runs rather than one: with `CARGOSHIP_E2E_STAGE_ONLY` set it provisions five machines instead of ten and stops at the boundary `phase/60_configure_engine.go` draws, and without it nothing changes. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.
+The cluster suite (`src/test/e2e/cluster`) walks the apply phase list one phase at a time against a bootloose cluster, as [choice-phase-e2e-tests](choice-phase-e2e-tests.md) describes. That suite is now two runs rather than one: with `CARGOSHIP_E2E_STAGE_ONLY` set it provisions five machines instead of ten and stops asserting at the boundary `phase/60_configure_engine.go` draws, and without it nothing changes. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.
 
 ## What forced it
 
-The suite was label-gated into CI on a hosted `ubuntu-latest` runner, together with the pull requests that extend it past the upload phases, and it did not pass there. Two things were wrong, and only the first was ours.
+The suite was label-gated into CI on a hosted `ubuntu-latest` runner and did not pass there. Two things were wrong, and only the first was ours.
 
-`phase/55_files_common.go` marks a host as claimed from the host list rather than from what it actually uploaded. An rke2 package ships no `.deb`, so the APT phase claims all five Debian hosts, uploads nothing to them, and registers an `apt-get install` with an empty package list -- which succeeds. `phase/59_bin_install.go`, the catch-all that exists precisely for a distro that ships neither RPMs nor debs, then filters those hosts out as already claimed, and they reach the initialize phases with no engine on them at all. That is a real product bug, and it is fixed in the pull request that adds the phase coverage which caught it. The local run had never caught it because the failure needs a Debian host and a package with no debs to meet.
+`phase/55_files_common.go` marked a host as claimed from the host list rather than from what it had uploaded. An rke2 package ships no `.deb`, so the APT phase claimed all five Debian hosts, uploaded nothing to them, and registered an `apt-get install` with an empty package list -- which succeeds. `phase/59_bin_install.go`, the catch-all that exists precisely for a distro that ships neither RPMs nor debs, then filtered those hosts out as already claimed, and they reached the initialize phases with no engine on them at all. That is a real product bug, it is fixed, and the local run had never caught it because the failure needs a Debian host and a package with no debs to meet.
 
 Underneath it was the blocker that is not fixable in the product. rke2 runs its own containerd, whose default snapshotter is overlayfs, and overlayfs refuses an upperdir that is itself on an overlay mount -- `EINVAL`, reported as `"overlayfs" snapshotter cannot be enabled for "/var/lib/rancher/rke2/agent/containerd"`. A hosted runner's Docker uses the `overlay2` storage driver, so every node container's root filesystem is an overlay mount and the snapshotter has nowhere to stack. The engine never reaches ready.
 
-The timings from that run are what shaped the rest. Everything through the engine config render -- fifteen phases, ten machines -- took 188 seconds on the runner and passed. The first initialize phase alone took 1236 seconds and then failed. The suite is not uniformly expensive; almost all of its cost and all of its environmental risk sit on one side of one line.
+The timings from that run are what shaped the rest. Everything through `Test_60_ConfigureEngine` -- fifteen phases, ten machines -- took 188 seconds on the runner and passed. `Test_61_InitializeControllers` alone took 1236 seconds and then failed. The suite is not uniformly expensive; almost all of its cost and all of its environmental risk sit on one side of one line.
 
 ## The seam was already in the code
 
-The Alpine machine that exists to make `phase/59` testable as the fallback it is cannot run rke2 -- rke2 links against glibc and Alpine is musl -- so `phase/60` is where it leaves the walk, and `59_bin_install_test.go` already says so: "This is the last phase the upload-only hosts take part in ... The next phase drops those hosts." The phases up to and including 60 stage files and render configuration; every phase after it installs, starts or queries the engine. That distinction was already written down, already load-bearing, and already the reason one host stops there.
+`Test_60_ConfigureEngine` calls `harness.dropUploadOnlyHosts()`. The Alpine machine that exists to make `phase/59` testable as the fallback it is cannot run rke2 -- rke2 links against glibc and Alpine is musl -- so 60 is where it leaves the walk. The phases up to and including 60 stage files and render configuration; every phase after it installs, starts or queries the engine. That distinction was already written down, already load-bearing, and already the reason one host stops there.
 
-So the split reuses it rather than inventing a second boundary. A stage-only run stops exactly where the Alpine host stops participating, and the sentence that justifies both is the same sentence.
+So the split reuses it rather than inventing a second boundary. A stage-only run stops asserting exactly where the Alpine host stops participating, and the sentence that justifies both is the same sentence.
 
 Drawing the line by wall-clock instead -- "skip the phases that take more than a minute" -- was rejected on the obvious grounds that it encodes a measurement rather than a property, and would have to be re-drawn every time a phase got faster or slower.
 
@@ -25,6 +25,16 @@ Drawing the line by wall-clock instead -- "skip the phases that take more than a
 The gate is `stageOnlyEnvVar`, read through `strconv.ParseBool`, under the `CARGOSHIP_E2E_` prefix the suite already uses for its other knobs. Build tags were the alternative and were rejected twice over: a tagged file is invisible to `go vet` and the linter unless the tag is set, so the gated half rots silently, and the suite would need two `go test` invocations with different tags to cover what one binary covers now. An environment variable is one build, one binary, and the same code compiled either way.
 
 It is a function rather than a package variable so that it reads the environment when asked rather than at package init, which is what lets a caller set it in process -- `mage test:endToEndClusterStage` does exactly that.
+
+## The engine steps are skipped one at a time
+
+`ApplyPhaseSuite` is gated per method rather than as a whole. Each of `Test_61` through `Test_81` begins with `requireEngine()`, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.
+
+## The phases after the engine still run
+
+`Test_91_Lock`, `Test_92_Unlock` and `Test_99_Disconnect` carry no `requireEngine()`, and that is deliberate rather than an oversight. The lock is a file on each host holding the instance ID of the process that took it; unlock removes it; disconnect clears the staged binary paths and drops the SSH connections. All three need a connected host and none needs an engine, so all three run on a stage-only walk and fail it if they regress.
+
+That matters more than it looks. A lock left behind delays the next run by thirty seconds on every node, and a stage-only walk that took the lock and skipped the release would do exactly that to the run after it. The three tests are commented to say they are ungated on purpose, so that a later change adding `requireEngine()` to everything after 60 has to argue with a comment first.
 
 ## Five machines, not three and not ten
 
@@ -61,4 +71,4 @@ Both jobs sit behind the same `e2e-cluster` label for now. The point of the stag
 
 ## What this does not do
 
-A stage-only run does not tell you that rke2 installs. It covers connection, OS detection, fact gathering, host validation, the prepare phases, SELinux, fapolicyd, `/etc/hosts`, the firewall and all four upload phases -- which is most of what the suite reaches today, and the part a change to `src/pkg/phase` is most likely to break. It says nothing about whether the cluster comes up, and the full walk remains the only thing that does.
+A stage-only run does not tell you that rke2 installs. It covers connection, OS detection, fact gathering, host validation, the prepare phases, SELinux, fapolicyd, `/etc/hosts`, the firewall, all four upload phases, the engine config render, and the lock and disconnect phases at the end -- which is most of the phase list and the part a change to `src/pkg/phase` is most likely to break. It says nothing about whether the cluster comes up, and the full walk remains the only thing that does.

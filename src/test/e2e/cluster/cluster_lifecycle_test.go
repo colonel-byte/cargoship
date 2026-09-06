@@ -86,6 +86,7 @@ func (s *ApplyPhaseSuite) Test_01_Prepare() {
 // Test_ZZ1_ClusterHealthy waits for every node the inventory named to report Ready, proving
 // the phases the suite just walked produced a working cluster and not only the right files.
 func (s *ApplyPhaseSuite) Test_ZZ1_ClusterHealthy() {
+	s.requireEngine()
 	t := s.T()
 	cs, err := e2e.KubeClient(t)
 	s.Require().NoError(err)
@@ -97,6 +98,7 @@ func (s *ApplyPhaseSuite) Test_ZZ1_ClusterHealthy() {
 // It is also the only step that exercises action.NewApply's own wiring, since the phase
 // tests build each phase themselves.
 func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
+	s.requireEngine()
 	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
 	defer cleanup()
 

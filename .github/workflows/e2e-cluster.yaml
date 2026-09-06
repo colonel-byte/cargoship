@@ -95,7 +95,8 @@ jobs:
           GOSUMDB: "off"
           GOTOOLCHAIN: local
 
-      # Same reasoning as the full job's diagnostics step below.
+      # Same reasoning as the full job's diagnostics step below, minus the journalctl: nothing
+      # on these nodes was started, so there is no engine unit to read.
       - name: Collect node diagnostics
         if: failure()
         run: |

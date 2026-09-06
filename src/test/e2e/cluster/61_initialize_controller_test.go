@@ -24,6 +24,7 @@ import (
 // workers need in Test_62 exists, and that the running version is the one the package
 // carries.
 func (s *ApplyPhaseSuite) Test_61_InitializeControllers() {
+	s.requireEngine()
 	p := &phase.InitializeControllers{Distro: s.harness.distro}
 	s.runPhase(p)
 	s.Require().True(ran(p), "the inventory has controllers but the phase was skipped")

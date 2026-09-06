@@ -22,6 +22,9 @@ import (
 // clears the temporary binaries the install staged and drops the SSH connections, so the
 // assertion is that no host is left holding a staged binary path and that the connections
 // really are closed.
+//
+// It carries no requireEngine. Both assertions hold whether or not the engine was started,
+// and this is the phase that closes out a stage-only walk.
 func (s *phaseWalk) disconnect() {
 	s.T().Helper()
 
