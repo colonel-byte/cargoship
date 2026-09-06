@@ -53,6 +53,19 @@ func (s *phaseWalk) aptUploadFiles() {
 		s.Require().Subsetf(after, before[host.String()],
 			"%s: the APT phase dropped files an earlier upload phase staged", host)
 	}
+
+	if s.harness.carriesFilesFor(config.SelectorAPT) {
+		return
+	}
+
+	// A phase claims a host by setting EngineUploaded, which is what the later upload phases
+	// filter on. Claiming a Debian host this package has no .deb for locks phase/59, the
+	// catch-all, out of the one host it exists to serve, and the host reaches the initialize
+	// phases with no engine on it at all.
+	for _, host := range debian {
+		s.Require().Falsef(host.Metadata.EngineUploaded,
+			"%s: the APT phase claimed a host it uploaded nothing to", host)
+	}
 }
 
 // Test_58_APTUploadFiles routes the install's APT uploads.
