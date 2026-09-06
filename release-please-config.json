@@ -19,7 +19,8 @@
         { "type": "ci", "section": "CI/CD" },
         { "type": "build", "section": "Build" }
       ],
-      "extra-files": []
+      "extra-files": [],
+      "extra-label": "e2e-cluster"
     }
   },
   "release-type": "go",
