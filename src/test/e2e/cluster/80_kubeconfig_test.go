@@ -68,6 +68,12 @@ func (s *ApplyPhaseSuite) Test_80_KubeConfig() {
 	s.kubeConfig()
 }
 
+// Test_80_KubeConfig rewrites the credentials against the upgraded control plane, proving the
+// upgrade did not leave the local kubeconfig pointing at something that no longer answers.
+func (s *UpgradePhaseSuite) Test_80_KubeConfig() {
+	s.kubeConfig()
+}
+
 // Test_80_KubeConfig rewrites the credentials once the cluster has grown, proving the join did
 // not leave the local kubeconfig pointing at something that no longer answers.
 func (s *JoinPhaseSuite) Test_80_KubeConfig() {

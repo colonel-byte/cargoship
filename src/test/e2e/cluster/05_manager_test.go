@@ -96,9 +96,10 @@ const (
 // an engine -- so a stage-only run still takes the lock, releases it and disconnects cleanly, and
 // still fails if any of that regresses. See stageOnlyEnvVar for why the halves are separated.
 //
-// The suite is one of two walks TestClusterPhases runs against the same cluster, in the only
-// order they work in: this one installs, and JoinPhaseSuite adds a machine to what it
-// installed. A stage-only run installs nothing, so it runs this walk alone.
+// The suite is one of three walks TestClusterPhases runs against the same cluster, in the only
+// order they work in: this one installs, JoinPhaseSuite adds a machine to what it installed,
+// and UpgradePhaseSuite moves the whole cluster to a newer package. A stage-only run installs
+// nothing, so it runs this walk alone.
 type ApplyPhaseSuite struct {
 	phaseWalk
 }

@@ -58,6 +58,12 @@ func (s *ApplyPhaseSuite) Test_60_ConfigureEngine() {
 	s.configureEngine()
 }
 
+// Test_60_ConfigureEngine re-renders the engine config from the newer package before the
+// upgrade phases restart the services onto it.
+func (s *UpgradePhaseSuite) Test_60_ConfigureEngine() {
+	s.configureEngine()
+}
+
 // Test_60_ConfigureEngine renders the engine config on the joining machine before it is
 // started, and re-renders it on the nodes already running. The assertion that each config
 // names its own host is what rules out the failure this phase is most able to cause on a join:

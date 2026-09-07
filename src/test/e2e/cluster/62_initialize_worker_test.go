@@ -44,6 +44,29 @@ func (s *ApplyPhaseSuite) Test_62_InitializeWorkers() {
 	}
 }
 
+// Test_62_InitializeWorkers, on the upgrade walk, must claim nothing, for the same reason the
+// controller half must not: the workers are already joined and running, and re-running the
+// join would tear a working node out of the cluster rather than upgrade it.
+func (s *UpgradePhaseSuite) Test_62_InitializeWorkers() {
+	p := &phase.InitializeWorkers{
+		Distro:           s.harness.distro,
+		WorkerConcurrent: s.harness.opts.WorkerConcurrent,
+	}
+	s.runPhase(p)
+	s.Require().False(ran(p), "the initialize phase claimed workers that are already running")
+
+	service := s.harness.distro.GetWorkerService()
+	for _, host := range s.harness.workers() {
+		s.Require().Truef(host.Configurer.ServiceIsRunning(host, service),
+			"%s: %s stopped running", host, service)
+
+		version, err := s.harness.distro.RunningVersion(*host)
+		s.Require().NoErrorf(err, "%s: could not read the running engine version", host)
+		s.Require().Equalf(installedVersion, version,
+			"%s: something upgraded the engine before the upgrade phase ran", host)
+	}
+}
+
 // Test_62_InitializeWorkers, on the join walk, is the phase that does the joining. It claims
 // every worker whose agent service is not already running, so the assertion is that exactly
 // one worker is in that state going in -- the machine this walk added -- and that all of them
