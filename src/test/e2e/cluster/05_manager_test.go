@@ -33,17 +33,18 @@ const distroID = "rke2"
 // running Fedora, the "a" replica Alpine and the rest Ubuntu.
 //
 // The Alpine host is a worker in the inventory, because that is what the upload phases key
-// on, but it never joins the cluster. So the counts are split: everything the upload phases
-// see, and the controllers and workers that will run the engine.
+// on, but it never joins the cluster. So there are two counts: everything the upload phases
+// see, and everything that runs the engine.
 //
 // They are read off whichever bootloose config this run provisions rather than written down,
 // because a stage-only run provisions the smaller one. See clusterConfig.
 var (
-	applyCounts        = countsFor(clusterConfig()) //nolint:gochecknoglobals
-	inventoryHostCount = applyCounts.inventory      //nolint:gochecknoglobals
-	uploadOnlyCount    = applyCounts.uploadOnly     //nolint:gochecknoglobals
-	clusterControllers = applyCounts.controllers    //nolint:gochecknoglobals
-	clusterWorkers     = applyCounts.workers        //nolint:gochecknoglobals
+	applyCounts        = countsFor(clusterConfig())                     //nolint:gochecknoglobals
+	inventoryHostCount = applyCounts.inventory                          //nolint:gochecknoglobals
+	uploadOnlyCount    = applyCounts.uploadOnly                         //nolint:gochecknoglobals
+	clusterNodeCount   = applyCounts.inventory - applyCounts.uploadOnly //nolint:gochecknoglobals
+	clusterControllers = applyCounts.controllers                        //nolint:gochecknoglobals
+	clusterWorkers     = applyCounts.workers                            //nolint:gochecknoglobals
 )
 
 // applyTimeout bounds the retry loops the phases run through manager.RetryTimeout, and
@@ -68,19 +69,32 @@ const (
 // phase findable from the phase.
 //
 // Testify runs suite methods in method-name order, so that number is also the order the
-// phases run in here, and it is the order apply runs them in.
+// phases run in here. It matches the order apply runs them in everywhere except the lock:
+// apply takes the lock third, right after OS detection, and holds it for the whole run,
+// whereas phase/91_lock.go's number puts it after the install. The suite still asserts what
+// the phase leaves on the hosts, it just no longer holds the lock across the phases in
+// between. Every other phase is in the same relative position apply puts it in.
 //
 // Steps that are not phases have no phase number to borrow: package create and prepare run
-// first as Test_00 and Test_01, "00" and "01" sorting before every phase in the list. They
-// live in cluster_lifecycle_test.go.
+// first as Test_00 and Test_01, and the health and idempotency checks run last as Test_ZZ1
+// and Test_ZZ2, "ZZ" sorting after every two-digit number. They live in
+// cluster_lifecycle_test.go.
 //
 // Every phase test shares one phaseHarness, so they are ordered and stateful by design.
 // Running a single phase with -run will fail: its predecessors never connected the hosts.
 //
-// Not every host in the inventory joins the cluster. The Alpine host belongs to neither of
-// the OS families the upload phases key on, which is what it is in the inventory for, and it
-// never runs the engine. It is a worker like any other to the phases in this walk, so every
-// one of them sees all ten hosts.
+// Not every host in the inventory joins the cluster. The Alpine host is there so that the BIN
+// upload phase is tested on a host belonging to neither OS family the other upload phases
+// claim, and Test_60_ConfigureEngine drops it before the first phase that touches the engine.
+// So the phases up to and including Test_59 see every host in the inventory and everything
+// after them sees one fewer.
+//
+// That same boundary is where a stage-only run stops asserting: the methods from Test_61 to
+// Test_81 begin with requireEngine, which skips them when stageOnlyEnvVar is set. The walk still
+// runs to the end. Test_91, Test_92 and Test_99 are deliberately not gated -- the lock is a file
+// on each host, unlock removes it, and disconnect drops the SSH connections, none of which needs
+// an engine -- so a stage-only run still takes the lock, releases it and disconnects cleanly, and
+// still fails if any of that regresses. See stageOnlyEnvVar for why the halves are separated.
 type ApplyPhaseSuite struct {
 	phaseWalk
 }
