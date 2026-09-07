@@ -47,6 +47,11 @@ func (p *GatherFactsDistro) Explanation() string {
 	return "Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running"
 }
 
+// ReadOnly marks this phase safe under a dry run. GatherFactsDistro reads the engine version
+// already on each host, which is what tells an upgrade apart from an install, and what catches
+// a downgrade before a real apply starts one.
+func (p *GatherFactsDistro) ReadOnly() {}
+
 // Prepare the phase
 func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	p.hosts = p.manager.Config.Spec.Hosts

@@ -45,6 +45,11 @@ func (p *GatherFacts) Explanation() string {
 	return "Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file."
 }
 
+// ReadOnly marks this phase safe under a dry run. GatherFacts asks each host its hostname,
+// private interface and private address. All three are reads, and the rest of the walk decides
+// what it would do from them.
+func (p *GatherFacts) ReadOnly() {}
+
 // Run the phase
 func (p *GatherFacts) Run(ctx context.Context) error {
 	p.profiles = p.manager.Config.Spec.Config.Profiles

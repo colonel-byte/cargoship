@@ -79,6 +79,7 @@ func newInstallResetCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.config, InstallResetConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().StringVarP(&o.distro, InstallResetDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagResetDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallResetConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().BoolVarP(&o.hosts, InstallResetUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallResetUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallResetUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
@@ -106,7 +107,9 @@ func newInstallResetCommand() *cobra.Command {
 func (o *installResetOptions) run(ctx context.Context, _ []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
+	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
+	// what would happen is what would push someone into running the real thing to find out.
+	if !o.confirm && !o.dryRun {
 		l.Warn("please include the --confirm argument")
 		return errors.New("pass confirm argument")
 	}
@@ -127,6 +130,9 @@ func (o *installResetOptions) run(ctx context.Context, _ []string) error {
 			Concurrency:       o.concurrency,
 			ConcurrentUploads: o.concurrency,
 			Config:            &cluster,
+			// Reset does not load a package, so it builds its Manager here rather than through
+			// initManager, and this is the only place the flag reaches it.
+			DryRun: o.dryRun,
 		},
 		WorkerConcurrent: o.workerCon,
 		NoWait:           true,
