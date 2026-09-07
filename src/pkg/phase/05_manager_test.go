@@ -176,7 +176,9 @@ func (p *readOnlyPhase) Explanation() string {
 	return "test function"
 }
 
-func (p *readOnlyPhase) ReadOnly() {}
+func (p *readOnlyPhase) ReadOnly() string {
+	return "test phase, reads nothing"
+}
 
 func (p *readOnlyPhase) Run(_ context.Context) error {
 	p.runCalled = true
@@ -302,6 +304,10 @@ func TestReadOnlyPhasesAreMarked(t *testing.T) {
 	} {
 		_, ok := p.(readOnly)
 		require.Truef(t, ok, "%s is not marked read-only, so a dry run would skip it", p.Title())
+
+		// The reason is rendered into docs/phases/<name>.md, so an empty one is a phase that
+		// claims to be safe under a dry run without saying why.
+		require.NotEmptyf(t, DryRunNote(p), "%s is marked read-only without giving a reason", p.Title())
 	}
 }
 
@@ -337,7 +343,9 @@ func (p *unpreparablePhase) Run(_ context.Context) error {
 // it; the bare type is used where the phase must land in the skip bucket.
 type readOnlyUnpreparable struct{ unpreparablePhase }
 
-func (p *readOnlyUnpreparable) ReadOnly() {}
+func (p *readOnlyUnpreparable) ReadOnly() string {
+	return "test phase, reads nothing"
+}
 
 // TestDryRunToleratesPrepareFailureOnSkippedPhase pins the behaviour a live cluster found:
 // KubeConfig.Prepare returns ErrNoControllers when nothing is running, which under a dry run is
@@ -391,4 +399,8 @@ func TestClassifyDryRun(t *testing.T) {
 	require.Equal(t, "runs, reads only", DryRunReadOnly.String())
 	require.Equal(t, "runs its own dry-run path", DryRunOwnPath.String())
 	require.Equal(t, "reported, not run", DryRunSkip.String())
+
+	require.Equal(t, "test phase, reads nothing", DryRunNote(&readOnlyPhase{}))
+	require.Empty(t, DryRunNote(&dryRunPhase{}), "only read-only phases carry a note")
+	require.Empty(t, DryRunNote(&mutatingPhase{}))
 }

@@ -116,8 +116,13 @@ type withDryRun interface {
 // A phase that implements neither this nor withDryRun is skipped under a dry run. That default
 // is the point of the interface: dry-run safety is a property a phase has to state, so a phase
 // added later is safe without anyone having remembered to think about it.
+//
+// ReadOnly returns why the phase is safe to run and why a dry run wants it run. The reason is a
+// return value rather than a comment because magefiles/gen-docs.go renders it into
+// docs/phases/<name>.md next to the phase, so the claim a reader sees is the one the phase
+// makes, not a second copy of it that can drift.
 type readOnly interface {
-	ReadOnly()
+	ReadOnly() string
 }
 
 // DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the
@@ -159,6 +164,16 @@ func ClassifyDryRun(p Phase) DryRunBehavior {
 		return DryRunReadOnly
 	}
 	return DryRunSkip
+}
+
+// DryRunNote returns the phase's own account of why a dry run runs it, or "" for a phase that
+// gives none. Only read-only phases carry one: they are the phases a dry run runs against live
+// hosts, so they are the ones a reader is entitled to an argument about.
+func DryRunNote(p Phase) string {
+	if ro, ok := p.(readOnly); ok {
+		return ro.ReadOnly()
+	}
+	return ""
 }
 
 // In-phase hooks for phases to run logic immediately before/after Run().

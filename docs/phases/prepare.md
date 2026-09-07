@@ -7,10 +7,10 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 
 1. Connect to hosts
     - Connects to a remote host via `github.com/k0sproject/rig`
-    - Dry run: runs, reads only
+    - Dry run: runs, reads only. Connects opens the SSH session to each host and does nothing else. A dry run needs it, because a preflight that never reached a host would report on a cluster it never looked at.
 1. Detect host operating systems
     - Gathers information about the remote host, including: OS and OS version
-    - Dry run: runs, reads only
+    - Dry run: runs, reads only. Reads `/etc/os-release` and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.
 1. Acquire exclusive host lock
     - Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other `cargoships` from doing any changes until the lock file has not been touch for over a minute
     - Dry run: reported, not run

@@ -292,7 +292,12 @@ func phaseComment(mk *markdown.Markdown, p phase.Phase, dryRun bool) {
 	if dryRun {
 		// phase.ClassifyDryRun is the same call Manager.Run gates on, so the label is what
 		// the phase actually does under --dry-run rather than a second description of it.
+		// The note is the phase's own account of why a dry run runs it; only the read-only
+		// phases carry one, since they are the ones that touch live hosts.
 		item += fmt.Sprintf("\n    - Dry run: %s", phase.ClassifyDryRun(p))
+		if note := phase.DryRunNote(p); note != "" {
+			item += ". " + note
+		}
 	}
 	mk.OrderedList(item)
 }

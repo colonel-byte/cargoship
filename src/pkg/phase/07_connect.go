@@ -47,10 +47,10 @@ func (p *Connect) Explanation() string {
 	return "Connects to a remote host via `github.com/k0sproject/rig`"
 }
 
-// ReadOnly marks this phase safe under a dry run. Connect opens the SSH session and does
-// nothing else, and a dry run needs it: a preflight that never reached a host would report a
-// healthy cluster it never looked at.
-func (p *Connect) ReadOnly() {}
+// ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
+func (p *Connect) ReadOnly() string {
+	return "Connects opens the SSH session to each host and does nothing else. A dry run needs it, because a preflight that never reached a host would report on a cluster it never looked at."
+}
 
 // Run the phase
 func (p *Connect) Run(ctx context.Context) error {
