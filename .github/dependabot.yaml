@@ -10,6 +10,11 @@ updates:
       - "a1994sc"
     allow:
       - dependency-type: "all"
+    ignore:
+      # gobwas/glob v1.0.0 removed the Glob interface type; vendored
+      # open-policy-agent/opa (transitive via sigstore/cosign) still uses it.
+      - dependency-name: "github.com/gobwas/glob"
+        update-types: ["version-update:semver-major"]
     groups:
       zarf:
         patterns:
