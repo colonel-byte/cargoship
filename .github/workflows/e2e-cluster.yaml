@@ -67,9 +67,9 @@ jobs:
   # The staging half of the suite, over the five-machine inventory: it uploads the package and
   # renders the engine config without starting an engine anywhere. No build step -- the suite
   # calls the cargoship packages directly, distro.Create to build the package and
-  # action.NewPrepare/NewApply/NewKubeConfig around the phase walk, so there is no binary for
-  # this workflow to produce or download. That is what makes it independent of e2e.yaml, which
-  # is the point of the split.
+  # action.NewPrepare/NewApply/NewReset/NewKubeConfig around the phase walk, so there is no
+  # binary for this workflow to produce or download. That is what makes it independent of
+  # e2e.yaml, which is the point of the split.
   e2e-cluster-stage:
     if: >-
       github.event_name == 'workflow_dispatch' ||

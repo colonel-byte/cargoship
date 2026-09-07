@@ -30,13 +30,15 @@ It is a function rather than a package variable so that it reads the environment
 
 `ApplyPhaseSuite` is skipped per method. Each of `Test_61` through `Test_81` begins with `requireEngine()`, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.
 
-The join and upgrade walks are skipped whole, in `TestClusterPhases`. Each starts from the cluster the apply walk installed -- there is nothing to join or upgrade when nothing was started -- so gating them method by method would produce two suites of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.
+The join, upgrade and reset walks are skipped whole, in `TestClusterPhases`. Each starts from the cluster the apply walk installed -- there is nothing to join, upgrade or reset when nothing was started -- so gating them method by method would produce three suites of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.
 
 ## The phases after the engine still run
 
 `Test_91_Lock`, `Test_92_Unlock` and `Test_99_Disconnect` carry no `requireEngine()`, and that is deliberate rather than an oversight. The lock is a file on each host holding the instance ID of the process that took it; unlock removes it; disconnect clears the staged binary paths and drops the SSH connections. All three need a connected host and none needs an engine, so all three run on a stage-only walk and fail it if they regress.
 
 That matters more than it looks. A lock left behind delays the next run by thirty seconds on every node, and a stage-only walk that took the lock and skipped the release would do exactly that to the run after it. The three tests are commented to say they are ungated on purpose, so that a later change adding `requireEngine()` to everything after 60 has to argue with a comment first.
+
+Nothing else in the 85-95 range can run here. `phase/85` through `phase/88` and `phase/95_daemon_reload.go` belong to reset, which tears down an engine that a stage-only run never installed.
 
 ## Five machines, not three and not ten
 
