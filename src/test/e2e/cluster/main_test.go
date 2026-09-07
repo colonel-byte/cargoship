@@ -274,6 +274,27 @@ func stageOnly() bool {
 	return err == nil && on
 }
 
+// keepClusterEnvVar leaves the machines running when the run failed, instead of deleting them
+// on the way out.
+//
+// What a failed engine phase leaves behind is thin. The phase captures the journal of the one
+// host whose wait timed out -- captureServiceLogsOnFailure in phase/06_service_logs.go -- and
+// nothing at all from the hosts that came up before it. A controller that cannot join usually
+// fails because of a node that started earlier, so those hosts are where the explanation is,
+// and their containers are the only place their journals exist. Deleting the cluster takes
+// them with it.
+//
+// It is off by default, because a local run that leaves ten containers and their volumes
+// behind is a surprise. CI turns it on and then removes the containers itself, in the step
+// after the one that reads them.
+const keepClusterEnvVar = "CARGOSHIP_E2E_KEEP_CLUSTER"
+
+// keepCluster reports whether a failed run was asked to leave its machines running.
+func keepCluster() bool {
+	on, err := strconv.ParseBool(os.Getenv(keepClusterEnvVar))
+	return err == nil && on
+}
+
 var (
 	// rootDir is the repo root, which TestMain chdirs into before running any test.
 	rootDir string //nolint:gochecknoglobals
@@ -311,7 +332,9 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	if testCluster != nil {
+	// Deleting the machines takes a failed run's evidence with them; see keepClusterEnvVar.
+	// The exit code is untouched either way, so a kept cluster is still a failed run.
+	if testCluster != nil && (code == 0 || !keepCluster()) {
 		if err := shutdown(testCluster); err != nil {
 			os.Exit(1)
 		}

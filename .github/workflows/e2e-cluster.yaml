@@ -86,6 +86,9 @@ jobs:
           # Provision the five-machine inventory and stop before the engine phases. See
           # stageOnlyEnvVar in src/test/e2e/cluster/main_test.go.
           CARGOSHIP_E2E_STAGE_ONLY: "1"
+          # Leave the machines standing when the run fails, so the step below can read them.
+          # See keepClusterEnvVar in the same file.
+          CARGOSHIP_E2E_KEEP_CLUSTER: "1"
           # Everything the test build needs is vendored, so make any accidental network
           # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
           CGO_ENABLED: 0
@@ -98,15 +101,28 @@ jobs:
       - name: Collect node diagnostics
         if: failure()
         run: |
-          df -h /
-          free -h
-          docker ps -a
+          diag="$RUNNER_TEMP/diagnostics"
+          mkdir -p "$diag"
+          df -h / | tee "$diag/df.txt"
+          free -h | tee "$diag/free.txt"
+          docker ps -a | tee "$diag/containers.txt"
           for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
-            name=$(docker inspect -f '{{.Name}}' "$c")
+            name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
+            docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
             echo "::group::$name"
-            docker logs --tail 200 "$c" 2>&1 || true
+            tail -n 200 "$diag/$name.docker.log" || true
             echo "::endgroup::"
           done
+          cp -r "$HOME/.cargoship-cache/logs" "$diag/suite-logs" 2>/dev/null || true
+
+      - name: Upload node diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-cluster-stage-diagnostics
+          path: ${{ runner.temp }}/diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Remove leftover bootloose containers
         if: always()
@@ -151,6 +167,9 @@ jobs:
           go test -mod=vendor -count=1 -v -timeout=55m
           ./src/test/e2e/cluster/...
         env:
+          # Leave the machines standing when the run fails, so the step below can read their
+          # journals. See keepClusterEnvVar in src/test/e2e/cluster/main_test.go.
+          CARGOSHIP_E2E_KEEP_CLUSTER: "1"
           # Everything the test build needs is vendored, so make any accidental network
           # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
           CGO_ENABLED: 0
@@ -160,31 +179,52 @@ jobs:
           GOTOOLCHAIN: local
 
       # Most of what explains a failure is already in the -v output above: the suite stops at
-      # the first failing phase and the phase logs are written through to stdout. This
-      # step covers the two things that are not, and that a phase failure does not distinguish
-      # between -- a full disk and an exhausted runner.
+      # the first failing phase and the phase logs are written through to stdout. This step
+      # covers what is not -- a full disk, an exhausted runner, and the journals of the nodes
+      # the phase did not name.
       #
-      # The container loop usually finds nothing, because TestMain deletes the cluster on the
-      # way out even when tests fail. It is here for the case where it did not get that far:
-      # the test binary killed by the OOM reaper, or a Delete that itself failed. When it does
-      # find containers, their logs are the only account of what the node was doing.
+      # Those journals are the point. The suite captures only the host whose wait timed out,
+      # and a controller that cannot join usually fails because of a node that started before
+      # it, so the rest of the cluster is where the answer is. The containers are still here to
+      # be read because the Test step set CARGOSHIP_E2E_KEEP_CLUSTER; the step after this one
+      # is what removes them.
+      #
+      # Full journals go to files and only a tail goes inline. The inline copy is what runs
+      # this job's log to tens of thousands of lines, and the artifact is the thing to read.
       - name: Collect node diagnostics
         if: failure()
         run: |
-          df -h /
-          free -h
-          docker ps -a
+          diag="$RUNNER_TEMP/diagnostics"
+          mkdir -p "$diag"
+          df -h / | tee "$diag/df.txt"
+          free -h | tee "$diag/free.txt"
+          docker ps -a | tee "$diag/containers.txt"
           for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
-            name=$(docker inspect -f '{{.Name}}' "$c")
+            name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
+            docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
+            docker exec "$c" journalctl -u rke2-server -u rke2-agent --no-pager \
+              > "$diag/$name.journal.log" 2>&1 || true
             echo "::group::$name"
-            docker logs --tail 200 "$c" 2>&1 || true
+            tail -n 200 "$diag/$name.journal.log" || true
             echo "::endgroup::"
           done
+          cp -r "$HOME/.cargoship-cache/logs" "$diag/suite-logs" 2>/dev/null || true
 
-      # TestMain deletes the cluster even when tests fail, but not when the job is cancelled
-      # or the test binary is killed, and a hosted runner is discarded anyway -- this is here
-      # so the same workflow behaves on a self-hosted runner, where it is not. The -v is what
-      # takes the anonymous volumes with the containers; see engineData.
+      - name: Upload node diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-cluster-diagnostics
+          path: ${{ runner.temp }}/diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # TestMain deletes the cluster on a passing run. On a failing one it is told to leave
+      # the machines standing, so the step above can read them, which makes this the step that
+      # actually removes them. It also covers a cancelled job or a killed test binary, which
+      # reach neither. A hosted runner is discarded anyway; this is here so the same workflow
+      # behaves on a self-hosted one, where it is not. The -v is what takes the anonymous
+      # volumes with the containers; see engineData.
       - name: Remove leftover bootloose containers
         if: always()
         run: |
