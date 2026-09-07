@@ -120,6 +120,47 @@ type readOnly interface {
 	ReadOnly()
 }
 
+// DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the
+// phase implements, and it is exported so magefiles/gen-docs.go can label each phase in
+// docs/phases/<name>.md with the same classification Run() gates on. The docs and the gate
+// cannot disagree, because there is only one classifier.
+type DryRunBehavior int
+
+const (
+	// DryRunSkip is the default: the phase declares nothing, so a dry run reports it and
+	// does not run it.
+	DryRunSkip DryRunBehavior = iota
+	// DryRunReadOnly is a phase implementing readOnly. It reads hosts and changes nothing,
+	// so a dry run runs it as itself.
+	DryRunReadOnly
+	// DryRunOwnPath is a phase implementing withDryRun. A dry run calls DryRun() instead of
+	// Run().
+	DryRunOwnPath
+)
+
+// String is the label written into the phase docs.
+func (b DryRunBehavior) String() string {
+	switch b {
+	case DryRunReadOnly:
+		return "runs, reads only"
+	case DryRunOwnPath:
+		return "runs its own dry-run path"
+	default:
+		return "reported, not run"
+	}
+}
+
+// ClassifyDryRun reports what a dry run does with p.
+func ClassifyDryRun(p Phase) DryRunBehavior {
+	if _, ok := p.(withDryRun); ok {
+		return DryRunOwnPath
+	}
+	if _, ok := p.(readOnly); ok {
+		return DryRunReadOnly
+	}
+	return DryRunSkip
+}
+
 // In-phase hooks for phases to run logic immediately before/after Run().
 // These are strictly internal hooks for phases themselves and are separate
 // from user-configured lifecycle hooks handled by the RunHooks phase.
@@ -257,12 +298,7 @@ func (m *Manager) Run(ctx context.Context) error {
 
 		// Classify before Prepare, so that when Prepare fails a dry run can tell a preflight
 		// result from an artifact of the phases it just skipped. See the two uses below.
-		skipUnderDryRun := false
-		if m.DryRun {
-			_, hasDryRun := p.(withDryRun)
-			_, isReadOnly := p.(readOnly)
-			skipUnderDryRun = !hasDryRun && !isReadOnly
-		}
+		skipUnderDryRun := m.DryRun && ClassifyDryRun(p) == DryRunSkip
 
 		if cp, ok := p.(withconfig); ok {
 			l.Debug("preparing", "phase", title)

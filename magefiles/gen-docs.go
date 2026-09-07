@@ -82,7 +82,7 @@ func (Generate) Document() error {
 		return err
 	}
 	for _, pd := range phaseDocs() {
-		if err := writePhaseDoc(pd.name, pd.phases); err != nil {
+		if err := writePhaseDoc(pd); err != nil {
 			return err
 		}
 	}
@@ -108,6 +108,9 @@ var (
 type phaseDoc struct {
 	name   string
 	phases phase.Phases
+	// dryRun adds the dry-run section and per-phase labels to the page. Only apply and reset
+	// register the --dry-run flag, so only their pages describe it.
+	dryRun bool
 }
 
 // phaseDocs lists every action whose phases get a docs/phases/<name>.md page. Add a new
@@ -119,12 +122,14 @@ func phaseDocs() []phaseDoc {
 			phases: action.NewApply(action.ApplyOptions{
 				Manager: genDocsManager,
 			}).Phases,
+			dryRun: true,
 		},
 		{
 			name: "reset",
 			phases: action.NewReset(action.ResetOptions{
 				Manager: genDocsManagerNoConfig,
 			}).Phases,
+			dryRun: true,
 		},
 		{
 			name: "kube-config",
@@ -135,6 +140,7 @@ func phaseDocs() []phaseDoc {
 		{
 			name:   "prepare",
 			phases: action.NewPrepare(action.PrepareOptions{}).Phases,
+			dryRun: true,
 		},
 		{
 			name: "engine-config-sync",
@@ -277,17 +283,37 @@ func linkHandler(link string) string {
 	return "./" + link[:len(link)-3] + ".md"
 }
 
-func phaseComment(mk *markdown.Markdown, p phase.Phase) {
+func phaseComment(mk *markdown.Markdown, p phase.Phase, dryRun bool) {
 	// The title and its explanation are one list item, so they go in as one block. Written
 	// as two, the writer sees an ordered list followed by a bullet list and separates them
 	// with the blank line a new list needs -- which splits every item from its explanation
 	// and renders the whole page as a loose list.
-	mk.OrderedList(fmt.Sprintf("%s\n    - %s", p.Title(), p.Explanation()))
+	item := fmt.Sprintf("%s\n    - %s", p.Title(), p.Explanation())
+	if dryRun {
+		// phase.ClassifyDryRun is the same call Manager.Run gates on, so the label is what
+		// the phase actually does under --dry-run rather than a second description of it.
+		item += fmt.Sprintf("\n    - Dry run: %s", phase.ClassifyDryRun(p))
+	}
+	mk.OrderedList(item)
 }
 
+// dryRunNote heads the pages for the commands that take --dry-run. It covers what the flag does
+// to the run as a whole; the per-phase labels below it cover each phase.
+const dryRunNote = "With `--dry-run`, cargoship connects to every host and runs the preflight " +
+	"checks for real, then reports the phases it would have run instead of running them. Each " +
+	"phase below is labelled with what a dry run does with it. A phase is only run when it " +
+	"declares that it is safe to, so a phase added later is reported until someone says " +
+	"otherwise.\n\n" +
+	"The report is not a static list. Every phase still prepares itself and checks whether it " +
+	"has anything to do, and both only read, so work that is already done is filtered out " +
+	"against the live hosts. A phase that could not be assessed, because it reads state an " +
+	"earlier reported phase would have created, is reported as `unassessed`.\n\n" +
+	"A dry run takes no cluster lock, so it does not block a real run, and it can report state " +
+	"that a concurrent run is already changing. It does not need `--confirm`."
+
 // writePhaseDoc renders one docs/phases/<name>.md page listing each phase's title and explanation.
-func writePhaseDoc(name string, phases phase.Phases) error {
-	path := fmt.Sprintf("docs/phases/%s.md", name)
+func writePhaseDoc(pd phaseDoc) error {
+	path := fmt.Sprintf("docs/phases/%s.md", pd.name)
 	fmt.Println(path)
 
 	f, err := os.Create(path)
@@ -301,10 +327,15 @@ func writePhaseDoc(name string, phases phase.Phases) error {
 	}()
 
 	doc := markdown.NewMarkdown(f)
-	doc.H2(fmt.Sprintf("%s phases", name))
+	doc.H2(fmt.Sprintf("%s phases", pd.name))
 
-	for _, p := range phases {
-		phaseComment(doc, p)
+	if pd.dryRun {
+		doc.PlainText(dryRunNote)
+		doc.PlainTextf("")
+	}
+
+	for _, p := range pd.phases {
+		phaseComment(doc, p, pd.dryRun)
 	}
 
 	doc.PlainTextf("")

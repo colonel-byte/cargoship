@@ -379,3 +379,16 @@ func TestWetRunFailsOnPrepareFailure(t *testing.T) {
 	require.Error(t, m.Run(context.Background()))
 	require.False(t, after.runCalled)
 }
+
+// TestClassifyDryRun pins the classifier the docs render. magefiles/gen-docs.go labels every
+// phase in docs/phases/apply.md and reset.md with this, and Run() gates on the same call, so a
+// label there is what the phase does rather than a second description of it.
+func TestClassifyDryRun(t *testing.T) {
+	require.Equal(t, DryRunReadOnly, ClassifyDryRun(&readOnlyPhase{}))
+	require.Equal(t, DryRunOwnPath, ClassifyDryRun(&dryRunPhase{}))
+	require.Equal(t, DryRunSkip, ClassifyDryRun(&mutatingPhase{}))
+
+	require.Equal(t, "runs, reads only", DryRunReadOnly.String())
+	require.Equal(t, "runs its own dry-run path", DryRunOwnPath.String())
+	require.Equal(t, "reported, not run", DryRunSkip.String())
+}
