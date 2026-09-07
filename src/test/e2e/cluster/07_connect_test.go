@@ -22,6 +22,8 @@ import (
 
 // connect covers phase/07_connect.go, the first phase apply runs. Every later phase
 // test reuses the SSH connections it opens.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) connect() {
 	s.T().Helper()
 
@@ -35,5 +37,10 @@ func (s *phaseWalk) connect() {
 }
 
 func (s *ApplyPhaseSuite) Test_07_Connect() {
+	s.connect()
+}
+
+// Test_07_Connect opens the connections for the join walk, including the new machine's first.
+func (s *JoinPhaseSuite) Test_07_Connect() {
 	s.connect()
 }
