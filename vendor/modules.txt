@@ -817,8 +817,8 @@ github.com/felixge/httpsnoop
 ## explicit; go 1.23
 github.com/fsnotify/fsnotify
 github.com/fsnotify/fsnotify/internal
-# github.com/fvbommel/sortorder v1.1.0
-## explicit; go 1.13
+# github.com/fvbommel/sortorder v1.2.0
+## explicit; go 1.21
 github.com/fvbommel/sortorder
 # github.com/fxamacker/cbor/v2 v2.9.3
 ## explicit; go 1.20
