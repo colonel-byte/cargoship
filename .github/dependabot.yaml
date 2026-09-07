@@ -2,8 +2,7 @@
 version: 2
 updates:
   - package-ecosystem: gomod
-    directories:
-      - "/"
+    directory: "/"
     schedule:
       interval: weekly
       day: monday
@@ -41,8 +40,7 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: pre-commit
-    directories:
-      - "/"
+    directory: "/"
     schedule:
       interval: daily
     assignees:
@@ -52,8 +50,7 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: github-actions
-    directories:
-      - "/"
+    directory: "/"
     schedule:
       interval: daily
     assignees:
