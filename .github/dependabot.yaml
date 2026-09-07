@@ -25,7 +25,8 @@ updates:
       docker:
         patterns:
           - "github.com/docker/*"
-          - "github.com/mody/*"
+          - "github.com/moby/*"
+          - "github.com/fvbommel/sortorder"
       cosign:
         patterns:
           - "github.com/aws/*"

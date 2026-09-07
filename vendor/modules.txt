@@ -754,7 +754,7 @@ github.com/dimchansky/utfbom
 # github.com/distribution/reference v0.6.0
 ## explicit; go 1.20
 github.com/distribution/reference
-# github.com/docker/cli v29.7.2+incompatible
+# github.com/docker/cli v29.8.0+incompatible
 ## explicit
 github.com/docker/cli/cli/command
 github.com/docker/cli/cli/config
@@ -828,8 +828,8 @@ github.com/felixge/httpsnoop
 ## explicit; go 1.23
 github.com/fsnotify/fsnotify
 github.com/fsnotify/fsnotify/internal
-# github.com/fvbommel/sortorder v1.1.0
-## explicit; go 1.13
+# github.com/fvbommel/sortorder v1.2.0
+## explicit; go 1.21
 github.com/fvbommel/sortorder
 # github.com/fxamacker/cbor/v2 v2.9.3
 ## explicit; go 1.20
