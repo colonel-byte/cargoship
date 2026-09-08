@@ -91,6 +91,7 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync {
 				Enabled:   opts.UpdateKubeConfig,
 			},
 			&phase.LabelNodes{
+				Distro:  d,
 				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
 			},
 
