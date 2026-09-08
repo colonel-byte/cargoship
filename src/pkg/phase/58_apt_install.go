@@ -58,7 +58,7 @@ func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 func (p *APTUploadFiles) Run(ctx context.Context) (err error) {
 	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
-			return zh.Configurer.InstallPackage(zh, getPath(p.filesFor(ctx, p.filesControl, zh))...)
+			return p.installPackagesFor(ctx, p.filesControl, zh)
 		}
 		return nil
 	})
@@ -67,7 +67,7 @@ func (p *APTUploadFiles) Run(ctx context.Context) (err error) {
 	}
 	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
-			return zh.Configurer.InstallPackage(zh, getPath(p.filesFor(ctx, p.filesWorkers, zh))...)
+			return p.installPackagesFor(ctx, p.filesWorkers, zh)
 		}
 		return nil
 	})

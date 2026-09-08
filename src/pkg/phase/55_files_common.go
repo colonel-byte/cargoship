@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -125,27 +126,58 @@ func (p *UploadFilesCommon) blockOtherInstalls(ctx context.Context, h *cluster.Z
 }
 
 func (p *UploadFilesCommon) uploadControllerFiles(ctx context.Context, h *cluster.ZarfHost) error {
-	return p.uploadFiles(ctx, h, p.filesFor(ctx, p.filesControl, h))
+	files, err := p.filesFor(p.filesControl, h)
+	if err != nil {
+		return err
+	}
+
+	return p.uploadFiles(ctx, h, files)
 }
 
 func (p *UploadFilesCommon) uploadWorkerFiles(ctx context.Context, h *cluster.ZarfHost) error {
-	return p.uploadFiles(ctx, h, p.filesFor(ctx, p.filesWorkers, h))
+	files, err := p.filesFor(p.filesWorkers, h)
+	if err != nil {
+		return err
+	}
+
+	return p.uploadFiles(ctx, h, files)
 }
 
 // filesFor picks the files built for a host's own architecture.
 //
-// An architecture that cannot be resolved yields no files rather than an error. ValidateHosts has
-// already failed the run for a host the package does not carry, so reaching this at upload time
-// means the host never reported an architecture at all, and uploading another architecture's
-// binaries to it would be worse than uploading nothing.
-func (p *UploadFilesCommon) filesFor(ctx context.Context, byArch map[api.Arch][]v1alpha1.ZarfFile, h *cluster.ZarfHost) []v1alpha1.ZarfFile {
+// A host whose architecture cannot be read fails rather than taking no files. Uploading nothing is
+// not the same as doing nothing here: cleanStaleUploads diffs this run's engine manifest against
+// the one the host already carried, so a host that recorded no engine files this run reads as a
+// version that dropped them, and the engine binaries it is running are deleted.
+//
+// ValidateHosts rejects a host the package does not carry, but only for a package that records
+// which architectures it was built for. One built before that metadata existed is applied
+// unchecked, so an architecture cargoship cannot parse still reaches this.
+func (p *UploadFilesCommon) filesFor(byArch map[api.Arch][]v1alpha1.ZarfFile, h *cluster.ZarfHost) ([]v1alpha1.ZarfFile, error) {
 	arch, err := hostArch(h)
 	if err != nil {
-		logger.From(ctx).Warn("could not determine the host architecture, uploading no files", "host", h, "error", err)
+		return nil, fmt.Errorf("cannot tell which files %s needs: %w", h, err)
+	}
+
+	return byArch[arch], nil
+}
+
+// installPackagesFor installs the packages built for a host's own architecture.
+//
+// A host the package carries no packages for is left alone rather than handed an empty list: dnf
+// and apt-get both read a list of packages to install, and calling either with none fails on its
+// own usage, which says nothing about why cargoship had no packages to give it.
+func (p *UploadFilesCommon) installPackagesFor(ctx context.Context, byArch map[api.Arch][]v1alpha1.ZarfFile, h *cluster.ZarfHost) error {
+	files, err := p.filesFor(byArch, h)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		logger.From(ctx).Warn("the package carries no engine packages for this host architecture, skipping the install", "host", h)
 		return nil
 	}
 
-	return byArch[arch]
+	return h.Configurer.InstallPackage(h, getPath(files)...)
 }
 
 // hostArches lists the distinct architectures of the hosts this phase still uploads to, in the
@@ -153,6 +185,10 @@ func (p *UploadFilesCommon) filesFor(ctx context.Context, byArch map[api.Arch][]
 //
 // It reads p.control and p.workers as they stand, so a phase that narrows those lists first, as the
 // RPM and APT phases do, only builds file sets for architectures it will actually upload.
+//
+// A host whose architecture cannot be read is skipped here rather than failing the phase early.
+// filesFor fails for that host when its turn to upload comes, which reports the host that is
+// actually stuck instead of stopping the run before any host has been served.
 func (p *UploadFilesCommon) hostArches(ctx context.Context) api.Arches {
 	var arches api.Arches
 

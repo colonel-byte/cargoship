@@ -22,6 +22,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	hostos "github.com/colonel-byte/cargoship/src/types/os"
+	rigos "github.com/k0sproject/rig/os"
 	"github.com/stretchr/testify/require"
 )
 
@@ -128,19 +130,81 @@ func TestFilesForPicksTheHostArchitecture(t *testing.T) {
 		api.ArchARM64: {{Name: "k3s-arm64"}},
 	}
 
-	got := p.filesFor(context.Background(), byArch, newDetectedHost(t, "arm64"))
+	got, err := p.filesFor(byArch, newDetectedHost(t, "arm64"))
 
+	require.NoError(t, err)
 	require.Equal(t, []string{"k3s-arm64"}, fileNames(got))
 }
 
-// TestFilesForWithoutAnArchitectureUploadsNothing covers a host that never reported an
-// architecture. Uploading another architecture's binaries to it would be worse than uploading none,
-// and ValidateHosts has already failed the run for a host the package genuinely cannot serve.
-func TestFilesForWithoutAnArchitectureUploadsNothing(t *testing.T) {
+// TestFilesForWithoutAnArchitectureFails covers a host running an architecture cargoship cannot
+// parse. Returning no files instead would upload nothing and record no engine manifest, which
+// cleanStaleUploads reads as a version that dropped those files and deletes the engine binaries
+// the host is running.
+func TestFilesForWithoutAnArchitectureFails(t *testing.T) {
 	p := &UploadFilesCommon{}
 	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
 
-	require.Empty(t, p.filesFor(context.Background(), byArch, newDetectedHost(t, "sparc64")))
+	got, err := p.filesFor(byArch, newDetectedHost(t, "sparc64"))
+
+	require.ErrorIs(t, err, api.ErrUnknownArch)
+	require.Empty(t, got)
+}
+
+// recordingConfigurer is a configurer that records the packages it was asked to install. The
+// embedded interface is nil: a test that reaches any other method is meant to panic rather than
+// pass against a stub of behaviour it did not mean to exercise.
+type recordingConfigurer struct {
+	hostos.Configurer
+
+	installed [][]string
+}
+
+func (c *recordingConfigurer) InstallPackage(_ rigos.Host, pkgs ...string) error {
+	c.installed = append(c.installed, pkgs)
+	return nil
+}
+
+func newInstallHost(t *testing.T, detected string) (*cluster.ZarfHost, *recordingConfigurer) {
+	t.Helper()
+
+	cfg := &recordingConfigurer{}
+	h := newDetectedHost(t, detected)
+	h.Configurer = cfg
+
+	return h, cfg
+}
+
+func TestInstallPackagesForInstallsTheHostArchitecturePackages(t *testing.T) {
+	p := &UploadFilesCommon{}
+	byArch := map[api.Arch][]v1alpha1.ZarfFile{
+		api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}},
+		api.ArchARM64: {{Name: "k3s-arm64", Target: "/tmp/k3s-arm64.rpm"}},
+	}
+	h, cfg := newInstallHost(t, "arm64")
+
+	require.NoError(t, p.installPackagesFor(context.Background(), byArch, h))
+	require.Equal(t, [][]string{{"/tmp/k3s-arm64.rpm"}}, cfg.installed)
+}
+
+// TestInstallPackagesForSkipsAHostWithNoPackages keeps an empty package list away from the package
+// manager: dnf and apt-get called with no packages fail on their own usage, which reports nothing
+// about the architecture the package turned out not to carry.
+func TestInstallPackagesForSkipsAHostWithNoPackages(t *testing.T) {
+	p := &UploadFilesCommon{}
+	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
+	h, cfg := newInstallHost(t, "arm64")
+
+	require.NoError(t, p.installPackagesFor(context.Background(), byArch, h))
+	require.Empty(t, cfg.installed)
+}
+
+func TestInstallPackagesForFailsWithoutAnArchitecture(t *testing.T) {
+	p := &UploadFilesCommon{}
+	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64", Target: "/tmp/k3s-amd64.rpm"}}}
+	h, cfg := newInstallHost(t, "sparc64")
+
+	require.ErrorIs(t, p.installPackagesFor(context.Background(), byArch, h), api.ErrUnknownArch)
+	require.Empty(t, cfg.installed)
 }
 
 func fileNames(files []v1alpha1.ZarfFile) []string {
