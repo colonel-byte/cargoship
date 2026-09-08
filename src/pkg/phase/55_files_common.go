@@ -180,32 +180,6 @@ func (p *UploadFilesCommon) installPackagesFor(ctx context.Context, byArch map[a
 	return h.Configurer.InstallPackage(h, getPath(files)...)
 }
 
-// hostArches lists the distinct architectures of the hosts this phase still uploads to, in the
-// order the cluster declares them.
-//
-// It reads p.control and p.workers as they stand, so a phase that narrows those lists first, as the
-// RPM and APT phases do, only builds file sets for architectures it will actually upload.
-//
-// A host whose architecture cannot be read is skipped here rather than failing the phase early.
-// filesFor fails for that host when its turn to upload comes, which reports the host that is
-// actually stuck instead of stopping the run before any host has been served.
-func (p *UploadFilesCommon) hostArches(ctx context.Context) api.Arches {
-	var arches api.Arches
-
-	for _, h := range slices.Concat(p.control, p.workers) {
-		arch, err := hostArch(h)
-		if err != nil {
-			logger.From(ctx).Warn("could not determine the host architecture, skipping it", "host", h, "error", err)
-			continue
-		}
-		if !slices.Contains(arches, arch) {
-			arches = append(arches, arch)
-		}
-	}
-
-	return arches
-}
-
 // ShouldRun is true when there are workers
 func (p *UploadFilesCommon) ShouldRun() bool {
 	return (len(p.control) + len(p.workers)) > 0
