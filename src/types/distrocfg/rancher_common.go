@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -36,6 +37,11 @@ type RancherCommon struct {
 }
 
 var (
+	// rancherVersionRegex matches the version rke2 and k3s print, which always carries a
+	// distro suffix -- v1.36.4+k3s1, v1.35.8+rke2r1. Other distros print their version
+	// differently and parse it themselves.
+	rancherVersionRegex = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
+
 	controllerArgs = []string{
 		keyKubeAPI,
 		keyKubeConMan,
@@ -348,7 +354,7 @@ func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
 	if err != nil {
 		return "", ErrVersionNotDetected
 	}
-	match := versionRegex.FindString(out)
+	match := rancherVersionRegex.FindString(out)
 	if match == "" {
 		return "", ErrVersionNotDetected
 	}
