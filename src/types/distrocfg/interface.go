@@ -41,6 +41,9 @@ const (
 
 // Distro interface for any distro object
 type Distro interface {
+	// AdminCredentials returns the cluster CA certificate and the admin client key pair
+	// for a given controller host and data directory
+	AdminCredentials(cluster.ZarfHost, string) (AdminCredentials, error)
 	// BinaryName returns the engine binary name
 	BinaryName() string
 	// BinaryPath returns the full path to the engine binary
