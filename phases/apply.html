@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-114c61ef.js";
+            window.path_to_searchindex_js = "../searchindex-b6e421e2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4e5d781a.js"></script>
+        <script src="../toc-b39f11c0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -236,7 +236,7 @@
 </li>
 <li>Updating hosts firewall
 <ul>
-<li>If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables. It trusts every other node in the cluster along with the engine’s pod and service CIDRs, opens the ports in the <code>.host.ports</code> section, and applies the rules in the <code>.host.firewall.rules</code> section</li>
+<li>If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables, preferring the front end the node’s OS ships. It trusts every other node in the cluster along with the engine’s pod and service CIDRs, opens the ports in the <code>.host.ports</code> section, and applies the rules in the <code>.host.firewall.rules</code> section</li>
 </ul>
 </li>
 <li>Upload files to hosts

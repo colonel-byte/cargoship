@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-114c61ef.js";
+            window.path_to_searchindex_js = "../searchindex-b6e421e2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4e5d781a.js"></script>
+        <script src="../toc-b39f11c0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,13 +183,13 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="host-firewall-configuration-guide"><a class="header" href="#host-firewall-configuration-guide">Host Firewall Configuration Guide</a></h1>
-<p>Cargoship configures the firewall on every node that runs one. It detects the firewall per node, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when <code>cargoship apply</code> is given the <code>--firewall</code> flag.</p>
+<p>Cargoship configures the firewall on every node that runs one. It picks the firewall per node, from the node’s operating system and from what is running on it, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when <code>cargoship apply</code> is given the <code>--firewall</code> flag.</p>
 <p>Every node cargoship manages gets three things: the private address of every other node in the cluster is trusted, the engine’s pod and service CIDR blocks are trusted, and the ports listed in <code>.host.ports</code> are opened. Anything beyond that comes from the rules in <code>.host.firewall.rules</code>.</p>
 <h2 id="backends"><a class="header" href="#backends">Backends</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Backend</th><th>Detected when</th><th>Notes</th></tr>
+<tr><th>Backend</th><th>Used when</th><th>Notes</th></tr>
 </thead>
 <tbody>
 <tr><td><code>firewalld</code></td><td>the <code>firewalld</code> service is running</td><td>Cluster trust is applied with ipsets in the <code>trusted</code> zone; ports become a <code>distro-exposed-ports</code> service on the <code>public</code> zone</td></tr>
@@ -199,8 +199,25 @@
 </table>
 </div>
 <p>Cargoship never runs <code>ufw enable</code>. A node whose ufw is inactive is left alone, because bringing up a default-deny firewall from a remote phase would cut the SSH connection cargoship is running over. Enable ufw yourself, with a rule that keeps SSH reachable, before pointing cargoship at the node.</p>
-<p>Backends are matched in the order above, and nftables is last on purpose: firewalld and ufw are both front ends onto nftables, so a host running either would match the nftables backend as well, and the front end is the one an operator expects cargoship to configure. The nftables backend is for the hosts that never had a front end – Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all.</p>
 <p>A node whose only nftables content comes from kube-proxy or the CNI is deliberately not a match. Every node in a running cluster has a non-empty ruleset, so matching on that would claim hosts whose operator never configured a firewall at all.</p>
+<h3 id="choosing-a-backend"><a class="header" href="#choosing-a-backend">Choosing a backend</a></h3>
+<p>The node’s operating system decides first. Each OS module names the firewall front end its distribution ships: firewalld on Enterprise Linux and SUSE, ufw on Debian and Ubuntu. Distributions that ship no front end – Alpine, Arch, CoreOS, Flatcar, Slackware – name none.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>The node’s OS ships</th><th>And that front end is</th><th>Cargoship configures</th></tr>
+</thead>
+<tbody>
+<tr><td>firewalld or ufw</td><td>running</td><td>that front end</td></tr>
+<tr><td>firewalld or ufw</td><td>installed, but stopped or inactive</td><td>nothing on the node</td></tr>
+<tr><td>firewalld or ufw</td><td>not installed</td><td>whichever backend matches, in the order above</td></tr>
+<tr><td>no front end</td><td>–</td><td>whichever backend matches, in the order above</td></tr>
+</tbody>
+</table>
+</div>
+<p>The second row is the deliberate part. An operator who installed a front end and left it down has made a decision about the node’s firewall posture, and cargoship does not take that decision away: it neither starts the service nor reaches past the stopped front end to write rules into the nftables underneath it, where the front end would overwrite them the moment it came up. Cargoship logs the node it skipped, and the apply continues.</p>
+<p>This affects a stock Ubuntu node, which ships ufw installed and inactive. Run <code>ufw enable</code> on those nodes, with a rule that keeps SSH reachable, before <code>cargoship apply --firewall</code>.</p>
+<p>The fallback match runs in the table order above, and nftables is last on purpose: firewalld and ufw are both front ends onto nftables, so a host running either would match the nftables backend as well. The nftables backend is for the hosts that never had a front end – Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all.</p>
 <h2 id="ports"><a class="header" href="#ports">Ports</a></h2>
 <p>The <code>.host.ports</code> list is the simple case, and it works the same on every backend. It opens a port, or an inclusive port range, to any source:</p>
 <pre><code class="language-yaml">spec:
@@ -329,7 +346,8 @@
 </code></pre>
 <p>Prefer a <code>direction: forward</code> rule under <code>.host.firewall.rules</code> for new configuration; it does the same thing on firewalld and also works on ufw and nftables hosts.</p>
 <h2 id="adding-a-backend"><a class="header" href="#adding-a-backend">Adding a backend</a></h2>
-<p>A backend is a <code>firewall.Backend</code> implementation in <code>src/pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>src/pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
+<p>A backend is a <code>firewall.Backend</code> implementation in <code>src/pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, an <code>Installed</code> that reports whether the firewall is present on the node at all, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>src/pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
+<p>A backend that is a distribution’s own front end also needs the OS modules for that distribution to return its <code>Name</code> from <code>PreferredFirewall</code>, in <code>src/types/os/linux</code>. That method is declared on each leaf OS module rather than on a shared base such as <code>EnterpriseLinux</code>, because those modules embed both their base and <code>configurer.Linux</code> at the same depth, which leaves a method promoted from either one ambiguous.</p>
 
                     </main>
 
