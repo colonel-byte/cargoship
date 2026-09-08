@@ -49,3 +49,8 @@ func init() {
 func (r *CentOS) String() string {
 	return "CentOS Linux"
 }
+
+// PreferredFirewall reports that CentOS ships firewalld as its firewall front end.
+func (r *CentOS) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}

@@ -49,3 +49,8 @@ func init() {
 func (r *AlmaLinux) String() string {
 	return "AlmaLinux"
 }
+
+// PreferredFirewall reports that AlmaLinux ships firewalld as its firewall front end.
+func (r *AlmaLinux) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}

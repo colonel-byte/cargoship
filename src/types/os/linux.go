@@ -45,6 +45,13 @@ const (
 	DataDirDefaultPath = "DataDirDefaultPath"
 )
 
+const (
+	// FirewallFirewalld is the firewall front end shipped by Enterprise Linux and SUSE.
+	FirewallFirewalld = "firewalld"
+	// FirewallUFW is the firewall front end shipped by Debian and Ubuntu.
+	FirewallUFW = "ufw"
+)
+
 // Linux is a base module for various linux OS support packages
 type Linux struct {
 	paths    map[string]string
@@ -56,10 +63,26 @@ func (l *Linux) OSKind() string {
 	return "linux"
 }
 
+// PreferredFirewall reports that the distribution ships no firewall front end of its own. An OS
+// module for a distribution that ships one overrides this. The method is declared on each leaf OS
+// module rather than on a shared base such as EnterpriseLinux, because those modules embed both
+// their base and this one at the same depth, which would leave the promoted method ambiguous.
+func (l *Linux) PreferredFirewall() string {
+	return ""
+}
+
 // NOTE The Linux struct does not embed rig/os.Linux because it will confuse
 // go as the distro-configurers' parents embed it too. This means you can't
 // add functions to base Linux package that call functions in the rig/os.Linux package,
 // you can however write those functions in the distro-configurers.
+
+// ApplySysctl loads every sysctl file the OS reads at boot, which includes the file at path.
+// Applying them all rather than only that file keeps a setting cargoship overrides from being
+// re-applied at its old value by a file later in the load order, and matches what the host
+// does on its next boot.
+func (l *Linux) ApplySysctl(h os.Host, _ string) error {
+	return h.Exec("sysctl --system", exec.Sudo(h))
+}
 
 // Quote wraps shellescape.Quote for consumers that need OS-aware escaping
 func (l *Linux) Quote(value string) string {

@@ -81,6 +81,15 @@ func (f *Firewalld) Detect(h *cluster.ZarfHost) bool {
 	return h.Configurer.ServiceIsRunning(h, FirewalldService)
 }
 
+// Installed is true when firewalld is present on h, running or not.
+func (f *Firewalld) Installed(h *cluster.ZarfHost) bool {
+	if h == nil || h.Configurer == nil {
+		return false
+	}
+
+	return h.Configurer.CommandExist(h, "firewall-cmd")
+}
+
 // Apply writes the ipsets, service, and policy files for p, enables them, and restarts
 // firewalld.
 func (f *Firewalld) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {

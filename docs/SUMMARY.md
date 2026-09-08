@@ -51,6 +51,7 @@
 
 - [build-flags](dev/build-flags.md)
 - [dagger](dev/dagger.md)
+- [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
 - [mage](dev/mage.md)
 - [thirdparty-src](dev/thirdparty-src.md)
@@ -62,9 +63,12 @@
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
+- [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
 - [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
+- [choice-phase-e2e-tests](agent/choice-phase-e2e-tests.md)
+- [choice-preferred-firewall](agent/choice-preferred-firewall.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 

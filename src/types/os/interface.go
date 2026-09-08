@@ -30,6 +30,10 @@ import (
 
 // Configurer defines the per-host operations required for managing a host.
 type Configurer interface {
+	// ApplySysctl loads the sysctl settings in the file at the given path into the running
+	// kernel. The path is passed rather than assumed because not every OS can apply the whole
+	// of /etc/sysctl.d in one command.
+	ApplySysctl(os.Host, string) error
 	// Arch returns the host processor architecture in the format engine expects it
 	Arch(os.Host) (string, error)
 	// Base returns the base part of a path
@@ -85,6 +89,10 @@ type Configurer interface {
 	MoveFile(os.Host, string, string) error
 	// OSKind returns the identifier for Linux hosts
 	OSKind() string
+	// PreferredFirewall names the firewall front end this distribution ships, e.g. firewalld on
+	// Enterprise Linux and ufw on Debian. It returns an empty string when the distribution has no
+	// front end of its own.
+	PreferredFirewall() string
 	// PrivateAddress resolves internal ip from private interface
 	PrivateAddress(os.Host, string, string) (string, error)
 	// PrivateInterface tries to find a private network interface

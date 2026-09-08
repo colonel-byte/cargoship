@@ -66,6 +66,8 @@ const (
 	InstallConfig = "config"
 	// InstallConfirm flag
 	InstallConfirm = "confirm"
+	// InstallDryRun flag
+	InstallDryRun = "dry-run"
 	// InstallConcurrency flag
 	InstallConcurrency = "concurrency"
 	// InstallWorkConcurrency flag

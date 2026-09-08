@@ -1,0 +1,234 @@
+---
+name: E2E cluster
+
+# The install group, src/test/e2e/cluster, which provisions a bootloose cluster of ten Docker
+# machines and walks the apply phase list one phase at a time against it. It needs Docker and
+# takes minutes rather than seconds, so it is not part of every pull request the way e2e.yaml
+# is. It has its own workflow rather than a gated job in e2e.yaml so that its trigger, its
+# concurrency group and its time budget are independent of the checks that do run on every
+# push.
+#
+# It runs on demand from the Actions tab, and automatically on a pull request carrying the
+# "e2e-cluster" label. Add that label to a pull request that touches src/pkg/phase,
+# src/pkg/action or the inventory handling. The trigger lists "labeled" explicitly: without
+# it, adding the label to an open pull request would not start a run until the next push.
+#
+# There are two jobs behind that trigger, and they run the same suite against different
+# inventories. e2e-cluster-stage provisions five machines and asks for the staging phases only;
+# e2e-cluster provisions ten and walks everything. The first takes minutes and the second takes
+# tens of them, which is the whole reason they are separate -- see
+# docs/agent/choice-e2e-stage-split.md. Both are label gated for now. The intent is to drop the
+# gate on the stage job once a few runs show what it costs and how reliable it is, so that the
+# phases it does cover run on every pull request.
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-cluster-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The staging half of the suite, over the five-machine inventory: it uploads the package and
+  # renders the engine config without starting an engine anywhere. No build step -- the suite
+  # calls the cargoship packages directly, distro.Create to build the package and
+  # action.NewPrepare around the phase walk, so there is no binary for this workflow to produce
+  # or download. That is what makes it independent of e2e.yaml, which is the point of the split.
+  e2e-cluster-stage:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e-cluster')
+    runs-on: ubuntu-latest
+    # Half the machines and half the uploads of the full job, and it starts no engine, so this
+    # wants a fraction of the budget. The suite's own timeout is below it for the same reason as
+    # in the full job.
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Half the nodes of the full job, but the package is the same size and every node still
+      # receives it, so the disk this frees is needed here too.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Test
+        run: >-
+          go test -mod=vendor -count=1 -v -timeout=25m
+          ./src/test/e2e/cluster/...
+        env:
+          # Provision the five-machine inventory and stop before the engine phases. See
+          # stageOnlyEnvVar in src/test/e2e/cluster/main_test.go.
+          CARGOSHIP_E2E_STAGE_ONLY: "1"
+          # Leave the machines standing when the run fails, so the step below can read them.
+          # See keepClusterEnvVar in the same file.
+          CARGOSHIP_E2E_KEEP_CLUSTER: "1"
+          # Everything the test build needs is vendored, so make any accidental network
+          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          CGO_ENABLED: 0
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      # Same reasoning as the full job's diagnostics step below.
+      - name: Collect node diagnostics
+        if: failure()
+        run: |
+          diag="$RUNNER_TEMP/diagnostics"
+          mkdir -p "$diag"
+          df -h / | tee "$diag/df.txt"
+          free -h | tee "$diag/free.txt"
+          docker ps -a | tee "$diag/containers.txt"
+          for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
+            name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
+            docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
+            echo "::group::$name"
+            tail -n 200 "$diag/$name.docker.log" || true
+            echo "::endgroup::"
+          done
+          cp -r "$HOME/.cargoship-cache/logs" "$diag/suite-logs" 2>/dev/null || true
+
+      - name: Upload node diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-cluster-stage-diagnostics
+          path: ${{ runner.temp }}/diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Remove leftover bootloose containers
+        if: always()
+        run: |
+          ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
+          if [ -n "$ids" ]; then
+            docker rm -fv $ids
+          fi
+
+  # The full walk, over the ten-machine inventory. No build step here either, and for the same
+  # reason as the stage job above.
+  e2e-cluster:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'e2e-cluster')
+    runs-on: ubuntu-latest
+    # The suite's own timeout is below this, so an overrun is reported as a Go test failure
+    # naming the phase it was in rather than as a cancelled job.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # The package the suite builds and stages on ten nodes runs to gigabytes, which is more
+      # than the ~14GB a hosted runner leaves free comfortably holds. None of what is
+      # removed here is used by this job. The tool cache is deliberately left alone: setup-go
+      # puts the toolchain there.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Test
+        run: >-
+          go test -mod=vendor -count=1 -v -timeout=55m
+          ./src/test/e2e/cluster/...
+        env:
+          # Leave the machines standing when the run fails, so the step below can read their
+          # journals. See keepClusterEnvVar in src/test/e2e/cluster/main_test.go.
+          CARGOSHIP_E2E_KEEP_CLUSTER: "1"
+          # Everything the test build needs is vendored, so make any accidental network
+          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          CGO_ENABLED: 0
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      # Most of what explains a failure is already in the -v output above: the suite stops at
+      # the first failing phase and the phase logs are written through to stdout. This step
+      # covers what is not -- a full disk, an exhausted runner, and the journals of the nodes
+      # the phase did not name.
+      #
+      # Those journals are the point. The suite captures only the host whose wait timed out,
+      # and a controller that cannot join usually fails because of a node that started before
+      # it, so the rest of the cluster is where the answer is. The containers are still here to
+      # be read because the Test step set CARGOSHIP_E2E_KEEP_CLUSTER; the step after this one
+      # is what removes them.
+      #
+      # Full journals go to files and only a tail goes inline. The inline copy is what runs
+      # this job's log to tens of thousands of lines, and the artifact is the thing to read.
+      - name: Collect node diagnostics
+        if: failure()
+        run: |
+          diag="$RUNNER_TEMP/diagnostics"
+          mkdir -p "$diag"
+          df -h / | tee "$diag/df.txt"
+          free -h | tee "$diag/free.txt"
+          docker ps -a | tee "$diag/containers.txt"
+          for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
+            name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
+            docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
+            docker exec "$c" journalctl -u rke2-server -u rke2-agent --no-pager \
+              > "$diag/$name.journal.log" 2>&1 || true
+            echo "::group::$name"
+            tail -n 200 "$diag/$name.journal.log" || true
+            echo "::endgroup::"
+          done
+          cp -r "$HOME/.cargoship-cache/logs" "$diag/suite-logs" 2>/dev/null || true
+
+      - name: Upload node diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-cluster-diagnostics
+          path: ${{ runner.temp }}/diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # TestMain deletes the cluster on a passing run. On a failing one it is told to leave
+      # the machines standing, so the step above can read them, which makes this the step that
+      # actually removes them. It also covers a cancelled job or a killed test binary, which
+      # reach neither. A hosted runner is discarded anyway; this is here so the same workflow
+      # behaves on a self-hosted one, where it is not. The -v is what takes the anonymous
+      # volumes with the containers; see engineData.
+      - name: Remove leftover bootloose containers
+        if: always()
+        run: |
+          ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
+          if [ -n "$ids" ]; then
+            docker rm -fv $ids
+          fi

@@ -31,6 +31,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
       --config string             Config file used to bootstrap a cluster.
       --confirm                   Confirm whether if to proceed with the install
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
+      --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -f, --fapolicyd                 Whether to update all the host nodes fapolicyd configuration.
   -F, --firewall                  Whether to update all the host nodes firewall configuration.
   -h, --help                      help for reset
