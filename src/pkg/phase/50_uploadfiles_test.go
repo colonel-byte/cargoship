@@ -18,14 +18,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/api"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/containerd/platforms"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/stretchr/testify/require"
 	"oras.land/oras-go/v2/content/oci"
 )
 
@@ -235,4 +238,48 @@ func TestPackageExportPlatformWithoutASingleArch(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newFileUploadPhase builds an UploadFiles over the given package files. TempDirectory is a scratch
+// directory rather than a real package layout: distroFilesFor only joins paths against it.
+func newFileUploadPhase(t *testing.T, files ...*v1alpha1.ZarfFile) *UploadFiles {
+	t.Helper()
+
+	p := &UploadFiles{}
+	p.SetManager(&Manager{TempDirectory: t.TempDir()})
+	p.disFiles = files
+
+	return p
+}
+
+func TestDistroFilesForSelectsByArch(t *testing.T) {
+	p := newFileUploadPhase(t,
+		newDistroFile("/usr/bin/k3s-amd64", api.ArchAMD64),
+		newDistroFile("/usr/bin/k3s-arm64", api.ArchARM64),
+		newDistroFile("/etc/k3s/config.yaml", ""),
+	)
+
+	got, err := p.distroFilesFor(context.Background(), newDetectedHost(t, "arm64"), api.ArchARM64)
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"k3s-arm64", "config.yaml"}, fileNames(got),
+		"an arm64 host takes its own binary and the file that selects no architecture")
+}
+
+// TestDistroFilesForKeepsTheAssembledIndex is the regression test for the invariant this loop
+// shares with profileFilesForArch: a file's position in the package's file list is the name of the
+// directory it was assembled into, so skipping one must not renumber the files after it.
+func TestDistroFilesForKeepsTheAssembledIndex(t *testing.T) {
+	p := newFileUploadPhase(t,
+		newDistroFile("/usr/bin/first", api.ArchAMD64),
+		newDistroFile("/usr/bin/second", api.ArchAMD64),
+		newDistroFile("/usr/bin/third", api.ArchARM64),
+	)
+
+	got, err := p.distroFilesFor(context.Background(), newDetectedHost(t, "arm64"), api.ArchARM64)
+
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Equal(t, "2", filepath.Base(filepath.Dir(got[0].LocalSource.Path)),
+		"third is the third file in the package, so it was assembled into directory 2 regardless of what was skipped")
 }

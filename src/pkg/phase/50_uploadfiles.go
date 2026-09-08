@@ -302,12 +302,21 @@ func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHos
 	return nil
 }
 
-func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost) error {
+// distroFilesFor is the package's own files as this host needs them uploaded, holding only the
+// files a host running arch has any use for.
+func (p *UploadFiles) distroFilesFor(ctx context.Context, h *cluster.ZarfHost, arch api.Arch) ([]v1alpha1.ZarfFile, error) {
 	files := []v1alpha1.ZarfFile{}
 
 	for i, f := range p.disFiles {
 		if ctx.Err() != nil {
-			return fmt.Errorf("upload canceled: %w", ctx.Err())
+			return nil, fmt.Errorf("upload canceled: %w", ctx.Err())
+		}
+		// A file's position in the list is the name of the directory it was assembled into, so a
+		// file meant for another architecture is skipped here rather than filtered out of the list
+		// beforehand. Filtering first would renumber every later file and read the wrong bytes.
+		if !f.Selector.MatchesArch(arch) {
+			logger.From(ctx).Debug("file is not for this host architecture", "file", filepath.Base(f.Target), "host", h, "arch", arch)
+			continue
 		}
 		target := f.Target
 		if f.Executable {
@@ -326,6 +335,21 @@ func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost
 			},
 		})
 	}
+
+	return files, nil
+}
+
+func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost) error {
+	arch, err := hostArch(h)
+	if err != nil {
+		return err
+	}
+
+	files, err := p.distroFilesFor(ctx, h, arch)
+	if err != nil {
+		return err
+	}
+
 	for _, f := range h.Files {
 		if ctx.Err() != nil {
 			return fmt.Errorf("upload canceled: %w", ctx.Err())
