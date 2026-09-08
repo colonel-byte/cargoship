@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b6e421e2.js";
+            window.path_to_searchindex_js = "../searchindex-abe698fb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b39f11c0.js"></script>
@@ -183,65 +183,80 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h2 id="reset-phases"><a class="header" href="#reset-phases">reset phases</a></h2>
+<p>With <code>--dry-run</code>, cargoship connects to every host and runs the preflight checks for real, then reports the phases it would have run instead of running them. Each phase below is labelled with what a dry run does with it. A phase is only run when it declares that it is safe to, so a phase added later is reported until someone says otherwise.</p>
+<p>The report is not a static list. Every phase still prepares itself and checks whether it has anything to do, and both only read, so work that is already done is filtered out against the live hosts. A phase that could not be assessed, because it reads state an earlier reported phase would have created, is reported as <code>unassessed</code>.</p>
+<p>A dry run takes no cluster lock, so it does not block a real run, and it can report state that a concurrent run is already changing. It does not need <code>--confirm</code>.</p>
 <ol>
 <li>Connect to hosts
 <ul>
 <li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
+<li>Dry run: runs, reads only. Connects opens the SSH session to each host and does nothing else. A dry run needs it, because a preflight that never reached a host would report on a cluster it never looked at.</li>
 </ul>
 </li>
 <li>Detect host operating systems
 <ul>
 <li>Gathers information about the remote host, including: OS and OS version</li>
+<li>Dry run: runs, reads only. Reads <code>/etc/os-release</code> and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.</li>
 </ul>
 </li>
 <li>Acquire exclusive host lock
 <ul>
 <li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Gather host facts
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
+<li>Dry run: runs, reads only. Gather facts about each host by asks for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.</li>
 </ul>
 </li>
 <li>Validate hosts
 <ul>
 <li>Verifying that each node in the cluster has a unique name and private address, that its CPU architecture is one the package carries, and that its firewall rules are usable,</li>
+<li>Dry run: runs, reads only. Validate the hosts is the preflight itself: sudo, unique hostnames and addresses, host architecture, firewall rules and clock skew. A dry run that skipped it would check nothing.</li>
 </ul>
 </li>
 <li>Gathering facts about the distro installed
 <ul>
 <li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
+<li>Dry run: runs, reads only. Gather distro related facts reads the engine version already on each host. That is what tells an upgrade apart from an install, and what catches a downgrade before a real run starts one.</li>
 </ul>
 </li>
 <li>Reset Worker
 <ul>
 <li>Deletes the worker from the cluster, if enabled it will try to drain node before removing the node</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Reset Controller
 <ul>
 <li>Deletes the controller from the cluster, if enabled it will try to drain node before removing the node</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Uninstalling Engine
 <ul>
 <li>Remove the rpm, apt, or binary files from all the hosts</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Reload service manager
 <ul>
 <li>Runs <code>systemctl daemon-reload</code> or equivalent on all hosts.</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Release exclusive host lock
 <ul>
 <li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Disconnect from hosts
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
+<li>Dry run: runs its own dry-run path</li>
 </ul>
 </li>
 </ol>
