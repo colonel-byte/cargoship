@@ -214,7 +214,9 @@ func (p *UploadFilesCommon) ShouldRun() bool {
 // getProfileFiles groups the files this phase uploads by the architecture of the host receiving
 // them, so a cluster of mixed CPUs gets the right binaries on each node.
 func (p *UploadFilesCommon) getProfileFiles(ctx context.Context, selector string, profile string) map[api.Arch][]v1alpha1.ZarfFile {
-	arches := p.hostArches(ctx)
+	// p.control and p.workers are read as they stand, so a phase that narrows them first, as the
+	// RPM and APT phases do, only builds file sets for architectures it will actually upload.
+	arches := hostArches(ctx, slices.Concat(p.control, p.workers))
 	byArch := make(map[api.Arch][]v1alpha1.ZarfFile, len(arches))
 
 	for _, arch := range arches {
