@@ -305,9 +305,21 @@ func (p *UploadFiles) cleanUpOldTmpFiles(ctx context.Context, h *cluster.ZarfHos
 func (p *UploadFiles) uploadDistroFiles(ctx context.Context, h *cluster.ZarfHost) error {
 	files := []v1alpha1.ZarfFile{}
 
+	// A file's position in the list is the name of the directory it was assembled into, so a file
+	// meant for another architecture is skipped inside the loop rather than filtered out of the
+	// list beforehand. Filtering first would renumber every later file and read the wrong bytes.
+	arch, err := hostArch(h)
+	if err != nil {
+		return err
+	}
+
 	for i, f := range p.disFiles {
 		if ctx.Err() != nil {
 			return fmt.Errorf("upload canceled: %w", ctx.Err())
+		}
+		if !f.Selector.MatchesArch(arch) {
+			logger.From(ctx).Debug("file is not for this host architecture", "file", filepath.Base(f.Target), "host", h, "arch", arch)
+			continue
 		}
 		target := f.Target
 		if f.Executable {

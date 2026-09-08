@@ -64,7 +64,7 @@ func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
-			for _, f := range p.filesControl {
+			for _, f := range p.filesFor(ctx, p.filesControl, zh) {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
 				if f.OriginalTarget != f.Target {
 					err := zh.Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget), exec.Sudo(zh))
@@ -82,7 +82,7 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 	}
 	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
-			for _, f := range p.filesWorkers {
+			for _, f := range p.filesFor(ctx, p.filesWorkers, zh) {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
 				if f.OriginalTarget != f.Target {
 					err := zh.Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget), exec.Sudo(zh))
