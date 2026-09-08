@@ -40,6 +40,9 @@ func getPath(files []v1alpha1.ZarfFile) []string {
 	return filePath
 }
 
+// hostFunc is one step of per-host work, as parallelDoUpload takes it.
+type hostFunc = func(context.Context, *cluster.ZarfHost) error
+
 // UploadFilesCommon implements a phase which upload files to hosts
 type UploadFilesCommon struct {
 	GenericPhase
@@ -83,8 +86,7 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 	err = p.parallelDoUpload(
 		ctx,
 		p.control,
-		p.uploadControllerFiles,
-		p.blockOtherInstalls,
+		p.uploadSteps(p.uploadControllerFiles, p.filesControl)...,
 	)
 	if err != nil {
 		return err
@@ -92,14 +94,28 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 	err = p.parallelDoUpload(
 		ctx,
 		p.workers,
-		p.uploadWorkerFiles,
-		p.blockOtherInstalls,
+		p.uploadSteps(p.uploadWorkerFiles, p.filesWorkers)...,
 	)
 	if err != nil {
 		return err
 	}
 
 	return p.parallelDo(ctx, slices.Concat(p.control, p.workers), p.cleanStaleUploads)
+}
+
+// uploadSteps is the per-host work for one role: the upload itself, and the mark that keeps the
+// later install phases off the host. The mark is only added when this phase has files for the
+// role. A phase whose package carries nothing for it -- an APT phase against a package with no
+// deb files, say -- must leave the host unmarked, so the binary phase, the catch-all that exists
+// for that case, still claims it. Marking a host the phase uploaded nothing to leaves it with no
+// engine, and the first sign of that is a controller phase waiting out its retry budget on a
+// service that was never installed.
+func (p *UploadFilesCommon) uploadSteps(upload hostFunc, files []v1alpha1.ZarfFile) []hostFunc {
+	if len(files) == 0 {
+		return []hostFunc{upload}
+	}
+
+	return []hostFunc{upload, p.blockOtherInstalls}
 }
 
 // cleanStaleUploads removes engine files this run's upload left in the manifest from a previous
