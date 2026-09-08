@@ -3,10 +3,15 @@ name: E2E cluster
 
 # The install group, src/test/e2e/cluster, which provisions a bootloose cluster of ten Docker
 # machines and walks the apply phase list one phase at a time against it. It installs rke2
-# onto nine of them and takes tens of minutes, so it is not part of every pull request the way
-# e2e.yaml is. It has its own workflow rather than a gated job in e2e.yaml so that its trigger,
-# its concurrency group and its time budget are independent of the checks that do run on every
-# push.
+# onto nine of them, then adds a tenth in the join walk, and takes tens of minutes, so it is
+# not part of every pull request the way e2e.yaml is. It has its own workflow rather than a
+# gated job in e2e.yaml so that its trigger, its concurrency group and its time budget are
+# independent of the checks that do run on every push.
+#
+# The run is two walks: the install onto ten machines, and the join, which starts an eleventh
+# machine and walks the same phase list again to bring it into the running cluster. The join is
+# not opt-in -- it is the only coverage of apply against a cluster that already exists, and it
+# installs the engine onto one node rather than onto nine.
 #
 # It runs on demand from the Actions tab, and automatically on a pull request carrying the
 # "e2e-cluster" label. Add that label to a pull request that touches src/pkg/phase,

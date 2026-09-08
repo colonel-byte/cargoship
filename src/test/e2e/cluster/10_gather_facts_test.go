@@ -23,6 +23,8 @@ import (
 // gatherFacts covers phase/10_gather_facts.go. It fills in the host metadata the
 // later phases key off -- hostname, architecture, private address -- so the assertion is
 // that every host came back with all three and that they match what bootloose provisioned.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) gatherFacts() {
 	s.T().Helper()
 
@@ -43,5 +45,11 @@ func (s *phaseWalk) gatherFacts() {
 }
 
 func (s *ApplyPhaseSuite) Test_10_GatherFacts() {
+	s.gatherFacts()
+}
+
+// Test_10_GatherFacts discovers the new node's address, which every later phase writes into
+// the other nodes' host files and firewalls.
+func (s *JoinPhaseSuite) Test_10_GatherFacts() {
 	s.gatherFacts()
 }
