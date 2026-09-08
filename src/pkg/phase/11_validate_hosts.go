@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -46,7 +47,7 @@ func (p *ValidateHosts) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *ValidateHosts) Explanation() string {
-	return "Verifying that each node in the cluster has a unique name and private address, and that its firewall rules are usable, "
+	return "Verifying that each node in the cluster has a unique name and private address, that its CPU architecture is one the package carries, and that its firewall rules are usable, "
 }
 
 // Run the phase
@@ -69,6 +70,7 @@ func (p *ValidateHosts) Run(ctx context.Context) error {
 		p.validateSudo,
 		p.validateConfigurer,
 		p.validateFirewallRules,
+		p.validateHostArch,
 	)
 	if err != nil {
 		return err
@@ -100,6 +102,39 @@ func (p *ValidateHosts) validateSudo(_ context.Context, h *cluster.ZarfHost) err
 func (p *ValidateHosts) validateFirewallRules(_ context.Context, h *cluster.ZarfHost) error {
 	if err := h.Host.Firewall.Validate(); err != nil {
 		return fmt.Errorf("%s: %w", h, err)
+	}
+
+	return nil
+}
+
+// validateHostArch rejects a host whose CPU is not one the package carries.
+//
+// This runs here rather than at upload time because the upload phases modify hosts as they go: by
+// the time a host went looking for a tarball the package never built, other hosts would already
+// have been written to.
+//
+// A flow that carries no package at all is left alone: reset builds its manager without one, and
+// there is nothing to check a host against. Neither is a package that records no build architecture.
+// Nothing cargoship assembles is missing that metadata, so such a package predates it, and refusing
+// to apply it would be a regression rather than a useful check.
+func (p *ValidateHosts) validateHostArch(_ context.Context, h *cluster.ZarfHost) error {
+	if p.manager.Distro == nil {
+		return nil
+	}
+
+	carried := p.manager.Distro.Build.Arches()
+	if len(carried) == 0 {
+		return nil
+	}
+
+	arch, err := hostArch(h)
+	if err != nil {
+		return err
+	}
+
+	if !slices.Contains(carried, arch) {
+		return fmt.Errorf("%s: host architecture %s is not carried by this package, which carries %s",
+			h, arch, api.FormatArches(carried))
 	}
 
 	return nil
