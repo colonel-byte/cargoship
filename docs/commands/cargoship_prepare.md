@@ -34,6 +34,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
       --confirm                                 Confirm whether if to proceed with the install
+      --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -f, --fapolicyd                               Whether to update all the host nodes fapolicyd configuration.
   -F, --firewall                                Whether to update all the host nodes firewall configuration.
   -h, --help                                    help for prepare

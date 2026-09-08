@@ -54,6 +54,8 @@ const (
 	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
 	CmdInstallFlagConfirm = "Confirm whether if to proceed with the install"
+	// CmdInstallFlagDryRun install flag dry run
+	CmdInstallFlagDryRun = "Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm."
 	// CmdInstallFlagTimeout install flag timeout
 	CmdInstallFlagTimeout = "Set the timeout for how long functions will last."
 	// CmdInstallFlagVaultPasswordFile install flag vault password file

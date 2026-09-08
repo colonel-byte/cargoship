@@ -50,6 +50,11 @@ func (p *ValidateHosts) Explanation() string {
 	return "Verifying that each node in the cluster has a unique name and private address, that its CPU architecture is one the package carries, and that its firewall rules are usable, "
 }
 
+// ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
+func (p *ValidateHosts) ReadOnly() string {
+	return "Validate the hosts is the preflight itself: sudo, unique hostnames and addresses, host architecture, firewall rules and clock skew. A dry run that skipped it would check nothing."
+}
+
 // Run the phase
 func (p *ValidateHosts) Run(ctx context.Context) error {
 	p.hncount = make(map[string]int, len(p.manager.Config.Spec.Hosts))

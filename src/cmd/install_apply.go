@@ -63,6 +63,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
@@ -95,7 +96,9 @@ func newInstallApplyCommand() *cobra.Command {
 func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
+	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
+	// what would happen is what would push someone into running the real thing to find out.
+	if !o.confirm && !o.dryRun {
 		l.Warn("please include the --confirm argument")
 		return errors.New("pass confirm argument")
 	}
