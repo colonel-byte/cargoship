@@ -19,6 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"slices"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/k0sproject/dig"
@@ -116,6 +118,25 @@ func (r *Common) SetPath(key string, value string) error {
 		return ErrPathKey
 	}
 	return nil
+}
+
+// removablePaths cleans paths and drops the ones that are unset or so broad that handing
+// them to a recursive remove would take out far more than the engine -- a distro left
+// half-configured should uninstall nothing, not everything.
+func removablePaths(paths ...string) []string {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		clean := filepath.Clean(p)
+		switch clean {
+		case ".", "/":
+			continue
+		}
+		if slices.Contains(out, clean) {
+			continue
+		}
+		out = append(out, clean)
+	}
+	return out
 }
 
 func marshalYAML(config dig.Mapping) ([]byte, error) {

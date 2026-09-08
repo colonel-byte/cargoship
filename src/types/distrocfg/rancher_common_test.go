@@ -883,3 +883,37 @@ func TestRancherVersionRegex(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanupPaths(t *testing.T) {
+	tests := map[string]struct {
+		distro Distro
+		want   []string
+	}{
+		"k3s": {
+			distro: &K3S{RancherCommon{Common{Config: "/etc/rancher/k3s/config.yaml", Data: "/var/lib/rancher/k3s"}}},
+			want:   []string{"/var/lib/rancher/k3s", "/etc/rancher/k3s"},
+		},
+		"rke2": {
+			distro: &RKE2{RancherCommon{Common{Config: "/etc/rancher/rke2/config.yaml", Data: "/var/lib/rancher/rke2"}}},
+			want:   []string{"/var/lib/rancher/rke2", "/etc/rancher/rke2"},
+		},
+		"unset paths are not removable": {
+			distro: &K3S{RancherCommon{Common{}}},
+			want:   []string{},
+		},
+		"root is not removable": {
+			distro: &K3S{RancherCommon{Common{Config: "/config.yaml", Data: "/"}}},
+			want:   []string{},
+		},
+		"the same directory is only removed once": {
+			distro: &K3S{RancherCommon{Common{Config: "/etc/rancher/k3s/config.yaml", Data: "/etc/rancher/k3s"}}},
+			want:   []string{"/etc/rancher/k3s"},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, tt.distro.CleanupPaths())
+		})
+	}
+}

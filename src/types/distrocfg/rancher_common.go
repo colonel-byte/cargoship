@@ -333,6 +333,12 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	}
 }
 
+// CleanupPaths returns the paths an uninstall removes from a host: the engine data
+// directory and the config directory, both of which rke2 and k3s own outright.
+func (d *RancherCommon) CleanupPaths() []string {
+	return removablePaths(d.DataDirPath(), filepath.Dir(d.Config))
+}
+
 // JoinTokenPathAgent returns the path of the token to join the cluster.
 // Distro's like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.
 func (d *RancherCommon) JoinTokenPathAgent() string {
