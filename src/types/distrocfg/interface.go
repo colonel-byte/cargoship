@@ -45,6 +45,9 @@ type Distro interface {
 	BinaryName() string
 	// BinaryPath returns the full path to the engine binary
 	BinaryPath() string
+	// CleanupPaths returns every path on a host the engine owns outright, for an uninstall
+	// to remove recursively. Paths that are unset or too broad to safely remove are left out.
+	CleanupPaths() []string
 	// ConfigPath returns the full path for the config directory used by the engine
 	ConfigPath() string
 	// ConfigureEngine does distro specific configuration on a host
