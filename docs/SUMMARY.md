@@ -68,6 +68,7 @@
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
 - [choice-phase-e2e-tests](agent/choice-phase-e2e-tests.md)
+- [choice-preferred-firewall](agent/choice-preferred-firewall.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 

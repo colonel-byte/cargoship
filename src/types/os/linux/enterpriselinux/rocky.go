@@ -49,3 +49,8 @@ func init() {
 func (r *RockyLinux) String() string {
 	return "Rocky Linux"
 }
+
+// PreferredFirewall reports that Rocky Linux ships firewalld as its firewall front end.
+func (r *RockyLinux) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}
