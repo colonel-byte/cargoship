@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/k0sproject/dig"
@@ -28,7 +27,6 @@ import (
 )
 
 var (
-	versionRegex = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
 	// ErrVersionNotDetected if a version is not detected
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
 	// ErrPathKey if a path key is not used

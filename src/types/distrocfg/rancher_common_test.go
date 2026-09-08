@@ -863,3 +863,23 @@ func TestStopServiceKillallExistsPropagatesExecError(t *testing.T) {
 		t.Fatalf("stopService() error = nil, want an error from the unconnected host's Exec call")
 	}
 }
+
+func TestRancherVersionRegex(t *testing.T) {
+	tests := map[string]struct {
+		output string
+		want   string
+	}{
+		"k3s":  {output: "k3s version v1.36.4+k3s1 (0a1b2c3d)\ngo version go1.25.1\n", want: "v1.36.4+k3s1"},
+		"rke2": {output: "rke2 version v1.35.8+rke2r1 (0a1b2c3d)\ngo version go1.25.1\n", want: "v1.35.8+rke2r1"},
+		// The distro suffix is mandatory, which is why this regex belongs to the Rancher
+		// distros rather than to every distro that embeds Common.
+		"upstream kubelet": {output: "Kubernetes v1.35.3\n", want: ""},
+		"no version":       {output: "command not found\n", want: ""},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, rancherVersionRegex.FindString(tt.output))
+		})
+	}
+}
