@@ -36,7 +36,7 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
     - Dry run: reported, not run
 1. Updating hosts firewall
-    - If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables. It trusts every other node in the cluster along with the engine's pod and service CIDRs, opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section
+    - If enabled, this configures the firewall on each node that runs one, firewalld, ufw, or nftables, preferring the front end the node's OS ships. It trusts every other node in the cluster along with the engine's pod and service CIDRs, opens the ports in the `.host.ports` section, and applies the rules in the `.host.firewall.rules` section
     - Dry run: reported, not run
 1. Upload files to hosts
     - Uploads the distro agnostic files to each remote node
