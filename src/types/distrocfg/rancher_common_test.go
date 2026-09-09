@@ -779,14 +779,14 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 	}
 
 	var auditYAML, pssYAML dig.Mapping
-	if err := yaml.Unmarshal(got[auditPath], &auditYAML); err != nil {
+	if err := yaml.Unmarshal(got[auditPath].Content, &auditYAML); err != nil {
 		t.Fatalf("failed to unmarshal audit.yaml: %v", err)
 	}
 	if auditYAML.DigString(keyKind) != "Policy" || auditYAML.DigString(keyAPIVersion) != "audit.k8s.io/v1" {
 		t.Errorf("audit.yaml = %+v, want kind=Policy apiVersion=audit.k8s.io/v1", auditYAML)
 	}
 
-	if err := yaml.Unmarshal(got[pssPath], &pssYAML); err != nil {
+	if err := yaml.Unmarshal(got[pssPath].Content, &pssYAML); err != nil {
 		t.Fatalf("failed to unmarshal pss.yaml: %v", err)
 	}
 	if pssYAML.DigString(keyKind) != "AdmissionConfiguration" || pssYAML.DigString(keyAPIVersion) != "apiserver.config.k8s.io/v1" {
@@ -797,8 +797,8 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalRegistriesYAML() error = %v", err)
 	}
-	if string(got[registriesPath]) != string(wantRegistries) {
-		t.Errorf("registries.yaml = %s, want %s", got[registriesPath], wantRegistries)
+	if string(got[registriesPath].Content) != string(wantRegistries) {
+		t.Errorf("registries.yaml = %s, want %s", got[registriesPath].Content, wantRegistries)
 	}
 }
 
@@ -1279,6 +1279,35 @@ func TestDesiredFilesWritesInlineCA(t *testing.T) {
 
 	files, err := d.DesiredFiles(cluster.ZarfHost{}, run, distro.ZarfDistro{})
 	require.NoError(t, err)
-	require.Equal(t, []byte(testCAPEM), files["/etc/cargoship/tls/mirror.example.com.crt"])
+	require.Equal(t, []byte(testCAPEM), files["/etc/cargoship/tls/mirror.example.com.crt"].Content)
 	require.Contains(t, files, filepath.Join(filepath.Dir(d.Config), "registries.yaml"))
+}
+
+// registries.yaml is group readable, so anything running as the engine's group can read the
+// mirror list. Every other file cargoship writes stays root-only.
+func TestDesiredFilesModes(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = dig.Mapping{
+		config.EngineAudit: dig.Mapping{"rules": []string{"foo"}},
+		config.EnginePSS:   dig.Mapping{"defaults": dig.Mapping{"enforce": "restricted"}},
+	}
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name:  "docker.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+			},
+		},
+	}
+
+	files, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	require.NoError(t, err)
+
+	dir := filepath.Dir(d.Config)
+	require.Equal(t, "0640", files[filepath.Join(dir, "registries.yaml")].Mode)
+	require.Equal(t, "0600", files[filepath.Join(dir, "audit.yaml")].Mode)
+	require.Equal(t, "0600", files[filepath.Join(dir, "pss.yaml")].Mode)
+	require.Equal(t, "0600", files["/etc/cargoship/tls/mirror.example.com.crt"].Mode)
 }

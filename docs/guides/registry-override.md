@@ -70,7 +70,7 @@ spec:
 
 `name` is the registry the images were originally referenced from, and `proxy.url` is the mirror the engine pulls from instead. Cargoship writes both into `/etc/rancher/<engine>/registries.yaml`: the pair becomes a `mirrors` entry, and the credentials become a `configs` entry keyed by the mirror's host and port. `proxy.url` may carry a scheme and a path. A URL given without a scheme is completed to `https://`, and the host is taken from it for the `configs` key, which is what the engine matches on.
 
-Cargoship does not copy `user` and `pass` into `registries.yaml` as they are given. It encodes the pair into a single credential -- base64 of `user:pass` -- and writes that as the engine's `auth` directive, so the password does not sit on every node as plain text. Base64 is an encoding, not encryption, so treat the resulting file as a secret regardless.
+Cargoship writes `registries.yaml` as root with mode `0640`, so the engine's group can read the mirror list while the credentials in it stay off limits to everyone else. Cargoship does not copy `user` and `pass` into `registries.yaml` as they are given. It encodes the pair into a single credential -- base64 of `user:pass` -- and writes that as the engine's `auth` directive, so the password does not sit on every node as plain text. Base64 is an encoding, not encryption, so treat the resulting file as a secret regardless.
 
 Use `token` on its own when the registry issues one directly. It is a different credential from a password, not another way to spell one, so Cargoship writes it as the engine's `identity_token` directive rather than as basic auth. A `token` given alongside `user` and `pass` wins:
 
@@ -132,7 +132,9 @@ Set `ca` or `caFile`, not both. `apply` rejects an entry that sets both, and one
 
 ### Keeping the Nodes in Step
 
-Cargoship 0.21 changed how `registries.yaml` is written: keys under `mirrors` and `configs` are quoted, an endpoint given without a scheme is completed to `https://`, and a `user` and `pass` pair is encoded into a single `auth` credential. None of that changes what the engine does, but all of it changes the file, so the first `apply` after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.
+`apply` compares what it would write against what is already on each node, and syncs only the nodes that differ. Both halves of a file count: contents, and the mode it is written with. A `registries.yaml` that someone has since widened to `0644` is rewritten the same as one with the wrong mirror in it, since the mode is what keeps the credentials in it off limits.
+
+That matters on upgrade. Cargoship 0.21 changed how `registries.yaml` is written: keys under `mirrors` and `configs` are quoted, an endpoint given without a scheme is completed to `https://`, a `user` and `pass` pair is encoded into a single `auth` credential, and the file is written `0640` instead of `0600`. None of that changes what the engine does, but all of it changes the file, so the first `apply` after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.
 
 ### Encrypting the Credential
 

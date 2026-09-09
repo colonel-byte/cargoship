@@ -17,6 +17,8 @@ package phase
 import (
 	"context"
 	"errors"
+	"io/fs"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,13 +31,17 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// defaultFileMode is what an engine config file is written with when the distro did not say.
+// Root-only is the safe answer: these files can carry registry credentials.
+const defaultFileMode = "0600"
+
 // EngineConfigSyncHosts phase state
 type EngineConfigSyncHosts struct {
 	GenericPhase
 	Distro distrocfg.Distro
 	// VaultPassword decrypts Ansible Vault-encrypted registry credentials.
 	VaultPassword string
-	desired       map[string][]byte
+	desired       map[string]distrocfg.DesiredFile
 	service       string
 	hosts         cluster.ZarfHosts
 	leader        *cluster.ZarfHost
@@ -77,16 +83,46 @@ func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
 			return true
 		}
 		current, err := h.ReadFile(path)
-		if err != nil || current != string(want) {
+		if err != nil || current != string(want.Content) {
+			return true
+		}
+		if !fileModeMatches(h, path, want.Mode) {
 			return true
 		}
 	}
 	return false
 }
 
+// fileModeMatches reports whether path on the host is already written with the mode want spells.
+// Content is only half of what cargoship puts on a host -- a registries.yaml holding credentials
+// is meant to be unreadable to anyone but root and the engine's group -- so a file someone has
+// since widened is drift as much as a file with the wrong contents in it.
+//
+// A mode that cannot be parsed, or a file that cannot be stat'd, reports a match: there is
+// nothing to compare against, and content comparison already decides whether the file is
+// rewritten.
+func fileModeMatches(h *cluster.ZarfHost, path, want string) bool {
+	if want == "" {
+		want = defaultFileMode
+	}
+	parsed, err := strconv.ParseUint(want, 8, 32)
+	if err != nil {
+		return true
+	}
+	info, err := h.Stat(path, exec.Sudo(h))
+	if err != nil || info == nil {
+		return true
+	}
+	return info.Mode().Perm() == fs.FileMode(parsed).Perm()
+}
+
 func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHost) error {
-	for path, content := range p.desired {
-		if err := h.WriteFile(path, string(content), "0600"); err != nil {
+	for path, file := range p.desired {
+		mode := file.Mode
+		if mode == "" {
+			mode = defaultFileMode
+		}
+		if err := h.WriteFile(path, string(file.Content), mode); err != nil {
 			return err
 		}
 	}

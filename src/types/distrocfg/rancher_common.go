@@ -52,6 +52,18 @@ var (
 	}
 )
 
+const (
+	// modeConfigFile is the mode of an engine config file cargoship writes. Only root reads
+	// these: they carry the cluster's audit and admission policy, and the CA certificates the
+	// engine verifies registries with.
+	modeConfigFile = "0600"
+	// modeRegistries is the mode of registries.yaml. It is group readable, since the engine is
+	// not the only thing on a node that pulls images -- a debugging `crictl pull` run under the
+	// engine's group needs the same mirror list -- while the credentials in it stay off limits
+	// to everyone else.
+	modeRegistries = "0640"
+)
+
 // registryTLSDir is where cargoship writes CA certificates given inline in the cluster
 // configuration. It is cargoship's own directory rather than the engine's, since these files
 // are cargoship's to create, replace, and remove.
@@ -254,8 +266,8 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		if err != nil {
 			logger.From(ctx).Warn("failed to render desired files", "host", host)
 		}
-		for path, content := range desired {
-			if err := host.WriteFile(path, string(content), "0600"); err != nil {
+		for path, file := range desired {
+			if err := host.WriteFile(path, string(file.Content), file.Mode); err != nil {
 				logger.From(ctx).Warn("failed to write", "file", path)
 			}
 		}
@@ -304,18 +316,18 @@ func (d *RancherCommon) engineServiceRunning(h *cluster.ZarfHost) bool {
 // DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
 // the given host/run/dis, keyed by their full destination path. Content is identical across
 // hosts of the same run (no host-varying fields are involved), unlike config.yaml.
-func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string][]byte, error) {
-	files := map[string][]byte{}
+func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+	files := map[string]DesiredFile{}
 
 	if len(run.Registries) > 0 {
 		b, err := marshalRegistriesYAML(buildRegistriesConfig(run.Registries))
 		if err != nil {
 			return nil, err
 		}
-		files[filepath.Join(filepath.Dir(d.Config), "registries.yaml")] = b
+		files[filepath.Join(filepath.Dir(d.Config), "registries.yaml")] = DesiredFile{Content: b, Mode: modeRegistries}
 
 		for path, ca := range registryCAFiles(run.Registries) {
-			files[path] = ca
+			files[path] = DesiredFile{Content: ca, Mode: modeConfigFile}
 		}
 	}
 
@@ -328,7 +340,7 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 		if err != nil {
 			return nil, err
 		}
-		files[filepath.Join(filepath.Dir(d.Config), "audit.yaml")] = b
+		files[filepath.Join(filepath.Dir(d.Config), "audit.yaml")] = DesiredFile{Content: b, Mode: modeConfigFile}
 	}
 
 	if pss := nodeConfig.DigMapping(config.EnginePSS); len(pss) > 0 {
@@ -338,7 +350,7 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 		if err != nil {
 			return nil, err
 		}
-		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = b
+		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = DesiredFile{Content: b, Mode: modeConfigFile}
 	}
 
 	return files, nil
