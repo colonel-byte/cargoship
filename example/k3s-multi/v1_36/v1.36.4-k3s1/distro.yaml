@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Unlike the other examples this one is maintained by hand: it exists to exercise a package that targets
-# more than one architecture, and is pinned to a single version so it stays small.
+# This file is generated in magefiles/templates/k3s-distro.yaml.tmpl, versions may need to updated over time.
 
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
@@ -122,8 +121,8 @@ spec:
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
       files:
-        # One binary per architecture, each landing at the same target. The selector decides which
-        # one a host receives; an entry without an arch selector goes to every host.
+        # One binary per architecture, each landing at the same target. The selector decides
+        # which one a host receives; an entry without an arch selector goes to every host.
         - source: https://github.com/k3s-io/k3s/releases/download/v1.36.4%2Bk3s1/k3s
           target: /usr/local/bin/k3s
           executable: true
