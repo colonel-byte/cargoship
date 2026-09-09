@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/action"
 	"github.com/spf13/cobra"
@@ -35,10 +36,13 @@ import (
 
 type installApplyOptions struct {
 	InstallCommon
-	workerCon int
-	hosts     bool
-	firewall  bool
-	fapolicy  bool
+	workerCon         string
+	hosts             bool
+	firewall          bool
+	fapolicy          bool
+	labelNodes        bool
+	updateKubeConfig  bool
+	vaultPasswordFile string
 }
 
 func newInstallApplyCommand() *cobra.Command {
@@ -47,20 +51,28 @@ func newInstallApplyCommand() *cobra.Command {
 		Use:     "apply [Distro Package]",
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDistroApplyShort,
+		Example: lang.CmdDistroApplyExample,
 		GroupID: lang.RootGroupInstallID,
+		PreRunE: o.preRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
 	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
+	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -81,10 +93,12 @@ func newInstallApplyCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installApplyOptions) run(ctx context.Context, args []string) error {
+func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
+	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
+	// what would happen is what would push someone into running the real thing to find out.
+	if !o.confirm && !o.dryRun {
 		l.Warn("please include the --confirm argument")
 		return errors.New("pass confirm argument")
 	}
@@ -94,7 +108,7 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	manager, err := initManager(ctx, args[0], o.InstallCommon)
+	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
 	if err != nil {
 		l.Warn("failed to create manager", "err", err)
 		return err
@@ -115,11 +129,20 @@ func (o *installApplyOptions) run(ctx context.Context, args []string) error {
 
 	manager.SetTimout(d)
 
+	vaultPassword, err := clustercfg.ResolveVaultPassword(o.vaultPasswordFile)
+	if err != nil {
+		l.Warn("failed to resolve vault password", "err", err)
+		return err
+	}
+
 	applyOpts := action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      o.hosts,
 		WorkerConcurrent: o.workerCon,
 		ModifyFirewall:   o.firewall,
+		LabelNodes:       o.labelNodes,
+		UpdateKubeConfig: o.updateKubeConfig,
+		VaultPassword:    vaultPassword,
 	}
 
 	return action.NewApply(applyOpts).Run(ctx)

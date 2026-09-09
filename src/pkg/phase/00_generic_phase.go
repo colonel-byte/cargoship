@@ -32,6 +32,7 @@ package phase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -121,6 +122,49 @@ func (p *GenericPhase) batchedParallelWithMessageInterval(ctx context.Context, m
 
 func (p *GenericPhase) batchedParallelWithMessage(ctx context.Context, msg string, hosts cluster.ZarfHosts, batchSize int, funcs ...func(context.Context, *cluster.ZarfHost) error) (err error) {
 	return p.batchedParallelWithMessageInterval(ctx, msg, Interval, hosts, batchSize, funcs...)
+}
+
+// batchedParallelPerProfileWithMessage groups hosts by profile and runs funcs over every group
+// concurrently, with each group independently respecting its own batch size. A group's batch
+// size comes from its profile's Concurrency override (see ZarfClusterProfiles.ResolveConcurrency),
+// falling back to fallback for hosts with no profile or a profile that sets no override.
+func (p *GenericPhase) batchedParallelPerProfileWithMessage(ctx context.Context, msg string, hosts cluster.ZarfHosts, fallback string, funcs ...func(context.Context, *cluster.ZarfHost) error) error {
+	profiles := p.manager.Config.Spec.Config.Profiles
+	groups := hosts.GroupByProfile()
+
+	batchSizes := make([]int, len(groups))
+	for i, group := range groups {
+		batchSize, err := profiles[group.Profile].ResolveConcurrency(len(group.Hosts), fallback)
+		if err != nil {
+			return fmt.Errorf("profile %q: %w", group.Profile, err)
+		}
+		batchSizes[i] = batchSize
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errs []error
+
+	for i, group := range groups {
+		groupMsg := msg
+		if group.Profile != "" {
+			groupMsg = fmt.Sprintf("%s (profile: %s)", msg, group.Profile)
+		}
+
+		wg.Add(1)
+		go func(group cluster.ZarfHostGroup, batchSize int, msg string) {
+			defer wg.Done()
+			if err := p.batchedParallelWithMessage(ctx, msg, group.Hosts, batchSize, funcs...); err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("profile %q: %w", group.Profile, err))
+				mu.Unlock()
+			}
+		}(group, batchSizes[i], groupMsg)
+	}
+
+	wg.Wait()
+
+	return errors.Join(errs...)
 }
 
 // Wet is a shorthand for manager.Wet

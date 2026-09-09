@@ -36,7 +36,7 @@ type InitializeWorkers struct {
 	GenericPhase
 	Distro           distrocfg.Distro
 	worker           cluster.ZarfHosts
-	WorkerConcurrent int
+	WorkerConcurrent string
 }
 
 // Title for the phase
@@ -77,15 +77,7 @@ func (p *InitializeWorkers) Run(ctx context.Context) error {
 	}
 	// waiting a second too clean up the logs
 	time.Sleep(1 * time.Second)
-	if p.WorkerConcurrent == 0 {
-		return p.parallelDoWithMessage(
-			ctx,
-			"starting agent",
-			p.worker,
-			p.startService,
-		)
-	}
-	return p.batchedParallelWithMessage(
+	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"starting agent",
 		p.worker,

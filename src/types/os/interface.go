@@ -46,6 +46,14 @@ type Host interface {
 // through this interface -- Configurer only carries what is genuinely
 // distro-specific.
 type Configurer interface {
+	// ApplySysctl loads the sysctl settings in the file at the given path into the running
+	// kernel. The path is passed rather than assumed because not every OS can apply the whole
+	// of /etc/sysctl.d in one command.
+	ApplySysctl(Host, string) error
+	// PreferredFirewall names the firewall front end this distribution ships, e.g. firewalld on
+	// Enterprise Linux and ufw on Debian. It returns an empty string when the distribution has no
+	// front end of its own.
+	PreferredFirewall() string
 	// Kind returns the general OS family identifier (e.g. "linux")
 	Kind() string
 	// OSKind returns the identifier for Linux hosts

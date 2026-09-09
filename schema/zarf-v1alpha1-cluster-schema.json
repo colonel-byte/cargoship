@@ -265,6 +265,23 @@
         "^x-": {}
       },
       "properties": {
+        "concurrency": {
+          "description": "limits how many hosts using this profile cargoship processes at once, e.g.\ndraining, upgrading, initializing, or uninstalling. It accepts a fixed count (\"1\") or a\npercentage of the hosts sharing this profile (\"25%\"). Empty falls back to the phase's\ndefault concurrency.",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
         "engine": {
           "$ref": "#/$defs/ZarfHostEngine",
           "description": "holds the node label and taint overrides applied to a host that selects this profile."
@@ -289,6 +306,14 @@
         },
         "name": {
           "description": "identifies the registry.",
+          "examples": [
+            "docker.io",
+            "ghcr.io",
+            "quay.io",
+            "gcr.io",
+            "registry.k8s.io",
+            "public.ecr.aws"
+          ],
           "type": "string"
         },
         "proxy": {
@@ -311,14 +336,26 @@
       "properties": {
         "pass": {
           "description": "is the login secret for the remote registry.",
+          "examples": [
+            "hunter2",
+            "$ANSIBLE_VAULT;1.1;AES256..."
+          ],
           "type": "string"
         },
         "token": {
           "description": "authenticates to the remote registry instead of a username and password.",
+          "examples": [
+            "abc123",
+            "$ANSIBLE_VAULT;1.1;AES256..."
+          ],
           "type": "string"
         },
         "user": {
           "description": "is the login name for the remote registry.",
+          "examples": [
+            "myuser",
+            "$ANSIBLE_VAULT;1.1;AES256..."
+          ],
           "type": "string"
         }
       },
@@ -331,6 +368,13 @@
         "^x-": {}
       },
       "properties": {
+        "rewrite": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps a regex pattern to a replacement, transforming the image name (not the tag)\nbefore it is pulled from this mirror. See https://docs.rke2.io/install/private_registry#rewrites",
+          "type": "object"
+        },
         "url": {
           "description": "is the registry address the engine pulls from instead of the original registry.",
           "type": "string"
@@ -361,6 +405,23 @@
         "config",
         "hosts"
       ],
+      "type": "object"
+    },
+    "ZarfFirewallConfig": {
+      "additionalProperties": false,
+      "description": "is the backend-neutral firewall configuration for a node.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "rules": {
+          "description": "lists the firewall rules cargoship applies to the node.",
+          "items": {
+            "$ref": "#/$defs/ZarfFirewallRule"
+          },
+          "type": "array"
+        }
+      },
       "type": "object"
     },
     "ZarfFirewallPolicyConfig": {
@@ -435,6 +496,94 @@
       "required": [
         "protocol",
         "port"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallRule": {
+      "additionalProperties": false,
+      "description": "is a single backend-neutral firewall rule.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "action": {
+          "description": "is what cargoship does with traffic that matches the rule.",
+          "enum": [
+            "allow",
+            "deny",
+            "reject"
+          ],
+          "type": "string"
+        },
+        "destination": {
+          "description": "is the address or CIDR the traffic goes to.",
+          "examples": [
+            "10.42.0.0/16"
+          ],
+          "type": "string"
+        },
+        "direction": {
+          "default": "in",
+          "description": "selects which traffic the rule matches. It defaults to in.",
+          "enum": [
+            "in",
+            "out",
+            "forward"
+          ],
+          "type": "string"
+        },
+        "egress": {
+          "description": "names where forward traffic leaves. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "trusted"
+          ],
+          "type": "string"
+        },
+        "ingress": {
+          "description": "names where forward traffic enters. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "public"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the rule. Cargoship uses it to name the artifacts it writes on the\nnode, so it must be unique within a host. Cargoship generates one when it is empty.",
+          "examples": [
+            "allow-metrics"
+          ],
+          "type": "string"
+        },
+        "port": {
+          "description": "is the port number, or inclusive port range, the rule matches.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of traffic the rule matches.",
+          "enum": [
+            "tcp",
+            "udp",
+            "sctp",
+            "dccp"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "description": "is the address or CIDR the traffic comes from.",
+          "examples": [
+            "10.0.0.0/8"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
       ],
       "type": "object"
     },
@@ -537,11 +686,15 @@
         "^x-": {}
       },
       "properties": {
+        "firewall": {
+          "$ref": "#/$defs/ZarfFirewallConfig",
+          "description": "holds the backend-neutral firewall rules cargoship renders onto whichever\nfirewall the node runs, firewalld, ufw, or nftables."
+        },
         "policy": {
           "additionalProperties": {
             "$ref": "#/$defs/ZarfFirewallPolicyConfig"
           },
-          "description": "maps a policy name to a firewalld policy that allows traffic from one interface to another.",
+          "description": "maps a policy name to a firewalld policy that allows traffic from one interface to another.\nIt is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.",
           "type": "object"
         },
         "ports": {

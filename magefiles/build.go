@@ -25,7 +25,8 @@ import (
 )
 
 type (
-	Build mg.Namespace
+	Build  mg.Namespace
+	Binary mg.Namespace
 )
 
 // Binary will build a binary of the local system, on the host

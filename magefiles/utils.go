@@ -20,10 +20,23 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/utils/build"
 	"github.com/magefile/mage/sh"
+	"golang.org/x/term"
 )
+
+// daggerProgressFlag picks a tty progress bar when stdout is an actual terminal, falling
+// back to dagger's plain log output otherwise (e.g. CI, or any other non-interactive shell)
+// where a tty renderer would just error out with "no tty available".
+func daggerProgressFlag() string {
+	if term.IsTerminal(int(os.Stdout.Fd())) {
+		return "--progress=tty"
+	}
+	return "--progress=plain"
+}
 
 func daggerBuildLocal(oper string, arch string) error {
 	bin := fmt.Sprintf("build/cargoship_%s_%s", oper, arch)
@@ -36,7 +49,7 @@ func daggerBuildLocal(oper string, arch string) error {
 	return sh.RunV(
 		"dagger",
 		"call",
-		"--progress=tty",
+		daggerProgressFlag(),
 		"--interactive=false",
 		"build-local",
 		"--os="+oper,
@@ -57,11 +70,12 @@ func hostBuildLocal(oper string, arch string) error {
 	env := map[string]string{}
 	env["GOOS"] = oper
 	env["GOARCH"] = arch
+	env["CGO_ENABLED"] = "0"
 
 	gc := build.GCFLags()
-	ld := build.LDFlags("0.0.0", "")
+	ld := build.LDFlags(config.UnsetCLIVersion, gitCommit())
 
-	goBuild := fmt.Sprintf(`go build -a -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
+	goBuild := fmt.Sprintf(`go build -a -trimpath -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
 
 	fmt.Println("executing:\n  " + goBuild)
 
@@ -71,6 +85,28 @@ func hostBuildLocal(oper string, arch string) error {
 		"-c",
 		goBuild,
 	)
+}
+
+// gitCommit returns the short commit of the checkout being built, suffixed with "-dirty" when
+// the working tree has uncommitted changes. When the commit cannot be resolved, for example in a
+// source tree with no .git directory or on a machine without git, it returns
+// config.UnsetCLICommit so a local build always stamps something rather than an empty string.
+func gitCommit() string {
+	commit, err := sh.Output("git", "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return config.UnsetCLICommit
+	}
+
+	commit = strings.TrimSpace(commit)
+	if commit == "" {
+		return config.UnsetCLICommit
+	}
+
+	if dirty, err := sh.Output("git", "status", "--porcelain"); err == nil && strings.TrimSpace(dirty) != "" {
+		commit += "-dirty"
+	}
+
+	return commit
 }
 
 func clean() error {

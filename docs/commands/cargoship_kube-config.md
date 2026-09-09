@@ -8,6 +8,19 @@ Get the admin kube-config for a control-plane node
 cargoship kube-config [flags]
 ```
 
+### Examples
+
+```
+# Fetch the admin kubeconfig from an RKE2 control-plane node
+$ cargoship kube-config --config ./cargoship-config.yaml --distro rke2
+
+# Fetch it from a K3s cluster
+$ cargoship kube-config --config ./cargoship-config.yaml --distro k3s
+
+# Use the distro set in the resolved cargoship config
+$ cargoship kube-config --config ./cargoship-config.yaml
+```
+
 ### Options
 
 ```

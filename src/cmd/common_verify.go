@@ -160,7 +160,6 @@ func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 	fs.StringVarP(&f.publicKeyPath, "key", "k", resolvedConfig.DistroOpts.PublicKey, zlang.CmdPackageFlagFlagPublicKey)
 	f.verify = verifyModeIfPossible
 	fs.VarP(&f.verify, "verify", "", lang.CmdPackageFlagVerify)
-	fs.Lookup("verify").NoOptDefVal = string(verifyModeAlways)
 
 	fs.AddFlagSet(newKeylessVerifyFlagSet(v, f))
 	annotateFlagGroup(fs, verifyFlagGroupTitle)

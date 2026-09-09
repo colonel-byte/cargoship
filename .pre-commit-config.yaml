@@ -38,7 +38,11 @@ repos:
     rev: v1.2.0
     hooks:
       - id: addlicense
-        exclude: vendor/.*
+        exclude: |-
+          (?x)^(
+              vendor/.*|
+              thirdparty-src/.*
+          )$
         exclude_types:
           - yaml
         args:
@@ -53,7 +57,7 @@ repos:
     hooks:
       - id: keep-sorted
   - repo: https://github.com/golangci/golangci-lint
-    rev: v2.13.1
+    rev: v2.13.2
     hooks:
       - id: golangci-lint
         exclude: vendor/.*
@@ -70,4 +74,4 @@ repos:
         name: generate-docs
         language: system
         pass_filenames: false
-        entry: bash -c "CARGOSHIP_CONFIG=hack/config.yaml mage generate:document"
+        entry: bash -c "CARGOSHIP_MAGE_DOCS_CHILD=1 CARGOSHIP_CONFIG=hack/config.yaml mage generate:document"

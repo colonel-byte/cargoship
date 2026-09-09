@@ -58,6 +58,12 @@ func init() {
 	)
 }
 
+// AdminCredentials returns the cluster CA certificate and the admin client key pair, read
+// out of the admin kubeconfig k3s writes on a controller host.
+func (d *K3S) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error) {
+	return adminCredentials(host, d.KubeconfigPath(host, dataDir))
+}
+
 // KubeconfigPath returns the path to the admin config for a given
 func (d *K3S) KubeconfigPath(_ *cluster.ZarfHost, _ string) string {
 	return filepath.Join(filepath.Dir(d.Config), "k3s.yaml")

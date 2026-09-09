@@ -18,12 +18,14 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
+	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -34,6 +36,11 @@ type RancherCommon struct {
 }
 
 var (
+	// rancherVersionRegex matches the version rke2 and k3s print, which always carries a
+	// distro suffix -- v1.36.4+k3s1, v1.35.8+rke2r1. Other distros print their version
+	// differently and parse it themselves.
+	rancherVersionRegex = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
+
 	controllerArgs = []string{
 		keyKubeAPI,
 		keyKubeConMan,
@@ -47,23 +54,31 @@ const (
 	keyAPIVersion    = "apiVersion"
 	keyAgentToken    = "agent-token-file"
 	keyAudit         = "audit-policy-file"
+	keyAuth          = "auth"
 	keyCIDRPod       = "cluster-cidr"
 	keyCIDRSVC       = "service-cidr"
+	keyConfigs       = "configs"
 	keyDataDir       = "data-dir"
 	keyETCD          = "etcd-arg"
+	keyEndpoint      = "endpoint"
+	keyIdentityToken = "identitytoken"
 	keyKind          = "kind"
 	keyKubeAPI       = "kube-apiserver-arg"
 	keyKubeConMan    = "kube-controller-manager-arg"
 	keyKubeScheduler = "kube-scheduler-arg"
 	keyMetadata      = "metadata"
+	keyMirrors       = "mirrors"
 	keyNodeLabel     = "node-label"
 	keyNodeName      = "node-name"
 	keyNodeTaint     = "node-taint"
+	keyPassword      = "password"
 	keyPodSec        = "pod-security-admission-config-file"
+	keyRewrite       = "rewrite"
 	keyServer        = "server"
 	keySpec          = "spec"
 	keyTLS           = "tls-san"
 	keyToken         = "token-file"
+	keyUsername      = "username"
 	//keep-sorted end
 )
 
@@ -77,6 +92,10 @@ const (
 // we look at `.spec.config.engine.podSecurity`, to determine the "pod security admission" that will be enforced by the kubelet. There is no validation done at this time, please reference: https://kubernetes.io/docs/concepts/security/pod-security-admission/
 // if `.spec.config.engine.podSecurity` is present we will add/overwrite "pod-security-admission-config-file" with the value of "/etc/rancher/(rke2|k3s)/pss.yaml"
 // if `.spec.config.engine.manifest` is present we will create files under
+// registries.yaml:
+// we look at the cluster document's `.spec.config.registries`, to determine registry mirrors and their credentials.
+// if any are present we write "/etc/rancher/(rke2|k3s)/registries.yaml" with a "mirrors" entry per registry, a
+// "rewrite" entry per mirror when `.proxy.rewrite` is set, and a "configs" entry with auth when credentials are set.
 
 // ConfigureEngine does distro specific configuration on a host
 func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
@@ -103,7 +122,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 				return err
 			}
 		} else {
-			if value, err := host.ReadFile(d.JoinTokenPath()); err != nil {
+			if value, err := host.ReadFile(d.JoinTokenPath()); err == nil {
 				run.ControllerToken = value
 			}
 		}
@@ -152,34 +171,147 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 			return err
 		}
 	} else {
-		if value, err := host.ReadFile(d.JoinTokenPathAgent()); err != nil {
+		if value, err := host.ReadFile(d.JoinTokenPathAgent()); err == nil {
 			run.AgentToken = value
 		}
 	}
 
 	if len(nodeConfig.DigMapping(config.EngineAudit)) > 0 {
-		nodeConfig.DigMapping(config.EngineAudit)[keyKind] = "Policy"
-		nodeConfig.DigMapping(config.EngineAudit)[keyAPIVersion] = "audit.k8s.io/v1"
-		audit := filepath.Join(filepath.Dir(d.Config), "audit.yaml")
-		nodeConfig.DigMapping(config.EngineConfig)[keyAudit] = audit
-		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineAudit), audit)
+		nodeConfig.DigMapping(config.EngineConfig)[keyAudit] = filepath.Join(filepath.Dir(d.Config), "audit.yaml")
+	}
+	if len(nodeConfig.DigMapping(config.EnginePSS)) > 0 {
+		nodeConfig.DigMapping(config.EngineConfig)[keyPodSec] = filepath.Join(filepath.Dir(d.Config), "pss.yaml")
+	}
+
+	// Nodes that already have the engine running are left alone here; config drift
+	// (registries/audit/pss) on those is rolled out via the engine-config-sync phases,
+	// which pair the write with a drain/restart/uncordon of the node.
+	if !d.engineServiceRunning(ctx, host) {
+		desired, err := d.DesiredFiles(host, run, dis)
 		if err != nil {
-			logger.From(ctx).Warn("failed to write", "file", audit)
+			logger.From(ctx).Warn("failed to render desired files", "host", host)
+		}
+		for path, content := range desired {
+			if err := host.WriteFile(path, string(content), "0600"); err != nil {
+				logger.From(ctx).Warn("failed to write", "file", path)
+			}
 		}
 	}
 
-	if len(nodeConfig.DigMapping(config.EnginePSS)) > 0 {
-		nodeConfig.DigMapping(config.EnginePSS)[keyKind] = "AdmissionConfiguration"
-		nodeConfig.DigMapping(config.EnginePSS)[keyAPIVersion] = "apiserver.config.k8s.io/v1"
-		pss := filepath.Join(filepath.Dir(d.Config), "pss.yaml")
-		nodeConfig.DigMapping(config.EngineConfig)[keyPodSec] = pss
-		err := d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EnginePSS), pss)
-		if err != nil {
-			logger.From(ctx).Warn("failed to write", "file", pss)
-		}
-	}
+	d.validateEngineConfig(ctx, dis.Spec.Version, host.IsController(), nodeConfig.DigMapping(config.EngineConfig))
 
 	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
+}
+
+// validateEngineConfig drops any config.yaml keys that aren't part of the flag set
+// mage generate:engineConfig extracted for this distro at the given engine version's minor
+// release (see src/pkg/engineconfig/gen), logging each one removed at debug. If no generated
+// config exists for this distro/version -- e.g. a version nobody has pulled/generated yet --
+// there's nothing to check against, so it warns once and leaves cfg untouched, falling back to
+// writing it exactly as before this check existed.
+func (d *RancherCommon) validateEngineConfig(ctx context.Context, version string, isController bool, cfg dig.Mapping) {
+	entry, ok := gen.Lookup(d.ID, version)
+	if !ok {
+		logger.From(ctx).Warn("no generated engine config schema for this distro/version, skipping config key validation", "distro", d.ID, "version", version)
+		return
+	}
+
+	target := entry.Agent
+	if isController {
+		target = entry.Server
+	}
+
+	valid := gen.Keys(target)
+	for k := range cfg {
+		if _, ok := valid[k]; !ok {
+			logger.From(ctx).Debug("engine config key not recognized for this distro/version, dropping it from config.yaml", "distro", d.ID, "version", version, "key", k)
+			delete(cfg, k)
+		}
+	}
+}
+
+func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.ZarfHost) bool {
+	service := d.GetWorkerService()
+	if h.IsController() {
+		service = d.GetControllerService()
+	}
+	return h.ServiceIsRunning(ctx, service)
+}
+
+// DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
+// the given host/run/dis, keyed by their full destination path. Content is identical across
+// hosts of the same run (no host-varying fields are involved), unlike config.yaml.
+func (d *RancherCommon) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string][]byte, error) {
+	files := map[string][]byte{}
+
+	if len(run.Registries) > 0 {
+		b, err := marshalYAML(buildRegistriesConfig(run.Registries))
+		if err != nil {
+			return nil, err
+		}
+		files[filepath.Join(filepath.Dir(d.Config), "registries.yaml")] = b
+	}
+
+	nodeConfig := dis.Spec.Config.Engine.Dup()
+
+	if audit := nodeConfig.DigMapping(config.EngineAudit); len(audit) > 0 {
+		audit[keyKind] = "Policy"
+		audit[keyAPIVersion] = "audit.k8s.io/v1"
+		b, err := marshalYAML(audit)
+		if err != nil {
+			return nil, err
+		}
+		files[filepath.Join(filepath.Dir(d.Config), "audit.yaml")] = b
+	}
+
+	if pss := nodeConfig.DigMapping(config.EnginePSS); len(pss) > 0 {
+		pss[keyKind] = "AdmissionConfiguration"
+		pss[keyAPIVersion] = "apiserver.config.k8s.io/v1"
+		b, err := marshalYAML(pss)
+		if err != nil {
+			return nil, err
+		}
+		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = b
+	}
+
+	return files, nil
+}
+
+// buildRegistriesConfig builds the containerd hosts-config mapping (mirrors/configs) rke2 and
+// k3s read from registries.yaml, based on the registry mirrors configured in `.spec.config.registries`.
+func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mapping {
+	mirrors := dig.Mapping{}
+	configs := dig.Mapping{}
+
+	for _, reg := range registries {
+		mirror := dig.Mapping{
+			keyEndpoint: []string{reg.Proxy.URL},
+		}
+		if len(reg.Proxy.Rewrite) > 0 {
+			mirror[keyRewrite] = reg.Proxy.Rewrite
+		}
+		mirrors[string(reg.Name)] = mirror
+
+		if reg.Authentication != (cluster.ZarfClusterRegistryAuth{}) {
+			auth := dig.Mapping{}
+			if reg.Authentication.Username != "" {
+				auth[keyUsername] = reg.Authentication.Username
+			}
+			if reg.Authentication.Password != "" {
+				auth[keyPassword] = reg.Authentication.Password
+			}
+			if reg.Authentication.Token != "" {
+				auth[keyIdentityToken] = reg.Authentication.Token
+			}
+			configs[reg.Proxy.URL] = dig.Mapping{keyAuth: auth}
+		}
+	}
+
+	result := dig.Mapping{keyMirrors: mirrors}
+	if len(configs) > 0 {
+		result[keyConfigs] = configs
+	}
+	return result
 }
 
 // GetClusterCIDR returns a string array with the all the known cluster cidr blocks
@@ -198,6 +330,12 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 		pod,
 		svc,
 	}
+}
+
+// CleanupPaths returns the paths an uninstall removes from a host: the engine data
+// directory and the config directory, both of which rke2 and k3s own outright.
+func (d *RancherCommon) CleanupPaths() []string {
+	return removablePaths(d.DataDirPath(), filepath.Dir(d.Config))
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster.
@@ -221,7 +359,7 @@ func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
 	if err != nil {
 		return "", ErrVersionNotDetected
 	}
-	match := versionRegex.FindString(out)
+	match := rancherVersionRegex.FindString(out)
 	if match == "" {
 		return "", ErrVersionNotDetected
 	}
@@ -231,12 +369,8 @@ func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
 func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall string) error {
 	ctx := context.Background()
 	riglogger.Logger().Debug("trying to stop service", "service", ser)
-	svc, err := h.Sudo().Service(ser)
-	if err != nil {
-		return err
-	}
-	if svc.IsRunning(ctx) {
-		if err := svc.Stop(ctx); err != nil {
+	if h.ServiceIsRunning(ctx, ser) {
+		if err := h.StopService(ctx, ser); err != nil {
 			return err
 		}
 	}
@@ -249,7 +383,7 @@ func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall str
 		}
 	}
 	if h.FS().CommandExist(killall) {
-		return h.Sudo().Exec(killall)
+		return h.SudoExec(killall)
 	}
 	if cache {
 		if err := h.Touch(cacheFile, time.Unix(0, 0)); err != nil {

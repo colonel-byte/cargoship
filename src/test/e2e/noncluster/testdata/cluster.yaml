@@ -1,0 +1,18 @@
+---
+# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# Minimal inventory used only by the install-group verification tests. The hosts are
+# never contacted: every case here fails during package load, before any cluster work.
+kind: ZarfCluster
+metadata:
+  name: e2e-verify
+spec:
+  config:
+    loadbalancer: e2e-verify.test.local
+  hosts:
+    - hostname: e2e-verify-01
+      ssh:
+        address: 10.255.255.1
+        user: root
+        port: 22
+        keyPath: /dev/null
+      role: controller

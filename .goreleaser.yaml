@@ -29,7 +29,10 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X github.com/colonel-byte/cargoship/src/config.CLIVersion={{.Version}}
+      - -X github.com/colonel-byte/cargoship/src/config.CLIVersion={{ .Version }}
+      - -X github.com/colonel-byte/cargoship/src/config.CLICommit={{ .ShortCommit }}
+    gcflags:
+      - all=-l -B -C
     env:
       - CGO_ENABLED=0
     goos:

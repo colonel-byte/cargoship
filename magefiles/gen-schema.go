@@ -43,14 +43,6 @@ type schema struct {
 	keyNamer     func(string) string
 }
 
-type t struct {
-	T string `json:"type"`
-}
-
-type o struct {
-	O []t `json:"oneOf"`
-}
-
 // Schema creates the jsonschema files for a number of the yaml files
 func (Generate) Schema() error {
 	var sch = []schema{
@@ -169,26 +161,6 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 	}
 
 	addYAMLExtensions(schemaMap)
-
-	// allow the sysctl object to use numbers along side strings
-	if defObj, ok := schemaMap["$defs"].(map[string]any); ok {
-		if obj, ok := defObj["ZarfDistroOS"].(map[string]any); ok {
-			if obj, ok := obj["properties"].(map[string]any); ok {
-				if obj, ok := obj["sysctl"].(map[string]any); ok {
-					obj["additionalProperties"] = o{
-						O: []t{
-							{
-								T: "string",
-							},
-							{
-								T: "number",
-							},
-						},
-					}
-				}
-			}
-		}
-	}
 
 	// rig v2's ClientWithConfig embeds a *named* CompositeConfig field tagged
 	// only `yaml:",inline"` -- a yaml-only convention that invopop/jsonschema

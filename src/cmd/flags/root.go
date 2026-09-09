@@ -17,6 +17,7 @@ package flags
 import (
 	"fmt"
 
+	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/spf13/cobra"
 )
@@ -76,9 +77,9 @@ const (
 // RegisterFlagCompletionFunc callback for shell tab completion.
 func getRootArchitecture() []string {
 	return []string{
-		fmt.Sprintf("%s\t%s", string(config.OSArchAMD64), osArchAMD64Desc),
-		fmt.Sprintf("%s\t%s", string(config.OSArchARM64), osArchARM64Desc),
-		fmt.Sprintf("%s\t%s", string(config.OSArchRISCV), osArchRISCVDesc),
+		fmt.Sprintf("%s\t%s", string(api.ArchAMD64), osArchAMD64Desc),
+		fmt.Sprintf("%s\t%s", string(api.ArchARM64), osArchARM64Desc),
+		fmt.Sprintf("%s\t%s", string(api.ArchRISCV), osArchRISCVDesc),
 	}
 }
 

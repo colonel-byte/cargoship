@@ -37,6 +37,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// sysctlConfPath is where the distro's sysctl settings are rendered on each host. It is under
+// /etc/sysctl.d and numbered 99 so that it is the last file the host reads, and so wins over
+// whatever the OS itself sets.
+const sysctlConfPath = "/etc/sysctl.d/99-cargoship.conf"
+
 // PrepareHosts installs required packages and so on on the hosts.
 type PrepareHosts struct {
 	GenericPhase
@@ -94,7 +99,7 @@ func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) err
 		if err := p.updateSysctlConfig(ctx, h); err != nil {
 			return fmt.Errorf("failed to create sysctls config: %w", err)
 		}
-		if err := h.Sudo().Exec("sysctl --system"); err != nil {
+		if err := h.Configurer.ApplySysctl(h, sysctlConfPath); err != nil {
 			return fmt.Errorf("failed apply the new sysctls: %w", err)
 		}
 	}
@@ -147,5 +152,5 @@ func (p *PrepareHosts) updateSysctlConfig(ctx context.Context, h *cluster.ZarfHo
 		logger.From(ctx).Warn("failed to render sysctl tables")
 	}
 
-	return h.WriteFile("/etc/sysctl.d/99-cargoship.conf", sb.String(), "0644")
+	return h.WriteFile(sysctlConfPath, sb.String(), "0644")
 }

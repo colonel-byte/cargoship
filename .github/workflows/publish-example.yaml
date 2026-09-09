@@ -1,0 +1,168 @@
+---
+name: Publish example package
+
+# Builds one of the distro definitions under example/ and publishes it to GHCR, using the
+# released cargoship CLI rather than a binary built here: the point is to exercise what a
+# user gets from a release against the definitions this repository ships.
+#
+# The version is not an input. Each flavor directory holds every build that is still
+# installable -- magefiles/gen-examples.go removes an example once its upstream artifacts
+# go away -- so "the latest example" is the highest version directory the flavor has, and
+# the workflow resolves it at run time instead of carrying a pin that would go stale.
+#
+# It runs on demand from the Actions tab, choosing the flavor, and automatically when a
+# release is published, where it takes the default flavor.
+#
+# It also runs on a pull request carrying the "publish-example" label, so the workflow can
+# be exercised on its own branch before it is merged. That run is label gated because each
+# run pushes gigabytes, and it publishes under a per-pull-request namespace so a test never
+# writes over the real reference. The trigger lists "labeled" explicitly: without it,
+# adding the label to an open pull request would not start a run until the next push.
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: Example flavor to publish
+        type: choice
+        default: rke2-cilium
+        options:
+          - rke2-cilium
+          - rke2-canal
+          - k3s-flannel
+          - k3s-multi
+  release:
+    types:
+      - published
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+
+permissions:
+  contents: read
+  packages: write
+
+# Publishing pushes gigabytes to a registry under a tag derived from the package version,
+# so two runs of the same flavor must not race each other to the same reference. The ref is
+# in the group so that a pull request's test runs queue against themselves rather than
+# against a release publishing the same flavor.
+concurrency:
+  group: publish-example-${{ inputs.flavor || 'rke2-cilium' }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # A pull request run is a test of the workflow, so it publishes into its own namespace and
+  # leaves the reference a release writes alone. Delete the pr-N package when done with it.
+  REGISTRY: >-
+    ${{ github.event_name == 'pull_request'
+    && format('oci://ghcr.io/colonel-byte/cargoship-examples/pr-{0}', github.event.number)
+    || 'oci://ghcr.io/colonel-byte/cargoship-examples' }}
+
+jobs:
+  publish-example:
+    # Label gated on pull requests: every run pulls and pushes gigabytes, which is not what
+    # an unrelated pull request should spend. Fork pull requests are excluded because they
+    # get neither the signing secrets nor a token that can write packages, so the run could
+    # only fail at the publish step.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (contains(github.event.pull_request.labels.*.name, 'publish-example') &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    # An example package pulls the distro's whole image list plus its RPMs or binary, and
+    # then uploads all of it. Both halves are network bound and neither is quick.
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The package runs to gigabytes and exists twice on disk while it is built: once in
+      # the cache the images are pulled into, once in the tarball. Same removals as
+      # e2e-cluster.yaml, and none of what goes is used here.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Setup cargoship (latest release)
+        uses: colonel-byte/setup-cargoship@4da2adc72270551216e4c58daae04ea8e3391948 # v1.0.0
+
+      # Examples live at example/<flavor>/<minor>/<version>/distro.yaml, so the version
+      # directories are exactly the depth-two directories under the flavor. Version sort
+      # over the whole path orders the minor line first and the rke2rN/k3sN revision last,
+      # which is the order magefiles/examples.go treats as newest.
+      - name: Resolve the latest example
+        id: example
+        env:
+          FLAVOR: ${{ inputs.flavor || 'rke2-cilium' }}
+        run: |
+          set -euo pipefail
+          root="example/$FLAVOR"
+          if [ ! -d "$root" ]; then
+            echo "no such example flavor: $root" >&2
+            exit 1
+          fi
+
+          dir=$(find "$root" -mindepth 2 -maxdepth 2 -type d | sort -V | tail -n 1)
+          if [ -z "$dir" ] || [ ! -f "$dir/distro.yaml" ]; then
+            echo "no example with a distro.yaml under $root" >&2
+            exit 1
+          fi
+
+          echo "publishing $dir"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # cargoship pushes through the docker credential store, so a docker login is what
+      # authorizes the publish. GITHUB_TOKEN plus packages: write is enough for GHCR under
+      # this repository's owner.
+      - name: Log in to GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Unsigned here on purpose: publish always re-signs, so signing twice would only
+      # spend the key material in an extra step. --confirm keeps it non-interactive.
+      - name: Build the package
+        run: cargoship create "${{ steps.example.outputs.dir }}" -o build --confirm
+
+      - name: Locate the package
+        id: package
+        run: |
+          set -euo pipefail
+          count=$(find build -maxdepth 1 -name '*.tar.zst' | wc -l)
+          if [ "$count" -ne 1 ]; then
+            echo "expected one package in build/, found $count" >&2
+            find build -maxdepth 1 -name '*.tar.zst' >&2 || true
+            exit 1
+          fi
+          pkg=$(find build -maxdepth 1 -name '*.tar.zst')
+          echo "path=$pkg" >> "$GITHUB_OUTPUT"
+
+      # The key never touches the disk: --signing-key takes a Cosign provider URI, and the
+      # env:// form reads the secret straight out of the environment. Same key material the
+      # release pipeline signs binaries with. See docs/guides/signing-packages.md.
+      - name: Publish the package
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: >-
+          cargoship publish "${{ steps.package.outputs.path }}" "$REGISTRY"
+          --signing-key env://COSIGN_PRIVATE_KEY
+          --signing-key-pass "$COSIGN_PASSWORD"
+          --confirm
+
+      - name: Summarize
+        run: |
+          {
+            echo "## Published example"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Definition | \`${{ steps.example.outputs.dir }}\` |"
+            echo "| Package | \`$(basename "${{ steps.package.outputs.path }}")\` |"
+            echo "| Registry | \`$REGISTRY\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

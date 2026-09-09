@@ -24,8 +24,11 @@ package v1alpha1
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/colonel-byte/cargoship/src/api"
 )
 
 // ZarfFile defines a file shared by the distro and cluster APIs.
@@ -86,6 +89,17 @@ type BinarySelector struct {
 	Profile string `json:"profile,omitempty" jsonschema:"enum=worker,enum=controller"`
 	// Package selects which install method receives this file: rpm, apt, or binary.
 	Package string `json:"package,omitempty" jsonschema:"enum=rpm,enum=apt,enum=binary"`
+	// Arch lists the CPU architectures this file applies to. An empty list means every architecture the package targets.
+	Arch api.Arches `json:"arch,omitempty"`
+}
+
+// MatchesArch reports whether this selector applies to arch. An empty Arch list matches every
+// architecture, mirroring how an empty Profile matches every profile.
+func (s BinarySelector) MatchesArch(arch api.Arch) bool {
+	if len(s.Arch) == 0 {
+		return true
+	}
+	return slices.Contains(s.Arch, arch)
 }
 
 // String returns Name. If Name is empty, it returns Source instead.

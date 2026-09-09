@@ -12,6 +12,19 @@ Displays the version of the release that the current binary was built from.
 cargoship version [flags]
 ```
 
+### Examples
+
+```
+# Print the version of the running binary
+$ cargoship version
+
+# Print the full build information as YAML
+$ cargoship version --output yaml
+
+# Print it as JSON, for piping into jq
+$ cargoship version -o json
+```
+
 ### Options
 
 ```

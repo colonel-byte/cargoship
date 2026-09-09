@@ -19,6 +19,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -31,10 +32,13 @@ const (
 // ConfigureEngine writes the engine configuration to host engine config dir
 type ConfigureEngine struct {
 	GenericPhase
-	Distro  distrocfg.Distro
-	run     cluster.ZarfRuntimeMeta
-	hosts   cluster.ZarfHosts
-	control cluster.ZarfHosts
+	Distro distrocfg.Distro
+	// VaultPassword decrypts Ansible Vault-encrypted registry credentials.
+	// If empty, registries with vault-encrypted credentials cause Prepare to error.
+	VaultPassword string
+	run           cluster.ZarfRuntimeMeta
+	hosts         cluster.ZarfHosts
+	control       cluster.ZarfHosts
 }
 
 // Prepare the phase
@@ -56,6 +60,12 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 
 	p.run.ControllerTLS = append(p.run.ControllerTLS, c.Spec.Config.LoadBalancer)
 	p.run.LoadBalancer = c.Spec.Config.LoadBalancer
+
+	if err := clustercfg.DecryptRegistryAuth(c, p.VaultPassword); err != nil {
+		logger.From(ctx).Warn("failed to decrypt registry auth", "error", err)
+		return err
+	}
+	p.run.Registries = c.Spec.Config.Registries
 
 	for _, h := range p.control {
 		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.Hostname(h))

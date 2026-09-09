@@ -43,6 +43,13 @@ const (
 	DataDirDefaultPath = "DataDirDefaultPath"
 )
 
+const (
+	// FirewallFirewalld is the firewall front end shipped by Enterprise Linux and SUSE.
+	FirewallFirewalld = "firewalld"
+	// FirewallUFW is the firewall front end shipped by Debian and Ubuntu.
+	FirewallUFW = "ufw"
+)
+
 // Linux is a base module for various linux OS support packages
 type Linux struct {
 	paths    map[string]string
@@ -62,6 +69,22 @@ func (l *Linux) OSKind() string {
 // Dir returns the directory part of a path
 func (l *Linux) Dir(p string) string {
 	return path.Dir(p)
+}
+
+// PreferredFirewall reports that the distribution ships no firewall front end of its own. An OS
+// module for a distribution that ships one overrides this. The method is declared on each leaf OS
+// module rather than on a shared base such as EnterpriseLinux, because those modules embed both
+// their base and this one at the same depth, which would leave the promoted method ambiguous.
+func (l *Linux) PreferredFirewall() string {
+	return ""
+}
+
+// ApplySysctl loads every sysctl file the OS reads at boot, which includes the file at path.
+// Applying them all rather than only that file keeps a setting cargoship overrides from being
+// re-applied at its old value by a file later in the load order, and matches what the host
+// does on its next boot.
+func (l *Linux) ApplySysctl(h Host, _ string) error {
+	return h.Sudo().Exec("sysctl --system")
 }
 
 // Hostname resolves the short hostname

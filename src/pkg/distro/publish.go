@@ -96,8 +96,14 @@ func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.R
 
 // pushToRemote pushes a package to the given reference
 func pushToRemote(ctx context.Context, layout *layout.DistroLayout, ref registry.Reference, opts PublishOptions) error {
-	arch := layout.Distro.Metadata.Architecture
-	// Set platform
+	// The remote needs one platform to resolve against on read; a push writes the index entry for
+	// every architecture the package covers, so any of them serves here. PushPackage rejects a
+	// package that records none.
+	arches := layout.Distro.Arches()
+	arch := ""
+	if len(arches) > 0 {
+		arch = string(arches[0])
+	}
 	platform := oci.PlatformForArch(arch)
 
 	cacheMod, err := coci.GetOCICacheModifier(ctx, opts.CachePath)

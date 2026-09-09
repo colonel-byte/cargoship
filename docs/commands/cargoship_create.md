@@ -8,6 +8,25 @@ Creates a Cargoship Package from a given directory or the current director
 cargoship create [Dir] [flags]
 ```
 
+### Examples
+
+```
+# Build a package from the definition in the current directory
+$ cargoship create .
+
+# Build from another directory, writing the package to ./build/
+$ cargoship create ./distro-defs -o ./build/
+
+# Pull images through an internal mirror instead of their upstream registry
+$ cargoship create ./distro-defs --registry-override docker.io=mirror.example.com
+
+# Sign the package as it is built, without prompting for the key password
+$ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
+
+# Build a byte-identical package on every run
+$ cargoship create ./distro-defs --reproducible
+```
+
 ### Options
 
 ```
@@ -19,7 +38,6 @@ cargoship create [Dir] [flags]
       --reproducible                Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
       --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string     Password to the private key used for signing packages
-      --skip-sbom                   Skip generating SBOM for this package
 ```
 
 ### Options inherited from parent commands

@@ -19,10 +19,6 @@
         "registry_override": {
           "$ref": "#/$defs/RegistryOverrideMap",
           "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"
-        },
-        "skip_sbom": {
-          "description": "whether we will scan the images or files",
-          "type": "boolean"
         }
       },
       "type": "object"
@@ -81,23 +77,33 @@
           "$ref": "#/$defs/DistroDeployOptions",
           "description": "are options used by the deploy subcommand"
         },
-        "fapolicy": {
+        "fapolicyd": {
           "default": true,
           "description": "whether we will update hosts with fapolicyd",
           "type": "boolean"
         },
-        "firewall_update": {
+        "firewall": {
           "default": true,
           "description": "whether we will update the host firewall",
           "type": "boolean"
         },
-        "host_update": {
+        "hosts": {
           "default": true,
           "description": "whether we will update the etc host file",
           "type": "boolean"
         },
         "insecure_ignore_tlog": {
           "type": "string"
+        },
+        "kubeconfig": {
+          "default": true,
+          "description": "whether we will update the local kubeconfig file with the admin creds for the cluster",
+          "type": "boolean"
+        },
+        "label_nodes": {
+          "default": true,
+          "description": "whether we will check and add the node-role.kubernetes.io/\u003cprofile\u003e label on nodes",
+          "type": "boolean"
         },
         "oci_concurrency": {
           "description": "is how many concurrent oci artifacts that will be pushed at a time",
@@ -150,10 +156,21 @@
           "type": "string"
         },
         "worker_concurrency": {
-          "description": "number of worker nodes that will be upgraded at once",
-          "maximum": 1000,
-          "minimum": 0,
-          "type": "integer"
+          "description": "number of worker nodes that will be upgraded at once, as a fixed count\n(\"5\") or a percentage of the batch (\"25%\")",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
         }
       },
       "type": "object"

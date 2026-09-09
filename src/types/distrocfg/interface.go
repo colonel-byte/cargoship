@@ -41,17 +41,27 @@ const (
 
 // Distro interface for any distro object
 type Distro interface {
-	//keep-sorted start sticky_comments=yes
+	// AdminCredentials returns the cluster CA certificate and the admin client key pair
+	// for a given controller host and data directory
+	AdminCredentials(*cluster.ZarfHost, string) (AdminCredentials, error)
 	// BinaryName returns the engine binary name
 	BinaryName() string
 	// BinaryPath returns the full path to the engine binary
 	BinaryPath() string
+	// CleanupPaths returns every path on a host the engine owns outright, for an uninstall
+	// to remove recursively. Paths that are unset or too broad to safely remove are left out.
+	CleanupPaths() []string
 	// ConfigPath returns the full path for the config directory used by the engine
 	ConfigPath() string
 	// ConfigureEngine does distro specific configuration on a host
 	ConfigureEngine(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
 	// DataDirPath returns the full path for the data directory used by the engine
 	DataDirPath() string
+	// DesiredFiles returns the full set of engine config files (path -> desired content) this
+	// distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
+	// pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
+	// detect drift on an already-running host.
+	DesiredFiles(*cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string][]byte, error)
 	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 	DistroCmdf(string, ...any) string
 	// GetClusterCIDR returns a string array with the all the known cluster cidr blocks
@@ -77,5 +87,4 @@ type Distro interface {
 	StopControllerService(*cluster.ZarfHost) error
 	// StopWorkerService stops the controller service on the host
 	StopWorkerService(*cluster.ZarfHost) error
-	//keep-sorted end
 }

@@ -19,7 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
+	"path/filepath"
+	"slices"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/k0sproject/dig"
@@ -28,7 +29,6 @@ import (
 )
 
 var (
-	versionRegex = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
 	// ErrVersionNotDetected if a version is not detected
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
 	// ErrPathKey if a path key is not used
@@ -120,17 +120,45 @@ func (r *Common) SetPath(key string, value string) error {
 	return nil
 }
 
-func (r *Common) writeYAML(ctx context.Context, host *cluster.ZarfHost, config dig.Mapping, path string) error {
+// removablePaths cleans paths and drops the ones that are unset or so broad that handing
+// them to a recursive remove would take out far more than the engine -- a distro left
+// half-configured should uninstall nothing, not everything.
+func removablePaths(paths ...string) []string {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		clean := filepath.Clean(p)
+		switch clean {
+		case ".", "/":
+			continue
+		}
+		if slices.Contains(out, clean) {
+			continue
+		}
+		out = append(out, clean)
+	}
+	return out
+}
+
+func marshalYAML(config dig.Mapping) ([]byte, error) {
 	buf := bytes.Buffer{}
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
 
 	if err := enc.Encode(config); err != nil {
+		return nil, err
+	}
+
+	return []byte("---\n" + buf.String()), nil
+}
+
+func (r *Common) writeYAML(ctx context.Context, host *cluster.ZarfHost, config dig.Mapping, path string) error {
+	out, err := marshalYAML(config)
+	if err != nil {
 		logger.From(ctx).Warn("failed to marshal yaml", "host", host)
 		return err
 	}
 
-	if err := host.WriteFile(path, "---\n"+buf.String(), "0600"); err != nil {
+	if err := host.WriteFile(path, string(out), "0600"); err != nil {
 		logger.From(ctx).Warn("failed to write file", "host", host)
 		return err
 	}

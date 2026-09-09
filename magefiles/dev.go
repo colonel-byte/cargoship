@@ -20,7 +20,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"runtime"
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
@@ -30,8 +29,7 @@ import (
 )
 
 type (
-	Dev  mg.Namespace
-	Test mg.Namespace
+	Dev mg.Namespace
 )
 
 // Clean removes build artifacts
@@ -92,19 +90,4 @@ func (Dev) Digest(ctx context.Context) error {
 	fmt.Print(desc.Digest)
 
 	return nil
-}
-
-// EndToEnd runs the go testing the e2e suite
-func (Test) EndToEnd() error {
-	if err := daggerBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
-		return err
-	}
-	return sh.RunV(
-		"go",
-		"test",
-		"-timeout=1h",
-		"github.com/colonel-byte/cargoship/src/test/e2e",
-		"-count=1",
-		"-v",
-	)
 }

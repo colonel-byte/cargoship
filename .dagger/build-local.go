@@ -51,7 +51,8 @@ func (m *Cargoship) BuildLocal(
 		WithMountedDirectory("/src", m.Source). // Ensure the source directory with go.mod is mounted
 		WithWorkdir("/src").
 		WithEnvVariable("GOOS", os).
-		WithEnvVariable("GOARCH", arch)
+		WithEnvVariable("GOARCH", arch).
+		WithEnvVariable("CGO_ENABLED", "0")
 
 	gitCommit, _ := builder.WithExec([]string{"git", "rev-parse", "--short", "HEAD", "--always"}).Stdout(ctx)
 
@@ -61,7 +62,7 @@ func (m *Cargoship) BuildLocal(
 	builder = builder.WithExec([]string{
 		"sh",
 		"-c",
-		fmt.Sprintf(`go build -mod=vendor -a -gcflags=all="%s" -ldflags "%s" -o /bin/%s /src/main.go`, gcflagsArgs, ldflagsArgs, binName),
+		fmt.Sprintf(`go build -mod=vendor -a -trimpath -gcflags=all="%s" -ldflags "%s" -o /bin/%s /src/main.go`, gcflagsArgs, ldflagsArgs, binName),
 	})
 	return builder.File("/bin/" + binName)
 }

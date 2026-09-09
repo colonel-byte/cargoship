@@ -35,7 +35,7 @@ import (
 
 type installPrepareOptions struct {
 	InstallCommon
-	workerCon int
+	workerCon string
 	hosts     bool
 	firewall  bool
 	fapolicy  bool
@@ -47,20 +47,25 @@ func newInstallPrepareCommand() *cobra.Command {
 		Use:     "prepare [Distro Package]",
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDistroPrepareShort,
+		Example: lang.CmdDistroPrepareExample,
 		GroupID: lang.RootGroupInstallID,
+		PreRunE: o.preRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			return o.run(ctx, args)
+			return o.run(ctx, cmd, args)
 		},
 	}
 
 	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
-	cmd.Flags().IntVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -81,10 +86,12 @@ func newInstallPrepareCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *installPrepareOptions) run(ctx context.Context, args []string) error {
+func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
+	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
+	// what would happen is what would push someone into running the real thing to find out.
+	if !o.confirm && !o.dryRun {
 		l.Warn("please include the --confirm argument")
 		return errors.New("pass confirm argument")
 	}
@@ -94,7 +101,7 @@ func (o *installPrepareOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	manager, err := initManager(ctx, args[0], o.InstallCommon)
+	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
 	if err != nil {
 		l.Warn("failed to create manager", "err", err)
 		return err

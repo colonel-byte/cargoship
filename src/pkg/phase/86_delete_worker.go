@@ -32,7 +32,7 @@ import (
 type DeleteWorkers struct {
 	DeleteCommon
 	NoDrain          bool
-	WorkerConcurrent int
+	WorkerConcurrent string
 	hosts            cluster.ZarfHosts
 }
 
@@ -56,6 +56,18 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *
 	if err := p.DeleteCommon.Prepare(ctx, c, d); err != nil {
 		logger.From(ctx).Warn("failed when setting up common logic", "error", err)
 	}
+	// DeleteCommon.Prepare warns rather than failing when it finds no running controller, so
+	// this is reached with a nil leader, and the filter below reaches the cluster through that
+	// leader. ShouldRun already treats a nil leader as nothing to do; returning here is what
+	// lets it, instead of dereferencing first and panicking.
+	//
+	// A reset with no controller running is an ordinary state: a cluster that was already
+	// reset, or one whose engine is down. A dry run guarantees it, because every phase that
+	// would have started an engine was skipped.
+	if p.leader == nil {
+		return nil
+	}
+
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		err := p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)))
 		if err != nil {
@@ -71,7 +83,7 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *
 // Run the phase
 func (p *DeleteWorkers) Run(ctx context.Context) error {
 	if !p.NoDrain {
-		err := p.batchedParallelWithMessage(
+		err := p.batchedParallelPerProfileWithMessage(
 			ctx,
 			"draining nodes",
 			p.hosts,
@@ -82,7 +94,7 @@ func (p *DeleteWorkers) Run(ctx context.Context) error {
 			logger.From(ctx).Warn("failed to drain node(s), continuing with removing nodes from cluster", "error", err)
 		}
 	}
-	return p.batchedParallelWithMessage(
+	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"deleting nodes",
 		p.hosts,

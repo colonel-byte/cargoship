@@ -44,7 +44,7 @@ var (
 type UninstallEngine struct {
 	GenericPhase
 	Distro           distrocfg.Distro
-	WorkerConcurrent int
+	WorkerConcurrent string
 	hosts            cluster.ZarfHosts
 }
 
@@ -67,7 +67,7 @@ func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _
 
 // Run the phase
 func (p *UninstallEngine) Run(ctx context.Context) error {
-	return p.batchedParallelWithMessage(
+	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"uninstalling engine files",
 		p.hosts,
@@ -127,21 +127,12 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 		}
 	}
 
-	if h.FileExist(p.Distro.DataDirPath()) {
-		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", p.Distro.DataDirPath())); err != nil {
-			logger.From(ctx).Warn("failed to remove engine data dir", "path", p.Distro.DataDirPath(), "error", err)
+	for _, path := range p.Distro.CleanupPaths() {
+		if !h.FileExist(path) {
+			continue
 		}
-	}
-
-	confPath := p.Distro.ConfigPath()
-	switch p.Distro.(type) {
-	case *distrocfg.K3S, *distrocfg.RKE2:
-		confPath = filepath.Dir(p.Distro.ConfigPath())
-	}
-
-	if h.FileExist(confPath) {
-		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", confPath)); err != nil {
-			logger.From(ctx).Warn("failed to remove engine config dir", "path", confPath, "error", err)
+		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", path)); err != nil {
+			logger.From(ctx).Warn("failed to remove engine path", "path", path, "error", err)
 		}
 	}
 	p.cleanUploadManifest(ctx, h)

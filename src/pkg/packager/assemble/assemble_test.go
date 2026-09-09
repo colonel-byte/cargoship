@@ -15,7 +15,12 @@
 package assemble
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +28,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/images"
+	"github.com/k0sproject/dig"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 func TestBuildTimestampReproducible(t *testing.T) {
@@ -77,6 +84,83 @@ func TestRecordDistroMetadataReproducible(t *testing.T) {
 	}
 }
 
+func TestRecordDistroMetadataArchitectures(t *testing.T) {
+	tests := []struct {
+		name         string
+		metadata     distro.ZarfDistroMetadata
+		wantArches   api.Arches
+		wantScalar   api.Arch
+		scalarReason string
+	}{
+		{
+			name:         "a scalar architecture is recorded in both fields",
+			metadata:     distro.ZarfDistroMetadata{Architecture: api.ArchAMD64},
+			wantArches:   api.Arches{api.ArchAMD64},
+			wantScalar:   api.ArchAMD64,
+			scalarReason: "a single architecture package keeps the scalar older readers look for",
+		},
+		{
+			name:         "a single entry list is recorded in both fields",
+			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{api.ArchARM64}},
+			wantArches:   api.Arches{api.ArchARM64},
+			wantScalar:   api.ArchARM64,
+			scalarReason: "a single architecture package keeps the scalar older readers look for",
+		},
+		{
+			name:         "several architectures leave the scalar empty",
+			metadata:     distro.ZarfDistroMetadata{Architectures: api.Arches{api.ArchAMD64, api.ArchARM64}},
+			wantArches:   api.Arches{api.ArchAMD64, api.ArchARM64},
+			wantScalar:   "",
+			scalarReason: "no single architecture describes what the package carries",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := recordDistroMetadata(distro.ZarfDistro{Metadata: tt.metadata}, AssembleOptions{})
+
+			if !slices.Equal(got.Build.Architectures, tt.wantArches) {
+				t.Errorf("Build.Architectures = %v, want %v", got.Build.Architectures, tt.wantArches)
+			}
+			if got.Build.Architecture != tt.wantScalar {
+				t.Errorf("Build.Architecture = %q, want %q: %s", got.Build.Architecture, tt.wantScalar, tt.scalarReason)
+			}
+		})
+	}
+}
+
+func TestArchStrings(t *testing.T) {
+	tests := []struct {
+		name   string
+		arches api.Arches
+		want   []string
+	}{
+		{
+			name: "no architectures",
+			want: []string{},
+		},
+		{
+			name:   "one architecture",
+			arches: api.Arches{api.ArchAMD64},
+			want:   []string{"amd64"},
+		},
+		{
+			name:   "several architectures keep their order",
+			arches: api.Arches{api.ArchARM64, api.ArchAMD64},
+			want:   []string{"arm64", "amd64"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := archStrings(tt.arches)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("archStrings(%v) = %v, want %v", tt.arches, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRecordDistroMetadataNonReproducible(t *testing.T) {
 	d := distro.ZarfDistro{}
 	d.Metadata.Architecture = "arm64"
@@ -114,5 +198,65 @@ func TestReproducibleAssemblyIsDeterministic(t *testing.T) {
 
 	if !reflect.DeepEqual(first.Build, second.Build) {
 		t.Fatalf("recordDistroMetadata not deterministic under Reproducible: true:\nfirst:  %+v\nsecond: %+v", first.Build, second.Build)
+	}
+}
+
+// engineConfigLogContext gives logUnknownEngineConfig a logger whose output can be read
+// back, since logging is the whole of what it does.
+func engineConfigLogContext() (context.Context, *bytes.Buffer) {
+	buf := &bytes.Buffer{}
+	l := slog.New(slog.NewTextHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	return logger.WithContext(context.Background(), l), buf
+}
+
+func engineConfigDistro(version string, cfg dig.Mapping) distro.ZarfDistro {
+	d := distro.ZarfDistro{}
+	d.Spec.Type = "rke2"
+	d.Spec.Version = version
+	d.Spec.Config.Engine = dig.Mapping{config.EngineConfig: cfg}
+	return d
+}
+
+func TestLogUnknownEngineConfigLogsOnlyUnknownKeys(t *testing.T) {
+	ctx, buf := engineConfigLogContext()
+
+	// cluster-cidr is a server-only key, so it also covers the check reading both roles.
+	logUnknownEngineConfig(ctx, engineConfigDistro("1.36.4-rke2r1", dig.Mapping{
+		"cluster-cidr":  []string{"10.42.0.0/16"},
+		"server":        "https://localhost:9345",
+		"totally-typod": "value",
+	}))
+
+	out := buf.String()
+	if !strings.Contains(out, "key=totally-typod") {
+		t.Fatalf("logUnknownEngineConfig did not log the unknown key: %s", out)
+	}
+	if strings.Contains(out, "key=cluster-cidr") || strings.Contains(out, "key=server") {
+		t.Fatalf("logUnknownEngineConfig logged a known key: %s", out)
+	}
+	if strings.Contains(out, "level=WARN") {
+		t.Fatalf("logUnknownEngineConfig logged above debug: %s", out)
+	}
+}
+
+func TestLogUnknownEngineConfigUnknownVersionLogsNoKeys(t *testing.T) {
+	ctx, buf := engineConfigLogContext()
+
+	logUnknownEngineConfig(ctx, engineConfigDistro("1.99.0-rke2r1", dig.Mapping{
+		"totally-typod": "value",
+	}))
+
+	if out := buf.String(); strings.Contains(out, "key=totally-typod") {
+		t.Fatalf("logUnknownEngineConfig flagged a key for a version it has no schema for: %s", out)
+	}
+}
+
+func TestLogUnknownEngineConfigEmptyConfigLogsNothing(t *testing.T) {
+	ctx, buf := engineConfigLogContext()
+
+	logUnknownEngineConfig(ctx, distro.ZarfDistro{})
+
+	if out := buf.String(); out != "" {
+		t.Fatalf("logUnknownEngineConfig logged for a distro with no engine config: %s", out)
 	}
 }

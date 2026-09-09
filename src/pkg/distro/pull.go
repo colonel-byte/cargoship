@@ -32,13 +32,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/coci"
 	"github.com/colonel-byte/cargoship/src/pkg/coci/layers"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/gabriel-vasile/mimetype"
-	"github.com/zarf-dev/zarf/src/config"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -139,17 +140,21 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.DistroLayout, er
 		return nil, err
 	}
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := coci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
+	mods := []oci.Modifier{oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod}
+	remote, err := coci.NewRemote(ctx, opts.Source, platform, mods...)
 	if err != nil {
 		return nil, err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
-	}
-	_, err = remote.ResolveRoot(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
+		// Nothing in the index matches this host. When the index lists a single manifest, that
+		// manifest is the whole package, so pull it by digest rather than refuse a package the
+		// registry holds. Pulling a package is not running it, and an arm64 package is worth
+		// having on an amd64 workstation to inspect, sign, or push somewhere else.
+		remote, desc, err = pullSoleManifest(ctx, remote, platform, mods, err)
+		if err != nil {
+			return nil, err
+		}
 	}
 	layersToPull, err := remote.AssembleLayers(ctx, layers.GetAllLayerTypes()...)
 	if err != nil {
@@ -177,6 +182,31 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.DistroLayout, er
 	// computation would produce a different (partial) digest.
 	disLayout.SetRegistryDigest(desc.Digest.String())
 	return disLayout, nil
+}
+
+// pullSoleManifest re-points remote at the only manifest its reference lists, for a package
+// published for an architecture this host does not match. resolveErr is the platform match failure
+// that sent us here, and it is what the caller sees if the index holds more than one manifest.
+func pullSoleManifest(ctx context.Context, remote *coci.Remote, platform ocispec.Platform, mods []oci.Modifier, resolveErr error) (*coci.Remote, ocispec.Descriptor, error) {
+	ref := remote.Repo().Reference
+
+	soleDigest, err := remote.SoleManifestDigest(ctx)
+	if err != nil {
+		return nil, ocispec.Descriptor{}, fmt.Errorf("could not find package %s with architecture %s: %w", ref.String(), platform.Architecture, resolveErr)
+	}
+	logger.From(ctx).Debug("no manifest matches this architecture, pulling the only one the package holds",
+		"architecture", platform.Architecture, "digest", soleDigest.String())
+
+	ref.Reference = soleDigest.String()
+	remote, err = coci.NewRemote(ctx, ref.String(), platform, mods...)
+	if err != nil {
+		return nil, ocispec.Descriptor{}, err
+	}
+	desc, err := remote.ResolveRoot(ctx)
+	if err != nil {
+		return nil, ocispec.Descriptor{}, err
+	}
+	return remote, desc, nil
 }
 
 func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (string, error) {

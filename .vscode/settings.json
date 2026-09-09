@@ -8,4 +8,20 @@
     "-tags=mage"
   ],
   "git.ignoreLimitWarning": true,
+  "gopls": {
+    "directoryFilters": [
+      "-thirdparty-src",
+      "-build",
+      "-vendor"
+    ]
+  },
+  "files.watcherExclude": {
+    "**/build/**": true,
+    "**/vendor/**": true,
+    "**/*.zst": true
+  },
+  "search.exclude": {
+    "**/build": true,
+    "**/vendor": true
+  }
 }

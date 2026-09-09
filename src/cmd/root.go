@@ -66,16 +66,24 @@ const (
 	InstallConfig = "config"
 	// InstallConfirm flag
 	InstallConfirm = "confirm"
+	// InstallDryRun flag
+	InstallDryRun = "dry-run"
 	// InstallConcurrency flag
 	InstallConcurrency = "concurrency"
 	// InstallWorkConcurrency flag
 	InstallWorkConcurrency = "work-concurrency"
 	// InstallUpdateHost flag
-	InstallUpdateHost = "update-hosts"
+	InstallUpdateHost = "hosts"
 	// InstallUpdateFirewall flag
-	InstallUpdateFirewall = "update-firewall"
+	InstallUpdateFirewall = "firewall"
 	// InstallUpdateFAPolicyD flag
-	InstallUpdateFAPolicyD = "update-fapolicyd"
+	InstallUpdateFAPolicyD = "fapolicyd"
+	// InstallLabelNodes flag
+	InstallLabelNodes = "label-nodes"
+	// InstallUpdateKubeConfig flag
+	InstallUpdateKubeConfig = "kubeconfig"
+	// InstallVaultPasswordFile flag
+	InstallVaultPasswordFile = "vault-password-file"
 )
 
 const (
@@ -152,9 +160,11 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newInstallPrepareCommand())
 	rootCmd.AddCommand(newInstallResetCommand())
 	rootCmd.AddCommand(newInstallKubeConfigCommand())
+	rootCmd.AddCommand(newInstallEngineConfigSyncCommand())
 	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
+	rootCmd.AddCommand(newVaultEncryptCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {
@@ -335,9 +345,9 @@ func setupLogger(level, format string, isColor bool, logFilePath string) (*slog.
 }
 
 // defaultLogFilePath returns where the always-on debug log file is written: under the same
-// cache directory cargoship already uses for OCI artifacts, named to the second. Invocations
-// started within the same second share/append to the same file since the name carries no PID
-// or other disambiguator.
+// cache directory cargoship already uses for OCI artifacts, named to the hundredth of a
+// second. Invocations started within the same hundredth of a second share/append to the same
+// file since the name carries no PID or other disambiguator.
 func defaultLogFilePath() string {
 	cacheDir, err := config.GetAbsCachePath()
 	if err != nil || cacheDir == "" {

@@ -33,6 +33,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// ingestDir is the directory ORAS uses to stage image layers while it pulls them.
+const ingestDir = "ingest"
+
 // NewDistroLayout returns an DistroLayout object
 func NewDistroLayout(dir string, distro v1alpha1.ZarfDistro) *DistroLayout {
 	return &DistroLayout{
@@ -61,13 +64,21 @@ func (d *DistroLayout) GetImageDirPath() string {
 	return filepath.Join(d.dirPath, config.ImagesDir)
 }
 
-// FileName returns the name of the Zarf package should have when exported to the file system
+// FileName returns the name of the Zarf package should have when exported to the file system. A
+// package targeting several architectures takes multi in the architecture position, since no single
+// architecture describes what it carries.
 func (d *DistroLayout) FileName() (string, error) {
-	if d.Distro.Build.Architecture == "" {
+	arches := d.Distro.Build.Arches()
+	if len(arches) == 0 {
 		return "", errors.New("package must include a build architecture")
 	}
 
-	name := fmt.Sprintf("cargoship-%s-%s", d.Distro.Metadata.Name, d.Distro.Build.Architecture)
+	arch := string(arches[0])
+	if len(arches) > 1 {
+		arch = config.MultiArch
+	}
+
+	name := fmt.Sprintf("cargoship-%s-%s", d.Distro.Metadata.Name, arch)
 	if d.Distro.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, d.Distro.Metadata.Version)
 	}
@@ -90,7 +101,7 @@ func (d *DistroLayout) Archive(ctx context.Context, dirPath string, _ int) (stri
 		return "", err
 	}
 	// Removes ingest directory that is only used for caching the images with ORAS
-	err = os.Remove(filepath.Join(d.dirPath, "images", "ingest"))
+	err = os.Remove(filepath.Join(d.GetImageDirPath(), ingestDir))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}

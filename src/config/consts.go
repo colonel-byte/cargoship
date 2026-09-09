@@ -13,13 +13,3 @@
 // limitations under the License.
 
 package config
-
-// These are the CPU architectures Zarf supports building/targeting for.
-const (
-	// OSArchAMD64 is the x86-64, 64-bit AMD, architecture.
-	OSArchAMD64 = "amd64"
-	// OSArchARM64 is the 64-bit ARM architecture.
-	OSArchARM64 = "arm64"
-	// OSArchRISCV is the 64-bit RISC-V architecture.
-	OSArchRISCV = "riscv64"
-)

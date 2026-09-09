@@ -1,0 +1,9 @@
+# Why sosedoff/ansible-vault-go and not apenella/go-ansible
+
+Cargoship's Ansible Vault support (`cargoship vault-encrypt`, and automatic decryption of vault-encrypted registry credentials at `apply` time) is built on [`github.com/sosedoff/ansible-vault-go`](https://github.com/sosedoff/ansible-vault-go). [`github.com/apenella/go-ansible`](https://github.com/apenella/go-ansible) was also considered, since it's a more widely known Go/Ansible integration, but it isn't a fit for this use case:
+
+- **No decrypt support.** `go-ansible`'s `vault/encrypt` package only exports an `EncryptString` type -- there is no `Decrypt`/`DecryptString` anywhere in the module. Decryption is Cargoship's actual requirement: `apply` has to transparently decrypt registry credentials on every run.
+- **It wraps the same library anyway.** `go-ansible`'s `EncryptString` uses `sosedoff/ansible-vault-go` internally for the crypto. Depending on `go-ansible` for encryption would still pull in `sosedoff/ansible-vault-go` as a transitive dependency, plus `spf13/afero` and `go-ansible`'s own password-reader abstraction -- more surface area to replace logic Cargoship already has in `ResolveVaultPassword` (`src/internal/clustercfg/vault.go`), for no functional gain.
+- **Wrong shape of library.** `go-ansible`'s primary purpose is wrapping `ansible-playbook`/`ansible`/`ansible-galaxy` CLI execution as subprocesses. Cargoship needs neither Ansible nor Python installed on the machine running `apply` or `vault-encrypt` -- `sosedoff/ansible-vault-go` is a native Go implementation of the vault cipher, so encrypting and decrypting single string values stays a pure in-process operation, consistent with Cargoship shipping as a single static binary.
+
+Net effect: switching would add a heavier, partially-redundant dependency, lose decrypt support outright, and reimplement functionality `sosedoff/ansible-vault-go` already provides directly.

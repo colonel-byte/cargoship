@@ -37,6 +37,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/types/os"
 	rig "github.com/k0sproject/rig/v2"
+	"github.com/k0sproject/rig/v2/cmd"
 	rigos "github.com/k0sproject/rig/v2/os"
 	"github.com/k0sproject/rig/v2/remotefs"
 )
@@ -61,6 +62,11 @@ var ErrCommandFailed = errors.New("command failed")
 type ZarfHost struct {
 	// ClientWithConfig embeds rig's client type. It gives ZarfHost multi-protocol connectivity to a remote host.
 	rig.ClientWithConfig `json:",inline"`
+	// fs, when set, replaces the filesystem the host's file operations act through. See SetFS.
+	fs remotefs.FS
+	// services, when set, replaces the init system the host's service operations act through.
+	// See SetServices.
+	services HostServices
 	// Environment maps environment variables cargoship sets on the host.
 	Environment map[string]string `json:"environment,omitempty"`
 	// Files lists files cargoship uploads to the host.
@@ -90,14 +96,20 @@ type ZarfHost struct {
 // ZarfHostConfig defines the configuration for a specific host, including
 // firewall policies and the ports cargoship opens on the node.
 type ZarfHostConfig struct {
+	// Firewall holds the backend-neutral firewall rules cargoship renders onto whichever
+	// firewall the node runs, firewalld, ufw, or nftables.
+	Firewall ZarfFirewallConfig `json:"firewall,omitempty"`
 	// Policy maps a policy name to a firewalld policy that allows traffic from one interface to another.
+	// It is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.
 	Policy map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
 	// Ports lists the ports and protocols cargoship opens on the node.
 	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
 }
 
-// Merge copies Policy and Ports from update into c, for whichever of those fields are empty in c.
+// Merge copies Policy and Ports from update into c, for whichever of those fields are empty in
+// c, and unions update's firewall rules into c's.
 func (c *ZarfHostConfig) Merge(update ZarfHostConfig) {
+	c.Firewall.Merge(update.Firewall)
 	if len(c.Policy) == 0 && len(update.Policy) > 0 {
 		c.Policy = make(map[string]ZarfFirewallPolicyConfig)
 		maps.Copy(c.Policy, update.Policy)
@@ -270,18 +282,131 @@ func (h *ZarfHost) Arch() (string, error) {
 
 // Touch updates file modification timestamps, creating the file if needed. Always runs with privilege escalation.
 func (h *ZarfHost) Touch(path string, modTime time.Time) error {
-	return h.Sudo().FS().Touch(path, modTime)
+	return h.sudoFS().Touch(path, modTime)
 }
 
 // DeleteFile removes a file from the host. Always runs with privilege escalation.
 func (h *ZarfHost) DeleteFile(path string) error {
-	return h.Sudo().FS().Remove(path)
+	return h.sudoFS().Remove(path)
 }
 
-// ServiceIsRunning returns true if the named service is running on the host. Init system
-// operations require privilege escalation, matching the v0.x Configurer.ServiceIsRunning behavior.
+// ErrNotConnected is returned by host operations that need a live connection on a host that
+// has never been set up or connected.
+var ErrNotConnected = errors.New("host is not connected")
+
+// HostServices is the init system surface a host exposes. A real host satisfies it through its
+// rig connection; SetServices substitutes another implementation, which is how the distro
+// modules and phases are exercised without a machine to run against.
+type HostServices interface {
+	ServiceIsRunning(ctx context.Context, name string) bool
+	StartService(ctx context.Context, name string) error
+	StopService(ctx context.Context, name string) error
+	RestartService(ctx context.Context, name string) error
+	EnableService(ctx context.Context, name string) error
+}
+
+// SetFS substitutes the filesystem this host's file operations act through, in place of the
+// one its rig connection provides.
+func (h *ZarfHost) SetFS(fs remotefs.FS) {
+	h.fs = fs
+}
+
+// SetServices substitutes the init system this host's service operations act through, in place
+// of the one its rig connection provides.
+func (h *ZarfHost) SetServices(services HostServices) {
+	h.services = services
+}
+
+// connected reports whether this host has a rig client to reach through. A host whose client
+// was never set up -- an inventory entry the run never connected to, or one built in a test --
+// has a nil embedded client, and reaching through it panics rather than failing, so every
+// operation that would do so checks here first.
+func (h *ZarfHost) connected() bool {
+	return h != nil && h.Client != nil
+}
+
+// notConnectedFS is a filesystem whose every operation fails with ErrNotConnected. It is what
+// an unconnected host's FS is, so that a caller gets an error back rather than a panic.
+func notConnectedFS() remotefs.FS {
+	return remotefs.NewPosixFS(cmd.NewErrorExecutor(ErrNotConnected))
+}
+
+// FS returns the host's filesystem. It shadows the promoted rig client method so that a host
+// with a substituted filesystem uses that one, and an unconnected host returns a filesystem
+// that fails rather than one that panics.
+func (h *ZarfHost) FS() remotefs.FS {
+	if h != nil && h.fs != nil {
+		return h.fs
+	}
+	if !h.connected() {
+		return notConnectedFS()
+	}
+	return h.Client.FS()
+}
+
+// sudoFS is FS escalated. A substituted filesystem is used as-is: what it stands in for is the
+// whole of the host's file access, privileged or not.
+func (h *ZarfHost) sudoFS() remotefs.FS {
+	if h != nil && h.fs != nil {
+		return h.fs
+	}
+	if !h.connected() {
+		return notConnectedFS()
+	}
+	return h.Sudo().FS()
+}
+
+// Exec runs a command on the host. It shadows the promoted rig client method so that an
+// unconnected host returns an error rather than panicking.
+func (h *ZarfHost) Exec(command string, opts ...cmd.ExecOption) error {
+	if !h.connected() {
+		return ErrNotConnected
+	}
+	return h.Client.Exec(command, opts...)
+}
+
+// ExecOutput runs a command on the host and returns its output. It shadows the promoted rig
+// client method so that an unconnected host returns an error rather than panicking.
+func (h *ZarfHost) ExecOutput(command string, opts ...cmd.ExecOption) (string, error) {
+	if !h.connected() {
+		return "", ErrNotConnected
+	}
+	return h.Client.ExecOutput(command, opts...)
+}
+
+// SudoExec runs a command on the host with privilege escalation. Like Exec, it returns an
+// error rather than panicking on a host that was never connected.
+func (h *ZarfHost) SudoExec(command string, opts ...cmd.ExecOption) error {
+	if !h.connected() {
+		return ErrNotConnected
+	}
+	return h.Sudo().Exec(command, opts...)
+}
+
+// SudoExecOutput runs a command on the host with privilege escalation and returns its output.
+// Like ExecOutput, it returns an error rather than panicking on a host that was never connected.
+func (h *ZarfHost) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, error) {
+	if !h.connected() {
+		return "", ErrNotConnected
+	}
+	return h.Sudo().ExecOutput(command, opts...)
+}
+
+// sudoService returns the named service on the host, escalated. Init system operations require
+// privilege escalation, matching the v0.x Configurer service behavior.
+func (h *ZarfHost) sudoService(name string) (*rig.Service, error) {
+	if !h.connected() {
+		return nil, ErrNotConnected
+	}
+	return h.Sudo().Service(name)
+}
+
+// ServiceIsRunning returns true if the named service is running on the host.
 func (h *ZarfHost) ServiceIsRunning(ctx context.Context, name string) bool {
-	svc, err := h.Sudo().Service(name)
+	if h != nil && h.services != nil {
+		return h.services.ServiceIsRunning(ctx, name)
+	}
+	svc, err := h.sudoService(name)
 	if err != nil {
 		return false
 	}
@@ -290,7 +415,10 @@ func (h *ZarfHost) ServiceIsRunning(ctx context.Context, name string) bool {
 
 // StartService starts the named service on the host.
 func (h *ZarfHost) StartService(ctx context.Context, name string) error {
-	svc, err := h.Sudo().Service(name)
+	if h != nil && h.services != nil {
+		return h.services.StartService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
 	if err != nil {
 		return err
 	}
@@ -299,7 +427,10 @@ func (h *ZarfHost) StartService(ctx context.Context, name string) error {
 
 // StopService stops the named service on the host.
 func (h *ZarfHost) StopService(ctx context.Context, name string) error {
-	svc, err := h.Sudo().Service(name)
+	if h != nil && h.services != nil {
+		return h.services.StopService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
 	if err != nil {
 		return err
 	}
@@ -308,7 +439,10 @@ func (h *ZarfHost) StopService(ctx context.Context, name string) error {
 
 // RestartService restarts the named service on the host.
 func (h *ZarfHost) RestartService(ctx context.Context, name string) error {
-	svc, err := h.Sudo().Service(name)
+	if h != nil && h.services != nil {
+		return h.services.RestartService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
 	if err != nil {
 		return err
 	}
@@ -317,7 +451,10 @@ func (h *ZarfHost) RestartService(ctx context.Context, name string) error {
 
 // EnableService enables the named service on the host.
 func (h *ZarfHost) EnableService(ctx context.Context, name string) error {
-	svc, err := h.Sudo().Service(name)
+	if h != nil && h.services != nil {
+		return h.services.EnableService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
 	if err != nil {
 		return err
 	}
@@ -398,7 +535,7 @@ func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
 	if _, err = io.Copy(lsha, file); err != nil {
 		return true
 	}
-	rsha, err := h.Sudo().FS().Sha256(rpath)
+	rsha, err := h.sudoFS().Sha256(rpath)
 	if err != nil {
 		return true
 	}
@@ -427,12 +564,12 @@ func (h *ZarfHost) WriteFile(path string, data string, permissions string) error
 	if err != nil {
 		return err
 	}
-	return h.Sudo().FS().WriteFile(path, []byte(data), mode)
+	return h.sudoFS().WriteFile(path, []byte(data), mode)
 }
 
 // ReadFile returns the contents of path on the host, or an error if the file does not exist. Always runs with privilege escalation.
 func (h *ZarfHost) ReadFile(path string) (string, error) {
-	data, err := h.Sudo().FS().ReadFile(path)
+	data, err := h.sudoFS().ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -442,7 +579,7 @@ func (h *ZarfHost) ReadFile(path string) (string, error) {
 // FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the
 // behavior of the v0.x Configurer.FileExist implementation this replaces.
 func (h *ZarfHost) FileExist(path string) bool {
-	return h.Sudo().FS().FileExist(path)
+	return h.sudoFS().FileExist(path)
 }
 
 // CheckHTTPStatus requests url and returns an error if the response status is not one of expected.

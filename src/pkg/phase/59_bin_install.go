@@ -63,7 +63,15 @@ func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d 
 func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 	err = p.parallelDo(ctx, p.control, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
-			for _, f := range p.filesControl {
+			files, err := p.filesFor(p.filesControl, zh)
+			if err != nil {
+				return err
+			}
+			if len(files) == 0 {
+				logger.From(ctx).Warn("the package carries no engine binaries for this host architecture", "host", zh)
+			}
+
+			for _, f := range files {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
 				if f.OriginalTarget != f.Target {
 					err := zh.Sudo().Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget))
@@ -81,7 +89,15 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 	}
 	err = p.parallelDo(ctx, p.workers, func(_ context.Context, zh *cluster.ZarfHost) error {
 		zh.Metadata.Install = func(ctx context.Context, zh *cluster.ZarfHost) error {
-			for _, f := range p.filesWorkers {
+			files, err := p.filesFor(p.filesWorkers, zh)
+			if err != nil {
+				return err
+			}
+			if len(files) == 0 {
+				logger.From(ctx).Warn("the package carries no engine binaries for this host architecture", "host", zh)
+			}
+
+			for _, f := range files {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
 				if f.OriginalTarget != f.Target {
 					err := zh.Sudo().Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget))

@@ -1,0 +1,7 @@
+src/pkg/engineconfig/gen/**/zz_*.go linguist-generated
+docs/commands/**/*.md linguist-generated
+docs/phases/**/*.md linguist-generated
+example/rke2-*/**/distro.yaml linguist-generated
+example/k3s-*/**/distro.yaml linguist-generated
+example/shasums.json linguist-generated
+thirdparty-src/** linguist-vendored

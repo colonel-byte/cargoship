@@ -19,7 +19,7 @@ src      = "docs"
 
 [output.html]
 fold.enable          = false
-additional-css       = [ "docs/css/root.css" ]
+additional-css       = [ "docs/css/root.css", "docs/css/print.css" ]
 no-section-label     = true
 admonitions          = true
 git-repository-url   = "https://github.com/colonel-byte/cargoship/tree/main"

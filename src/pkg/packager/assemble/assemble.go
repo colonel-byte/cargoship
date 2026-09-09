@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,11 +40,13 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
 	"github.com/colonel-byte/cargoship/src/pkg/images"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/k0sproject/dig"
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -71,10 +74,58 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
+// logUnknownEngineConfig logs engine config keys the distro version being packaged does not
+// recognize, so a typo is visible here rather than only on every node at install time.
+//
+// This only ever logs, at debug. The generated schemas cover the versions whose source has been
+// pulled into this build, which is not necessarily the version a package targets, and a package
+// that carries a key this binary has never heard of is still a package worth building. Install
+// time keeps the authoritative check, where the key is narrowed to the role the node actually
+// plays and an unrecognized one is dropped from the config it writes.
+func logUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
+	cfg := engineConfigKeys(d.Spec.Config.Engine[config.EngineConfig])
+	if len(cfg) == 0 {
+		return
+	}
+
+	l := logger.From(ctx)
+	entry, ok := gen.Lookup(d.Spec.Type, d.Spec.Version)
+	if !ok {
+		l.Debug("no generated engine config schema for this distro/version, skipping config key validation",
+			"distro", d.Spec.Type, "version", d.Spec.Version)
+		return
+	}
+
+	// A package installs controllers and workers alike, so a key either role accepts belongs
+	// here.
+	valid := gen.Keys(entry.Server)
+	maps.Copy(valid, gen.Keys(entry.Agent))
+
+	for _, k := range slices.Sorted(maps.Keys(cfg)) {
+		if _, ok := valid[k]; !ok {
+			l.Debug("engine config key not recognized for this distro/version, it will be dropped at install time",
+				"distro", d.Spec.Type, "version", d.Spec.Version, "key", k)
+		}
+	}
+}
+
+// engineConfigKeys is the engine config block, whichever map shape it was decoded into.
+func engineConfigKeys(v any) map[string]any {
+	switch m := v.(type) {
+	case dig.Mapping:
+		return m
+	case map[string]any:
+		return m
+	default:
+		return nil
+	}
+}
+
 // AssembleDistro creates the actual tarballs
 func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling distro", "path", distroPath)
+	logUnknownEngineConfig(ctx, d)
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -114,16 +165,18 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 
 	if len(componentImages) > 0 {
+		arches := d.Metadata.Arches()
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			Arch:                  d.Metadata.Architecture,
+			Arches:                archStrings(arches),
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, config.ImagesDir),
 			PlainHTTP:             opts.PlainHTTP,
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		}
-		l.Info("pulling images too", "path", filepath.Join(buildPath, config.ImagesDir))
-		_, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, config.ImagesDir), pullOpts)
+		imagesPath := filepath.Join(buildPath, config.ImagesDir)
+		l.Info("pulling images too", "path", imagesPath, "architectures", api.FormatArches(arches))
+		_, err := images.Pull(ctx, componentImages, imagesPath, pullOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -266,8 +319,25 @@ func buildTimestamp(reproducible bool) time.Time {
 	return time.Now()
 }
 
+// archStrings converts the architectures a package targets into the plain strings the image puller
+// takes. Every architecture is pulled into the one images directory, where an image that resolves to
+// more than one manifest is stored as an index.
+func archStrings(arches api.Arches) []string {
+	out := make([]string, 0, len(arches))
+	for _, arch := range arches {
+		out = append(out, string(arch))
+	}
+	return out
+}
+
 func recordDistroMetadata(distro distro.ZarfDistro, opts AssembleOptions) distro.ZarfDistro {
-	distro.Build.Architecture = distro.Metadata.Architecture
+	arches := distro.Metadata.Arches()
+	distro.Build.Architectures = arches
+	// The scalar stays populated for a single architecture package so that readers which only know
+	// about it, such as an older cargoship, still see the architecture they expect.
+	if len(arches) == 1 {
+		distro.Build.Architecture = arches[0]
+	}
 	distro.Build.Timestamp = buildTimestamp(opts.Reproducible).Format(api.BuildTimestampFormat)
 	distro.Build.Version = distro.Metadata.Version
 	distro.Build.Reproducible = opts.Reproducible

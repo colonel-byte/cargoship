@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -34,8 +35,32 @@ type (
 	Generate mg.Namespace
 )
 
+// docsConfig is the repo's checked-in config, forced during doc generation so flag defaults
+// in generated docs are reproducible regardless of whatever the caller has set locally (e.g.
+// via direnv) -- this mirrors the CARGOSHIP_CONFIG=hack/config.yaml override used by the
+// pre-commit hook.
+const docsConfig = "hack/config.yaml"
+
+// docsConfigChildEnv marks a re-exec'd child process so it runs the real generation logic
+// instead of re-exec'ing again.
+const docsConfigChildEnv = "CARGOSHIP_MAGE_DOCS_CHILD"
+
 // Document creates the docs for this repo
 func (Generate) Document() error {
+	// src/cmd sets its flag defaults from CARGOSHIP_CONFIG the moment the package is
+	// imported (root.go's package-level `var rootCmd = NewCargoshipCommand()` and its
+	// func init() both call initViper(), which is a no-op after the first call). By the
+	// time this function body runs, that has already happened -- setting the env var here
+	// is too late. Re-exec mage as a child process with the env var set before the child's
+	// own cmd package initializes.
+	if os.Getenv(docsConfigChildEnv) != "1" {
+		c := exec.Command("mage", "generate:document")
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		c.Env = append(os.Environ(), "CARGOSHIP_CONFIG="+docsConfig, docsConfigChildEnv+"=1")
+		return c.Run()
+	}
+
 	rootCmd := cmd.NewCargoshipCommand()
 	rootCmd.DisableAutoGenTag = true
 
@@ -56,17 +81,10 @@ func (Generate) Document() error {
 	if err := doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler); err != nil {
 		return err
 	}
-	if err := phaseApply(); err != nil {
-		return err
-	}
-	if err := phaseReset(); err != nil {
-		return err
-	}
-	if err := phaseKubeConfig(); err != nil {
-		return err
-	}
-	if err := phasePrepare(); err != nil {
-		return err
+	for _, pd := range phaseDocs() {
+		if err := writePhaseDoc(pd); err != nil {
+			return err
+		}
 	}
 	if err := generateSummary(); err != nil {
 		return err
@@ -75,18 +93,85 @@ func (Generate) Document() error {
 	return nil
 }
 
+// gen-docs manager building blocks, reused across the phaseDocs() entries below.
+var (
+	genDocsManager = &phase.Manager{
+		DistroID: distrocfg.DistroRKE2,
+		Config: &cluster.ZarfCluster{
+			Metadata: cluster.ZarfClusterMetadata{Name: "gen-docs"},
+		},
+	}
+	genDocsManagerNoConfig = &phase.Manager{DistroID: distrocfg.DistroRKE2}
+)
+
+// phaseDoc pairs a docs/phases/<name>.md file with the phase list to render into it.
+type phaseDoc struct {
+	name   string
+	phases phase.Phases
+	// dryRun adds the dry-run section and per-phase labels to the page. Only apply and reset
+	// register the --dry-run flag, so only their pages describe it.
+	dryRun bool
+}
+
+// phaseDocs lists every action whose phases get a docs/phases/<name>.md page. Add a new
+// action's phases here to get it picked up by `Document()` -- no new function needed.
+func phaseDocs() []phaseDoc {
+	return []phaseDoc{
+		{
+			name: "apply",
+			phases: action.NewApply(action.ApplyOptions{
+				Manager: genDocsManager,
+			}).Phases,
+			dryRun: true,
+		},
+		{
+			name: "reset",
+			phases: action.NewReset(action.ResetOptions{
+				Manager: genDocsManagerNoConfig,
+			}).Phases,
+			dryRun: true,
+		},
+		{
+			name: "kube-config",
+			phases: action.NewKubeConfig(action.KubeConfigOptions{
+				Manager: genDocsManager,
+			}).Phases,
+		},
+		{
+			name:   "prepare",
+			phases: action.NewPrepare(action.PrepareOptions{}).Phases,
+			dryRun: true,
+		},
+		{
+			name: "engine-config-sync",
+			phases: action.NewEngineConfigSync(action.EngineConfigSyncOptions{
+				Manager: genDocsManager,
+			}).Phases,
+		},
+	}
+}
+
+// printExcludedNote marks the sections that docs/css/print.css hides from
+// print.html, so the omission is visible to anyone reading SUMMARY.md.
+const printExcludedNote = "<!-- Excluded from the print page (print.html) by docs/css/print.css. -->"
+
 func generateSummary() error {
 	fmt.Println("docs/SUMMARY.md")
 	var builder strings.Builder
 
 	md := markdown.NewMarkdown(&builder)
 
+	// Section order matters beyond the sidebar: docs/css/print.css drops
+	// everything from the first Development chapter to the end of the document
+	// out of the print page, so Development, Agent and Misc have to stay last,
+	// in that order. Anything added after them is excluded from print too.
 	summary := []struct {
 		title  string
 		folder string
 		regex  string
 		indent bool
 		extra  string
+		note   string
 	}{
 		{
 			title: "Index",
@@ -113,17 +198,29 @@ func generateSummary() error {
 			title:  "Development",
 			folder: "dev",
 			regex:  `(.+)\.md`,
+			note:   printExcludedNote,
+		},
+		{
+			title:  "Agent",
+			folder: "agent",
+			regex:  `(.+)\.md`,
+			note:   printExcludedNote,
 		},
 		{
 			title:  "Misc",
 			folder: "misc",
 			regex:  `(.+)\.md`,
+			note:   printExcludedNote,
 		},
 	}
 
 	for i, item := range summary {
 		md = md.H1(item.title)
 		md = md.PlainText("")
+		if item.note != "" {
+			md = md.PlainText(item.note)
+			md = md.PlainText("")
+		}
 		if item.extra != "" {
 			md = md.PlainText(item.extra)
 		}
@@ -186,25 +283,45 @@ func linkHandler(link string) string {
 	return "./" + link[:len(link)-3] + ".md"
 }
 
-func phaseComment(mk *markdown.Markdown, p phase.Phase) {
-	mk.OrderedList(p.Title())
-	mk.PlainTextf("    - %s", p.Explanation())
+func phaseComment(mk *markdown.Markdown, p phase.Phase, dryRun bool) {
+	// The title and its explanation are one list item, so they go in as one block. Written
+	// as two, the writer sees an ordered list followed by a bullet list and separates them
+	// with the blank line a new list needs -- which splits every item from its explanation
+	// and renders the whole page as a loose list.
+	item := fmt.Sprintf("%s\n    - %s", p.Title(), p.Explanation())
+	if dryRun {
+		// phase.ClassifyDryRun is the same call Manager.Run gates on, so the label is what
+		// the phase actually does under --dry-run rather than a second description of it.
+		// The note is the phase's own account of why a dry run runs it; only the read-only
+		// phases carry one, since they are the ones that touch live hosts.
+		item += fmt.Sprintf("\n    - Dry run: %s", phase.ClassifyDryRun(p))
+		if note := phase.DryRunNote(p); note != "" {
+			item += ". " + note
+		}
+	}
+	mk.OrderedList(item)
 }
 
-func phaseApply() error {
-	apply := action.NewApply(action.ApplyOptions{
-		Manager: &phase.Manager{
-			DistroID: distrocfg.DistroRKE2,
-			Config: &cluster.ZarfCluster{
-				Metadata: cluster.ZarfClusterMetadata{
-					Name: "gen-docs",
-				},
-			},
-		},
-	})
+// dryRunNote heads the pages for the commands that take --dry-run. It covers what the flag does
+// to the run as a whole; the per-phase labels below it cover each phase.
+const dryRunNote = "With `--dry-run`, cargoship connects to every host and runs the preflight " +
+	"checks for real, then reports the phases it would have run instead of running them. Each " +
+	"phase below is labelled with what a dry run does with it. A phase is only run when it " +
+	"declares that it is safe to, so a phase added later is reported until someone says " +
+	"otherwise.\n\n" +
+	"The report is not a static list. Every phase still prepares itself and checks whether it " +
+	"has anything to do, and both only read, so work that is already done is filtered out " +
+	"against the live hosts. A phase that could not be assessed, because it reads state an " +
+	"earlier reported phase would have created, is reported as `unassessed`.\n\n" +
+	"A dry run takes no cluster lock, so it does not block a real run, and it can report state " +
+	"that a concurrent run is already changing. It does not need `--confirm`."
 
-	fmt.Println("docs/phases/apply.md")
-	f, err := os.Create("docs/phases/apply.md")
+// writePhaseDoc renders one docs/phases/<name>.md page listing each phase's title and explanation.
+func writePhaseDoc(pd phaseDoc) error {
+	path := fmt.Sprintf("docs/phases/%s.md", pd.name)
+	fmt.Println(path)
+
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -214,109 +331,19 @@ func phaseApply() error {
 		}
 	}()
 
-	applyDoc := markdown.NewMarkdown(f)
+	doc := markdown.NewMarkdown(f)
+	doc.H2(fmt.Sprintf("%s phases", pd.name))
 
-	applyDoc.H2("apply phases")
-
-	for _, p := range apply.Phases {
-		phaseComment(applyDoc, p)
+	if pd.dryRun {
+		doc.PlainText(dryRunNote)
+		doc.PlainTextf("")
 	}
 
-	applyDoc.PlainTextf("")
-
-	return applyDoc.Build()
-}
-
-func phaseReset() error {
-	reset := action.NewReset(action.ResetOptions{
-		Manager: &phase.Manager{
-			DistroID: distrocfg.DistroRKE2,
-		},
-	})
-
-	fmt.Println("docs/phases/reset.md")
-	f, err := os.Create("docs/phases/reset.md")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
-	resetDoc := markdown.NewMarkdown(f)
-
-	resetDoc.H2("reset phases")
-
-	for _, p := range reset.Phases {
-		phaseComment(resetDoc, p)
+	for _, p := range pd.phases {
+		phaseComment(doc, p, pd.dryRun)
 	}
 
-	resetDoc.PlainTextf("")
+	doc.PlainTextf("")
 
-	return resetDoc.Build()
-}
-
-func phaseKubeConfig() error {
-	kube := action.NewKubeConfig(action.KubeConfigOptions{
-		Manager: &phase.Manager{
-			DistroID: distrocfg.DistroRKE2,
-			Config: &cluster.ZarfCluster{
-				Metadata: cluster.ZarfClusterMetadata{
-					Name: "gen-docs",
-				},
-			},
-		},
-	})
-
-	fmt.Println("docs/phases/kube-config.md")
-	f, err := os.Create("docs/phases/kube-config.md")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
-	resetDoc := markdown.NewMarkdown(f)
-
-	resetDoc.H2("kube-config phases")
-
-	for _, p := range kube.Phases {
-		phaseComment(resetDoc, p)
-	}
-
-	resetDoc.PlainTextf("")
-
-	return resetDoc.Build()
-}
-
-func phasePrepare() error {
-	kube := action.NewPrepare(action.PrepareOptions{})
-
-	fmt.Println("docs/phases/prepare.md")
-	f, err := os.Create("docs/phases/prepare.md")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
-	resetDoc := markdown.NewMarkdown(f)
-
-	resetDoc.H2("prepare phases")
-
-	for _, p := range kube.Phases {
-		phaseComment(resetDoc, p)
-	}
-
-	resetDoc.PlainTextf("")
-
-	return resetDoc.Build()
+	return doc.Build()
 }

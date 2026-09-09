@@ -24,6 +24,8 @@ package linux
 import (
 	"strings"
 
+	"al.essio.dev/pkg/shellescape"
+
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	rigos "github.com/k0sproject/rig/v2/os"
 )
@@ -64,6 +66,15 @@ func (l *Alpine) InstallPackage(h configurer.Host, pkg ...string) error {
 // UninstallPackage installs packages via apk
 func (l *Alpine) UninstallPackage(h configurer.Host, pkg ...string) error {
 	return h.Sudo().Exec("apk del " + strings.Join(pkg, " "))
+}
+
+// ApplySysctl loads the settings in the file at path. Alpine's sysctl is the busybox applet,
+// which has no --system: it takes one or more files with -p and knows nothing about the
+// /etc/sysctl.d load order the base implementation relies on. Only the file cargoship wrote is
+// applied, so a setting another file overrides keeps whatever value that file gave it until
+// the host next boots and reads them all in order.
+func (l *Alpine) ApplySysctl(h configurer.Host, path string) error {
+	return h.Sudo().Exec("sysctl -p " + shellescape.Quote(path))
 }
 
 // Prepare will install required packages

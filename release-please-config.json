@@ -12,14 +12,15 @@
         { "type": "feat", "section": "Features" },
         { "type": "fix", "section": "Bug Fixes" },
         { "type": "perf", "section": "Performance Improvements", "hidden": true },
-        { "type": "refactor", "section": "Refactoring", "hidden": true },
+        { "type": "refactor", "section": "Refactoring" },
         { "type": "docs", "section": "Documentation" },
         { "type": "test", "section": "Tests", "hidden": true },
         { "type": "chore", "section": "Miscellaneous" },
         { "type": "ci", "section": "CI/CD" },
         { "type": "build", "section": "Build" }
       ],
-      "extra-files": []
+      "extra-files": [],
+      "extra-label": "e2e-cluster"
     }
   },
   "release-type": "go",

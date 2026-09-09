@@ -43,12 +43,17 @@ type ApplyOptions struct {
 	NoDrain bool
 	// ModifyHosts updates the /etc/hosts file with all the nodes in the cluster
 	ModifyHosts bool
-	// ModifyFirewall updates the firewalld on the nodes
+	// ModifyFirewall updates the firewall, firewalld, ufw, or nftables, on the nodes
 	ModifyFirewall bool
-	// WorkerConcurrent number of workers that will be installed or upgraded at a time
-	WorkerConcurrent int
+	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
+	// count ("5") or a percentage of the batch ("25%")
+	WorkerConcurrent string
 	// UpdateKubeConfig whether to update the local config
 	UpdateKubeConfig bool
+	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
+	LabelNodes bool
+	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
+	VaultPassword string
 }
 
 // Apply state logic
@@ -62,10 +67,6 @@ func NewApply(opts ApplyOptions) *Apply {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
 		return nil
-	}
-
-	if opts.WorkerConcurrent < 0 {
-		opts.WorkerConcurrent = 0
 	}
 
 	if opts.Manager.Concurrency < 0 {
@@ -97,12 +98,6 @@ func NewApply(opts ApplyOptions) *Apply {
 				Distro:  d,
 				Enabled: opts.ModifyFirewall,
 			},
-			&phase.ConfigureFirewallPorts{
-				Enabled: opts.ModifyFirewall,
-			},
-			&phase.ConfigureFirewallPolicy{
-				Enabled: opts.ModifyFirewall,
-			},
 
 			&phase.UploadFiles{},
 			&phase.RPMUploadFiles{},
@@ -112,7 +107,8 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 
 			&phase.ConfigureEngine{
-				Distro: d,
+				Distro:        d,
+				VaultPassword: opts.VaultPassword,
 			},
 			&phase.InitializeControllers{
 				Distro: d,
@@ -132,10 +128,27 @@ func NewApply(opts ApplyOptions) *Apply {
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
+			&phase.EngineConfigSyncController{
+				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
+					Distro:        d,
+					VaultPassword: opts.VaultPassword,
+				},
+			},
+			&phase.EngineConfigSyncWorker{
+				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
+					Distro:        d,
+					VaultPassword: opts.VaultPassword,
+				},
+				WorkerConcurrent: opts.WorkerConcurrent,
+			},
 			&phase.KubeConfig{
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
-				Enabled:   true,
+				Enabled:   opts.UpdateKubeConfig,
+			},
+			&phase.LabelNodes{
+				Distro:  d,
+				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),
