@@ -184,6 +184,16 @@ func (b ZarfDistroBuildData) Arches() api.Arches {
 	return api.Arches{b.Architecture}
 }
 
+// Arches returns the CPU architectures the package covers. A built package records them under
+// build, so that is preferred; a definition that has not been built yet only carries what the
+// metadata targets.
+func (distro ZarfDistro) Arches() api.Arches {
+	if arches := distro.Build.Arches(); len(arches) > 0 {
+		return arches
+	}
+	return distro.Metadata.Arches()
+}
+
 // IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.
 func (distro ZarfDistro) IsSBOMAble() bool {
 	if len(distro.Spec.Config.ImagesConfig.Images) > 0 || len(distro.Spec.Config.Files) > 0 {
