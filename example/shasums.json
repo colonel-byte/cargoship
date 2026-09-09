@@ -143,6 +143,10 @@
     "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-agent-1.36.3~rke2r1-0.el9.x86_64.rpm",
     "sha256": "0fe8db592cef8f7320a2b8423c073ed2af6fe9bb47e847e182bd5c8c9e59df7e"
   },
+  "rke2-agent-1.36.4~rke2r1-0.el9.aarch64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-agent-1.36.4~rke2r1-0.el9.aarch64.rpm",
+    "sha256": "d22d4007a5f8c846be3b830a0ecd89b3067957ad9b865f9fa11491e0b1b046b9"
+  },
   "rke2-agent-1.36.4~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-agent-1.36.4~rke2r1-0.el9.x86_64.rpm",
     "sha256": "995ac17ee051d94a3cc7090df18be3851e474dba01ed2ff80cf32ed3db4e5978"
@@ -286,6 +290,10 @@
   "rke2-common-1.36.3~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.3~rke2r1-0.el9.x86_64.rpm",
     "sha256": "b5b5253d46f5b84ce168e0563b553405a9e84353bf539acce6121ae42d545f47"
+  },
+  "rke2-common-1.36.4~rke2r1-0.el9.aarch64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-common-1.36.4~rke2r1-0.el9.aarch64.rpm",
+    "sha256": "2094aac9925a498a31f3f555deb48de15c5be2b7d31c80399ed3718442560498"
   },
   "rke2-common-1.36.4~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.4~rke2r1-0.el9.x86_64.rpm",
@@ -434,6 +442,10 @@
   "rke2-server-1.36.3~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-server-1.36.3~rke2r1-0.el9.x86_64.rpm",
     "sha256": "1c170c8652930ab89a15e189eeaceee1f0ab7a289c5ed917f208c4a19ba46aed"
+  },
+  "rke2-server-1.36.4~rke2r1-0.el9.aarch64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-server-1.36.4~rke2r1-0.el9.aarch64.rpm",
+    "sha256": "c5d22e1f8e68137dfd906aa7fbc98d13370d227c195d7ed2299993dd93beaff2"
   },
   "rke2-server-1.36.4~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-server-1.36.4~rke2r1-0.el9.x86_64.rpm",
