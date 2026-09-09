@@ -18,8 +18,11 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -45,6 +48,13 @@ type EngineConfigSyncHosts struct {
 	service       string
 	hosts         cluster.ZarfHosts
 	leader        *cluster.ZarfHost
+	// drift records why each host was selected. Prepare fills it while deciding which hosts to
+	// sync, so Run can say what it is draining a node for without reading every file off that
+	// host a second time. It is keyed by host pointer rather than by name: the same pointers
+	// travel from the candidate list into p.hosts, while ZarfHost.Hostname is an optional
+	// override that is empty on most hosts.
+	driftMu sync.Mutex
+	drift   map[*cluster.ZarfHost][]string
 }
 
 // ShouldRun is true when there are hosts to sync
@@ -77,20 +87,56 @@ func (p *EngineConfigSyncHosts) loadDesiredConfig(c *cluster.ZarfCluster, dis di
 	return nil
 }
 
-func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
+// driftedFiles names the desired files the host does not already have, each with the reason it
+// is being rewritten, followed by any file left over in a directory the distro owns. An
+// unreadable file is reported as such rather than as a content difference, since the two call
+// for different things from whoever reads the log. The list is sorted so that the same drift
+// reads the same way from one run to the next.
+func (p *EngineConfigSyncHosts) driftedFiles(h *cluster.ZarfHost) []string {
+	var drifted []string
 	for path, want := range p.desired {
+		base := filepath.Base(path)
 		if !h.FileExist(path) {
-			return true
+			drifted = append(drifted, base+" (missing)")
+			continue
 		}
 		current, err := h.ReadFile(path)
-		if err != nil || current != string(want.Content) {
-			return true
-		}
-		if !fileModeMatches(h, path, want.Mode) {
-			return true
+		switch {
+		case err != nil:
+			drifted = append(drifted, base+" (unreadable)")
+		case current != string(want.Content):
+			drifted = append(drifted, base+" (out of sync)")
+		case !fileModeMatches(h, path, want.Mode):
+			drifted = append(drifted, base+" (wrong mode)")
 		}
 	}
-	return false
+	sort.Strings(drifted)
+
+	for _, path := range distrocfg.StaleFiles(h, p.Distro.ManagedDirs(), p.desired) {
+		drifted = append(drifted, filepath.Base(path)+" (stale)")
+	}
+	return drifted
+}
+
+func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
+	drifted := p.driftedFiles(h)
+
+	p.driftMu.Lock()
+	defer p.driftMu.Unlock()
+	if p.drift == nil {
+		p.drift = map[*cluster.ZarfHost][]string{}
+	}
+	p.drift[h] = drifted
+
+	return len(drifted) > 0
+}
+
+// driftReason reports what needsUpdate found on this host, for the log line that precedes a
+// drain. It is empty when the host was never checked.
+func (p *EngineConfigSyncHosts) driftReason(h *cluster.ZarfHost) string {
+	p.driftMu.Lock()
+	defer p.driftMu.Unlock()
+	return strings.Join(p.drift[h], ", ")
 }
 
 // fileModeMatches reports whether path on the host is already written with the mode want spells.
@@ -126,11 +172,13 @@ func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHos
 			return err
 		}
 	}
-	return nil
+	// The node is already stopped and about to be restarted, which is the one moment a file the
+	// configuration no longer calls for can be removed without the engine noticing it go.
+	return distrocfg.RemoveStaleFiles(h, p.Distro.ManagedDirs(), p.desired)
 }
 
 func (p *EngineConfigSyncHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Info("draining nodes", "node", h)
+	logger.From(ctx).Info("draining node to sync engine config", "node", h, "drifted", p.driftReason(h))
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
 		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
 	})

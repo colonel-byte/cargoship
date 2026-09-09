@@ -126,13 +126,17 @@ Distributing that CA to every host beforehand is often the annoying part, so `ca
             -----END CERTIFICATE-----
 ```
 
-Cargoship writes it to `/etc/cargoship/tls/<host>.crt` on each host -- `<host>` being the same host the `configs` entry is keyed by, with anything outside `A-Za-z0-9._-` replaced by an underscore -- and sets `caFile` to that path for you. The certificate travels with the cluster configuration, so a rotated CA reaches the nodes the same way a changed mirror does.
+Cargoship writes it to `/etc/cargoship/tls/<host>.crt` on each host -- `<host>` being the same host the `configs` entry is keyed by, with anything outside `A-Za-z0-9._-` replaced by an underscore -- and sets `caFile` to that path for you. The certificate travels with the cluster configuration, so a rotated CA reaches the nodes the same way a changed mirror does: `apply` sees the file drift, then drains, rewrites, and restarts each node in turn.
 
 Set `ca` or `caFile`, not both. `apply` rejects an entry that sets both, and one whose `ca` is not a PEM certificate, naming the registry. A certificate is public, so encrypting one buys nothing, but a `ca` given as an Ansible Vault value is accepted and decrypted like any other -- a document vaulted as a whole should not have to be picked apart. The certificate is checked once it is decrypted, which is the first point at which there is a certificate to look at.
+
+Cargoship owns `/etc/cargoship/tls` outright: every file in it was written for a registry entry. Drop the `ca` from an entry, or drop the entry itself, and the next `apply` removes the certificate that was written for it along with the reference to it, rather than leaving it on every node for however long the cluster lives.
 
 ### Keeping the Nodes in Step
 
 `apply` compares what it would write against what is already on each node, and syncs only the nodes that differ. Both halves of a file count: contents, and the mode it is written with. A `registries.yaml` that someone has since widened to `0644` is rewritten the same as one with the wrong mirror in it, since the mode is what keeps the credentials in it off limits.
+
+Syncing a node means draining it, rewriting the files, restarting the engine, and uncordoning it once it is ready again -- one node at a time. The log line before each drain names the files that drifted and why, so a cluster-wide rewrite is legible while it happens.
 
 That matters on upgrade. Cargoship 0.21 changed how `registries.yaml` is written: keys under `mirrors` and `configs` are quoted, an endpoint given without a scheme is completed to `https://`, a `user` and `pass` pair is encoded into a single `auth` credential, and the file is written `0640` instead of `0600`. None of that changes what the engine does, but all of it changes the file, so the first `apply` after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.
 

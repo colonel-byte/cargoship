@@ -63,14 +63,29 @@ func (c *fileConfigurer) Stat(_ rigos.Host, path string, _ ...exec.Option) (*rig
 	return &rigos.FileInfo{FName: path, FMode: mode}, nil
 }
 
-func TestNeedsUpdate(t *testing.T) {
+// managedDirsDistro is a distro that owns no directories, so drift detection in these tests
+// comes down to the desired files themselves.
+type managedDirsDistro struct {
+	distrocfg.Distro
+
+	dirs []string
+}
+
+func (d *managedDirsDistro) ManagedDirs() []string { return d.dirs }
+
+func newSyncPhase(cfg *fileConfigurer, desired map[string]distrocfg.DesiredFile) (*EngineConfigSyncHosts, *cluster.ZarfHost) {
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+	return p, &cluster.ZarfHost{Configurer: cfg}
+}
+
+func TestDriftedFiles(t *testing.T) {
 	desired := map[string]distrocfg.DesiredFile{
 		registriesPath: {Content: []byte("---\nmirrors: {}\n"), Mode: "0640"},
 	}
 
 	cases := map[string]struct {
 		configurer *fileConfigurer
-		want       bool
+		want       []string
 	}{
 		"in sync": {
 			configurer: &fileConfigurer{
@@ -80,21 +95,21 @@ func TestNeedsUpdate(t *testing.T) {
 		},
 		"missing": {
 			configurer: &fileConfigurer{},
-			want:       true,
+			want:       []string{"registries.yaml (missing)"},
 		},
 		"content differs": {
 			configurer: &fileConfigurer{
 				files: map[string]string{registriesPath: "---\n"},
 				modes: map[string]fs.FileMode{registriesPath: 0o640},
 			},
-			want: true,
+			want: []string{"registries.yaml (out of sync)"},
 		},
 		"someone widened the permissions": {
 			configurer: &fileConfigurer{
 				files: map[string]string{registriesPath: "---\nmirrors: {}\n"},
 				modes: map[string]fs.FileMode{registriesPath: 0o644},
 			},
-			want: true,
+			want: []string{"registries.yaml (wrong mode)"},
 		},
 		"a mode that cannot be read is not drift on its own": {
 			configurer: &fileConfigurer{
@@ -106,9 +121,30 @@ func TestNeedsUpdate(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			p := &EngineConfigSyncHosts{desired: desired}
-			h := &cluster.ZarfHost{Configurer: tc.configurer}
-			require.Equal(t, tc.want, p.needsUpdate(h))
+			p, h := newSyncPhase(tc.configurer, desired)
+			require.Equal(t, tc.want, p.driftedFiles(h))
 		})
 	}
+}
+
+// A host is selected on its own drift, and the reason reported for it is its own. The two hosts
+// here differ only in what is on them: neither carries a hostname override, which is the field
+// the drift record used to be keyed by.
+func TestDriftReasonIsPerHost(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		registriesPath: {Content: []byte("---\nmirrors: {}\n"), Mode: "0640"},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+
+	inSync := &cluster.ZarfHost{Configurer: &fileConfigurer{
+		files: map[string]string{registriesPath: "---\nmirrors: {}\n"},
+		modes: map[string]fs.FileMode{registriesPath: 0o640},
+	}}
+	drifted := &cluster.ZarfHost{Configurer: &fileConfigurer{}}
+
+	require.False(t, p.needsUpdate(inSync))
+	require.True(t, p.needsUpdate(drifted))
+
+	require.Empty(t, p.driftReason(inSync), "a host with nothing to write has no drift to report")
+	require.Equal(t, "registries.yaml (missing)", p.driftReason(drifted))
 }
