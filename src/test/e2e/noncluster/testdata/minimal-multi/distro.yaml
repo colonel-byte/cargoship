@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The minimal definition, targeting two architectures instead of one. It carries no images and
-# no files for the same reason testdata/minimal does not: the publish and pull tests only need a
-# package whose metadata covers more than one architecture, and downloading engine artifacts for
-# two of them would cost minutes per run.
+# The minimal definition, targeting two architectures instead of one. It carries no images for the
+# same reason testdata/minimal does not: downloading engine artifacts for two architectures would
+# cost minutes per run. It does carry three tiny local files -- one per architecture plus one with
+# no arch selector -- so that a build of it actually exercises per-architecture file selection, and
+# so the build-twice comparison has per-architecture content to compare rather than metadata alone.
 
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
@@ -35,3 +36,17 @@ spec:
       config:
         cluster-cidr: 10.42.0.0/16
         cluster-domain: cluster.local
+    os:
+      files:
+        - source: payload/amd64.txt
+          target: /var/lib/cargoship-e2e/payload.txt
+          selector:
+            arch:
+              - amd64
+        - source: payload/arm64.txt
+          target: /var/lib/cargoship-e2e/payload.txt
+          selector:
+            arch:
+              - arm64
+        - source: payload/shared.txt
+          target: /var/lib/cargoship-e2e/shared.txt

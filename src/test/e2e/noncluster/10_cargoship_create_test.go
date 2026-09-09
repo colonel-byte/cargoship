@@ -16,6 +16,7 @@
 package noncluster
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -61,6 +62,30 @@ func TestCargoshipCreate(t *testing.T) {
 		firstBytes := readSinglePackage(t, first)
 		secondBytes := readSinglePackage(t, second)
 		require.Equal(t, firstBytes, secondBytes, "--reproducible must pin the build timestamp")
+	})
+
+	// A multi-architecture package packs every declared architecture's files, whichever
+	// architecture builds it, so pinning the timestamp has to make all of them identical:
+	// one architecture's entries drifting between builds would defeat the shared blobs a
+	// multi-architecture publish relies on.
+	t.Run("reproducible multi-architecture builds are byte-identical", func(t *testing.T) {
+		first := t.TempDir()
+		second := t.TempDir()
+
+		_, _, err := e2e.Cargoship(t, "create", multiArchDistroDir, "-o", first, "--reproducible")
+		require.NoError(t, err)
+		_, _, err = e2e.Cargoship(t, "create", multiArchDistroDir, "-o", second, "--reproducible")
+		require.NoError(t, err)
+
+		require.Equal(t, readSinglePackage(t, first), readSinglePackage(t, second),
+			"--reproducible must pin the build timestamp for a multi-architecture package")
+
+		// Assert the comparison covered per-architecture payloads rather than metadata
+		// alone, which is what would make it pass vacuously.
+		require.ElementsMatch(t,
+			[]string{"amd64 payload\n", "arm64 payload\n", "shared payload\n"},
+			packagedOSFiles(t, first),
+			"both architectures' files belong in the package")
 	})
 
 	t.Run("signing key produces a signed package", func(t *testing.T) {
@@ -148,4 +173,32 @@ func readSinglePackage(t *testing.T, dir string) []byte {
 	require.NoError(t, err)
 
 	return data
+}
+
+// packagedOSFiles returns the contents of every os/ file the one archive in dir carries.
+func packagedOSFiles(t *testing.T, dir string) []string {
+	t.Helper()
+
+	matches, err := filepath.Glob(filepath.Join(dir, "*.tar.zst"))
+	require.NoError(t, err)
+	require.Len(t, matches, 1)
+
+	extractDir := t.TempDir()
+	require.NoError(t, archive.Decompress(t.Context(), matches[0], extractDir, archive.DecompressOpts{}))
+
+	var contents []string
+	osDir := filepath.Join(extractDir, "os")
+	require.NoError(t, filepath.WalkDir(osDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		contents = append(contents, string(data))
+		return nil
+	}))
+
+	return contents
 }
