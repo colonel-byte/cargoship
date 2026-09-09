@@ -9,12 +9,12 @@ configs:
 mirrors:
   "docker.io":
     endpoint:
-      - mirror-docker-hub.example.com
+      - https://mirror-docker-hub.example.com
     rewrite:
       "^rancher/(.*)": mirrorproject/rancher-images/$1
   "ghcr.io":
     endpoint:
-      - mirror-ghcr.example.com
+      - https://mirror-ghcr.example.com
   "quay.io":
     endpoint:
-      - mirror-quay.example.com
+      - https://mirror-quay.example.com

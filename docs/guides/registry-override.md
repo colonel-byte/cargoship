@@ -60,11 +60,15 @@ Once images are being pulled from your mirror, the cluster's container engine al
 spec:
   config:
     registries:
-      - name: mirror.example.com
+      - name: docker.io
+        proxy:
+          url: https://mirror.example.com:5000
         auth:
           user: myuser
           pass: hunter2
 ```
+
+`name` is the registry the images were originally referenced from, and `proxy.url` is the mirror the engine pulls from instead. Cargoship writes both into `/etc/rancher/<engine>/registries.yaml`: the pair becomes a `mirrors` entry, and the credentials become a `configs` entry keyed by the mirror's host and port. `proxy.url` may carry a scheme and a path. A URL given without a scheme is completed to `https://`, and the host is taken from it for the `configs` key, which is what the engine matches on.
 
 Cargoship does not copy `user` and `pass` into `registries.yaml` as they are given. It encodes the pair into a single credential -- base64 of `user:pass` -- and writes that as the engine's `auth` directive, so the password does not sit on every node as plain text. Base64 is an encoding, not encryption, so treat the resulting file as a secret regardless.
 
@@ -75,11 +79,26 @@ Use `token` on its own when the registry issues one directly. It is a different 
           token: abc123
 ```
 
+`proxy` is optional. Leave it out to authenticate a registry Cargoship pulls from directly, without redirecting anything -- a private registry that hosts your own images, say:
+
+```yaml
+      - name: nexus.example.com
+        auth:
+          user: myuser
+          pass: hunter2
+```
+
+That writes a `configs` entry keyed by `nexus.example.com` and no `mirrors` entry. An entry that carries neither a `proxy.url` nor credentials configures nothing, and `apply` rejects it by name rather than writing an empty entry. So does a `proxy` block with no `url` in it, and a registry listed twice, which would otherwise mean the second entry quietly replacing the first.
+
+The rest of the entry is checked the same way, when the inventory file is read and before `apply` connects to anything. `name` is the registry part of an image reference, so it carries no scheme and no repository path: `docker.io`, not `https://docker.io` and not `docker.io/library`. (`*` is the exception -- engines read it as every registry.) `proxy.url` has to name a host and use `http` or `https`, and any credentials in it belong in `auth` instead. A `proxy.rewrite` pattern has to compile as a regular expression and rewrite to something, since the engine compiles it on the node, where failing means a failed pull rather than a rejected document. `user` and `pass` are a pair; half of one authenticates nothing and reaches you as a 401 from the registry rather than as the missing half it is.
+
+Several registries may share one mirror -- a single Nexus proxying `docker.io`, `ghcr.io`, and `quay.io` under different paths is the usual shape -- and cargoship writes one `configs` entry for the host they have in common. Those entries have to agree: if two registries resolve to the same host but ask for different credentials, only one of them could survive into the file, so `apply` reports the conflict by name instead of picking one.
+
 Writing `pass: hunter2` in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in `user`, `pass`, or `token` -- any field starting with `$ANSIBLE_VAULT` is decrypted automatically when the package is applied.
 
 ### Keeping the Nodes in Step
 
-Cargoship 0.21 changed how `registries.yaml` is written: keys under `mirrors` and `configs` are quoted, and a `user` and `pass` pair is encoded into a single `auth` credential. Neither changes what the engine does, but both change the file, so the first `apply` after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.
+Cargoship 0.21 changed how `registries.yaml` is written: keys under `mirrors` and `configs` are quoted, an endpoint given without a scheme is completed to `https://`, and a `user` and `pass` pair is encoded into a single `auth` credential. None of that changes what the engine does, but all of it changes the file, so the first `apply` after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.
 
 ### Encrypting the Credential
 

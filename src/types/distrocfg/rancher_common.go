@@ -333,20 +333,30 @@ func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mappi
 	configs := dig.Mapping{}
 
 	for _, reg := range registries {
-		mirror := dig.Mapping{
-			keyEndpoint: []string{reg.Proxy.URL},
+		// Credentials belong to whichever host the pull actually goes to: the mirror when there
+		// is one, and the registry itself when there is not. A registry with credentials but no
+		// mirror is still worth writing -- it authenticates a direct pull -- so it gets a configs
+		// entry without a mirrors entry rather than one keyed by an empty host.
+		host := reg.ConfigHost()
+		if endpoint := reg.MirrorEndpoint(); endpoint != "" {
+			mirror := dig.Mapping{
+				keyEndpoint: []string{endpoint},
+			}
+			if len(reg.Proxy.Rewrite) > 0 {
+				mirror[keyRewrite] = reg.Proxy.Rewrite
+			}
+			mirrors[string(reg.Name)] = mirror
 		}
-		if len(reg.Proxy.Rewrite) > 0 {
-			mirror[keyRewrite] = reg.Proxy.Rewrite
-		}
-		mirrors[string(reg.Name)] = mirror
 
 		if auth := registryAuth(reg.Authentication); len(auth) > 0 {
-			configs[reg.Proxy.URL] = dig.Mapping{keyAuth: auth}
+			configs[host] = dig.Mapping{keyAuth: auth}
 		}
 	}
 
-	result := dig.Mapping{keyMirrors: mirrors}
+	result := dig.Mapping{}
+	if len(mirrors) > 0 {
+		result[keyMirrors] = mirrors
+	}
 	if len(configs) > 0 {
 		result[keyConfigs] = configs
 	}
