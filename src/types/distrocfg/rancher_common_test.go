@@ -204,6 +204,10 @@ func TestRegistryAuthKeyNames(t *testing.T) {
 		t.Errorf("auth keys = %q/%q/%q/%q, want username/password/auth/identity_token",
 			keyUsername, keyPassword, keyAuth, keyIdentityToken)
 	}
+	if keyCAFile != "ca_file" || keyCertFile != "cert_file" || keyKeyFile != "key_file" || keyInsecureSkipVerify != "insecure_skip_verify" {
+		t.Errorf("tls keys = %q/%q/%q/%q, want ca_file/cert_file/key_file/insecure_skip_verify",
+			keyCAFile, keyCertFile, keyKeyFile, keyInsecureSkipVerify)
+	}
 }
 
 func TestRegistryAuth(t *testing.T) {
@@ -1090,4 +1094,191 @@ func TestBuildRegistriesConfigWithoutProxy(t *testing.T) {
 	}
 	require.Equal(t, want, buildRegistriesConfig(registries),
 		"a registry without a proxy gets credentials but no mirror")
+}
+
+func TestBuildRegistriesConfigWithTLS(t *testing.T) {
+	insecure := true
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "private.registry.io",
+			Proxy: &cluster.ZarfClusterRegistryProxy{
+				URL: "mirror-private.example.com",
+			},
+			TLS: &cluster.ZarfClusterRegistryTLS{
+				CAFile:             "/etc/ssl/certs/ca.pem",
+				CertFile:           "/etc/ssl/certs/client.pem",
+				KeyFile:            "/etc/ssl/certs/client-key.pem",
+				InsecureSkipVerify: insecure,
+			},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	want := dig.Mapping{
+		keyMirrors: dig.Mapping{
+			"private.registry.io": dig.Mapping{
+				keyEndpoint: []string{"https://mirror-private.example.com"},
+			},
+		},
+		keyConfigs: dig.Mapping{
+			"mirror-private.example.com": dig.Mapping{
+				keyTLSConfig: dig.Mapping{
+					keyCAFile:             "/etc/ssl/certs/ca.pem",
+					keyCertFile:           "/etc/ssl/certs/client.pem",
+					keyKeyFile:            "/etc/ssl/certs/client-key.pem",
+					keyInsecureSkipVerify: true,
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
+	}
+}
+
+const testCAPEM = `-----BEGIN CERTIFICATE-----
+dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
+-----END CERTIFICATE-----
+`
+
+// An inline CA is written to its own file, and ca_file points at that file rather than at the
+// certificate itself.
+func TestBuildRegistriesConfigInlineCA(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name:  "docker.io",
+			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com:5000"},
+			TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	configs, ok := got[keyConfigs].(dig.Mapping)
+	require.True(t, ok, "buildRegistriesConfig() has no configs entry: %+v", got)
+	entry, ok := configs["mirror.example.com:5000"].(dig.Mapping)
+	require.True(t, ok, "configs has no entry for the mirror host: %+v", configs)
+	require.Equal(t,
+		dig.Mapping{keyCAFile: "/etc/cargoship/tls/mirror.example.com_5000.crt"},
+		entry[keyTLSConfig],
+		"ca_file points at the file cargoship writes the inline CA to")
+
+	require.Equal(t,
+		map[string][]byte{"/etc/cargoship/tls/mirror.example.com_5000.crt": []byte(testCAPEM)},
+		registryCAFiles(registries))
+}
+
+// A CA path already on the host is used as given, and nothing extra is written.
+func TestBuildRegistriesConfigCAFile(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "nexus.example.com",
+			TLS:  &cluster.ZarfClusterRegistryTLS{CAFile: "/etc/pki/ca.crt"},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	configs, ok := got[keyConfigs].(dig.Mapping)
+	require.True(t, ok, "buildRegistriesConfig() has no configs entry: %+v", got)
+	entry, ok := configs["nexus.example.com"].(dig.Mapping)
+	require.True(t, ok, "configs has no entry for the registry: %+v", configs)
+	require.Equal(t, dig.Mapping{keyCAFile: "/etc/pki/ca.crt"}, entry[keyTLSConfig])
+	require.Empty(t, registryCAFiles(registries))
+}
+
+func TestRegistryCAPath(t *testing.T) {
+	cases := map[string]string{
+		"mirror.example.com":      "/etc/cargoship/tls/mirror.example.com.crt",
+		"mirror.example.com:5000": "/etc/cargoship/tls/mirror.example.com_5000.crt",
+		"*":                       "/etc/cargoship/tls/_.crt",
+		"../../etc/shadow":        "/etc/cargoship/tls/.._.._etc_shadow.crt",
+	}
+	for host, want := range cases {
+		if got := registryCAPath(host); got != want {
+			t.Errorf("registryCAPath(%q) = %q, want %q", host, got, want)
+		}
+	}
+}
+
+// TestConfigureEngineWritesRegistriesTLSGolden covers the tls half of the file the auth golden
+// does not: an inline CA that becomes a ca_file path, CA and client certificate paths already on
+// the host, and verification turned off. It diffs byte-for-byte against
+// testdata/registries-tls.yaml -- update that fixture if a deliberate change to the output shape
+// is made.
+func TestConfigureEngineWritesRegistriesTLSGolden(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name:  "docker.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com:5000"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+			},
+			{
+				Name: "nexus.example.com",
+				Authentication: cluster.ZarfClusterRegistryAuth{
+					Username: "robot",
+					Password: "secretpassword",
+				},
+				TLS: &cluster.ZarfClusterRegistryTLS{
+					CAFile:   "/etc/pki/ca-trust/source/anchors/nexus-ca.pem",
+					CertFile: "/etc/ssl/certs/nexus-client.pem",
+					KeyFile:  "/etc/ssl/private/nexus-client-key.pem",
+				},
+			},
+			{
+				Name:  "quay.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "http://mirror-quay.example.com"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{InsecureSkipVerify: true},
+			},
+		},
+	}
+	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
+	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+
+	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
+		t.Fatalf("ConfigureEngine() error = %v", err)
+	}
+
+	registriesPath := filepath.Join(filepath.Dir(d.Config), "registries.yaml")
+	got, written := cfg.files[registriesPath]
+	if !written {
+		t.Fatalf("expected file %s to be written, files = %+v", registriesPath, cfg.files)
+	}
+
+	want, err := os.ReadFile("testdata/registries-tls.yaml")
+	if err != nil {
+		t.Fatalf("failed to read golden file: %v", err)
+	}
+	if got != string(want) {
+		t.Errorf("registries.yaml = \n%s\nwant\n%s", got, want)
+	}
+
+	// The inline CA is written next to the file that references it, and the reference points at
+	// the path it was written to.
+	caPath := "/etc/cargoship/tls/mirror.example.com_5000.crt"
+	if cfg.files[caPath] != testCAPEM {
+		t.Errorf("%s = %q, want the inline CA certificate", caPath, cfg.files[caPath])
+	}
+}
+
+func TestDesiredFilesWritesInlineCA(t *testing.T) {
+	d := newTestRancher()
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name:  "docker.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+			},
+		},
+	}
+
+	files, err := d.DesiredFiles(cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	require.NoError(t, err)
+	require.Equal(t, []byte(testCAPEM), files["/etc/cargoship/tls/mirror.example.com.crt"])
+	require.Contains(t, files, filepath.Join(filepath.Dir(d.Config), "registries.yaml"))
 }

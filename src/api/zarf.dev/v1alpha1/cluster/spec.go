@@ -22,6 +22,7 @@
 package cluster
 
 import (
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/url"
@@ -176,15 +177,20 @@ type ZarfClusterRegistries struct {
 	// Authentication holds the credentials for the registry.
 	Authentication ZarfClusterRegistryAuth `json:"auth,omitempty"`
 	// Proxy holds the pull redirect settings for the registry. Omit it to configure credentials
-	// for the registry without redirecting pulls away from it.
+	// or TLS for the registry without redirecting pulls away from it.
 	Proxy *ZarfClusterRegistryProxy `json:"proxy,omitempty"`
+	// TLS configures TLS verification and certificates for the registry endpoint.
+	TLS *ZarfClusterRegistryTLS `json:"tls,omitempty"`
 }
 
 // Validate returns an error when the registry entry configures nothing. An entry has to carry a
-// proxy or credentials to have any effect, and one that carries neither is more likely a
-// mistyped document than an intentional no-op.
+// proxy, credentials, or TLS settings to have any effect, and one that carries none of them is
+// more likely a mistyped document than an intentional no-op.
 func (r ZarfClusterRegistries) Validate() error {
 	if err := validateRegistryName(r.Name); err != nil {
+		return err
+	}
+	if err := r.TLS.Validate(r.Name); err != nil {
 		return err
 	}
 	if err := r.Proxy.Validate(r.Name); err != nil {
@@ -193,13 +199,13 @@ func (r ZarfClusterRegistries) Validate() error {
 	if err := r.Authentication.Validate(r.Name); err != nil {
 		return err
 	}
-	if r.ProxyURL() != "" {
+	if r.ProxyURL() != "" || r.TLS != nil {
 		return nil
 	}
 	if r.Authentication.Username != "" || r.Authentication.Password != "" || r.Authentication.Token != "" {
 		return nil
 	}
-	return fmt.Errorf("registry %q: needs at least one of proxy.url or auth", r.Name)
+	return fmt.Errorf("registry %q: needs at least one of proxy.url, auth, or tls", r.Name)
 }
 
 // ProxyURL returns the address pulls for this registry are redirected to, or an empty string
@@ -230,10 +236,10 @@ func (r ZarfClusterRegistries) MirrorEndpoint() string {
 	}
 }
 
-// ConfigHost returns the host this registry's credentials belong to: the mirror when pulls are
-// redirected to one, and the registry itself when they are not. The proxy address may carry a
-// scheme and a path -- "https://mirror.example.com:5000/v2" -- but an engine matches its
-// per-registry configuration on the host alone, so the host is what comes back here.
+// ConfigHost returns the host this registry's credentials and TLS settings belong to: the mirror
+// when pulls are redirected to one, and the registry itself when they are not. The proxy address
+// may carry a scheme and a path -- "https://mirror.example.com:5000/v2" -- but an engine matches
+// its per-registry configuration on the host alone, so the host is what comes back here.
 func (r ZarfClusterRegistries) ConfigHost() string {
 	endpoint := r.MirrorEndpoint()
 	if endpoint == "" {
@@ -246,10 +252,20 @@ func (r ZarfClusterRegistries) ConfigHost() string {
 	return host
 }
 
-// sameRegistryConfig reports whether two registry entries would write identical credentials, in
-// which case both landing on the same host is harmless rather than a conflict.
+// sameRegistryConfig reports whether two registry entries would write identical credentials and
+// TLS settings, in which case both landing on the same host is harmless rather than a conflict.
 func sameRegistryConfig(a, b ZarfClusterRegistries) bool {
-	return a.Authentication == b.Authentication
+	if a.Authentication != b.Authentication {
+		return false
+	}
+	switch {
+	case a.TLS == nil && b.TLS == nil:
+		return true
+	case a.TLS == nil || b.TLS == nil:
+		return false
+	default:
+		return *a.TLS == *b.TLS
+	}
 }
 
 // ValidateRegistries validates every registry entry, and rejects a set of entries that would
@@ -257,10 +273,10 @@ func sameRegistryConfig(a, b ZarfClusterRegistries) bool {
 //
 // Two entries naming the same registry collide on the mirror they define for it, and two entries
 // resolving to the same host -- which several registries proxied through one mirror legitimately
-// do -- collide on the credentials written for that host. In both cases the last entry wins and
-// the earlier one silently does nothing, so the conflict is reported here instead. Entries that
-// resolve to the same host with identical settings are left alone: there is nothing to lose
-// between them.
+// do -- collide on the credentials and TLS settings written for that host. In both cases the
+// last entry wins and the earlier one silently does nothing, so the conflict is reported here
+// instead. Entries that resolve to the same host with identical settings are left alone: there
+// is nothing to lose between them.
 func ValidateRegistries(registries []ZarfClusterRegistries) error {
 	byName := map[ZarfClusterRegistrieName]struct{}{}
 	byHost := map[string]ZarfClusterRegistries{}
@@ -276,11 +292,64 @@ func ValidateRegistries(registries []ZarfClusterRegistries) error {
 		host := registry.ConfigHost()
 		previous, ok := byHost[host]
 		if ok && !sameRegistryConfig(previous, registry) {
-			return fmt.Errorf("registries %q and %q both configure host %q with different auth settings", previous.Name, registry.Name, host)
+			return fmt.Errorf("registries %q and %q both configure host %q with different auth or tls settings", previous.Name, registry.Name, host)
 		}
 		if !ok {
 			byHost[host] = registry
 		}
+	}
+	return nil
+}
+
+// ZarfClusterRegistryTLS holds the TLS connection settings for a container registry. The field
+// names are cargoship's own, in the camelCase the rest of this file uses; distrocfg maps them
+// onto whatever spelling each engine's registry configuration expects.
+type ZarfClusterRegistryTLS struct {
+	// CA is the PEM-encoded CA certificate used to verify the registry certificate. Cargoship
+	// writes it to a file on each host and points the engine at that path, so the certificate
+	// travels with the cluster configuration instead of having to be distributed separately.
+	// Use CAFile instead when the certificate is already on the hosts. It may also be given as
+	// an Ansible Vault-encrypted string, which cargoship decrypts at apply time.
+	CA string `json:"ca,omitempty"`
+	// CAFile is the path on the host to the CA bundle used to verify the registry certificate.
+	CAFile string `json:"caFile,omitempty"`
+	// CertFile is the path on the host to the client certificate used to authenticate to the registry.
+	CertFile string `json:"certFile,omitempty"`
+	// KeyFile is the path on the host to the client private key used to authenticate to the registry.
+	KeyFile string `json:"keyFile,omitempty"`
+	// InsecureSkipVerify disables TLS certificate verification.
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+}
+
+// VaultHeader marks a value in a cluster configuration as Ansible Vault ciphertext produced by
+// `ansible-vault encrypt_string`. Cargoship decrypts such a value at apply time, so anything
+// that inspects the plaintext has to wait until then.
+const VaultHeader = "$ANSIBLE_VAULT"
+
+// IsVaultEncrypted reports whether value is Ansible Vault ciphertext rather than a plain value.
+func IsVaultEncrypted(value string) bool {
+	return strings.HasPrefix(strings.TrimSpace(value), VaultHeader)
+}
+
+// Validate returns an error when the TLS settings cannot be applied. A nil receiver is valid:
+// TLS is optional. name identifies the registry in the error.
+func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error {
+	if t == nil {
+		return nil
+	}
+	if t.CA != "" && t.CAFile != "" {
+		return fmt.Errorf("registry %q: set tls.ca or tls.caFile, not both", name)
+	}
+	// A vault-encrypted CA is still ciphertext at this point. It is checked again once apply
+	// decrypts it, which is the first moment there is a certificate to look at.
+	if t.CA != "" && !IsVaultEncrypted(t.CA) {
+		block, _ := pem.Decode([]byte(t.CA))
+		if block == nil || block.Type != "CERTIFICATE" {
+			return fmt.Errorf("registry %q: tls.ca is not a PEM-encoded certificate", name)
+		}
+	}
+	if (t.CertFile == "") != (t.KeyFile == "") {
+		return fmt.Errorf("registry %q: tls.certFile and tls.keyFile go together", name)
 	}
 	return nil
 }
