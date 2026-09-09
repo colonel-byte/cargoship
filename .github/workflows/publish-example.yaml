@@ -12,6 +12,12 @@ name: Publish example package
 #
 # It runs on demand from the Actions tab, choosing the flavor, and automatically when a
 # release is published, where it takes the default flavor.
+#
+# It also runs on a pull request carrying the "publish-example" label, so the workflow can
+# be exercised on its own branch before it is merged. That run is label gated because each
+# run pushes gigabytes, and it publishes under a per-pull-request namespace so a test never
+# writes over the real reference. The trigger lists "labeled" explicitly: without it,
+# adding the label to an open pull request would not start a run until the next push.
 on:
   workflow_dispatch:
     inputs:
@@ -27,19 +33,43 @@ on:
   release:
     types:
       - published
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
 
 permissions:
   contents: read
   packages: write
 
 # Publishing pushes gigabytes to a registry under a tag derived from the package version,
-# so two runs of the same flavor must not race each other to the same reference.
+# so two runs of the same flavor must not race each other to the same reference. The ref is
+# in the group so that a pull request's test runs queue against themselves rather than
+# against a release publishing the same flavor.
 concurrency:
-  group: publish-example-${{ inputs.flavor || 'rke2-cilium' }}
+  group: publish-example-${{ inputs.flavor || 'rke2-cilium' }}-${{ github.ref }}
   cancel-in-progress: false
+
+env:
+  # A pull request run is a test of the workflow, so it publishes into its own namespace and
+  # leaves the reference a release writes alone. Delete the pr-N package when done with it.
+  REGISTRY: >-
+    ${{ github.event_name == 'pull_request'
+    && format('oci://ghcr.io/colonel-byte/cargoship-examples/pr-{0}', github.event.number)
+    || 'oci://ghcr.io/colonel-byte/cargoship-examples' }}
 
 jobs:
   publish-example:
+    # Label gated on pull requests: every run pulls and pushes gigabytes, which is not what
+    # an unrelated pull request should spend. Fork pull requests are excluded because they
+    # get neither the signing secrets nor a token that can write packages, so the run could
+    # only fail at the publish step.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (contains(github.event.pull_request.labels.*.name, 'publish-example') &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     # An example package pulls the distro's whole image list plus its RPMs or binary, and
     # then uploads all of it. Both halves are network bound and neither is quick.
@@ -120,8 +150,7 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: >-
-          cargoship publish "${{ steps.package.outputs.path }}"
-          oci://ghcr.io/colonel-byte/cargoship-examples
+          cargoship publish "${{ steps.package.outputs.path }}" "$REGISTRY"
           --signing-key env://COSIGN_PRIVATE_KEY
           --signing-key-pass "$COSIGN_PASSWORD"
           --confirm
@@ -135,5 +164,5 @@ jobs:
             echo "| --- | --- |"
             echo "| Definition | \`${{ steps.example.outputs.dir }}\` |"
             echo "| Package | \`$(basename "${{ steps.package.outputs.path }}")\` |"
-            echo "| Registry | \`oci://ghcr.io/colonel-byte/cargoship-examples\` |"
+            echo "| Registry | \`$REGISTRY\` |"
           } >> "$GITHUB_STEP_SUMMARY"
