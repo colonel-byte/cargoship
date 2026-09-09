@@ -104,6 +104,34 @@ func DecryptRegistryAuth(dis *cluster.ZarfCluster, password string) error {
 	return nil
 }
 
+// VerifyRegistryAuth reports whether every Ansible Vault-encrypted registry value in dis can be
+// decrypted with password, and whether what comes out is usable, leaving dis unchanged.
+//
+// The values are only needed once the engine configuration is written, which is several phases
+// into an apply -- long after cargoship has connected to every host, and on a sync, after it has
+// started draining nodes. A password that was never supplied, or one that does not match the
+// document, is worth finding out about before any of that happens rather than partway through it,
+// so a command calls this as soon as it has resolved the password.
+func VerifyRegistryAuth(dis *cluster.ZarfCluster, password string) error {
+	if dis == nil {
+		return nil
+	}
+
+	// Decryption writes the plaintext back over the ciphertext, so it runs against a copy here.
+	// Only the fields DecryptRegistryAuth writes need copying: the TLS block, because it holds
+	// the inline CA, and the registry structs holding the credentials themselves.
+	probe := &cluster.ZarfCluster{}
+	probe.Spec.Config.Registries = make([]cluster.ZarfClusterRegistries, len(dis.Spec.Config.Registries))
+	copy(probe.Spec.Config.Registries, dis.Spec.Config.Registries)
+	for i := range probe.Spec.Config.Registries {
+		if tls := probe.Spec.Config.Registries[i].TLS; tls != nil {
+			clone := *tls
+			probe.Spec.Config.Registries[i].TLS = &clone
+		}
+	}
+	return DecryptRegistryAuth(probe, password)
+}
+
 // EncryptValue encrypts value with the given Ansible Vault password, producing
 // a string suitable for use as a registry auth field (see DecryptRegistryAuth).
 func EncryptValue(value, password string) (string, error) {
