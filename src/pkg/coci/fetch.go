@@ -22,12 +22,14 @@ package coci
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/cfg"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 )
@@ -65,4 +67,42 @@ func (r *Remote) FetchImagesIndex(ctx context.Context) (*ocispec.Index, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+// SoleManifestDigest returns the digest of the only package manifest the index at the remote's
+// reference lists. A package published for one architecture holds a single manifest, so there is
+// nothing to choose between and the caller can pull it whatever platform the index records it
+// under. It errors when the index lists more than one distinct manifest, since picking between
+// those is what platform matching is for.
+func (r *Remote) SoleManifestDigest(ctx context.Context) (digest.Digest, error) {
+	ref := r.Repo().Reference.Reference
+
+	desc, rc, err := r.Repo().FetchReference(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close() //nolint:errcheck // read-only body, nothing to do with a close error
+
+	if desc.MediaType != ocispec.MediaTypeImageIndex {
+		return "", fmt.Errorf("%s is not an image index", ref)
+	}
+
+	b, err := content.ReadAll(rc, desc)
+	if err != nil {
+		return "", err
+	}
+	var index ocispec.Index
+	if err := json.Unmarshal(b, &index); err != nil {
+		return "", err
+	}
+
+	distinct := make(map[digest.Digest]struct{}, len(index.Manifests))
+	for _, manifest := range index.Manifests {
+		distinct[manifest.Digest] = struct{}{}
+	}
+	if len(distinct) != 1 {
+		return "", fmt.Errorf("index %s lists %d distinct manifests, none of which match the requested platform", ref, len(distinct))
+	}
+
+	return index.Manifests[0].Digest, nil
 }

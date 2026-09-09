@@ -28,6 +28,10 @@ import (
 // tests. Paths are relative to the repo root, which TestMain chdirs into.
 const minimalDistroDir = "src/test/e2e/noncluster/testdata/minimal"
 
+// multiArchDistroDir is the same definition targeting two architectures, for the tests that need
+// a package no single architecture can claim on its own.
+const multiArchDistroDir = "src/test/e2e/noncluster/testdata/minimal-multi"
+
 // cosignKeyPassword is the passphrase protecting the ephemeral signing keys handed out
 // by cosignKeyPair.
 const cosignKeyPassword = "e2e-password"

@@ -17,6 +17,7 @@ package noncluster
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/test"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,6 +38,7 @@ import (
 const (
 	minimalPackageName    = "e2e-minimal"
 	minimalPackageVersion = "0.0.1"
+	multiArchPackageName  = "e2e-minimal-multi"
 )
 
 // TestCargoshipPublishPullRoundTrip exercises the built cargoship binary's "publish" and
@@ -251,6 +254,112 @@ func TestCargoshipPullHTTP(t *testing.T) {
 		_, _, err := e2e.Cargoship(t, "pull", srcURL, "-o", t.TempDir())
 		require.Error(t, err)
 	})
+}
+
+// TestCargoshipPublishMultiArch covers a package covering more than one architecture. It holds one
+// set of blobs, so it publishes as one manifest, and the index tagged at the version is what makes
+// it resolvable from either architecture: the same manifest digest listed once per architecture.
+func TestCargoshipPublishMultiArch(t *testing.T) {
+	pkgPath := multiArchPackage(t)
+	require.Contains(t, filepath.Base(pkgPath), "multi", "a package covering several architectures takes multi in its name")
+
+	addr := test.SetupInMemoryRegistry(t)
+	dst := fmt.Sprintf("oci://%s/e2e-test", addr)
+	src := fmt.Sprintf("%s/%s:%s", dst, multiArchPackageName, minimalPackageVersion)
+
+	_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst, "--plain-http", "--confirm")
+	require.NoError(t, err)
+
+	index := fetchIndex(t, addr, "e2e-test/"+multiArchPackageName, minimalPackageVersion)
+	require.Len(t, index.Manifests, 2)
+	require.Equal(t, []string{"amd64", "arm64"}, indexArchitectures(index))
+	require.Equal(t, index.Manifests[0].Digest, index.Manifests[1].Digest,
+		"both architectures must resolve to the one manifest the package pushed")
+
+	wantBytes, err := os.ReadFile(pkgPath)
+	require.NoError(t, err)
+
+	for _, arch := range []string{"amd64", "arm64"} {
+		t.Run("pulls from "+arch, func(t *testing.T) {
+			pullDir := t.TempDir()
+			_, _, err := e2e.Cargoship(t, "pull", src, "--plain-http", "-o", pullDir, "-a", arch)
+			require.NoError(t, err)
+
+			gotBytes, err := os.ReadFile(requireSinglePackage(t, pullDir))
+			require.NoError(t, err)
+			require.Equal(t, wantBytes, gotBytes)
+		})
+	}
+}
+
+// TestCargoshipPullForeignArchitecture covers pulling a package built for one architecture onto a
+// host of another. There is only one manifest to choose from, so failing the platform match is no
+// reason to refuse: pulling a package is not running it, and a foreign package is still worth
+// fetching to inspect, sign, or push somewhere else.
+func TestCargoshipPullForeignArchitecture(t *testing.T) {
+	pkgPath := minimalPackage(t)
+	addr := test.SetupInMemoryRegistry(t)
+	dst, src := ociRefs(addr, "e2e-test")
+
+	_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst, "--plain-http", "--confirm")
+	require.NoError(t, err)
+
+	// testdata/minimal targets amd64 whatever the host running the suite is.
+	pullDir := t.TempDir()
+	_, _, err = e2e.Cargoship(t, "pull", src, "--plain-http", "-o", pullDir, "-a", "arm64")
+	require.NoError(t, err)
+
+	wantBytes, err := os.ReadFile(pkgPath)
+	require.NoError(t, err)
+	gotBytes, err := os.ReadFile(requireSinglePackage(t, pullDir))
+	require.NoError(t, err)
+	require.Equal(t, wantBytes, gotBytes)
+}
+
+// multiArchPackage builds testdata/minimal-multi and returns the path to the archive.
+func multiArchPackage(t *testing.T) string {
+	t.Helper()
+
+	outDir := t.TempDir()
+	_, _, err := e2e.Cargoship(t, "create", multiArchDistroDir, "-o", outDir)
+	require.NoError(t, err)
+
+	return requireSinglePackage(t, outDir)
+}
+
+// fetchIndex reads the image index the registry holds at repo:tag.
+func fetchIndex(t *testing.T, addr string, repo string, tag string) ocispec.Index {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet,
+		fmt.Sprintf("http://%s/v2/%s/manifests/%s", addr, repo, tag), nil)
+	require.NoError(t, err)
+	req.Header.Set("Accept", ocispec.MediaTypeImageIndex)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, ocispec.MediaTypeImageIndex, resp.Header.Get("Content-Type"))
+
+	var index ocispec.Index
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&index))
+
+	return index
+}
+
+// indexArchitectures lists the architectures an index records, in index order.
+func indexArchitectures(index ocispec.Index) []string {
+	arches := make([]string, 0, len(index.Manifests))
+	for _, manifest := range index.Manifests {
+		if manifest.Platform != nil {
+			arches = append(arches, manifest.Platform.Architecture)
+		}
+	}
+
+	return arches
 }
 
 // manifestDigest asks the registry for the manifest digest behind repo:tag and returns it
