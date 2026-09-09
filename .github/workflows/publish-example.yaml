@@ -1,0 +1,139 @@
+---
+name: Publish example package
+
+# Builds one of the distro definitions under example/ and publishes it to GHCR, using the
+# released cargoship CLI rather than a binary built here: the point is to exercise what a
+# user gets from a release against the definitions this repository ships.
+#
+# The version is not an input. Each flavor directory holds every build that is still
+# installable -- magefiles/gen-examples.go removes an example once its upstream artifacts
+# go away -- so "the latest example" is the highest version directory the flavor has, and
+# the workflow resolves it at run time instead of carrying a pin that would go stale.
+#
+# It runs on demand from the Actions tab, choosing the flavor, and automatically when a
+# release is published, where it takes the default flavor.
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: Example flavor to publish
+        type: choice
+        default: rke2-cilium
+        options:
+          - rke2-cilium
+          - rke2-canal
+          - k3s-flannel
+          - k3s-multi
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+  packages: write
+
+# Publishing pushes gigabytes to a registry under a tag derived from the package version,
+# so two runs of the same flavor must not race each other to the same reference.
+concurrency:
+  group: publish-example-${{ inputs.flavor || 'rke2-cilium' }}
+  cancel-in-progress: false
+
+jobs:
+  publish-example:
+    runs-on: ubuntu-latest
+    # An example package pulls the distro's whole image list plus its RPMs or binary, and
+    # then uploads all of it. Both halves are network bound and neither is quick.
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The package runs to gigabytes and exists twice on disk while it is built: once in
+      # the cache the images are pulled into, once in the tarball. Same removals as
+      # e2e-cluster.yaml, and none of what goes is used here.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Setup cargoship (latest release)
+        uses: colonel-byte/setup-cargoship@4da2adc72270551216e4c58daae04ea8e3391948 # v1.0.0
+
+      # Examples live at example/<flavor>/<minor>/<version>/distro.yaml, so the version
+      # directories are exactly the depth-two directories under the flavor. Version sort
+      # over the whole path orders the minor line first and the rke2rN/k3sN revision last,
+      # which is the order magefiles/examples.go treats as newest.
+      - name: Resolve the latest example
+        id: example
+        env:
+          FLAVOR: ${{ inputs.flavor || 'rke2-cilium' }}
+        run: |
+          set -euo pipefail
+          root="example/$FLAVOR"
+          if [ ! -d "$root" ]; then
+            echo "no such example flavor: $root" >&2
+            exit 1
+          fi
+
+          dir=$(find "$root" -mindepth 2 -maxdepth 2 -type d | sort -V | tail -n 1)
+          if [ -z "$dir" ] || [ ! -f "$dir/distro.yaml" ]; then
+            echo "no example with a distro.yaml under $root" >&2
+            exit 1
+          fi
+
+          echo "publishing $dir"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      # cargoship pushes through the docker credential store, so a docker login is what
+      # authorizes the publish. GITHUB_TOKEN plus packages: write is enough for GHCR under
+      # this repository's owner.
+      - name: Log in to GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Unsigned here on purpose: publish always re-signs, so signing twice would only
+      # spend the key material in an extra step. --confirm keeps it non-interactive.
+      - name: Build the package
+        run: cargoship create "${{ steps.example.outputs.dir }}" -o build --confirm
+
+      - name: Locate the package
+        id: package
+        run: |
+          set -euo pipefail
+          count=$(find build -maxdepth 1 -name '*.tar.zst' | wc -l)
+          if [ "$count" -ne 1 ]; then
+            echo "expected one package in build/, found $count" >&2
+            find build -maxdepth 1 -name '*.tar.zst' >&2 || true
+            exit 1
+          fi
+          pkg=$(find build -maxdepth 1 -name '*.tar.zst')
+          echo "path=$pkg" >> "$GITHUB_OUTPUT"
+
+      # The key never touches the disk: --signing-key takes a Cosign provider URI, and the
+      # env:// form reads the secret straight out of the environment. Same key material the
+      # release pipeline signs binaries with. See docs/guides/signing-packages.md.
+      - name: Publish the package
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: >-
+          cargoship publish "${{ steps.package.outputs.path }}"
+          oci://ghcr.io/colonel-byte/cargoship-examples
+          --signing-key env://COSIGN_PRIVATE_KEY
+          --signing-key-pass "$COSIGN_PASSWORD"
+          --confirm
+
+      - name: Summarize
+        run: |
+          {
+            echo "## Published example"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Definition | \`${{ steps.example.outputs.dir }}\` |"
+            echo "| Package | \`$(basename "${{ steps.package.outputs.path }}")\` |"
+            echo "| Registry | \`oci://ghcr.io/colonel-byte/cargoship-examples\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
