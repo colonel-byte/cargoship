@@ -16,6 +16,7 @@ package distrocfg
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -50,37 +51,78 @@ var (
 	}
 )
 
+// Keys used in the files this file writes, kept in one place so a rename cannot silently
+// change what an engine reads. Three files are involved: config.yaml (engine flags), the
+// manifests written under the data directory, and registries.yaml (mirrors and credentials,
+// documented at https://docs.rke2.io/install/private_registry). Names are sorted, so keys for
+// different files sit next to each other.
 const (
-	//keep-sorted start
-	keyAPIVersion    = "apiVersion"
-	keyAgentToken    = "agent-token-file"
-	keyAudit         = "audit-policy-file"
-	keyAuth          = "auth"
-	keyCIDRPod       = "cluster-cidr"
-	keyCIDRSVC       = "service-cidr"
-	keyConfigs       = "configs"
-	keyDataDir       = "data-dir"
-	keyETCD          = "etcd-arg"
-	keyEndpoint      = "endpoint"
-	keyIdentityToken = "identitytoken"
-	keyKind          = "kind"
-	keyKubeAPI       = "kube-apiserver-arg"
-	keyKubeConMan    = "kube-controller-manager-arg"
+	// keyAPIVersion is the apiVersion of a manifest cargoship writes: a HelmChartConfig, the
+	// audit policy, or the pod security admission configuration.
+	keyAPIVersion = "apiVersion"
+	// keyAgentToken points config.yaml at the file holding the token an agent joins with.
+	keyAgentToken = "agent-token-file"
+	// keyAudit points config.yaml at the audit policy file the apiserver loads.
+	keyAudit = "audit-policy-file"
+	// keyAuth names both the auth section of a configs entry and, inside it, the base64
+	// "username:password" credential. The engines spell both the same way.
+	keyAuth = "auth"
+	// keyCIDRPod is the config.yaml key holding the pod network range.
+	keyCIDRPod = "cluster-cidr"
+	// keyCIDRSVC is the config.yaml key holding the service network range.
+	keyCIDRSVC = "service-cidr"
+	// keyConfigs is the registries.yaml section holding auth per mirror, keyed by the mirror's
+	// host and port rather than by the registry name.
+	keyConfigs = "configs"
+	// keyDataDir is the config.yaml key holding the directory the engine keeps its state in.
+	keyDataDir = "data-dir"
+	// keyETCD passes flags through to etcd. Controllers only.
+	keyETCD = "etcd-arg"
+	// keyEndpoint is the mirrors key holding the addresses to pull from, in order.
+	keyEndpoint = "endpoint"
+	// keyIdentityToken is the auth key holding a token the registry issued, as opposed to a
+	// password. The engine exchanges it with the registry for a bearer token.
+	keyIdentityToken = "identity_token"
+	// keyKind is the kind of a manifest cargoship writes, alongside keyAPIVersion.
+	keyKind = "kind"
+	// keyKubeAPI passes flags through to the apiserver. Controllers only.
+	keyKubeAPI = "kube-apiserver-arg"
+	// keyKubeConMan passes flags through to the controller manager. Controllers only.
+	keyKubeConMan = "kube-controller-manager-arg"
+	// keyKubeScheduler passes flags through to the scheduler. Controllers only.
 	keyKubeScheduler = "kube-scheduler-arg"
-	keyMetadata      = "metadata"
-	keyMirrors       = "mirrors"
-	keyNodeLabel     = "node-label"
-	keyNodeName      = "node-name"
-	keyNodeTaint     = "node-taint"
-	keyPassword      = "password"
-	keyPodSec        = "pod-security-admission-config-file"
-	keyRewrite       = "rewrite"
-	keyServer        = "server"
-	keySpec          = "spec"
-	keyTLS           = "tls-san"
-	keyToken         = "token-file"
-	keyUsername      = "username"
-	//keep-sorted end
+	// keyMetadata is the metadata of a manifest cargoship writes: its name and namespace.
+	keyMetadata = "metadata"
+	// keyMirrors is the registries.yaml section mapping a registry name to where pulls for it
+	// go instead.
+	keyMirrors = "mirrors"
+	// keyNodeLabel is the config.yaml key holding the labels the node registers with.
+	keyNodeLabel = "node-label"
+	// keyNodeName is the config.yaml key holding the name the node registers under.
+	keyNodeName = "node-name"
+	// keyNodeTaint is the config.yaml key holding the taints the node registers with.
+	keyNodeTaint = "node-taint"
+	// keyPassword is the auth key holding a registry password. Written only when there is no
+	// username to pair it with, since a pair is encoded under keyAuth instead.
+	keyPassword = "password"
+	// keyPodSec points config.yaml at the pod security admission configuration file.
+	keyPodSec = "pod-security-admission-config-file"
+	// keyRewrite is the mirrors key mapping a regex to a replacement, applied to the image name
+	// before it is pulled from that mirror.
+	keyRewrite = "rewrite"
+	// keyServer is the config.yaml key holding the URL of the controller a joining node
+	// registers with.
+	keyServer = "server"
+	// keySpec is the spec of a manifest cargoship writes, holding the Helm values.
+	keySpec = "spec"
+	// keyTLS is the config.yaml key listing the extra names and addresses that go on the
+	// controller's TLS certificate.
+	keyTLS = "tls-san"
+	// keyTokenFile points config.yaml at the file holding the token a controller joins with.
+	keyTokenFile = "token-file"
+	// keyUsername is the auth key holding a registry username. Written only when there is no
+	// password to pair it with, since a pair is encoded under keyAuth instead.
+	keyUsername = "username"
 )
 
 // Both RKE2 and k3s share similar logic on how to configure the Kubernetes Engine.
@@ -114,7 +156,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 	if host.IsController() {
 		nodeConfig.DigMapping(config.EngineConfig)[keyTLS] = run.ControllerTLS
-		nodeConfig.DigMapping(config.EngineConfig)[keyToken] = d.JoinTokenPath()
+		nodeConfig.DigMapping(config.EngineConfig)[keyTokenFile] = d.JoinTokenPath()
 		nodeConfig.DigMapping(config.EngineConfig)[keyAgentToken] = d.JoinTokenPathAgent()
 
 		if !host.FileExist(d.JoinTokenPath()) {
@@ -160,7 +202,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			}
 		}
 	} else {
-		nodeConfig.DigMapping(config.EngineConfig)[keyToken] = d.JoinTokenPathAgent()
+		nodeConfig.DigMapping(config.EngineConfig)[keyTokenFile] = d.JoinTokenPathAgent()
 		for _, v := range controllerArgs {
 			delete(nodeConfig.DigMapping(config.EngineConfig), v)
 		}
@@ -246,7 +288,7 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 	files := map[string][]byte{}
 
 	if len(run.Registries) > 0 {
-		b, err := marshalYAML(buildRegistriesConfig(run.Registries))
+		b, err := marshalRegistriesYAML(buildRegistriesConfig(run.Registries))
 		if err != nil {
 			return nil, err
 		}
@@ -278,8 +320,14 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 	return files, nil
 }
 
-// buildRegistriesConfig builds the containerd hosts-config mapping (mirrors/configs) rke2 and
-// k3s read from registries.yaml, based on the registry mirrors configured in `.spec.config.registries`.
+// buildRegistriesConfig builds the registry mapping (mirrors/configs) rke2 and k3s read from
+// registries.yaml, based on the registry mirrors configured in `.spec.config.registries`.
+//
+// The key names are the ones wharfie -- the library both engines parse this file with --
+// unmarshals: auth, username, password, and identity_token under auth, as documented at
+// https://docs.rke2.io/install/private_registry. Unmarshalling is not strict, so a key spelled
+// any other way is dropped silently and the engine goes on to pull anonymously, which surfaces
+// far away from here as a 401.
 func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mapping {
 	mirrors := dig.Mapping{}
 	configs := dig.Mapping{}
@@ -293,17 +341,7 @@ func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mappi
 		}
 		mirrors[string(reg.Name)] = mirror
 
-		if reg.Authentication != (cluster.ZarfClusterRegistryAuth{}) {
-			auth := dig.Mapping{}
-			if reg.Authentication.Username != "" {
-				auth[keyUsername] = reg.Authentication.Username
-			}
-			if reg.Authentication.Password != "" {
-				auth[keyPassword] = reg.Authentication.Password
-			}
-			if reg.Authentication.Token != "" {
-				auth[keyIdentityToken] = reg.Authentication.Token
-			}
+		if auth := registryAuth(reg.Authentication); len(auth) > 0 {
 			configs[reg.Proxy.URL] = dig.Mapping{keyAuth: auth}
 		}
 	}
@@ -313,6 +351,38 @@ func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mappi
 		result[keyConfigs] = configs
 	}
 	return result
+}
+
+// registryAuth renders one registry's credentials for a configs entry.
+//
+// A username and password are encoded into a single credential -- base64 of "username:password"
+// -- and written under the "auth" key, which is what both engines document as "authentication
+// token of the private registry basic auth". Encoding here keeps one spelling of a credential on
+// the node rather than two, and keeps a password from sitting in registries.yaml as plain text.
+// Base64 is an encoding rather than encryption, so the file is still a secret either way.
+//
+// A token given directly is a different credential -- the registry issues it, and it is not a
+// base64 pair -- so it is written under identity_token, the key the engine exchanges for a
+// bearer token, instead of being passed off as basic auth.
+//
+// A username without a password (or the reverse) cannot be encoded into a pair, so it is written
+// under its own key and left for the engine to complete or reject.
+func registryAuth(a cluster.ZarfClusterRegistryAuth) dig.Mapping {
+	auth := dig.Mapping{}
+	switch {
+	case a.Token != "":
+		auth[keyIdentityToken] = a.Token
+	case a.Username != "" && a.Password != "":
+		auth[keyAuth] = base64.StdEncoding.EncodeToString([]byte(a.Username + ":" + a.Password))
+	default:
+		if a.Username != "" {
+			auth[keyUsername] = a.Username
+		}
+		if a.Password != "" {
+			auth[keyPassword] = a.Password
+		}
+	}
+	return auth
 }
 
 // GetClusterCIDR returns a string array with the all the known cluster cidr blocks

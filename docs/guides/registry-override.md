@@ -66,7 +66,20 @@ spec:
           pass: hunter2
 ```
 
+Cargoship does not copy `user` and `pass` into `registries.yaml` as they are given. It encodes the pair into a single credential -- base64 of `user:pass` -- and writes that as the engine's `auth` directive, so the password does not sit on every node as plain text. Base64 is an encoding, not encryption, so treat the resulting file as a secret regardless.
+
+Use `token` on its own when the registry issues one directly. It is a different credential from a password, not another way to spell one, so Cargoship writes it as the engine's `identity_token` directive rather than as basic auth. A `token` given alongside `user` and `pass` wins:
+
+```yaml
+        auth:
+          token: abc123
+```
+
 Writing `pass: hunter2` in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in `user`, `pass`, or `token` -- any field starting with `$ANSIBLE_VAULT` is decrypted automatically when the package is applied.
+
+### Keeping the Nodes in Step
+
+Cargoship 0.21 changed how `registries.yaml` is written: keys under `mirrors` and `configs` are quoted, and a `user` and `pass` pair is encoded into a single `auth` credential. Neither changes what the engine does, but both change the file, so the first `apply` after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.
 
 ### Encrypting the Credential
 
