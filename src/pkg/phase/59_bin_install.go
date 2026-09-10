@@ -28,7 +28,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -75,7 +74,7 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 			for _, f := range files {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
 				if f.OriginalTarget != f.Target {
-					err := zh.Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget), exec.Sudo(zh))
+					err := zh.Sudo().Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget))
 					if err != nil {
 						logger.From(ctx).Warn("failed to move", "error", err)
 					}
@@ -101,7 +100,7 @@ func (p *BINUploadFiles) Run(ctx context.Context) (err error) {
 			for _, f := range files {
 				logger.From(ctx).Debug("installing binary", "target", f.Target)
 				if f.OriginalTarget != f.Target {
-					err := zh.Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget), exec.Sudo(zh))
+					err := zh.Sudo().Exec(fmt.Sprintf("mv %s %s", f.Target, f.OriginalTarget))
 					if err != nil {
 						logger.From(ctx).Warn("failed to move", "error", err)
 					}

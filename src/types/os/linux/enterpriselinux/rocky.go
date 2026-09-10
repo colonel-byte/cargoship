@@ -23,22 +23,20 @@ package enterpriselinux
 import (
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/colonel-byte/cargoship/src/types/os/linux"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 // RockyLinux provides OS support for RockyLinux
 type RockyLinux struct {
 	linux.EnterpriseLinux
-	configurer.Linux
 }
 
 var _ configurer.Configurer = (*RockyLinux)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == linux.OSKindELRocky
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == linux.OSKindELRocky
 		},
 		func() any {
 			return &RockyLinux{}

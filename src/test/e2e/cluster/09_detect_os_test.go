@@ -71,9 +71,11 @@ func (s *phaseWalk) detectOS() {
 
 		s.Require().NotEmptyf(host.Configurer.Hostname(host), "%s: configurer resolved no hostname", host)
 
-		s.Require().Equalf(expectedOSID(host.Hostname), host.OSVersion.ID,
+		release, err := host.OS()
+		s.Require().NoErrorf(err, "%s: failed to read the OS release", host)
+		s.Require().Equalf(expectedOSID(host.Hostname), release.ID,
 			"%s: detected a different OS than the image the machine was built from", host)
-		families[host.OSVersion.ID]++
+		families[release.ID]++
 	}
 
 	s.Require().Lenf(families, len(uniqueOSIDs()),

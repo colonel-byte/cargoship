@@ -22,7 +22,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -41,7 +40,7 @@ type DeleteCommon struct {
 // Prepare the phase
 func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
+		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) > 0 {
 		p.leader = control[0]
@@ -54,14 +53,14 @@ func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *d
 func (p *DeleteCommon) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
 	})
 }
 
 func (p *DeleteCommon) deleteNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("deleting", "node", h)
 	err := retry.Timeout(ctx, 10*time.Second, func(_ context.Context) error {
-		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), deleteNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), deleteNode, h.Configurer.Hostname(h)))
 	})
 	if err != nil {
 		logger.From(ctx).Warn("got an error well deleting the", "node", h.Configurer.Hostname(h))

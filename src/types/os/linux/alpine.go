@@ -27,10 +27,7 @@ import (
 	"al.essio.dev/pkg/shellescape"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -45,16 +42,15 @@ type BaseLinux struct {
 
 // Alpine provides OS support for Alpine Linux
 type Alpine struct {
-	os.Linux
 	BaseLinux
 }
 
 var _ configurer.Configurer = (*Alpine)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == OSKindAlpine
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == OSKindAlpine
 		},
 		func() any {
 			return &Alpine{}
@@ -63,13 +59,13 @@ func init() {
 }
 
 // InstallPackage installs packages via apk
-func (l *Alpine) InstallPackage(h os.Host, pkg ...string) error {
-	return h.Execf("apk add --update %s", strings.Join(pkg, " "), exec.Sudo(h))
+func (l *Alpine) InstallPackage(h configurer.Host, pkg ...string) error {
+	return h.Sudo().Exec("apk add --update " + strings.Join(pkg, " "))
 }
 
 // UninstallPackage installs packages via apk
-func (l *Alpine) UninstallPackage(h os.Host, pkg ...string) error {
-	return h.Execf("apk del %s", strings.Join(pkg, " "), exec.Sudo(h))
+func (l *Alpine) UninstallPackage(h configurer.Host, pkg ...string) error {
+	return h.Sudo().Exec("apk del " + strings.Join(pkg, " "))
 }
 
 // ApplySysctl loads the settings in the file at path. Alpine's sysctl is the busybox applet,
@@ -77,11 +73,11 @@ func (l *Alpine) UninstallPackage(h os.Host, pkg ...string) error {
 // /etc/sysctl.d load order the base implementation relies on. Only the file cargoship wrote is
 // applied, so a setting another file overrides keeps whatever value that file gave it until
 // the host next boots and reads them all in order.
-func (l *Alpine) ApplySysctl(h os.Host, path string) error {
-	return h.Execf("sysctl -p %s", shellescape.Quote(path), exec.Sudo(h))
+func (l *Alpine) ApplySysctl(h configurer.Host, path string) error {
+	return h.Sudo().Exec("sysctl -p " + shellescape.Quote(path))
 }
 
 // Prepare will install required packages
-func (l *Alpine) Prepare(h os.Host) error {
+func (l *Alpine) Prepare(h configurer.Host) error {
 	return l.InstallPackage(h, "findutils", "coreutils")
 }

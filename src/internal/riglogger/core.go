@@ -12,63 +12,88 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package riglogger add settings that overrides the rig.Logger
+// Package riglogger bridges cargoship's context-scoped logger into rig v2's
+// slog-based logging. rig v2 removed the v0.x global rig.SetLogger(l)
+// setter -- logging is now configured per client via the rig.WithLogger
+// client option. Since rig clients are constructed deep inside the phase
+// pipeline (via ZarfHost.Connect, see
+// src/api/zarf.dev/v1alpha1/cluster/host.go) rather than at a single call
+// site with easy access to the request context, this package stores the
+// most recently configured logger so that ZarfHost.Connect can pass it to
+// rig.WithLogger without threading a logger argument through every phase.
 package riglogger
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"sync/atomic"
 
-	"github.com/k0sproject/rig/log"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-type rigLogger struct {
-	log.Logger
-	ctx context.Context
+// rigSlogHandler adapts cargoship's context-scoped logger to an slog.Handler
+// so rig v2's internal logging is routed through it.
+type rigSlogHandler struct {
+	ctx context.Context //nolint:containedctx // bound once at RigLogger time; rig's slog.Logger has no per-call context plumbing
 }
 
-// Debugf implements log.Logger.
-func (l rigLogger) Debugf(msg string, args ...any) {
-	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...), argAttrs(args))
+// Enabled implements slog.Handler.
+func (rigSlogHandler) Enabled(context.Context, slog.Level) bool {
+	return true
 }
 
-// Errorf implements log.Logger.
-func (l rigLogger) Errorf(msg string, args ...any) {
-	logger.From(l.ctx).Error(fmt.Sprintf(msg, args...), argAttrs(args))
-}
+// Handle implements slog.Handler.
+//
+// r's attrs are forwarded as-is rather than flattened into the message: structured sinks like
+// the --log-file JSON handler need the raw key-value pairs, not just a formatted string.
+func (h rigSlogHandler) Handle(ctx context.Context, r slog.Record) error {
+	l := logger.From(ctx)
+	msg := r.Message
 
-// Infof implements log.Logger.
-func (l rigLogger) Infof(msg string, args ...any) {
-	logger.From(l.ctx).Info(fmt.Sprintf(msg, args...), argAttrs(args))
-}
+	args := make([]any, 0, r.NumAttrs())
+	r.Attrs(func(a slog.Attr) bool {
+		args = append(args, a)
+		return true
+	})
 
-// Tracef implements log.Logger.
-func (l rigLogger) Tracef(msg string, args ...any) {
-	logger.From(l.ctx).Debug(fmt.Sprintf(msg, args...), argAttrs(args))
-}
-
-// Warnf implements log.Logger.
-func (l rigLogger) Warnf(msg string, args ...any) {
-	logger.From(l.ctx).Warn(fmt.Sprintf(msg, args...), argAttrs(args))
-}
-
-// argAttrs forwards rig's positional printf args as an "args" slog list so structured sinks
-// like the JSON file handler retain the raw values instead of only the single flattened message
-// string that fmt.Sprintf produces. When args is empty, a zero Attr is returned instead, which
-// handlers skip, so no empty "args" array is logged.
-func argAttrs(args []any) slog.Attr {
-	if len(args) == 0 {
-		return slog.Attr{}
-	}
-	return slog.Any("args", args)
-}
-
-// RigLogger overrides the rig.Log with our custom logger
-func RigLogger(ctx context.Context) error {
-	log.Log = rigLogger{
-		ctx: ctx,
+	switch {
+	case r.Level >= slog.LevelError:
+		l.Error(msg, args...)
+	case r.Level >= slog.LevelWarn:
+		l.Warn(msg, args...)
+	case r.Level >= slog.LevelInfo:
+		l.Info(msg, args...)
+	default:
+		l.Debug(msg, args...)
 	}
 	return nil
+}
+
+// WithAttrs implements slog.Handler.
+func (h rigSlogHandler) WithAttrs(_ []slog.Attr) slog.Handler {
+	return h
+}
+
+// WithGroup implements slog.Handler.
+func (h rigSlogHandler) WithGroup(_ string) slog.Handler {
+	return h
+}
+
+var current atomic.Pointer[slog.Logger]
+
+// RigLogger overrides rig's logger with our custom logger, bound to ctx. The
+// resulting logger is retrieved by ZarfHost.Connect (via Logger) and passed
+// to rig.WithLogger when the underlying rig client is constructed.
+func RigLogger(ctx context.Context) error {
+	current.Store(slog.New(rigSlogHandler{ctx: ctx}))
+	return nil
+}
+
+// Logger returns the currently configured rig logger. If RigLogger has not
+// been called yet, it returns a logger that discards everything.
+func Logger() *slog.Logger {
+	if l := current.Load(); l != nil {
+		return l
+	}
+	return slog.New(slog.DiscardHandler)
 }

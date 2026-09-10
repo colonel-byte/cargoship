@@ -42,7 +42,7 @@ type AdminCredentials struct {
 // -- rke2 and k3s each under their own data dir, upstream under /etc/kubernetes -- but each
 // one writes an admin kubeconfig with all three in it, so going through the kubeconfig keeps
 // this to one code path rather than a per-distro set of certificate paths.
-func adminCredentials(host cluster.ZarfHost, path string) (AdminCredentials, error) {
+func adminCredentials(host *cluster.ZarfHost, path string) (AdminCredentials, error) {
 	raw, err := host.ReadFile(path)
 	if err != nil {
 		return AdminCredentials{}, fmt.Errorf("failed to read admin kubeconfig %s: %w", path, err)
@@ -96,7 +96,7 @@ func adminCredentials(host cluster.ZarfHost, path string) (AdminCredentials, err
 
 // resolvePEM returns data when the kubeconfig embedded it, and otherwise reads the file
 // the kubeconfig referenced off the host.
-func resolvePEM(host cluster.ZarfHost, data []byte, path string) ([]byte, error) {
+func resolvePEM(host *cluster.ZarfHost, data []byte, path string) ([]byte, error) {
 	if len(data) > 0 {
 		return data, nil
 	}

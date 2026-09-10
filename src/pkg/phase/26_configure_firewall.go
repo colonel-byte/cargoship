@@ -62,7 +62,7 @@ func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 	p.backends = make(map[string]firewall.Backend)
 
 	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		selection := firewall.Select(h)
+		selection := firewall.Select(ctx, h)
 		if selection.Backend == nil {
 			if selection.Skipped != nil {
 				logger.From(ctx).Info("node's firewall is installed but not running, leaving it alone",

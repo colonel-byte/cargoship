@@ -37,7 +37,7 @@ func (s *phaseWalk) configureFirewall() {
 
 	backends := make(map[string]firewall.Backend, len(s.harness.hosts()))
 	for _, host := range s.harness.hosts() {
-		if b := firewall.Select(host).Backend; b != nil {
+		if b := firewall.Select(s.ctx, host).Backend; b != nil {
 			backends[host.String()] = b
 		}
 	}

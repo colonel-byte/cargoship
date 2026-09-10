@@ -25,9 +25,7 @@ import (
 	"strings"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -37,16 +35,15 @@ const (
 
 // CoreOS provides OS support for ostree based Fedora & RHEL systems
 type CoreOS struct {
-	os.Linux
 	BaseLinux
 }
 
 var _ configurer.Configurer = (*CoreOS)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return strings.Contains(os.Name, OSKindCoreOS) && (os.ID == OSKindELFedora || os.ID == OSKindELRedHat)
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return strings.Contains(r.Name, OSKindCoreOS) && (r.ID == OSKindELFedora || r.ID == OSKindELRedHat)
 		},
 		func() any {
 			return &CoreOS{}
@@ -55,11 +52,11 @@ func init() {
 }
 
 // InstallPackage installs packages but will throw an error
-func (l *CoreOS) InstallPackage(_ os.Host, _ ...string) error {
+func (l *CoreOS) InstallPackage(_ configurer.Host, _ ...string) error {
 	return errors.New("CoreOS does not support installing packages manually")
 }
 
 // UninstallPackage uninstalls packages but will throw an error
-func (l *CoreOS) UninstallPackage(_ os.Host, _ ...string) error {
+func (l *CoreOS) UninstallPackage(_ configurer.Host, _ ...string) error {
 	return errors.New("CoreOS does not support removing packages manually")
 }

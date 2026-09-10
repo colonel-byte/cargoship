@@ -25,11 +25,7 @@ import (
 	"strings"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/linux"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -39,16 +35,15 @@ const (
 
 // Debian provides OS support for Debian systems
 type Debian struct {
-	linux.Debian
 	configurer.Linux
 }
 
 var _ configurer.Configurer = (*Debian)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == OSKindDebian
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == OSKindDebian
 		},
 		func() any {
 			return &Debian{}
@@ -56,9 +51,21 @@ func init() {
 	)
 }
 
+// InstallPackage installs packages via apt-get
+func (c Debian) InstallPackage(h configurer.Host, s ...string) error {
+	sudo := h.Sudo()
+	if err := sudo.Exec("apt-get update"); err != nil {
+		return fmt.Errorf("failed to update apt cache: %w", err)
+	}
+	if err := sudo.Exec("DEBIAN_FRONTEND=noninteractive apt-get install -y -q " + strings.Join(s, " ")); err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
 // UninstallPackage uninstalls packages via apt-get
-func (c Debian) UninstallPackage(h os.Host, s ...string) error {
-	if err := h.Execf("DEBIAN_FRONTEND=noninteractive apt-get remove -y -q %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+func (c Debian) UninstallPackage(h configurer.Host, s ...string) error {
+	if err := h.Sudo().Exec("DEBIAN_FRONTEND=noninteractive apt-get remove -y -q " + strings.Join(s, " ")); err != nil {
 		return fmt.Errorf("failed to remove packages: %w", err)
 	}
 	return nil

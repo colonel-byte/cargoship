@@ -37,7 +37,7 @@ type PrepareSelinux struct {
 // Prepare the phase
 func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.selinuxHosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.SELinuxEnabled(h)
+		return selinuxEnabled(h)
 	})
 
 	logger.From(ctx).Info("number of systems with selinux", "hosts", len(p.selinuxHosts))
@@ -73,4 +73,12 @@ func (p *PrepareSelinux) prepareHost(ctx context.Context, h *cluster.ZarfHost) e
 		return err
 	}
 	return nil
+}
+
+// selinuxEnabled reports whether SELinux is in enforcing mode on h. There is
+// no remotefs.OS equivalent for this check (it is not a generic OS/filesystem
+// operation), so it is implemented as a direct privileged shell command,
+// matching the behavior of the v0.x Configurer.SELinuxEnabled implementation.
+func selinuxEnabled(h *cluster.ZarfHost) bool {
+	return h.Sudo().Exec("getenforce | grep -iq enforcing") == nil
 }

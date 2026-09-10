@@ -22,8 +22,7 @@ package linux
 
 import (
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -41,9 +40,9 @@ type OpenSUSE struct {
 var _ configurer.Configurer = (*OpenSUSE)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == OSKindOpenSUSE || os.ID == OSKindOpenSUSEMicro
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == OSKindOpenSUSE || r.ID == OSKindOpenSUSEMicro
 		},
 		func() any {
 			return &OpenSUSE{}

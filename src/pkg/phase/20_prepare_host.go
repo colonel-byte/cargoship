@@ -32,8 +32,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os"
+	configurer "github.com/colonel-byte/cargoship/src/types/os"
+	rig "github.com/k0sproject/rig/v2"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -70,7 +70,7 @@ func (p *PrepareHosts) Run(ctx context.Context) error {
 }
 
 type prepare interface {
-	Prepare(os.Host) error
+	Prepare(configurer.Host) error
 }
 
 func (p *PrepareHosts) prepareHost(ctx context.Context, h *cluster.ZarfHost) error {
@@ -111,7 +111,7 @@ func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHos
 	if err := h.Configurer.UpdateEnvironment(h, env); err != nil {
 		return err
 	}
-	if h.Connection.Protocol() != "SSH" {
+	if h.ProtocolName() != "SSH" {
 		return nil
 	}
 
@@ -123,9 +123,9 @@ func (p *PrepareHosts) updateEnvironment(ctx context.Context, h *cluster.ZarfHos
 	// server configuration (sshd only accepts LC_* variables by default).
 	logger.From(ctx).Info("reconnecting to apply new environment", "host", h)
 	h.Disconnect()
-	return retry.Timeout(ctx, 10*time.Minute, func(_ context.Context) error {
-		if err := h.Connect(); err != nil {
-			if errors.Is(err, rig.ErrCantConnect) || strings.Contains(err.Error(), "host key mismatch") {
+	return retry.Timeout(ctx, 10*time.Minute, func(ctx context.Context) error {
+		if err := h.Connect(ctx); err != nil {
+			if errors.Is(err, rig.ErrNonRetryable) || strings.Contains(err.Error(), "host key mismatch") {
 				return errors.Join(retry.ErrAbort, err)
 			}
 			return fmt.Errorf("failed to reconnect to %s: %w", h, err)

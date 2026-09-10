@@ -151,7 +151,7 @@ func marshalYAML(config dig.Mapping) ([]byte, error) {
 	return []byte("---\n" + buf.String()), nil
 }
 
-func (r *Common) writeYAML(ctx context.Context, host cluster.ZarfHost, config dig.Mapping, path string) error {
+func (r *Common) writeYAML(ctx context.Context, host *cluster.ZarfHost, config dig.Mapping, path string) error {
 	out, err := marshalYAML(config)
 	if err != nil {
 		logger.From(ctx).Warn("failed to marshal yaml", "host", host)

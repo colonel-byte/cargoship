@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/k0sproject/rig/exec"
 )
 
 const (
@@ -73,21 +72,21 @@ func (f *Firewalld) Name() string {
 }
 
 // Detect is true when firewalld is running on h.
-func (f *Firewalld) Detect(h *cluster.ZarfHost) bool {
+func (f *Firewalld) Detect(ctx context.Context, h *cluster.ZarfHost) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
 
-	return h.Configurer.ServiceIsRunning(h, FirewalldService)
+	return h.ServiceIsRunning(ctx, FirewalldService)
 }
 
 // Installed is true when firewalld is present on h, running or not.
-func (f *Firewalld) Installed(h *cluster.ZarfHost) bool {
+func (f *Firewalld) Installed(_ context.Context, h *cluster.ZarfHost) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
 
-	return h.Configurer.CommandExist(h, "firewall-cmd")
+	return h.FS().CommandExist("firewall-cmd")
 }
 
 // Apply writes the ipsets, service, and policy files for p, enables them, and restarts
@@ -106,7 +105,7 @@ func (f *Firewalld) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) erro
 		return err
 	}
 
-	return h.Configurer.RestartService(h, FirewalldService)
+	return h.RestartService(ctx, FirewalldService)
 }
 
 // applyClusterTrust trusts every node address and cluster CIDR.
@@ -143,7 +142,7 @@ func (f *Firewalld) applyClusterTrust(h *cluster.ZarfHost, p Plan) error {
 		}
 
 		cmd := fmt.Sprintf("firewall-cmd --permanent --zone=trusted --add-source=ipset:%s", set.name)
-		if err := h.Exec(cmd, exec.Sudo(h)); err != nil {
+		if err := h.Sudo().Exec(cmd); err != nil {
 			return err
 		}
 	}
@@ -172,7 +171,7 @@ func (f *Firewalld) applyPorts(h *cluster.ZarfHost, p Plan) error {
 
 	cmd := fmt.Sprintf("firewall-cmd --permanent --zone=public --add-service=%s", firewalldPortService)
 
-	return h.Exec(cmd, exec.Sudo(h))
+	return h.Sudo().Exec(cmd)
 }
 
 // applyPolicies writes the legacy `.host.policy` files.
@@ -208,7 +207,7 @@ func (f *Firewalld) applyRules(_ context.Context, h *cluster.ZarfHost, p Plan) e
 		if err != nil {
 			return err
 		}
-		if err := h.Exec(cmd, exec.Sudo(h)); err != nil {
+		if err := h.Sudo().Exec(cmd); err != nil {
 			return err
 		}
 	}

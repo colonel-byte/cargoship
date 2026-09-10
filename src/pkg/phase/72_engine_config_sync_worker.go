@@ -44,7 +44,7 @@ func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfClu
 	if err := p.loadDesiredConfig(c, *d); err != nil {
 		return err
 	}
-	if err := p.prepareLeader(); err != nil {
+	if err := p.prepareLeader(ctx); err != nil {
 		return err
 	}
 

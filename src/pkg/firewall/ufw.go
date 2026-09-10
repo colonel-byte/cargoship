@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -63,12 +62,12 @@ func (u *UFW) Name() string {
 }
 
 // Detect is true when ufw is installed on h and reports itself active.
-func (u *UFW) Detect(h *cluster.ZarfHost) bool {
-	if h == nil || h.Configurer == nil || !h.Configurer.CommandExist(h, UFWService) {
+func (u *UFW) Detect(_ context.Context, h *cluster.ZarfHost) bool {
+	if h == nil || h.Configurer == nil || !h.FS().CommandExist(UFWService) {
 		return false
 	}
 
-	out, err := h.ExecOutput("ufw status", exec.Sudo(h))
+	out, err := h.Sudo().ExecOutput("ufw status")
 	if err != nil {
 		return false
 	}
@@ -77,12 +76,12 @@ func (u *UFW) Detect(h *cluster.ZarfHost) bool {
 }
 
 // Installed is true when ufw is present on h, active or not.
-func (u *UFW) Installed(h *cluster.ZarfHost) bool {
+func (u *UFW) Installed(_ context.Context, h *cluster.ZarfHost) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
 
-	return h.Configurer.CommandExist(h, UFWService)
+	return h.FS().CommandExist(UFWService)
 }
 
 // Apply reconciles the node's ufw rules with p and reloads ufw. Rules cargoship applied on an
@@ -106,7 +105,7 @@ func (u *UFW) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {
 	}
 
 	for _, rule := range desired {
-		if err := h.Exec("ufw "+rule, exec.Sudo(h)); err != nil {
+		if err := h.Sudo().Exec("ufw " + rule); err != nil {
 			return fmt.Errorf("failed to apply ufw rule %q: %w", rule, err)
 		}
 	}
@@ -115,7 +114,7 @@ func (u *UFW) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error {
 		return err
 	}
 
-	return h.Exec("ufw --force reload", exec.Sudo(h))
+	return h.Sudo().Exec("ufw --force reload")
 }
 
 // applyProfile writes the application profile holding the inventory ports, and removes it
@@ -134,7 +133,7 @@ func (u *UFW) applyProfile(h *cluster.ZarfHost, p Plan) error {
 	}
 
 	// ufw caches profiles, so an edited profile only reaches existing rules after an update.
-	return h.Exec("ufw app update "+ufwProfileName, exec.Sudo(h))
+	return h.Sudo().Exec("ufw app update " + ufwProfileName)
 }
 
 // readState returns the rules cargoship applied to h on its last run. A node cargoship has
@@ -164,7 +163,7 @@ func (u *UFW) readState(ctx context.Context, h *cluster.ZarfHost) []string {
 
 // writeState records the rules cargoship applied, for the next run to reconcile against.
 func (u *UFW) writeState(h *cluster.ZarfHost, rules []string) error {
-	if err := h.Configurer.MkDir(h, ufwStateDir, exec.Sudo(h)); err != nil {
+	if err := h.Sudo().FS().MkdirAll(ufwStateDir, 0o755); err != nil {
 		return err
 	}
 
@@ -175,7 +174,7 @@ func (u *UFW) writeState(h *cluster.ZarfHost, rules []string) error {
 // logged rather than returned: the rule may already be gone, and that is not a reason to fail
 // the phase.
 func (u *UFW) deleteRule(ctx context.Context, h *cluster.ZarfHost, rule string) {
-	if err := h.Exec("ufw --force delete "+stripComment(rule), exec.Sudo(h)); err != nil {
+	if err := h.Sudo().Exec("ufw --force delete " + stripComment(rule)); err != nil {
 		logger.From(ctx).Warn("could not delete stale ufw rule",
 			"host", h.String(), "rule", rule, "error", err)
 	}

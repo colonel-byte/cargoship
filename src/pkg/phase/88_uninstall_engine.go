@@ -31,7 +31,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -93,11 +92,11 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 
 	for _, pkg := range pkgsType {
 		folder := filepath.Join(p.Distro.DataDirPath(), pkg)
-		if h.Configurer.FileExist(h, folder) {
-			err := fs.WalkDir(h.SudoFsys(), folder, func(_ string, d fs.DirEntry, _ error) error {
+		if h.FileExist(folder) {
+			err := fs.WalkDir(h.Sudo().FS(), folder, func(_ string, d fs.DirEntry, _ error) error {
 				if !d.IsDir() && rpmPre.MatchString(d.Name()) {
 					cmd := fmt.Sprintf(`rpm -qp %s/%s --queryformat "%%{NAME}"`, folder, d.Name())
-					output, err := h.ExecOutput(cmd, exec.Sudo(h))
+					output, err := h.Sudo().ExecOutput(cmd)
 					if err != nil {
 						logger.From(ctx).Warn("walking", "error", err, "output", output)
 					}
@@ -105,7 +104,7 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 				}
 				if !d.IsDir() && aptPre.MatchString(d.Name()) {
 					cmd := fmt.Sprintf(`dpkg-deb --show --showformat="${Package}" %s/%s`, folder, d.Name())
-					output, err := h.ExecOutput(cmd, exec.Sudo(h))
+					output, err := h.Sudo().ExecOutput(cmd)
 					if err != nil {
 						logger.From(ctx).Warn("walking", "error", err, "output", output)
 					}
@@ -129,10 +128,10 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 	}
 
 	for _, path := range p.Distro.CleanupPaths() {
-		if !h.Configurer.FileExist(h, path) {
+		if !h.FileExist(path) {
 			continue
 		}
-		if err := h.Execf(fmt.Sprintf("rm -rf %s", path), exec.Sudo(h)); err != nil {
+		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", path)); err != nil {
 			logger.From(ctx).Warn("failed to remove engine path", "path", path, "error", err)
 		}
 	}

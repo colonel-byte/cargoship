@@ -48,7 +48,7 @@ func (p *Disconnect) DryRun() error {
 		if len(h.Metadata.BinaryTempFile) > 0 {
 			for _, f := range h.Metadata.BinaryTempFile {
 				if h.FileExist(f) {
-					err := h.Configurer.DeleteFile(h, f)
+					err := h.DeleteFile(f)
 					if err != nil {
 						logger.From(ctx).Debug("failed to delete", "file", f, "host", h)
 					}
