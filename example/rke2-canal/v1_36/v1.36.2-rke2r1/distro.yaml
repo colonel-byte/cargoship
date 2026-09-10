@@ -216,6 +216,6 @@ spec:
         - docker.io/rancher/rke2-cloud-provider:v1.36.1-0.20260508014929-7bbbf7c9b258-build20260515
         - docker.io/rancher/hardened-snapshot-controller:v8.6.0-build20260608
         - docker.io/rancher/hardened-traefik:v3.7.4-build20260608
-        # canal cni images
+        # canal cni and add-on images
         - docker.io/rancher/hardened-calico:v3.32.0-build20260604
         - docker.io/rancher/hardened-flannel:v0.28.5-build20260604

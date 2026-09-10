@@ -141,6 +141,10 @@ spec:
                 - operator: Exists
             ui:
               enabled: true
+              frontend:
+                server:
+                  ipv6:
+                    enabled: false
               tolerations:
                 - operator: Exists
     os:
@@ -257,7 +261,7 @@ spec:
         - docker.io/rancher/nginx-ingress-controller:v1.14.3-hardened1
         - docker.io/rancher/rke2-cloud-provider:v1.35.0-rc1.0.20251218152248-a6c6cd15c0c4-build20251219
         - docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260108
-        # cilium cni images
+        # cilium cni and add-on images
         - docker.io/rancher/mirrored-cilium-certgen:v0.3.1
         - docker.io/rancher/mirrored-cilium-cilium:v1.18.6
         - docker.io/rancher/mirrored-cilium-cilium-envoy:v1.35.9-1767794330-db497dd19e346b39d81d7b5c0dedf6c812bcc5c9

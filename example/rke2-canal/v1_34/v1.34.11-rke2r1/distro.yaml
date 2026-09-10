@@ -217,6 +217,6 @@ spec:
         - docker.io/rancher/nginx-ingress-controller:v1.14.5-hardened2
         - docker.io/rancher/rke2-cloud-provider:v1.34.11-0.20260817193950-75826e8afefa-build20260820
         - docker.io/rancher/hardened-snapshot-controller:v8.6.0-build20260819
-        # canal cni images
+        # canal cni and add-on images
         - docker.io/rancher/hardened-calico:v3.32.1-build20260827
         - docker.io/rancher/hardened-flannel:v0.28.9-build20260819

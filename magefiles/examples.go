@@ -63,8 +63,10 @@ type exampleFlavor struct {
 	cni               string   // cilium -- what the template configures
 	name              string   // multi -- what follows the distro in metadata.name; the CNI when empty
 	dir               string   // example/rke2-cilium -- where its examples are written
-	imageList         string   // rke2-images-cilium.linux-amd64.txt -- its CNI's airgap manifest, when it has one of its own
+	imageLists        []string // rke2-images-cilium.linux-amd64.txt -- the airgap manifests it adds to the core one
 	replacesKubeProxy bool     // whether the CNI takes over from kube-proxy
+	encryption        bool     // whether the CNI encrypts pod-to-pod traffic
+	cloudProvider     string   // rancher-vsphere -- the bundled cloud provider it selects; none when empty
 	arches            []string // the architectures its examples target; amd64 alone when empty
 	minors            []string // v1_36 -- the minor lines it renders, all of them when empty
 }
@@ -152,21 +154,47 @@ var exampleDistros = []exampleDistroSpec{
 			{
 				cni:               "cilium",
 				dir:               "example/rke2-cilium",
-				imageList:         "rke2-images-cilium.linux-amd64.txt",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
 				replacesKubeProxy: true,
 			},
 			{
-				cni:       "canal",
-				dir:       "example/rke2-canal",
-				imageList: "rke2-images-canal.linux-amd64.txt",
+				cni:               "cilium",
+				name:              "multi-cni-cilium",
+				dir:               "example/rke2-multi-cni-cilium",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
+				arches:            exampleMultiArches,
+				minors:            exampleMultiMinors,
+				replacesKubeProxy: true,
 			},
 			{
-				cni:       "canal",
-				name:      "multi",
-				dir:       "example/rke2-multi",
-				imageList: "rke2-images-canal.linux-amd64.txt",
-				arches:    exampleMultiArches,
-				minors:    exampleMultiMinors,
+				cni:               "cilium",
+				name:              "cilium-vsphere",
+				dir:               "example/rke2-cilium-vsphere",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt", "rke2-images-vsphere.linux-amd64.txt"},
+				replacesKubeProxy: true,
+				cloudProvider:     "rancher-vsphere",
+			},
+			{
+				cni:               "cilium",
+				name:              "cilium-wireguard",
+				dir:               "example/rke2-cilium-wireguard",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
+				minors:            exampleMultiMinors,
+				replacesKubeProxy: true,
+				encryption:        true,
+			},
+			{
+				cni:        "canal",
+				dir:        "example/rke2-canal",
+				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
+			},
+			{
+				cni:        "canal",
+				name:       "multi-cni-canal",
+				dir:        "example/rke2-multi-cni-canal",
+				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
+				arches:     exampleMultiArches,
+				minors:     exampleMultiMinors,
 			},
 		},
 		derive: func(v *exampleVersion) {
@@ -227,8 +255,10 @@ type exampleVersion struct {
 	CNI               string   // cilium
 	Name              string   // flannel -- what the example's metadata.name ends in
 	ReplacesKubeProxy bool     // whether to set disable-kube-proxy
+	Encryption        bool     // whether to turn on the CNI's transparent encryption
+	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
 	CoreImages        []string // the release's own image manifest
-	CNIImages         []string // the flavor's CNI manifest, when it has one
+	CNIImages         []string // the flavor's own manifests, concatenated, when it has any
 
 	// Arches is every architecture the example targets, and the files each of them installs.
 	// MultiArch says whether there is more than one, which is what decides both how the
@@ -472,6 +502,8 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 		CNI:               f.cni,
 		Name:              f.flavorName(),
 		ReplacesKubeProxy: f.replacesKubeProxy,
+		Encryption:        f.encryption,
+		CloudProvider:     f.cloudProvider,
 	}
 	for _, arch := range f.architectures() {
 		rpmArch, ok := exampleRPMArches[arch]
@@ -495,11 +527,12 @@ func (v *exampleVersion) fetchImages(repoURL string, spec exampleDistroSpec, f e
 	if v.CoreImages, err = fetchImageList(repoURL, v.TagURL, spec.coreImages); err != nil {
 		return err
 	}
-	if f.imageList == "" {
-		return nil
-	}
-	if v.CNIImages, err = fetchImageList(repoURL, v.TagURL, f.imageList); err != nil {
-		return err
+	for _, asset := range f.imageLists {
+		images, err := fetchImageList(repoURL, v.TagURL, asset)
+		if err != nil {
+			return err
+		}
+		v.CNIImages = append(v.CNIImages, images...)
 	}
 	return nil
 }

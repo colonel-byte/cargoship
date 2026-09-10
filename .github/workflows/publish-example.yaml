@@ -27,7 +27,11 @@ on:
         default: rke2-cilium
         options:
           - rke2-cilium
+          - rke2-cilium-vsphere
+          - rke2-cilium-wireguard
+          - rke2-multi-cni-cilium
           - rke2-canal
+          - rke2-multi-cni-canal
           - k3s-flannel
           - k3s-multi
   release:

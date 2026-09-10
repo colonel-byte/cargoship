@@ -19,14 +19,12 @@
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfDistro
 metadata:
-  name: rancher-rke2-multi
-  version: 1.36.4-rke2r1
-  architectures:
-    - amd64
-    - arm64
+  name: rancher-rke2-cilium-vsphere
+  version: 1.35.8-rke2r1
+  architecture: amd64
 spec:
   type: rke2
-  version: 1.36.4-rke2r1
+  version: 1.35.8-rke2r1
   actions:
     onCreate:
       before:
@@ -34,10 +32,8 @@ spec:
           cmd: |-
             rm -rf   target
             mkdir -p target
-            echo https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
-            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
-            echo https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
-            curl -L -o ./target/rke2.linux-arm64.tar.gz https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
+            echo https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz
+            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.35.8%2Brke2r1/rke2.linux-amd64.tar.gz
       after:
         - description: clean up after
           cmd: |-
@@ -48,8 +44,12 @@ spec:
         cluster-cidr: 10.42.0.0/16
         cluster-domain: cluster.local
         cni:
-          - canal
+          - cilium
         disable-cloud-controller: true
+        # rke2 rewrites this to "external", forces disable-cloud-controller and deploys the
+        # provider's bundled CPI and CSI charts. Every other bundled provider is disabled.
+        cloud-provider-name: rancher-vsphere
+        disable-kube-proxy: true
         disable:
           - rke2-ingress-nginx
         embedded-registry: false
@@ -107,33 +107,108 @@ spec:
                   - kube-system
                   - rook-ceph
                   - zarf
+      manifest:
+        rke2-cilium: |-
+          kubeProxyReplacement: true
+          k8sServiceHost: "localhost"
+          k8sServicePort: 6443
+          l2announcements:
+            enabled: true
+          encryption:
+            enabled: false
+            type: wireguard
+          tolerations:
+            - operator: Exists
+          operator:
+            tolerations:
+              - operator: Exists
+          cni:
+            exclusive: false
+          bandwidthManager:
+            enabled: false
+          bpf:
+            masquerade: true
+          socketLB:
+            hostNamespaceOnly: true
+            enabled: true
+          localRedirectPolicies:
+            enabled: true
+          hostFirewall:
+            enabled: false
+          enablePolicy: default
+          hubble:
+            enabled: true
+            relay:
+              enabled: true
+              tolerations:
+                - operator: Exists
+            ui:
+              enabled: true
+              frontend:
+                server:
+                  ipv6:
+                    enabled: false
+              tolerations:
+                - operator: Exists
+        rancher-vsphere-cpi: |-
+          vCenter:
+            # These are placeholders: an example cannot know the vCenter it will run against,
+            # and credentials do not belong in a package. Fill them in, or replace the
+            # generated secret with your own, before building this example.
+            host: ""
+            port: 443
+            insecureFlag: true
+            datacenters: ""
+            username: ""
+            password: ""
+            credentialsSecret:
+              name: vsphere-cpi-creds
+              generate: true
+        rancher-vsphere-csi: |-
+          vCenter:
+            # Placeholders, as above. clusterId has to be unique per cluster sharing a vCenter.
+            host: ""
+            port: 443
+            insecureFlag: "1"
+            clusterId: ""
+            datacenters: ""
+            username: ""
+            password: ""
+            configSecret:
+              name: vsphere-config-secret
+              generate: true
+          storageClass:
+            enabled: true
+            name: vsphere-csi-sc
+            isDefault: true
+            datastoreURL: ""
     os:
       sysctl:
         # Istio related sysctl overrides
-        "fs.inotify.max_user_watches": "11048576"
-        "fs.inotify.max_user_instances": "8192"
+        "fs.inotify.max_user_watches": 11048576
+        "fs.inotify.max_user_instances": 8192
         # Misc performance
-        "vm.max_map_count": "262144"
-        "fs.file-max": "2097152"
+        "vm.max_map_count": 262144
+        "fs.file-max": 2097152
         # Network tuning
-        "net.core.somaxconn": "32768"
-        "net.ipv4.tcp_max_syn_backlog": "8192"
-        "net.core.netdev_max_backlog": "16384"
+        "net.core.somaxconn": 32768
+        "net.ipv4.tcp_max_syn_backlog": 8192
+        "net.core.netdev_max_backlog": 16384
         # NFTABLES
-        "net.netfilter.nf_conntrack_max": "1000000"
-        "net.netfilter.nf_conntrack_buckets": "250000"
-        "net.netfilter.nf_conntrack_tcp_timeout_established": "86400"
-        "net.netfilter.nf_conntrack_tcp_timeout_close_wait": "3600"
+        "net.netfilter.nf_conntrack_max": 1000000
+        "net.netfilter.nf_conntrack_buckets": 250000
+        "net.netfilter.nf_conntrack_tcp_timeout_established": 86400
+        "net.netfilter.nf_conntrack_tcp_timeout_close_wait": 3600
         # Network
-        "net.ipv4.ip_forward": "1"
-        "net.ipv6.conf.all.forwarding": "1"
-        "net.bridge.bridge-nf-call-iptables": "1"
-        "net.bridge.bridge-nf-call-ip6tables": "1"
+        "net.ipv4.ip_forward": 1
+        "net.ipv6.conf.all.forwarding": 1
+        "net.bridge.bridge-nf-call-iptables": 1
+        "net.bridge.bridge-nf-call-ip6tables": 1
         # RKE2 related sysctl overrides
-        "vm.panic_on_oom": "0"
-        "vm.overcommit_memory": "1"
-        "kernel.panic": "10"
-        "kernel.panic_on_oops": "1"
+        "vm.panic_on_oom": 0
+        "vm.overcommit_memory": 1
+        "kernel.panic": 10
+        "kernel.panic_on_oops": 1
       fapolicyd: |
         # Allow RKE2 to function
         allow perm=any all : dir=/opt/cni/
@@ -141,108 +216,46 @@ spec:
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
       files:
-        # One set of RPMs and one tarball per architecture, each landing at the same target.
-        # The selector decides which set a host receives; an entry without an arch selector
-        # goes to every host.
-        - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.4~rke2r1-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-common-1.36.4~rke2r1-0.el9.x86_64.rpm
-          shasum: ecd1fde5269c9fef3d75622f3d011ec6ec2a47c650875b2242442c2a58598457
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-common-1.35.8~rke2r1-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-common-1.35.8~rke2r1-0.el9.x86_64.rpm
+          shasum: 88216947c50a3c86cc6ece5b33306d4080a2d61edc542576b3238268d35fd4d2
           selector:
             package: rpm
-            arch:
-              - amd64
-        - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-common-1.36.4~rke2r1-0.el9.aarch64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-common-1.36.4~rke2r1-0.el9.aarch64.rpm
-          shasum: 2094aac9925a498a31f3f555deb48de15c5be2b7d31c80399ed3718442560498
-          selector:
-            package: rpm
-            arch:
-              - arm64
         - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
           shasum: cb05b41bc3c3032392aec81258478a54fd121c563dfd2688153d5b2b925d69fc
           selector:
             package: rpm
-        - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-server-1.36.4~rke2r1-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-server-1.36.4~rke2r1-0.el9.x86_64.rpm
-          shasum: 97b0d320811d1abb95e21281206dcd6eb4ece05cc3296a4a4e14c6794bca8e66
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-server-1.35.8~rke2r1-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-server-1.35.8~rke2r1-0.el9.x86_64.rpm
+          shasum: 28102fd378b6d9b51e3896cc60936a1a548929a84905588cd6fe0166c99fc7ce
           selector:
             package: rpm
             profile: controller
-            arch:
-              - amd64
-        - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-server-1.36.4~rke2r1-0.el9.aarch64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-server-1.36.4~rke2r1-0.el9.aarch64.rpm
-          shasum: c5d22e1f8e68137dfd906aa7fbc98d13370d227c195d7ed2299993dd93beaff2
-          selector:
-            package: rpm
-            profile: controller
-            arch:
-              - arm64
-        - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-agent-1.36.4~rke2r1-0.el9.x86_64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-agent-1.36.4~rke2r1-0.el9.x86_64.rpm
-          shasum: 995ac17ee051d94a3cc7090df18be3851e474dba01ed2ff80cf32ed3db4e5978
+        - source: https://rpm.rancher.io/rke2/latest/1.35/centos/9/x86_64/rke2-agent-1.35.8~rke2r1-0.el9.x86_64.rpm
+          target: /var/lib/rancher/rke2/rpm/rke2-agent-1.35.8~rke2r1-0.el9.x86_64.rpm
+          shasum: 2b09ab2904a351621443218d7e39611651aa658d8f3119392d37db20e1ea4117
           selector:
             package: rpm
             profile: worker
-            arch:
-              - amd64
-        - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/aarch64/rke2-agent-1.36.4~rke2r1-0.el9.aarch64.rpm
-          target: /var/lib/rancher/rke2/rpm/rke2-agent-1.36.4~rke2r1-0.el9.aarch64.rpm
-          shasum: d22d4007a5f8c846be3b830a0ecd89b3067957ad9b865f9fa11491e0b1b046b9
-          selector:
-            package: rpm
-            profile: worker
-            arch:
-              - arm64
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
           selector:
             package: binary
-            arch:
-              - amd64
-        - source: target/rke2.linux-arm64.tar.gz
-          extractPath: bin/rke2
-          target: /usr/local/bin/rke2
-          executable: true
-          selector:
-            package: binary
-            arch:
-              - arm64
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
           selector:
             package: binary
-            arch:
-              - amd64
-        - source: target/rke2.linux-arm64.tar.gz
-          extractPath: bin/rke2-killall.sh
-          target: /usr/local/bin/rke2-killall.sh
-          executable: true
-          selector:
-            package: binary
-            arch:
-              - arm64
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
           selector:
             package: binary
-            arch:
-              - amd64
-        - source: target/rke2.linux-arm64.tar.gz
-          extractPath: bin/rke2-uninstall.sh
-          target: /usr/local/bin/rke2-uninstall.sh
-          executable: true
-          selector:
-            package: binary
-            arch:
-              - arm64
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: lib/systemd/system/rke2-server.service
           target: /etc/systemd/system/rke2-server.service
@@ -251,18 +264,6 @@ spec:
           selector:
             package: binary
             profile: controller
-            arch:
-              - amd64
-        - source: target/rke2.linux-arm64.tar.gz
-          extractPath: lib/systemd/system/rke2-server.service
-          target: /etc/systemd/system/rke2-server.service
-          symlinks:
-            - /etc/systemd/system/multi-user.target.wants/rke2-server.service
-          selector:
-            package: binary
-            profile: controller
-            arch:
-              - arm64
         - source: target/rke2.linux-amd64.tar.gz
           extractPath: lib/systemd/system/rke2-agent.service
           target: /etc/systemd/system/rke2-agent.service
@@ -271,18 +272,6 @@ spec:
           selector:
             package: binary
             profile: worker
-            arch:
-              - amd64
-        - source: target/rke2.linux-arm64.tar.gz
-          extractPath: lib/systemd/system/rke2-agent.service
-          target: /etc/systemd/system/rke2-agent.service
-          symlinks:
-            - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
-          selector:
-            package: binary
-            profile: worker
-            arch:
-              - arm64
         - source: https://rpm.rancher.io/rke2/latest/common/centos/9/noarch/rke2-selinux-0.22-1.el9.noarch.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
           shasum: cb05b41bc3c3032392aec81258478a54fd121c563dfd2688153d5b2b925d69fc
@@ -292,8 +281,8 @@ spec:
       path: /var/lib/rancher/rke2/agent/images
       compression: none
       images:
-        - docker.io/rancher/rke2-runtime:v1.36.4-rke2r1
-        - docker.io/rancher/hardened-kubernetes:v1.36.4-rke2r1-build20260821
+        - docker.io/rancher/rke2-runtime:v1.35.8-rke2r1
+        - docker.io/rancher/hardened-kubernetes:v1.35.8-rke2r1-build20260821
         - docker.io/rancher/hardened-coredns:v1.14.7-build20260819
         - docker.io/rancher/hardened-cluster-autoscaler:v1.10.3-build20260819
         - docker.io/rancher/hardened-dns-node-cache:1.26.8-build20260819
@@ -303,9 +292,28 @@ spec:
         - docker.io/rancher/klipper-helm:v0.13.3-build20260820
         - docker.io/rancher/klipper-lb:v0.4.17
         - docker.io/rancher/mirrored-pause:3.10.2
-        - docker.io/rancher/rke2-cloud-provider:v1.36.4-0.20260817193921-a2fc9574e060-build20260820
+        - docker.io/rancher/kube-webhook-certgen:v1.14.5-hardened2
+        - docker.io/rancher/nginx-ingress-controller:v1.14.5-hardened2
+        - docker.io/rancher/rke2-cloud-provider:v1.35.8-0.20260817193936-20fc9c33a412-build20260820
         - docker.io/rancher/hardened-snapshot-controller:v8.6.0-build20260819
-        - docker.io/rancher/hardened-traefik:v3.7.11-build20260819
-        # canal cni images
-        - docker.io/rancher/hardened-calico:v3.32.1-build20260827
-        - docker.io/rancher/hardened-flannel:v0.28.9-build20260819
+        # cilium cni and add-on images
+        - docker.io/rancher/mirrored-cilium-certgen:v0.4.6
+        - docker.io/rancher/mirrored-cilium-cilium:v1.19.6
+        - docker.io/rancher/mirrored-cilium-cilium-envoy:v1.36.9-1782267392-edeb3f2af56c37c407efa1f63f0b32f595399bbc
+        - docker.io/rancher/mirrored-cilium-clustermesh-apiserver:v1.19.6
+        - docker.io/rancher/mirrored-cilium-hubble-relay:v1.19.6
+        - docker.io/rancher/mirrored-cilium-hubble-ui:v0.13.5
+        - docker.io/rancher/mirrored-cilium-hubble-ui-backend:v0.13.5
+        - docker.io/rancher/mirrored-cilium-operator-aws:v1.19.6
+        - docker.io/rancher/mirrored-cilium-operator-azure:v1.19.6
+        - docker.io/rancher/mirrored-cilium-operator-generic:v1.19.6
+        - docker.io/rancher/hardened-cni-plugins:v1.9.1-build20260717
+        - docker.io/rancher/mirrored-cloud-provider-vsphere:v1.35.1
+        - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-driver:v3.7.2
+        - docker.io/rancher/mirrored-cloud-provider-vsphere-csi-release-syncer:v3.7.2
+        - docker.io/rancher/mirrored-sig-storage-csi-node-driver-registrar:v2.13.0
+        - docker.io/rancher/mirrored-sig-storage-csi-resizer:v1.12.0
+        - docker.io/rancher/mirrored-sig-storage-livenessprobe:v2.15.0
+        - docker.io/rancher/mirrored-sig-storage-csi-attacher:v4.9.0
+        - docker.io/rancher/mirrored-sig-storage-csi-provisioner:v4.0.1
+        - docker.io/rancher/hardened-csi-snapshotter:v8.6.0-build20260708

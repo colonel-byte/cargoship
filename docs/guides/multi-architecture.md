@@ -47,7 +47,7 @@ files:
 
 An entry with no `arch` selector goes to every host, the same way an entry with no `profile` selector goes to every role. That is what the architecture-independent files -- unit files, scripts, `noarch` RPMs -- want.
 
-`selector.arch` may only name architectures the definition declares. A file selecting `x86_64` in a package targeting `amd64` fails at create time rather than silently never uploading. `example/k3s-multi` and `example/rke2-multi` are complete definitions written this way, generated from the same templates as the single-architecture examples, and `example/upstream` is a hand-written one that installs Kubernetes from upstream packages for both architectures.
+`selector.arch` may only name architectures the definition declares. A file selecting `x86_64` in a package targeting `amd64` fails at create time rather than silently never uploading. `example/k3s-multi`, `example/rke2-multi-cni-canal` and `example/rke2-multi-cni-cilium` are complete definitions written this way, generated from the same templates as the single-architecture examples, and `example/upstream` is a hand-written one that installs Kubernetes from upstream packages for both architectures.
 
 ## Building
 
