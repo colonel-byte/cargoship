@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-88561c25.js";
+            window.path_to_searchindex_js = "../searchindex-3677eca0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2851a731.js"></script>
@@ -198,9 +198,10 @@ $ cargoship kube-config --config ./cargoship-config.yaml --distro k3s
 $ cargoship kube-config --config ./cargoship-config.yaml
 </code></pre>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
-<pre><code>      --config string   Config file used to bootstrap a cluster.
-  -D, --distro string   What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'.
-  -h, --help            help for kube-config
+<pre><code>      --config string       Config file used to bootstrap a cluster.
+  -D, --distro string       What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'.
+  -h, --help                help for kube-config
+      --kubeconfig string   Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>  -a, --architecture string        Architecture for OCI images and Zarf packages
