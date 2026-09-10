@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-df2ab52d.js";
+            window.path_to_searchindex_js = "../searchindex-d717e6f3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2851a731.js"></script>
@@ -223,7 +223,14 @@
           user: myuser
           pass: hunter2
 </code></pre>
+<p>Cargoship does not copy <code>user</code> and <code>pass</code> into <code>registries.yaml</code> as they are given. It encodes the pair into a single credential – base64 of <code>user:pass</code> – and writes that as the engine’s <code>auth</code> directive, so the password does not sit on every node as plain text. Base64 is an encoding, not encryption, so treat the resulting file as a secret regardless.</p>
+<p>Use <code>token</code> on its own when the registry issues one directly. It is a different credential from a password, not another way to spell one, so Cargoship writes it as the engine’s <code>identity_token</code> directive rather than as basic auth. A <code>token</code> given alongside <code>user</code> and <code>pass</code> wins:</p>
+<pre><code class="language-yaml">        auth:
+          token: abc123
+</code></pre>
 <p>Writing <code>pass: hunter2</code> in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in <code>user</code>, <code>pass</code>, or <code>token</code> – any field starting with <code>$ANSIBLE_VAULT</code> is decrypted automatically when the package is applied.</p>
+<h3 id="keeping-the-nodes-in-step"><a class="header" href="#keeping-the-nodes-in-step">Keeping the Nodes in Step</a></h3>
+<p>Cargoship 0.21 changed how <code>registries.yaml</code> is written: keys under <code>mirrors</code> and <code>configs</code> are quoted, and a <code>user</code> and <code>pass</code> pair is encoded into a single <code>auth</code> credential. Neither changes what the engine does, but both change the file, so the first <code>apply</code> after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.</p>
 <h3 id="encrypting-the-credential"><a class="header" href="#encrypting-the-credential">Encrypting the Credential</a></h3>
 <p>Use <code>cargoship vault-encrypt</code> to produce the encrypted value. It reads the plaintext from an argument, from stdin, or – if stdin is a terminal – prompts for it with hidden input so the secret is never echoed or left in shell history:</p>
 <pre><code>cargoship vault-encrypt --vault-password-file ./vault-pass.txt
