@@ -24,9 +24,10 @@ $ cargoship kube-config --config ./cargoship-config.yaml
 ### Options
 
 ```
-      --config string   Config file used to bootstrap a cluster.
-  -D, --distro string   What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'.
-  -h, --help            help for kube-config
+      --config string       Config file used to bootstrap a cluster.
+  -D, --distro string       What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'.
+  -h, --help                help for kube-config
+      --kubeconfig string   Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
 ```
 
 ### Options inherited from parent commands

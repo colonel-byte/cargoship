@@ -43,6 +43,7 @@ type installEngineConfigSyncOptions struct {
 	workerCon         string
 	labelNodes        bool
 	updateKubeConfig  bool
+	kubeConfigPath    string
 	vaultPasswordFile string
 }
 
@@ -66,6 +67,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().StringVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
@@ -135,6 +137,7 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		VaultPassword:    vaultPassword,
 		LabelNodes:       o.labelNodes,
 		UpdateKubeConfig: o.updateKubeConfig,
+		KubeConfigPath:   o.kubeConfigPath,
 	}
 
 	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)

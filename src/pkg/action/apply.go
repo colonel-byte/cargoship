@@ -48,8 +48,11 @@ type ApplyOptions struct {
 	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
 	// count ("5") or a percentage of the batch ("25%")
 	WorkerConcurrent string
-	// UpdateKubeConfig whether to update the local config
+	// UpdateKubeConfig whether to update the config
 	UpdateKubeConfig bool
+	// KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
+	// location when empty
+	KubeConfigPath string
 	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool
 	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
@@ -145,6 +148,8 @@ func NewApply(opts ApplyOptions) *Apply {
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
 				Enabled:   opts.UpdateKubeConfig,
+				Write:     true,
+				Path:      opts.KubeConfigPath,
 			},
 			&phase.LabelNodes{
 				Distro:  d,

@@ -42,6 +42,7 @@ type installApplyOptions struct {
 	fapolicy          bool
 	labelNodes        bool
 	updateKubeConfig  bool
+	kubeConfigPath    string
 	vaultPasswordFile string
 }
 
@@ -68,6 +69,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
@@ -149,6 +151,7 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		ModifyFirewall:   o.firewall,
 		LabelNodes:       o.labelNodes,
 		UpdateKubeConfig: o.updateKubeConfig,
+		KubeConfigPath:   o.kubeConfigPath,
 		VaultPassword:    vaultPassword,
 	}
 

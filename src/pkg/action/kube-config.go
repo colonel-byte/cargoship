@@ -34,6 +34,9 @@ import (
 type KubeConfigOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
+	// KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
+	// location when empty
+	KubeConfigPath string
 }
 
 // KubeConfig state logic
@@ -63,6 +66,8 @@ func NewKubeConfig(opts KubeConfigOptions) *KubeConfig {
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
 				Enabled:   true,
+				Write:     true,
+				Path:      opts.KubeConfigPath,
 			},
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},

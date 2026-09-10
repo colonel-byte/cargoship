@@ -44,7 +44,8 @@ const (
 
 type installKubeConfigOptions struct {
 	InstallCommon
-	distro string
+	distro         string
+	kubeConfigPath string
 }
 
 func newInstallKubeConfigCommand() *cobra.Command {
@@ -63,6 +64,7 @@ func newInstallKubeConfigCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.config, InstallKubeConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().StringVarP(&o.distro, InstallKubeDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagKubeConfigDistro)
+	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -105,6 +107,7 @@ func (o *installKubeConfigOptions) run(ctx context.Context, _ []string) error {
 			ConcurrentUploads: o.concurrency,
 			Config:            &clusterDef,
 		},
+		KubeConfigPath: o.kubeConfigPath,
 	}
 
 	return action.NewKubeConfig(configOpts).Run(ctx)

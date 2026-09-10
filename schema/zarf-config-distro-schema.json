@@ -96,9 +96,8 @@
           "type": "string"
         },
         "kubeconfig": {
-          "default": true,
-          "description": "whether we will update the local kubeconfig file with the admin creds for the cluster",
-          "type": "boolean"
+          "description": "path of the kubeconfig file the admin creds are merged into, the standard\nlocation -- KUBECONFIG, else ~/.kube/config -- when empty",
+          "type": "string"
         },
         "label_nodes": {
           "default": true,
@@ -141,6 +140,11 @@
             "k3s"
           ],
           "type": "string"
+        },
+        "update_kubeconfig": {
+          "default": true,
+          "description": "whether we will update a kubeconfig file with the admin creds for the cluster",
+          "type": "boolean"
         },
         "use_signed_timestamps": {
           "description": "verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.",
