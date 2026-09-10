@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -24,17 +25,22 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-
+	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for.
 // Apply removes nothing, so continuing would report success over a machine that is still running
 // the engine and still joined.
 var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
+
+// listNodes asks for every node as JSON, so the result unmarshals straight into the typed list the
+// comparison below works on. It runs through the leader over SSH, like every other cluster command
+// in the phases, rather than through a Kubernetes client dialled at the load balancer: a cluster
+// whose firewall admits only SSH from outside is an ordinary deployment, and the check has to work
+// there.
+const listNodes = `get nodes -o json`
 
 // controlPlaneLabels are the labels a distro puts on a node that runs the control plane. Which
 // one is present varies by distro and by version, so any of them counts.
@@ -65,8 +71,7 @@ var controlPlaneLabels = []string{
 // phase makes the gap loud instead of invisible.
 type DetectRemovedHosts struct {
 	GenericPhase
-	Distro    distrocfg.Distro
-	ClusterLB string
+	Distro distrocfg.Distro
 	// AllowUnmanaged downgrades the refusal to a warning. A cluster can hold nodes cargoship
 	// never joined, and refusing on those would block every apply on a working setup, so the
 	// operator needs a way to say the extra nodes are deliberate.
@@ -95,14 +100,13 @@ func (p *DetectRemovedHosts) ReadOnly() string {
 // way the label and delete phases find one. Nothing is running on a first install, so there is no
 // leader, and ShouldRun turns the phase off: a cluster that does not exist yet cannot have had a
 // host removed from it.
-func (p *DetectRemovedHosts) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *DetectRemovedHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
 		return h.IsController() && h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService())
 	})
 	if len(control) > 0 {
 		p.leader = control[0]
 	}
-	p.ClusterLB = c.Spec.Config.LoadBalancer
 	return nil
 }
 
@@ -113,24 +117,18 @@ func (p *DetectRemovedHosts) ShouldRun() bool {
 
 // Run the phase.
 //
-// Only positive evidence stops the apply. Failing to reach the API server says nothing about
-// whether a host was removed, and this phase runs before every phase that does the real work, so
-// treating an unreachable cluster as a refusal would turn a load balancer blip into a failed apply
-// that had nothing to do with removals. Those cases warn and continue.
+// Only positive evidence stops the apply. Failing to reach the cluster says nothing about whether
+// a host was removed, and this phase runs before every phase that does the real work, so treating
+// an unreachable cluster as a refusal would turn a transient failure into a failed apply that had
+// nothing to do with removals. Those cases warn and continue.
 func (p *DetectRemovedHosts) Run(ctx context.Context) error {
-	clientset, err := p.clientset()
+	nodes, err := p.listNodes()
 	if err != nil {
 		logger.From(ctx).Warn("cannot check for removed hosts, skipping the check", "error", err)
 		return nil
 	}
 
-	nodes, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		logger.From(ctx).Warn("cannot list nodes, skipping the check for removed hosts", "error", err)
-		return nil
-	}
-
-	unmanaged := unmanagedNodes(p.manager.Config.Spec.Hosts, nodes.Items)
+	unmanaged := unmanagedNodes(p.manager.Config.Spec.Hosts, nodes)
 	if len(unmanaged) == 0 {
 		return nil
 	}
@@ -144,6 +142,27 @@ func (p *DetectRemovedHosts) Run(ctx context.Context) error {
 	}
 
 	return fmt.Errorf("%w: %s", ErrUnmanagedNodes, strings.Join(unmanaged, ", "))
+}
+
+// listNodes returns every node joined to the cluster, read with kubectl on the leader.
+func (p *DetectRemovedHosts) listNodes() ([]corev1.Node, error) {
+	if p.leader == nil {
+		return nil, ErrNoControllers
+	}
+
+	out, err := p.leader.ExecOutput(
+		p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), listNodes),
+		exec.Sudo(p.leader),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+
+	var list corev1.NodeList
+	if err := json.Unmarshal([]byte(out), &list); err != nil {
+		return nil, fmt.Errorf("failed to parse the node list: %w", err)
+	}
+	return list.Items, nil
 }
 
 // unmanagedNodes returns the names of the nodes joined to the cluster that no host in the config
@@ -209,12 +228,4 @@ func nodeRole(node *corev1.Node) string {
 		}
 	}
 	return "worker"
-}
-
-// clientset builds a Kubernetes client from the leader's admin certificates.
-func (p *DetectRemovedHosts) clientset() (*kubernetes.Clientset, error) {
-	if p.leader == nil {
-		return nil, ErrNoControllers
-	}
-	return distroClientset(p.Distro, *p.leader, p.ClusterLB)
 }

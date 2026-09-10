@@ -30,10 +30,14 @@ Neither is a bug in reset. The unfiltered list is exactly right when the instruc
 
 ## What the check actually does
 
-`DetectRemovedHosts` runs after fact gathering and before anything is changed, lists the nodes joined to the cluster, and stops the apply when the cluster holds a node no host accounts for, naming each one with its role. Two guards keep it from becoming a nuisance, and both exist because a false positive would stop an apply on a working cluster:
+`DetectRemovedHosts` runs after fact gathering and before anything is changed, lists the nodes joined to the cluster, and stops the apply when the cluster holds a node no host accounts for, naming each one with its role.
+
+The list is read by running `kubectl get nodes -o json` on the leader over the existing SSH connection, which is how every other cluster command in the phases works. `LabelNodes` is the exception: it builds a Kubernetes client dialled at `https://<loadBalancer>:6443` from the machine running cargoship. That was not copied here. A cluster whose firewall admits only SSH from outside is an ordinary deployment for cargoship, and a check that runs on every apply must not be the one thing that needs the API port open. Going through the leader also drops the need for the load balancer address and for reading the admin certificates.
+
+Two guards keep it from becoming a nuisance, and both exist because a false positive would stop an apply on a working cluster:
 
 - Nodes are matched to hosts by any shared identifier: the node's name or any address it reports, against the host's hostname, private address, or connection address. Names alone are not enough, because an operator can set `node-name` in the engine config, and matching on names would then report every node in the cluster as removed.
-- Only positive evidence stops the run. An unreachable API server says nothing about whether a host was removed, so a failure to build a client or list nodes warns and continues.
+- Only positive evidence stops the run. Failing to reach the cluster says nothing about whether a host was removed, so a failure to list the nodes warns and continues.
 
 The phase is read-only, so a dry run executes it. That is the run where being told about a host you deleted from the config costs nothing.
 

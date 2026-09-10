@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // nodeRoleLabelPrefix prefixes the Kubernetes node label cargoship uses to mark which
@@ -140,5 +141,20 @@ func (p *LabelNodes) clientset() (*kubernetes.Clientset, error) {
 	if p.leader == nil {
 		return nil, errors.New("no leader host resolved")
 	}
-	return distroClientset(p.Distro, *p.leader, p.ClusterLB)
+
+	creds, err := p.Distro.AdminCredentials(*p.leader, p.Distro.DataDirPath())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read admin credentials: %w", err)
+	}
+
+	restConfig := &rest.Config{
+		Host: fmt.Sprintf("https://%s:6443", p.ClusterLB),
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:   creds.CertificateAuthority,
+			CertData: creds.ClientCertificate,
+			KeyData:  creds.ClientKey,
+		},
+	}
+
+	return kubernetes.NewForConfig(restConfig)
 }

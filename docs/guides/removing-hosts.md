@@ -16,7 +16,7 @@ apply anyway: worker3 (worker)
 
 Each node is named with its role, because a leftover controller is the more dangerous case. The check is read-only, so `--dry-run` runs it too, which is where you want to find out about a removal you did not intend.
 
-A node is matched to a host by any identifier they share: the node's name or any address it reports, against the host's hostname, private address, or connection address. That is deliberately generous, since a false positive would stop an apply on a working cluster -- it means a node whose name you overrode with `node-name` in the engine config still matches its host through its address. If the cluster cannot be reached at all, the check warns and the apply continues, because an unreachable API server is not evidence that a host was removed.
+A node is matched to a host by any identifier they share: the node's name or any address it reports, against the host's hostname, private address, or connection address. That is deliberately generous, since a false positive would stop an apply on a working cluster -- it means a node whose name you overrode with `node-name` in the engine config still matches its host through its address. If the cluster cannot be reached at all, the check warns and the apply continues, because failing to reach it is not evidence that a host was removed. The node list is read with `kubectl` on a controller over the existing SSH connection, so the check works on a cluster whose firewall admits nothing but SSH from outside.
 
 ## Why apply refuses instead of reconciling
 
