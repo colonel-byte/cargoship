@@ -124,6 +124,12 @@ func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *di
 // the image reference alone, so two architectures of the same image would otherwise be written to
 // the same path, and the exporter opens tarballs for appending.
 func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, store *carch.OciArchiveStore, arch api.Arch) error {
+	compression := p.manager.Distro.Spec.Config.ImagesConfig.Compression
+	tarSuffix, err := p.manager.Distro.Spec.Config.ImagesConfig.TarballSuffix()
+	if err != nil {
+		return err
+	}
+
 	exportPlatform := imageExportPlatform(arch)
 
 	tarBallDir := filepath.Join(p.manager.TempDirectory, config.TarBallDir, string(arch))
@@ -132,7 +138,7 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 	}
 
 	for _, i := range p.manager.Distro.Spec.Config.ImagesConfig.Images {
-		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), ".tar")
+		tarBallName := tagPrefix.ReplaceAllLiteralString(nsPrefix.ReplaceAllLiteralString(i, "_"), tarSuffix)
 		tarballPath := filepath.Join(tarBallDir, tarBallName)
 
 		desc, err := src.Resolve(ctx, i)
@@ -154,15 +160,29 @@ func (p *UploadFiles) exportImagesForArch(ctx context.Context, src *oci.Store, s
 			return err
 		}
 
+		compressor, err := imageCompressWriter(compression, writer)
+		if err != nil {
+			if cerr := writer.Close(); cerr != nil {
+				logger.From(ctx).Warn("failed to close writer", "error", cerr)
+			}
+			return err
+		}
+
 		err = archive.Export(
 			ctx,
 			store,
-			writer,
+			compressor,
 			archive.WithManifest(desc, i),
 			archive.WithPlatform(exportPlatform),
 		)
 		if err != nil {
 			logger.From(ctx).Warn("failed to create archive", "error", err)
+		}
+
+		// The compressor has to be closed before the file so its trailer lands in the tarball.
+		err = compressor.Close()
+		if err != nil {
+			logger.From(ctx).Warn("failed to close compressor", "compression", compression, "error", err)
 		}
 
 		err = writer.Close()

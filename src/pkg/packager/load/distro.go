@@ -130,6 +130,12 @@ func resolveArchitectures(dis v1alpha1.ZarfDistro, requested string) (v1alpha1.Z
 }
 
 func validateDistro(_ context.Context, dis v1alpha1.ZarfDistro, declared api.Arches, path string) error {
+	// Reject an image compression format cargoship cannot write here, so a typo
+	// fails at build time instead of halfway through an apply.
+	if _, err := dis.Spec.Config.ImagesConfig.TarballSuffix(); err != nil {
+		return err
+	}
+
 	if err := validateArchitectures(dis, declared); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}

@@ -16,6 +16,8 @@
 package distro
 
 import (
+	"fmt"
+
 	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/invopop/jsonschema"
@@ -121,6 +123,16 @@ type ZarfDistroConfig struct {
 	Engine dig.Mapping `json:"engine,omitempty"`
 }
 
+// Compression formats accepted by ZarfDistroImageConfig.Compression.
+const (
+	// CompressionNone writes the image tarballs uncompressed. This is the default.
+	CompressionNone = "none"
+	// CompressionGzip writes the image tarballs with gzip compression.
+	CompressionGzip = "gz"
+	// CompressionZstd writes the image tarballs with zstd compression.
+	CompressionZstd = "zstd"
+)
+
 // ZarfDistroImageConfig holds settings for the images cargoship writes to a host.
 type ZarfDistroImageConfig struct {
 	// Compression sets the compression format for the image tarballs.
@@ -129,6 +141,23 @@ type ZarfDistroImageConfig struct {
 	Path string `json:"path,omitempty"`
 	// Images lists the offline images required by the package.
 	Images []string `json:"images,omitempty" jsonschema:"uniqueItems=true"`
+}
+
+// TarballSuffix returns the file suffix image tarballs get for the configured
+// compression format. The suffixes match the archive extensions a host imports,
+// so a compressed tarball is still picked up. An unset format means no
+// compression. It returns an error for a format cargoship cannot write.
+func (c ZarfDistroImageConfig) TarballSuffix() (string, error) {
+	switch c.Compression {
+	case "", CompressionNone:
+		return ".tar", nil
+	case CompressionGzip:
+		return ".tar.gz", nil
+	case CompressionZstd:
+		return ".tar.zst", nil
+	default:
+		return "", fmt.Errorf("unsupported image compression %q, expected one of %q, %q, %q", c.Compression, CompressionNone, CompressionGzip, CompressionZstd)
+	}
 }
 
 // ZarfDistroOS holds settings applied to a host.
