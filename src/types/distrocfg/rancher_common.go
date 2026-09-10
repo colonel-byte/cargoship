@@ -271,6 +271,9 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 				logger.From(ctx).Warn("failed to write", "file", path)
 			}
 		}
+		if err := RemoveStaleFiles(&host, d.ManagedDirs(), desired); err != nil {
+			logger.From(ctx).Warn("failed to remove stale files", "host", host, "error", err)
+		}
 	}
 
 	d.validateEngineConfig(ctx, dis.Spec.Version, host.IsController(), nodeConfig.DigMapping(config.EngineConfig))
@@ -519,6 +522,14 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 		pod,
 		svc,
 	}
+}
+
+// ManagedDirs returns the directories on a host whose contents cargoship owns outright. For
+// rke2 and k3s that is the directory holding the CA certificates written for registries that
+// carry an inline one: every file in it was put there by a registry entry, so a file with no
+// entry left behind it can go.
+func (d *RancherCommon) ManagedDirs() []string {
+	return []string{registryTLSDir}
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the engine data
