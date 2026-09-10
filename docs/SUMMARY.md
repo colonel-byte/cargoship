@@ -10,6 +10,7 @@
 - [multi-architecture](guides/multi-architecture.md)
 - [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
+- [removing-hosts](guides/removing-hosts.md)
 - [setup-inv](guides/setup-inv.md)
 - [signing-packages](guides/signing-packages.md)
 

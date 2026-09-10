@@ -41,6 +41,7 @@ type installApplyOptions struct {
 	firewall          bool
 	fapolicy          bool
 	labelNodes        bool
+	allowUnmanaged    bool
 	updateKubeConfig  bool
 	kubeConfigPath    string
 	vaultPasswordFile string
@@ -71,6 +72,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
+	cmd.Flags().BoolVar(&o.allowUnmanaged, InstallAllowUnmanagedNodes, resolvedConfig.DistroOpts.AllowUnmanagedNodes, lang.CmdInstallAllowUnmanagedNodes)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
@@ -145,14 +147,15 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 	}
 
 	applyOpts := action.ApplyOptions{
-		Manager:          manager,
-		ModifyHosts:      o.hosts,
-		WorkerConcurrent: o.workerCon,
-		ModifyFirewall:   o.firewall,
-		LabelNodes:       o.labelNodes,
-		UpdateKubeConfig: o.updateKubeConfig,
-		KubeConfigPath:   o.kubeConfigPath,
-		VaultPassword:    vaultPassword,
+		Manager:             manager,
+		ModifyHosts:         o.hosts,
+		WorkerConcurrent:    o.workerCon,
+		ModifyFirewall:      o.firewall,
+		LabelNodes:          o.labelNodes,
+		AllowUnmanagedNodes: o.allowUnmanaged,
+		UpdateKubeConfig:    o.updateKubeConfig,
+		KubeConfigPath:      o.kubeConfigPath,
+		VaultPassword:       vaultPassword,
 	}
 
 	return action.NewApply(applyOpts).Run(ctx)
