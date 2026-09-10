@@ -72,19 +72,33 @@ func (Build) Examples() error {
 		}
 	}
 
+	signingKey := os.Getenv("SIGNING_KEY")
+	signingKeyPass := os.Getenv("SIGNING_KEY_PASS")
+	reproducible := os.Getenv("REPRODUCIBLE") == "true" || os.Getenv("REPRODUCIBLE") == "1"
+
+	var extraFlags []string
+	if signingKey != "" {
+		extraFlags = append(extraFlags, "--signing-key", signingKey)
+	}
+	if signingKeyPass != "" {
+		extraFlags = append(extraFlags, "--signing-key-pass", signingKeyPass)
+	}
+	if reproducible {
+		extraFlags = append(extraFlags, "--reproducible")
+	}
+
 	fmt.Printf("Building %d examples with %s into %s\n", len(dirs), bin, out)
 
 	var failed []error
 	for i, dir := range dirs {
 		fmt.Printf("\n[%d/%d] %s\n", i+1, len(dirs), dir)
 
+		args := append([]string{"create", dir, "--output", out, "--confirm"}, extraFlags...)
 		start := time.Now()
 		err := sh.RunWithV(
 			map[string]string{"TMPDIR": tmp},
 			bin,
-			"create", dir,
-			"--output", out,
-			"--confirm",
+			args...,
 		)
 		if err != nil {
 			fmt.Printf("FAILED %s: %v\n", dir, err)
