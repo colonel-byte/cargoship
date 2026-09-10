@@ -65,9 +65,11 @@ const (
 	// CmdInstallHostUpdate install flag host
 	CmdInstallHostUpdate = "Whether to update all the host nodes /etc/hosts file."
 	// CmdInstallLabelNodes install flag label nodes
-	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --kubeconfig."
+	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig."
+	// CmdInstallKubeConfigPath install flag kubeconfig path
+	CmdInstallKubeConfigPath = "Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config."
 	// CmdInstallUpdateKubeConfig install flag update kubeconfig
-	CmdInstallUpdateKubeConfig = "Whether to update the local kubeconfig file with the admin creds for this cluster."
+	CmdInstallUpdateKubeConfig = "Whether to write the admin creds for this cluster to a kubeconfig file at all."
 	// CmdPackageCreateFlagOutput create flag output
 	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
 	// CmdPackageFlagConcurrency deploy flag concurrency

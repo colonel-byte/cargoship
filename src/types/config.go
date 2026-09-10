@@ -79,8 +79,11 @@ type DistroOptions struct {
 	HostUpdate bool `json:"hosts,omitempty" mapstructure:"hosts" jsonschema:"default=true"`
 	// LabelNodes whether we will check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
-	// UpdateKubeConfig whether we will update the local kubeconfig file with the admin creds for the cluster
-	UpdateKubeConfig bool `json:"kubeconfig,omitempty" mapstructure:"kubeconfig" jsonschema:"default=true"`
+	// UpdateKubeConfig whether we will update a kubeconfig file with the admin creds for the cluster
+	UpdateKubeConfig bool `json:"update_kubeconfig,omitempty" mapstructure:"update_kubeconfig" jsonschema:"default=true"`
+	// KubeConfig path of the kubeconfig file the admin creds are merged into, the standard
+	// location -- KUBECONFIG, else ~/.kube/config -- when empty
+	KubeConfig string `json:"kubeconfig,omitempty" mapstructure:"kubeconfig"`
 	// WorkerConcurrency number of worker nodes that will be upgraded at once, as a fixed count
 	// ("5") or a percentage of the batch ("25%")
 	WorkerConcurrency string `json:"worker_concurrency,omitempty" mapstructure:"worker_concurrency" jsonschema:"oneof_type=string;integer" jsonschema_extras:"examples=1,examples=5,examples=25%,examples=100%"`

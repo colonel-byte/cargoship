@@ -81,7 +81,9 @@ const (
 	// InstallLabelNodes flag
 	InstallLabelNodes = "label-nodes"
 	// InstallUpdateKubeConfig flag
-	InstallUpdateKubeConfig = "kubeconfig"
+	InstallUpdateKubeConfig = "update-kubeconfig"
+	// InstallKubeConfigPath flag
+	InstallKubeConfigPath = "kubeconfig"
 	// InstallVaultPasswordFile flag
 	InstallVaultPasswordFile = "vault-password-file"
 )
