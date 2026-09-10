@@ -1,0 +1,22 @@
+---
+configs:
+  "mirror-quay.example.com":
+    tls:
+      insecure_skip_verify: true
+  "mirror.example.com:5000":
+    tls:
+      ca_file: /etc/cargoship/tls/mirror.example.com_5000.crt
+  "nexus.example.com":
+    auth:
+      auth: cm9ib3Q6c2VjcmV0cGFzc3dvcmQ=
+    tls:
+      ca_file: /etc/pki/ca-trust/source/anchors/nexus-ca.pem
+      cert_file: /etc/ssl/certs/nexus-client.pem
+      key_file: /etc/ssl/private/nexus-client-key.pem
+mirrors:
+  "docker.io":
+    endpoint:
+      - https://mirror.example.com:5000
+  "quay.io":
+    endpoint:
+      - http://mirror-quay.example.com

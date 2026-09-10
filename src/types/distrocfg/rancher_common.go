@@ -16,8 +16,11 @@ package distrocfg
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -36,6 +39,11 @@ type RancherCommon struct {
 }
 
 var (
+	// rancherVersionRegex matches the version rke2 and k3s print, which always carries a
+	// distro suffix -- v1.36.4+k3s1, v1.35.8+rke2r1. Other distros print their version
+	// differently and parse it themselves.
+	rancherVersionRegex = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
+
 	controllerArgs = []string{
 		keyKubeAPI,
 		keyKubeConMan,
@@ -45,36 +53,108 @@ var (
 )
 
 const (
-	//keep-sorted start
-	keyAPIVersion    = "apiVersion"
-	keyAgentToken    = "agent-token-file"
-	keyAudit         = "audit-policy-file"
-	keyAuth          = "auth"
-	keyCIDRPod       = "cluster-cidr"
-	keyCIDRSVC       = "service-cidr"
-	keyConfigs       = "configs"
-	keyDataDir       = "data-dir"
-	keyETCD          = "etcd-arg"
-	keyEndpoint      = "endpoint"
-	keyIdentityToken = "identitytoken"
-	keyKind          = "kind"
-	keyKubeAPI       = "kube-apiserver-arg"
-	keyKubeConMan    = "kube-controller-manager-arg"
+	// modeConfigFile is the mode of an engine config file cargoship writes. Only root reads
+	// these: they carry the cluster's audit and admission policy, and the CA certificates the
+	// engine verifies registries with.
+	modeConfigFile = "0600"
+	// modeRegistries is the mode of registries.yaml. It is group readable, since the engine is
+	// not the only thing on a node that pulls images -- a debugging `crictl pull` run under the
+	// engine's group needs the same mirror list -- while the credentials in it stay off limits
+	// to everyone else.
+	modeRegistries = "0640"
+)
+
+// registryTLSDir is where cargoship writes CA certificates given inline in the cluster
+// configuration. It is cargoship's own directory rather than the engine's, since these files
+// are cargoship's to create, replace, and remove.
+const registryTLSDir = "/etc/cargoship/tls"
+
+// Keys used in the files this file writes, kept in one place so a rename cannot silently
+// change what an engine reads. Three files are involved: config.yaml (engine flags), the
+// manifests written under the data directory, and registries.yaml (mirrors and credentials,
+// documented at https://docs.rke2.io/install/private_registry). Names are sorted, so keys for
+// different files sit next to each other.
+const (
+	// keyAPIVersion is the apiVersion of a manifest cargoship writes: a HelmChartConfig, the
+	// audit policy, or the pod security admission configuration.
+	keyAPIVersion = "apiVersion"
+	// keyAgentToken points config.yaml at the file holding the token an agent joins with.
+	keyAgentToken = "agent-token-file"
+	// keyAudit points config.yaml at the audit policy file the apiserver loads.
+	keyAudit = "audit-policy-file"
+	// keyAuth names both the auth section of a configs entry and, inside it, the base64
+	// "username:password" credential. The engines spell both the same way.
+	keyAuth = "auth"
+	// keyCAFile is the tls key holding the path on the host to the CA bundle that verifies the
+	// registry certificate.
+	keyCAFile = "ca_file"
+	// keyCIDRPod is the config.yaml key holding the pod network range.
+	keyCIDRPod = "cluster-cidr"
+	// keyCIDRSVC is the config.yaml key holding the service network range.
+	keyCIDRSVC = "service-cidr"
+	// keyCertFile is the tls key holding the path on the host to the client certificate the
+	// registry authenticates the host with.
+	keyCertFile = "cert_file"
+	// keyConfigs is the registries.yaml section holding auth and tls per mirror, keyed by the
+	// mirror's host and port rather than by the registry name.
+	keyConfigs = "configs"
+	// keyDataDir is the config.yaml key holding the directory the engine keeps its state in.
+	keyDataDir = "data-dir"
+	// keyETCD passes flags through to etcd. Controllers only.
+	keyETCD = "etcd-arg"
+	// keyEndpoint is the mirrors key holding the addresses to pull from, in order.
+	keyEndpoint = "endpoint"
+	// keyIdentityToken is the auth key holding a token the registry issued, as opposed to a
+	// password. The engine exchanges it with the registry for a bearer token.
+	keyIdentityToken = "identity_token"
+	// keyInsecureSkipVerify is the tls key that turns certificate verification off for one
+	// registry.
+	keyInsecureSkipVerify = "insecure_skip_verify"
+	// keyKeyFile is the tls key holding the path on the host to the client private key that goes
+	// with keyCertFile.
+	keyKeyFile = "key_file"
+	// keyKind is the kind of a manifest cargoship writes, alongside keyAPIVersion.
+	keyKind = "kind"
+	// keyKubeAPI passes flags through to the apiserver. Controllers only.
+	keyKubeAPI = "kube-apiserver-arg"
+	// keyKubeConMan passes flags through to the controller manager. Controllers only.
+	keyKubeConMan = "kube-controller-manager-arg"
+	// keyKubeScheduler passes flags through to the scheduler. Controllers only.
 	keyKubeScheduler = "kube-scheduler-arg"
-	keyMetadata      = "metadata"
-	keyMirrors       = "mirrors"
-	keyNodeLabel     = "node-label"
-	keyNodeName      = "node-name"
-	keyNodeTaint     = "node-taint"
-	keyPassword      = "password"
-	keyPodSec        = "pod-security-admission-config-file"
-	keyRewrite       = "rewrite"
-	keyServer        = "server"
-	keySpec          = "spec"
-	keyTLS           = "tls-san"
-	keyToken         = "token-file"
-	keyUsername      = "username"
-	//keep-sorted end
+	// keyMetadata is the metadata of a manifest cargoship writes: its name and namespace.
+	keyMetadata = "metadata"
+	// keyMirrors is the registries.yaml section mapping a registry name to where pulls for it
+	// go instead.
+	keyMirrors = "mirrors"
+	// keyNodeLabel is the config.yaml key holding the labels the node registers with.
+	keyNodeLabel = "node-label"
+	// keyNodeName is the config.yaml key holding the name the node registers under.
+	keyNodeName = "node-name"
+	// keyNodeTaint is the config.yaml key holding the taints the node registers with.
+	keyNodeTaint = "node-taint"
+	// keyPassword is the auth key holding a registry password. Written only when there is no
+	// username to pair it with, since a pair is encoded under keyAuth instead.
+	keyPassword = "password"
+	// keyPodSec points config.yaml at the pod security admission configuration file.
+	keyPodSec = "pod-security-admission-config-file"
+	// keyRewrite is the mirrors key mapping a regex to a replacement, applied to the image name
+	// before it is pulled from that mirror.
+	keyRewrite = "rewrite"
+	// keyServer is the config.yaml key holding the URL of the controller a joining node
+	// registers with.
+	keyServer = "server"
+	// keySpec is the spec of a manifest cargoship writes, holding the Helm values.
+	keySpec = "spec"
+	// keyTLS is the config.yaml key listing the extra names and addresses that go on the
+	// controller's TLS certificate.
+	keyTLS = "tls-san"
+	// keyTLSConfig is the configs section holding one registry's TLS settings.
+	keyTLSConfig = "tls"
+	// keyTokenFile points config.yaml at the file holding the token a controller joins with.
+	keyTokenFile = "token-file"
+	// keyUsername is the auth key holding a registry username. Written only when there is no
+	// password to pair it with, since a pair is encoded under keyAuth instead.
+	keyUsername = "username"
 )
 
 // Both RKE2 and k3s share similar logic on how to configure the Kubernetes Engine.
@@ -108,7 +188,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 	if host.IsController() {
 		nodeConfig.DigMapping(config.EngineConfig)[keyTLS] = run.ControllerTLS
-		nodeConfig.DigMapping(config.EngineConfig)[keyToken] = d.JoinTokenPath()
+		nodeConfig.DigMapping(config.EngineConfig)[keyTokenFile] = d.JoinTokenPath()
 		nodeConfig.DigMapping(config.EngineConfig)[keyAgentToken] = d.JoinTokenPathAgent()
 
 		if !host.FileExist(d.JoinTokenPath()) {
@@ -154,7 +234,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			}
 		}
 	} else {
-		nodeConfig.DigMapping(config.EngineConfig)[keyToken] = d.JoinTokenPathAgent()
+		nodeConfig.DigMapping(config.EngineConfig)[keyTokenFile] = d.JoinTokenPathAgent()
 		for _, v := range controllerArgs {
 			delete(nodeConfig.DigMapping(config.EngineConfig), v)
 		}
@@ -186,10 +266,13 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		if err != nil {
 			logger.From(ctx).Warn("failed to render desired files", "host", host)
 		}
-		for path, content := range desired {
-			if err := host.WriteFile(path, string(content), "0600"); err != nil {
+		for path, file := range desired {
+			if err := host.WriteFile(path, string(file.Content), file.Mode); err != nil {
 				logger.From(ctx).Warn("failed to write", "file", path)
 			}
+		}
+		if err := RemoveStaleFiles(&host, d.ManagedDirs(), desired); err != nil {
+			logger.From(ctx).Warn("failed to remove stale files", "host", host, "error", err)
 		}
 	}
 
@@ -236,15 +319,19 @@ func (d *RancherCommon) engineServiceRunning(h *cluster.ZarfHost) bool {
 // DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
 // the given host/run/dis, keyed by their full destination path. Content is identical across
 // hosts of the same run (no host-varying fields are involved), unlike config.yaml.
-func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string][]byte, error) {
-	files := map[string][]byte{}
+func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+	files := map[string]DesiredFile{}
 
 	if len(run.Registries) > 0 {
-		b, err := marshalYAML(buildRegistriesConfig(run.Registries))
+		b, err := marshalRegistriesYAML(buildRegistriesConfig(run.Registries))
 		if err != nil {
 			return nil, err
 		}
-		files[filepath.Join(filepath.Dir(d.Config), "registries.yaml")] = b
+		files[filepath.Join(filepath.Dir(d.Config), "registries.yaml")] = DesiredFile{Content: b, Mode: modeRegistries}
+
+		for path, ca := range registryCAFiles(run.Registries) {
+			files[path] = DesiredFile{Content: ca, Mode: modeConfigFile}
+		}
 	}
 
 	nodeConfig := dis.Spec.Config.Engine.Dup()
@@ -256,7 +343,7 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 		if err != nil {
 			return nil, err
 		}
-		files[filepath.Join(filepath.Dir(d.Config), "audit.yaml")] = b
+		files[filepath.Join(filepath.Dir(d.Config), "audit.yaml")] = DesiredFile{Content: b, Mode: modeConfigFile}
 	}
 
 	if pss := nodeConfig.DigMapping(config.EnginePSS); len(pss) > 0 {
@@ -266,47 +353,157 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 		if err != nil {
 			return nil, err
 		}
-		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = b
+		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = DesiredFile{Content: b, Mode: modeConfigFile}
 	}
 
 	return files, nil
 }
 
-// buildRegistriesConfig builds the containerd hosts-config mapping (mirrors/configs) rke2 and
-// k3s read from registries.yaml, based on the registry mirrors configured in `.spec.config.registries`.
+// buildRegistriesConfig builds the registry mapping (mirrors/configs) rke2 and k3s read from
+// registries.yaml, based on the registry mirrors configured in `.spec.config.registries`.
+//
+// The key names are the ones wharfie -- the library both engines parse this file with --
+// unmarshals: auth, username, password, and identity_token under auth, and ca_file, cert_file, key_file,
+// and insecure_skip_verify under tls, as documented at
+// https://docs.rke2.io/install/private_registry. Unmarshalling is not strict, so a key spelled
+// any other way is dropped silently and the engine goes on to pull anonymously, which surfaces
+// far away from here as a 401.
 func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mapping {
 	mirrors := dig.Mapping{}
 	configs := dig.Mapping{}
 
 	for _, reg := range registries {
-		mirror := dig.Mapping{
-			keyEndpoint: []string{reg.Proxy.URL},
+		// Credentials belong to whichever host the pull actually goes to: the mirror when there
+		// is one, and the registry itself when there is not. A registry with credentials but no
+		// mirror is still worth writing -- it authenticates a direct pull -- so it gets a configs
+		// entry without a mirrors entry rather than one keyed by an empty host.
+		host := reg.ConfigHost()
+		if endpoint := reg.MirrorEndpoint(); endpoint != "" {
+			mirror := dig.Mapping{
+				keyEndpoint: []string{endpoint},
+			}
+			if len(reg.Proxy.Rewrite) > 0 {
+				mirror[keyRewrite] = reg.Proxy.Rewrite
+			}
+			mirrors[string(reg.Name)] = mirror
 		}
-		if len(reg.Proxy.Rewrite) > 0 {
-			mirror[keyRewrite] = reg.Proxy.Rewrite
-		}
-		mirrors[string(reg.Name)] = mirror
 
-		if reg.Authentication != (cluster.ZarfClusterRegistryAuth{}) {
-			auth := dig.Mapping{}
-			if reg.Authentication.Username != "" {
-				auth[keyUsername] = reg.Authentication.Username
-			}
-			if reg.Authentication.Password != "" {
-				auth[keyPassword] = reg.Authentication.Password
-			}
-			if reg.Authentication.Token != "" {
-				auth[keyIdentityToken] = reg.Authentication.Token
-			}
-			configs[reg.Proxy.URL] = dig.Mapping{keyAuth: auth}
+		entry := dig.Mapping{}
+		if auth := registryAuth(reg.Authentication); len(auth) > 0 {
+			entry[keyAuth] = auth
+		}
+		if tls := registryTLS(reg.TLS, host); len(tls) > 0 {
+			entry[keyTLSConfig] = tls
+		}
+		if len(entry) > 0 {
+			configs[host] = entry
 		}
 	}
 
-	result := dig.Mapping{keyMirrors: mirrors}
+	result := dig.Mapping{}
+	if len(mirrors) > 0 {
+		result[keyMirrors] = mirrors
+	}
 	if len(configs) > 0 {
 		result[keyConfigs] = configs
 	}
 	return result
+}
+
+// registryAuth renders one registry's credentials for a configs entry.
+//
+// A username and password are encoded into a single credential -- base64 of "username:password"
+// -- and written under the "auth" key, which is what both engines document as "authentication
+// token of the private registry basic auth". Encoding here keeps one spelling of a credential on
+// the node rather than two, and keeps a password from sitting in registries.yaml as plain text.
+// Base64 is an encoding rather than encryption, so the file is still a secret either way.
+//
+// A token given directly is a different credential -- the registry issues it, and it is not a
+// base64 pair -- so it is written under identity_token, the key the engine exchanges for a
+// bearer token, instead of being passed off as basic auth.
+//
+// A username without a password (or the reverse) cannot be encoded into a pair, so it is written
+// under its own key and left for the engine to complete or reject.
+func registryAuth(a cluster.ZarfClusterRegistryAuth) dig.Mapping {
+	auth := dig.Mapping{}
+	switch {
+	case a.Token != "":
+		auth[keyIdentityToken] = a.Token
+	case a.Username != "" && a.Password != "":
+		auth[keyAuth] = base64.StdEncoding.EncodeToString([]byte(a.Username + ":" + a.Password))
+	default:
+		if a.Username != "" {
+			auth[keyUsername] = a.Username
+		}
+		if a.Password != "" {
+			auth[keyPassword] = a.Password
+		}
+	}
+	return auth
+}
+
+// registryTLS renders one registry's TLS settings for a configs entry. An inline CA is not
+// written here -- it goes to its own file on the host (see registryCAFiles), and ca_file points
+// at that path. insecure_skip_verify is written only when it is on, since the engine's own
+// default is to verify.
+func registryTLS(t *cluster.ZarfClusterRegistryTLS, host string) dig.Mapping {
+	tls := dig.Mapping{}
+	if t == nil {
+		return tls
+	}
+	switch {
+	case t.CA != "":
+		tls[keyCAFile] = registryCAPath(host)
+	case t.CAFile != "":
+		tls[keyCAFile] = t.CAFile
+	}
+	if t.CertFile != "" {
+		tls[keyCertFile] = t.CertFile
+	}
+	if t.KeyFile != "" {
+		tls[keyKeyFile] = t.KeyFile
+	}
+	if t.InsecureSkipVerify {
+		tls[keyInsecureSkipVerify] = t.InsecureSkipVerify
+	}
+	return tls
+}
+
+// registryCAFiles returns the CA certificate files to write on the host, keyed by path, for
+// every registry that carries an inline PEM CA. Writing them alongside registries.yaml keeps
+// the certificate and the configuration that references it in one place, so the engine-config
+// sync phases notice a changed certificate the same way they notice a changed mirror.
+func registryCAFiles(registries []cluster.ZarfClusterRegistries) map[string][]byte {
+	files := map[string][]byte{}
+	for _, reg := range registries {
+		if reg.TLS == nil || reg.TLS.CA == "" {
+			continue
+		}
+		files[registryCAPath(reg.ConfigHost())] = []byte(reg.TLS.CA)
+	}
+	return files
+}
+
+// registryCAPath returns where a registry's inline CA certificate is written on the host. The
+// host can carry a port and, in the no-mirror case, whatever the registry is named, so anything
+// outside a conservative set is replaced rather than trusted to be path-safe.
+func registryCAPath(host string) string {
+	return filepath.Join(registryTLSDir, sanitizeRegistryFilename(host)+".crt")
+}
+
+// sanitizeRegistryFilename replaces every character outside [A-Za-z0-9._-] with an underscore,
+// so a host like "mirror.example.com:5000" becomes one path element.
+func sanitizeRegistryFilename(host string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return r
+		case r == '.', r == '_', r == '-':
+			return r
+		default:
+			return '_'
+		}
+	}, host)
 }
 
 // GetClusterCIDR returns a string array with the all the known cluster cidr blocks
@@ -325,6 +522,20 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 		pod,
 		svc,
 	}
+}
+
+// ManagedDirs returns the directories on a host whose contents cargoship owns outright. For
+// rke2 and k3s that is the directory holding the CA certificates written for registries that
+// carry an inline one: every file in it was put there by a registry entry, so a file with no
+// entry left behind it can go.
+func (d *RancherCommon) ManagedDirs() []string {
+	return []string{registryTLSDir}
+}
+
+// CleanupPaths returns the paths an uninstall removes from a host: the engine data
+// directory and the config directory, both of which rke2 and k3s own outright.
+func (d *RancherCommon) CleanupPaths() []string {
+	return removablePaths(d.DataDirPath(), filepath.Dir(d.Config))
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster.
@@ -348,7 +559,7 @@ func (d *RancherCommon) RunningVersion(host cluster.ZarfHost) (string, error) {
 	if err != nil {
 		return "", ErrVersionNotDetected
 	}
-	match := versionRegex.FindString(out)
+	match := rancherVersionRegex.FindString(out)
 	if match == "" {
 		return "", ErrVersionNotDetected
 	}

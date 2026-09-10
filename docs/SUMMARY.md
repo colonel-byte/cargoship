@@ -7,6 +7,7 @@
 # Guides
 
 - [firewall](guides/firewall.md)
+- [multi-architecture](guides/multi-architecture.md)
 - [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
 - [setup-inv](guides/setup-inv.md)
@@ -54,6 +55,7 @@
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
 - [mage](dev/mage.md)
+- [shell-completion](dev/shell-completion.md)
 - [thirdparty-src](dev/thirdparty-src.md)
 
 

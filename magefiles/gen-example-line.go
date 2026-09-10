@@ -78,7 +78,11 @@ func (Generate) ExampleLine(distro, prefix string) error {
 	}
 
 	for _, f := range spec.flavors {
-		for _, tag := range tags {
+		rendered, err := filterFlavorTags(tags, f)
+		if err != nil {
+			return err
+		}
+		for _, tag := range rendered {
 			if err := renderExample(tmpl, d.Repo, tag, spec, f, sums); err != nil {
 				return err
 			}

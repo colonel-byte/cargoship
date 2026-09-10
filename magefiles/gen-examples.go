@@ -79,10 +79,10 @@ func (Generate) Examples() error {
 func renderExample(tmpl *template.Template, repoURL, tag string, spec exampleDistroSpec, f exampleFlavor, sums *exampleShasums) error {
 	path, err := writeExample(tmpl, repoURL, tag, spec, f, sums)
 	if err != nil {
-		return fmt.Errorf("generating %s %s example for %s: %w", spec.name, f.cni, tag, err)
+		return fmt.Errorf("generating %s %s example for %s: %w", spec.name, f.flavorName(), tag, err)
 	}
 	if path == "" {
-		fmt.Printf("Skipped %s %s: upstream no longer publishes what it installs\n", f.cni, tag)
+		fmt.Printf("Skipped %s %s: upstream no longer publishes what it installs\n", f.flavorName(), tag)
 		return nil
 	}
 	fmt.Println("Generated " + path)

@@ -19,7 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
+	"path/filepath"
+	"slices"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/k0sproject/dig"
@@ -28,7 +29,6 @@ import (
 )
 
 var (
-	versionRegex = regexp.MustCompile(`v?[0-9]+\.[0-9]+\.[0-9]+\+[a-z0-9]+`)
 	// ErrVersionNotDetected if a version is not detected
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
 	// ErrPathKey if a path key is not used
@@ -118,6 +118,103 @@ func (r *Common) SetPath(key string, value string) error {
 		return ErrPathKey
 	}
 	return nil
+}
+
+// removablePaths cleans paths and drops the ones that are unset or so broad that handing
+// them to a recursive remove would take out far more than the engine -- a distro left
+// half-configured should uninstall nothing, not everything.
+func removablePaths(paths ...string) []string {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		clean := filepath.Clean(p)
+		switch clean {
+		case ".", "/":
+			continue
+		}
+		if slices.Contains(out, clean) {
+			continue
+		}
+		out = append(out, clean)
+	}
+	return out
+}
+
+// marshalRegistriesYAML renders registries.yaml with the registry names under mirrors, the
+// mirror hosts under configs, and the rewrite patterns inside each mirror all double quoted.
+// The parser does not need the quotes -- a bare registry.example.com:5000 round-trips -- but a
+// key that looks like a number, a boolean, or the "*" wildcard does need them, and both
+// engines' documentation writes these keys quoted. Quoting all of them keeps one rule rather
+// than a rule plus exceptions.
+func marshalRegistriesYAML(config dig.Mapping) ([]byte, error) {
+	raw, err := yaml.Marshal(config)
+	if err != nil {
+		return nil, err
+	}
+
+	var doc yaml.Node
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return nil, err
+	}
+	quoteRegistryKeys(&doc)
+
+	buf := bytes.Buffer{}
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+
+	if err := enc.Encode(&doc); err != nil {
+		return nil, err
+	}
+
+	return []byte("---\n" + buf.String()), nil
+}
+
+// quoteRegistryKeys double quotes the keys of the mirrors and configs mappings, and of any
+// rewrite mapping inside a mirror. Values are left as they are.
+func quoteRegistryKeys(doc *yaml.Node) {
+	root := doc
+	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
+		root = root.Content[0]
+	}
+	if root.Kind != yaml.MappingNode {
+		return
+	}
+
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		section, entries := root.Content[i].Value, root.Content[i+1]
+		if entries.Kind != yaml.MappingNode {
+			continue
+		}
+		if section != keyMirrors && section != keyConfigs {
+			continue
+		}
+
+		quoteKeys(entries)
+		if section != keyMirrors {
+			continue
+		}
+		for j := 1; j < len(entries.Content); j += 2 {
+			quoteRewriteKeys(entries.Content[j])
+		}
+	}
+}
+
+// quoteRewriteKeys double quotes the patterns of one mirror's rewrite mapping.
+func quoteRewriteKeys(mirror *yaml.Node) {
+	if mirror.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(mirror.Content); i += 2 {
+		if mirror.Content[i].Value == keyRewrite && mirror.Content[i+1].Kind == yaml.MappingNode {
+			quoteKeys(mirror.Content[i+1])
+		}
+	}
+}
+
+// quoteKeys sets the double quoted style on every key of a mapping node.
+func quoteKeys(mapping *yaml.Node) {
+	for i := 0; i < len(mapping.Content); i += 2 {
+		mapping.Content[i].Style = yaml.DoubleQuotedStyle
+	}
 }
 
 func marshalYAML(config dig.Mapping) ([]byte, error) {

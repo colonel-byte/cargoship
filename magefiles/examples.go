@@ -39,15 +39,81 @@ const (
 	exampleK3sSelinuxRPM  = "https://rpm.rancher.io/k3s/latest/common/centos/9/noarch/k3s-selinux-1.6-1.el9.noarch.rpm"
 )
 
-// exampleFlavor is one build of a distro the template renders. Flavors are named for their
-// CNI and written to their own directory, since the CNI choice reaches further than the
+// The multi-architecture flavors exist to show what a package covering more than one
+// architecture looks like, not to cover every release: one current minor line is enough to
+// read, and keeps the arm64 artifacts the shasum cache has to hold down to a handful.
+var (
+	exampleMultiArches = []string{"amd64", "arm64"}
+	exampleMultiMinors = []string{"v1_36"}
+)
+
+// exampleRPMArches maps a Go architecture to the name rpm.rancher.io publishes it under.
+var exampleRPMArches = map[string]string{
+	"amd64": "x86_64",
+	"arm64": "aarch64",
+}
+
+// exampleFlavor is one build of a distro the template renders. Flavors are usually named for
+// their CNI and written to their own directory, since the CNI choice reaches further than the
 // image list: cilium replaces kube-proxy and is configured through a HelmChartConfig
-// manifest, while canal and flannel run alongside kube-proxy and need no manifest.
+// manifest, while canal and flannel run alongside kube-proxy and need no manifest. The
+// multi-architecture flavors are the exception: they are named for what they demonstrate
+// rather than for a CNI, since the CNI is not what makes them worth having.
 type exampleFlavor struct {
-	cni               string // cilium -- the flavor's name, and what the template configures
-	dir               string // example/rke2-cilium -- where its examples are written
-	imageList         string // rke2-images-cilium.linux-amd64.txt -- its CNI's airgap manifest, when it has one of its own
-	replacesKubeProxy bool   // whether the CNI takes over from kube-proxy
+	cni               string   // cilium -- what the template configures
+	name              string   // multi -- what follows the distro in metadata.name; the CNI when empty
+	dir               string   // example/rke2-cilium -- where its examples are written
+	imageLists        []string // rke2-images-cilium.linux-amd64.txt -- the airgap manifests it adds to the core one
+	replacesKubeProxy bool     // whether the CNI takes over from kube-proxy
+	encryption        bool     // whether the CNI encrypts pod-to-pod traffic
+	cloudProvider     string   // rancher-vsphere -- the bundled cloud provider it selects; none when empty
+	arches            []string // the architectures its examples target; amd64 alone when empty
+	minors            []string // v1_36 -- the minor lines it renders, all of them when empty
+}
+
+// flavorName is what the example's metadata.name ends in.
+func (f exampleFlavor) flavorName() string {
+	if f.name != "" {
+		return f.name
+	}
+	return f.cni
+}
+
+// architectures is what the flavor's examples target. Most examples are amd64 only, so that
+// is what an unset list means rather than nothing at all.
+func (f exampleFlavor) architectures() []string {
+	if len(f.arches) > 0 {
+		return f.arches
+	}
+	return []string{"amd64"}
+}
+
+// covers reports whether a tag belongs to a minor line this flavor renders. A flavor that
+// names no lines renders every tag it is given.
+func (f exampleFlavor) covers(tag string) (bool, error) {
+	if len(f.minors) == 0 {
+		return true, nil
+	}
+	minor, err := tagMinor(tag)
+	if err != nil {
+		return false, err
+	}
+	return slices.Contains(f.minors, minor), nil
+}
+
+// filterFlavorTags drops the tags a flavor does not render, keeping the order it was given.
+func filterFlavorTags(tags []string, f exampleFlavor) ([]string, error) {
+	var out []string
+	for _, tag := range tags {
+		covered, err := f.covers(tag)
+		if err != nil {
+			return nil, err
+		}
+		if covered {
+			out = append(out, tag)
+		}
+	}
+	return out, nil
 }
 
 // exampleDistroSpec is everything that differs between the distros examples are rendered
@@ -88,24 +154,63 @@ var exampleDistros = []exampleDistroSpec{
 			{
 				cni:               "cilium",
 				dir:               "example/rke2-cilium",
-				imageList:         "rke2-images-cilium.linux-amd64.txt",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
 				replacesKubeProxy: true,
 			},
 			{
-				cni:       "canal",
-				dir:       "example/rke2-canal",
-				imageList: "rke2-images-canal.linux-amd64.txt",
+				cni:               "cilium",
+				name:              "multi-cni-cilium",
+				dir:               "example/rke2-multi-cni-cilium",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
+				arches:            exampleMultiArches,
+				minors:            exampleMultiMinors,
+				replacesKubeProxy: true,
+			},
+			{
+				cni:               "cilium",
+				name:              "cilium-vsphere",
+				dir:               "example/rke2-cilium-vsphere",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt", "rke2-images-vsphere.linux-amd64.txt"},
+				replacesKubeProxy: true,
+				cloudProvider:     "rancher-vsphere",
+			},
+			{
+				cni:               "cilium",
+				name:              "cilium-wireguard",
+				dir:               "example/rke2-cilium-wireguard",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
+				minors:            exampleMultiMinors,
+				replacesKubeProxy: true,
+				encryption:        true,
+			},
+			{
+				cni:        "canal",
+				dir:        "example/rke2-canal",
+				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
+			},
+			{
+				cni:        "canal",
+				name:       "multi-cni-canal",
+				dir:        "example/rke2-multi-cni-canal",
+				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
+				arches:     exampleMultiArches,
+				minors:     exampleMultiMinors,
 			},
 		},
 		derive: func(v *exampleVersion) {
 			v.SelinuxRPM = exampleRKE2SelinuxRPM
-			v.CommonRPM = exampleRKE2RPM("common", v.Minor, v.RPMVersion)
-			v.ServerRPM = exampleRKE2RPM("server", v.Minor, v.RPMVersion)
-			v.AgentRPM = exampleRKE2RPM("agent", v.Minor, v.RPMVersion)
+			for i := range v.Arches {
+				a := &v.Arches[i]
+				a.CommonRPM = exampleRKE2RPM("common", v.Minor, v.RPMVersion, a.RPMArch)
+				a.ServerRPM = exampleRKE2RPM("server", v.Minor, v.RPMVersion, a.RPMArch)
+				a.AgentRPM = exampleRKE2RPM("agent", v.Minor, v.RPMVersion, a.RPMArch)
+				a.Tarball = fmt.Sprintf("rke2.linux-%s.tar.gz", a.Arch)
+			}
 		},
 		// RKE2 installs from RPMs, and Rancher removes an rke2rN's RPMs once the next
-		// revision supersedes it, long before the git tag goes anywhere.
-		probe: func(v exampleVersion) string { return v.CommonRPM },
+		// revision supersedes it, long before the git tag goes anywhere. Every architecture
+		// of a build is published and pulled together, so the first one answers for all.
+		probe: func(v exampleVersion) string { return v.Arches[0].CommonRPM },
 	},
 	{
 		name:       "k3s",
@@ -115,10 +220,21 @@ var exampleDistros = []exampleDistroSpec{
 		// images are already in k3s-images.txt.
 		flavors: []exampleFlavor{
 			{cni: "flannel", dir: "example/k3s-flannel"},
+			{
+				cni:    "flannel",
+				name:   "multi",
+				dir:    "example/k3s-multi",
+				arches: exampleMultiArches,
+				minors: exampleMultiMinors,
+			},
 		},
 		derive: func(v *exampleVersion) {
 			v.SelinuxRPM = exampleK3sSelinuxRPM
-			v.BinaryURL = fmt.Sprintf("https://github.com/k3s-io/k3s/releases/download/%s/k3s", v.TagURL)
+			for i := range v.Arches {
+				a := &v.Arches[i]
+				a.BinaryURL = fmt.Sprintf("https://github.com/k3s-io/k3s/releases/download/%s/%s",
+					v.TagURL, exampleK3sBinary(a.Arch))
+			}
 		},
 		fetch: fetchK3sBinarySHA,
 	},
@@ -137,50 +253,91 @@ type exampleVersion struct {
 	RPMVersion        string   // 1.36.4~rke2r1 -- RPM file names
 	TagURL            string   // v1.36.4%2Brke2r1 -- the release download path segment
 	CNI               string   // cilium
+	Name              string   // flannel -- what the example's metadata.name ends in
 	ReplacesKubeProxy bool     // whether to set disable-kube-proxy
+	Encryption        bool     // whether to turn on the CNI's transparent encryption
+	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
 	CoreImages        []string // the release's own image manifest
-	CNIImages         []string // the flavor's CNI manifest, when it has one
+	CNIImages         []string // the flavor's own manifests, concatenated, when it has any
 
-	// The remote files the example installs, and the selinux policy RPM both distros share.
-	// They are built here rather than in the templates so that the URL checked against
-	// upstream is the same one the example carries.
+	// Arches is every architecture the example targets, and the files each of them installs.
+	// MultiArch says whether there is more than one, which is what decides both how the
+	// example declares its architectures and whether its files need an arch selector at all.
+	Arches    []exampleArch
+	MultiArch bool
+
+	// The selinux policy RPM both distros share, and the one file neither publishes per
+	// architecture. It is built here rather than in the templates so that the URL checked
+	// against upstream is the same one the example carries.
 	SelinuxRPM string
+}
 
-	// RKE2 installs from RPMs.
+// exampleArch is one architecture's share of an example: the files a distro publishes once
+// per architecture, at the URLs that architecture publishes them under. A single-architecture
+// flavor has one of these, so the templates range over them either way.
+type exampleArch struct {
+	Arch    string // amd64 -- what a file's arch selector names
+	RPMArch string // x86_64 -- what rpm.rancher.io calls the same architecture
+
+	// RKE2 installs from RPMs, plus a release tarball its binaries are extracted from.
 	CommonRPM string
 	ServerRPM string
 	AgentRPM  string
+	Tarball   string // rke2.linux-amd64.tar.gz
 
 	// k3s installs a single binary, whose digest the release publishes for us.
 	BinaryURL string
 	BinarySHA string
 }
 
-// exampleRKE2RPM is the rpm.rancher.io URL of one of a build's versioned RPMs.
-func exampleRKE2RPM(pkg, minor, rpmVersion string) string {
-	return fmt.Sprintf("https://rpm.rancher.io/rke2/latest/%s/centos/9/x86_64/rke2-%s-%s-0.el9.x86_64.rpm",
-		minor, pkg, rpmVersion)
+// exampleRKE2RPM is the rpm.rancher.io URL of one of a build's versioned RPMs, for one
+// architecture.
+func exampleRKE2RPM(pkg, minor, rpmVersion, rpmArch string) string {
+	return fmt.Sprintf("https://rpm.rancher.io/rke2/latest/%s/centos/9/%s/rke2-%s-%s-0.el9.%s.rpm",
+		minor, rpmArch, pkg, rpmVersion, rpmArch)
 }
 
-// fetchK3sBinarySHA reads the k3s binary's digest out of the release's own checksum file.
-// Every k3s release publishes one, so the binary itself -- tens of megabytes, and named
-// plainly enough that every version would collide in the cache -- never has to be
-// downloaded to be verified.
-func fetchK3sBinarySHA(v *exampleVersion, repoURL string) error {
-	const asset = "sha256sum-amd64.txt"
-
-	lines, err := fetchReleaseLines(repoURL, v.TagURL, asset)
-	if err != nil {
-		return err
+// exampleK3sBinary is the name a k3s release publishes its binary for an architecture under.
+// amd64 is the unsuffixed one, every other architecture carries its own name.
+func exampleK3sBinary(arch string) string {
+	if arch == "amd64" {
+		return "k3s"
 	}
+	return "k3s-" + arch
+}
+
+// fetchK3sBinarySHA reads each architecture's k3s binary digest out of the release's own
+// checksum file for that architecture. Every k3s release publishes one per architecture, so
+// the binaries themselves -- tens of megabytes, and named plainly enough that every version
+// would collide in the cache -- never have to be downloaded to be verified.
+func fetchK3sBinarySHA(v *exampleVersion, repoURL string) error {
+	for i := range v.Arches {
+		a := &v.Arches[i]
+		asset := fmt.Sprintf("sha256sum-%s.txt", a.Arch)
+		binary := exampleK3sBinary(a.Arch)
+
+		lines, err := fetchReleaseLines(repoURL, v.TagURL, asset)
+		if err != nil {
+			return err
+		}
+		sum, err := k3sBinarySHA(lines, binary)
+		if err != nil {
+			return fmt.Errorf("%s for %s: %w", asset, v.TagURL, err)
+		}
+		a.BinarySHA = sum
+	}
+	return nil
+}
+
+// k3sBinarySHA picks one binary's digest out of a release checksum file's lines.
+func k3sBinarySHA(lines []string, binary string) (string, error) {
 	for _, line := range lines {
 		// "<sha256>  k3s", alongside the airgap tarballs.
-		if sum, name, ok := strings.Cut(line, " "); ok && strings.TrimSpace(name) == "k3s" {
-			v.BinarySHA = sum
-			return nil
+		if sum, name, ok := strings.Cut(line, " "); ok && strings.TrimSpace(name) == binary {
+			return sum, nil
 		}
 	}
-	return fmt.Errorf("no k3s entry in %s for %s", asset, v.TagURL)
+	return "", fmt.Errorf("no %s entry", binary)
 }
 
 // parseExampleTemplate parses a distro's example template, wiring in the sha256 function its
@@ -208,7 +365,7 @@ func exampleTags(pinned []string, spec exampleDistroSpec, f exampleFlavor) ([]st
 	minors, err := os.ReadDir(f.dir)
 	if os.IsNotExist(err) {
 		// A flavor with no examples yet renders the pinned tags, and grows from there.
-		return sortedTags(tags)
+		return flavorTags(tags, f)
 	}
 	if err != nil {
 		return nil, err
@@ -235,13 +392,17 @@ func exampleTags(pinned []string, spec exampleDistroSpec, f exampleFlavor) ([]st
 		}
 	}
 
-	return sortedTags(tags)
+	return flavorTags(tags, f)
 }
 
-// sortedTags flattens a tag set newest first.
-func sortedTags(tags map[string]bool) ([]string, error) {
+// flavorTags flattens a tag set newest first, dropping the minor lines the flavor does not
+// render.
+func flavorTags(tags map[string]bool, f exampleFlavor) ([]string, error) {
 	out := slices.Collect(maps.Keys(tags))
-	return out, sortTagsDesc(out)
+	if err := sortTagsDesc(out); err != nil {
+		return nil, err
+	}
+	return filterFlavorTags(out, f)
 }
 
 // sortTagsDesc orders tags newest first, so generated output and the lines it prints read
@@ -339,8 +500,20 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 		RPMVersion:        strings.ReplaceAll(trimmed, "+", "~"),
 		TagURL:            strings.ReplaceAll(tag, "+", "%2B"),
 		CNI:               f.cni,
+		Name:              f.flavorName(),
 		ReplacesKubeProxy: f.replacesKubeProxy,
+		Encryption:        f.encryption,
+		CloudProvider:     f.cloudProvider,
 	}
+	for _, arch := range f.architectures() {
+		rpmArch, ok := exampleRPMArches[arch]
+		if !ok {
+			return exampleVersion{}, fmt.Errorf("no rpm architecture known for %s", arch)
+		}
+		v.Arches = append(v.Arches, exampleArch{Arch: arch, RPMArch: rpmArch})
+	}
+	v.MultiArch = len(v.Arches) > 1
+
 	if spec.derive != nil {
 		spec.derive(&v)
 	}
@@ -354,11 +527,12 @@ func (v *exampleVersion) fetchImages(repoURL string, spec exampleDistroSpec, f e
 	if v.CoreImages, err = fetchImageList(repoURL, v.TagURL, spec.coreImages); err != nil {
 		return err
 	}
-	if f.imageList == "" {
-		return nil
-	}
-	if v.CNIImages, err = fetchImageList(repoURL, v.TagURL, f.imageList); err != nil {
-		return err
+	for _, asset := range f.imageLists {
+		images, err := fetchImageList(repoURL, v.TagURL, asset)
+		if err != nil {
+			return err
+		}
+		v.CNIImages = append(v.CNIImages, images...)
 	}
 	return nil
 }

@@ -81,6 +81,11 @@ func (p *KubeConfig) ShouldRun() bool {
 
 // Run the phase
 func (p *KubeConfig) Run(_ context.Context) error {
+	creds, err := p.Distro.AdminCredentials(*p.leader, p.Distro.DataDirPath())
+	if err != nil {
+		return err
+	}
+
 	pathOptions := clientcmd.NewDefaultPathOptions()
 	config, err := pathOptions.GetStartingConfig()
 	if err != nil {
@@ -90,14 +95,14 @@ func (p *KubeConfig) Run(_ context.Context) error {
 	if !exists {
 		startingCluster = clientcmdapi.NewCluster()
 	}
-	cluster := p.modifyCluster(*startingCluster)
+	cluster := p.modifyCluster(*startingCluster, creds)
 	config.Clusters[p.ClusterID] = &cluster
 
 	startingAuth, exists := config.AuthInfos[fmt.Sprintf("%s-admin", p.ClusterID)]
 	if !exists {
 		startingAuth = clientcmdapi.NewAuthInfo()
 	}
-	auth := p.modifyAuthInfo(*startingAuth)
+	auth := modifyAuthInfo(*startingAuth, creds)
 	config.AuthInfos[fmt.Sprintf("%s-admin", p.ClusterID)] = &auth
 
 	config.Contexts[p.ClusterID] = &clientcmdapi.Context{
@@ -110,33 +115,20 @@ func (p *KubeConfig) Run(_ context.Context) error {
 	return clientcmd.ModifyConfig(pathOptions, *config, true)
 }
 
-func (p *KubeConfig) modifyCluster(existingCluster clientcmdapi.Cluster) clientcmdapi.Cluster {
+func (p *KubeConfig) modifyCluster(existingCluster clientcmdapi.Cluster, creds distrocfg.AdminCredentials) clientcmdapi.Cluster {
 	modifiedCluster := existingCluster
 
-	ca, err := p.leader.ReadFile("/var/lib/rancher/rke2/server/tls/server-ca.crt")
-	if err != nil {
-		return modifiedCluster
-	}
-	modifiedCluster.CertificateAuthorityData = []byte(ca)
+	modifiedCluster.CertificateAuthorityData = creds.CertificateAuthority
 	modifiedCluster.Server = fmt.Sprintf("https://%s:6443", p.ClusterLB)
 
 	return modifiedCluster
 }
 
-func (p *KubeConfig) modifyAuthInfo(existingAuthInfo clientcmdapi.AuthInfo) clientcmdapi.AuthInfo {
+func modifyAuthInfo(existingAuthInfo clientcmdapi.AuthInfo, creds distrocfg.AdminCredentials) clientcmdapi.AuthInfo {
 	modifiedAuthInfo := existingAuthInfo
 
-	crt, err := p.leader.ReadFile("/var/lib/rancher/rke2/server/tls/client-admin.crt")
-	if err != nil {
-		return modifiedAuthInfo
-	}
-	key, err := p.leader.ReadFile("/var/lib/rancher/rke2/server/tls/client-admin.key")
-	if err != nil {
-		return modifiedAuthInfo
-	}
-
-	modifiedAuthInfo.ClientCertificateData = []byte(crt)
-	modifiedAuthInfo.ClientKeyData = []byte(key)
+	modifiedAuthInfo.ClientCertificateData = creds.ClientCertificate
+	modifiedAuthInfo.ClientKeyData = creds.ClientKey
 
 	return modifiedAuthInfo
 }

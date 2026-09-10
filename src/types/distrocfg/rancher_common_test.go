@@ -17,11 +17,13 @@ package distrocfg
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -104,7 +106,7 @@ func TestBuildRegistriesConfigNoAuth(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "docker.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL: "mirror-docker-hub.example.com",
 			},
 		},
@@ -115,7 +117,7 @@ func TestBuildRegistriesConfigNoAuth(t *testing.T) {
 	want := dig.Mapping{
 		keyMirrors: dig.Mapping{
 			"docker.io": dig.Mapping{
-				keyEndpoint: []string{"mirror-docker-hub.example.com"},
+				keyEndpoint: []string{"https://mirror-docker-hub.example.com"},
 			},
 		},
 	}
@@ -128,13 +130,11 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "ghcr.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL: "mirror-ghcr.example.com",
 			},
 			Authentication: cluster.ZarfClusterRegistryAuth{
-				Username: "user",
-				Password: "pass",
-				Token:    "tok",
+				Token: "tok",
 			},
 		},
 	}
@@ -144,14 +144,12 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 	want := dig.Mapping{
 		keyMirrors: dig.Mapping{
 			"ghcr.io": dig.Mapping{
-				keyEndpoint: []string{"mirror-ghcr.example.com"},
+				keyEndpoint: []string{"https://mirror-ghcr.example.com"},
 			},
 		},
 		keyConfigs: dig.Mapping{
 			"mirror-ghcr.example.com": dig.Mapping{
 				keyAuth: dig.Mapping{
-					keyUsername:      "user",
-					keyPassword:      "pass",
 					keyIdentityToken: "tok",
 				},
 			},
@@ -162,11 +160,95 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 	}
 }
 
+// A username and password are encoded into one base64 credential rather than written as two
+// keys, so the node never carries the password in plain text.
+func TestBuildRegistriesConfigWithUserPass(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "quay.io",
+			Proxy: &cluster.ZarfClusterRegistryProxy{
+				URL: "mirror-quay.example.com",
+			},
+			Authentication: cluster.ZarfClusterRegistryAuth{
+				Username: "robot",
+				Password: "secretpassword",
+			},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	want := dig.Mapping{
+		keyMirrors: dig.Mapping{
+			"quay.io": dig.Mapping{
+				keyEndpoint: []string{"https://mirror-quay.example.com"},
+			},
+		},
+		keyConfigs: dig.Mapping{
+			"mirror-quay.example.com": dig.Mapping{
+				keyAuth: dig.Mapping{
+					keyAuth: base64.StdEncoding.EncodeToString([]byte("robot:secretpassword")),
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
+	}
+}
+
+// The auth keys are the ones wharfie unmarshals, and it ignores anything else without
+// complaining, so a rename here is a silent loss of credentials on every node.
+func TestRegistryAuthKeyNames(t *testing.T) {
+	if keyUsername != "username" || keyPassword != "password" || keyAuth != "auth" || keyIdentityToken != "identity_token" {
+		t.Errorf("auth keys = %q/%q/%q/%q, want username/password/auth/identity_token",
+			keyUsername, keyPassword, keyAuth, keyIdentityToken)
+	}
+	if keyCAFile != "ca_file" || keyCertFile != "cert_file" || keyKeyFile != "key_file" || keyInsecureSkipVerify != "insecure_skip_verify" {
+		t.Errorf("tls keys = %q/%q/%q/%q, want ca_file/cert_file/key_file/insecure_skip_verify",
+			keyCAFile, keyCertFile, keyKeyFile, keyInsecureSkipVerify)
+	}
+}
+
+func TestRegistryAuth(t *testing.T) {
+	cases := map[string]struct {
+		auth cluster.ZarfClusterRegistryAuth
+		want dig.Mapping
+	}{
+		"user and password become one base64 credential under auth": {
+			auth: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"},
+			want: dig.Mapping{keyAuth: base64.StdEncoding.EncodeToString([]byte("robot:secretpassword"))},
+		},
+		"a token is passed through as given, under identity_token": {
+			auth: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+			want: dig.Mapping{keyIdentityToken: "tok"},
+		},
+		"a token wins over a user and password": {
+			auth: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword", Token: "tok"},
+			want: dig.Mapping{keyIdentityToken: "tok"},
+		},
+		"half a credential cannot be encoded, so it is written as it is": {
+			auth: cluster.ZarfClusterRegistryAuth{Username: "robot"},
+			want: dig.Mapping{keyUsername: "robot"},
+		},
+		"no credentials produce no auth entry": {
+			auth: cluster.ZarfClusterRegistryAuth{},
+			want: dig.Mapping{},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.want, registryAuth(tc.auth))
+		})
+	}
+}
+
 func TestBuildRegistriesConfigWithRewrite(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "docker.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL: "mirror-docker-hub.example.com",
 				Rewrite: map[string]string{
 					"^rancher/(.*)": "mirrorproject/rancher-images/$1",
@@ -180,7 +262,7 @@ func TestBuildRegistriesConfigWithRewrite(t *testing.T) {
 	want := dig.Mapping{
 		keyMirrors: dig.Mapping{
 			"docker.io": dig.Mapping{
-				keyEndpoint: []string{"mirror-docker-hub.example.com"},
+				keyEndpoint: []string{"https://mirror-docker-hub.example.com"},
 				keyRewrite: map[string]string{
 					"^rancher/(.*)": "mirrorproject/rancher-images/$1",
 				},
@@ -196,11 +278,11 @@ func TestBuildRegistriesConfigMultiple(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name:  "docker.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-docker-hub.example.com"},
+			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-docker-hub.example.com"},
 		},
 		{
 			Name:  "quay.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
+			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
 			Authentication: cluster.ZarfClusterRegistryAuth{
 				Username: "user",
 			},
@@ -225,9 +307,7 @@ func TestBuildRegistriesConfigMultiple(t *testing.T) {
 func TestBuildRegistriesConfigEmpty(t *testing.T) {
 	got := buildRegistriesConfig(nil)
 
-	want := dig.Mapping{
-		keyMirrors: dig.Mapping{},
-	}
+	want := dig.Mapping{}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
 	}
@@ -367,8 +447,8 @@ func TestConfigureEngineControllerLeaderNoTokenFiles(t *testing.T) {
 	if got.DigString(keyDataDir) != d.Data {
 		t.Errorf("config.yaml data-dir = %q, want %q", got.DigString(keyDataDir), d.Data)
 	}
-	if got.DigString(keyToken) != d.JoinTokenPath() {
-		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyToken), d.JoinTokenPath())
+	if got.DigString(keyTokenFile) != d.JoinTokenPath() {
+		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyTokenFile), d.JoinTokenPath())
 	}
 	if got.DigString(keyAgentToken) != d.JoinTokenPathAgent() {
 		t.Errorf("config.yaml agent-token-file = %q, want %q", got.DigString(keyAgentToken), d.JoinTokenPathAgent())
@@ -436,8 +516,8 @@ func TestConfigureEngineWorkerStripsControllerArgs(t *testing.T) {
 	if want := "https://lb.example.com:9345"; got.DigString(keyServer) != want {
 		t.Errorf("config.yaml server = %q, want %q", got.DigString(keyServer), want)
 	}
-	if got.DigString(keyToken) != d.JoinTokenPathAgent() {
-		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyToken), d.JoinTokenPathAgent())
+	if got.DigString(keyTokenFile) != d.JoinTokenPathAgent() {
+		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyTokenFile), d.JoinTokenPathAgent())
 	}
 	for _, k := range []string{keyKubeAPI, keyKubeConMan, keyKubeScheduler, keyETCD} {
 		if _, ok := got[k]; ok {
@@ -548,7 +628,7 @@ func TestConfigureEngineWritesRegistries(t *testing.T) {
 		Registries: []cluster.ZarfClusterRegistries{
 			{
 				Name:  "docker.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
 			},
 		},
 	}
@@ -570,8 +650,8 @@ func TestConfigureEngineWritesRegistries(t *testing.T) {
 		t.Fatalf("registries.yaml mirrors[docker.io] = %+v, want a mapping", mirrors["docker.io"])
 	}
 	endpoints, ok := docker[keyEndpoint].([]any)
-	if !ok || len(endpoints) != 1 || endpoints[0] != "mirror.example.com" {
-		t.Errorf("registries.yaml mirrors[docker.io].endpoint = %+v, want [mirror.example.com]", docker[keyEndpoint])
+	if !ok || len(endpoints) != 1 || endpoints[0] != "https://mirror.example.com" {
+		t.Errorf("registries.yaml mirrors[docker.io].endpoint = %+v, want [https://mirror.example.com]", docker[keyEndpoint])
 	}
 }
 
@@ -604,7 +684,7 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 		Registries: []cluster.ZarfClusterRegistries{
 			{
 				Name: "docker.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{
+				Proxy: &cluster.ZarfClusterRegistryProxy{
 					URL: "mirror-docker-hub.example.com",
 					Rewrite: map[string]string{
 						"^rancher/(.*)": "mirrorproject/rancher-images/$1",
@@ -613,11 +693,17 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 			},
 			{
 				Name:  "ghcr.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-ghcr.example.com"},
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-ghcr.example.com"},
 				Authentication: cluster.ZarfClusterRegistryAuth{
-					Username: "user",
-					Password: "pass",
-					Token:    "tok",
+					Token: "tok",
+				},
+			},
+			{
+				Name:  "quay.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
+				Authentication: cluster.ZarfClusterRegistryAuth{
+					Username: "robot",
+					Password: "secretpassword",
 				},
 			},
 		},
@@ -674,7 +760,7 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 		Registries: []cluster.ZarfClusterRegistries{
 			{
 				Name:  "docker.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
 			},
 		},
 	}
@@ -693,26 +779,26 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 	}
 
 	var auditYAML, pssYAML dig.Mapping
-	if err := yaml.Unmarshal(got[auditPath], &auditYAML); err != nil {
+	if err := yaml.Unmarshal(got[auditPath].Content, &auditYAML); err != nil {
 		t.Fatalf("failed to unmarshal audit.yaml: %v", err)
 	}
 	if auditYAML.DigString(keyKind) != "Policy" || auditYAML.DigString(keyAPIVersion) != "audit.k8s.io/v1" {
 		t.Errorf("audit.yaml = %+v, want kind=Policy apiVersion=audit.k8s.io/v1", auditYAML)
 	}
 
-	if err := yaml.Unmarshal(got[pssPath], &pssYAML); err != nil {
+	if err := yaml.Unmarshal(got[pssPath].Content, &pssYAML); err != nil {
 		t.Fatalf("failed to unmarshal pss.yaml: %v", err)
 	}
 	if pssYAML.DigString(keyKind) != "AdmissionConfiguration" || pssYAML.DigString(keyAPIVersion) != "apiserver.config.k8s.io/v1" {
 		t.Errorf("pss.yaml = %+v, want kind=AdmissionConfiguration apiVersion=apiserver.config.k8s.io/v1", pssYAML)
 	}
 
-	wantRegistries, err := marshalYAML(buildRegistriesConfig(run.Registries))
+	wantRegistries, err := marshalRegistriesYAML(buildRegistriesConfig(run.Registries))
 	if err != nil {
-		t.Fatalf("marshalYAML() error = %v", err)
+		t.Fatalf("marshalRegistriesYAML() error = %v", err)
 	}
-	if string(got[registriesPath]) != string(wantRegistries) {
-		t.Errorf("registries.yaml = %s, want %s", got[registriesPath], wantRegistries)
+	if string(got[registriesPath].Content) != string(wantRegistries) {
+		t.Errorf("registries.yaml = %s, want %s", got[registriesPath].Content, wantRegistries)
 	}
 }
 
@@ -862,4 +948,366 @@ func TestStopServiceKillallExistsPropagatesExecError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("stopService() error = nil, want an error from the unconnected host's Exec call")
 	}
+}
+
+func TestRancherVersionRegex(t *testing.T) {
+	tests := map[string]struct {
+		output string
+		want   string
+	}{
+		"k3s":  {output: "k3s version v1.36.4+k3s1 (0a1b2c3d)\ngo version go1.25.1\n", want: "v1.36.4+k3s1"},
+		"rke2": {output: "rke2 version v1.35.8+rke2r1 (0a1b2c3d)\ngo version go1.25.1\n", want: "v1.35.8+rke2r1"},
+		// The distro suffix is mandatory, which is why this regex belongs to the Rancher
+		// distros rather than to every distro that embeds Common.
+		"upstream kubelet": {output: "Kubernetes v1.35.3\n", want: ""},
+		"no version":       {output: "command not found\n", want: ""},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, rancherVersionRegex.FindString(tt.output))
+		})
+	}
+}
+
+func TestCleanupPaths(t *testing.T) {
+	tests := map[string]struct {
+		distro Distro
+		want   []string
+	}{
+		"k3s": {
+			distro: &K3S{RancherCommon{Common{Config: "/etc/rancher/k3s/config.yaml", Data: "/var/lib/rancher/k3s"}}},
+			want:   []string{"/var/lib/rancher/k3s", "/etc/rancher/k3s"},
+		},
+		"rke2": {
+			distro: &RKE2{RancherCommon{Common{Config: "/etc/rancher/rke2/config.yaml", Data: "/var/lib/rancher/rke2"}}},
+			want:   []string{"/var/lib/rancher/rke2", "/etc/rancher/rke2"},
+		},
+		"unset paths are not removable": {
+			distro: &K3S{RancherCommon{Common{}}},
+			want:   []string{},
+		},
+		"root is not removable": {
+			distro: &K3S{RancherCommon{Common{Config: "/config.yaml", Data: "/"}}},
+			want:   []string{},
+		},
+		"the same directory is only removed once": {
+			distro: &K3S{RancherCommon{Common{Config: "/etc/rancher/k3s/config.yaml", Data: "/etc/rancher/k3s"}}},
+			want:   []string{"/etc/rancher/k3s"},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, tt.distro.CleanupPaths())
+		})
+	}
+}
+
+// The mirror and configs keys are registry names and hosts, which can look like numbers,
+// booleans, or the "*" wildcard, so they are written quoted.
+func TestMarshalRegistriesYAMLQuotesKeys(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "*",
+			Proxy: &cluster.ZarfClusterRegistryProxy{
+				URL:     "mirror.example.com:5000",
+				Rewrite: map[string]string{"^rancher/(.*)": "mirrorproject/rancher-images/$1"},
+			},
+			Authentication: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+		},
+	}
+
+	got, err := marshalRegistriesYAML(buildRegistriesConfig(registries))
+	if err != nil {
+		t.Fatalf("marshalRegistriesYAML() error = %v", err)
+	}
+
+	for _, want := range []string{`"*":`, `"mirror.example.com:5000":`, `"^rancher/(.*)":`} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("registries.yaml = %s, want it to contain %s", got, want)
+		}
+	}
+
+	// Quoting is a rendering choice, so the file still has to parse back to the same keys.
+	var round map[string]map[string]any
+	if err := yaml.Unmarshal(got, &round); err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	if _, ok := round["mirrors"]["*"]; !ok {
+		t.Errorf("mirrors = %+v, want a * entry", round["mirrors"])
+	}
+	if _, ok := round["configs"]["mirror.example.com:5000"]; !ok {
+		t.Errorf("configs = %+v, want a mirror.example.com:5000 entry", round["configs"])
+	}
+}
+
+func TestBuildRegistriesConfigKeysConfigsByHost(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name:           "docker.io",
+			Proxy:          &cluster.ZarfClusterRegistryProxy{URL: "https://mirror.example.com:5000/v2"},
+			Authentication: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	configs, ok := got[keyConfigs].(dig.Mapping)
+	if !ok {
+		t.Fatalf("buildRegistriesConfig() has no configs entry: %+v", got)
+	}
+	if _, ok := configs["mirror.example.com:5000"]; !ok {
+		t.Errorf("configs keys = %+v, want an entry for mirror.example.com:5000", configs)
+	}
+
+	mirrors, ok := got[keyMirrors].(dig.Mapping)
+	if !ok {
+		t.Fatalf("buildRegistriesConfig() has no mirrors entry: %+v", got)
+	}
+	docker, ok := mirrors["docker.io"].(dig.Mapping)
+	if !ok {
+		t.Fatalf("mirrors has no docker.io entry: %+v", mirrors)
+	}
+	endpoint := docker[keyEndpoint]
+	if !reflect.DeepEqual(endpoint, []string{"https://mirror.example.com:5000/v2"}) {
+		t.Errorf("endpoint = %+v, want the URL as written", endpoint)
+	}
+}
+
+// A registry can carry credentials without a mirror -- they authenticate a direct pull. The
+// entry is keyed by the registry itself then, since that is where the pull goes.
+func TestBuildRegistriesConfigWithoutProxy(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name:           "registry.example.com",
+			Authentication: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+		},
+	}
+
+	want := dig.Mapping{
+		keyConfigs: dig.Mapping{
+			"registry.example.com": dig.Mapping{
+				keyAuth: dig.Mapping{keyIdentityToken: "tok"},
+			},
+		},
+	}
+	require.Equal(t, want, buildRegistriesConfig(registries),
+		"a registry without a proxy gets credentials but no mirror")
+}
+
+func TestBuildRegistriesConfigWithTLS(t *testing.T) {
+	insecure := true
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "private.registry.io",
+			Proxy: &cluster.ZarfClusterRegistryProxy{
+				URL: "mirror-private.example.com",
+			},
+			TLS: &cluster.ZarfClusterRegistryTLS{
+				CAFile:             "/etc/ssl/certs/ca.pem",
+				CertFile:           "/etc/ssl/certs/client.pem",
+				KeyFile:            "/etc/ssl/certs/client-key.pem",
+				InsecureSkipVerify: insecure,
+			},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	want := dig.Mapping{
+		keyMirrors: dig.Mapping{
+			"private.registry.io": dig.Mapping{
+				keyEndpoint: []string{"https://mirror-private.example.com"},
+			},
+		},
+		keyConfigs: dig.Mapping{
+			"mirror-private.example.com": dig.Mapping{
+				keyTLSConfig: dig.Mapping{
+					keyCAFile:             "/etc/ssl/certs/ca.pem",
+					keyCertFile:           "/etc/ssl/certs/client.pem",
+					keyKeyFile:            "/etc/ssl/certs/client-key.pem",
+					keyInsecureSkipVerify: true,
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
+	}
+}
+
+const testCAPEM = `-----BEGIN CERTIFICATE-----
+dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
+-----END CERTIFICATE-----
+`
+
+// An inline CA is written to its own file, and ca_file points at that file rather than at the
+// certificate itself.
+func TestBuildRegistriesConfigInlineCA(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name:  "docker.io",
+			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com:5000"},
+			TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	configs, ok := got[keyConfigs].(dig.Mapping)
+	require.True(t, ok, "buildRegistriesConfig() has no configs entry: %+v", got)
+	entry, ok := configs["mirror.example.com:5000"].(dig.Mapping)
+	require.True(t, ok, "configs has no entry for the mirror host: %+v", configs)
+	require.Equal(t,
+		dig.Mapping{keyCAFile: "/etc/cargoship/tls/mirror.example.com_5000.crt"},
+		entry[keyTLSConfig],
+		"ca_file points at the file cargoship writes the inline CA to")
+
+	require.Equal(t,
+		map[string][]byte{"/etc/cargoship/tls/mirror.example.com_5000.crt": []byte(testCAPEM)},
+		registryCAFiles(registries))
+}
+
+// A CA path already on the host is used as given, and nothing extra is written.
+func TestBuildRegistriesConfigCAFile(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "nexus.example.com",
+			TLS:  &cluster.ZarfClusterRegistryTLS{CAFile: "/etc/pki/ca.crt"},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	configs, ok := got[keyConfigs].(dig.Mapping)
+	require.True(t, ok, "buildRegistriesConfig() has no configs entry: %+v", got)
+	entry, ok := configs["nexus.example.com"].(dig.Mapping)
+	require.True(t, ok, "configs has no entry for the registry: %+v", configs)
+	require.Equal(t, dig.Mapping{keyCAFile: "/etc/pki/ca.crt"}, entry[keyTLSConfig])
+	require.Empty(t, registryCAFiles(registries))
+}
+
+func TestRegistryCAPath(t *testing.T) {
+	cases := map[string]string{
+		"mirror.example.com":      "/etc/cargoship/tls/mirror.example.com.crt",
+		"mirror.example.com:5000": "/etc/cargoship/tls/mirror.example.com_5000.crt",
+		"*":                       "/etc/cargoship/tls/_.crt",
+		"../../etc/shadow":        "/etc/cargoship/tls/.._.._etc_shadow.crt",
+	}
+	for host, want := range cases {
+		if got := registryCAPath(host); got != want {
+			t.Errorf("registryCAPath(%q) = %q, want %q", host, got, want)
+		}
+	}
+}
+
+// TestConfigureEngineWritesRegistriesTLSGolden covers the tls half of the file the auth golden
+// does not: an inline CA that becomes a ca_file path, CA and client certificate paths already on
+// the host, and verification turned off. It diffs byte-for-byte against
+// testdata/registries-tls.yaml -- update that fixture if a deliberate change to the output shape
+// is made.
+func TestConfigureEngineWritesRegistriesTLSGolden(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name:  "docker.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com:5000"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+			},
+			{
+				Name: "nexus.example.com",
+				Authentication: cluster.ZarfClusterRegistryAuth{
+					Username: "robot",
+					Password: "secretpassword",
+				},
+				TLS: &cluster.ZarfClusterRegistryTLS{
+					CAFile:   "/etc/pki/ca-trust/source/anchors/nexus-ca.pem",
+					CertFile: "/etc/ssl/certs/nexus-client.pem",
+					KeyFile:  "/etc/ssl/private/nexus-client-key.pem",
+				},
+			},
+			{
+				Name:  "quay.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "http://mirror-quay.example.com"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{InsecureSkipVerify: true},
+			},
+		},
+	}
+	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
+	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+
+	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
+		t.Fatalf("ConfigureEngine() error = %v", err)
+	}
+
+	registriesPath := filepath.Join(filepath.Dir(d.Config), "registries.yaml")
+	got, written := cfg.files[registriesPath]
+	if !written {
+		t.Fatalf("expected file %s to be written, files = %+v", registriesPath, cfg.files)
+	}
+
+	want, err := os.ReadFile("testdata/registries-tls.yaml")
+	if err != nil {
+		t.Fatalf("failed to read golden file: %v", err)
+	}
+	if got != string(want) {
+		t.Errorf("registries.yaml = \n%s\nwant\n%s", got, want)
+	}
+
+	// The inline CA is written next to the file that references it, and the reference points at
+	// the path it was written to.
+	caPath := "/etc/cargoship/tls/mirror.example.com_5000.crt"
+	if cfg.files[caPath] != testCAPEM {
+		t.Errorf("%s = %q, want the inline CA certificate", caPath, cfg.files[caPath])
+	}
+}
+
+func TestDesiredFilesWritesInlineCA(t *testing.T) {
+	d := newTestRancher()
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name:  "docker.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+			},
+		},
+	}
+
+	files, err := d.DesiredFiles(cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	require.NoError(t, err)
+	require.Equal(t, []byte(testCAPEM), files["/etc/cargoship/tls/mirror.example.com.crt"].Content)
+	require.Contains(t, files, filepath.Join(filepath.Dir(d.Config), "registries.yaml"))
+}
+
+// registries.yaml is group readable, so anything running as the engine's group can read the
+// mirror list. Every other file cargoship writes stays root-only.
+func TestDesiredFilesModes(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = dig.Mapping{
+		config.EngineAudit: dig.Mapping{"rules": []string{"foo"}},
+		config.EnginePSS:   dig.Mapping{"defaults": dig.Mapping{"enforce": "restricted"}},
+	}
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name:  "docker.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				TLS:   &cluster.ZarfClusterRegistryTLS{CA: testCAPEM},
+			},
+		},
+	}
+
+	files, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	require.NoError(t, err)
+
+	dir := filepath.Dir(d.Config)
+	require.Equal(t, "0640", files[filepath.Join(dir, "registries.yaml")].Mode)
+	require.Equal(t, "0600", files[filepath.Join(dir, "audit.yaml")].Mode)
+	require.Equal(t, "0600", files[filepath.Join(dir, "pss.yaml")].Mode)
+	require.Equal(t, "0600", files["/etc/cargoship/tls/mirror.example.com.crt"].Mode)
 }

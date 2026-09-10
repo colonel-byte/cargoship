@@ -1,16 +1,20 @@
 ---
 configs:
-  mirror-ghcr.example.com:
+  "mirror-ghcr.example.com":
     auth:
-      identitytoken: tok
-      password: pass
-      username: user
+      identity_token: tok
+  "mirror-quay.example.com":
+    auth:
+      auth: cm9ib3Q6c2VjcmV0cGFzc3dvcmQ=
 mirrors:
-  docker.io:
+  "docker.io":
     endpoint:
-      - mirror-docker-hub.example.com
+      - https://mirror-docker-hub.example.com
     rewrite:
-      ^rancher/(.*): mirrorproject/rancher-images/$1
-  ghcr.io:
+      "^rancher/(.*)": mirrorproject/rancher-images/$1
+  "ghcr.io":
     endpoint:
-      - mirror-ghcr.example.com
+      - https://mirror-ghcr.example.com
+  "quay.io":
+    endpoint:
+      - https://mirror-quay.example.com

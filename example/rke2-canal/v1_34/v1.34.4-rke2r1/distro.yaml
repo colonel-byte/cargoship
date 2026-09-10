@@ -106,30 +106,30 @@ spec:
     os:
       sysctl:
         # Istio related sysctl overrides
-        "fs.inotify.max_user_watches": "11048576"
-        "fs.inotify.max_user_instances": "8192"
+        "fs.inotify.max_user_watches": 11048576
+        "fs.inotify.max_user_instances": 8192
         # Misc performance
-        "vm.max_map_count": "262144"
-        "fs.file-max": "2097152"
+        "vm.max_map_count": 262144
+        "fs.file-max": 2097152
         # Network tuning
-        "net.core.somaxconn": "32768"
-        "net.ipv4.tcp_max_syn_backlog": "8192"
-        "net.core.netdev_max_backlog": "16384"
+        "net.core.somaxconn": 32768
+        "net.ipv4.tcp_max_syn_backlog": 8192
+        "net.core.netdev_max_backlog": 16384
         # NFTABLES
-        "net.netfilter.nf_conntrack_max": "1000000"
-        "net.netfilter.nf_conntrack_buckets": "250000"
-        "net.netfilter.nf_conntrack_tcp_timeout_established": "86400"
-        "net.netfilter.nf_conntrack_tcp_timeout_close_wait": "3600"
+        "net.netfilter.nf_conntrack_max": 1000000
+        "net.netfilter.nf_conntrack_buckets": 250000
+        "net.netfilter.nf_conntrack_tcp_timeout_established": 86400
+        "net.netfilter.nf_conntrack_tcp_timeout_close_wait": 3600
         # Network
-        "net.ipv4.ip_forward": "1"
-        "net.ipv6.conf.all.forwarding": "1"
-        "net.bridge.bridge-nf-call-iptables": "1"
-        "net.bridge.bridge-nf-call-ip6tables": "1"
+        "net.ipv4.ip_forward": 1
+        "net.ipv6.conf.all.forwarding": 1
+        "net.bridge.bridge-nf-call-iptables": 1
+        "net.bridge.bridge-nf-call-ip6tables": 1
         # RKE2 related sysctl overrides
-        "vm.panic_on_oom": "0"
-        "vm.overcommit_memory": "1"
-        "kernel.panic": "10"
-        "kernel.panic_on_oops": "1"
+        "vm.panic_on_oom": 0
+        "vm.overcommit_memory": 1
+        "kernel.panic": 10
+        "kernel.panic_on_oops": 1
       fapolicyd: |
         # Allow RKE2 to function
         allow perm=any all : dir=/opt/cni/
@@ -217,6 +217,6 @@ spec:
         - docker.io/rancher/nginx-ingress-controller:v1.14.3-hardened2
         - docker.io/rancher/rke2-cloud-provider:v1.34.4-0.20260211145917-c6017918a65c-build20260211
         - docker.io/rancher/hardened-snapshot-controller:v8.4.0-build20260205
-        # canal cni images
+        # canal cni and add-on images
         - docker.io/rancher/hardened-calico:v3.31.3-build20260206
         - docker.io/rancher/hardened-flannel:v0.28.1-build20260206

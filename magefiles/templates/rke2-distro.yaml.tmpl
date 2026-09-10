@@ -19,9 +19,16 @@
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfDistro
 metadata:
-  name: rancher-rke2-{{ .CNI }}
+  name: rancher-rke2-{{ .Name }}
   version: {{ .Version }}
-  architecture: amd64
+{{- if .MultiArch }}
+  architectures:
+{{- range .Arches }}
+    - {{ .Arch }}
+{{- end }}
+{{- else }}
+  architecture: {{ (index .Arches 0).Arch }}
+{{- end }}
 spec:
   type: rke2
   version: {{ .Version }}
@@ -32,8 +39,10 @@ spec:
           cmd: |-
             rm -rf   target
             mkdir -p target
-            echo https://github.com/rancher/rke2/releases/download/{{ .TagURL }}/rke2.linux-amd64.tar.gz
-            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/{{ .TagURL }}/rke2.linux-amd64.tar.gz
+{{- range $arch := .Arches }}
+            echo https://github.com/rancher/rke2/releases/download/{{ $.TagURL }}/{{ $arch.Tarball }}
+            curl -L -o ./target/{{ $arch.Tarball }} https://github.com/rancher/rke2/releases/download/{{ $.TagURL }}/{{ $arch.Tarball }}
+{{- end }}
       after:
         - description: clean up after
           cmd: |-
@@ -46,6 +55,11 @@ spec:
         cni:
           - {{ .CNI }}
         disable-cloud-controller: true
+{{- if .CloudProvider }}
+        # rke2 rewrites this to "external", forces disable-cloud-controller and deploys the
+        # provider's bundled CPI and CSI charts. Every other bundled provider is disabled.
+        cloud-provider-name: {{ .CloudProvider }}
+{{- end }}
 {{- if .ReplacesKubeProxy }}
         disable-kube-proxy: true
 {{- end }}
@@ -106,48 +120,114 @@ spec:
                   - kube-system
                   - rook-ceph
                   - zarf
-{{- if eq .CNI "cilium" }}
+{{- if or (eq .CNI "cilium") .CloudProvider }}
       manifest:
+{{- end }}
+{{- if eq .CNI "cilium" }}
         rke2-cilium: |-
           kubeProxyReplacement: true
           k8sServiceHost: "localhost"
-          k8sServicePort: "6443"
-          encryption:
+          k8sServicePort: 6443
+          l2announcements:
             enabled: true
+          encryption:
+            enabled: {{ .Encryption }}
             type: wireguard
           tolerations:
             - operator: Exists
           operator:
             tolerations:
               - operator: Exists
+          cni:
+            exclusive: false
+          bandwidthManager:
+            enabled: false
+          bpf:
+            masquerade: true
+          socketLB:
+            hostNamespaceOnly: true
+            enabled: true
+          localRedirectPolicies:
+            enabled: true
+          hostFirewall:
+            enabled: false
+          enablePolicy: default
+          hubble:
+            enabled: true
+            relay:
+              enabled: true
+              tolerations:
+                - operator: Exists
+            ui:
+              enabled: true
+              frontend:
+                server:
+                  ipv6:
+                    enabled: false
+              tolerations:
+                - operator: Exists
+{{- end }}
+{{- if eq .CloudProvider "rancher-vsphere" }}
+        rancher-vsphere-cpi: |-
+          vCenter:
+            # These are placeholders: an example cannot know the vCenter it will run against,
+            # and credentials do not belong in a package. Fill them in, or replace the
+            # generated secret with your own, before building this example.
+            host: ""
+            port: 443
+            insecureFlag: true
+            datacenters: ""
+            username: ""
+            password: ""
+            credentialsSecret:
+              name: vsphere-cpi-creds
+              generate: true
+        rancher-vsphere-csi: |-
+          vCenter:
+            # Placeholders, as above. clusterId has to be unique per cluster sharing a vCenter.
+            host: ""
+            port: 443
+            insecureFlag: "1"
+            clusterId: ""
+            datacenters: ""
+            username: ""
+            password: ""
+            configSecret:
+              name: vsphere-config-secret
+              generate: true
+          storageClass:
+            enabled: true
+            name: vsphere-csi-sc
+            isDefault: true
+            datastoreURL: ""
 {{- end }}
     os:
       sysctl:
         # Istio related sysctl overrides
-        "fs.inotify.max_user_watches": "11048576"
-        "fs.inotify.max_user_instances": "8192"
+        "fs.inotify.max_user_watches": 11048576
+        "fs.inotify.max_user_instances": 8192
         # Misc performance
-        "vm.max_map_count": "262144"
-        "fs.file-max": "2097152"
+        "vm.max_map_count": 262144
+        "fs.file-max": 2097152
         # Network tuning
-        "net.core.somaxconn": "32768"
-        "net.ipv4.tcp_max_syn_backlog": "8192"
-        "net.core.netdev_max_backlog": "16384"
+        "net.core.somaxconn": 32768
+        "net.ipv4.tcp_max_syn_backlog": 8192
+        "net.core.netdev_max_backlog": 16384
         # NFTABLES
-        "net.netfilter.nf_conntrack_max": "1000000"
-        "net.netfilter.nf_conntrack_buckets": "250000"
-        "net.netfilter.nf_conntrack_tcp_timeout_established": "86400"
-        "net.netfilter.nf_conntrack_tcp_timeout_close_wait": "3600"
+        "net.netfilter.nf_conntrack_max": 1000000
+        "net.netfilter.nf_conntrack_buckets": 250000
+        "net.netfilter.nf_conntrack_tcp_timeout_established": 86400
+        "net.netfilter.nf_conntrack_tcp_timeout_close_wait": 3600
         # Network
-        "net.ipv4.ip_forward": "1"
-        "net.ipv6.conf.all.forwarding": "1"
-        "net.bridge.bridge-nf-call-iptables": "1"
-        "net.bridge.bridge-nf-call-ip6tables": "1"
+        "net.ipv4.ip_forward": 1
+        "net.ipv6.conf.all.forwarding": 1
+        "net.bridge.bridge-nf-call-iptables": 1
+        "net.bridge.bridge-nf-call-ip6tables": 1
         # RKE2 related sysctl overrides
-        "vm.panic_on_oom": "0"
-        "vm.overcommit_memory": "1"
-        "kernel.panic": "10"
-        "kernel.panic_on_oops": "1"
+        "vm.panic_on_oom": 0
+        "vm.overcommit_memory": 1
+        "kernel.panic": 10
+        "kernel.panic_on_oops": 1
       fapolicyd: |
         # Allow RKE2 to function
         allow perm=any all : dir=/opt/cni/
@@ -155,17 +235,25 @@ spec:
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
       files:
-{{- $commonRPM := .CommonRPM }}
 {{- $selinuxRPM := .SelinuxRPM }}
-{{- $serverRPM := .ServerRPM }}
-{{- $agentRPM := .AgentRPM }}
-        - source: {{ $commonRPM }}
-          target: /var/lib/rancher/rke2/rpm/rke2-common-{{ .RPMVersion }}-0.el9.x86_64.rpm
-{{- with sha256 $commonRPM }}
+{{- if .MultiArch }}
+        # One set of RPMs and one tarball per architecture, each landing at the same target.
+        # The selector decides which set a host receives; an entry without an arch selector
+        # goes to every host.
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: {{ $arch.CommonRPM }}
+          target: /var/lib/rancher/rke2/rpm/rke2-common-{{ $.RPMVersion }}-0.el9.{{ $arch.RPMArch }}.rpm
+{{- with sha256 $arch.CommonRPM }}
           shasum: {{ . }}
 {{- end }}
           selector:
             package: rpm
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
         - source: {{ $selinuxRPM }}
           target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
 {{- with sha256 $selinuxRPM }}
@@ -173,41 +261,72 @@ spec:
 {{- end }}
           selector:
             package: rpm
-        - source: {{ $serverRPM }}
-          target: /var/lib/rancher/rke2/rpm/rke2-server-{{ .RPMVersion }}-0.el9.x86_64.rpm
-{{- with sha256 $serverRPM }}
+{{- range $arch := .Arches }}
+        - source: {{ $arch.ServerRPM }}
+          target: /var/lib/rancher/rke2/rpm/rke2-server-{{ $.RPMVersion }}-0.el9.{{ $arch.RPMArch }}.rpm
+{{- with sha256 $arch.ServerRPM }}
           shasum: {{ . }}
 {{- end }}
           selector:
             package: rpm
             profile: controller
-        - source: {{ $agentRPM }}
-          target: /var/lib/rancher/rke2/rpm/rke2-agent-{{ .RPMVersion }}-0.el9.x86_64.rpm
-{{- with sha256 $agentRPM }}
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: {{ $arch.AgentRPM }}
+          target: /var/lib/rancher/rke2/rpm/rke2-agent-{{ $.RPMVersion }}-0.el9.{{ $arch.RPMArch }}.rpm
+{{- with sha256 $arch.AgentRPM }}
           shasum: {{ . }}
 {{- end }}
           selector:
             package: rpm
             profile: worker
-        - source: target/rke2.linux-amd64.tar.gz
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: target/{{ $arch.Tarball }}
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
           selector:
             package: binary
-        - source: target/rke2.linux-amd64.tar.gz
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: target/{{ $arch.Tarball }}
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
           selector:
             package: binary
-        - source: target/rke2.linux-amd64.tar.gz
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: target/{{ $arch.Tarball }}
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
           selector:
             package: binary
-        - source: target/rke2.linux-amd64.tar.gz
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: target/{{ $arch.Tarball }}
           extractPath: lib/systemd/system/rke2-server.service
           target: /etc/systemd/system/rke2-server.service
           symlinks:
@@ -215,7 +334,13 @@ spec:
           selector:
             package: binary
             profile: controller
-        - source: target/rke2.linux-amd64.tar.gz
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: target/{{ $arch.Tarball }}
           extractPath: lib/systemd/system/rke2-agent.service
           target: /etc/systemd/system/rke2-agent.service
           symlinks:
@@ -223,6 +348,11 @@ spec:
           selector:
             package: binary
             profile: worker
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
         - source: {{ $selinuxRPM }}
           target: /var/lib/rancher/rke2/rpm/rke2-selinux-0.22-1.el9.noarch.rpm
 {{- with sha256 $selinuxRPM }}
@@ -237,7 +367,7 @@ spec:
 {{- range .CoreImages }}
         - {{ . }}
 {{- end }}
-        # {{ .CNI }} cni images
+        # {{ .CNI }} cni and add-on images
 {{- range .CNIImages }}
         - {{ . }}
 {{- end }}
