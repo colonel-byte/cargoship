@@ -17,11 +17,13 @@ package distrocfg
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -132,9 +134,7 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 				URL: "mirror-ghcr.example.com",
 			},
 			Authentication: cluster.ZarfClusterRegistryAuth{
-				Username: "user",
-				Password: "pass",
-				Token:    "tok",
+				Token: "tok",
 			},
 		},
 	}
@@ -150,8 +150,6 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 		keyConfigs: dig.Mapping{
 			"mirror-ghcr.example.com": dig.Mapping{
 				keyAuth: dig.Mapping{
-					keyUsername:      "user",
-					keyPassword:      "pass",
 					keyIdentityToken: "tok",
 				},
 			},
@@ -159,6 +157,86 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
+	}
+}
+
+// A username and password are encoded into one base64 credential rather than written as two
+// keys, so the node never carries the password in plain text.
+func TestBuildRegistriesConfigWithUserPass(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "quay.io",
+			Proxy: cluster.ZarfClusterRegistryProxy{
+				URL: "mirror-quay.example.com",
+			},
+			Authentication: cluster.ZarfClusterRegistryAuth{
+				Username: "robot",
+				Password: "secretpassword",
+			},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	want := dig.Mapping{
+		keyMirrors: dig.Mapping{
+			"quay.io": dig.Mapping{
+				keyEndpoint: []string{"mirror-quay.example.com"},
+			},
+		},
+		keyConfigs: dig.Mapping{
+			"mirror-quay.example.com": dig.Mapping{
+				keyAuth: dig.Mapping{
+					keyAuth: base64.StdEncoding.EncodeToString([]byte("robot:secretpassword")),
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
+	}
+}
+
+// The auth keys are the ones wharfie unmarshals, and it ignores anything else without
+// complaining, so a rename here is a silent loss of credentials on every node.
+func TestRegistryAuthKeyNames(t *testing.T) {
+	if keyUsername != "username" || keyPassword != "password" || keyAuth != "auth" || keyIdentityToken != "identity_token" {
+		t.Errorf("auth keys = %q/%q/%q/%q, want username/password/auth/identity_token",
+			keyUsername, keyPassword, keyAuth, keyIdentityToken)
+	}
+}
+
+func TestRegistryAuth(t *testing.T) {
+	cases := map[string]struct {
+		auth cluster.ZarfClusterRegistryAuth
+		want dig.Mapping
+	}{
+		"user and password become one base64 credential under auth": {
+			auth: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"},
+			want: dig.Mapping{keyAuth: base64.StdEncoding.EncodeToString([]byte("robot:secretpassword"))},
+		},
+		"a token is passed through as given, under identity_token": {
+			auth: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+			want: dig.Mapping{keyIdentityToken: "tok"},
+		},
+		"a token wins over a user and password": {
+			auth: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword", Token: "tok"},
+			want: dig.Mapping{keyIdentityToken: "tok"},
+		},
+		"half a credential cannot be encoded, so it is written as it is": {
+			auth: cluster.ZarfClusterRegistryAuth{Username: "robot"},
+			want: dig.Mapping{keyUsername: "robot"},
+		},
+		"no credentials produce no auth entry": {
+			auth: cluster.ZarfClusterRegistryAuth{},
+			want: dig.Mapping{},
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.want, registryAuth(tc.auth))
+		})
 	}
 }
 
@@ -367,8 +445,8 @@ func TestConfigureEngineControllerLeaderNoTokenFiles(t *testing.T) {
 	if got.DigString(keyDataDir) != d.Data {
 		t.Errorf("config.yaml data-dir = %q, want %q", got.DigString(keyDataDir), d.Data)
 	}
-	if got.DigString(keyToken) != d.JoinTokenPath() {
-		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyToken), d.JoinTokenPath())
+	if got.DigString(keyTokenFile) != d.JoinTokenPath() {
+		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyTokenFile), d.JoinTokenPath())
 	}
 	if got.DigString(keyAgentToken) != d.JoinTokenPathAgent() {
 		t.Errorf("config.yaml agent-token-file = %q, want %q", got.DigString(keyAgentToken), d.JoinTokenPathAgent())
@@ -436,8 +514,8 @@ func TestConfigureEngineWorkerStripsControllerArgs(t *testing.T) {
 	if want := "https://lb.example.com:9345"; got.DigString(keyServer) != want {
 		t.Errorf("config.yaml server = %q, want %q", got.DigString(keyServer), want)
 	}
-	if got.DigString(keyToken) != d.JoinTokenPathAgent() {
-		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyToken), d.JoinTokenPathAgent())
+	if got.DigString(keyTokenFile) != d.JoinTokenPathAgent() {
+		t.Errorf("config.yaml token-file = %q, want %q", got.DigString(keyTokenFile), d.JoinTokenPathAgent())
 	}
 	for _, k := range []string{keyKubeAPI, keyKubeConMan, keyKubeScheduler, keyETCD} {
 		if _, ok := got[k]; ok {
@@ -615,9 +693,15 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 				Name:  "ghcr.io",
 				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-ghcr.example.com"},
 				Authentication: cluster.ZarfClusterRegistryAuth{
-					Username: "user",
-					Password: "pass",
-					Token:    "tok",
+					Token: "tok",
+				},
+			},
+			{
+				Name:  "quay.io",
+				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
+				Authentication: cluster.ZarfClusterRegistryAuth{
+					Username: "robot",
+					Password: "secretpassword",
 				},
 			},
 		},
@@ -707,9 +791,9 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 		t.Errorf("pss.yaml = %+v, want kind=AdmissionConfiguration apiVersion=apiserver.config.k8s.io/v1", pssYAML)
 	}
 
-	wantRegistries, err := marshalYAML(buildRegistriesConfig(run.Registries))
+	wantRegistries, err := marshalRegistriesYAML(buildRegistriesConfig(run.Registries))
 	if err != nil {
-		t.Fatalf("marshalYAML() error = %v", err)
+		t.Fatalf("marshalRegistriesYAML() error = %v", err)
 	}
 	if string(got[registriesPath]) != string(wantRegistries) {
 		t.Errorf("registries.yaml = %s, want %s", got[registriesPath], wantRegistries)
@@ -915,5 +999,43 @@ func TestCleanupPaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tt.want, tt.distro.CleanupPaths())
 		})
+	}
+}
+
+// The mirror and configs keys are registry names and hosts, which can look like numbers,
+// booleans, or the "*" wildcard, so they are written quoted.
+func TestMarshalRegistriesYAMLQuotesKeys(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name: "*",
+			Proxy: cluster.ZarfClusterRegistryProxy{
+				URL:     "mirror.example.com:5000",
+				Rewrite: map[string]string{"^rancher/(.*)": "mirrorproject/rancher-images/$1"},
+			},
+			Authentication: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+		},
+	}
+
+	got, err := marshalRegistriesYAML(buildRegistriesConfig(registries))
+	if err != nil {
+		t.Fatalf("marshalRegistriesYAML() error = %v", err)
+	}
+
+	for _, want := range []string{`"*":`, `"mirror.example.com:5000":`, `"^rancher/(.*)":`} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("registries.yaml = %s, want it to contain %s", got, want)
+		}
+	}
+
+	// Quoting is a rendering choice, so the file still has to parse back to the same keys.
+	var round map[string]map[string]any
+	if err := yaml.Unmarshal(got, &round); err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	if _, ok := round["mirrors"]["*"]; !ok {
+		t.Errorf("mirrors = %+v, want a * entry", round["mirrors"])
+	}
+	if _, ok := round["configs"]["mirror.example.com:5000"]; !ok {
+		t.Errorf("configs = %+v, want a mirror.example.com:5000 entry", round["configs"])
 	}
 }
