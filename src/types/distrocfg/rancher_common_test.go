@@ -106,7 +106,7 @@ func TestBuildRegistriesConfigNoAuth(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "docker.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL: "mirror-docker-hub.example.com",
 			},
 		},
@@ -117,7 +117,7 @@ func TestBuildRegistriesConfigNoAuth(t *testing.T) {
 	want := dig.Mapping{
 		keyMirrors: dig.Mapping{
 			"docker.io": dig.Mapping{
-				keyEndpoint: []string{"mirror-docker-hub.example.com"},
+				keyEndpoint: []string{"https://mirror-docker-hub.example.com"},
 			},
 		},
 	}
@@ -130,7 +130,7 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "ghcr.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL: "mirror-ghcr.example.com",
 			},
 			Authentication: cluster.ZarfClusterRegistryAuth{
@@ -144,7 +144,7 @@ func TestBuildRegistriesConfigWithAuth(t *testing.T) {
 	want := dig.Mapping{
 		keyMirrors: dig.Mapping{
 			"ghcr.io": dig.Mapping{
-				keyEndpoint: []string{"mirror-ghcr.example.com"},
+				keyEndpoint: []string{"https://mirror-ghcr.example.com"},
 			},
 		},
 		keyConfigs: dig.Mapping{
@@ -166,7 +166,7 @@ func TestBuildRegistriesConfigWithUserPass(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "quay.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL: "mirror-quay.example.com",
 			},
 			Authentication: cluster.ZarfClusterRegistryAuth{
@@ -181,7 +181,7 @@ func TestBuildRegistriesConfigWithUserPass(t *testing.T) {
 	want := dig.Mapping{
 		keyMirrors: dig.Mapping{
 			"quay.io": dig.Mapping{
-				keyEndpoint: []string{"mirror-quay.example.com"},
+				keyEndpoint: []string{"https://mirror-quay.example.com"},
 			},
 		},
 		keyConfigs: dig.Mapping{
@@ -244,7 +244,7 @@ func TestBuildRegistriesConfigWithRewrite(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "docker.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL: "mirror-docker-hub.example.com",
 				Rewrite: map[string]string{
 					"^rancher/(.*)": "mirrorproject/rancher-images/$1",
@@ -258,7 +258,7 @@ func TestBuildRegistriesConfigWithRewrite(t *testing.T) {
 	want := dig.Mapping{
 		keyMirrors: dig.Mapping{
 			"docker.io": dig.Mapping{
-				keyEndpoint: []string{"mirror-docker-hub.example.com"},
+				keyEndpoint: []string{"https://mirror-docker-hub.example.com"},
 				keyRewrite: map[string]string{
 					"^rancher/(.*)": "mirrorproject/rancher-images/$1",
 				},
@@ -274,11 +274,11 @@ func TestBuildRegistriesConfigMultiple(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name:  "docker.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-docker-hub.example.com"},
+			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-docker-hub.example.com"},
 		},
 		{
 			Name:  "quay.io",
-			Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
+			Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
 			Authentication: cluster.ZarfClusterRegistryAuth{
 				Username: "user",
 			},
@@ -303,9 +303,7 @@ func TestBuildRegistriesConfigMultiple(t *testing.T) {
 func TestBuildRegistriesConfigEmpty(t *testing.T) {
 	got := buildRegistriesConfig(nil)
 
-	want := dig.Mapping{
-		keyMirrors: dig.Mapping{},
-	}
+	want := dig.Mapping{}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("buildRegistriesConfig() = %+v, want %+v", got, want)
 	}
@@ -626,7 +624,7 @@ func TestConfigureEngineWritesRegistries(t *testing.T) {
 		Registries: []cluster.ZarfClusterRegistries{
 			{
 				Name:  "docker.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
 			},
 		},
 	}
@@ -648,8 +646,8 @@ func TestConfigureEngineWritesRegistries(t *testing.T) {
 		t.Fatalf("registries.yaml mirrors[docker.io] = %+v, want a mapping", mirrors["docker.io"])
 	}
 	endpoints, ok := docker[keyEndpoint].([]any)
-	if !ok || len(endpoints) != 1 || endpoints[0] != "mirror.example.com" {
-		t.Errorf("registries.yaml mirrors[docker.io].endpoint = %+v, want [mirror.example.com]", docker[keyEndpoint])
+	if !ok || len(endpoints) != 1 || endpoints[0] != "https://mirror.example.com" {
+		t.Errorf("registries.yaml mirrors[docker.io].endpoint = %+v, want [https://mirror.example.com]", docker[keyEndpoint])
 	}
 }
 
@@ -682,7 +680,7 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 		Registries: []cluster.ZarfClusterRegistries{
 			{
 				Name: "docker.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{
+				Proxy: &cluster.ZarfClusterRegistryProxy{
 					URL: "mirror-docker-hub.example.com",
 					Rewrite: map[string]string{
 						"^rancher/(.*)": "mirrorproject/rancher-images/$1",
@@ -691,14 +689,14 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 			},
 			{
 				Name:  "ghcr.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-ghcr.example.com"},
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-ghcr.example.com"},
 				Authentication: cluster.ZarfClusterRegistryAuth{
 					Token: "tok",
 				},
 			},
 			{
 				Name:  "quay.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror-quay.example.com"},
 				Authentication: cluster.ZarfClusterRegistryAuth{
 					Username: "robot",
 					Password: "secretpassword",
@@ -758,7 +756,7 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 		Registries: []cluster.ZarfClusterRegistries{
 			{
 				Name:  "docker.io",
-				Proxy: cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
+				Proxy: &cluster.ZarfClusterRegistryProxy{URL: "mirror.example.com"},
 			},
 		},
 	}
@@ -1008,7 +1006,7 @@ func TestMarshalRegistriesYAMLQuotesKeys(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{
 			Name: "*",
-			Proxy: cluster.ZarfClusterRegistryProxy{
+			Proxy: &cluster.ZarfClusterRegistryProxy{
 				URL:     "mirror.example.com:5000",
 				Rewrite: map[string]string{"^rancher/(.*)": "mirrorproject/rancher-images/$1"},
 			},
@@ -1038,4 +1036,58 @@ func TestMarshalRegistriesYAMLQuotesKeys(t *testing.T) {
 	if _, ok := round["configs"]["mirror.example.com:5000"]; !ok {
 		t.Errorf("configs = %+v, want a mirror.example.com:5000 entry", round["configs"])
 	}
+}
+
+func TestBuildRegistriesConfigKeysConfigsByHost(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name:           "docker.io",
+			Proxy:          &cluster.ZarfClusterRegistryProxy{URL: "https://mirror.example.com:5000/v2"},
+			Authentication: cluster.ZarfClusterRegistryAuth{Username: "robot", Password: "secretpassword"},
+		},
+	}
+
+	got := buildRegistriesConfig(registries)
+
+	configs, ok := got[keyConfigs].(dig.Mapping)
+	if !ok {
+		t.Fatalf("buildRegistriesConfig() has no configs entry: %+v", got)
+	}
+	if _, ok := configs["mirror.example.com:5000"]; !ok {
+		t.Errorf("configs keys = %+v, want an entry for mirror.example.com:5000", configs)
+	}
+
+	mirrors, ok := got[keyMirrors].(dig.Mapping)
+	if !ok {
+		t.Fatalf("buildRegistriesConfig() has no mirrors entry: %+v", got)
+	}
+	docker, ok := mirrors["docker.io"].(dig.Mapping)
+	if !ok {
+		t.Fatalf("mirrors has no docker.io entry: %+v", mirrors)
+	}
+	endpoint := docker[keyEndpoint]
+	if !reflect.DeepEqual(endpoint, []string{"https://mirror.example.com:5000/v2"}) {
+		t.Errorf("endpoint = %+v, want the URL as written", endpoint)
+	}
+}
+
+// A registry can carry credentials without a mirror -- they authenticate a direct pull. The
+// entry is keyed by the registry itself then, since that is where the pull goes.
+func TestBuildRegistriesConfigWithoutProxy(t *testing.T) {
+	registries := []cluster.ZarfClusterRegistries{
+		{
+			Name:           "registry.example.com",
+			Authentication: cluster.ZarfClusterRegistryAuth{Token: "tok"},
+		},
+	}
+
+	want := dig.Mapping{
+		keyConfigs: dig.Mapping{
+			"registry.example.com": dig.Mapping{
+				keyAuth: dig.Mapping{keyIdentityToken: "tok"},
+			},
+		},
+	}
+	require.Equal(t, want, buildRegistriesConfig(registries),
+		"a registry without a proxy gets credentials but no mirror")
 }

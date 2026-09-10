@@ -319,7 +319,7 @@
           "description": "holds the credentials for the registry."
         },
         "name": {
-          "description": "identifies the registry.",
+          "description": "identifies the registry. With a proxy it is the registry pulls are redirected away\nfrom; without one it is the registry the credentials authenticate to.",
           "examples": [
             "docker.io",
             "ghcr.io",
@@ -332,12 +332,11 @@
         },
         "proxy": {
           "$ref": "#/$defs/ZarfClusterRegistryProxy",
-          "description": "holds the pull redirect settings for the registry."
+          "description": "holds the pull redirect settings for the registry. Omit it to configure credentials\nfor the registry without redirecting pulls away from it."
         }
       },
       "required": [
-        "name",
-        "proxy"
+        "name"
       ],
       "type": "object"
     },
