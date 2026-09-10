@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d5e5c65b.js";
+            window.path_to_searchindex_js = "../searchindex-a5a472ec.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2851a731.js"></script>
@@ -294,7 +294,7 @@ $ANSIBLE_VAULT;1.1;AES256
 <p><code>cargoship apply</code> needs the same vault password to decrypt the credential at run time, supplied the same way as encryption – via <code>--vault-password-file</code>, or the <code>CARGOSHIP_VAULT_PASSWORD</code> environment variable if the flag is omitted:</p>
 <pre><code>cargoship apply --vault-password-file ./vault-pass.txt cluster.tar.zst
 </code></pre>
-<p>If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, <code>apply</code> fails with an error naming the registry and the field – <code>auth.user</code>, <code>auth.pass</code>, <code>auth.token</code>, or <code>tls.ca</code> – rather than silently treating the ciphertext as a literal username or password. So does a <code>tls.ca</code> that decrypts to something that is not a certificate.</p>
+<p>If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, <code>apply</code> fails with an error naming the registry and the field – <code>auth.user</code>, <code>auth.pass</code>, <code>auth.token</code>, or <code>tls.ca</code> – rather than silently treating the ciphertext as a literal username or password. So does a password that does not match the document, or a <code>tls.ca</code> that decrypts to something that is not a certificate. All of it is checked as soon as the password is resolved, before the first host is connected to, so a wrong password costs you an error message rather than a half-configured cluster.</p>
 
                     </main>
 
