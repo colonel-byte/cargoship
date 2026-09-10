@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f77c7a83.js";
+            window.path_to_searchindex_js = "../searchindex-d5e5c65b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2851a731.js"></script>
@@ -263,10 +263,12 @@
             ...
             -----END CERTIFICATE-----
 </code></pre>
-<p>Cargoship writes it to <code>/etc/cargoship/tls/&lt;host&gt;.crt</code> on each host – <code>&lt;host&gt;</code> being the same host the <code>configs</code> entry is keyed by, with anything outside <code>A-Za-z0-9._-</code> replaced by an underscore – and sets <code>caFile</code> to that path for you. The certificate travels with the cluster configuration, so a rotated CA reaches the nodes the same way a changed mirror does.</p>
+<p>Cargoship writes it to <code>/etc/cargoship/tls/&lt;host&gt;.crt</code> on each host – <code>&lt;host&gt;</code> being the same host the <code>configs</code> entry is keyed by, with anything outside <code>A-Za-z0-9._-</code> replaced by an underscore – and sets <code>caFile</code> to that path for you. The certificate travels with the cluster configuration, so a rotated CA reaches the nodes the same way a changed mirror does: <code>apply</code> sees the file drift, then drains, rewrites, and restarts each node in turn.</p>
 <p>Set <code>ca</code> or <code>caFile</code>, not both. <code>apply</code> rejects an entry that sets both, and one whose <code>ca</code> is not a PEM certificate, naming the registry. A certificate is public, so encrypting one buys nothing, but a <code>ca</code> given as an Ansible Vault value is accepted and decrypted like any other – a document vaulted as a whole should not have to be picked apart. The certificate is checked once it is decrypted, which is the first point at which there is a certificate to look at.</p>
+<p>Cargoship owns <code>/etc/cargoship/tls</code> outright: every file in it was written for a registry entry. Drop the <code>ca</code> from an entry, or drop the entry itself, and the next <code>apply</code> removes the certificate that was written for it along with the reference to it, rather than leaving it on every node for however long the cluster lives.</p>
 <h3 id="keeping-the-nodes-in-step"><a class="header" href="#keeping-the-nodes-in-step">Keeping the Nodes in Step</a></h3>
 <p><code>apply</code> compares what it would write against what is already on each node, and syncs only the nodes that differ. Both halves of a file count: contents, and the mode it is written with. A <code>registries.yaml</code> that someone has since widened to <code>0644</code> is rewritten the same as one with the wrong mirror in it, since the mode is what keeps the credentials in it off limits.</p>
+<p>Syncing a node means draining it, rewriting the files, restarting the engine, and uncordoning it once it is ready again – one node at a time. The log line before each drain names the files that drifted and why, so a cluster-wide rewrite is legible while it happens.</p>
 <p>That matters on upgrade. Cargoship 0.21 changed how <code>registries.yaml</code> is written: keys under <code>mirrors</code> and <code>configs</code> are quoted, an endpoint given without a scheme is completed to <code>https://</code>, a <code>user</code> and <code>pass</code> pair is encoded into a single <code>auth</code> credential, and the file is written <code>0640</code> instead of <code>0600</code>. None of that changes what the engine does, but all of it changes the file, so the first <code>apply</code> after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.</p>
 <h3 id="encrypting-the-credential"><a class="header" href="#encrypting-the-credential">Encrypting the Credential</a></h3>
 <p>Use <code>cargoship vault-encrypt</code> to produce the encrypted value. It reads the plaintext from an argument, from stdin, or – if stdin is a terminal – prompts for it with hidden input so the secret is never echoed or left in shell history:</p>
