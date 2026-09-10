@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d717e6f3.js";
+            window.path_to_searchindex_js = "../searchindex-03427574.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2851a731.js"></script>
@@ -218,19 +218,31 @@
 <pre><code class="language-yaml">spec:
   config:
     registries:
-      - name: mirror.example.com
+      - name: docker.io
+        proxy:
+          url: https://mirror.example.com:5000
         auth:
           user: myuser
           pass: hunter2
 </code></pre>
+<p><code>name</code> is the registry the images were originally referenced from, and <code>proxy.url</code> is the mirror the engine pulls from instead. Cargoship writes both into <code>/etc/rancher/&lt;engine&gt;/registries.yaml</code>: the pair becomes a <code>mirrors</code> entry, and the credentials become a <code>configs</code> entry keyed by the mirror’s host and port. <code>proxy.url</code> may carry a scheme and a path. A URL given without a scheme is completed to <code>https://</code>, and the host is taken from it for the <code>configs</code> key, which is what the engine matches on.</p>
 <p>Cargoship does not copy <code>user</code> and <code>pass</code> into <code>registries.yaml</code> as they are given. It encodes the pair into a single credential – base64 of <code>user:pass</code> – and writes that as the engine’s <code>auth</code> directive, so the password does not sit on every node as plain text. Base64 is an encoding, not encryption, so treat the resulting file as a secret regardless.</p>
 <p>Use <code>token</code> on its own when the registry issues one directly. It is a different credential from a password, not another way to spell one, so Cargoship writes it as the engine’s <code>identity_token</code> directive rather than as basic auth. A <code>token</code> given alongside <code>user</code> and <code>pass</code> wins:</p>
 <pre><code class="language-yaml">        auth:
           token: abc123
 </code></pre>
+<p><code>proxy</code> is optional. Leave it out to authenticate a registry Cargoship pulls from directly, without redirecting anything – a private registry that hosts your own images, say:</p>
+<pre><code class="language-yaml">      - name: nexus.example.com
+        auth:
+          user: myuser
+          pass: hunter2
+</code></pre>
+<p>That writes a <code>configs</code> entry keyed by <code>nexus.example.com</code> and no <code>mirrors</code> entry. An entry that carries neither a <code>proxy.url</code> nor credentials configures nothing, and <code>apply</code> rejects it by name rather than writing an empty entry. So does a <code>proxy</code> block with no <code>url</code> in it, and a registry listed twice, which would otherwise mean the second entry quietly replacing the first.</p>
+<p>The rest of the entry is checked the same way, when the inventory file is read and before <code>apply</code> connects to anything. <code>name</code> is the registry part of an image reference, so it carries no scheme and no repository path: <code>docker.io</code>, not <code>https://docker.io</code> and not <code>docker.io/library</code>. (<code>*</code> is the exception – engines read it as every registry.) <code>proxy.url</code> has to name a host and use <code>http</code> or <code>https</code>, and any credentials in it belong in <code>auth</code> instead. A <code>proxy.rewrite</code> pattern has to compile as a regular expression and rewrite to something, since the engine compiles it on the node, where failing means a failed pull rather than a rejected document. <code>user</code> and <code>pass</code> are a pair; half of one authenticates nothing and reaches you as a 401 from the registry rather than as the missing half it is.</p>
+<p>Several registries may share one mirror – a single Nexus proxying <code>docker.io</code>, <code>ghcr.io</code>, and <code>quay.io</code> under different paths is the usual shape – and cargoship writes one <code>configs</code> entry for the host they have in common. Those entries have to agree: if two registries resolve to the same host but ask for different credentials, only one of them could survive into the file, so <code>apply</code> reports the conflict by name instead of picking one.</p>
 <p>Writing <code>pass: hunter2</code> in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in <code>user</code>, <code>pass</code>, or <code>token</code> – any field starting with <code>$ANSIBLE_VAULT</code> is decrypted automatically when the package is applied.</p>
 <h3 id="keeping-the-nodes-in-step"><a class="header" href="#keeping-the-nodes-in-step">Keeping the Nodes in Step</a></h3>
-<p>Cargoship 0.21 changed how <code>registries.yaml</code> is written: keys under <code>mirrors</code> and <code>configs</code> are quoted, and a <code>user</code> and <code>pass</code> pair is encoded into a single <code>auth</code> credential. Neither changes what the engine does, but both change the file, so the first <code>apply</code> after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.</p>
+<p>Cargoship 0.21 changed how <code>registries.yaml</code> is written: keys under <code>mirrors</code> and <code>configs</code> are quoted, an endpoint given without a scheme is completed to <code>https://</code>, and a <code>user</code> and <code>pass</code> pair is encoded into a single <code>auth</code> credential. None of that changes what the engine does, but all of it changes the file, so the first <code>apply</code> after upgrading rolls through every node in the cluster once. Plan for it the way you would plan for any rolling restart.</p>
 <h3 id="encrypting-the-credential"><a class="header" href="#encrypting-the-credential">Encrypting the Credential</a></h3>
 <p>Use <code>cargoship vault-encrypt</code> to produce the encrypted value. It reads the plaintext from an argument, from stdin, or – if stdin is a terminal – prompts for it with hidden input so the secret is never echoed or left in shell history:</p>
 <pre><code>cargoship vault-encrypt --vault-password-file ./vault-pass.txt
