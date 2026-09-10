@@ -196,7 +196,7 @@ func TestEncryptValueRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EncryptValue() error = %v", err)
 	}
-	if !isVaultEncrypted(encrypted) {
+	if !cluster.IsVaultEncrypted(encrypted) {
 		t.Fatalf("EncryptValue() = %q, want a $ANSIBLE_VAULT-prefixed string", encrypted)
 	}
 
@@ -233,5 +233,59 @@ func TestDecryptRegistryAuthWrongPassword(t *testing.T) {
 	err = DecryptRegistryAuth(dis, "wrongpass")
 	if err == nil {
 		t.Fatal("DecryptRegistryAuth() error = nil, want an error for wrong vault password")
+	}
+}
+
+const testCAPEM = `-----BEGIN CERTIFICATE-----
+dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
+-----END CERTIFICATE-----
+`
+
+// A CA certificate is public and does not need encrypting, but a document vaulted as a whole
+// carries one anyway, so it is decrypted alongside the credentials.
+func TestDecryptRegistryAuthDecryptsInlineCA(t *testing.T) {
+	const password = "testpass"
+	encryptedCA, err := vault.Encrypt(testCAPEM, password)
+	if err != nil {
+		t.Fatalf("vault.Encrypt() error = %v", err)
+	}
+
+	dis := &cluster.ZarfCluster{}
+	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+		{
+			Name: "ghcr.io",
+			TLS:  &cluster.ZarfClusterRegistryTLS{CA: encryptedCA},
+		},
+	}
+
+	if err := DecryptRegistryAuth(dis, password); err != nil {
+		t.Fatalf("DecryptRegistryAuth() error = %v", err)
+	}
+
+	if got := dis.Spec.Config.Registries[0].TLS.CA; got != testCAPEM {
+		t.Errorf("DecryptRegistryAuth() CA = %q, want the certificate", got)
+	}
+}
+
+// Load time saw ciphertext, so the certificate is checked here instead -- the first point at
+// which there is a certificate to look at.
+func TestDecryptRegistryAuthRejectsDecryptedCAThatIsNotACertificate(t *testing.T) {
+	const password = "testpass"
+	encryptedCA, err := vault.Encrypt("not a certificate", password)
+	if err != nil {
+		t.Fatalf("vault.Encrypt() error = %v", err)
+	}
+
+	dis := &cluster.ZarfCluster{}
+	dis.Spec.Config.Registries = []cluster.ZarfClusterRegistries{
+		{
+			Name: "ghcr.io",
+			TLS:  &cluster.ZarfClusterRegistryTLS{CA: encryptedCA},
+		},
+	}
+
+	err = DecryptRegistryAuth(dis, password)
+	if err == nil {
+		t.Fatal("DecryptRegistryAuth() error = nil, want an error for a decrypted value that is not a certificate")
 	}
 }

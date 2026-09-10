@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -51,6 +52,11 @@ var (
 	}
 )
 
+// registryTLSDir is where cargoship writes CA certificates given inline in the cluster
+// configuration. It is cargoship's own directory rather than the engine's, since these files
+// are cargoship's to create, replace, and remove.
+const registryTLSDir = "/etc/cargoship/tls"
+
 // Keys used in the files this file writes, kept in one place so a rename cannot silently
 // change what an engine reads. Three files are involved: config.yaml (engine flags), the
 // manifests written under the data directory, and registries.yaml (mirrors and credentials,
@@ -67,12 +73,18 @@ const (
 	// keyAuth names both the auth section of a configs entry and, inside it, the base64
 	// "username:password" credential. The engines spell both the same way.
 	keyAuth = "auth"
+	// keyCAFile is the tls key holding the path on the host to the CA bundle that verifies the
+	// registry certificate.
+	keyCAFile = "ca_file"
 	// keyCIDRPod is the config.yaml key holding the pod network range.
 	keyCIDRPod = "cluster-cidr"
 	// keyCIDRSVC is the config.yaml key holding the service network range.
 	keyCIDRSVC = "service-cidr"
-	// keyConfigs is the registries.yaml section holding auth per mirror, keyed by the mirror's
-	// host and port rather than by the registry name.
+	// keyCertFile is the tls key holding the path on the host to the client certificate the
+	// registry authenticates the host with.
+	keyCertFile = "cert_file"
+	// keyConfigs is the registries.yaml section holding auth and tls per mirror, keyed by the
+	// mirror's host and port rather than by the registry name.
 	keyConfigs = "configs"
 	// keyDataDir is the config.yaml key holding the directory the engine keeps its state in.
 	keyDataDir = "data-dir"
@@ -83,6 +95,12 @@ const (
 	// keyIdentityToken is the auth key holding a token the registry issued, as opposed to a
 	// password. The engine exchanges it with the registry for a bearer token.
 	keyIdentityToken = "identity_token"
+	// keyInsecureSkipVerify is the tls key that turns certificate verification off for one
+	// registry.
+	keyInsecureSkipVerify = "insecure_skip_verify"
+	// keyKeyFile is the tls key holding the path on the host to the client private key that goes
+	// with keyCertFile.
+	keyKeyFile = "key_file"
 	// keyKind is the kind of a manifest cargoship writes, alongside keyAPIVersion.
 	keyKind = "kind"
 	// keyKubeAPI passes flags through to the apiserver. Controllers only.
@@ -118,6 +136,8 @@ const (
 	// keyTLS is the config.yaml key listing the extra names and addresses that go on the
 	// controller's TLS certificate.
 	keyTLS = "tls-san"
+	// keyTLSConfig is the configs section holding one registry's TLS settings.
+	keyTLSConfig = "tls"
 	// keyTokenFile points config.yaml at the file holding the token a controller joins with.
 	keyTokenFile = "token-file"
 	// keyUsername is the auth key holding a registry username. Written only when there is no
@@ -293,6 +313,10 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 			return nil, err
 		}
 		files[filepath.Join(filepath.Dir(d.Config), "registries.yaml")] = b
+
+		for path, ca := range registryCAFiles(run.Registries) {
+			files[path] = ca
+		}
 	}
 
 	nodeConfig := dis.Spec.Config.Engine.Dup()
@@ -324,7 +348,8 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 // registries.yaml, based on the registry mirrors configured in `.spec.config.registries`.
 //
 // The key names are the ones wharfie -- the library both engines parse this file with --
-// unmarshals: auth, username, password, and identity_token under auth, as documented at
+// unmarshals: auth, username, password, and identity_token under auth, and ca_file, cert_file, key_file,
+// and insecure_skip_verify under tls, as documented at
 // https://docs.rke2.io/install/private_registry. Unmarshalling is not strict, so a key spelled
 // any other way is dropped silently and the engine goes on to pull anonymously, which surfaces
 // far away from here as a 401.
@@ -348,8 +373,15 @@ func buildRegistriesConfig(registries []cluster.ZarfClusterRegistries) dig.Mappi
 			mirrors[string(reg.Name)] = mirror
 		}
 
+		entry := dig.Mapping{}
 		if auth := registryAuth(reg.Authentication); len(auth) > 0 {
-			configs[host] = dig.Mapping{keyAuth: auth}
+			entry[keyAuth] = auth
+		}
+		if tls := registryTLS(reg.TLS, host); len(tls) > 0 {
+			entry[keyTLSConfig] = tls
+		}
+		if len(entry) > 0 {
+			configs[host] = entry
 		}
 	}
 
@@ -393,6 +425,70 @@ func registryAuth(a cluster.ZarfClusterRegistryAuth) dig.Mapping {
 		}
 	}
 	return auth
+}
+
+// registryTLS renders one registry's TLS settings for a configs entry. An inline CA is not
+// written here -- it goes to its own file on the host (see registryCAFiles), and ca_file points
+// at that path. insecure_skip_verify is written only when it is on, since the engine's own
+// default is to verify.
+func registryTLS(t *cluster.ZarfClusterRegistryTLS, host string) dig.Mapping {
+	tls := dig.Mapping{}
+	if t == nil {
+		return tls
+	}
+	switch {
+	case t.CA != "":
+		tls[keyCAFile] = registryCAPath(host)
+	case t.CAFile != "":
+		tls[keyCAFile] = t.CAFile
+	}
+	if t.CertFile != "" {
+		tls[keyCertFile] = t.CertFile
+	}
+	if t.KeyFile != "" {
+		tls[keyKeyFile] = t.KeyFile
+	}
+	if t.InsecureSkipVerify {
+		tls[keyInsecureSkipVerify] = t.InsecureSkipVerify
+	}
+	return tls
+}
+
+// registryCAFiles returns the CA certificate files to write on the host, keyed by path, for
+// every registry that carries an inline PEM CA. Writing them alongside registries.yaml keeps
+// the certificate and the configuration that references it in one place, so the engine-config
+// sync phases notice a changed certificate the same way they notice a changed mirror.
+func registryCAFiles(registries []cluster.ZarfClusterRegistries) map[string][]byte {
+	files := map[string][]byte{}
+	for _, reg := range registries {
+		if reg.TLS == nil || reg.TLS.CA == "" {
+			continue
+		}
+		files[registryCAPath(reg.ConfigHost())] = []byte(reg.TLS.CA)
+	}
+	return files
+}
+
+// registryCAPath returns where a registry's inline CA certificate is written on the host. The
+// host can carry a port and, in the no-mirror case, whatever the registry is named, so anything
+// outside a conservative set is replaced rather than trusted to be path-safe.
+func registryCAPath(host string) string {
+	return filepath.Join(registryTLSDir, sanitizeRegistryFilename(host)+".crt")
+}
+
+// sanitizeRegistryFilename replaces every character outside [A-Za-z0-9._-] with an underscore,
+// so a host like "mirror.example.com:5000" becomes one path element.
+func sanitizeRegistryFilename(host string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			return r
+		case r == '.', r == '_', r == '-':
+			return r
+		default:
+			return '_'
+		}
+	}, host)
 }
 
 // GetClusterCIDR returns a string array with the all the known cluster cidr blocks

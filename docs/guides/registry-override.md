@@ -88,13 +88,47 @@ Use `token` on its own when the registry issues one directly. It is a different 
           pass: hunter2
 ```
 
-That writes a `configs` entry keyed by `nexus.example.com` and no `mirrors` entry. An entry that carries neither a `proxy.url` nor credentials configures nothing, and `apply` rejects it by name rather than writing an empty entry. So does a `proxy` block with no `url` in it, and a registry listed twice, which would otherwise mean the second entry quietly replacing the first.
+That writes a `configs` entry keyed by `nexus.example.com` and no `mirrors` entry. An entry that carries neither a `proxy.url`, credentials, nor `tls` configures nothing, and `apply` rejects it by name rather than writing an empty entry. So does a `proxy` block with no `url` in it, and a registry listed twice, which would otherwise mean the second entry quietly replacing the first.
 
 The rest of the entry is checked the same way, when the inventory file is read and before `apply` connects to anything. `name` is the registry part of an image reference, so it carries no scheme and no repository path: `docker.io`, not `https://docker.io` and not `docker.io/library`. (`*` is the exception -- engines read it as every registry.) `proxy.url` has to name a host and use `http` or `https`, and any credentials in it belong in `auth` instead. A `proxy.rewrite` pattern has to compile as a regular expression and rewrite to something, since the engine compiles it on the node, where failing means a failed pull rather than a rejected document. `user` and `pass` are a pair; half of one authenticates nothing and reaches you as a 401 from the registry rather than as the missing half it is.
 
-Several registries may share one mirror -- a single Nexus proxying `docker.io`, `ghcr.io`, and `quay.io` under different paths is the usual shape -- and cargoship writes one `configs` entry for the host they have in common. Those entries have to agree: if two registries resolve to the same host but ask for different credentials, only one of them could survive into the file, so `apply` reports the conflict by name instead of picking one.
+Several registries may share one mirror -- a single Nexus proxying `docker.io`, `ghcr.io`, and `quay.io` under different paths is the usual shape -- and cargoship writes one `configs` entry for the host they have in common. Those entries have to agree: if two registries resolve to the same host but ask for different credentials or different TLS settings, only one of them could survive into the file, so `apply` reports the conflict by name instead of picking one.
 
-Writing `pass: hunter2` in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in `user`, `pass`, or `token` -- any field starting with `$ANSIBLE_VAULT` is decrypted automatically when the package is applied.
+Writing `pass: hunter2` in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in `user`, `pass`, `token`, or `tls.ca` -- any field starting with `$ANSIBLE_VAULT` is decrypted automatically when the package is applied.
+
+### Registry TLS
+
+A registry serving a certificate the host does not already trust needs a `tls` block. It takes paths to files already on the host:
+
+```yaml
+spec:
+  config:
+    registries:
+      - name: docker.io
+        proxy:
+          url: https://mirror.example.com:5000
+        tls:
+          caFile: /etc/pki/ca-trust/source/anchors/mirror-ca.pem
+          certFile: /etc/ssl/certs/mirror-client.pem
+          keyFile: /etc/ssl/private/mirror-client-key.pem
+```
+
+`caFile` verifies the registry's certificate; `certFile` and `keyFile` are the client certificate the registry authenticates the host with, and go together. Setting `insecureSkipVerify: true` turns certificate verification off for that registry -- it makes the connection trivially interceptable, so prefer distributing the CA and verifying against it.
+
+Distributing that CA to every host beforehand is often the annoying part, so `ca` takes the PEM-encoded certificate inline instead:
+
+```yaml
+        tls:
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            MIIDdzCCAl+gAwIBAgIEbGVhZjANBgkqhkiG9w0BAQsFADBaMQswCQYDVQQGEwJV
+            ...
+            -----END CERTIFICATE-----
+```
+
+Cargoship writes it to `/etc/cargoship/tls/<host>.crt` on each host -- `<host>` being the same host the `configs` entry is keyed by, with anything outside `A-Za-z0-9._-` replaced by an underscore -- and sets `caFile` to that path for you. The certificate travels with the cluster configuration, so a rotated CA reaches the nodes the same way a changed mirror does.
+
+Set `ca` or `caFile`, not both. `apply` rejects an entry that sets both, and one whose `ca` is not a PEM certificate, naming the registry. A certificate is public, so encrypting one buys nothing, but a `ca` given as an Ansible Vault value is accepted and decrypted like any other -- a document vaulted as a whole should not have to be picked apart. The certificate is checked once it is decrypted, which is the first point at which there is a certificate to look at.
 
 ### Keeping the Nodes in Step
 
@@ -135,4 +169,4 @@ spec:
 cargoship apply --vault-password-file ./vault-pass.txt cluster.tar.zst
 ```
 
-If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, `apply` fails with an error naming the registry rather than silently treating the ciphertext as a literal username or password.
+If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, `apply` fails with an error naming the registry and the field -- `auth.user`, `auth.pass`, `auth.token`, or `tls.ca` -- rather than silently treating the ciphertext as a literal username or password. So does a `tls.ca` that decrypts to something that is not a certificate.

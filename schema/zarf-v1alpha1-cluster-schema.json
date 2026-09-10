@@ -332,7 +332,11 @@
         },
         "proxy": {
           "$ref": "#/$defs/ZarfClusterRegistryProxy",
-          "description": "holds the pull redirect settings for the registry. Omit it to configure credentials\nfor the registry without redirecting pulls away from it."
+          "description": "holds the pull redirect settings for the registry. Omit it to configure credentials\nor TLS for the registry without redirecting pulls away from it."
+        },
+        "tls": {
+          "$ref": "#/$defs/ZarfClusterRegistryTLS",
+          "description": "configures TLS verification and certificates for the registry endpoint."
         }
       },
       "required": [
@@ -396,6 +400,36 @@
       "required": [
         "url"
       ],
+      "type": "object"
+    },
+    "ZarfClusterRegistryTLS": {
+      "additionalProperties": false,
+      "description": "holds the TLS connection settings for a container registry.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "ca": {
+          "description": "is the PEM-encoded CA certificate used to verify the registry certificate. Cargoship\nwrites it to a file on each host and points the engine at that path, so the certificate\ntravels with the cluster configuration instead of having to be distributed separately.\nUse CAFile instead when the certificate is already on the hosts. It may also be given as\nan Ansible Vault-encrypted string, which cargoship decrypts at apply time.",
+          "type": "string"
+        },
+        "caFile": {
+          "description": "is the path on the host to the CA bundle used to verify the registry certificate.",
+          "type": "string"
+        },
+        "certFile": {
+          "description": "is the path on the host to the client certificate used to authenticate to the registry.",
+          "type": "string"
+        },
+        "insecureSkipVerify": {
+          "description": "disables TLS certificate verification.",
+          "type": "boolean"
+        },
+        "keyFile": {
+          "description": "is the path on the host to the client private key used to authenticate to the registry.",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "ZarfClusterSpec": {
