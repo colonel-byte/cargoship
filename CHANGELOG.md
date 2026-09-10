@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.20.1](https://github.com/colonel-byte/cargoship/compare/v0.20.0...v0.20.1) (2026-09-10)
+
+
+### Features
+
+* add mage function for generating packages ([#335](https://github.com/colonel-byte/cargoship/issues/335)) ([5dd0c19](https://github.com/colonel-byte/cargoship/commit/5dd0c19079f41b6ac6934ca2ceaf291547ac0e07))
+* **engine-config:** remove files cargoship no longer writes ([#331](https://github.com/colonel-byte/cargoship/issues/331)) ([2f9de30](https://github.com/colonel-byte/cargoship/commit/2f9de30a6448a74a683b7f9c8d1105ae706e1e99))
+* **engine-config:** write each engine config file with its own mode ([#330](https://github.com/colonel-byte/cargoship/issues/330)) ([d9fe4bf](https://github.com/colonel-byte/cargoship/commit/d9fe4bfaec4fa3d0c90c3be05453e9027499e9de))
+* make the registry proxy optional ([#328](https://github.com/colonel-byte/cargoship/issues/328)) ([d5da3d7](https://github.com/colonel-byte/cargoship/commit/d5da3d74b61ccabcfd83f81dfc50735fd0b7668b))
+* **registry:** check vault-encrypted registry values before connecting ([#332](https://github.com/colonel-byte/cargoship/issues/332)) ([e9b7f60](https://github.com/colonel-byte/cargoship/commit/e9b7f603251580ca4fac6c3d58d959924a343914))
+* **registry:** support per-registry TLS configuration ([#329](https://github.com/colonel-byte/cargoship/issues/329)) ([46f6486](https://github.com/colonel-byte/cargoship/commit/46f648663c3b481f4164fee57c4dfff8071be068))
+* respect image compress on uploaded images ([#265](https://github.com/colonel-byte/cargoship/issues/265)) ([c517e71](https://github.com/colonel-byte/cargoship/commit/c517e71ea889c378252719af6dd1b75eb02dcf24))
+
+
+### Bug Fixes
+
+* write the registry keys the engines actually read ([#327](https://github.com/colonel-byte/cargoship/issues/327)) ([ab1565b](https://github.com/colonel-byte/cargoship/commit/ab1565bbcc0ef98238a5e7c884e5b41118e287fc))
+
+
+### Refactoring
+
+* **example:** expand examples and dev setup ([#334](https://github.com/colonel-byte/cargoship/issues/334)) ([2c49dfd](https://github.com/colonel-byte/cargoship/commit/2c49dfdbe5f16bf853ff41e1150806acab9d102a))
+
 ## [0.20.0](https://github.com/colonel-byte/cargoship/compare/v0.19.0...v0.20.0) (2026-09-09)
 
 
