@@ -135,6 +135,13 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		return err
 	}
 
+	// Nothing decrypts these until the engine configuration is written, which is well after every
+	// host has been connected to. Check them here, while stopping still costs nothing.
+	if err := clustercfg.VerifyRegistryAuth(manager.Config, vaultPassword); err != nil {
+		l.Warn("failed to decrypt registry credentials", "err", err)
+		return err
+	}
+
 	applyOpts := action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      o.hosts,

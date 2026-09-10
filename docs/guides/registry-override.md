@@ -175,4 +175,4 @@ spec:
 cargoship apply --vault-password-file ./vault-pass.txt cluster.tar.zst
 ```
 
-If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, `apply` fails with an error naming the registry and the field -- `auth.user`, `auth.pass`, `auth.token`, or `tls.ca` -- rather than silently treating the ciphertext as a literal username or password. So does a `tls.ca` that decrypts to something that is not a certificate.
+If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, `apply` fails with an error naming the registry and the field -- `auth.user`, `auth.pass`, `auth.token`, or `tls.ca` -- rather than silently treating the ciphertext as a literal username or password. So does a password that does not match the document, or a `tls.ca` that decrypts to something that is not a certificate. All of it is checked as soon as the password is resolved, before the first host is connected to, so a wrong password costs you an error message rather than a half-configured cluster.
