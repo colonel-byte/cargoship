@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a762ab65.js";
+            window.path_to_searchindex_js = "../searchindex-df2ab52d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-0b29316a.js"></script>
+        <script src="../toc-2851a731.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -218,7 +218,7 @@ metadata:
         - arm64
 </code></pre>
 <p>An entry with no <code>arch</code> selector goes to every host, the same way an entry with no <code>profile</code> selector goes to every role. That is what the architecture-independent files – unit files, scripts, <code>noarch</code> RPMs – want.</p>
-<p><code>selector.arch</code> may only name architectures the definition declares. A file selecting <code>x86_64</code> in a package targeting <code>amd64</code> fails at create time rather than silently never uploading. <code>example/k3s-multi</code> and <code>example/rke2-multi</code> are complete definitions written this way, generated from the same templates as the single-architecture examples, and <code>example/upstream</code> is a hand-written one that installs Kubernetes from upstream packages for both architectures.</p>
+<p><code>selector.arch</code> may only name architectures the definition declares. A file selecting <code>x86_64</code> in a package targeting <code>amd64</code> fails at create time rather than silently never uploading. <code>example/k3s-multi</code>, <code>example/rke2-multi-cni-canal</code> and <code>example/rke2-multi-cni-cilium</code> are complete definitions written this way, generated from the same templates as the single-architecture examples, and <code>example/upstream</code> is a hand-written one that installs Kubernetes from upstream packages for both architectures.</p>
 <h2 id="building"><a class="header" href="#building">Building</a></h2>
 <p><code>cargoship create</code> builds every architecture the definition declares into one package. Images are pulled for each of them, so a two-architecture package with images takes roughly twice as long to build and is roughly twice the size.</p>
 <p>The archive is named <code>cargoship-&lt;name&gt;-&lt;arch&gt;-&lt;version&gt;.tar.zst</code>, and a package covering more than one architecture takes <code>multi</code> in the architecture position, since no single architecture describes what it carries:</p>
