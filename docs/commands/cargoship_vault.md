@@ -33,4 +33,5 @@ Groups the commands that write Ansible Vault ciphertext for a cluster configurat
 
 * [cargoship](./cargoship.md)	 - CLI for cargoship installs
 * [cargoship vault encrypt](./cargoship_vault_encrypt.md)	 - Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
+* [cargoship vault encrypt-path](./cargoship_vault_encrypt-path.md)	 - Encrypts the value already in a config file at a YAML path, in place
 
