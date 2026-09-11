@@ -29,6 +29,7 @@ func newVaultCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(newVaultEncryptCommand())
+	cmd.AddCommand(newVaultEncryptPathCommand())
 
 	return cmd
 }

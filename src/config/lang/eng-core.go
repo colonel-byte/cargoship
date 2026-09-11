@@ -98,6 +98,14 @@ const (
 	CmdVaultEncryptLong = "Encrypts VALUE with Ansible Vault, producing a $ANSIBLE_VAULT-prefixed string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal."
 	// CmdVaultEncryptFlagPasswordFile flag description
 	CmdVaultEncryptFlagPasswordFile = "Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
+	// CmdVaultEncryptPathShort vault encrypt-path short
+	CmdVaultEncryptPathShort = "Encrypts the value already in a config file at a YAML path, in place"
+	// CmdVaultEncryptPathLong vault encrypt-path long
+	CmdVaultEncryptPathLong = "Encrypts the value FILE holds at PATH with Ansible Vault and writes it back to FILE as a block scalar, leaving comments, key order, and the rest of the document untouched. PATH is a YAML path such as '.spec.config.registries[0].auth.pass'; the leading '$' go-yaml uses is optional. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, and warns when PATH is anywhere else, because nothing unwraps a value encrypted elsewhere."
+	// CmdVaultEncryptPathFlagDryRun flag description
+	CmdVaultEncryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
+	// CmdVaultEncryptPathFlagForce flag description
+	CmdVaultEncryptPathFlagForce = "Encrypt the value even though it is Ansible Vault ciphertext already, wrapping it a second time."
 	// CmdViperErrLoadingConfigFile error text
 	CmdViperErrLoadingConfigFile = "failed to load config file"
 	// RootCmdFlagLogFormat log format

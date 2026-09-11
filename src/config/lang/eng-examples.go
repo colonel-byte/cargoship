@@ -173,6 +173,16 @@ $ printf my-registry-password | cargoship vault encrypt --vault-password-file ./
 # Encrypt the contents of a file
 $ cargoship vault encrypt --vault-password-file ./vault-pass.txt < ./registry-token.txt`
 
+	// CmdVaultEncryptPathExample vault encrypt-path example
+	CmdVaultEncryptPathExample = `# Encrypt the password a config already holds for its first registry
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Encrypt a registry's inline CA certificate, however many lines of PEM it runs to
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].tls.ca' --vault-password-file ./vault-pass.txt
+
+# See what the file would become without writing it
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.token' --vault-password-file ./vault-pass.txt --dry-run`
+
 	// CmdVersionExample version example
 	CmdVersionExample = `# Print the version of the running binary
 $ cargoship version
