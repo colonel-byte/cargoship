@@ -203,6 +203,13 @@ $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass
 # Rotate the password a whole configuration is vaulted with
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.txt`
+	// CmdVaultRekeyExample vault rekey example
+	CmdVaultRekeyExample = `# Move every encrypted registry credential in a cluster configuration to a new vault password
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt
+
+# Check what a rotation would produce without writing it back
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt --dry-run
+`
 
 	// CmdVaultDecryptExample vault decrypt example
 	CmdVaultDecryptExample = `# Decrypt a value copied out of a config file
