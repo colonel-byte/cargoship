@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.21.0](https://github.com/colonel-byte/cargoship/compare/v0.20.1...v0.21.0) (2026-09-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* kubeconfig as value ([#337](https://github.com/colonel-byte/cargoship/issues/337))
+
+### Features
+
+* allow passing yaml blocks for helm manifests ([#341](https://github.com/colonel-byte/cargoship/issues/341)) ([d493a7c](https://github.com/colonel-byte/cargoship/commit/d493a7ce8fdfa4d1e25bbbe5582acb62b1346f1b))
+* kubeconfig as value ([#337](https://github.com/colonel-byte/cargoship/issues/337)) ([d718299](https://github.com/colonel-byte/cargoship/commit/d7182994c711bcb8a78cd122eb6192fd3fc1f076))
+* **vault:** add "vault decrypt" and "vault decrypt-path" ([#346](https://github.com/colonel-byte/cargoship/issues/346)) ([4d687ad](https://github.com/colonel-byte/cargoship/commit/4d687ad49fec8e8fd24cbe7bfbdc3cd830cb97a8))
+* **vault:** add "vault encrypt-file" and "vault decrypt-file" ([#347](https://github.com/colonel-byte/cargoship/issues/347)) ([a3304fb](https://github.com/colonel-byte/cargoship/commit/a3304fb50c005b4cd789162efcfc9324a6415c83))
+* **vault:** add "vault encrypt-path" to encrypt a value in place ([#345](https://github.com/colonel-byte/cargoship/issues/345)) ([72eef41](https://github.com/colonel-byte/cargoship/commit/72eef4110139cb9b6b22c68ee9e1e28eb9c9e3b5))
+* **vault:** add "vault rekey" to move a config to a new vault password ([#351](https://github.com/colonel-byte/cargoship/issues/351)) ([84c743f](https://github.com/colonel-byte/cargoship/commit/84c743fd406da2c10ac7840a6275423900125306))
+* **vault:** group the vault commands under a "vault" subcommand ([#344](https://github.com/colonel-byte/cargoship/issues/344)) ([67c435c](https://github.com/colonel-byte/cargoship/commit/67c435cb2044d6303ea9c72b7891931ae1e61695))
+* **vault:** make the new rekey password optional and re-salt in place ([#354](https://github.com/colonel-byte/cargoship/issues/354)) ([b06854a](https://github.com/colonel-byte/cargoship/commit/b06854a7bbfe17cb011200828b23f6e6e6608345))
+* **vault:** resolve anchors and aliases before walking a config ([#356](https://github.com/colonel-byte/cargoship/issues/356)) ([dc16a42](https://github.com/colonel-byte/cargoship/commit/dc16a42df8740be654937b646b56d72ad4837cf1))
+* **vault:** take several YAML paths per encrypt-path and decrypt-path run ([#355](https://github.com/colonel-byte/cargoship/issues/355)) ([3cc9b2e](https://github.com/colonel-byte/cargoship/commit/3cc9b2e59b9aa85a115410858ba93f78f152ffb3))
+
+
+### Bug Fixes
+
+* **vault:** rewrite a credential two registries share only once ([#357](https://github.com/colonel-byte/cargoship/issues/357)) ([a91971a](https://github.com/colonel-byte/cargoship/commit/a91971a1914c0d3c74f7af50eeedd06472da2e7b))
+
+
+### Refactoring
+
+* **examples:** show off yaml block ([#342](https://github.com/colonel-byte/cargoship/issues/342)) ([82ffe23](https://github.com/colonel-byte/cargoship/commit/82ffe23c8ef10bd617a50fc819df539a2d39ab27))
+
+
+### Documentation
+
+* **vault:** add a guide to vault encryption and decryption ([#348](https://github.com/colonel-byte/cargoship/issues/348)) ([6f1ad35](https://github.com/colonel-byte/cargoship/commit/6f1ad356c3f62605be55152ab9577994f6bb338b))
+
+
+### CI/CD
+
+* build required action always ([#352](https://github.com/colonel-byte/cargoship/issues/352)) ([43137fa](https://github.com/colonel-byte/cargoship/commit/43137fa8d767424b278cda63a02507fa5c04e4af))
+* delete a pull request's example packages on close, and sweep stale ones after 30 days ([#359](https://github.com/colonel-byte/cargoship/issues/359)) ([f6a922a](https://github.com/colonel-byte/cargoship/commit/f6a922aeba4ee6effb9a6eb60e4086b07ccea1ed))
+* run publish-example once goreleaser has uploaded the release ([#350](https://github.com/colonel-byte/cargoship/issues/350)) ([90b9c13](https://github.com/colonel-byte/cargoship/commit/90b9c138c8fec836d028bb1bdb74572e17f34147))
+* update logic on clean ([#360](https://github.com/colonel-byte/cargoship/issues/360)) ([d42991e](https://github.com/colonel-byte/cargoship/commit/d42991ea71f7f10b6ea131d5a251271051c7ef0e))
+
 ## [0.20.1](https://github.com/colonel-byte/cargoship/compare/v0.20.0...v0.20.1) (2026-09-10)
 
 
