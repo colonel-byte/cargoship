@@ -2,11 +2,11 @@
 
 ## cargoship vault
 
-Encrypts cluster configuration values with Ansible Vault
+Encrypts and decrypts cluster configuration values with Ansible Vault
 
 ### Synopsis
 
-Groups the commands that write Ansible Vault ciphertext for a cluster configuration. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, using the password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable.
+Groups the commands that read and write Ansible Vault ciphertext for a cluster configuration. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, using the password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable.
 
 ### Options
 
@@ -32,6 +32,8 @@ Groups the commands that write Ansible Vault ciphertext for a cluster configurat
 ### SEE ALSO
 
 * [cargoship](./cargoship.md)	 - CLI for cargoship installs
+* [cargoship vault decrypt](./cargoship_vault_decrypt.md)	 - Decrypts an Ansible Vault value, printing the plaintext
+* [cargoship vault decrypt-path](./cargoship_vault_decrypt-path.md)	 - Decrypts the value already in a config file at a YAML path, in place
 * [cargoship vault encrypt](./cargoship_vault_encrypt.md)	 - Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
 * [cargoship vault encrypt-path](./cargoship_vault_encrypt-path.md)	 - Encrypts the value already in a config file at a YAML path, in place
 

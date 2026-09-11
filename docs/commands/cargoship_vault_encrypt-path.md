@@ -51,5 +51,5 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.t
 
 ### SEE ALSO
 
-* [cargoship vault](./cargoship_vault.md)	 - Encrypts cluster configuration values with Ansible Vault
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
 

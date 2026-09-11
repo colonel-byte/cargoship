@@ -22,6 +22,8 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/parser"
 	vault "github.com/sosedoff/ansible-vault-go"
 )
 
@@ -287,4 +289,205 @@ func readPath(t *testing.T, doc []byte, path string) string {
 		t.Fatalf("reading %s: value is %T, not a string, in:\n%s", path, cursor, doc)
 	}
 	return value
+}
+
+func TestDecryptAtPathRoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{"plain scalar", ".spec.config.registries[0].auth.pass", "hunter2"},
+		{"quoted scalar", ".spec.config.registries[0].auth.token", "tok #1"},
+		{"literal block", ".spec.config.registries[0].tls.ca", "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n"},
+		{"rooted path", "$.spec.config.registries[0].auth.user", "admin"},
+		{"unprefixed path", "spec.config.loadbalancer", "lb.example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encrypted, err := EncryptAtPath([]byte(pathTestDoc), tt.path, testPassword, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v", err)
+			}
+
+			got, err := DecryptAtPath(encrypted, tt.path, testPassword)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			if value := readPath(t, got, tt.path); value != tt.want {
+				t.Errorf("value at %s = %q, want %q", tt.path, value, tt.want)
+			}
+		})
+	}
+}
+
+// TestDecryptAtPathRestoresTheDocument pins the property that makes the pair safe to use on a
+// configuration under version control: encrypting a value and decrypting it again gives back the
+// file that went in, byte for byte, rather than a re-rendering of it.
+func TestDecryptAtPathRestoresTheDocument(t *testing.T) {
+	for _, path := range []string{
+		".spec.config.registries[0].auth.user",
+		".spec.config.registries[0].auth.pass",
+		".spec.config.registries[0].auth.token",
+		".spec.config.registries[0].tls.ca",
+		".spec.config.loadbalancer",
+	} {
+		t.Run(path, func(t *testing.T) {
+			encrypted, err := EncryptAtPath([]byte(pathTestDoc), path, testPassword, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v", err)
+			}
+			got, err := DecryptAtPath(encrypted, path, testPassword)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			if string(got) != pathTestDoc {
+				t.Errorf("round trip changed the document:\n got:\n%s\nwant:\n%s", got, pathTestDoc)
+			}
+		})
+	}
+}
+
+// TestDecryptAtPathWritesAnyPlaintext covers the values a scalar has to be able to hold on the way
+// back in. Two of these are wrong if go-yaml's encoder is trusted with them -- a control character
+// written raw into a plain scalar, and a block scalar line whose trailing space does not survive
+// contact with anything that trims whitespace -- so this is the guard on renderScalar quoting them
+// instead.
+func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
+	values := []string{
+		"hunter2",
+		"has: a colon",
+		"has #a hash",
+		"*starts-with-an-alias-marker",
+		"  leading space",
+		"trailing space  ",
+		"123",
+		"true",
+		"null",
+		"",
+		"tab\tseparated",
+		"carriage\r\nreturn",
+		"control\x1bcharacter",
+		"line1\nline2",
+		"line1\nline2\n",
+		"line1\ntrailing space  \nline3",
+		"  leading space\nsecond line",
+		"blank\n\n\nlines",
+		"trailing\nblank lines\n\n\n",
+		"\nleading blank line",
+		"-----BEGIN CERTIFICATE-----\naGVsbG8=\n-----END CERTIFICATE-----\n",
+		"émoji 🚀 and ünicode",
+	}
+
+	const path = ".spec.config.registries[0].auth.pass"
+	for _, want := range values {
+		t.Run(strconv.Quote(want), func(t *testing.T) {
+			ciphertext, err := EncryptValue(want, testPassword)
+			if err != nil {
+				t.Fatalf("EncryptValue() error = %v", err)
+			}
+			// Put the ciphertext in the document the way encrypt-path would, so the decrypt runs
+			// against a real block scalar rather than a hand-built one.
+			doc, err := EncryptAtPath([]byte(pathTestDoc), path, testPassword, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v", err)
+			}
+			node, err := mustPath(t, path).FilterFile(mustParse(t, doc))
+			if err != nil {
+				t.Fatalf("FilterFile() error = %v", err)
+			}
+			doc, err = spliceScalar(doc, node, "|-", strings.Split(strings.TrimRight(ciphertext, "\n"), "\n"))
+			if err != nil {
+				t.Fatalf("spliceScalar() error = %v", err)
+			}
+
+			got, err := DecryptAtPath(doc, path, testPassword)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			if value := readPath(t, got, path); value != want {
+				t.Errorf("value at %s = %q, want %q\ndocument:\n%s", path, value, want, got)
+			}
+			// A neighbouring key is the canary for a replacement that ran past its own value.
+			if value := readPath(t, got, ".spec.config.registries[0].auth.token"); value != "tok #1" {
+				t.Errorf("neighbouring token = %q, want %q\ndocument:\n%s", value, "tok #1", got)
+			}
+		})
+	}
+}
+
+func TestDecryptAtPathRejectsPlaintext(t *testing.T) {
+	_, err := DecryptAtPath([]byte(pathTestDoc), ".spec.config.registries[0].auth.pass", testPassword)
+	if !errors.Is(err, ErrNotEncrypted) {
+		t.Fatalf("DecryptAtPath() error = %v, want ErrNotEncrypted", err)
+	}
+}
+
+func TestDecryptAtPathRejectsTheWrongPassword(t *testing.T) {
+	const path = ".spec.config.registries[0].auth.pass"
+	encrypted, err := EncryptAtPath([]byte(pathTestDoc), path, testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	if _, err := DecryptAtPath(encrypted, path, "not the password"); err == nil {
+		t.Fatal("DecryptAtPath() error = nil, want a decryption failure")
+	}
+}
+
+func TestDecryptAtPathErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"path not found", ".spec.config.registries[0].auth.missing"},
+		{"path is a mapping", ".spec.config.registries[0].auth"},
+		{"path is a sequence", ".spec.config.registries"},
+		{"invalid path", ".spec.config.registries[bogus"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := DecryptAtPath([]byte(pathTestDoc), tt.path, testPassword); err == nil {
+				t.Errorf("DecryptAtPath(%q) error = nil, want an error", tt.path)
+			}
+		})
+	}
+}
+
+func TestDecryptValue(t *testing.T) {
+	encrypted, err := EncryptValue("hunter2", testPassword)
+	if err != nil {
+		t.Fatalf("EncryptValue() error = %v", err)
+	}
+	got, err := DecryptValue(encrypted, testPassword)
+	if err != nil {
+		t.Fatalf("DecryptValue() error = %v", err)
+	}
+	if got != "hunter2" {
+		t.Errorf("DecryptValue() = %q, want %q", got, "hunter2")
+	}
+	if _, err := DecryptValue("hunter2", testPassword); !errors.Is(err, ErrNotEncrypted) {
+		t.Errorf("DecryptValue(plaintext) error = %v, want ErrNotEncrypted", err)
+	}
+}
+
+// mustPath and mustParse give the tests the same two steps EncryptAtPath takes, so that one can
+// build a document holding an arbitrary value without going through the public entry points.
+func mustPath(t *testing.T, path string) *goyaml.Path {
+	t.Helper()
+	p, err := parseYAMLPath(path)
+	if err != nil {
+		t.Fatalf("parseYAMLPath() error = %v", err)
+	}
+	return p
+}
+
+func mustParse(t *testing.T, doc []byte) *ast.File {
+	t.Helper()
+	file, err := parser.ParseBytes(doc, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parser.ParseBytes() error = %v", err)
+	}
+	return file
 }

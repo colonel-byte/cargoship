@@ -87,9 +87,9 @@ const (
 	// CmdSha256SumFlagExtractPath flag description
 	CmdSha256SumFlagExtractPath = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
 	// CmdVaultShort vault short
-	CmdVaultShort = "Encrypts cluster configuration values with Ansible Vault"
+	CmdVaultShort = "Encrypts and decrypts cluster configuration values with Ansible Vault"
 	// CmdVaultLong vault long
-	CmdVaultLong = "Groups the commands that write Ansible Vault ciphertext for a cluster configuration. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, using the password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable."
+	CmdVaultLong = "Groups the commands that read and write Ansible Vault ciphertext for a cluster configuration. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, using the password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable."
 	// CmdVaultEncryptDeprecated deprecation notice for the top-level vault-encrypt spelling
 	CmdVaultEncryptDeprecated = `use "cargoship vault encrypt" instead.`
 	// CmdVaultEncryptShort vault encrypt short
@@ -106,6 +106,16 @@ const (
 	CmdVaultEncryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultEncryptPathFlagForce flag description
 	CmdVaultEncryptPathFlagForce = "Encrypt the value even though it is Ansible Vault ciphertext already, wrapping it a second time."
+	// CmdVaultDecryptShort vault decrypt short
+	CmdVaultDecryptShort = "Decrypts an Ansible Vault value, printing the plaintext"
+	// CmdVaultDecryptLong vault decrypt long
+	CmdVaultDecryptLong = "Decrypts VALUE, a $ANSIBLE_VAULT-prefixed string produced by 'cargoship vault encrypt', and prints the plaintext to stdout. If VALUE is omitted, it is read from stdin. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file."
+	// CmdVaultDecryptPathShort vault decrypt-path short
+	CmdVaultDecryptPathShort = "Decrypts the value already in a config file at a YAML path, in place"
+	// CmdVaultDecryptPathLong vault decrypt-path long
+	CmdVaultDecryptPathLong = "Decrypts the Ansible Vault value FILE holds at PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. PATH is a YAML path such as '.spec.config.registries[0].auth.pass'; the leading '$' go-yaml uses is optional. This is the inverse of 'cargoship vault encrypt-path', and leaves the value readable to anyone who can read the file."
+	// CmdVaultDecryptPathFlagDryRun flag description
+	CmdVaultDecryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdViperErrLoadingConfigFile error text
 	CmdViperErrLoadingConfigFile = "failed to load config file"
 	// RootCmdFlagLogFormat log format

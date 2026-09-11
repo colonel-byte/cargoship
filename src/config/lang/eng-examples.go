@@ -183,6 +183,31 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].tls.ca
 # See what the file would become without writing it
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.token' --vault-password-file ./vault-pass.txt --dry-run`
 
+	// CmdVaultDecryptExample vault decrypt example
+	CmdVaultDecryptExample = `# Decrypt a value copied out of a config file
+$ cargoship vault decrypt '$ANSIBLE_VAULT;1.1;AES256
+3862...' --vault-password-file ./vault-pass.txt
+
+# Decrypt a value held in a file
+$ cargoship vault decrypt --vault-password-file ./vault-pass.txt < ./encrypted-token.txt
+
+# Write a decrypted CA certificate straight out to a PEM file
+$ cargoship vault decrypt --vault-password-file ./vault-pass.txt < ./encrypted-ca.txt > ./ca.pem
+
+# Check a value round-trips under the password a config will be applied with
+$ cargoship vault encrypt hunter2 --vault-password-file ./vault-pass.txt | cargoship vault decrypt --vault-password-file ./vault-pass.txt`
+
+	// CmdVaultDecryptPathExample vault decrypt-path example
+	CmdVaultDecryptPathExample = `# Put the plaintext password back into a config, in place of the ciphertext
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Check that a vaulted value decrypts, without writing the plaintext to disk
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run
+
+# Rotate the password a config is vaulted with
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt`
+
 	// CmdVersionExample version example
 	CmdVersionExample = `# Print the version of the running binary
 $ cargoship version
