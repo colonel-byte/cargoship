@@ -99,9 +99,9 @@ const (
 	// CmdVaultEncryptFlagPasswordFile flag description
 	CmdVaultEncryptFlagPasswordFile = "Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
 	// CmdVaultEncryptPathShort vault encrypt-path short
-	CmdVaultEncryptPathShort = "Encrypts the value already in a config file at a YAML path, in place"
+	CmdVaultEncryptPathShort = "Encrypts the values a config file already holds at one or more YAML paths, in place"
 	// CmdVaultEncryptPathLong vault encrypt-path long
-	CmdVaultEncryptPathLong = "Encrypts the value FILE holds at PATH with Ansible Vault and writes it back to FILE as a block scalar, leaving comments, key order, and the rest of the document untouched. PATH is a YAML path such as '.spec.config.registries[0].auth.pass'; the leading '$' go-yaml uses is optional. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, and warns when PATH is anywhere else, because nothing unwraps a value encrypted elsewhere."
+	CmdVaultEncryptPathLong = "Encrypts the values FILE holds at each YAML_PATH with Ansible Vault and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has encrypted, so a path that is missing or encrypted already leaves FILE as it was rather than partly rewritten. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, and warns about a path anywhere else, because nothing unwraps a value encrypted elsewhere."
 	// CmdVaultEncryptPathFlagDryRun flag description
 	CmdVaultEncryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultEncryptPathFlagForce flag description
@@ -123,9 +123,9 @@ const (
 	// CmdVaultDecryptLong vault decrypt long
 	CmdVaultDecryptLong = "Decrypts VALUE, a $ANSIBLE_VAULT-prefixed string produced by 'cargoship vault encrypt', and prints the plaintext to stdout. If VALUE is omitted, it is read from stdin. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file."
 	// CmdVaultDecryptPathShort vault decrypt-path short
-	CmdVaultDecryptPathShort = "Decrypts the value already in a config file at a YAML path, in place"
+	CmdVaultDecryptPathShort = "Decrypts the values a config file holds at one or more YAML paths, in place"
 	// CmdVaultDecryptPathLong vault decrypt-path long
-	CmdVaultDecryptPathLong = "Decrypts the Ansible Vault value FILE holds at PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. PATH is a YAML path such as '.spec.config.registries[0].auth.pass'; the leading '$' go-yaml uses is optional. This is the inverse of 'cargoship vault encrypt-path', and leaves the value readable to anyone who can read the file."
+	CmdVaultDecryptPathLong = "Decrypts the Ansible Vault values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of 'cargoship vault encrypt-path', and leaves the values readable to anyone who can read the file."
 	// CmdVaultDecryptPathFlagDryRun flag description
 	CmdVaultDecryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultDecryptFileShort vault decrypt-file short

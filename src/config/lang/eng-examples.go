@@ -177,6 +177,9 @@ $ cargoship vault encrypt --vault-password-file ./vault-pass.txt < ./registry-to
 	CmdVaultEncryptPathExample = `# Encrypt the password a config already holds for its first registry
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
 
+# Encrypt several values in one pass; the file is written once, after all of them have encrypted
+$ cargoship vault encrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
+
 # Encrypt a registry's inline CA certificate, however many lines of PEM it runs to
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].tls.ca' --vault-password-file ./vault-pass.txt
 
@@ -231,6 +234,9 @@ $ cargoship vault encrypt hunter2 --vault-password-file ./vault-pass.txt | cargo
 	// CmdVaultDecryptPathExample vault decrypt-path example
 	CmdVaultDecryptPathExample = `# Put the plaintext password back into a config, in place of the ciphertext
 $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Decrypt several values in one pass
+$ cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
 
 # Check that a vaulted value decrypts, without writing the plaintext to disk
 $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run

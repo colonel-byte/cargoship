@@ -39,8 +39,8 @@ func newVaultEncryptPathCommand() *cobra.Command {
 	o := vaultEncryptPathOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "encrypt-path FILE PATH",
-		Args:    cobra.ExactArgs(2),
+		Use:     "encrypt-path FILE YAML_PATH [YAML_PATH...]",
+		Args:    cobra.MinimumNArgs(2),
 		Short:   lang.CmdVaultEncryptPathShort,
 		Long:    lang.CmdVaultEncryptPathLong,
 		Example: lang.CmdVaultEncryptPathExample,
@@ -57,9 +57,14 @@ func newVaultEncryptPathCommand() *cobra.Command {
 }
 
 func (o *vaultEncryptPathOptions) run(cmd *cobra.Command, args []string) error {
-	file, path := args[0], args[1]
+	file := args[0]
 
 	password, err := requireVaultPassword(o.vaultPasswordFile)
+	if err != nil {
+		return err
+	}
+
+	paths, err := canonicalYAMLPaths(args[1:])
 	if err != nil {
 		return err
 	}
@@ -69,30 +74,65 @@ func (o *vaultEncryptPathOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	encrypted, err := clustercfg.EncryptAtPath(src, path, password, o.force)
-	if errors.Is(err, clustercfg.ErrAlreadyEncrypted) {
-		// --force belongs to the command, so the suggestion to use it is added here rather than
-		// carried in the error the encrypting package returns.
-		return fmt.Errorf("%w; pass --%s to wrap it again", err, MiscVaultForce)
-	}
-	if err != nil {
-		return err
+	// Every path is encrypted into the document in memory, and the file is written once at the end,
+	// so a path that turns out to be missing or encrypted already leaves FILE exactly as it was
+	// rather than half done.
+	doc := src
+	for _, path := range paths {
+		doc, err = clustercfg.EncryptAtPath(doc, path, password, o.force)
+		if errors.Is(err, clustercfg.ErrAlreadyEncrypted) {
+			// --force belongs to the command, so the suggestion to use it is added here rather than
+			// carried in the error the encrypting package returns.
+			return fmt.Errorf("%w; pass --%s to wrap it again", err, MiscVaultForce)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
-	if !clustercfg.PathIsDecryptable(path) {
-		logger.From(cmd.Context()).Warn("cargoship does not decrypt this field at apply time, so the value will reach the host as ciphertext; it decrypts a registry's auth.user, auth.pass, auth.token and tls.ca", "path", path)
+	// Warnings are held until every path has encrypted, so that a run which writes nothing does not
+	// warn about values it left alone.
+	for _, path := range paths {
+		if !clustercfg.PathIsDecryptable(path) {
+			logger.From(cmd.Context()).Warn("cargoship does not decrypt this field at apply time, so the value will reach the host as ciphertext; it decrypts a registry's auth.user, auth.pass, auth.token and tls.ca", "path", path)
+		}
 	}
 
 	if o.dryRun {
-		_, err := cmd.OutOrStdout().Write(encrypted)
+		_, err := cmd.OutOrStdout().Write(doc)
 		return err
 	}
 
-	if err := writeFileInPlace(file, encrypted); err != nil {
+	if err := writeFileInPlace(file, doc); err != nil {
 		return err
 	}
-	logger.From(cmd.Context()).Info("encrypted value in place", "file", file, "path", path)
+	for _, path := range paths {
+		logger.From(cmd.Context()).Info("encrypted value in place", "file", file, "path", path)
+	}
 	return nil
+}
+
+// canonicalYAMLPaths returns the YAML paths named on the command line as go-yaml spells them, which
+// is the spelling the logs and errors should quote, and rejects a path named twice.
+//
+// A repeated path is always a mistake and never a harmless one: encrypt-path would report it as
+// already encrypted the second time around, and under --force would quietly wrap it twice, which
+// produces a value nothing reads back.
+func canonicalYAMLPaths(paths []string) ([]string, error) {
+	canonical := make([]string, 0, len(paths))
+	seen := make(map[string]string, len(paths))
+	for _, path := range paths {
+		normalized, err := clustercfg.CanonicalYAMLPath(path)
+		if err != nil {
+			return nil, err
+		}
+		if first, ok := seen[normalized]; ok {
+			return nil, fmt.Errorf("%s and %s name the same value; give each YAML path once", first, path)
+		}
+		seen[normalized] = path
+		canonical = append(canonical, normalized)
+	}
+	return canonical, nil
 }
 
 // writeFileInPlace replaces the contents of name with data, keeping its mode. The new contents go

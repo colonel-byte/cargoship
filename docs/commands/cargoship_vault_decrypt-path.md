@@ -2,14 +2,14 @@
 
 ## cargoship vault decrypt-path
 
-Decrypts the value already in a config file at a YAML path, in place
+Decrypts the values a config file holds at one or more YAML paths, in place
 
 ### Synopsis
 
-Decrypts the Ansible Vault value FILE holds at PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. PATH is a YAML path such as '.spec.config.registries[0].auth.pass'; the leading '$' go-yaml uses is optional. This is the inverse of 'cargoship vault encrypt-path', and leaves the value readable to anyone who can read the file.
+Decrypts the Ansible Vault values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of 'cargoship vault encrypt-path', and leaves the values readable to anyone who can read the file.
 
 ```
-cargoship vault decrypt-path FILE PATH [flags]
+cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
 ```
 
 ### Examples
@@ -17,6 +17,9 @@ cargoship vault decrypt-path FILE PATH [flags]
 ```
 # Put the plaintext password back into a config, in place of the ciphertext
 $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Decrypt several values in one pass
+$ cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
 
 # Check that a vaulted value decrypts, without writing the plaintext to disk
 $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run

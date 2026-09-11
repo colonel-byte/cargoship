@@ -2,14 +2,14 @@
 
 ## cargoship vault encrypt-path
 
-Encrypts the value already in a config file at a YAML path, in place
+Encrypts the values a config file already holds at one or more YAML paths, in place
 
 ### Synopsis
 
-Encrypts the value FILE holds at PATH with Ansible Vault and writes it back to FILE as a block scalar, leaving comments, key order, and the rest of the document untouched. PATH is a YAML path such as '.spec.config.registries[0].auth.pass'; the leading '$' go-yaml uses is optional. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, and warns when PATH is anywhere else, because nothing unwraps a value encrypted elsewhere.
+Encrypts the values FILE holds at each YAML_PATH with Ansible Vault and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has encrypted, so a path that is missing or encrypted already leaves FILE as it was rather than partly rewritten. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, and warns about a path anywhere else, because nothing unwraps a value encrypted elsewhere.
 
 ```
-cargoship vault encrypt-path FILE PATH [flags]
+cargoship vault encrypt-path FILE YAML_PATH [YAML_PATH...] [flags]
 ```
 
 ### Examples
@@ -17,6 +17,9 @@ cargoship vault encrypt-path FILE PATH [flags]
 ```
 # Encrypt the password a config already holds for its first registry
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Encrypt several values in one pass; the file is written once, after all of them have encrypted
+$ cargoship vault encrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
 
 # Encrypt a registry's inline CA certificate, however many lines of PEM it runs to
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].tls.ca' --vault-password-file ./vault-pass.txt
