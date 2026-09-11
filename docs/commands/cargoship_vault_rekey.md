@@ -2,11 +2,11 @@
 
 ## cargoship vault rekey
 
-Moves every encrypted registry credential in a config file to a new vault password
+Re-wraps every encrypted registry credential in a config file, optionally under a new vault password
 
 ### Synopsis
 
-Re-wraps every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- under the password named by --new-vault-password-file, leaving comments, key order, and the rest of the document untouched. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the old password, and the command stops without touching FILE if one is not, because a configuration vaulted under two passwords is one no password can read back.
+Re-wraps every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- under the password named by --new-vault-password-file, leaving comments, key order, and the rest of the document untouched. With that flag omitted the values are re-wrapped under the password they already carry, which gives every one of them a fresh salt and fresh ciphertext without changing the password. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the old password, and the command stops without touching FILE if one is not, because a configuration vaulted under two passwords is one no password can read back.
 
 ```
 cargoship vault rekey FILE [flags]
@@ -18,6 +18,9 @@ cargoship vault rekey FILE [flags]
 # Move every encrypted registry credential in a cluster configuration to a new vault password
 $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt
 
+# Re-salt every encrypted registry credential, keeping the password the file already uses
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt
+
 # Check what a rotation would produce without writing it back
 $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt --dry-run
 
@@ -28,7 +31,7 @@ $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --ne
 ```
       --dry-run                          Print the resulting document to stdout instead of writing it back to FILE.
   -h, --help                             help for rekey
-      --new-vault-password-file string   Path to a file containing the Ansible Vault password to move to. Required, and deliberately without an environment fallback: the environment holds the password the file is vaulted under now.
+      --new-vault-password-file string   Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the password the file already uses. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened.
       --vault-password-file string       Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 
