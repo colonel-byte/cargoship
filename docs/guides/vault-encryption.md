@@ -43,17 +43,19 @@ chmod 600 vault-pass.txt
 
 ```
 cargoship vault encrypt [VALUE]
-cargoship vault encrypt-path FILE PATH
+cargoship vault encrypt-path FILE YAML_PATH [YAML_PATH...]
 cargoship vault encrypt-file FILE
 cargoship vault decrypt [VALUE]
-cargoship vault decrypt-path FILE PATH
+cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...]
 cargoship vault decrypt-file FILE
 cargoship vault rekey FILE
 ```
 
-The `encrypt` and `decrypt` pair work on a value and print to stdout. The `-path` pair work on one value inside a configuration file and rewrite the file in place. The `-file` pair work on every registry credential in a configuration at once, and are what you want most of the time. `rekey` moves a whole configuration from one vault password to another, or re-salts it under the one it has -- see [Rotating the Vault Password](#rotating-the-vault-password).
+The `encrypt` and `decrypt` pair work on a value and print to stdout. The `-path` pair work on named values inside a configuration file and rewrite the file in place. The `-file` pair work on every registry credential in a configuration at once, and are what you want most of the time. `rekey` moves a whole configuration from one vault password to another, or re-salts it under the one it has -- see [Rotating the Vault Password](#rotating-the-vault-password).
 
-`PATH` is a YAML path such as `.spec.config.registries[0].auth.pass`. The leading `$` that go-yaml uses is optional, so `$.spec...`, `.spec...`, and `spec...` all name the same value. Quote the path in your shell -- it contains `[` and `]`.
+`YAML_PATH` is a path *into the document*, not a path on the filesystem: `.spec.config.registries[0].auth.pass` names a value inside `FILE`, the way `jq` or `yq` would address it. The leading `$` that go-yaml uses is optional, so `$.spec...`, `.spec...`, and `spec...` all name the same value. Quote it in your shell -- it contains `[` and `]`.
+
+The `-path` commands take as many of them as you like after `FILE`. The file is written once, after every value has been rewritten, so a path that is missing or in the wrong state fails the run without leaving the file half-done. Naming the same value twice -- including as two different spellings of one path -- is an error rather than a second pass over it.
 
 ### Encrypting a Value
 
@@ -77,10 +79,16 @@ The output is a multi-line `$ANSIBLE_VAULT` block that you then paste into the c
 
 ### Encrypting a Value Already in a File
 
-`vault encrypt-path` encrypts the plaintext the file already holds at a path, and writes it back as a block scalar:
+`vault encrypt-path` encrypts the plaintext the file already holds at a YAML path, and writes it back as a block scalar:
 
 ```
 cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+```
+
+Name several paths to encrypt them in one pass, which is the way to vault values `encrypt-file` does not cover -- anything outside a registry's credentials, such as an `x-tra` block of your own:
+
+```
+cargoship vault encrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
 ```
 
 Given this configuration:
@@ -114,7 +122,7 @@ Two flags change what it does:
 * `--dry-run` prints the resulting document to stdout and leaves the file untouched.
 * `--force` encrypts a value that is `$ANSIBLE_VAULT` already, wrapping it a second time. Without it, an already-encrypted value is an error, so that re-running the command cannot bury the plaintext under a layer nothing unwraps.
 
-If `PATH` is not one of the four fields in [What Cargoship Decrypts](#what-cargoship-decrypts), the command warns and proceeds:
+If a `YAML_PATH` is not one of the four fields in [What Cargoship Decrypts](#what-cargoship-decrypts), the command warns and proceeds:
 
 ```
 WRN cargoship does not decrypt this field at apply time, so the value will reach the host as ciphertext
@@ -142,6 +150,12 @@ Unlike `vault encrypt`, there is no hidden prompt. Ciphertext is neither secret 
 
 ```
 cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+```
+
+It takes several paths too, and like `encrypt-path` writes the file once at the end:
+
+```
+cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
 ```
 
 Encrypting a value and decrypting it again gives back the file that went in, byte for byte.

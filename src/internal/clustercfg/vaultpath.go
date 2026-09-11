@@ -289,6 +289,18 @@ func quoteScalar(value string) string {
 	return b.String()
 }
 
+// CanonicalYAMLPath returns yamlPath as go-yaml spells it, so that the several ways of writing one
+// path -- "$.spec.x", ".spec.x" and "spec.x" -- come back as the same string. A caller given a list
+// of paths needs that to tell whether two of them name the same value, which is worth catching
+// before the first one has been rewritten.
+func CanonicalYAMLPath(yamlPath string) (string, error) {
+	path, err := parseYAMLPath(yamlPath)
+	if err != nil {
+		return "", err
+	}
+	return path.String(), nil
+}
+
 // parseYAMLPath accepts a path with or without the "$" root that go-yaml requires, so that the
 // dotted form an operator reads off a config -- ".spec.config.registries[0].auth.pass" -- works as
 // typed.

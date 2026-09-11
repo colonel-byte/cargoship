@@ -33,8 +33,8 @@ func newVaultDecryptPathCommand() *cobra.Command {
 	o := vaultDecryptPathOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "decrypt-path FILE PATH",
-		Args:    cobra.ExactArgs(2),
+		Use:     "decrypt-path FILE YAML_PATH [YAML_PATH...]",
+		Args:    cobra.MinimumNArgs(2),
 		Short:   lang.CmdVaultDecryptPathShort,
 		Long:    lang.CmdVaultDecryptPathLong,
 		Example: lang.CmdVaultDecryptPathExample,
@@ -50,9 +50,14 @@ func newVaultDecryptPathCommand() *cobra.Command {
 }
 
 func (o *vaultDecryptPathOptions) run(cmd *cobra.Command, args []string) error {
-	file, path := args[0], args[1]
+	file := args[0]
 
 	password, err := requireVaultPassword(o.vaultPasswordFile)
+	if err != nil {
+		return err
+	}
+
+	paths, err := canonicalYAMLPaths(args[1:])
 	if err != nil {
 		return err
 	}
@@ -62,22 +67,29 @@ func (o *vaultDecryptPathOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	decrypted, err := clustercfg.DecryptAtPath(src, path, password)
-	if err != nil {
-		return err
+	// As on encrypt-path, the file is written once at the end, so a path that is missing or
+	// plaintext leaves FILE untouched rather than partly decrypted.
+	doc := src
+	for _, path := range paths {
+		doc, err = clustercfg.DecryptAtPath(doc, path, password)
+		if err != nil {
+			return err
+		}
 	}
 
 	if o.dryRun {
-		_, err := cmd.OutOrStdout().Write(decrypted)
+		_, err := cmd.OutOrStdout().Write(doc)
 		return err
 	}
 
-	if err := writeFileInPlace(file, decrypted); err != nil {
+	if err := writeFileInPlace(file, doc); err != nil {
 		return err
 	}
-	// Worth saying plainly: the point of vaulting a value is that the file around it is safe to
-	// commit, and this command has just taken that away.
-	logger.From(cmd.Context()).Warn("the file now holds this value in plaintext", "file", file, "path", path)
-	logger.From(cmd.Context()).Info("decrypted value in place", "file", file, "path", path)
+	for _, path := range paths {
+		// Worth saying plainly: the point of vaulting a value is that the file around it is safe to
+		// commit, and this command has just taken that away.
+		logger.From(cmd.Context()).Warn("the file now holds this value in plaintext", "file", file, "path", path)
+		logger.From(cmd.Context()).Info("decrypted value in place", "file", file, "path", path)
+	}
 	return nil
 }

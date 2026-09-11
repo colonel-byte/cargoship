@@ -260,6 +260,64 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 		require.Contains(t, stderr, "--force")
 	})
 
+	t.Run("encrypts several paths in one run", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config,
+			".spec.config.registries[0].auth.user",
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].tls.ca",
+			"--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "pass: |- # rotate me", "the trailing comment should survive")
+		require.Contains(t, string(got), "          insecureSkipVerify: false", "the key after the CA block should survive")
+		require.Contains(t, string(got), "    loadbalancer: lb.example.com", "a path that was not named should be left alone")
+
+		for marker, want := range map[string]string{
+			"user: |-": "admin",
+			"pass: |-": "hunter2",
+			"ca: |-":   "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n",
+		} {
+			decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), marker), password)
+			require.NoError(t, err, "value at %q should decrypt", marker)
+			require.Equal(t, want, decrypted)
+		}
+	})
+
+	// The whole file is written once, at the end, so a run that cannot finish leaves nothing behind
+	// -- which is what makes it safe to name several paths at a time.
+	t.Run("writes nothing when one of several paths fails", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config,
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].auth.nope",
+			"--vault-password-file", passwordFile)
+		require.Error(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "the path that did encrypt should not have been written")
+	})
+
+	t.Run("rejects the same path named twice, however it is spelled", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-path", config,
+			".spec.config.registries[0].auth.pass",
+			"spec.config.registries[0].auth.pass",
+			"--vault-password-file", passwordFile, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "name the same value")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "a failed run should not touch the file")
+	})
+
 	t.Run("errors on a missing file", func(t *testing.T) {
 		missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
 
@@ -420,6 +478,43 @@ func TestCargoshipVaultDecryptPath(t *testing.T) {
 				require.Equal(t, vaultPathDoc, string(got), "encrypt then decrypt should give back the original file")
 			})
 		}
+	})
+
+	t.Run("decrypts several paths in one run", func(t *testing.T) {
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(config, []byte(vaultPathDoc), 0o600))
+
+		paths := []string{
+			".spec.config.registries[0].auth.user",
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].tls.ca",
+		}
+		_, _, err := e2e.Cargoship(t, append([]string{"vault", "encrypt-path", config}, append(paths, "--vault-password-file", passwordFile)...)...)
+		require.NoError(t, err)
+
+		_, _, err = e2e.Cargoship(t, append([]string{"vault", "decrypt-path", config}, append(paths, "--vault-password-file", passwordFile)...)...)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "encrypting then decrypting the same set should give back the original file")
+	})
+
+	t.Run("writes nothing when one of several paths fails", func(t *testing.T) {
+		config := encryptedDoc(t, ".spec.config.registries[0].auth.pass")
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		// The second path is plaintext, which decrypt-path refuses; the first would have decrypted.
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-path", config,
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].auth.user",
+			"--vault-password-file", passwordFile)
+		require.Error(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
 	})
 
 	t.Run("keeps the file's mode", func(t *testing.T) {
