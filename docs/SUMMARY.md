@@ -12,6 +12,7 @@
 - [registry-override](guides/registry-override.md)
 - [setup-inv](guides/setup-inv.md)
 - [signing-packages](guides/signing-packages.md)
+- [vault-encryption](guides/vault-encryption.md)
 
 
 -----------
