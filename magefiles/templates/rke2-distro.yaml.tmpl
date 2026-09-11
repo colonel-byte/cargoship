@@ -124,7 +124,7 @@ spec:
       manifest:
 {{- end }}
 {{- if eq .CNI "cilium" }}
-        rke2-cilium: |-
+        rke2-cilium:
           kubeProxyReplacement: true
           k8sServiceHost: "localhost"
           k8sServicePort: 6443
