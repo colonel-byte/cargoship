@@ -42,8 +42,8 @@ var ErrNotEncrypted = errors.New("value is not Ansible Vault-encrypted")
 // time.
 //
 // These two have to be kept in step with that function: a field added there and not here is one
-// PathIsDecryptable warns about, and a field added here and not there promises a decryption that
-// never happens. Everything else in this package derives the paths it
+// EncryptConfig walks past and PathIsDecryptable warns about, and a field added here and not there
+// promises a decryption that never happens. Everything else in this package derives the paths it
 // cares about from these, so that keeping them in step is the only obligation.
 const registriesPath = "$.spec.config.registries"
 
@@ -53,7 +53,7 @@ var vaultedFields = []string{"auth.user", "auth.pass", "auth.token", "tls.ca"}
 var decryptablePath = regexp.MustCompile(`^` + regexp.QuoteMeta(registriesPath) + `\[\d+]\.(` + fieldAlternation(vaultedFields) + `)$`)
 
 // fieldAlternation renders fields as a regexp alternation, so that decryptablePath is built from
-// the list above rather than restating it.
+// the same list EncryptConfig walks rather than restating it.
 func fieldAlternation(fields []string) string {
 	quoted := make([]string, len(fields))
 	for i, field := range fields {
@@ -408,4 +408,146 @@ func keyColumnOn(line string, valueColumn int) (int, bool) {
 		rest = strings.TrimLeft(rest[2:], " ")
 	}
 	return len(before) - len(rest) + 1, true
+}
+
+// EncryptConfig encrypts every registry credential in src that cargoship decrypts at apply time --
+// each registry's auth.user, auth.pass, auth.token and tls.ca -- and returns the rewritten
+// document along with the paths it changed. Everything else is left exactly as it was, by the same
+// byte-level splice EncryptAtPath uses.
+//
+// A field that is absent, empty, or encrypted already is skipped rather than treated as an error,
+// so running this over a configuration that is partly vaulted finishes the job, and running it
+// twice changes nothing the second time. Pass reencrypt to wrap values that are ciphertext already.
+//
+// A value that is encrypted already has to be one this password can read, and it is an error when
+// it is not. Skipping it quietly would leave the file holding ciphertext under two different vault
+// passwords, and an apply decrypts a registry's fields with one password, so the result would be a
+// configuration no password can read back -- found out about at apply time, several phases in,
+// rather than here.
+func EncryptConfig(src []byte, password string, reencrypt bool) ([]byte, []string, error) {
+	return rewriteConfig(src, func(value string) (bool, error) {
+		if reencrypt || !cluster.IsVaultEncrypted(value) {
+			return true, nil
+		}
+		if _, err := DecryptValue(value, password); err != nil {
+			return false, errors.New("is Ansible Vault-encrypted with a different password; decrypt the file with the password it was vaulted under before encrypting it with this one")
+		}
+		return false, nil
+	}, func(doc []byte, path string) ([]byte, error) {
+		return EncryptAtPath(doc, path, password, true)
+	})
+}
+
+// DecryptConfig is the inverse of EncryptConfig: it decrypts every vaulted registry credential in
+// src and returns the rewritten document along with the paths it changed. A field that is not
+// ciphertext is skipped, so what comes back is a document with no vaulted credentials left in it
+// however many of them there were to begin with.
+func DecryptConfig(src []byte, password string) ([]byte, []string, error) {
+	return rewriteConfig(src, func(value string) (bool, error) {
+		return cluster.IsVaultEncrypted(value), nil
+	}, func(doc []byte, path string) ([]byte, error) {
+		return DecryptAtPath(doc, path, password)
+	})
+}
+
+// rewriteConfig applies rewrite to every registry credential path whose current value satisfies
+// wanted, returning the rewritten document and the paths that were changed. An error from wanted is
+// reported against the path it was asked about, which is the one thing the caller cannot say for
+// itself.
+//
+// Each rewrite reparses the document rather than reusing the nodes found here, because splicing
+// one value moves every offset after it. The paths themselves do not move, so walking them in
+// order is enough, and a configuration holds few enough of them for the reparsing to be beside the
+// point.
+func rewriteConfig(src []byte, wanted func(string) (bool, error), rewrite func([]byte, string) ([]byte, error)) ([]byte, []string, error) {
+	count, err := registryCount(src)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	doc := src
+	changed := []string{}
+	for i := range count {
+		for _, field := range vaultedFields {
+			path := fmt.Sprintf("%s[%d].%s", registriesPath, i, field)
+
+			value, ok, err := scalarAtPath(doc, path)
+			if err != nil {
+				return nil, nil, err
+			}
+			// An empty value is skipped alongside a missing one: a credential nobody set is not
+			// worth replacing with ciphertext that decrypts to nothing.
+			if !ok || value == "" {
+				continue
+			}
+
+			want, err := wanted(value)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%s %w", path, err)
+			}
+			if !want {
+				continue
+			}
+
+			doc, err = rewrite(doc, path)
+			if err != nil {
+				return nil, nil, err
+			}
+			changed = append(changed, path)
+		}
+	}
+	return doc, changed, nil
+}
+
+// registryCount returns how many registries the configuration holds. A document with no registries
+// key at all is an error rather than a document with nothing to do, because that is what pointing
+// one of these commands at the wrong file looks like.
+func registryCount(src []byte) (int, error) {
+	path, err := parseYAMLPath(registriesPath)
+	if err != nil {
+		return 0, err
+	}
+
+	file, err := parser.ParseBytes(src, parser.ParseComments)
+	if err != nil {
+		return 0, fmt.Errorf("parsing YAML: %w", err)
+	}
+
+	node, err := path.FilterFile(file)
+	if err != nil {
+		return 0, fmt.Errorf("no registries found at %s; is this a cluster configuration?: %w", registriesPath, err)
+	}
+
+	sequence, ok := node.(*ast.SequenceNode)
+	if !ok {
+		return 0, fmt.Errorf("%s holds a %s, not a list of registries", registriesPath, strings.ToLower(node.Type().String()))
+	}
+	return len(sequence.Values), nil
+}
+
+// scalarAtPath returns the scalar the document holds at path, reporting false when the path is not
+// there. A path that resolves to something other than a scalar is reported as absent too: a
+// registry with no tls block has no tls.ca to rewrite, and neither has one whose tls.ca somebody
+// wrote as a list.
+func scalarAtPath(src []byte, yamlPath string) (string, bool, error) {
+	path, err := parseYAMLPath(yamlPath)
+	if err != nil {
+		return "", false, err
+	}
+
+	file, err := parser.ParseBytes(src, parser.ParseComments)
+	if err != nil {
+		return "", false, fmt.Errorf("parsing YAML: %w", err)
+	}
+
+	node, err := path.FilterFile(file)
+	if err != nil {
+		return "", false, nil
+	}
+
+	value, err := scalarValue(node, path.String())
+	if err != nil {
+		return "", false, nil
+	}
+	return value, true, nil
 }

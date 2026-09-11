@@ -33,7 +33,9 @@ Groups the commands that read and write Ansible Vault ciphertext for a cluster c
 
 * [cargoship](./cargoship.md)	 - CLI for cargoship installs
 * [cargoship vault decrypt](./cargoship_vault_decrypt.md)	 - Decrypts an Ansible Vault value, printing the plaintext
+* [cargoship vault decrypt-file](./cargoship_vault_decrypt-file.md)	 - Decrypts every registry credential in a config file, in place
 * [cargoship vault decrypt-path](./cargoship_vault_decrypt-path.md)	 - Decrypts the value already in a config file at a YAML path, in place
 * [cargoship vault encrypt](./cargoship_vault_encrypt.md)	 - Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
+* [cargoship vault encrypt-file](./cargoship_vault_encrypt-file.md)	 - Encrypts every registry credential in a config file, in place
 * [cargoship vault encrypt-path](./cargoship_vault_encrypt-path.md)	 - Encrypts the value already in a config file at a YAML path, in place
 

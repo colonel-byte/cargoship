@@ -183,6 +183,27 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].tls.ca
 # See what the file would become without writing it
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.token' --vault-password-file ./vault-pass.txt --dry-run`
 
+	// CmdVaultEncryptFileExample vault encrypt-file example
+	CmdVaultEncryptFileExample = `# Encrypt every registry credential in a cluster configuration
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
+
+# See what the file would become without writing it
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt --dry-run
+
+# Vault a configuration before committing it
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt && git add ./cluster.yaml`
+
+	// CmdVaultDecryptFileExample vault decrypt-file example
+	CmdVaultDecryptFileExample = `# Decrypt every registry credential in a cluster configuration
+$ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
+
+# Check that every vaulted credential decrypts, without writing plaintext to disk
+$ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt --dry-run > /dev/null
+
+# Rotate the password a whole configuration is vaulted with
+$ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.txt`
+
 	// CmdVaultDecryptExample vault decrypt example
 	CmdVaultDecryptExample = `# Decrypt a value copied out of a config file
 $ cargoship vault decrypt '$ANSIBLE_VAULT;1.1;AES256
