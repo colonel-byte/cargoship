@@ -67,7 +67,9 @@ concurrency:
 
 env:
   # A pull request run is a test of the workflow, so it publishes into its own namespace and
-  # leaves the reference a release writes alone. Delete the pr-N package when done with it.
+  # leaves the reference a release writes alone. prune-example-pr-packages.yaml deletes the
+  # pr-N packages when the pull request closes, and sweeps up anything older than thirty
+  # days that no close event took care of.
   REGISTRY: >-
     ${{ github.event_name == 'pull_request'
     && format('oci://ghcr.io/colonel-byte/cargoship-examples/pr-{0}', github.event.number)

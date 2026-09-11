@@ -1,0 +1,211 @@
+---
+name: Prune example pull request packages
+
+# Deletes the throwaway GHCR packages that publish-example.yaml writes when it runs on a
+# pull request. Those runs publish under ghcr.io/colonel-byte/cargoship-examples/pr-N so a
+# test never writes over the reference a release publishes, and each one costs gigabytes of
+# registry storage. Nothing consumed them once the pull request they belonged to is done,
+# so anything untouched for the retention window goes.
+#
+# Only the pr-N namespaces are considered. The release reference,
+# ghcr.io/colonel-byte/cargoship-examples/<flavor>, never matches the prefix and is never a
+# candidate however old it gets.
+#
+# A package is judged by its newest version: a pr-N namespace whose latest push is older
+# than the window is stale as a whole, and the whole package is deleted rather than its
+# versions one at a time. That is also the only way GHCR allows it -- the REST API refuses
+# to delete the last remaining version of a package -- and it takes the untagged child
+# manifests with it instead of leaving them orphaned.
+#
+# Closing a pull request is the better signal and takes the storage back the same day, so
+# that runs too and deletes that one pull request's packages whatever their age. The
+# schedule stays as the backstop: it covers a pull request closed while the close run was
+# broken, packages published by a workflow_dispatch that no close event will ever follow,
+# and anything left behind by a failed delete.
+on:
+  schedule:
+    # Daily, off the hour, since nothing downstream waits on this.
+    - cron: 23 5 * * *
+  pull_request:
+    types:
+      - closed
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: Delete pr-N packages whose newest version is older than this many days
+        type: number
+        default: 30
+      dry_run:
+        description: List what would be deleted without deleting it
+        type: boolean
+        default: false
+
+# packages: write is what authorizes the delete. The pull request runs publish these
+# packages with GITHUB_TOKEN, which makes this repository their admin by default, so no
+# personal access token is needed.
+permissions:
+  contents: read
+  packages: write
+
+# Deletes of different pull requests do not touch the same packages, so only runs for the
+# same pull request -- and the scheduled sweep with itself -- need to queue.
+concurrency:
+  group: prune-example-pr-packages-${{ github.event.number || 'sweep' }}
+  cancel-in-progress: false
+
+jobs:
+  # The scheduled sweep. Skipped on a pull request close, which the job below handles.
+  prune-stale:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prune stale pull request packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: colonel-byte
+          # A scheduled run has no inputs, so the defaults have to be repeated here.
+          RETENTION_DAYS: ${{ inputs.retention_days || 30 }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+          # cargoship publishes to <registry>/<namespace>/<package name>, so a pull request
+          # package is named cargoship-examples/pr-N/<flavor> under the owner.
+          PREFIX: cargoship-examples/pr-
+        run: |
+          set -euo pipefail
+
+          cutoff=$(date -u -d "$RETENTION_DAYS days ago" +%s)
+          echo "deleting packages under $OWNER matching '$PREFIX*' with no version newer than"
+          echo "$(date -u -d "@$cutoff" +%Y-%m-%dT%H:%M:%SZ) (retention: $RETENTION_DAYS days)"
+
+          # --paginate walks every page; the org can hold more container packages than the
+          # 100 one page returns.
+          mapfile -t packages < <(
+            gh api --paginate \
+              "/orgs/$OWNER/packages?package_type=container&per_page=100" \
+              --jq ".[] | select(.name | startswith(\"$PREFIX\")) | .name"
+          )
+
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "no pull request packages found"
+            echo "No pull request packages found." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "## Pruned example pull request packages"
+            echo
+            echo "| Package | Newest version | Action |"
+            echo "| --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          failed=0
+          for package in "${packages[@]}"; do
+            # The package name is a path, and the API takes it as a single path segment, so
+            # its slashes have to be percent encoded.
+            encoded=${package//\//%2F}
+
+            # updated_at rather than created_at: a namespace that was pushed to again is
+            # still in use even if its first version is old.
+            newest=$(
+              gh api --paginate \
+                "/orgs/$OWNER/packages/container/$encoded/versions?per_page=100" \
+                --jq '.[].updated_at' | sort | tail -n 1
+            )
+            if [ -z "$newest" ]; then
+              echo "$package: no versions, skipping"
+              echo "| \`$package\` | none | skipped |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+
+            if [ "$(date -u -d "$newest" +%s)" -ge "$cutoff" ]; then
+              echo "$package: newest version $newest is within retention, keeping"
+              echo "| \`$package\` | $newest | kept |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "$package: newest version $newest is stale, would delete"
+              echo "| \`$package\` | $newest | would delete |" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+
+            echo "$package: newest version $newest is stale, deleting"
+            # One package that refuses to go -- a public package over the download count
+            # GHCR will delete, say -- should not keep the rest from being cleaned up, so
+            # the failure is recorded and the loop carries on.
+            if gh api --method DELETE "/orgs/$OWNER/packages/container/$encoded"; then
+              echo "| \`$package\` | $newest | deleted |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              failed=1
+              echo "$package: delete failed" >&2
+              echo "| \`$package\` | $newest | **delete failed** |" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+          exit "$failed"
+
+  # Deletes the closed pull request's packages outright: the namespace is dead the moment
+  # the pull request is, so there is nothing to age out. It runs whether the pull request
+  # merged or not, and whether or not it still carries the publish-example label, since the
+  # label can be taken off after a run has already published. A pull request that published
+  # nothing matches nothing and the job is a no-op.
+  #
+  # Fork pull requests are excluded: their GITHUB_TOKEN is read only, so the delete could
+  # only fail. Nothing is stranded by that, because publish-example.yaml does not publish
+  # for forks either.
+  prune-closed:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Delete the pull request's packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: colonel-byte
+          # The trailing slash matters: without it pr-1 would also match pr-12.
+          PREFIX: cargoship-examples/pr-${{ github.event.number }}/
+        run: |
+          set -euo pipefail
+
+          echo "deleting packages under $OWNER matching '$PREFIX*'"
+
+          mapfile -t packages < <(
+            gh api --paginate \
+              "/orgs/$OWNER/packages?package_type=container&per_page=100" \
+              --jq ".[] | select(.name | startswith(\"$PREFIX\")) | .name"
+          )
+
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "no packages published for this pull request"
+            echo "No packages were published for this pull request." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "## Deleted pull request packages"
+            echo
+            echo "| Package | Action |"
+            echo "| --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          failed=0
+          for package in "${packages[@]}"; do
+            # The package name is a path, and the API takes it as a single path segment, so
+            # its slashes have to be percent encoded.
+            encoded=${package//\//%2F}
+
+            echo "$package: deleting"
+            # A failed delete is left for the scheduled sweep to retry, so one refusal does
+            # not keep the rest of this pull request's packages around.
+            if gh api --method DELETE "/orgs/$OWNER/packages/container/$encoded"; then
+              echo "| \`$package\` | deleted |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              failed=1
+              echo "$package: delete failed" >&2
+              echo "| \`$package\` | **delete failed** |" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+          exit "$failed"
