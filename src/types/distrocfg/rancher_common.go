@@ -15,6 +15,7 @@
 package distrocfg
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -31,6 +32,7 @@ import (
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/log"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"gopkg.in/yaml.v3"
 )
 
 // RancherCommon is a parent object for both RKE2 and k3s distros
@@ -207,6 +209,11 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 		}
 
 		for k, v := range nodeConfig.DigMapping(config.EngineManifest) {
+			values, err := helmValuesContent(v)
+			if err != nil {
+				logger.From(ctx).Warn("failed to render helm values", "chart", k, "error", err)
+				continue
+			}
 			config := dig.Mapping{}
 			config[keyAPIVersion] = "helm.cattle.io/v1"
 			config[keyKind] = "HelmChartConfig"
@@ -215,9 +222,9 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 				"namespace": "kube-system",
 			}
 			config[keySpec] = map[string]string{
-				"valuesContent": fmt.Sprint(v),
+				"valuesContent": values,
 			}
-			err := d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
+			err = d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
 			if err != nil {
 				logger.From(ctx).Warn("failed to write", "file", fmt.Sprintf("%s-config.yaml", k))
 			}
@@ -279,6 +286,29 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 	d.validateEngineConfig(ctx, dis.Spec.Version, host.IsController(), nodeConfig.DigMapping(config.EngineConfig))
 
 	return d.writeYAML(ctx, host, nodeConfig.DigMapping(config.EngineConfig), d.Config)
+}
+
+// helmValuesContent renders one `.spec.config.engine.manifest` entry into the valuesContent
+// string a HelmChartConfig carries. The section holds Helm values, so an entry is written either
+// as a YAML block string -- which is already the values file's contents and is passed through
+// untouched -- or as a YAML mapping, which is marshalled back to YAML here. Anything else
+// (a bare number, a list) is marshalled the same way rather than guessed at.
+func helmValuesContent(v any) (string, error) {
+	if s, ok := v.(string); ok {
+		return s, nil
+	}
+
+	buf := bytes.Buffer{}
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(v); err != nil {
+		return "", err
+	}
+	if err := enc.Close(); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 // validateEngineConfig drops any config.yaml keys that aren't part of the flag set
