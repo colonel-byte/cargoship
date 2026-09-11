@@ -29,7 +29,8 @@
   - [reset](commands/cargoship_reset.md)
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [sign](commands/cargoship_sign.md)
-  - [vault-encrypt](commands/cargoship_vault-encrypt.md)
+  - [vault](commands/cargoship_vault.md)
+    - [encrypt](commands/cargoship_vault_encrypt.md)
   - [version](commands/cargoship_version.md)
 
 

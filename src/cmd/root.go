@@ -166,7 +166,8 @@ func NewCargoshipCommand() *cobra.Command {
 	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
-	rootCmd.AddCommand(newVaultEncryptCommand())
+	rootCmd.AddCommand(newVaultCommand())
+	rootCmd.AddCommand(newDeprecatedVaultEncryptCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {

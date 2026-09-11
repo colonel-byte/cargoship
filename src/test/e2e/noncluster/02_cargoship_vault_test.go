@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCargoshipVaultEncrypt exercises the `vault-encrypt` command with a value
+// TestCargoshipVaultEncrypt exercises the `vault encrypt` command with a value
 // argument, a value piped over stdin, and its error paths.
 func TestCargoshipVaultEncrypt(t *testing.T) {
 	passwordFile := filepath.Join(t.TempDir(), "vault-password")
@@ -36,7 +36,7 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 	t.Run("encrypts a value argument, round-trips with vault password", func(t *testing.T) {
 		const value = "hello world"
 
-		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", passwordFile, value)
+		stdout, _, err := e2e.Cargoship(t, "vault", "encrypt", "--vault-password-file", passwordFile, value)
 		require.NoError(t, err)
 
 		encrypted := strings.TrimSpace(stdout)
@@ -50,7 +50,7 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 	t.Run("encrypts a value piped over stdin", func(t *testing.T) {
 		const value = "piped-secret"
 
-		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault-encrypt", "--vault-password-file", passwordFile, "--no-color")
+		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault", "encrypt", "--vault-password-file", passwordFile, "--no-color")
 		cmd.Stdin = strings.NewReader(value + "\n")
 		out, err := cmd.Output()
 		require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		const value = "env-password-secret"
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
 
-		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", value)
+		stdout, _, err := e2e.Cargoship(t, "vault", "encrypt", value)
 		require.NoError(t, err)
 
 		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
@@ -80,7 +80,7 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
 		t.Setenv("ANSIBLE_VAULT_PASSWORD", password)
 
-		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", value)
+		stdout, _, err := e2e.Cargoship(t, "vault", "encrypt", value)
 		require.NoError(t, err)
 
 		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
@@ -95,7 +95,7 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		const value = "empty-flag-secret"
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
 
-		stdout, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", "", value)
+		stdout, _, err := e2e.Cargoship(t, "vault", "encrypt", "--vault-password-file", "", value)
 		require.NoError(t, err)
 
 		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
@@ -107,24 +107,51 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
 		t.Setenv("ANSIBLE_VAULT_PASSWORD", "")
 
-		_, stderr, err := e2e.Cargoship(t, "vault-encrypt", "value")
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt", "value")
 		require.Error(t, err)
 		require.Contains(t, stderr, "no vault password found")
 	})
 
 	t.Run("empty stdin errors", func(t *testing.T) {
-		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault-encrypt", "--vault-password-file", passwordFile, "--no-color")
+		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath, "vault", "encrypt", "--vault-password-file", passwordFile, "--no-color")
 		cmd.Stdin = strings.NewReader("")
 		require.Error(t, cmd.Run())
 	})
 
 	t.Run("missing password file errors", func(t *testing.T) {
-		_, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", filepath.Join(t.TempDir(), "does-not-exist"), "value")
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt", "--vault-password-file", filepath.Join(t.TempDir(), "does-not-exist"), "value")
 		require.Error(t, err)
 	})
 
 	t.Run("too many args errors", func(t *testing.T) {
-		_, _, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", passwordFile, "one", "two")
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt", "--vault-password-file", passwordFile, "one", "two")
 		require.Error(t, err)
+	})
+}
+
+// TestCargoshipVaultEncryptDeprecatedAlias checks that the top-level spelling the vault group
+// replaced still works for scripts that predate it, and says so when it runs.
+func TestCargoshipVaultEncryptDeprecatedAlias(t *testing.T) {
+	passwordFile := filepath.Join(t.TempDir(), "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	t.Run("still encrypts, and warns that it is deprecated", func(t *testing.T) {
+		const value = "legacy-secret"
+
+		stdout, stderr, err := e2e.Cargoship(t, "vault-encrypt", "--vault-password-file", passwordFile, value, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, `use "cargoship vault encrypt" instead`)
+
+		decrypted, err := vault.Decrypt(strings.TrimSpace(stdout), password)
+		require.NoError(t, err)
+		require.Equal(t, value, decrypted)
+	})
+
+	t.Run("is not offered in help", func(t *testing.T) {
+		stdout, _, err := e2e.Cargoship(t, "--help")
+		require.NoError(t, err)
+		require.NotContains(t, stdout, "vault-encrypt")
+		require.Contains(t, stdout, "vault ")
 	})
 }

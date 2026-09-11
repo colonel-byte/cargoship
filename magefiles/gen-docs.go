@@ -262,7 +262,13 @@ func getMarkdown(pattern string, directory string, indent bool) ([]string, error
 		if !entry.IsDir() && re.MatchString(entry.Name()) {
 			com := re.FindStringSubmatch(entry.Name())
 			if indent {
-				list = append(list, fmt.Sprintf("  - [%s](%s/%s)", com[1], directory, entry.Name()))
+				// Cobra names a subcommand's page after its whole command path, joined with
+				// underscores, so "vault encrypt" lands in cargoship_vault_encrypt.md. Step
+				// the bullet in one level per ancestor and label it with the last word, so
+				// that the sidebar nests a command under the group it belongs to.
+				path := strings.Split(com[1], "_")
+				name := path[len(path)-1]
+				list = append(list, fmt.Sprintf("%s- [%s](%s/%s)", strings.Repeat("  ", len(path)), name, directory, entry.Name()))
 			} else {
 				list = append(list, fmt.Sprintf("- [%s](%s/%s)", com[1], directory, entry.Name()))
 			}

@@ -86,9 +86,15 @@ const (
 	CmdSha256SumShort = "Generates a SHA256SUM for the given file"
 	// CmdSha256SumFlagExtractPath flag description
 	CmdSha256SumFlagExtractPath = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	// CmdVaultEncryptShort vault-encrypt short
+	// CmdVaultShort vault short
+	CmdVaultShort = "Encrypts cluster configuration values with Ansible Vault"
+	// CmdVaultLong vault long
+	CmdVaultLong = "Groups the commands that write Ansible Vault ciphertext for a cluster configuration. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, using the password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable."
+	// CmdVaultEncryptDeprecated deprecation notice for the top-level vault-encrypt spelling
+	CmdVaultEncryptDeprecated = `use "cargoship vault encrypt" instead.`
+	// CmdVaultEncryptShort vault encrypt short
 	CmdVaultEncryptShort = "Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields"
-	// CmdVaultEncryptLong vault-encrypt long
+	// CmdVaultEncryptLong vault encrypt long
 	CmdVaultEncryptLong = "Encrypts VALUE with Ansible Vault, producing a $ANSIBLE_VAULT-prefixed string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal."
 	// CmdVaultEncryptFlagPasswordFile flag description
 	CmdVaultEncryptFlagPasswordFile = "Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."

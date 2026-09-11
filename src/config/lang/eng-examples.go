@@ -160,18 +160,18 @@ $ cargoship sha256sum ./artifact.tar.gz --extract-path ./bin/tool
 # Same thing, using the shorter alias
 $ cargoship sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst`
 
-	// CmdVaultEncryptExample vault-encrypt example
+	// CmdVaultEncryptExample vault encrypt example
 	CmdVaultEncryptExample = `# Encrypt a registry password for a config file's user/pass/token field
-$ cargoship vault-encrypt my-registry-password --vault-password-file ./vault-pass.txt
+$ cargoship vault encrypt my-registry-password --vault-password-file ./vault-pass.txt
 
 # Omit the value to be prompted for it, with the input hidden
-$ cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+$ cargoship vault encrypt --vault-password-file ./vault-pass.txt
 
 # Encrypt a value piped in on stdin
-$ printf my-registry-password | cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+$ printf my-registry-password | cargoship vault encrypt --vault-password-file ./vault-pass.txt
 
 # Encrypt the contents of a file
-$ cargoship vault-encrypt --vault-password-file ./vault-pass.txt < ./registry-token.txt`
+$ cargoship vault encrypt --vault-password-file ./vault-pass.txt < ./registry-token.txt`
 
 	// CmdVersionExample version example
 	CmdVersionExample = `# Print the version of the running binary
