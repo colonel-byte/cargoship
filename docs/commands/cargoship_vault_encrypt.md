@@ -46,5 +46,5 @@ $ cargoship vault encrypt --vault-password-file ./vault-pass.txt < ./registry-to
 
 ### SEE ALSO
 
-* [cargoship vault](./cargoship_vault.md)	 - Encrypts cluster configuration values with Ansible Vault
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
 

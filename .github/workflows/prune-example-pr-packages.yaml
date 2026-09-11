@@ -1,0 +1,172 @@
+---
+name: Prune example pull request packages
+
+# Deletes the throwaway GHCR packages that publish-example.yaml writes when it runs on a
+# pull request. Those runs publish under ghcr.io/colonel-byte/cargoship-examples/pr-N so a
+# test never writes over the reference a release publishes, and each one costs gigabytes of
+# registry storage. Nothing consumes them once the pull request they belong to is done, so
+# anything with no push in the last thirty days goes.
+#
+# Only pr-N namespaces are ever touched. The release reference,
+# ghcr.io/colonel-byte/cargoship-examples/<flavor>, is never a candidate however old it gets.
+#
+# Packages are named, never searched for. GITHUB_TOKEN can read and delete an individual
+# package that a workflow in this repository published, but it cannot list an organization's
+# packages: GET /orgs/{org}/packages takes an OAuth app token or a classic personal access
+# token with read:packages, and rejects the Actions token with HTTP 400. That is the same
+# limit dataaxiom/ghcr-cleanup-action documents when it asks for a personal access token to
+# expand a package wildcard. So the names are built from what this repository already knows
+# -- the example definitions give the package name, the pull requests give the namespace --
+# and each candidate is probed before anything is deleted.
+#
+# A stale package is deleted whole rather than version by version. That is the only way GHCR
+# allows it -- the REST API refuses to delete a package's last remaining version -- and it
+# takes the untagged child manifests with it instead of leaving them orphaned.
+on:
+  schedule:
+    # Daily, off the hour, since nothing downstream waits on this.
+    - cron: 23 5 * * *
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: Delete pr-N packages whose newest version is older than this many days
+        type: number
+        default: 30
+      dry_run:
+        description: List what would be deleted without deleting it
+        type: boolean
+        default: false
+
+# packages: write is what authorizes the delete. The pull request runs publish these
+# packages with GITHUB_TOKEN, which makes this repository their admin by default, so no
+# personal access token is needed. pull-requests: read is for asking which pull requests
+# carry the publish-example label.
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
+
+concurrency:
+  group: prune-example-pr-packages
+  cancel-in-progress: false
+
+jobs:
+  # Candidates come from the pull requests that carry the publish-example label, because that
+  # label is what lets publish-example.yaml run on a pull request at all: every pr-N package
+  # was published by a labeled run. A workflow_dispatch or release publish is not a candidate
+  # and cannot be one -- those write to the release reference, not to a pr-N namespace. The
+  # one package this will not find is one whose pull request had the label taken off after a
+  # run had already published; delete that one by hand.
+  prune-stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OWNER: colonel-byte
+      NAMESPACE: cargoship-examples
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prune stale pull request packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # A scheduled run has no inputs, so the defaults have to be repeated here.
+          RETENTION_DAYS: ${{ inputs.retention_days || 30 }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+        run: |
+          set -euo pipefail
+
+          cutoff=$(date -u -d "$RETENTION_DAYS days ago" +%s)
+          echo "deleting pr-N packages with no version newer than" \
+            "$(date -u -d "@$cutoff" +%Y-%m-%dT%H:%M:%SZ) (retention: $RETENTION_DAYS days)"
+
+          # Plain assignment first: set -e sees a command substitution that fails there, but
+          # not one inside <( ) or a here-string, and a name list that failed to build would
+          # otherwise read as "there is nothing to prune".
+          names=$(.github/scripts/example-package-names.sh)
+          mapfile -t names <<< "$names"
+
+          # Open pull requests are included: a branch that sat for the whole window is not
+          # using its package either, and reopening the question costs a republish, which is
+          # what the label asks for anyway.
+          numbers=$(
+            gh pr list --repo "$REPO" --state all --label publish-example \
+              --limit 200 --json number --jq '.[].number'
+          )
+          if [ -z "$numbers" ]; then
+            echo "no pull request has carried the publish-example label"
+            echo "No pull request has carried the publish-example label." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          mapfile -t numbers <<< "$numbers"
+          echo "checking ${#numbers[@]} labeled pull requests against ${#names[@]} package names"
+
+          {
+            echo "## Pruned example pull request packages"
+            echo
+            echo "| Package | Newest version | Action |"
+            echo "| --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          found=0
+          failed=0
+          for number in "${numbers[@]}"; do
+            for name in "${names[@]}"; do
+              package="$NAMESPACE/pr-$number/$name"
+              # The package name is a path and the API takes it as one path segment, so its
+              # slashes have to be percent encoded.
+              encoded=${package//\//%2F}
+
+              # A flavor this pull request never published has no package, which is the normal
+              # case: a run publishes one flavor out of the eight.
+              if ! gh api "/orgs/$OWNER/packages/container/$encoded" >/dev/null 2>&1; then
+                continue
+              fi
+              found=$((found + 1))
+
+              # updated_at rather than created_at: a namespace that was pushed to again is
+              # still in use even if its first version is old.
+              newest=$(
+                gh api --paginate \
+                  "/orgs/$OWNER/packages/container/$encoded/versions?per_page=100" \
+                  --jq '.[].updated_at' | sort | tail -n 1
+              )
+              if [ -z "$newest" ]; then
+                echo "$package: no versions, skipping"
+                echo "| \`$package\` | none | skipped |" >> "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+
+              if [ "$(date -u -d "$newest" +%s)" -ge "$cutoff" ]; then
+                echo "$package: newest version $newest is within retention, keeping"
+                echo "| \`$package\` | $newest | kept |" >> "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "$package: newest version $newest is stale, would delete"
+                echo "| \`$package\` | $newest | would delete |" >> "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+
+              echo "$package: newest version $newest is stale, deleting"
+              # One package that refuses to go -- a public package over the download count
+              # GHCR will delete, say -- should not keep the rest from being cleaned up, so
+              # the failure is recorded and the loop carries on.
+              if gh api --method DELETE "/orgs/$OWNER/packages/container/$encoded"; then
+                echo "| \`$package\` | $newest | deleted |" >> "$GITHUB_STEP_SUMMARY"
+              else
+                failed=1
+                echo "$package: delete failed" >&2
+                echo "| \`$package\` | $newest | **delete failed** |" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            done
+          done
+
+          if [ "$found" -eq 0 ]; then
+            echo "no pull request packages exist"
+            echo "| _none_ | | no pull request packages exist |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          exit "$failed"

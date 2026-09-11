@@ -155,3 +155,1086 @@ func TestCargoshipVaultEncryptDeprecatedAlias(t *testing.T) {
 		require.Contains(t, stdout, "vault ")
 	})
 }
+
+// vaultPathDoc is a cluster configuration carrying the shapes vault encrypt-path has to rewrite:
+// a scalar with a trailing comment, and a multi-line PEM block with a sibling key after it.
+const vaultPathDoc = `apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+spec:
+  # registries the cluster pulls from
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: harbor # our mirror
+        auth:
+          user: admin
+          pass: hunter2 # rotate me
+        tls:
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            aGVsbG8gd29ybGQ=
+            -----END CERTIFICATE-----
+          insecureSkipVerify: false
+  hosts:
+    - name: node1
+`
+
+// TestCargoshipVaultEncryptPath exercises the `vault encrypt-path` command against a config file
+// on disk: what it writes back, what it leaves alone, and its error paths.
+func TestCargoshipVaultEncryptPath(t *testing.T) {
+	passwordFile := filepath.Join(t.TempDir(), "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	// writeDoc puts a fresh copy of vaultPathDoc in its own directory, so that one subtest's
+	// rewrite cannot be seen by another.
+	writeDoc := func(t *testing.T) string {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(vaultPathDoc), 0o600))
+		return path
+	}
+
+	t.Run("encrypts a scalar in place, round-trips with vault password", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "pass: |- # rotate me", "the trailing comment should survive")
+		require.Contains(t, string(got), "  # registries the cluster pulls from", "comments elsewhere should survive")
+		require.Contains(t, string(got), "      - name: harbor # our mirror")
+
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |-"), password)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", decrypted)
+	})
+
+	t.Run("encrypts a multi-line literal block without truncating it", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].tls.ca", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "          insecureSkipVerify: false", "the key after the block should survive")
+
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "ca: |-"), password)
+		require.NoError(t, err)
+		require.Equal(t, "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n", decrypted)
+	})
+
+	t.Run("dry run prints the document and leaves the file alone", func(t *testing.T) {
+		config := writeDoc(t)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--dry-run")
+		require.NoError(t, err)
+		require.Contains(t, stdout, "pass: |- # rotate me")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got))
+	})
+
+	t.Run("warns when the path is not one cargoship decrypts", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.loadbalancer", "--vault-password-file", passwordFile, "--dry-run")
+		require.NoError(t, err, "an unsupported path is a warning, not a failure")
+		require.Contains(t, stderr, "does not decrypt this field at apply time")
+	})
+
+	t.Run("refuses to encrypt an already-encrypted value without --force", func(t *testing.T) {
+		config := writeDoc(t)
+		const path = ".spec.config.registries[0].auth.pass"
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, path, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-path", config, path, "--vault-password-file", passwordFile, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "already Ansible Vault-encrypted")
+		require.Contains(t, stderr, "--force")
+	})
+
+	t.Run("encrypts several paths in one run", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config,
+			".spec.config.registries[0].auth.user",
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].tls.ca",
+			"--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "pass: |- # rotate me", "the trailing comment should survive")
+		require.Contains(t, string(got), "          insecureSkipVerify: false", "the key after the CA block should survive")
+		require.Contains(t, string(got), "    loadbalancer: lb.example.com", "a path that was not named should be left alone")
+
+		for marker, want := range map[string]string{
+			"user: |-": "admin",
+			"pass: |-": "hunter2",
+			"ca: |-":   "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n",
+		} {
+			decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), marker), password)
+			require.NoError(t, err, "value at %q should decrypt", marker)
+			require.Equal(t, want, decrypted)
+		}
+	})
+
+	// The whole file is written once, at the end, so a run that cannot finish leaves nothing behind
+	// -- which is what makes it safe to name several paths at a time.
+	t.Run("writes nothing when one of several paths fails", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config,
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].auth.nope",
+			"--vault-password-file", passwordFile)
+		require.Error(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "the path that did encrypt should not have been written")
+	})
+
+	t.Run("rejects the same path named twice, however it is spelled", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-path", config,
+			".spec.config.registries[0].auth.pass",
+			"spec.config.registries[0].auth.pass",
+			"--vault-password-file", passwordFile, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "name the same value")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "a failed run should not touch the file")
+	})
+
+	t.Run("errors on a missing file", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", missing, ".spec.config.loadbalancer", "--vault-password-file", passwordFile)
+		require.Error(t, err)
+	})
+
+	t.Run("errors on a path the document does not have", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].auth.nope", "--vault-password-file", passwordFile)
+		require.Error(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "a failed run should not touch the file")
+	})
+
+	t.Run("errors without a vault password", func(t *testing.T) {
+		config := writeDoc(t)
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
+		t.Setenv("ANSIBLE_VAULT_PASSWORD", "")
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].auth.pass")
+		require.Error(t, err)
+	})
+}
+
+// vaultValueAt returns the ciphertext of the block scalar introduced by header, undoing the
+// indentation the document stores it with so that it can be handed back to the vault library.
+func vaultValueAt(t *testing.T, doc, header string) string {
+	t.Helper()
+
+	lines := strings.Split(doc, "\n")
+	start := -1
+	for i, line := range lines {
+		if strings.Contains(line, header) {
+			start = i + 1
+			break
+		}
+	}
+	require.NotEqual(t, -1, start, "no %q in:\n%s", header, doc)
+	require.Less(t, start, len(lines), "nothing follows %q", header)
+
+	indent := len(lines[start]) - len(strings.TrimLeft(lines[start], " "))
+	var body []string
+	for _, line := range lines[start:] {
+		if strings.TrimSpace(line) == "" || len(line)-len(strings.TrimLeft(line, " ")) < indent {
+			break
+		}
+		body = append(body, line[indent:])
+	}
+
+	value := strings.Join(body, "\n")
+	require.True(t, strings.HasPrefix(value, "$ANSIBLE_VAULT"), "value at %q is not ciphertext: %q", header, value)
+	return value
+}
+
+// TestCargoshipVaultDecrypt exercises `vault decrypt`, the inverse of `vault encrypt`.
+func TestCargoshipVaultDecrypt(t *testing.T) {
+	passwordFile := filepath.Join(t.TempDir(), "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	encrypt := func(t *testing.T, value string) string {
+		t.Helper()
+		encrypted, err := vault.Encrypt(value, password)
+		require.NoError(t, err)
+		return encrypted
+	}
+
+	t.Run("decrypts a value given as an argument", func(t *testing.T) {
+		stdout, _, err := e2e.Cargoship(t, "vault", "decrypt", encrypt(t, "hunter2"), "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", strings.TrimRight(stdout, "\n"))
+	})
+
+	t.Run("round-trips a value through encrypt", func(t *testing.T) {
+		encrypted, _, err := e2e.Cargoship(t, "vault", "encrypt", "hunter2", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "decrypt", strings.TrimRight(encrypted, "\n"), "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", strings.TrimRight(stdout, "\n"))
+	})
+
+	t.Run("keeps a multi-line value intact", func(t *testing.T) {
+		const pem = "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n"
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "decrypt", encrypt(t, pem), "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		require.Equal(t, pem, stdout, "a value ending in a newline should not gain a second one")
+	})
+
+	t.Run("takes the password from the environment", func(t *testing.T) {
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", password)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "decrypt", encrypt(t, "hunter2"))
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", strings.TrimRight(stdout, "\n"))
+	})
+
+	t.Run("errors on the wrong password", func(t *testing.T) {
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "not the password")
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt", encrypt(t, "hunter2"))
+		require.Error(t, err)
+	})
+
+	t.Run("errors on a value that is not encrypted", func(t *testing.T) {
+		_, stderr, err := e2e.Cargoship(t, "vault", "decrypt", "hunter2", "--vault-password-file", passwordFile, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "not Ansible Vault-encrypted")
+	})
+
+	t.Run("errors without a vault password", func(t *testing.T) {
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
+		t.Setenv("ANSIBLE_VAULT_PASSWORD", "")
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt", "anything")
+		require.Error(t, err)
+	})
+}
+
+// TestCargoshipVaultDecryptPath exercises `vault decrypt-path`, which has to put a plaintext value
+// back into a document without disturbing anything around it.
+func TestCargoshipVaultDecryptPath(t *testing.T) {
+	passwordFile := filepath.Join(t.TempDir(), "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	// encryptedDoc is vaultPathDoc with the value at path encrypted, which is the state
+	// decrypt-path is meant to undo.
+	encryptedDoc := func(t *testing.T, path string) string {
+		t.Helper()
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(config, []byte(vaultPathDoc), 0o600))
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, path, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		return config
+	}
+
+	t.Run("restores the document a matching encrypt-path produced", func(t *testing.T) {
+		for _, path := range []string{
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].tls.ca",
+			".spec.config.loadbalancer",
+		} {
+			t.Run(path, func(t *testing.T) {
+				config := encryptedDoc(t, path)
+
+				_, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, path, "--vault-password-file", passwordFile)
+				require.NoError(t, err)
+
+				got, err := os.ReadFile(config)
+				require.NoError(t, err)
+				require.Equal(t, vaultPathDoc, string(got), "encrypt then decrypt should give back the original file")
+			})
+		}
+	})
+
+	t.Run("decrypts several paths in one run", func(t *testing.T) {
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(config, []byte(vaultPathDoc), 0o600))
+
+		paths := []string{
+			".spec.config.registries[0].auth.user",
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].tls.ca",
+		}
+		_, _, err := e2e.Cargoship(t, append([]string{"vault", "encrypt-path", config}, append(paths, "--vault-password-file", passwordFile)...)...)
+		require.NoError(t, err)
+
+		_, _, err = e2e.Cargoship(t, append([]string{"vault", "decrypt-path", config}, append(paths, "--vault-password-file", passwordFile)...)...)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "encrypting then decrypting the same set should give back the original file")
+	})
+
+	t.Run("writes nothing when one of several paths fails", func(t *testing.T) {
+		config := encryptedDoc(t, ".spec.config.registries[0].auth.pass")
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		// The second path is plaintext, which decrypt-path refuses; the first would have decrypted.
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-path", config,
+			".spec.config.registries[0].auth.pass",
+			".spec.config.registries[0].auth.user",
+			"--vault-password-file", passwordFile)
+		require.Error(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
+	})
+
+	t.Run("keeps the file's mode", func(t *testing.T) {
+		config := encryptedDoc(t, ".spec.config.registries[0].auth.pass")
+		require.NoError(t, os.Chmod(config, 0o640))
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		info, err := os.Stat(config)
+		require.NoError(t, err)
+		require.Equal(t, os.FileMode(0o640), info.Mode().Perm())
+	})
+
+	t.Run("warns that the file now holds plaintext", func(t *testing.T) {
+		config := encryptedDoc(t, ".spec.config.registries[0].auth.pass")
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "plaintext")
+	})
+
+	t.Run("dry run prints the document and leaves the file alone", func(t *testing.T) {
+		config := encryptedDoc(t, ".spec.config.registries[0].auth.pass")
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--dry-run")
+		require.NoError(t, err)
+		require.Contains(t, stdout, "pass: hunter2 # rotate me")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got))
+	})
+
+	t.Run("refuses a value that is not encrypted", func(t *testing.T) {
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(config, []byte(vaultPathDoc), 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "not Ansible Vault-encrypted")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultPathDoc, string(got), "a failed run should not touch the file")
+	})
+
+	t.Run("errors on the wrong password", func(t *testing.T) {
+		config := encryptedDoc(t, ".spec.config.registries[0].auth.pass")
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		wrong := filepath.Join(t.TempDir(), "wrong-password")
+		require.NoError(t, os.WriteFile(wrong, []byte("not the password"), 0o600))
+
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", wrong)
+		require.Error(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
+	})
+
+	t.Run("errors on a missing file", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-path", missing, ".spec.config.loadbalancer", "--vault-password-file", passwordFile)
+		require.Error(t, err)
+	})
+
+	t.Run("errors on a path the document does not have", func(t *testing.T) {
+		config := encryptedDoc(t, ".spec.config.registries[0].auth.pass")
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.nope", "--vault-password-file", passwordFile)
+		require.Error(t, err)
+	})
+}
+
+// vaultFileDoc holds two registries so that the whole-file commands have to walk more than one, and
+// leaves the gaps a real configuration has: a registry with a token instead of a password, one with
+// no tls block, and an empty field.
+const vaultFileDoc = `apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+spec:
+  # registries the cluster pulls from
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: harbor # our mirror
+        auth:
+          user: admin
+          pass: hunter2 # rotate me
+          token: ""
+        tls:
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            aGVsbG8gd29ybGQ=
+            -----END CERTIFICATE-----
+          insecureSkipVerify: false
+      - name: quay
+        auth:
+          token: quay-token
+  hosts:
+    - name: node1
+`
+
+// TestCargoshipVaultEncryptFile exercises `vault encrypt-file` and `vault decrypt-file` against a
+// config file on disk: which fields they walk, what they leave alone, and the round trip between
+// them.
+func TestCargoshipVaultEncryptFile(t *testing.T) {
+	dir := t.TempDir()
+	passwordFile := filepath.Join(dir, "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	writeDoc := func(t *testing.T) string {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(vaultFileDoc), 0o600))
+		return path
+	}
+
+	// vaultedDoc is a copy of vaultFileDoc with every credential already encrypted, which is where
+	// the decrypt-file subtests start from.
+	vaultedDoc := func(t *testing.T) string {
+		t.Helper()
+		config := writeDoc(t)
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		return config
+	}
+
+	// A configuration that shares one auth block between two registries: the credential lives under
+	// the anchor, and the second registry holds an alias to it.
+	t.Run("encrypts a credential two registries share through an anchor", func(t *testing.T) {
+		const anchored = `apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+spec:
+  config:
+    registries:
+      - name: docker.io
+        auth: &auth
+          user: robot
+          pass: hunter2
+      - name: test.io
+        auth: *auth
+  hosts:
+    - name: node1
+`
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(config, []byte(anchored), 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=2", "the shared user and pass, once each")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.NotContains(t, string(got), "pass: hunter2", "the shared password should not be left in the clear")
+		require.Contains(t, string(got), "auth: *auth", "the alias should survive")
+
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |-"), password)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", decrypted)
+
+		// Back to the file that went in, which is the check that nothing about the anchor moved.
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		got, err = os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, anchored, string(got))
+	})
+
+	t.Run("encrypts every credential and leaves everything else alone", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=4")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "  # registries the cluster pulls from", "comments elsewhere should survive")
+		require.Contains(t, string(got), "      - name: harbor # our mirror")
+		require.Contains(t, string(got), "pass: |- # rotate me", "the trailing comment should survive")
+		require.Contains(t, string(got), "          insecureSkipVerify: false", "the key after the CA block should survive")
+		require.Contains(t, string(got), "    loadbalancer: lb.example.com", "a field cargoship never decrypts should be left alone")
+		require.Contains(t, string(got), `          token: ""`, "an empty field should be left alone")
+
+		for _, marker := range []string{"user: |-", "pass: |- # rotate me", "ca: |-", "token: |-"} {
+			decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), marker), password)
+			require.NoError(t, err, "value at %q should decrypt", marker)
+			require.NotEmpty(t, decrypted)
+		}
+	})
+
+	t.Run("round-trips a document byte for byte", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultFileDoc, string(got))
+	})
+
+	t.Run("a second run has nothing to do", func(t *testing.T) {
+		config := vaultedDoc(t)
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "nothing to encrypt")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got))
+	})
+
+	t.Run("finishes a partly vaulted file", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		partial, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=3", "the value encrypted already should be skipped")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultValueAt(t, string(partial), "pass: |- # rotate me"), vaultValueAt(t, string(got), "pass: |- # rotate me"), "the existing ciphertext should be left as it was")
+	})
+
+	// The case an operator hits after rotating a registry credential: one value edited back to
+	// plaintext, the rest still vaulted under the same password.
+	t.Run("picks up an edited credential without disturbing the others", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		edited, err := os.ReadFile(config)
+		require.NoError(t, err)
+		user := vaultValueAt(t, string(edited), "user: |-")
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=1")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, user, vaultValueAt(t, string(got), "user: |-"), "the untouched username should keep its ciphertext")
+
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |- # rotate me"), password)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", decrypted)
+	})
+
+	// The same mixed shape, but vaulted under two different passwords, which is a document no
+	// apply can read: it decrypts a registry's fields with one password.
+	t.Run("refuses to mix vault passwords", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		other := filepath.Join(t.TempDir(), "other-password")
+		require.NoError(t, os.WriteFile(other, []byte("a different vault password"), 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", other, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "encrypted with a different password")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
+	})
+
+	t.Run("rotates the password a whole file is vaulted with", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		rotated := filepath.Join(t.TempDir(), "new-password")
+		require.NoError(t, os.WriteFile(rotated, []byte("the new password"), 0o600))
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		_, _, err = e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", rotated)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |- # rotate me"), "the new password")
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", decrypted)
+	})
+
+	t.Run("dry run prints the document and leaves the file alone", func(t *testing.T) {
+		config := writeDoc(t)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--dry-run")
+		require.NoError(t, err)
+		require.Contains(t, stdout, "$ANSIBLE_VAULT")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultFileDoc, string(got))
+	})
+
+	t.Run("a dry-run decrypt checks every value without writing plaintext", func(t *testing.T) {
+		config := vaultedDoc(t)
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", passwordFile, "--dry-run")
+		require.NoError(t, err)
+		require.Equal(t, vaultFileDoc, stdout)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got))
+	})
+
+	t.Run("errors on the wrong password", func(t *testing.T) {
+		config := vaultedDoc(t)
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		wrong := filepath.Join(t.TempDir(), "wrong-password")
+		require.NoError(t, os.WriteFile(wrong, []byte("not the password"), 0o600))
+
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", wrong)
+		require.Error(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
+	})
+
+	t.Run("errors on a document with no registries", func(t *testing.T) {
+		config := filepath.Join(t.TempDir(), "not-a-cluster.yaml")
+		require.NoError(t, os.WriteFile(config, []byte("apiVersion: v1\nkind: ConfigMap\n"), 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "is this a cluster configuration?")
+	})
+
+	t.Run("errors on a missing file", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", missing, "--vault-password-file", passwordFile)
+		require.Error(t, err)
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", missing, "--vault-password-file", passwordFile)
+		require.Error(t, err)
+	})
+}
+
+// TestCargoshipVaultRekey exercises `vault rekey` against a config file on disk: that it moves
+// every credential to the new password, that the plaintext never lands in the file, and that it
+// refuses the states from which a rotation cannot produce a readable configuration.
+func TestCargoshipVaultRekey(t *testing.T) {
+	dir := t.TempDir()
+	passwordFile := filepath.Join(dir, "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	newPasswordFile := filepath.Join(dir, "new-vault-password")
+	const newPassword = "the password we are moving to"
+	require.NoError(t, os.WriteFile(newPasswordFile, []byte(newPassword), 0o600))
+
+	writeDoc := func(t *testing.T) string {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(vaultFileDoc), 0o600))
+		return path
+	}
+
+	vaultedDoc := func(t *testing.T) string {
+		t.Helper()
+		config := writeDoc(t)
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		return config
+	}
+
+	t.Run("moves every credential to the new password", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=4")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		for _, marker := range []string{"user: |-", "pass: |- # rotate me", "ca: |-", "token: |-"} {
+			decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), marker), newPassword)
+			require.NoError(t, err, "value at %q should decrypt with the new password", marker)
+			require.NotEmpty(t, decrypted)
+
+			_, err = vault.Decrypt(vaultValueAt(t, string(got), marker), password)
+			require.Error(t, err, "value at %q should no longer decrypt with the old password", marker)
+		}
+	})
+
+	// The reason this is one command rather than a decrypt-file followed by an encrypt-file: at no
+	// point does the file on disk hold the credential in the clear.
+	t.Run("never writes the plaintext to the file", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.NotContains(t, string(got), "hunter2", "the rekeyed password should never appear in the clear")
+		require.NotContains(t, string(got), "quay-token")
+		require.NotContains(t, string(got), "admin")
+	})
+
+	t.Run("leaves everything else alone", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "  # registries the cluster pulls from", "comments elsewhere should survive")
+		require.Contains(t, string(got), "      - name: harbor # our mirror")
+		require.Contains(t, string(got), "pass: |- # rotate me", "the trailing comment should survive")
+		require.Contains(t, string(got), "          insecureSkipVerify: false", "the key after the CA block should survive")
+		require.Contains(t, string(got), "    loadbalancer: lb.example.com", "a field cargoship never decrypts should be left alone")
+		require.Contains(t, string(got), `          token: ""`, "an empty field should be left alone")
+	})
+
+	t.Run("round-trips back to the original document under the new password", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile)
+		require.NoError(t, err)
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", newPasswordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultFileDoc, string(got))
+	})
+
+	// A file already vaulted under two passwords cannot be rotated into a working state, so the
+	// command has to stop and say which value it could not read.
+	t.Run("refuses a file vaulted under two passwords", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		other := filepath.Join(t.TempDir(), "other-password")
+		require.NoError(t, os.WriteFile(other, []byte("a different vault password"), 0o600))
+		_, _, err = e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", other)
+		require.NoError(t, err)
+
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "old vault password")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
+	})
+
+	// With no new password named, every value is re-salted under the password the file already
+	// carries: fresh ciphertext, same password, and the plaintext still never on disk.
+	t.Run("re-salts every credential when the new password is omitted", func(t *testing.T) {
+		config := vaultedDoc(t)
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=4")
+		require.Contains(t, stderr, "re-salted", "a re-salt should not be reported as a rotation")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.NotEqual(t, string(before), string(got), "every value should come back under a fresh salt")
+		require.NotContains(t, string(got), "hunter2", "the plaintext should never reach the file")
+
+		for _, marker := range []string{"user: |-", "pass: |- # rotate me", "ca: |-", "token: |-"} {
+			require.NotEqual(t, vaultValueAt(t, string(before), marker), vaultValueAt(t, string(got), marker),
+				"ciphertext at %q should have changed", marker)
+
+			decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), marker), password)
+			require.NoError(t, err, "value at %q should still decrypt with the same password", marker)
+			require.NotEmpty(t, decrypted)
+		}
+	})
+
+	// Naming a file holding the password the configuration already uses is the same request spelled
+	// out, and is reported the same way rather than as a rotation.
+	t.Run("re-salts when the new password file holds the old password", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "re-salted")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		_, err = vault.Decrypt(vaultValueAt(t, string(got), "pass: |- # rotate me"), password)
+		require.NoError(t, err)
+	})
+
+	// Deliberately no environment fallback for the new password: the environment holds the password
+	// the file is vaulted under now, so falling back to it would report a rotation onto a password
+	// nobody asked to move to.
+	t.Run("does not take the new password from the environment", func(t *testing.T) {
+		config := vaultedDoc(t)
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", newPassword)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "re-salted", "an omitted flag means the old password, not one from the environment")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		_, err = vault.Decrypt(vaultValueAt(t, string(got), "pass: |- # rotate me"), password)
+		require.NoError(t, err)
+	})
+
+	t.Run("errors when the named new password file is empty", func(t *testing.T) {
+		config := vaultedDoc(t)
+		empty := filepath.Join(t.TempDir(), "empty-password")
+		require.NoError(t, os.WriteFile(empty, []byte("\n"), 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", empty, "--no-color")
+		require.Error(t, err)
+		require.Contains(t, stderr, "new-vault-password-file")
+	})
+
+	t.Run("dry run prints the document and leaves the file alone", func(t *testing.T) {
+		config := vaultedDoc(t)
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile, "--dry-run")
+		require.NoError(t, err)
+		require.Contains(t, stdout, "$ANSIBLE_VAULT")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(got))
+	})
+
+	t.Run("has nothing to do on a file with no ciphertext in it", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "nothing to rekey")
+
+		_, stderr, err = e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "nothing to re-salt")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, vaultFileDoc, string(got))
+	})
+
+	t.Run("errors on a missing file", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+
+		_, _, err := e2e.Cargoship(t, "vault", "rekey", missing, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile)
+		require.Error(t, err)
+	})
+}
+
+// anchoredInventoryFixture is a full inventory that leans on anchors, aliases and merge keys the
+// way an operator's does: one robot account two mirrors share, one trust bundle three registries
+// share, and one block of SSH defaults every host merges.
+const anchoredInventoryFixture = "src/test/e2e/noncluster/testdata/inventory-anchors.yaml"
+
+// TestCargoshipVaultAnchoredInventory runs the file commands over that inventory. A shared value
+// is one value however many registries name it, so it is encrypted once, rekeyed once, and every
+// alias and merge key that reaches it is still there afterwards.
+func TestCargoshipVaultAnchoredInventory(t *testing.T) {
+	dir := t.TempDir()
+	passwordFile := filepath.Join(dir, "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	newPasswordFile := filepath.Join(dir, "new-vault-password")
+	const newPassword = "the password we are moving to"
+	require.NoError(t, os.WriteFile(newPasswordFile, []byte(newPassword), 0o600))
+
+	original, err := os.ReadFile(anchoredInventoryFixture)
+	require.NoError(t, err)
+
+	// The fixture is copied rather than used in place: these commands rewrite the file they are
+	// given, and the checked-in one has to stay as it is.
+	writeDoc := func(t *testing.T) string {
+		t.Helper()
+		path := filepath.Join(t.TempDir(), "inventory-anchors.yaml")
+		require.NoError(t, os.WriteFile(path, original, 0o600))
+		return path
+	}
+
+	vaultedDoc := func(t *testing.T) string {
+		t.Helper()
+		config := writeDoc(t)
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		return config
+	}
+
+	// Six values, not eight: the account and the trust bundle the mirrors share are each named
+	// twice in the document but are one value, and the registry that merges the trust bundle
+	// reaches the same one.
+	t.Run("encrypts each shared value once", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=6")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		for _, plaintext := range []string{"hunter2", "correct-horse", "ghcr-token", "aGVsbG8gd29ybGQ="} {
+			require.NotContains(t, string(got), plaintext, "%q should not be left in the clear", plaintext)
+		}
+
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |-"), password)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", decrypted)
+	})
+
+	t.Run("leaves the anchors, the aliases and the merge keys where they were", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		for _, marker := range []string{
+			"auth: &robot-auth",
+			"auth: *robot-auth",
+			"tls: &internal-tls",
+			"tls: *internal-tls",
+			"          <<: *internal-tls",
+			"        <<: &ssh-defaults",
+			"        <<: *ssh-defaults",
+		} {
+			require.Contains(t, string(got), marker, "%q should survive encryption", marker)
+		}
+
+		require.Contains(t, string(got), "token: |- # rotate me", "the trailing comment should survive")
+		require.Contains(t, string(got), "          insecureSkipVerify: true", "the key after a merge should survive")
+		require.Contains(t, string(got), "    loadbalancer: e2e-anchors.test.local", "a field cargoship never encrypts should be left alone")
+		require.Contains(t, string(got), "        address: 10.255.255.2", "the host that overrides one default should keep it")
+	})
+
+	t.Run("rekeys each shared value once and moves it to the new password", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=6")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		for _, marker := range []string{"user: |-", "pass: |-", "ca: |-", "token: |- # rotate me"} {
+			decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), marker), newPassword)
+			require.NoError(t, err, "value at %q should decrypt with the new password", marker)
+			require.NotEmpty(t, decrypted)
+		}
+
+		// Decrypting under the new password is the only way back: a shared value rekeyed once is
+		// rekeyed for every registry that names it.
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", newPasswordFile)
+		require.NoError(t, err)
+
+		got, err = os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(original), string(got))
+	})
+
+	t.Run("round-trips back to the file that went in", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(original), string(got))
+	})
+
+	// A YAML path that lands on an alias names the value the anchor holds, so encrypting through
+	// one is encrypting the block both mirrors read.
+	t.Run("encrypt-path through an alias reaches the shared value", func(t *testing.T) {
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[1].auth.pass", "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.NotContains(t, string(got), "pass: hunter2")
+		require.Contains(t, string(got), "auth: *robot-auth", "the alias should survive")
+
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |-"), password)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", decrypted)
+	})
+}
