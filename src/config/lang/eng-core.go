@@ -114,6 +114,10 @@ const (
 	CmdVaultEncryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultEncryptFileFlagForce flag description
 	CmdVaultEncryptFileFlagForce = "Encrypt values that are Ansible Vault ciphertext already, wrapping them a second time."
+	// CmdVaultRekeyFlagNewPasswordFile flag description
+	CmdVaultRekeyFlagNewPasswordFile = "Path to a file containing the Ansible Vault password to move to. Required, and deliberately without an environment fallback: the environment holds the password the file is vaulted under now."
+	// CmdVaultRekeyFlagDryRun flag description
+	CmdVaultRekeyFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultDecryptShort vault decrypt short
 	CmdVaultDecryptShort = "Decrypts an Ansible Vault value, printing the plaintext"
 	// CmdVaultDecryptLong vault decrypt long
@@ -128,6 +132,10 @@ const (
 	CmdVaultDecryptFileShort = "Decrypts every registry credential in a config file, in place"
 	// CmdVaultDecryptFileLong vault decrypt-file long
 	CmdVaultDecryptFileLong = "Decrypts every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of 'cargoship vault encrypt-file', and leaves the credentials readable to anyone who can read the file."
+	// CmdVaultRekeyShort vault rekey short
+	CmdVaultRekeyShort = "Moves every encrypted registry credential in a config file to a new vault password"
+	// CmdVaultRekeyLong vault rekey long
+	CmdVaultRekeyLong = "Re-wraps every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- under the password named by --new-vault-password-file, leaving comments, key order, and the rest of the document untouched. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the old password, and the command stops without touching FILE if one is not, because a configuration vaulted under two passwords is one no password can read back."
 	// CmdVaultDecryptFileFlagDryRun flag description
 	CmdVaultDecryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdViperErrLoadingConfigFile error text

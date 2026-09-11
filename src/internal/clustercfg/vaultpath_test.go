@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
@@ -817,4 +818,240 @@ func editPass(t *testing.T, doc []byte, value string) []byte {
 	}
 	old := readPath(t, got, ".spec.config.registries[0].auth.pass")
 	return []byte(strings.Replace(string(got), old, value, 1))
+}
+
+// rekeyPassword is the password a rotation moves to, kept distinct from testPassword so that a
+// test asserting a value moved cannot pass by accident.
+const rekeyPassword = "a-new-vault-password"
+
+const passPath = "$.spec.config.registries[0].auth.pass"
+
+func TestRekeyConfigMovesEveryCredential(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	got, changed, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	if err != nil {
+		t.Fatalf("RekeyConfig() error = %v", err)
+	}
+
+	want := []string{
+		"$.spec.config.registries[0].auth.user",
+		"$.spec.config.registries[0].auth.pass",
+		"$.spec.config.registries[0].tls.ca",
+		"$.spec.config.registries[1].auth.token",
+	}
+	if strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want %v", changed, want)
+	}
+
+	// What the rotation is for: the new password reads every value, and the old one reads none of
+	// them. A rekey that left even one value behind would be the half-rotated file this command
+	// exists to avoid.
+	for _, path := range want {
+		value := readPath(t, got, path)
+		if !cluster.IsVaultEncrypted(value) {
+			t.Errorf("value at %s = %q, want ciphertext", path, value)
+		}
+		if _, err := DecryptValue(value, rekeyPassword); err != nil {
+			t.Errorf("value at %s does not decrypt with the new password: %v", path, err)
+		}
+		if _, err := DecryptValue(value, testPassword); err == nil {
+			t.Errorf("value at %s still decrypts with the old password", path)
+		}
+	}
+}
+
+// TestRekeyConfigDecryptsAtApplyTime is the check that matters most, as it is for encrypt-file:
+// what a rotation writes has to be what an apply reads back, under the new password.
+func TestRekeyConfigDecryptsAtApplyTime(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	rekeyed, _, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	if err != nil {
+		t.Fatalf("RekeyConfig() error = %v", err)
+	}
+
+	plain, _, err := DecryptConfig(rekeyed, rekeyPassword)
+	if err != nil {
+		t.Fatalf("DecryptConfig() error = %v", err)
+	}
+
+	// Back to the document it started as, which is the strongest statement that nothing was lost
+	// on the way through two encryptions.
+	if string(plain) != configTestDoc {
+		t.Errorf("round trip through a rotation changed the document:\n%s\nwant:\n%s", plain, configTestDoc)
+	}
+}
+
+func TestRekeyConfigPreservesEverythingElse(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	got, _, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	if err != nil {
+		t.Fatalf("RekeyConfig() error = %v", err)
+	}
+
+	if !strings.Contains(string(got), "  # keep this comment exactly where it is") {
+		t.Errorf("comment did not survive:\n%s", got)
+	}
+	if !strings.Contains(string(got), "pass: |- # rotate me") {
+		t.Errorf("the trailing comment on the rekeyed value did not survive:\n%s", got)
+	}
+	if !strings.Contains(string(got), "          insecureSkipVerify: false") {
+		t.Errorf("the key after the CA block did not survive:\n%s", got)
+	}
+	if value := readPath(t, got, ".spec.config.loadbalancer"); value != "lb.example.com" {
+		t.Errorf("loadbalancer = %q, want it left alone", value)
+	}
+	if value := readPath(t, got, ".spec.config.registries[0].auth.token"); value != "" {
+		t.Errorf("empty token = %q, want it left alone", value)
+	}
+}
+
+// TestRekeyConfigSkipsPlaintext covers the file an operator has half-edited: a credential pasted
+// back in the clear is not this command's business, and must come out the other side untouched
+// rather than vaulted under the new password as a side effect of a rotation.
+func TestRekeyConfigSkipsPlaintext(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	edited := editPass(t, vaulted, "hunter3")
+
+	got, changed, err := RekeyConfig(edited, testPassword, rekeyPassword)
+	if err != nil {
+		t.Fatalf("RekeyConfig() error = %v", err)
+	}
+
+	for _, path := range changed {
+		if path == passPath {
+			t.Errorf("changed = %v, want the plaintext pass left out", changed)
+		}
+	}
+	if value := readPath(t, got, passPath); value != "hunter3" {
+		t.Errorf("pass = %q, want the plaintext left as it was", value)
+	}
+}
+
+func TestRekeyConfigRejectsTheWrongOldPassword(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	got, _, err := RekeyConfig(vaulted, "not-the-old-password", rekeyPassword)
+	if err == nil {
+		t.Fatal("RekeyConfig() error = nil, want an error")
+	}
+	if got != nil {
+		t.Errorf("a failed run returned a document, which a caller might write:\n%s", got)
+	}
+}
+
+// TestRekeyConfigRejectsAMixedFile is the hazard a rotation has to refuse rather than work around.
+// A file already holding ciphertext under two passwords cannot be rekeyed into a working state,
+// because an apply reads a registry's fields with one password, so the command stops and names the
+// value it could not read.
+func TestRekeyConfigRejectsAMixedFile(t *testing.T) {
+	const otherPassword = "a-different-vault-password"
+
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	// Take one value back to plaintext and vault it again under a password nothing else uses.
+	edited := editPass(t, vaulted, "hunter3")
+	mixed, err := EncryptAtPath(edited, passPath, otherPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+
+	got, _, err := RekeyConfig(mixed, testPassword, rekeyPassword)
+	if err == nil {
+		t.Fatal("RekeyConfig() error = nil, want a refusal to rekey a file vaulted under two passwords")
+	}
+	if got != nil {
+		t.Errorf("a failed run returned a document, which a caller might write:\n%s", got)
+	}
+	for _, want := range []string{"auth.pass", "old vault password"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want it to mention %q", err, want)
+		}
+	}
+}
+
+func TestRekeyAtPathRejectsPlaintext(t *testing.T) {
+	_, err := RekeyAtPath([]byte(pathTestDoc), passPath, testPassword, rekeyPassword)
+	if !errors.Is(err, ErrNotEncrypted) {
+		t.Fatalf("RekeyAtPath() error = %v, want ErrNotEncrypted", err)
+	}
+}
+
+// TestRekeyAtPathRejectsADoubleWrappedValue covers what encrypt-path --force leaves behind. Rekeying
+// it would move the outer layer to the new password and leave the inner one on the old, which is a
+// value no single password can read back -- so it is refused rather than half done.
+func TestRekeyAtPathRejectsADoubleWrappedValue(t *testing.T) {
+	once, err := EncryptAtPath([]byte(pathTestDoc), passPath, testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	twice, err := EncryptAtPath(once, passPath, testPassword, true)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+
+	if _, err := RekeyAtPath(twice, passPath, testPassword, rekeyPassword); !errors.Is(err, ErrWrappedTwice) {
+		t.Fatalf("RekeyAtPath() error = %v, want ErrWrappedTwice", err)
+	}
+}
+
+// TestRekeyAtPathCarriesAValueDecryptWouldRefuse is what separates rekeying in one step from a
+// decrypt followed by an encrypt. A secret that is not valid UTF-8 has no faithful YAML
+// representation, so DecryptAtPath refuses to write it back -- but a rotation never renders the
+// plaintext as YAML, so it moves the value across without ever having to.
+func TestRekeyAtPathCarriesAValueDecryptWouldRefuse(t *testing.T) {
+	secret := string([]byte{0x00, 0xff, 0xfe})
+	if utf8.ValidString(secret) {
+		t.Fatal("the fixture is supposed to be invalid UTF-8")
+	}
+
+	encrypted, err := EncryptValue(secret, testPassword)
+	if err != nil {
+		t.Fatalf("EncryptValue() error = %v", err)
+	}
+	node, _, _, err := scalarNodeAtPath([]byte(pathTestDoc), passPath)
+	if err != nil {
+		t.Fatalf("scalarNodeAtPath() error = %v", err)
+	}
+	doc, err := spliceCiphertext([]byte(pathTestDoc), node, encrypted)
+	if err != nil {
+		t.Fatalf("spliceCiphertext() error = %v", err)
+	}
+
+	// The premise: decrypting this value into the document is the thing that cannot be done.
+	if _, err := DecryptAtPath(doc, passPath, testPassword); err == nil {
+		t.Fatal("DecryptAtPath() error = nil, want a refusal to write a non-UTF-8 value back")
+	}
+
+	got, err := RekeyAtPath(doc, passPath, testPassword, rekeyPassword)
+	if err != nil {
+		t.Fatalf("RekeyAtPath() error = %v", err)
+	}
+
+	plain, err := DecryptValue(readPath(t, got, passPath), rekeyPassword)
+	if err != nil {
+		t.Fatalf("DecryptValue() error = %v", err)
+	}
+	if plain != secret {
+		t.Errorf("plaintext = %q, want %q", plain, secret)
+	}
 }

@@ -37,6 +37,12 @@ var ErrAlreadyEncrypted = errors.New("value is already Ansible Vault-encrypted")
 // saying out loud rather than reporting as success.
 var ErrNotEncrypted = errors.New("value is not Ansible Vault-encrypted")
 
+// ErrWrappedTwice reports that the value at the requested path is ciphertext whose plaintext is
+// itself ciphertext -- what encrypt-path --force produces. Rekeying it would move the outer layer
+// onto the new password and leave the inner one on the old, which no single password can read
+// back, so it is refused rather than half done.
+var ErrWrappedTwice = errors.New("value is Ansible Vault-encrypted more than once")
+
 // registriesPath is where a cluster configuration keeps the registries whose credentials are
 // vaulted, and vaultedFields are the fields of one of them that DecryptRegistryAuth reads at apply
 // time.
@@ -84,36 +90,52 @@ func PathIsDecryptable(yamlPath string) bool {
 //
 // If the value is ciphertext already, it returns ErrAlreadyEncrypted unless reencrypt is set.
 func EncryptAtPath(src []byte, yamlPath, password string, reencrypt bool) ([]byte, error) {
-	path, err := parseYAMLPath(yamlPath)
-	if err != nil {
-		return nil, err
-	}
-
-	file, err := parser.ParseBytes(src, parser.ParseComments)
-	if err != nil {
-		return nil, fmt.Errorf("parsing YAML: %w", err)
-	}
-
-	node, err := path.FilterFile(file)
-	if err != nil {
-		return nil, fmt.Errorf("no value found at %s: %w", path.String(), err)
-	}
-
-	plain, err := scalarValue(node, path.String())
+	node, plain, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
 	if cluster.IsVaultEncrypted(plain) && !reencrypt {
-		return nil, fmt.Errorf("%s: %w", path.String(), ErrAlreadyEncrypted)
+		return nil, fmt.Errorf("%s: %w", path, ErrAlreadyEncrypted)
 	}
 
 	encrypted, err := EncryptValue(plain, password)
 	if err != nil {
 		return nil, err
 	}
+	return spliceCiphertext(src, node, encrypted)
+}
 
-	// Strip rather than clip, so the stored ciphertext does not depend on whether the vault
-	// library left a trailing newline on it.
+// scalarNodeAtPath locates the scalar at yamlPath in src and returns the node, its value, and the
+// path as go-yaml renders it, which is the spelling errors should quote rather than the one the
+// caller passed. EncryptAtPath, DecryptAtPath and RekeyAtPath all begin here.
+func scalarNodeAtPath(src []byte, yamlPath string) (ast.Node, string, string, error) {
+	path, err := parseYAMLPath(yamlPath)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	file, err := parser.ParseBytes(src, parser.ParseComments)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("parsing YAML: %w", err)
+	}
+
+	node, err := path.FilterFile(file)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("no value found at %s: %w", path.String(), err)
+	}
+
+	value, err := scalarValue(node, path.String())
+	if err != nil {
+		return nil, "", "", err
+	}
+	return node, value, path.String(), nil
+}
+
+// spliceCiphertext writes encrypted over the value node holds, as a literal block scalar.
+//
+// The ciphertext is stripped rather than clipped, so what is stored does not depend on whether the
+// vault library left a trailing newline on it.
+func spliceCiphertext(src []byte, node ast.Node, encrypted string) ([]byte, error) {
 	return spliceScalar(src, node, "|-", strings.Split(strings.TrimRight(encrypted, "\n"), "\n"))
 }
 
@@ -126,27 +148,12 @@ func EncryptAtPath(src []byte, yamlPath, password string, reencrypt bool) ([]byt
 // anything the other two would change on the way back in. If the value is plaintext already, it
 // returns ErrNotEncrypted.
 func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
-	path, err := parseYAMLPath(yamlPath)
-	if err != nil {
-		return nil, err
-	}
-
-	file, err := parser.ParseBytes(src, parser.ParseComments)
-	if err != nil {
-		return nil, fmt.Errorf("parsing YAML: %w", err)
-	}
-
-	node, err := path.FilterFile(file)
-	if err != nil {
-		return nil, fmt.Errorf("no value found at %s: %w", path.String(), err)
-	}
-
-	encrypted, err := scalarValue(node, path.String())
+	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
 	if !cluster.IsVaultEncrypted(encrypted) {
-		return nil, fmt.Errorf("%s: %w", path.String(), ErrNotEncrypted)
+		return nil, fmt.Errorf("%s: %w", path, ErrNotEncrypted)
 	}
 
 	plain, err := DecryptValue(encrypted, password)
@@ -156,9 +163,45 @@ func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
 
 	head, tail, err := renderScalar(plain)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path.String(), err)
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return spliceScalar(src, node, head, tail)
+}
+
+// RekeyAtPath returns src with the Ansible Vault ciphertext at yamlPath re-wrapped under
+// newPassword, preserving every other byte of src by the same splice EncryptAtPath uses.
+//
+// The plaintext is never rendered back into the document. The value is decrypted, encrypted again,
+// and spliced in as ciphertext, so the plaintext exists only as a string in memory -- which is the
+// whole point of rekeying as one operation rather than a decrypt-file followed by an encrypt-file,
+// where the file holds the plaintext in between. It also means a value renderScalar would refuse
+// to write back, one that is not valid UTF-8, rekeys without trouble, because nothing here has to
+// express it as YAML.
+//
+// A value that is plaintext returns ErrNotEncrypted, and one wrapped more than once
+// ErrWrappedTwice.
+func RekeyAtPath(src []byte, yamlPath, oldPassword, newPassword string) ([]byte, error) {
+	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
+	if err != nil {
+		return nil, err
+	}
+	if !cluster.IsVaultEncrypted(encrypted) {
+		return nil, fmt.Errorf("%s: %w", path, ErrNotEncrypted)
+	}
+
+	plain, err := DecryptValue(encrypted, oldPassword)
+	if err != nil {
+		return nil, err
+	}
+	if cluster.IsVaultEncrypted(plain) {
+		return nil, fmt.Errorf("%s: %w", path, ErrWrappedTwice)
+	}
+
+	rekeyed, err := EncryptValue(plain, newPassword)
+	if err != nil {
+		return nil, err
+	}
+	return spliceCiphertext(src, node, rekeyed)
 }
 
 // renderScalar returns the YAML text for value, split into the part that replaces the value on its
@@ -447,6 +490,32 @@ func DecryptConfig(src []byte, password string) ([]byte, []string, error) {
 		return cluster.IsVaultEncrypted(value), nil
 	}, func(doc []byte, path string) ([]byte, error) {
 		return DecryptAtPath(doc, path, password)
+	})
+}
+
+// RekeyConfig re-wraps every vaulted registry credential in src under newPassword and returns the
+// rewritten document along with the paths it changed. A field that is absent, empty, or plaintext
+// is skipped, so what comes back is a document whose ciphertext is all under one password and whose
+// plaintext was never written anywhere.
+//
+// Every value it touches has to be readable with oldPassword, and it is an error when one is not.
+// There is no way to rekey a file already holding ciphertext under two passwords into a working
+// state -- an apply reads a registry's fields with a single password -- so stopping is the only
+// answer that does not produce a configuration no password can read back.
+//
+// Unlike EncryptConfig this is not idempotent, and cannot be: Ansible Vault salts every
+// encryption, so a second run rewrites the same values to different ciphertext.
+func RekeyConfig(src []byte, oldPassword, newPassword string) ([]byte, []string, error) {
+	return rewriteConfig(src, func(value string) (bool, error) {
+		if !cluster.IsVaultEncrypted(value) {
+			return false, nil
+		}
+		if _, err := DecryptValue(value, oldPassword); err != nil {
+			return false, errors.New("cannot be read with the old vault password; is it vaulted under a different one?")
+		}
+		return true, nil
+	}, func(doc []byte, path string) ([]byte, error) {
+		return RekeyAtPath(doc, path, oldPassword, newPassword)
 	})
 }
 
