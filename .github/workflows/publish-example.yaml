@@ -10,8 +10,13 @@ name: Publish example package
 # go away -- so "the latest example" is the highest version directory the flavor has, and
 # the workflow resolves it at run time instead of carrying a pin that would go stale.
 #
-# It runs on demand from the Actions tab, choosing the flavor, and automatically when a
-# release is published, where it takes the default flavor.
+# It runs on demand from the Actions tab, choosing the flavor, and automatically once the
+# goreleaser workflow succeeds on a version tag, where it takes the default flavor. The
+# chain is release-please publishes the release and pushes the tag, the tag push starts
+# goreleaser, and goreleaser finishing starts this. Keying off the release event instead
+# does not work, and did not: release-please publishes the release roughly ten minutes
+# before goreleaser has uploaded the archives, so setup-cargoship resolved the brand new
+# version and then failed on an asset that did not exist yet.
 #
 # It also runs on a pull request carrying the "publish-example" label, so the workflow can
 # be exercised on its own branch before it is merged. That run is label gated because each
@@ -34,9 +39,11 @@ on:
           - rke2-multi-cni-canal
           - k3s-flannel
           - k3s-multi
-  release:
+  workflow_run:
+    workflows:
+      - goreleaser
     types:
-      - published
+      - completed
   pull_request:
     types:
       - opened
@@ -53,7 +60,9 @@ permissions:
 # in the group so that a pull request's test runs queue against themselves rather than
 # against a release publishing the same flavor.
 concurrency:
-  group: publish-example-${{ inputs.flavor || 'rke2-cilium' }}-${{ github.ref }}
+  group: >-
+    publish-example-${{ inputs.flavor || 'rke2-cilium' }}-${{
+    github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: false
 
 env:
@@ -66,21 +75,36 @@ env:
 
 jobs:
   publish-example:
+    # A goreleaser run is only worth following when it succeeded, because a failed one
+    # uploaded no archive for setup-cargoship to install, and only on a version tag, since
+    # goreleaser takes every tag while release-please only ever pushes vN.N.N.
+    #
     # Label gated on pull requests: every run pulls and pushes gigabytes, which is not what
     # an unrelated pull request should spend. Fork pull requests are excluded because they
     # get neither the signing secrets nor a token that can write packages, so the run could
     # only fail at the publish step.
     if: >-
-      github.event_name != 'pull_request' ||
-      (contains(github.event.pull_request.labels.*.name, 'publish-example') &&
-      github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')) ||
+      (github.event_name == 'pull_request' &&
+      contains(github.event.pull_request.labels.*.name, 'publish-example') &&
+      github.event.pull_request.head.repo.full_name == github.repository) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # An example package pulls the distro's whole image list plus its RPMs or binary, and
     # then uploads all of it. Both halves are network bound and neither is quick.
     timeout-minutes: 90
     steps:
+      # A workflow_run run starts from the default branch whatever ref set it off, so the
+      # tagged commit has to be asked for by name. Without it this would build whatever
+      # example definitions main holds now rather than the ones the release shipped. The
+      # fallback covers the dispatch and pull request triggers, where github.ref is already
+      # what should be built.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       # The package runs to gigabytes and exists twice on disk while it is built: once in
       # the cache the images are pulled into, once in the tarball. Same removals as
