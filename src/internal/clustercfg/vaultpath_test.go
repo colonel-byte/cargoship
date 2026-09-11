@@ -583,6 +583,32 @@ func TestEncryptConfigResolvesAnchors(t *testing.T) {
 	}
 }
 
+// TestRekeyConfigResolvesAnchors is the case a shared value breaks if each path is walked on its
+// own: the second visit would find ciphertext under the new password and report it as a value the
+// old password cannot read.
+func TestRekeyConfigResolvesAnchors(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(anchorTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	got, changed, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	if err != nil {
+		t.Fatalf("RekeyConfig() error = %v", err)
+	}
+	if len(changed) != 2 {
+		t.Fatalf("changed = %v, want the two shared credentials once each", changed)
+	}
+
+	plain, _, err := DecryptConfig(got, rekeyPassword)
+	if err != nil {
+		t.Fatalf("DecryptConfig() error = %v", err)
+	}
+	if string(plain) != anchorTestDoc {
+		t.Errorf("round trip through a rotation changed the document:\n%s\nwant:\n%s", plain, anchorTestDoc)
+	}
+}
+
 // TestEncryptAtPathThroughAlias covers naming the aliased registry rather than the anchored one:
 // the value it reaches is the anchored one, so that is what gets rewritten.
 func TestEncryptAtPathThroughAlias(t *testing.T) {

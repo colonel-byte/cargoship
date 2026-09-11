@@ -535,50 +535,89 @@ func RekeyConfig(src []byte, oldPassword, newPassword string) ([]byte, []string,
 // rewriteConfig applies rewrite to every registry credential path whose current value satisfies
 // wanted, returning the rewritten document and the paths that were changed. An error from wanted is
 // reported against the path it was asked about, which is the one thing the caller cannot say for
-// itself.
+// itself. A value two registries share through an anchor is rewritten once, under the first path
+// that reaches it.
 //
 // Each rewrite reparses the document rather than reusing the nodes found here, because splicing
 // one value moves every offset after it. The paths themselves do not move, so walking them in
 // order is enough, and a configuration holds few enough of them for the reparsing to be beside the
 // point.
 func rewriteConfig(src []byte, wanted func(string) (bool, error), rewrite func([]byte, string) ([]byte, error)) ([]byte, []string, error) {
-	count, err := registryCount(src)
+	paths, err := credentialPaths(src)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	doc := src
 	changed := []string{}
+	for _, path := range paths {
+		value, ok, err := scalarAtPath(doc, path)
+		if err != nil {
+			return nil, nil, err
+		}
+		// An empty value is skipped alongside a missing one: a credential nobody set is not
+		// worth replacing with ciphertext that decrypts to nothing.
+		if !ok || value == "" {
+			continue
+		}
+
+		want, err := wanted(value)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%s %w", path, err)
+		}
+		if !want {
+			continue
+		}
+
+		doc, err = rewrite(doc, path)
+		if err != nil {
+			return nil, nil, err
+		}
+		changed = append(changed, path)
+	}
+	return doc, changed, nil
+}
+
+// credentialPaths returns the registry credential paths in src that are worth walking: every field
+// of every registry, less those that name a value another path already names.
+//
+// That last part is what a document sharing one auth block between registries needs. An alias
+// resolves to the anchored value itself, so "registries[1].auth.pass" and "registries[0].auth.pass"
+// can be the same bytes. Rewriting the second one after the first has been rewritten is at best a
+// second pass over a value that is already done, and for a rekey it is an error -- the value now
+// reads with the new password, and the old one is what that walk expects.
+func credentialPaths(src []byte) ([]string, error) {
+	count, err := registryCount(src)
+	if err != nil {
+		return nil, err
+	}
+
+	paths := []string{}
+	named := map[string]string{}
 	for i := range count {
 		for _, field := range vaultedFields {
 			path := fmt.Sprintf("%s[%d].%s", registriesPath, i, field)
 
-			value, ok, err := scalarAtPath(doc, path)
+			_, origin, ok, err := nodeAtPath(src, path)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
-			// An empty value is skipped alongside a missing one: a credential nobody set is not
-			// worth replacing with ciphertext that decrypts to nothing.
-			if !ok || value == "" {
+			if !ok {
+				// Left in: the walk reports a path the document does not have as nothing to do,
+				// which is the same answer it has always given for a credential nobody set.
+				paths = append(paths, path)
 				continue
 			}
-
-			want, err := wanted(value)
-			if err != nil {
-				return nil, nil, fmt.Errorf("%s %w", path, err)
-			}
-			if !want {
+			if _, ok := named[origin]; ok {
+				// Nothing is lost by dropping it: the value it names is rewritten under the path
+				// that reached it first, and an apply reads both registries from the same node.
 				continue
 			}
-
-			doc, err = rewrite(doc, path)
-			if err != nil {
-				return nil, nil, err
-			}
-			changed = append(changed, path)
+			named[origin] = path
+			paths = append(paths, path)
 		}
 	}
-	return doc, changed, nil
+	return paths, nil
 }
 
 // registryCount returns how many registries the configuration holds. A document with no registries
