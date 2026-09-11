@@ -17,6 +17,7 @@ package noncluster
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -120,4 +121,34 @@ func cosignKeyPair(t *testing.T) (privPath string, pubPath string) {
 	require.NoError(t, os.WriteFile(pubPath, keys.PublicBytes, 0o644))
 
 	return privPath, pubPath
+}
+
+// vaultValueAt returns the ciphertext of the block scalar introduced by header, undoing the
+// indentation the document stores it with so that it can be handed back to the vault library.
+func vaultValueAt(t *testing.T, doc, header string) string {
+	t.Helper()
+
+	lines := strings.Split(doc, "\n")
+	start := -1
+	for i, line := range lines {
+		if strings.Contains(line, header) {
+			start = i + 1
+			break
+		}
+	}
+	require.NotEqual(t, -1, start, "no %q in:\n%s", header, doc)
+	require.Less(t, start, len(lines), "nothing follows %q", header)
+
+	indent := len(lines[start]) - len(strings.TrimLeft(lines[start], " "))
+	var body []string
+	for _, line := range lines[start:] {
+		if strings.TrimSpace(line) == "" || len(line)-len(strings.TrimLeft(line, " ")) < indent {
+			break
+		}
+		body = append(body, line[indent:])
+	}
+
+	value := strings.Join(body, "\n")
+	require.True(t, strings.HasPrefix(value, "$ANSIBLE_VAULT"), "value at %q is not ciphertext: %q", header, value)
+	return value
 }
