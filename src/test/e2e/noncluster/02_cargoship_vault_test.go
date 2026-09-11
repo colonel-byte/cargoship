@@ -649,6 +649,47 @@ func TestCargoshipVaultEncryptFile(t *testing.T) {
 		return config
 	}
 
+	// A configuration that shares one auth block between two registries: the credential lives under
+	// the anchor, and the second registry holds an alias to it.
+	t.Run("encrypts a credential two registries share through an anchor", func(t *testing.T) {
+		const anchored = `apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+spec:
+  config:
+    registries:
+      - name: docker.io
+        auth: &auth
+          user: robot
+          pass: hunter2
+      - name: test.io
+        auth: *auth
+  hosts:
+    - name: node1
+`
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(config, []byte(anchored), 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=2", "the shared user and pass, once each")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.NotContains(t, string(got), "pass: hunter2", "the shared password should not be left in the clear")
+		require.Contains(t, string(got), "auth: *auth", "the alias should survive")
+
+		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |-"), password)
+		require.NoError(t, err)
+		require.Equal(t, "hunter2", decrypted)
+
+		// Back to the file that went in, which is the check that nothing about the anchor moved.
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+		got, err = os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, anchored, string(got))
+	})
+
 	t.Run("encrypts every credential and leaves everything else alone", func(t *testing.T) {
 		config := writeDoc(t)
 

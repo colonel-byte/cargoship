@@ -205,6 +205,36 @@ The inverse: every vaulted registry credential in the file becomes plaintext aga
 
 If any value fails to decrypt, the command fails and the file is not touched at all -- it does not leave you with half a configuration in the clear.
 
+### Shared Credentials (Anchors and Aliases)
+
+A configuration that pulls from two names on the same host usually writes the credential once and points the second registry at it:
+
+```
+    registries:
+      - name: docker.io
+        auth: &auth
+          user: robot
+          pass: hunter2
+      - name: test.io
+        auth: *auth
+```
+
+All of the vault commands follow anchors and aliases. The value lives under the anchor, so that is what gets rewritten, and the alias is left as it is:
+
+```
+      - name: docker.io
+        auth: &auth
+          user: |-
+            $ANSIBLE_VAULT;1.1;AES256
+            ...
+      - name: test.io
+        auth: *auth
+```
+
+Both registries read the same ciphertext at apply time, which is what sharing the value meant in the first place. `encrypt-file` reports it once -- `count=2` for the shared `user` and `pass` above, not four -- because there is one value behind each pair of paths. Naming the aliased registry yourself works too: `encrypt-path ... '.spec.config.registries[1].auth.pass'` rewrites the anchored value, since that is the value that path resolves to. Naming both registries in one `encrypt-path` run is the one thing to avoid; the second path is the value the first has already encrypted, so it fails as already encrypted.
+
+An alias whose anchor is missing, or comes later in the file, is an error naming the alias. Nothing in this package reports a value it cannot reach as a value that was not there.
+
 ## Rotating the Vault Password
 
 ```

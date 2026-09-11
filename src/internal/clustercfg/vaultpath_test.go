@@ -521,6 +521,102 @@ spec:
     - name: node1
 `
 
+// anchorTestDoc shares one auth block between two registries, the way a configuration pulling from
+// two names on the same host is written. The value lives under the anchor; the second registry
+// holds an alias to it.
+const anchorTestDoc = `apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+spec:
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: docker.io
+        auth: &auth
+          user: robot
+          pass: hunter2
+      - name: test.io
+        auth: *auth
+  hosts:
+    - name: node1
+`
+
+// TestEncryptConfigResolvesAnchors covers the document go-yaml's path filter cannot walk on its
+// own. Before anchors were resolved this came back with nothing changed, which reads as a file with
+// no credentials in it rather than as one holding two in the clear.
+func TestEncryptConfigResolvesAnchors(t *testing.T) {
+	got, changed, err := EncryptConfig([]byte(anchorTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	// Once each: the second registry's fields are the first's, so encrypting them again would be a
+	// second pass over the same bytes.
+	want := []string{
+		"$.spec.config.registries[0].auth.user",
+		"$.spec.config.registries[0].auth.pass",
+	}
+	if strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want %v", changed, want)
+	}
+	if strings.Contains(string(got), "pass: hunter2") {
+		t.Errorf("the shared password is still in the clear:\n%s", got)
+	}
+	if !strings.Contains(string(got), "auth: *auth") {
+		t.Errorf("the alias did not survive:\n%s", got)
+	}
+
+	// Both registries read the credential back, which is what sharing it is for.
+	var dis cluster.ZarfCluster
+	if err := goyaml.Unmarshal(got, &dis); err != nil {
+		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
+	}
+	if err := DecryptRegistryAuth(&dis, testPassword); err != nil {
+		t.Fatalf("DecryptRegistryAuth() error = %v", err)
+	}
+	for i, registry := range dis.Spec.Config.Registries {
+		if registry.Authentication.Username != "robot" {
+			t.Errorf("registry %d user = %q, want %q", i, registry.Authentication.Username, "robot")
+		}
+		if registry.Authentication.Password != "hunter2" {
+			t.Errorf("registry %d pass = %q, want %q", i, registry.Authentication.Password, "hunter2")
+		}
+	}
+}
+
+// TestEncryptAtPathThroughAlias covers naming the aliased registry rather than the anchored one:
+// the value it reaches is the anchored one, so that is what gets rewritten.
+func TestEncryptAtPathThroughAlias(t *testing.T) {
+	got, err := EncryptAtPath([]byte(anchorTestDoc), ".spec.config.registries[1].auth.pass", testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	if strings.Contains(string(got), "pass: hunter2") {
+		t.Errorf("the shared password is still in the clear:\n%s", got)
+	}
+	if !strings.Contains(string(got), "auth: *auth") {
+		t.Errorf("the alias did not survive:\n%s", got)
+	}
+
+	value := readPath(t, got, ".spec.config.registries[0].auth.pass")
+	if !cluster.IsVaultEncrypted(value) {
+		t.Errorf("value at the anchor = %q, want the ciphertext written through the alias", value)
+	}
+}
+
+// TestEncryptConfigRejectsAnAliasWithoutAnAnchor is the other half of resolving them: a document
+// this package cannot walk has to say so, rather than come back reporting nothing to do.
+func TestEncryptConfigRejectsAnAliasWithoutAnAnchor(t *testing.T) {
+	doc := strings.Replace(anchorTestDoc, "auth: &auth", "auth:", 1)
+
+	_, _, err := EncryptConfig([]byte(doc), testPassword, false)
+	if err == nil {
+		t.Fatal("EncryptConfig() error = nil, want an error naming the alias")
+	}
+	if !strings.Contains(err.Error(), "*auth") {
+		t.Errorf("error = %v, want it to name the alias", err)
+	}
+}
+
 func TestEncryptConfigEncryptsEveryCredential(t *testing.T) {
 	got, changed, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
 	if err != nil {
