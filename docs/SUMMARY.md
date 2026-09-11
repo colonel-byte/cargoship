@@ -30,6 +30,8 @@
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [sign](commands/cargoship_sign.md)
   - [vault](commands/cargoship_vault.md)
+    - [decrypt-path](commands/cargoship_vault_decrypt-path.md)
+    - [decrypt](commands/cargoship_vault_decrypt.md)
     - [encrypt-path](commands/cargoship_vault_encrypt-path.md)
     - [encrypt](commands/cargoship_vault_encrypt.md)
   - [version](commands/cargoship_version.md)

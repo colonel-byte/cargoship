@@ -19,8 +19,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newVaultCommand groups the commands that encrypt values for a cluster configuration with Ansible
-// Vault. It takes no arguments of its own, so running it bare prints the group's help.
+// newVaultCommand groups the commands that read and write Ansible Vault ciphertext for a cluster
+// configuration. It takes no arguments of its own, so running it bare prints the group's help.
 func newVaultCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vault",
@@ -30,6 +30,8 @@ func newVaultCommand() *cobra.Command {
 
 	cmd.AddCommand(newVaultEncryptCommand())
 	cmd.AddCommand(newVaultEncryptPathCommand())
+	cmd.AddCommand(newVaultDecryptCommand())
+	cmd.AddCommand(newVaultDecryptPathCommand())
 
 	return cmd
 }

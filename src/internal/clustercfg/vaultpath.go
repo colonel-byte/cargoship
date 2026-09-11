@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
@@ -31,14 +32,19 @@ import (
 // unwraps.
 var ErrAlreadyEncrypted = errors.New("value is already Ansible Vault-encrypted")
 
+// ErrNotEncrypted reports that the value at the requested path is plaintext, so there is nothing
+// to decrypt. Rewriting it anyway would be a no-op that still rewrote the file, which is worth
+// saying out loud rather than reporting as success.
+var ErrNotEncrypted = errors.New("value is not Ansible Vault-encrypted")
+
 // registriesPath is where a cluster configuration keeps the registries whose credentials are
 // vaulted, and vaultedFields are the fields of one of them that DecryptRegistryAuth reads at apply
 // time.
 //
 // These two have to be kept in step with that function: a field added there and not here is one
 // PathIsDecryptable warns about, and a field added here and not there promises a decryption that
-// never happens. Everything else in this package derives the paths it cares about from these, so
-// that keeping them in step is the only obligation.
+// never happens. Everything else in this package derives the paths it
+// cares about from these, so that keeping them in step is the only obligation.
 const registriesPath = "$.spec.config.registries"
 
 var vaultedFields = []string{"auth.user", "auth.pass", "auth.token", "tls.ca"}
@@ -109,6 +115,135 @@ func EncryptAtPath(src []byte, yamlPath, password string, reencrypt bool) ([]byt
 	// Strip rather than clip, so the stored ciphertext does not depend on whether the vault
 	// library left a trailing newline on it.
 	return spliceScalar(src, node, "|-", strings.Split(strings.TrimRight(encrypted, "\n"), "\n"))
+}
+
+// DecryptAtPath returns src with the Ansible Vault ciphertext at yamlPath replaced by its
+// plaintext, preserving every other byte of src for the same reasons, and by the same means, as
+// EncryptAtPath.
+//
+// The plaintext is written in whichever scalar style holds it faithfully: plain where YAML allows
+// it, a literal block for something multi-line such as a PEM certificate, and a quoted string for
+// anything the other two would change on the way back in. If the value is plaintext already, it
+// returns ErrNotEncrypted.
+func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
+	path, err := parseYAMLPath(yamlPath)
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := parser.ParseBytes(src, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("parsing YAML: %w", err)
+	}
+
+	node, err := path.FilterFile(file)
+	if err != nil {
+		return nil, fmt.Errorf("no value found at %s: %w", path.String(), err)
+	}
+
+	encrypted, err := scalarValue(node, path.String())
+	if err != nil {
+		return nil, err
+	}
+	if !cluster.IsVaultEncrypted(encrypted) {
+		return nil, fmt.Errorf("%s: %w", path.String(), ErrNotEncrypted)
+	}
+
+	plain, err := DecryptValue(encrypted, password)
+	if err != nil {
+		return nil, err
+	}
+
+	head, tail, err := renderScalar(plain)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path.String(), err)
+	}
+	return spliceScalar(src, node, head, tail)
+}
+
+// renderScalar returns the YAML text for value, split into the part that replaces the value on its
+// own line and any further lines, the latter given relative to the indentation the caller will add.
+//
+// go-yaml's encoder chooses the style and handles the quoting rules, which is work better left to
+// the YAML library than reimplemented here. It is wrong in two cases, both of which produce a
+// document that reads back as something other than what went in, so those are quoted explicitly
+// instead: a value holding a control character, which it writes raw into a plain scalar; and a
+// multi-line value with trailing whitespace on a line, which survives a block scalar only until
+// something that trims trailing whitespace touches the file.
+func renderScalar(value string) (string, []string, error) {
+	if !utf8.ValidString(value) {
+		// A YAML scalar holds text, so there is no style that can carry arbitrary bytes. Saying so
+		// leaves the ciphertext in place, which is better than writing a file whose value no longer
+		// decodes to what was encrypted.
+		return "", nil, errors.New("the decrypted value is not valid UTF-8, so it cannot be written back as YAML")
+	}
+
+	scalar := ""
+	if blockSafe(value) {
+		encoded, err := goyaml.Marshal(value)
+		if err != nil {
+			return "", nil, fmt.Errorf("rendering the decrypted value as YAML: %w", err)
+		}
+		scalar = strings.TrimSuffix(string(encoded), "\n")
+	} else {
+		scalar = quoteScalar(value)
+	}
+
+	lines := strings.Split(scalar, "\n")
+	tail := make([]string, 0, len(lines)-1)
+	for _, line := range lines[1:] {
+		// The encoder indents a block scalar's content by two, which the splice re-does at the
+		// depth the value actually sits at.
+		tail = append(tail, strings.TrimPrefix(line, "  "))
+	}
+	return lines[0], tail, nil
+}
+
+// blockSafe reports whether go-yaml can render value in a style that reads back unchanged.
+func blockSafe(value string) bool {
+	for _, r := range value {
+		if r != '\n' && (r < 0x20 || r == 0x7f) {
+			return false
+		}
+	}
+	if !strings.Contains(value, "\n") {
+		return true
+	}
+	for _, line := range strings.Split(value, "\n") {
+		if line != strings.TrimRight(line, " \t") {
+			return false
+		}
+	}
+	return true
+}
+
+// quoteScalar returns value as a YAML double-quoted scalar, which is the one style that can hold
+// any string on a single line.
+func quoteScalar(value string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range value {
+		switch r {
+		case '"':
+			b.WriteString(`\"`)
+		case '\\':
+			b.WriteString(`\\`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		default:
+			if r < 0x20 || r == 0x7f {
+				fmt.Fprintf(&b, `\x%02x`, r)
+				continue
+			}
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 // parseYAMLPath accepts a path with or without the "$" root that go-yaml requires, so that the
