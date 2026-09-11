@@ -24,7 +24,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/parser"
 )
 
 // ErrAlreadyEncrypted reports that the value at the requested path is Ansible Vault ciphertext
@@ -114,9 +113,9 @@ func scalarNodeAtPath(src []byte, yamlPath string) (ast.Node, string, string, er
 		return nil, "", "", err
 	}
 
-	file, err := parser.ParseBytes(src, parser.ParseComments)
+	file, err := parseYAML(src)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("parsing YAML: %w", err)
+		return nil, "", "", err
 	}
 
 	node, err := path.FilterFile(file)
@@ -591,9 +590,9 @@ func registryCount(src []byte) (int, error) {
 		return 0, err
 	}
 
-	file, err := parser.ParseBytes(src, parser.ParseComments)
+	file, err := parseYAML(src)
 	if err != nil {
-		return 0, fmt.Errorf("parsing YAML: %w", err)
+		return 0, err
 	}
 
 	node, err := path.FilterFile(file)
@@ -612,25 +611,48 @@ func registryCount(src []byte) (int, error) {
 // there. A path that resolves to something other than a scalar is reported as absent too: a
 // registry with no tls block has no tls.ca to rewrite, and neither has one whose tls.ca somebody
 // wrote as a list.
+//
+// Only a path the document does not have is absent. Anything else the lookup fails on is returned
+// as an error, because a value this package cannot reach is one a whole-file command would
+// otherwise walk past and then report the file as having had nothing to do -- which reads as
+// success over credentials still sitting there in the clear.
 func scalarAtPath(src []byte, yamlPath string) (string, bool, error) {
-	path, err := parseYAMLPath(yamlPath)
-	if err != nil {
+	node, _, ok, err := nodeAtPath(src, yamlPath)
+	if err != nil || !ok {
 		return "", false, err
 	}
 
-	file, err := parser.ParseBytes(src, parser.ParseComments)
-	if err != nil {
-		return "", false, fmt.Errorf("parsing YAML: %w", err)
-	}
-
-	node, err := path.FilterFile(file)
-	if err != nil {
-		return "", false, nil
-	}
-
-	value, err := scalarValue(node, path.String())
+	value, err := scalarValue(node, yamlPath)
 	if err != nil {
 		return "", false, nil
 	}
 	return value, true, nil
+}
+
+// nodeAtPath returns the node at yamlPath along with where in src it was parsed from, reporting
+// false when the document does not have that path.
+//
+// The position is what tells two paths naming one value apart from two paths naming two: an alias
+// resolves to the anchored value's own node, so both come back pointing at the same bytes.
+func nodeAtPath(src []byte, yamlPath string) (ast.Node, string, bool, error) {
+	path, err := parseYAMLPath(yamlPath)
+	if err != nil {
+		return nil, "", false, err
+	}
+
+	file, err := parseYAML(src)
+	if err != nil {
+		return nil, "", false, err
+	}
+
+	node, err := path.FilterFile(file)
+	if err != nil {
+		if errors.Is(err, goyaml.ErrNotFoundNode) {
+			return nil, "", false, nil
+		}
+		return nil, "", false, fmt.Errorf("no value found at %s: %w", path.String(), err)
+	}
+
+	position := node.GetToken().Position
+	return node, fmt.Sprintf("%d:%d", position.Line, position.Column), true, nil
 }
