@@ -243,6 +243,13 @@ func renderScalar(value string) (string, []string, error) {
 
 // blockSafe reports whether go-yaml can render value in a style that reads back unchanged.
 func blockSafe(value string) bool {
+	if value != "" && strings.Trim(value, "\n") == "" {
+		// A value that is nothing but line breaks has no line of text to carry the block's
+		// indentation, so a block scalar holding it is either empty -- which reads back as the
+		// empty string -- or indented with whitespace-only lines, which is exactly the fragility
+		// the trailing-whitespace check below refuses. Quote it instead.
+		return false
+	}
 	for _, r := range value {
 		if r != '\n' && (r < 0x20 || r == 0x7f) {
 			return false
@@ -297,13 +304,25 @@ func CanonicalYAMLPath(yamlPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.String(), nil
+	canonical := path.String()
+
+	// The canonical spelling is handed back to the parser -- by this package to read the value, and
+	// by a caller comparing one path against another -- so it is only useful if it names the same
+	// value the operator typed. go-yaml prints a quoted key without its quotes, so a path such as
+	// "'$'" comes back as "$.$", which no longer parses. Refuse the path rather than return a
+	// spelling that fails later with an error naming something the operator never wrote.
+	round, err := parseYAMLPath(canonical)
+	if err != nil || round.String() != canonical {
+		return "", fmt.Errorf("YAML path %q cannot be written in a form this tool reads back", yamlPath)
+	}
+
+	return canonical, nil
 }
 
 // parseYAMLPath accepts a path with or without the "$" root that go-yaml requires, so that the
 // dotted form an operator reads off a config -- ".spec.config.registries[0].auth.pass" -- works as
 // typed.
-func parseYAMLPath(yamlPath string) (*goyaml.Path, error) {
+func parseYAMLPath(yamlPath string) (_ *goyaml.Path, err error) {
 	normalized := yamlPath
 	switch {
 	case strings.HasPrefix(normalized, "$"):
@@ -312,6 +331,16 @@ func parseYAMLPath(yamlPath string) (*goyaml.Path, error) {
 	default:
 		normalized = "$." + normalized
 	}
+
+	// go-yaml reads past the end of a path whose index is never closed -- "registries[0" -- and
+	// panics instead of reporting the syntax error. Recovering keeps a mistyped path the usage
+	// error it is, rather than a stack trace on the operator's terminal.
+	defer func() {
+		if recover() != nil {
+			err = fmt.Errorf("invalid YAML path %q", yamlPath)
+		}
+	}()
+
 	path, err := goyaml.PathString(normalized)
 	if err != nil {
 		return nil, fmt.Errorf("invalid YAML path %q: %w", yamlPath, err)
@@ -360,7 +389,15 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 		current = literal.Start.Value
 	}
 	if !strings.HasPrefix(text[start:], current) {
-		return nil, fmt.Errorf("value at line %d, column %d does not match the parsed document", line, token.Position.Column)
+		// go-yaml drops the payload of a hex escape from a token's origin text, so a quoted scalar
+		// holding one -- which is how renderScalar writes a control character -- does not match the
+		// document it was parsed from. Measure the scalar in the source instead of trusting the
+		// token, so that a file this package wrote is one it can read back.
+		quoted, ok := quotedScalarAt(text[start:])
+		if !ok {
+			return nil, fmt.Errorf("value at line %d, column %d does not match the parsed document", line, token.Position.Column)
+		}
+		current = quoted
 	}
 
 	lineEnd := lineEndOffset(text, lines, line)
@@ -398,6 +435,37 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 	}
 	b.WriteString(text[end:])
 	return []byte(b.String()), nil
+}
+
+// quotedScalarAt returns the flow scalar at the start of s, quotes included, and reports whether s
+// begins with one that ends on its own line. A scalar in any other style, or one folded across
+// lines, is left to the caller to refuse: this exists only to measure what renderScalar writes.
+func quotedScalarAt(s string) (string, bool) {
+	if s == "" {
+		return "", false
+	}
+	quote := s[0]
+	if quote != '"' && quote != '\'' {
+		return "", false
+	}
+
+	for i := 1; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			if quote == '"' {
+				i++ // An escape in a double-quoted scalar hides the byte after it.
+			}
+		case quote:
+			if quote == '\'' && i+1 < len(s) && s[i+1] == '\'' {
+				i++ // "''" is an escaped quote, not the end of the scalar.
+				continue
+			}
+			return s[:i+1], true
+		case '\n':
+			return "", false
+		}
+	}
+	return "", false
 }
 
 // lineOffsets returns the offset at which each line of text begins.
