@@ -123,6 +123,34 @@ type ZarfDistroConfig struct {
 	Engine dig.Mapping `json:"engine,omitempty"`
 }
 
+// JSONSchemaExtend pins down the shape of the engine's manifest section, whose values are Helm
+// values written into a HelmChartConfig: either a YAML string or a mapping cargoship serializes
+// to YAML for the chart. Engine is otherwise a free-form mapping handed to the distro engine, so
+// the section list stays open and every other section keeps validating as it did.
+func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema) {
+	engine, ok := s.Properties.Get("engine")
+	if !ok {
+		return
+	}
+	manifest := &jsonschema.Schema{
+		Type:        "object",
+		Description: "maps a chart name to the Helm values cargoship writes to that chart's HelmChartConfig. A value is either a YAML string or a mapping.",
+		AdditionalProperties: &jsonschema.Schema{
+			OneOf: []*jsonschema.Schema{
+				{Type: "string"},
+				{Type: "object"},
+			},
+		},
+	}
+
+	// Replacing the $ref with an inline object is what lets a property be described at all:
+	// the Mapping definition is shared by every free-form mapping in the schema.
+	engine.Ref = ""
+	engine.Type = "object"
+	engine.Properties = jsonschema.NewProperties()
+	engine.Properties.Set("manifest", manifest)
+}
+
 // Compression formats accepted by ZarfDistroImageConfig.Compression.
 const (
 	// CompressionNone writes the image tarballs uncompressed. This is the default.

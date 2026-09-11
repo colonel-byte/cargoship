@@ -426,8 +426,27 @@
       },
       "properties": {
         "engine": {
-          "$ref": "#/$defs/Mapping",
-          "description": "holds configuration passed through to the distro engine."
+          "description": "holds configuration passed through to the distro engine.",
+          "patternProperties": {
+            "^x-": {}
+          },
+          "properties": {
+            "manifest": {
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object"
+                  }
+                ]
+              },
+              "description": "maps a chart name to the Helm values cargoship writes to that chart's HelmChartConfig. A value is either a YAML string or a mapping.",
+              "type": "object"
+            }
+          },
+          "type": "object"
         },
         "files": {
           "$ref": "#/$defs/ZarfFiles",

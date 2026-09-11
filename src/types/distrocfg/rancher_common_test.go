@@ -1311,3 +1311,53 @@ func TestDesiredFilesModes(t *testing.T) {
 	require.Equal(t, "0600", files[filepath.Join(dir, "pss.yaml")].Mode)
 	require.Equal(t, "0600", files["/etc/cargoship/tls/mirror.example.com.crt"].Mode)
 }
+
+// A manifest entry written as a YAML mapping rather than a block string is Helm values all the
+// same, so it lands in valuesContent as YAML, not as a Go-formatted map.
+func TestConfigureEngineWritesManifestsFromMapping(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = dig.Mapping{
+		config.EngineManifest: dig.Mapping{
+			"my-chart": dig.Mapping{
+				"kubeProxyReplacement": true,
+				"k8sServicePort":       6443,
+				"tolerations":          []any{dig.Mapping{"operator": "Exists"}},
+			},
+		},
+	}
+	run := cluster.ZarfRuntimeMeta{}
+	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
+	host := cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1", Configurer: cfg}
+	host.Metadata.IsLeader = true
+
+	require.NoError(t, d.ConfigureEngine(context.Background(), host, run, dis))
+
+	path := filepath.Join(d.Data, "server/manifests/my-chart-config.yaml")
+	got := parseWrittenYAML(t, cfg.files, path)
+
+	values := dig.Mapping{}
+	require.NoError(t, yaml.Unmarshal([]byte(got.DigString(keySpec, "valuesContent")), &values))
+	require.Equal(t, true, values.Dig("kubeProxyReplacement"))
+	require.Equal(t, 6443, values.Dig("k8sServicePort"))
+	require.Equal(t, []any{dig.Mapping{"operator": "Exists"}}, values.Dig("tolerations"))
+}
+
+func TestHelmValuesContent(t *testing.T) {
+	tests := map[string]struct {
+		in   any
+		want string
+	}{
+		"string passes through": {in: "foo: bar", want: "foo: bar"},
+		"mapping is marshalled": {in: dig.Mapping{"foo": dig.Mapping{"bar": "baz"}}, want: "foo:\n  bar: baz\n"},
+		"scalar is marshalled":  {in: 6443, want: "6443\n"},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := helmValuesContent(tt.in)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
