@@ -62,17 +62,9 @@ func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	newPassword, err := requireNewVaultPassword(o.newVaultPasswordFile)
+	newPassword, err := resolveNewVaultPassword(o.newVaultPasswordFile, oldPassword)
 	if err != nil {
 		return err
-	}
-
-	// Rekeying onto the password the file already carries would re-salt every value, report a
-	// count, and leave the credentials readable with exactly the password the operator was trying
-	// to retire. The usual cause is a flag pointing at the wrong file, so it is worth refusing
-	// rather than reporting as a rotation that happened.
-	if oldPassword == newPassword {
-		return fmt.Errorf("the new vault password is the same as the old one; --%s has to name a file holding the password to move to", MiscVaultNewPasswordFile)
 	}
 
 	src, err := os.ReadFile(file)
@@ -85,17 +77,30 @@ func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return finishVaultFile(cmd, file, rekeyed, changed, o.dryRun, "rekeyed", "nothing to rekey: no registry credential in this file is encrypted")
+	// Rekeying onto the password the file already carries re-salts every value and leaves it
+	// readable with the same password as before. That is a supported thing to ask for, but it is
+	// not a rotation, so it is reported as what it is rather than as a password change that did
+	// not happen.
+	verb, nothingToDo := "rekeyed", "nothing to rekey: no registry credential in this file is encrypted"
+	if newPassword == oldPassword {
+		verb, nothingToDo = "re-salted", "nothing to re-salt: no registry credential in this file is encrypted"
+	}
+
+	return finishVaultFile(cmd, file, rekeyed, changed, o.dryRun, verb, nothingToDo)
 }
 
-// requireNewVaultPassword reads the password to rekey onto, which unlike every other vault password
+// resolveNewVaultPassword reads the password to rekey onto, which unlike every other vault password
 // comes only from the file named. The environment variables ResolveVaultPassword falls back to hold
-// the password a configuration is vaulted under now, so honouring them here would let an omitted
-// flag rekey a file onto the password it started with -- the one case this command must not report
-// as success.
-func requireNewVaultPassword(passwordFile string) (string, error) {
+// the password a configuration is vaulted under now, so honouring them here would turn an omitted
+// flag into a silent rotation onto the password the file started with.
+//
+// An omitted flag instead means the old password, which re-salts every value under the password the
+// file already uses -- a fresh salt and fresh ciphertext for a configuration whose password is
+// fine but whose ciphertext an operator would rather not keep, without the plaintext ever reaching
+// disk. Naming a file holding the old password does the same thing, and is reported the same way.
+func resolveNewVaultPassword(passwordFile, oldPassword string) (string, error) {
 	if passwordFile == "" {
-		return "", fmt.Errorf("no new vault password given: set --%s", MiscVaultNewPasswordFile)
+		return oldPassword, nil
 	}
 
 	// Going through ResolveVaultPassword is safe only because the empty case is handled above: given

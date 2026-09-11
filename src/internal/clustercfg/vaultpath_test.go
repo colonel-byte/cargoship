@@ -864,6 +864,43 @@ func TestRekeyConfigMovesEveryCredential(t *testing.T) {
 	}
 }
 
+// TestRekeyConfigResaltsUnderTheSamePassword covers the password-preserving case behind a "vault
+// rekey" with no new password named: every value comes back as different ciphertext that the
+// password the file already carried still reads.
+func TestRekeyConfigResaltsUnderTheSamePassword(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	got, changed, err := RekeyConfig(vaulted, testPassword, testPassword)
+	if err != nil {
+		t.Fatalf("RekeyConfig() error = %v", err)
+	}
+	if len(changed) != 4 {
+		t.Fatalf("changed = %v, want all four credentials re-salted", changed)
+	}
+
+	for _, path := range changed {
+		value := readPath(t, got, path)
+		if value == readPath(t, vaulted, path) {
+			t.Errorf("value at %s is byte-identical, want a fresh salt", path)
+		}
+		if _, err := DecryptValue(value, testPassword); err != nil {
+			t.Errorf("value at %s no longer decrypts with the password it was vaulted under: %v", path, err)
+		}
+	}
+
+	// The plaintext is what it always was, which is the part a re-salt must not disturb.
+	plain, _, err := DecryptConfig(got, testPassword)
+	if err != nil {
+		t.Fatalf("DecryptConfig() error = %v", err)
+	}
+	if string(plain) != configTestDoc {
+		t.Errorf("a re-salt changed the document:\n%s\nwant:\n%s", plain, configTestDoc)
+	}
+}
+
 // TestRekeyConfigDecryptsAtApplyTime is the check that matters most, as it is for encrypt-file:
 // what a rotation writes has to be what an apply reads back, under the new password.
 func TestRekeyConfigDecryptsAtApplyTime(t *testing.T) {

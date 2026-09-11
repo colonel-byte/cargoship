@@ -504,7 +504,9 @@ func DecryptConfig(src []byte, password string) ([]byte, []string, error) {
 // answer that does not produce a configuration no password can read back.
 //
 // Unlike EncryptConfig this is not idempotent, and cannot be: Ansible Vault salts every
-// encryption, so a second run rewrites the same values to different ciphertext.
+// encryption, so a second run rewrites the same values to different ciphertext. Passing the same
+// password as both old and new is that property put to use rather than a mistake: every value
+// comes back under a fresh salt, readable with the password the file already carried.
 func RekeyConfig(src []byte, oldPassword, newPassword string) ([]byte, []string, error) {
 	return rewriteConfig(src, func(value string) (bool, error) {
 		if !cluster.IsVaultEncrypted(value) {

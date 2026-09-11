@@ -859,28 +859,71 @@ func TestCargoshipVaultRekey(t *testing.T) {
 		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
 	})
 
-	// Rekeying onto the password the file already carries would re-salt every value and report a
-	// rotation that did not happen, which is worse than an error.
-	t.Run("refuses the password the file already uses", func(t *testing.T) {
+	// With no new password named, every value is re-salted under the password the file already
+	// carries: fresh ciphertext, same password, and the plaintext still never on disk.
+	t.Run("re-salts every credential when the new password is omitted", func(t *testing.T) {
 		config := vaultedDoc(t)
 		before, err := os.ReadFile(config)
 		require.NoError(t, err)
 
-		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", passwordFile, "--no-color")
-		require.Error(t, err)
-		require.Contains(t, stderr, "same as the old one")
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=4")
+		require.Contains(t, stderr, "re-salted", "a re-salt should not be reported as a rotation")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, string(before), string(got), "a failed run should not touch the file")
+		require.NotEqual(t, string(before), string(got), "every value should come back under a fresh salt")
+		require.NotContains(t, string(got), "hunter2", "the plaintext should never reach the file")
+
+		for _, marker := range []string{"user: |-", "pass: |- # rotate me", "ca: |-", "token: |-"} {
+			require.NotEqual(t, vaultValueAt(t, string(before), marker), vaultValueAt(t, string(got), marker),
+				"ciphertext at %q should have changed", marker)
+
+			decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), marker), password)
+			require.NoError(t, err, "value at %q should still decrypt with the same password", marker)
+			require.NotEmpty(t, decrypted)
+		}
+	})
+
+	// Naming a file holding the password the configuration already uses is the same request spelled
+	// out, and is reported the same way rather than as a rotation.
+	t.Run("re-salts when the new password file holds the old password", func(t *testing.T) {
+		config := vaultedDoc(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "re-salted")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		_, err = vault.Decrypt(vaultValueAt(t, string(got), "pass: |- # rotate me"), password)
+		require.NoError(t, err)
 	})
 
 	// Deliberately no environment fallback for the new password: the environment holds the password
-	// the file is vaulted under now, so falling back to it would rotate a file onto itself.
-	t.Run("requires the new password to be named explicitly", func(t *testing.T) {
+	// the file is vaulted under now, so falling back to it would report a rotation onto a password
+	// nobody asked to move to.
+	t.Run("does not take the new password from the environment", func(t *testing.T) {
 		config := vaultedDoc(t)
+		t.Setenv("CARGOSHIP_VAULT_PASSWORD", newPassword)
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "re-salted", "an omitted flag means the old password, not one from the environment")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		_, err = vault.Decrypt(vaultValueAt(t, string(got), "pass: |- # rotate me"), password)
+		require.NoError(t, err)
+	})
+
+	t.Run("errors when the named new password file is empty", func(t *testing.T) {
+		config := vaultedDoc(t)
+		empty := filepath.Join(t.TempDir(), "empty-password")
+		require.NoError(t, os.WriteFile(empty, []byte("\n"), 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", empty, "--no-color")
 		require.Error(t, err)
 		require.Contains(t, stderr, "new-vault-password-file")
 	})
@@ -905,6 +948,10 @@ func TestCargoshipVaultRekey(t *testing.T) {
 		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile, "--no-color")
 		require.NoError(t, err)
 		require.Contains(t, stderr, "nothing to rekey")
+
+		_, stderr, err = e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--no-color")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "nothing to re-salt")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)

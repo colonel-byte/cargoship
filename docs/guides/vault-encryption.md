@@ -51,7 +51,7 @@ cargoship vault decrypt-file FILE
 cargoship vault rekey FILE
 ```
 
-The `encrypt` and `decrypt` pair work on a value and print to stdout. The `-path` pair work on one value inside a configuration file and rewrite the file in place. The `-file` pair work on every registry credential in a configuration at once, and are what you want most of the time. `rekey` moves a whole configuration from one vault password to another -- see [Rotating the Vault Password](#rotating-the-vault-password).
+The `encrypt` and `decrypt` pair work on a value and print to stdout. The `-path` pair work on one value inside a configuration file and rewrite the file in place. The `-file` pair work on every registry credential in a configuration at once, and are what you want most of the time. `rekey` moves a whole configuration from one vault password to another, or re-salts it under the one it has -- see [Rotating the Vault Password](#rotating-the-vault-password).
 
 `PATH` is a YAML path such as `.spec.config.registries[0].auth.pass`. The leading `$` that go-yaml uses is optional, so `$.spec...`, `.spec...`, and `spec...` all name the same value. Quote the path in your shell -- it contains `[` and `]`.
 
@@ -199,13 +199,21 @@ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-
 
 Every vaulted registry credential in the file moves to the new password in one command. The plaintext is never written to the file: each value is decrypted and encrypted again in memory, so there is no window in which the configuration on disk is readable, and nothing to remember to clean up if the command fails or the terminal goes away mid-rotation. `--dry-run` prints the result to stdout and leaves the file alone.
 
-`--new-vault-password-file` is required and, unlike `--vault-password-file`, has no environment fallback. The environment holds the password the file is vaulted under *now*, so falling back to it would rotate a file onto itself and report a rotation that never happened.
+`--new-vault-password-file` is optional. Omit it and every value is re-wrapped under the password the file already carries:
+
+```
+cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt
+```
+
+That is a re-salt rather than a rotation, and it is logged as one. Ansible Vault salts each encryption, so every credential comes back as different ciphertext holding the same plaintext under the same password -- useful when the ciphertext has been somewhere you would rather it had not been, or when a value was vaulted long enough ago that you want it rewritten, and it never puts the plaintext on disk. Naming a file that holds the old password does the same thing.
+
+Unlike `--vault-password-file`, `--new-vault-password-file` has no environment fallback. The environment holds the password the file is vaulted under *now*, so falling back to it would report a rotation onto a password nobody asked to move to.
 
 A value that is plaintext is skipped, and so is one that is empty or absent -- rekeying does not encrypt anything that was not encrypted before. To pick up a newly added credential, run `encrypt-file` with the new password afterwards.
 
 **Rotate the whole file, not one value at a time.** An apply decrypts all of a registry's fields with a single password, so a configuration whose values were vaulted under two different passwords is one that no password can read. `rekey` refuses to create or perpetuate that state: if any encrypted value in the file cannot be read with the old password, it stops before writing anything and names the path. `encrypt-file` refuses the same way. But rotating path by path with `decrypt-path` and `encrypt-path` will walk you into it, since those commands only ever look at the one value you named.
 
-Ansible Vault salts each encryption, so the ciphertext differs on every run even when the password and the plaintext are unchanged. A rekey produces a diff on every value it touches, and running it twice with the same pair of passwords is not idempotent -- the second run fails, because the file is no longer readable with the old password.
+Ansible Vault salts each encryption, so the ciphertext differs on every run even when the password and the plaintext are unchanged. A rekey produces a diff on every value it touches, and running it twice with the same pair of *different* passwords is not idempotent -- the second run fails, because the file is no longer readable with the old password. A re-salt can be run as often as you like, since the password it reads with is the password it writes back.
 
 ## Checking Before an Apply
 

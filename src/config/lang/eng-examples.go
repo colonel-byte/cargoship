@@ -207,6 +207,9 @@ $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.t
 	CmdVaultRekeyExample = `# Move every encrypted registry credential in a cluster configuration to a new vault password
 $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt
 
+# Re-salt every encrypted registry credential, keeping the password the file already uses
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt
+
 # Check what a rotation would produce without writing it back
 $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt --dry-run
 `
