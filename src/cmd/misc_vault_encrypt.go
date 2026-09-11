@@ -38,7 +38,7 @@ func newVaultEncryptCommand() *cobra.Command {
 	o := vaultEncryptOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "vault-encrypt [VALUE]",
+		Use:     "encrypt [VALUE]",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdVaultEncryptShort,
 		Long:    lang.CmdVaultEncryptLong,
@@ -54,13 +54,23 @@ func newVaultEncryptCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *vaultEncryptOptions) run(cmd *cobra.Command, args []string) error {
-	password, err := clustercfg.ResolveVaultPassword(o.vaultPasswordFile)
+// requireVaultPassword resolves the vault password the way every vault command does, treating the
+// absence of one as an error rather than as an empty password.
+func requireVaultPassword(passwordFile string) (string, error) {
+	password, err := clustercfg.ResolveVaultPassword(passwordFile)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if password == "" {
-		return errors.New("no vault password found: set --vault-password-file or the CARGOSHIP_VAULT_PASSWORD/ANSIBLE_VAULT_PASSWORD environment variable")
+		return "", errors.New("no vault password found: set --vault-password-file or the CARGOSHIP_VAULT_PASSWORD/ANSIBLE_VAULT_PASSWORD environment variable")
+	}
+	return password, nil
+}
+
+func (o *vaultEncryptOptions) run(cmd *cobra.Command, args []string) error {
+	password, err := requireVaultPassword(o.vaultPasswordFile)
+	if err != nil {
+		return err
 	}
 
 	value, err := readValue(cmd, args)
