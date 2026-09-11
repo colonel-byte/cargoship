@@ -106,6 +106,14 @@ const (
 	CmdVaultEncryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultEncryptPathFlagForce flag description
 	CmdVaultEncryptPathFlagForce = "Encrypt the value even though it is Ansible Vault ciphertext already, wrapping it a second time."
+	// CmdVaultEncryptFileShort vault encrypt-file short
+	CmdVaultEncryptFileShort = "Encrypts every registry credential in a config file, in place"
+	// CmdVaultEncryptFileLong vault encrypt-file long
+	CmdVaultEncryptFileLong = "Encrypts every registry credential FILE holds that cargoship decrypts at apply time -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly vaulted configuration finishes the job and running it twice changes nothing the second time."
+	// CmdVaultEncryptFileFlagDryRun flag description
+	CmdVaultEncryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
+	// CmdVaultEncryptFileFlagForce flag description
+	CmdVaultEncryptFileFlagForce = "Encrypt values that are Ansible Vault ciphertext already, wrapping them a second time."
 	// CmdVaultDecryptShort vault decrypt short
 	CmdVaultDecryptShort = "Decrypts an Ansible Vault value, printing the plaintext"
 	// CmdVaultDecryptLong vault decrypt long
@@ -116,6 +124,12 @@ const (
 	CmdVaultDecryptPathLong = "Decrypts the Ansible Vault value FILE holds at PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. PATH is a YAML path such as '.spec.config.registries[0].auth.pass'; the leading '$' go-yaml uses is optional. This is the inverse of 'cargoship vault encrypt-path', and leaves the value readable to anyone who can read the file."
 	// CmdVaultDecryptPathFlagDryRun flag description
 	CmdVaultDecryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
+	// CmdVaultDecryptFileShort vault decrypt-file short
+	CmdVaultDecryptFileShort = "Decrypts every registry credential in a config file, in place"
+	// CmdVaultDecryptFileLong vault decrypt-file long
+	CmdVaultDecryptFileLong = "Decrypts every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of 'cargoship vault encrypt-file', and leaves the credentials readable to anyone who can read the file."
+	// CmdVaultDecryptFileFlagDryRun flag description
+	CmdVaultDecryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdViperErrLoadingConfigFile error text
 	CmdViperErrLoadingConfigFile = "failed to load config file"
 	// RootCmdFlagLogFormat log format

@@ -491,3 +491,330 @@ func mustParse(t *testing.T, doc []byte) *ast.File {
 	}
 	return file
 }
+
+// configTestDoc holds two registries so that the whole-file commands have to walk more than one,
+// and leaves gaps a real configuration has: a registry with a token instead of a password, one
+// with no tls block, and an empty field.
+const configTestDoc = `apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+spec:
+  # keep this comment exactly where it is
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: harbor # our mirror
+        auth:
+          user: admin
+          pass: hunter2 # rotate me
+          token: ""
+        tls:
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            aGVsbG8gd29ybGQ=
+            -----END CERTIFICATE-----
+          insecureSkipVerify: false
+      - name: quay
+        auth:
+          token: "tok #2"
+  hosts:
+    - name: node1
+`
+
+func TestEncryptConfigEncryptsEveryCredential(t *testing.T) {
+	got, changed, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	want := []string{
+		"$.spec.config.registries[0].auth.user",
+		"$.spec.config.registries[0].auth.pass",
+		"$.spec.config.registries[0].tls.ca",
+		"$.spec.config.registries[1].auth.token",
+	}
+	if strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want %v", changed, want)
+	}
+
+	// The empty token and the loadbalancer are the two things that should have been walked past.
+	if value := readPath(t, got, ".spec.config.registries[0].auth.token"); value != "" {
+		t.Errorf("empty token = %q, want it left alone", value)
+	}
+	if value := readPath(t, got, ".spec.config.loadbalancer"); value != "lb.example.com" {
+		t.Errorf("loadbalancer = %q, want it left alone", value)
+	}
+	if !strings.Contains(string(got), "  # keep this comment exactly where it is") {
+		t.Errorf("comment did not survive:\n%s", got)
+	}
+	if !strings.Contains(string(got), "          insecureSkipVerify: false") {
+		t.Errorf("the key after the CA block did not survive:\n%s", got)
+	}
+
+	for _, path := range want {
+		if value := readPath(t, got, path); !cluster.IsVaultEncrypted(value) {
+			t.Errorf("value at %s = %q, want ciphertext", path, value)
+		}
+	}
+}
+
+// TestEncryptConfigDecryptsAtApplyTime is the check that matters most: what encrypt-file writes has
+// to be what an apply reads back.
+func TestEncryptConfigDecryptsAtApplyTime(t *testing.T) {
+	got, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	var dis cluster.ZarfCluster
+	if err := goyaml.Unmarshal(got, &dis); err != nil {
+		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
+	}
+	if err := DecryptRegistryAuth(&dis, testPassword); err != nil {
+		t.Fatalf("DecryptRegistryAuth() error = %v", err)
+	}
+
+	registries := dis.Spec.Config.Registries
+	if len(registries) != 2 {
+		t.Fatalf("got %d registries, want 2", len(registries))
+	}
+	if got, want := registries[0].Authentication.Username, "admin"; got != want {
+		t.Errorf("user = %q, want %q", got, want)
+	}
+	if got, want := registries[0].Authentication.Password, "hunter2"; got != want {
+		t.Errorf("pass = %q, want %q", got, want)
+	}
+	if got, want := registries[0].TLS.CA, "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n"; got != want {
+		t.Errorf("ca = %q, want %q", got, want)
+	}
+	if got, want := registries[1].Authentication.Token, "tok #2"; got != want {
+		t.Errorf("token = %q, want %q", got, want)
+	}
+}
+
+// TestEncryptConfigRoundTrip pins the property that makes the pair safe on a file under version
+// control, across a document with several registries.
+func TestEncryptConfigRoundTrip(t *testing.T) {
+	encrypted, encryptedPaths, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	got, decryptedPaths, err := DecryptConfig(encrypted, testPassword)
+	if err != nil {
+		t.Fatalf("DecryptConfig() error = %v", err)
+	}
+	if strings.Join(decryptedPaths, ",") != strings.Join(encryptedPaths, ",") {
+		t.Errorf("decrypted %v, want the %v that were encrypted", decryptedPaths, encryptedPaths)
+	}
+	if string(got) != configTestDoc {
+		t.Errorf("round trip changed the document:\n got:\n%s\nwant:\n%s", got, configTestDoc)
+	}
+}
+
+func TestEncryptConfigIsIdempotent(t *testing.T) {
+	once, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	twice, changed, err := EncryptConfig(once, testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	if len(changed) != 0 {
+		t.Errorf("changed = %v, want nothing left to encrypt", changed)
+	}
+	if string(twice) != string(once) {
+		t.Errorf("a second run changed the document:\n%s", twice)
+	}
+}
+
+// TestEncryptConfigFinishesAPartlyVaultedFile covers the case an operator actually hits: some
+// values were encrypted by hand, and encrypt-file has to pick up the rest without touching them.
+func TestEncryptConfigFinishesAPartlyVaultedFile(t *testing.T) {
+	const done = "$.spec.config.registries[0].auth.pass"
+	partial, err := EncryptAtPath([]byte(configTestDoc), done, testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	before := readPath(t, partial, done)
+
+	got, changed, err := EncryptConfig(partial, testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	for _, path := range changed {
+		if path == done {
+			t.Errorf("re-encrypted %s, which was encrypted already", done)
+		}
+	}
+	if after := readPath(t, got, done); after != before {
+		t.Errorf("ciphertext at %s changed", done)
+	}
+
+	if _, remaining, err := DecryptConfig(got, testPassword); err != nil || len(remaining) != 4 {
+		t.Errorf("after finishing the job, DecryptConfig found %v (err = %v), want all four", remaining, err)
+	}
+}
+
+func TestEncryptConfigForceRewrapsEverything(t *testing.T) {
+	once, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	twice, changed, err := EncryptConfig(once, testPassword, true)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	if len(changed) != 4 {
+		t.Fatalf("changed = %v, want all four wrapped again", changed)
+	}
+
+	// Unwrapping once should leave ciphertext rather than plaintext.
+	unwrapped, _, err := DecryptConfig(twice, testPassword)
+	if err != nil {
+		t.Fatalf("DecryptConfig() error = %v", err)
+	}
+	if value := readPath(t, unwrapped, ".spec.config.registries[0].auth.pass"); !cluster.IsVaultEncrypted(value) {
+		t.Errorf("value after one unwrap = %q, want the inner ciphertext", value)
+	}
+}
+
+func TestDecryptConfigSkipsPlaintext(t *testing.T) {
+	got, changed, err := DecryptConfig([]byte(configTestDoc), testPassword)
+	if err != nil {
+		t.Fatalf("DecryptConfig() error = %v", err)
+	}
+	if len(changed) != 0 {
+		t.Errorf("changed = %v, want nothing to decrypt", changed)
+	}
+	if string(got) != configTestDoc {
+		t.Errorf("a document with nothing to decrypt was rewritten:\n%s", got)
+	}
+}
+
+func TestConfigRejectsADocumentWithoutRegistries(t *testing.T) {
+	tests := []struct {
+		name string
+		doc  string
+	}{
+		{"no registries key", "apiVersion: zarf.dev/v1alpha1\nspec:\n  config: {}\n"},
+		{"registries is not a list", "spec:\n  config:\n    registries: nope\n"},
+		{"not YAML at all", "\tnot: [valid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, _, err := EncryptConfig([]byte(tt.doc), testPassword, false); err == nil {
+				t.Error("EncryptConfig() error = nil, want an error")
+			}
+			if _, _, err := DecryptConfig([]byte(tt.doc), testPassword); err == nil {
+				t.Error("DecryptConfig() error = nil, want an error")
+			}
+		})
+	}
+}
+
+// TestVaultedFieldsMatchPathIsDecryptable ties the list the whole-file commands walk to the paths
+// the warning accepts, so that the two cannot drift apart.
+func TestVaultedFieldsMatchPathIsDecryptable(t *testing.T) {
+	for _, field := range vaultedFields {
+		path := registriesPath + "[0]." + field
+		if !PathIsDecryptable(path) {
+			t.Errorf("PathIsDecryptable(%q) = false, want true", path)
+		}
+	}
+}
+
+// TestEncryptConfigRotatesOneCredential covers the everyday mixed case: the registry password
+// changed, so the operator pastes the new one in as plaintext and leaves the vaulted username
+// alone. The same vault password is used throughout, so encrypt-file has to pick up the new value
+// without disturbing the old one, and an apply has to read both back.
+func TestEncryptConfigRotatesOneCredential(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	user := readPath(t, vaulted, ".spec.config.registries[0].auth.user")
+
+	// What the operator does by hand: replace the ciphertext with the new password in the clear.
+	got, changed, err := EncryptConfig(editPass(t, vaulted, "hunter3"), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	if want := []string{"$.spec.config.registries[0].auth.pass"}; strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want only the edited password", changed)
+	}
+	if after := readPath(t, got, ".spec.config.registries[0].auth.user"); after != user {
+		t.Errorf("the untouched username was rewritten")
+	}
+
+	var dis cluster.ZarfCluster
+	if err := goyaml.Unmarshal(got, &dis); err != nil {
+		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
+	}
+	if err := DecryptRegistryAuth(&dis, testPassword); err != nil {
+		t.Fatalf("DecryptRegistryAuth() error = %v", err)
+	}
+	if got, want := dis.Spec.Config.Registries[0].Authentication.Username, "admin"; got != want {
+		t.Errorf("user = %q, want %q", got, want)
+	}
+	if got, want := dis.Spec.Config.Registries[0].Authentication.Password, "hunter3"; got != want {
+		t.Errorf("pass = %q, want %q", got, want)
+	}
+}
+
+// TestEncryptConfigRejectsAnotherVaultPassword covers the mixed case that is not safe: a document
+// holding values vaulted under one password, encrypted with another. An apply decrypts a registry's
+// fields with a single password, so a document like that is one no password can read. Catching it
+// here is the difference between a clear error and an apply that fails several phases in.
+func TestEncryptConfigRejectsAnotherVaultPassword(t *testing.T) {
+	const otherPassword = "a-different-vault-password"
+
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+	edited := editPass(t, vaulted, "hunter3")
+
+	_, _, err = EncryptConfig(edited, otherPassword, false)
+	if err == nil {
+		t.Fatal("EncryptConfig() error = nil, want a refusal to mix vault passwords")
+	}
+	for _, want := range []string{"auth.user", "different password", "decrypt the file"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want it to mention %q", err, want)
+		}
+	}
+}
+
+// TestDecryptConfigRejectsAnotherVaultPassword is the same hazard from the other side, and matters
+// more, because this is the direction the fix runs in: a wrong password has to fail rather than
+// leave some values in the clear and the rest vaulted.
+func TestDecryptConfigRejectsAnotherVaultPassword(t *testing.T) {
+	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	got, _, err := DecryptConfig(vaulted, "a-different-vault-password")
+	if err == nil {
+		t.Fatal("DecryptConfig() error = nil, want an error")
+	}
+	if got != nil {
+		t.Errorf("a failed run returned a document, which a caller might write: \n%s", got)
+	}
+}
+
+// editPass replaces the value at the first registry's auth.pass with plaintext, standing in for an
+// operator editing the file by hand.
+func editPass(t *testing.T, doc []byte, value string) []byte {
+	t.Helper()
+	got, err := DecryptAtPath(doc, "$.spec.config.registries[0].auth.pass", testPassword)
+	if err != nil {
+		t.Fatalf("DecryptAtPath() error = %v", err)
+	}
+	old := readPath(t, got, ".spec.config.registries[0].auth.pass")
+	return []byte(strings.Replace(string(got), old, value, 1))
+}
