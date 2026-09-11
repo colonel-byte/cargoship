@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3677eca0.js";
+            window.path_to_searchindex_js = "../searchindex-b16222cc.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-2851a731.js"></script>
+        <script src="../toc-ae9f4fd4.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,11 +183,11 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
-<p>Cargoship’s Ansible Vault support (<code>cargoship vault-encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
+<p>Cargoship’s Ansible Vault support (<code>cargoship vault encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
 <ul>
 <li><strong>No decrypt support.</strong> <code>go-ansible</code>’s <code>vault/encrypt</code> package only exports an <code>EncryptString</code> type – there is no <code>Decrypt</code>/<code>DecryptString</code> anywhere in the module. Decryption is Cargoship’s actual requirement: <code>apply</code> has to transparently decrypt registry credentials on every run.</li>
 <li><strong>It wraps the same library anyway.</strong> <code>go-ansible</code>’s <code>EncryptString</code> uses <code>sosedoff/ansible-vault-go</code> internally for the crypto. Depending on <code>go-ansible</code> for encryption would still pull in <code>sosedoff/ansible-vault-go</code> as a transitive dependency, plus <code>spf13/afero</code> and <code>go-ansible</code>’s own password-reader abstraction – more surface area to replace logic Cargoship already has in <code>ResolveVaultPassword</code> (<code>src/internal/clustercfg/vault.go</code>), for no functional gain.</li>
-<li><strong>Wrong shape of library.</strong> <code>go-ansible</code>’s primary purpose is wrapping <code>ansible-playbook</code>/<code>ansible</code>/<code>ansible-galaxy</code> CLI execution as subprocesses. Cargoship needs neither Ansible nor Python installed on the machine running <code>apply</code> or <code>vault-encrypt</code> – <code>sosedoff/ansible-vault-go</code> is a native Go implementation of the vault cipher, so encrypting and decrypting single string values stays a pure in-process operation, consistent with Cargoship shipping as a single static binary.</li>
+<li><strong>Wrong shape of library.</strong> <code>go-ansible</code>’s primary purpose is wrapping <code>ansible-playbook</code>/<code>ansible</code>/<code>ansible-galaxy</code> CLI execution as subprocesses. Cargoship needs neither Ansible nor Python installed on the machine running <code>apply</code> or <code>vault encrypt</code> – <code>sosedoff/ansible-vault-go</code> is a native Go implementation of the vault cipher, so encrypting and decrypting single string values stays a pure in-process operation, consistent with Cargoship shipping as a single static binary.</li>
 </ul>
 <p>Net effect: switching would add a heavier, partially-redundant dependency, lose decrypt support outright, and reimplement functionality <code>sosedoff/ansible-vault-go</code> already provides directly.</p>
 
