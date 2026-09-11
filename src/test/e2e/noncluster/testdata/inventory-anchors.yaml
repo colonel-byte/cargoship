@@ -1,0 +1,62 @@
+---
+# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# An inventory shaped the way an operator writes one when values repeat: a robot account two
+# mirrors share, a trust bundle shared by three registries, and a block of SSH defaults every host
+# merges. The vault commands resolve anchors, aliases and merge keys before they walk the document,
+# so a shared credential is encrypted once -- in the block the anchor names -- and every reference
+# to it keeps pointing at the same value.
+#
+# A merge key can add keys to a block but not override one the anchor already sets: YAML forbids
+# the same key twice in a mapping, so the shared blocks here hold only what every user of them
+# wants, and what differs per host or per registry is written beside the merge.
+#
+# Nothing here is contacted. The tests only read this file and rewrite copies of it.
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: e2e-anchors
+spec:
+  config:
+    loadbalancer: e2e-anchors.test.local
+    registries:
+      # The robot account and the trust bundle both live here, in the blocks the anchors name.
+      - name: registry.test.local
+        auth: &robot-auth
+          user: robot
+          pass: hunter2
+        tls: &internal-tls
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            aGVsbG8gd29ybGQ=
+            -----END CERTIFICATE-----
+      # Same account, same trust bundle, a second endpoint in front of them.
+      - name: mirror.test.local
+        auth: *robot-auth
+        tls: *internal-tls
+      # The same trust bundle with one more setting, and an account of its own.
+      - name: lab.test.local
+        auth:
+          user: lab-robot
+          pass: correct-horse
+        tls:
+          <<: *internal-tls
+          insecureSkipVerify: true
+      # A registry that shares nothing with the others.
+      - name: ghcr.test.local
+        auth:
+          token: ghcr-token # rotate me
+  hosts:
+    # Every host reaches its SSH defaults through the merge and names only its own address.
+    - hostname: e2e-anchors-01
+      role: controller
+      ssh:
+        <<: &ssh-defaults
+          user: root
+          port: 22
+          keyPath: /dev/null
+        address: 10.255.255.1
+    - hostname: e2e-anchors-02
+      role: worker
+      ssh:
+        <<: *ssh-defaults
+        address: 10.255.255.2
