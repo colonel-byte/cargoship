@@ -55,6 +55,9 @@ type ApplyOptions struct {
 	KubeConfigPath string
 	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool
+	// AllowUnmanagedNodes lets an apply continue when the cluster holds a node no host in the
+	// config accounts for, rather than stopping on it
+	AllowUnmanagedNodes bool
 	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
 	VaultPassword string
 }
@@ -90,6 +93,12 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.ValidateHosts{},
 			&phase.GatherFactsDistro{
 				Distro: d,
+			},
+			// Before anything is changed: an apply that is about to walk past a node the config
+			// no longer holds should say so while stopping is still free.
+			&phase.DetectRemovedHosts{
+				Distro:         d,
+				AllowUnmanaged: opts.AllowUnmanagedNodes,
 			},
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},

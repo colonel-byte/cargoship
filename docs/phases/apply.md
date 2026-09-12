@@ -23,6 +23,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Gathering facts about the distro installed
     - Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running
     - Dry run: runs, reads only. Gather distro related facts reads the engine version already on each host. That is what tells an upgrade apart from an install, and what catches a downgrade before a real run starts one.
+1. Checking for nodes no longer in the config
+    - Compares the nodes joined to the cluster against the hosts in the config and stops the apply when the cluster holds a node the config does not, since nothing later in an apply removes a node
+    - Dry run: runs, reads only. Checking for removed nodes lists the nodes joined to the cluster and compares them to the config. It writes nothing, and a dry run is exactly when an operator wants to be told that a host they deleted from the config is still running.
 1. Prepare hosts
     - Updates the remote nodes; environment variables and sysctl
     - Dry run: reported, not run

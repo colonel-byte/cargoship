@@ -10,6 +10,7 @@
 - [multi-architecture](guides/multi-architecture.md)
 - [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
+- [removing-hosts](guides/removing-hosts.md)
 - [setup-inv](guides/setup-inv.md)
 - [signing-packages](guides/signing-packages.md)
 - [vault-encryption](guides/vault-encryption.md)
@@ -79,6 +80,7 @@
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
 - [choice-phase-e2e-tests](agent/choice-phase-e2e-tests.md)
 - [choice-preferred-firewall](agent/choice-preferred-firewall.md)
+- [choice-removed-hosts](agent/choice-removed-hosts.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 
