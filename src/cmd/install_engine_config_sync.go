@@ -89,6 +89,9 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 
 	cmd.MarkFlagRequired(InstallEngineConfigSyncConfig)
 
+	addBuildFlags(cmd)
+	addTimeoutFlag(cmd)
+
 	return cmd
 }
 
