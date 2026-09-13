@@ -57,7 +57,7 @@ updates:
           - "*"
   - package-ecosystem: docker
     directories:
-      - "/containers/alpine"
+      - "/containers/base"
       - "/containers/ubi"
     schedule:
       interval: daily

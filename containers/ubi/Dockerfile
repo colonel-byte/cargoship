@@ -30,15 +30,15 @@ RUN rpm --install --verbose /tmp/rpms/*.rpm \
 
 ARG UID=65532
 ARG GID=65532
-RUN groupadd --gid "${GID}" cargoship \
-  && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/cargoship --create-home cargoship \
+RUN groupadd --gid "${GID}" nonroot \
+  && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \
   && mkdir -p \
-    /home/cargoship/.cargoship-cache \
-    /home/cargoship/.zarf \
-    /home/cargoship/.ssh \
+    /home/nonroot/.cargoship-cache \
+    /home/nonroot/.zarf \
+    /home/nonroot/.ssh \
     /workspace \
-  && chmod 0700 /home/cargoship/.ssh \
-  && chown -R "${UID}:${GID}" /home/cargoship /workspace
+  && chmod 0700 /home/nonroot /home/nonroot/.ssh \
+  && chown -R "${UID}:${GID}" /home/nonroot /workspace
 
 # base.name carries the tag only, not the digest, so that a dependabot digest
 # refresh needs no edit here. Update it by hand when the FROM tag itself moves.
@@ -48,7 +48,7 @@ LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.licenses="Apache-2.0" \
   org.opencontainers.image.base.name="registry.access.redhat.com/ubi9/ubi-minimal:9.8"
 
-ENV HOME=/home/cargoship
+ENV HOME=/home/nonroot
 
 WORKDIR /workspace
 

@@ -107,7 +107,7 @@ dockers_v2:
   - id: cargoship
     ids:
       - cargoship
-    dockerfile: containers/alpine/Dockerfile
+    dockerfile: containers/base/Dockerfile
     images:
       - "ghcr.io/colonel-byte/cargoship"
     tags:

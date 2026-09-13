@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         dockerfile:
-          - containers/alpine/Dockerfile
+          - containers/base/Dockerfile
           - containers/ubi/Dockerfile
     steps:
       - name: Checkout

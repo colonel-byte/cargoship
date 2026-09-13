@@ -14,7 +14,7 @@ A single `goreleaser release` run produces:
 
 *   **Archives** — `tar.gz` per OS/arch, named after `uname` conventions (`cargoship_Linux_x86_64.tar.gz`).
 *   **Packages** — `apk`, `deb`, and `rpm`, from the `nfpms` section, GPG-signed when `GPG_KEY_PATH` is set.
-*   **Container images** — two multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Alpine, bare binary) and `ghcr.io/colonel-byte/cargoship:<tag>-ubi` (Red Hat UBI, installs the rpm).
+*   **Container images** — two multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary) and `ghcr.io/colonel-byte/cargoship:<tag>-ubi` (Red Hat UBI, installs the rpm).
 *   **SBOMs** — one per archive, via Syft.
 *   **Signatures** — cosign `sigstore.json` bundles over both the checksums file and every archive, plus registry signatures over both container images.
 
@@ -22,7 +22,7 @@ A single `goreleaser release` run produces:
 
 The `builds` section compiles `linux` and `darwin` against `amd64`, `arm64`, and `riscv64`. Three settings there matter more than they look:
 
-*   **`CGO_ENABLED=0`** — produces a statically linked binary. This is what lets the container image use an Alpine (musl) base; a glibc-linked binary fails there with a confusing `no such file or directory` on exec.
+*   **`CGO_ENABLED=0`** — produces a statically linked binary. This is what lets the default image sit on `cgr.dev/chainguard/static`, which ships no libc, no shell, and no package manager; a dynamically linked binary fails there with a confusing `no such file or directory` on exec.
 *   **`ldflags -X`** — stamps `config.CLIVersion` and `config.CLICommit`, which is what `cargoship version` prints.
 *   **`mod_timestamp: {{ .CommitTimestamp }}`** — pins file mtimes to the commit for reproducibility. `nfpms.mtime` and the image's `org.opencontainers.image.created` label use `.CommitDate` for the same reason.
 
@@ -40,7 +40,9 @@ Three consequences are worth internalizing:
 
 ### The Dockerfile Contract
 
-Both Dockerfiles live under `containers/` — `containers/alpine/Dockerfile` and `containers/ubi/Dockerfile` — and each is named explicitly by its `dockers_v2` entry's `dockerfile:` key. Neither compiles anything: GoReleaser has already built the binaries and packages by the time they run. Alpine copies the binary, UBI installs the rpm. Adding a builder stage to either would duplicate that work and break the guarantee described under [Binary Identity](#binary-identity).
+Both Dockerfiles live under `containers/` — `containers/base/Dockerfile` and `containers/ubi/Dockerfile` — and each is named explicitly by its `dockers_v2` entry's `dockerfile:` key. Neither compiles anything: GoReleaser has already built the binaries and packages by the time they run. The static image copies the binary, UBI installs the rpm. Adding a *compiling* stage to either would duplicate that work and break the guarantee described under [Binary Identity](#binary-identity).
+
+The directory name is deliberately generic: `containers/base/` is the plain-binary image whatever base it happens to sit on, so a future base swap does not force another rename. If it is ever renamed anyway, three other files have to move with it in the same commit — the `dockerfile:` key in `.goreleaser.yaml`, the lint matrix in `.github/workflows/scan-lint.yaml`, and the `directories:` list of the `docker` ecosystem in `.github/dependabot.yaml`.
 
 `dockers_v2` hands the Dockerfile a temporary context laid out one directory per platform, which is why the binary is copied from `$TARGETPLATFORM` rather than the context root:
 
@@ -52,22 +54,32 @@ Both Dockerfiles live under `containers/` — `containers/alpine/Dockerfile` and
 
 The source tree is **not** in that context. Anything else the image needs must be declared in `extra_files`.
 
-Both Dockerfiles are single-stage: a `FROM`, one `RUN` that creates the unprivileged user and its directory skeleton, and a `COPY` of the artifact. Nothing is compiled and nothing is staged.
+The UBI file is single-stage: a `FROM`, a `COPY` of the rpm, and `RUN`s that install it and lay out the unprivileged user's directories.
 
-The Alpine file previously split its `RUN` into a `--platform=$BUILDPLATFORM` stage so the final image executed nothing, making it buildable without binfmt handlers. That was measured and removed: on a `--no-cache` `linux/arm64` build the split was *slower* (~1.9s vs ~1.3s), because busybox `adduser`/`mkdir` under QEMU costs less than an extra stage and its `COPY`s, and the release workflow installs QEMU for the UBI variant anyway. Both images now do their setup on the target platform, under emulation for `linux/arm64`.
+The static file has to be two-stage. `cgr.dev/chainguard/static` carries no shell and no package manager, so the runtime image cannot `mkdir`, `chmod`, or `chown` anything for itself. A small Alpine `skeleton` stage builds the directory tree under `/skeleton` and the runtime stage copies it in. That stage creates empty directories only — nothing architecture-specific — so it is pinned to `--platform=$BUILDPLATFORM` and never runs under emulation.
+
+Copy the skeleton **at its root**, not directory by directory:
+
+```dockerfile
+COPY --from=skeleton /skeleton/ /
+```
+
+A `COPY` whose destination directory does not yet exist creates that directory root-owned and carries ownership only on the entries beneath it. `COPY --from=skeleton /skeleton/workspace /workspace` therefore produces a `root:root` `/workspace` that uid `65532` cannot write to — the failure surfaces at runtime, not at build time. Merging the tree into `/` preserves every directory's own uid, gid, and mode.
+
+A `$BUILDPLATFORM` stage is not automatically cheaper, and speed is not why the split exists. On the older Alpine-based version of this file, hoisting its one `RUN` into a build-platform stage measured *slower* on a `--no-cache` `linux/arm64` build (~1.9s vs ~1.3s): busybox `adduser`/`mkdir` under QEMU cost less than an extra stage and its `COPY`s. The split is here because the runtime base cannot execute anything at all.
 
 ### Base Image Pinning
 
-Both Dockerfiles pin their base to a digest, in `tag@sha256:...` form:
+Every `FROM` pins its base to a digest, in `tag@sha256:...` form:
 
 ```dockerfile
-FROM --platform=$BUILDPLATFORM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce AS rootfs
+FROM cgr.dev/chainguard/static:latest@sha256:bf639cba19ba56329e6907ac26a7afcdde57a80b6aa66d5100da6883196e6b82
 ```
 
 The tag stays in the reference for readability; the digest is what actually resolves. Keep the digest a **manifest-list (index) digest**, not a per-platform one, or the `linux/arm64` build will fail to find its platform:
 
 ```sh
-docker buildx imagetools inspect alpine:3.22 --format '{{ .Manifest.Digest }}'
+docker buildx imagetools inspect cgr.dev/chainguard/static:latest --format '{{ .Manifest.Digest }}'
 ```
 
 Two conventions here exist to keep dependabot working, and both look redundant until you know why:
@@ -75,7 +87,9 @@ Two conventions here exist to keep dependabot working, and both look redundant u
 *   **The reference is repeated on every `FROM`** rather than hoisted into an `ARG`. Dependabot's Dockerfile parser reads literal `FROM` lines only — it has no `ARG` resolution, so `FROM ${BASE_IMAGE}` is invisible to it and the pin would never be refreshed. It is also not stage-aware, so aliasing (`FROM alpine@sha256:... AS base` then `FROM base`) is no better: the bare stage reference parses as an image and produces a spurious `base:latest` dependency.
 *   **`org.opencontainers.image.base.name` carries the tag only**, without the digest. Dependabot rewrites `FROM` lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (`3.22` → `3.23`) means updating the label by hand, which is the comment sitting above it in both files.
 
-`.github/dependabot.yaml` tracks both directories under its `docker` ecosystem, on the same daily schedule as the other ecosystems.
+One base needs more care than the others. **`cgr.dev/chainguard/static` publishes `:latest` and nothing else** on Chainguard's free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date — it eventually stops resolving, and the build fails with `manifest unknown`. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.
+
+`.github/dependabot.yaml` tracks both directories under its `docker` ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.
 
 ### Linting
 
@@ -92,7 +106,7 @@ Default rules and the default `info` failure threshold apply; there is no `.hado
 
 A second `dockers_v2` entry builds `containers/ubi/Dockerfile`, published as the `-ubi` tag on the same image repository. It exists for environments that want a Red Hat base and an installed, queryable package rather than a loose binary.
 
-The difference is how the binary arrives. The Alpine image copies it; the UBI image `rpm --install`s the same package produced by the `nfpms` section, so it is registered in the image's rpm database:
+The difference is how the binary arrives. The static image copies it; the UBI image `rpm --install`s the same package produced by the `nfpms` section, so it is registered in the image's rpm database:
 
 ```sh
 $ docker run --rm --entrypoint rpm ghcr.io/colonel-byte/cargoship:<tag>-ubi -q cargoship
@@ -107,14 +121,14 @@ Details worth knowing before editing it:
 *   **The install step must run on the target platform.** `rpm` unpacks an architecture-specific binary into the target rootfs, so this one could not be hoisted to `$BUILDPLATFORM` even if it were worth doing. It is the reason `setup-qemu-action` is a hard dependency, and why the UBI build is the slow one.
 *   **`rpm -i`, not `microdnf install`.** The package declares no dependencies, so nothing needs resolving and the build stays hermetic — no repo access at image build time. Switch to `microdnf` if `nfpms.*.depends` ever gains an entry.
 *   **A signed rpm logs a `NOKEY` warning** during the build, because the release signing key is not in the image keyring. It is a warning, not a failure.
-*   **The binary lands in `/usr/bin`** (per `nfpms.rpm.prefixes`), not `/usr/local/bin` as in the Alpine image. The entrypoints differ accordingly; everything else — uid `65532`, `$HOME`, `/workspace` — is deliberately identical, so the two variants are drop-in swaps.
+*   **The binary lands in `/usr/bin`** (per `nfpms.rpm.prefixes`), not `/usr/local/bin` as in the static image. The entrypoints differ accordingly; everything else — the `nonroot` account at uid `65532`, `$HOME`, `/workspace` — is deliberately identical, so the two variants are drop-in swaps.
 
-The UBI base is substantially larger: roughly 354MB versus 145MB for Alpine on amd64.
+The UBI base is substantially larger: roughly 354MB versus 137MB for the static image on amd64.
 
 ### Image Runtime Layout
 
-*   Runs as uid/gid `65532` with a real `/etc/passwd` entry, so `$HOME` and `os/user` lookups resolve.
-*   `HOME=/home/cargoship`, which backs viper's `$HOME/.zarf` config search path (`src/cmd/viper.go`) and the default cache path `~/.cargoship-cache` (`src/config/common.go`).
+*   Runs as uid/gid `65532`, which has a real `/etc/passwd` entry named `nonroot` with home `/home/nonroot` in both images, so `os/user` lookups and `$HOME` agree with each other and across variants. The static image inherits that account from its base; the UBI image creates it to match. The `USER` line stays numeric (`65532:65532`) so the image still runs correctly under a `runAsUser` that ignores names.
+*   `HOME=/home/nonroot`, which backs viper's `$HOME/.zarf` config search path (`src/cmd/viper.go`) and the default cache path `~/.cargoship-cache` (`src/config/common.go`). Both directories are pre-created and owned by `65532`, as is `~/.ssh` at 0700.
 *   `WORKDIR /workspace`. Since `.` is viper's first config search path, bind-mounting a package directory there picks up `cargoship-config.yaml` with no extra flags:
 
 ```sh
@@ -152,7 +166,7 @@ This pipe only runs on a real publish. A `--snapshot` run pushes nothing, so it 
 
 ## Binary Identity
 
-The binary is byte-identical everywhere it ships: the release archive, the apk/deb/rpm packages, the Alpine image, and the UBI image (where it arrives via `rpm --install`). GoReleaser compiles once per target and reuses that one artifact downstream.
+The binary is byte-identical everywhere it ships: the release archive, the apk/deb/rpm packages, the static image, and the UBI image (where it arrives via `rpm --install`). GoReleaser compiles once per target and reuses that one artifact downstream.
 
 This means a cosign verification against the released archive transitively covers the binary shipped in the image. Verify it yourself after a snapshot run:
 
@@ -171,7 +185,7 @@ Each setup step in `.github/workflows/release.yaml` exists for a specific reason
 
 *   **Syft** — generates the archive SBOMs.
 *   **cosign** — signs checksums, archives, and the published images; needs `COSIGN_PRIVATE_KEY` and `COSIGN_PASSWORD`.
-*   **QEMU** — registers binfmt handlers for cross-platform builds. Required: every `RUN` in both Dockerfiles executes on the target platform, so the `linux/arm64` half of each build runs under emulation.
+*   **QEMU** — registers binfmt handlers for cross-platform builds. Required by the UBI image, whose `rpm --install` unpacks architecture-specific files and so must run on the target platform; its `linux/arm64` half runs under emulation. The static image does not need it — its only `RUN` is pinned to `$BUILDPLATFORM`.
 *   **Buildx** — required, not optional; provisions the container driver that can emit a multi-platform manifest.
 *   **GHCR login** — required to push. The job's `packages: write` permission is an authorization, not a credential.
 *   **`fetch-depth: 0`** — GoReleaser needs full history to resolve tags and changelog range.
