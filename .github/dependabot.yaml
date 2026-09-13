@@ -46,6 +46,18 @@ updates:
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
+      interval: weekly
+    assignees:
+      - "a1994sc"
+    groups:
+      core:
+        patterns:
+          - "*"
+  - package-ecosystem: docker
+    directories:
+      - "/containers/base"
+      - "/containers/ubi"
+    schedule:
       interval: daily
     groups:
       core:
