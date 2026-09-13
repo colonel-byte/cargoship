@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.22.1](https://github.com/colonel-byte/cargoship/compare/v0.22.0...v0.22.1) (2026-09-13)
+
+
+### CI/CD
+
+* **gorelease:** add 'latest' tag ([#372](https://github.com/colonel-byte/cargoship/issues/372)) ([d4c0f1e](https://github.com/colonel-byte/cargoship/commit/d4c0f1ed892ef7fce3f742116e75e76c55554912))
+
+
+### Build
+
+* **deps:** Bump the cosign group with 20 updates ([#369](https://github.com/colonel-byte/cargoship/issues/369)) ([8f00046](https://github.com/colonel-byte/cargoship/commit/8f000467b5f612f6bf61f77718a30eb3e70a2367))
+* **deps:** Bump the misc group with 6 updates ([#370](https://github.com/colonel-byte/cargoship/issues/370)) ([7bc188f](https://github.com/colonel-byte/cargoship/commit/7bc188fc74c85e0ffcdbfb5cd3c3f2ed7c996701))
+
 ## [0.22.0](https://github.com/colonel-byte/cargoship/compare/v0.21.0...v0.22.0) (2026-09-13)
 
 
