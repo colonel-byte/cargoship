@@ -14,40 +14,39 @@
 
 # syntax=docker/dockerfile:1
 
-ARG BASE_IMAGE=alpine:3.22
+# The base image is pinned by digest, and repeated on each FROM rather than
+# hoisted into an ARG: dependabot's Dockerfile parser only reads literal FROM
+# lines and cannot resolve a reference that arrives through a build arg. Keep
+# every FROM in this file on the same digest.
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:d235f607e1d6d833f031db107dc42206e4dd4d5aa9142c43d3771fb7f9bea76a
 
-FROM --platform=$BUILDPLATFORM ${BASE_IMAGE} AS rootfs
+ARG TARGETPLATFORM
+
+COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
+
+RUN rpm --install --verbose /tmp/rpms/*.rpm \
+  && rm -rf /tmp/rpms \
+  && cargoship version
 
 ARG UID=65532
 ARG GID=65532
-RUN addgroup -g "${GID}" cargoship \
-  && adduser -D -u "${UID}" -G cargoship -h /home/cargoship cargoship \
+RUN groupadd --gid "${GID}" cargoship \
+  && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/cargoship --create-home cargoship \
   && mkdir -p \
     /home/cargoship/.cargoship-cache \
     /home/cargoship/.zarf \
     /home/cargoship/.ssh \
     /workspace \
-    /tmp \
   && chmod 0700 /home/cargoship/.ssh \
-  && chmod 1777 /tmp \
   && chown -R "${UID}:${GID}" /home/cargoship /workspace
 
-FROM ${BASE_IMAGE}
-
-ARG BASE_IMAGE
-
-COPY --from=rootfs /etc/passwd /etc/group /etc/
-COPY --from=rootfs --chown=65532:65532 /home/cargoship /home/cargoship
-COPY --from=rootfs --chown=65532:65532 /workspace /workspace
-
-ARG TARGETPLATFORM
-COPY ${TARGETPLATFORM}/cargoship /usr/local/bin/cargoship
-
+# base.name carries the tag only, not the digest, so that a dependabot digest
+# refresh needs no edit here. Update it by hand when the FROM tag itself moves.
 LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
   org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
   org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="${BASE_IMAGE}"
+  org.opencontainers.image.base.name="registry.access.redhat.com/ubi9/ubi-minimal:9.8"
 
 ENV HOME=/home/cargoship
 
@@ -55,5 +54,5 @@ WORKDIR /workspace
 
 USER 65532:65532
 
-ENTRYPOINT ["/usr/local/bin/cargoship"]
+ENTRYPOINT ["/usr/bin/cargoship"]
 CMD ["--help"]

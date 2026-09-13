@@ -107,10 +107,31 @@ dockers_v2:
   - id: cargoship
     ids:
       - cargoship
+    dockerfile: containers/alpine/Dockerfile
     images:
       - "ghcr.io/colonel-byte/cargoship"
     tags:
       - "{{ .Tag }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    flags:
+      - "--pull"
+    labels:
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .CommitDate }}"
+
+  - id: cargoship-ubi
+    # Pulls in the nfpms artifacts instead of the raw binary: containers/ubi/Dockerfile
+    # installs the .rpm so the package is registered in the image's rpmdb.
+    ids:
+      - packagers
+    dockerfile: containers/ubi/Dockerfile
+    images:
+      - "ghcr.io/colonel-byte/cargoship"
+    tags:
+      - "{{ .Tag }}-ubi"
     platforms:
       - linux/amd64
       - linux/arm64
@@ -147,6 +168,16 @@ signs:
       - "${artifact}"
       - "--yes"
     artifacts: archive
+    stdin: "{{ .Env.COSIGN_PASSWORD }}"
+
+docker_signs:
+  - id: images
+    cmd: cosign
+    args:
+      - "sign"
+      - "--key=env://COSIGN_PRIVATE_KEY"
+      - "${artifact}@${digest}"
+      - "--yes"
     stdin: "{{ .Env.COSIGN_PASSWORD }}"
 
 release:

@@ -63,6 +63,11 @@ repos:
         exclude: vendor/.*
       - id: golangci-lint-config-verify
         exclude: vendor/.*
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.15.1
+    hooks:
+      - id: hadolint-docker
+        exclude: vendor/.*
   - repo: local
     hooks:
       - id: schema-generator
