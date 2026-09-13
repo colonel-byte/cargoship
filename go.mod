@@ -1,6 +1,6 @@
 module github.com/colonel-byte/cargoship
 
-go 1.26.6
+go 1.27.0
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.1
@@ -104,22 +104,22 @@ require (
 	github.com/aliyun/credentials-go v1.4.13 // indirect
 	github.com/andybalholm/brotli v1.2.4 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.46.0 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.33.3 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.3 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.19.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.64.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.46.0 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.47.0 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.33.4 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.4 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.65.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.47.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.19 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.59.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.9.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.37.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.42.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.49.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.60.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.10.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.38.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.50.0 // indirect
 	github.com/aws/smithy-go v1.28.1 // indirect
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -335,12 +335,12 @@ require (
 	github.com/sigstore/protobuf-specs v0.5.2 // indirect
 	github.com/sigstore/rekor v1.5.4 // indirect
 	github.com/sigstore/rekor-tiles/v2 v2.3.0 // indirect
-	github.com/sigstore/sigstore v1.10.9 // indirect
+	github.com/sigstore/sigstore v1.10.10 // indirect
 	github.com/sigstore/sigstore-go v1.3.0 // indirect
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.9 // indirect
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.9 // indirect
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.9 // indirect
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.9 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.10 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.10 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.10 // indirect
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.10 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.1.3 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
