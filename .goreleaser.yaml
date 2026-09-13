@@ -103,12 +103,27 @@ nfpms:
       signature:
         key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
 
+dockers_v2:
+  - id: cargoship
+    ids:
+      - cargoship
+    images:
+      - "ghcr.io/colonel-byte/cargoship"
+    tags:
+      - "{{ .Tag }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    flags:
+      - "--pull"
+    labels:
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .CommitDate }}"
+
+# Use the auto-generated changelog github provides
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
+  use: github-native
 
 signs:
   - id: checksum
@@ -135,6 +150,11 @@ signs:
     stdin: "{{ .Env.COSIGN_PASSWORD }}"
 
 release:
+  github:
+    owner: colonel-byte
+    name: cargoship
+  name_template: "v{{ .Version }}"
+  mode: append
   footer: |-
     ---
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
