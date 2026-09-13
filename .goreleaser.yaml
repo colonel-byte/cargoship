@@ -112,6 +112,7 @@ dockers_v2:
       - "ghcr.io/colonel-byte/cargoship"
     tags:
       - "{{ .Tag }}"
+      - "latest"
     platforms:
       - linux/amd64
       - linux/arm64
