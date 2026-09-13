@@ -169,8 +169,8 @@ func TestCargoshipVerifyFlagParsing(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// Run directly rather than through e2e.Cargoship: that helper appends --no-color and
-	// --tmpdir, and a trailing --verify would consume the first of them as its value.
+	// Run directly rather than through e2e.Cargoship: that helper appends --no-color, and a
+	// trailing --verify would consume it as its value.
 	t.Run("without a value errors", func(t *testing.T) {
 		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath,
 			"pull", "oci://example.invalid/nope:0.0.1", "-o", t.TempDir(), "--no-color", "--verify")
