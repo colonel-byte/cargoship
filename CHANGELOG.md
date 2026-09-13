@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.22.0](https://github.com/colonel-byte/cargoship/compare/v0.21.0...v0.22.0) (2026-09-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* add docker images ([#364](https://github.com/colonel-byte/cargoship/issues/364))
+* add code owners file ([#366](https://github.com/colonel-byte/cargoship/issues/366))
+
+### Features
+
+* **cli:** remove unneeded global flags ([#361](https://github.com/colonel-byte/cargoship/issues/361)) ([1185e46](https://github.com/colonel-byte/cargoship/commit/1185e460b5eec1e160adf95cd1e8dbeb5d006e65))
+
+
+### Refactoring
+
+* **test:** make it more easy to track ([#362](https://github.com/colonel-byte/cargoship/issues/362)) ([bde3b68](https://github.com/colonel-byte/cargoship/commit/bde3b68d026850b3568b907b96a390d975869c93))
+
+
+### CI/CD
+
+* add code owners file ([#366](https://github.com/colonel-byte/cargoship/issues/366)) ([5053f9e](https://github.com/colonel-byte/cargoship/commit/5053f9eecd347aebc189236a05fe1b36f8ce25f7))
+* add docker images ([#364](https://github.com/colonel-byte/cargoship/issues/364)) ([a3a5070](https://github.com/colonel-byte/cargoship/commit/a3a5070695757712f3d13f8d5c60f39490843b20))
+* add pre-commit checking ([#365](https://github.com/colonel-byte/cargoship/issues/365)) ([e19472a](https://github.com/colonel-byte/cargoship/commit/e19472a34b7e9bdd99b1357fd260d4d08989b5d5))
+
+
+### Build
+
+* **deps:** Bump alpine from 3.22 to 3.24 ([#368](https://github.com/colonel-byte/cargoship/issues/368)) ([6f85407](https://github.com/colonel-byte/cargoship/commit/6f85407a36937f2f82f56906a3b1032f706a6127))
+* **deps:** Bump the golang group 11 updates ([#367](https://github.com/colonel-byte/cargoship/issues/367)) ([d727bd3](https://github.com/colonel-byte/cargoship/commit/d727bd3037b57900654fda92be9b97357e97647f))
+
 ## [0.21.0](https://github.com/colonel-byte/cargoship/compare/v0.20.1...v0.21.0) (2026-09-11)
 
 
