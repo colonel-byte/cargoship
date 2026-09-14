@@ -106,42 +106,78 @@ func DecryptRegistryAuth(dis *cluster.ZarfCluster, password string) error {
 }
 
 // DecryptValues recursively decrypts Ansible Vault-encrypted values inside a dig.Mapping in place.
+//
+// Sequences are walked as well as mappings. PathIsDecryptable tells an operator that anything under
+// $.spec.config.values is decrypted at apply time, so a shape missed here would be a path the
+// encrypt command accepts and nothing ever unwraps, leaving ciphertext on the host.
+//
+// A nested mapping is converted to dig.Mapping whatever the decoder produced, so what reaches the
+// templating layer has one map type throughout.
 func DecryptValues(values dig.Mapping, password string) error {
+	return decryptValuesInto(values, valuesPath, password)
+}
+
+// decryptValuesInto decrypts the entries of values, naming the YAML path of the offending value in
+// any error so a nested key reports where it lives rather than only its own name.
+func decryptValuesInto(values dig.Mapping, at, password string) error {
 	for k, v := range values {
-		switch val := v.(type) {
-		case string:
-			if cluster.IsVaultEncrypted(val) {
-				if password == "" {
-					return fmt.Errorf("values %q is Ansible Vault-encrypted but no vault password was provided; pass --vault-password-file or set %s", k, VaultPasswordEnvVar)
-				}
-				plain, err := vault.Decrypt(val, password)
-				if err != nil {
-					return fmt.Errorf("values %q: decrypting: %w", k, err)
-				}
-				values[k] = plain
-			}
-		case dig.Mapping:
-			if err := DecryptValues(val, password); err != nil {
-				return err
-			}
-		case map[string]any:
-			sub := dig.Mapping(val)
-			if err := DecryptValues(sub, password); err != nil {
-				return err
-			}
-			values[k] = sub
-		case map[any]any:
-			sub := make(dig.Mapping, len(val))
-			for subK, subV := range val {
-				sub[fmt.Sprint(subK)] = subV
-			}
-			if err := DecryptValues(sub, password); err != nil {
-				return err
-			}
-			values[k] = sub
+		decrypted, err := decryptValue(v, at+"."+k, password)
+		if err != nil {
+			return err
 		}
+		values[k] = decrypted
 	}
 	return nil
+}
+
+// decryptValue returns v with every Ansible Vault-encrypted string inside it decrypted. Anything
+// that is not a string, a mapping or a sequence is returned untouched.
+func decryptValue(v any, at, password string) (any, error) {
+	switch val := v.(type) {
+	case string:
+		if !cluster.IsVaultEncrypted(val) {
+			return val, nil
+		}
+		if password == "" {
+			return nil, fmt.Errorf("%s is Ansible Vault-encrypted but no vault password was provided; pass --vault-password-file or set %s", at, VaultPasswordEnvVar)
+		}
+		plain, err := vault.Decrypt(val, password)
+		if err != nil {
+			return nil, fmt.Errorf("%s: decrypting: %w", at, err)
+		}
+		return plain, nil
+	case dig.Mapping:
+		if err := decryptValuesInto(val, at, password); err != nil {
+			return nil, err
+		}
+		return val, nil
+	case map[string]any:
+		sub := dig.Mapping(val)
+		if err := decryptValuesInto(sub, at, password); err != nil {
+			return nil, err
+		}
+		return sub, nil
+	case map[any]any:
+		sub := make(dig.Mapping, len(val))
+		for subK, subV := range val {
+			sub[fmt.Sprint(subK)] = subV
+		}
+		if err := decryptValuesInto(sub, at, password); err != nil {
+			return nil, err
+		}
+		return sub, nil
+	case []any:
+		for i, item := range val {
+			decrypted, err := decryptValue(item, fmt.Sprintf("%s[%d]", at, i), password)
+			if err != nil {
+				return nil, err
+			}
+			val[i] = decrypted
+		}
+		return val, nil
+	default:
+		return v, nil
+	}
 }
 
 // VerifyRegistryAuth reports whether every Ansible Vault-encrypted registry value in dis can be

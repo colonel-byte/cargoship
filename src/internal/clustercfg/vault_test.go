@@ -422,11 +422,87 @@ func TestDecryptValues(t *testing.T) {
 		t.Fatalf("DecryptValues() error = %v", err)
 	}
 
-	sub := values["vsphere"].(dig.Mapping)
+	sub, ok := values["vsphere"].(dig.Mapping)
+	if !ok {
+		t.Fatalf("DecryptValues() vsphere = %T, want dig.Mapping", values["vsphere"])
+	}
 	if sub["password"] != "my-super-secret" {
 		t.Errorf("DecryptValues() vsphere.password = %q, want %q", sub["password"], "my-super-secret")
 	}
 	if sub["host"] != "vcenter.local" {
 		t.Errorf("DecryptValues() vsphere.host = %q, want %q", sub["host"], "vcenter.local")
+	}
+}
+
+// PathIsDecryptable accepts any path under $.spec.config.values, including one that indexes a
+// sequence, so a vaulted string inside a list has to be decrypted too. Missing it would leave
+// ciphertext on the host after the encrypt command said the path was fine.
+func TestDecryptValuesWalksSequences(t *testing.T) {
+	const password = "testpass"
+	encSecret, err := vault.Encrypt("inside-a-list", password)
+	if err != nil {
+		t.Fatalf("vault.Encrypt() error = %v", err)
+	}
+
+	if !PathIsDecryptable("$.spec.config.values.certs[0]") {
+		t.Fatal("PathIsDecryptable($.spec.config.values.certs[0]) = false, want true")
+	}
+
+	values := dig.Mapping{
+		"certs": []any{encSecret, "plain"},
+		"nested": []any{
+			map[string]any{"password": encSecret},
+		},
+	}
+
+	if err := DecryptValues(values, password); err != nil {
+		t.Fatalf("DecryptValues() error = %v", err)
+	}
+
+	certs, ok := values["certs"].([]any)
+	if !ok {
+		t.Fatalf("DecryptValues() certs = %T, want []any", values["certs"])
+	}
+	if certs[0] != "inside-a-list" {
+		t.Errorf("DecryptValues() certs[0] = %q, want %q", certs[0], "inside-a-list")
+	}
+	if certs[1] != "plain" {
+		t.Errorf("DecryptValues() certs[1] = %q, want %q", certs[1], "plain")
+	}
+
+	nested, ok := values["nested"].([]any)
+	if !ok {
+		t.Fatalf("DecryptValues() nested = %T, want []any", values["nested"])
+	}
+	inner, ok := nested[0].(dig.Mapping)
+	if !ok {
+		t.Fatalf("DecryptValues() nested[0] = %T, want dig.Mapping", nested[0])
+	}
+	if inner["password"] != "inside-a-list" {
+		t.Errorf("DecryptValues() nested[0].password = %q, want %q", inner["password"], "inside-a-list")
+	}
+}
+
+// The error has to name the value, not just its leaf key, or an operator with a deep values tree is
+// told a password is wrong somewhere without being told where.
+func TestDecryptValuesErrorNamesThePath(t *testing.T) {
+	encSecret, err := vault.Encrypt("secret", "testpass")
+	if err != nil {
+		t.Fatalf("vault.Encrypt() error = %v", err)
+	}
+
+	values := dig.Mapping{
+		"vsphere": dig.Mapping{
+			"creds": []any{dig.Mapping{"password": encSecret}},
+		},
+	}
+
+	err = DecryptValues(values, "")
+	if err == nil {
+		t.Fatal("DecryptValues() with no password error = nil, want an error")
+	}
+	const want = "$.spec.config.values.vsphere.creds[0].password"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("DecryptValues() error = %v, want it to name %s", err, want)
 	}
 }
