@@ -998,7 +998,6 @@ github.com/go-piv/piv-go/v2/third_party/rsa
 # github.com/go-sprout/sprout v1.1.1
 ## explicit; go 1.25.0
 github.com/go-sprout/sprout
-github.com/go-sprout/sprout/group/all
 github.com/go-sprout/sprout/internal/helpers
 github.com/go-sprout/sprout/internal/runtime
 github.com/go-sprout/sprout/registry/backward
@@ -1009,7 +1008,6 @@ github.com/go-sprout/sprout/registry/encoding
 github.com/go-sprout/sprout/registry/env
 github.com/go-sprout/sprout/registry/filesystem
 github.com/go-sprout/sprout/registry/maps
-github.com/go-sprout/sprout/registry/network
 github.com/go-sprout/sprout/registry/numeric
 github.com/go-sprout/sprout/registry/random
 github.com/go-sprout/sprout/registry/reflect

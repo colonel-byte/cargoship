@@ -16,6 +16,7 @@
 package utils
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -32,9 +34,34 @@ import (
 // for cargoship's shared cache.
 const CacheDir = "cargoship"
 
+// responseHeaderTimeout bounds the wait for a server to start replying. It is a
+// header timeout rather than a whole-request timeout on purpose: a server that
+// accepts the connection and then goes silent must not hang the caller forever,
+// but a large artifact on a slow link must not be cut off partway through
+// either. Cancelling a download that has started is the caller's job, via ctx.
+const responseHeaderTimeout = 30 * time.Second
+
+var cacheHTTPClient = &http.Client{Transport: cacheTransport()}
+
+// cacheTransport clones the default transport so proxy and TLS settings from the
+// environment still apply, and adds the header timeout described above.
+func cacheTransport() http.RoundTripper {
+	t, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		// Unreachable with the stdlib default. A process that replaced it keeps
+		// whatever it installed rather than losing proxy support to this clone.
+		return http.DefaultTransport
+	}
+	clone := t.Clone()
+	clone.ResponseHeaderTimeout = responseHeaderTimeout
+	return clone
+}
+
 // DownloadToCache downloads a URL into the given relative path under cargoship's cache directory if not already cached.
 // If expectedSha256 is provided (optional), it validates that the cached or downloaded file matches the sha256 checksum.
-func DownloadToCache(url, relPath string, expectedSha256 ...string) (string, error) {
+func DownloadToCache(ctx context.Context, url, relPath string, expectedSha256 ...string) (string, error) {
+	l := logger.From(ctx)
+
 	cacheRoot, err := ResolveCachePath("")
 	if err != nil {
 		return "", err
@@ -45,18 +72,22 @@ func DownloadToCache(url, relPath string, expectedSha256 ...string) (string, err
 		expected = strings.TrimSpace(expectedSha256[0])
 	}
 
-	if cachedFileUsable(target, expected) {
-		logger.Default().Info("found file in cache, using cached copy", "target", target)
+	if cachedFileUsable(ctx, target, expected) {
+		l.Info("found file in cache, using cached copy", "target", target)
 		return target, nil
 	}
 
-	logger.Default().Info("file not in cache, downloading", "url", url, "target", target)
+	l.Info("file not in cache, downloading", "url", url, "target", target)
 
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return "", fmt.Errorf("creating cache directory: %w", err)
 	}
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating request for %s: %w", url, err)
+	}
+	resp, err := cacheHTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("downloading %s: %w", url, err)
 	}
@@ -77,20 +108,20 @@ func DownloadToCache(url, relPath string, expectedSha256 ...string) (string, err
 
 	if _, err := io.Copy(writer, resp.Body); err != nil {
 		f.Close() //nolint:errcheck // the copy failure below is the error worth reporting
-		removePartialDownload(tmpFile)
+		removePartialDownload(ctx, tmpFile)
 		return "", fmt.Errorf("writing cache file: %w", err)
 	}
 	// The close is checked rather than deferred: a write that only fails on flush would
 	// otherwise be renamed into the cache as a complete file.
 	if err := f.Close(); err != nil {
-		removePartialDownload(tmpFile)
+		removePartialDownload(ctx, tmpFile)
 		return "", fmt.Errorf("writing cache file: %w", err)
 	}
 
 	if expected != "" {
 		actualSha := hex.EncodeToString(hasher.Sum(nil))
 		if !strings.EqualFold(actualSha, expected) {
-			removePartialDownload(tmpFile)
+			removePartialDownload(ctx, tmpFile)
 			return "", fmt.Errorf("checksum mismatch for %s: expected %s, got %s", url, expected, actualSha)
 		}
 	}
@@ -105,7 +136,9 @@ func DownloadToCache(url, relPath string, expectedSha256 ...string) (string, err
 // asked for. An entry that cannot be checksummed or does not match is removed on the way out, so
 // the download that follows replaces it rather than every later run tripping over the same bad
 // entry.
-func cachedFileUsable(target, expected string) bool {
+func cachedFileUsable(ctx context.Context, target, expected string) bool {
+	l := logger.From(ctx)
+
 	if _, err := os.Stat(target); err != nil {
 		return false
 	}
@@ -116,24 +149,24 @@ func cachedFileUsable(target, expected string) bool {
 	matches, err := verifyFileSHA256(target, expected)
 	switch {
 	case err != nil:
-		logger.Default().Warn("unable to checksum cached file, re-downloading", "target", target, "error", err)
+		l.Warn("unable to checksum cached file, re-downloading", "target", target, "error", err)
 	case matches:
 		return true
 	default:
-		logger.Default().Warn("cached file checksum mismatch, re-downloading", "target", target, "expected", expected)
+		l.Warn("cached file checksum mismatch, re-downloading", "target", target, "expected", expected)
 	}
 
 	if err := os.Remove(target); err != nil {
-		logger.Default().Warn("unable to remove unusable cached file", "target", target, "error", err)
+		l.Warn("unable to remove unusable cached file", "target", target, "error", err)
 	}
 	return false
 }
 
 // removePartialDownload drops a download that is already being abandoned, so a failure to remove
 // it is logged rather than returned in place of the error that caused the abandonment.
-func removePartialDownload(path string) {
+func removePartialDownload(ctx context.Context, path string) {
 	if err := os.Remove(path); err != nil {
-		logger.Default().Warn("unable to remove partial download", "target", path, "error", err)
+		logger.From(ctx).Warn("unable to remove partial download", "target", path, "error", err)
 	}
 }
 
