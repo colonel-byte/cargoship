@@ -94,6 +94,9 @@ func newInstallApplyCommand() *cobra.Command {
 
 	cmd.MarkFlagRequired(InstallConfig)
 
+	addBuildFlags(cmd)
+	addTimeoutFlag(cmd)
+
 	return cmd
 }
 

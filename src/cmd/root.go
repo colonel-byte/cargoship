@@ -37,7 +37,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -168,7 +167,8 @@ func NewCargoshipCommand() *cobra.Command {
 	// Misc related
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
-	rootCmd.AddCommand(newVaultEncryptCommand())
+	rootCmd.AddCommand(newVaultCommand())
+	rootCmd.AddCommand(newDeprecatedVaultEncryptCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {
@@ -178,19 +178,8 @@ func NewCargoshipCommand() *cobra.Command {
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingFormat, flags.RegisterLogFormat); err != nil {
 		fmt.Printf("failed to register %s flag completion: %v", RootLoggingFormat, err)
 	}
-	rootCmd.PersistentFlags().StringVar(&Timeout, RootTimeout, v.GetString(RootTimeout), lang.CmdInstallFlagTimeout)
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, RootZarfCache, parsePath(rootCmd.Context(), resolvedConfig.CachePath), zlang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", parsePath(rootCmd.Context(), resolvedConfig.TempDirectory), zlang.RootCmdFlagTempDir)
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, RootArchitecture, "a", resolvedConfig.Architecture, zlang.RootCmdFlagArch)
-	if err := rootCmd.RegisterFlagCompletionFunc(RootArchitecture, flags.RegisterArchitectureFormat); err != nil {
-		fmt.Printf("failed to register %s flag completion: %v", RootArchitecture, err)
-	}
-
-	// Security
-	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", v.GetBool(RootPlainHTTP), zlang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(RootInsecureSkipTLSVerify), zlang.RootCmdFlagInsecureSkipTLSVerify)
 
 	return rootCmd
 }

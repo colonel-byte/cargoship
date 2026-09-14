@@ -11,17 +11,11 @@ cargoship COMMAND [flags]
 ### Options
 
 ```
-  -a, --architecture string        Architecture for OCI images and Zarf packages
-  -h, --help                       help for cargoship
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --timeout string             Set the timeout for how long functions will last.
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -h, --help                help for cargoship
+      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO
@@ -36,6 +30,6 @@ cargoship COMMAND [flags]
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
-* [cargoship vault-encrypt](./cargoship_vault-encrypt.md)	 - Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

@@ -35,7 +35,7 @@ var CommonRegistries = []string{
 
 // DistroConfig holds the values for the `.`, or root, section of the config file
 type DistroConfig struct {
-	// CachePath is the folder where oras artifacts are stored
+	// CachePath is the folder where cargoship caches what it fetches: oras artifacts, and the release assets the example generation targets read
 	CachePath string `json:"zarf_cache,omitempty" mapstructure:"zarf_cache"`
 	// DistroOpts are various options used by the command
 	DistroOpts DistroOptions `json:"distro,omitempty" mapstructure:"distro"`

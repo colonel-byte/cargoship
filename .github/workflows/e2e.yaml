@@ -4,13 +4,6 @@ name: Basic build
 on:
   pull_request:
     paths-ignore:
-      - "**.md"
-      - "**.jpg"
-      - "**.png"
-      - "**.gif"
-      - "**.svg"
-      - "adr/**"
-      - "docs/**"
       - "CODEOWNERS"
 
 permissions:

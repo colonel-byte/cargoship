@@ -6,8 +6,6 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    assignees:
-      - "a1994sc"
     allow:
       - dependency-type: "all"
     ignore:
@@ -48,9 +46,19 @@ updates:
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "a1994sc"
+    groups:
+      core:
+        patterns:
+          - "*"
+  - package-ecosystem: docker
+    directories:
+      - "/containers/base"
+      - "/containers/ubi"
+    schedule:
+      interval: daily
     groups:
       core:
         patterns:
@@ -59,8 +67,6 @@ updates:
     directory: "/"
     schedule:
       interval: daily
-    assignees:
-      - "a1994sc"
     groups:
       core:
         patterns:

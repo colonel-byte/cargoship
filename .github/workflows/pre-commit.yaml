@@ -1,0 +1,30 @@
+---
+name: Validate pre-commit hooks
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  prek:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Runs the hooks from .pre-commit-config.yaml, so licensing, formatting
+      # and sorting can never drift from the local pre-commit setup. Skipped:
+      #   schema-generator, docs-generator - `repo: local` hooks that shell out
+      #     to mage and regenerate files; they need the full dev toolchain.
+      #   golangci-lint - already covered by the Validate Lint workflow.
+      - name: Run hooks
+        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        with:
+          extra-args: >-
+            --all-files
+            --skip schema-generator
+            --skip docs-generator
+            --skip golangci-lint

@@ -94,6 +94,9 @@ func newPackageCreateCommand() *cobra.Command {
 
 	v.SetDefault(distroOutputKey, ".")
 
+	addBuildFlags(cmd)
+	addRegistryFlags(cmd)
+
 	return cmd
 }
 

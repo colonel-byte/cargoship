@@ -303,7 +303,7 @@
       "type": "string"
     },
     "zarf_cache": {
-      "description": "is the folder where oras artifacts are stored",
+      "description": "is the folder where cargoship caches what it fetches: oras artifacts, and the release assets the example generation targets read",
       "type": "string"
     }
   },

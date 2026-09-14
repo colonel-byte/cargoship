@@ -53,6 +53,8 @@ func newSha256SumCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.extractPath, "extract-path", "e", "", lang.CmdSha256SumFlagExtractPath)
 
+	addTempDirFlags(cmd)
+
 	return cmd
 }
 

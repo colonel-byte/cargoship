@@ -141,3 +141,19 @@ func EncryptValue(value, password string) (string, error) {
 	}
 	return encrypted, nil
 }
+
+// DecryptValue decrypts a single Ansible Vault-encrypted value with the given
+// password, returning the plaintext EncryptValue was given.
+//
+// DecryptRegistryAuth is what an apply runs; this is for the operator reading a
+// value back out of a configuration by hand.
+func DecryptValue(value, password string) (string, error) {
+	if !cluster.IsVaultEncrypted(value) {
+		return "", ErrNotEncrypted
+	}
+	plain, err := vault.Decrypt(value, password)
+	if err != nil {
+		return "", fmt.Errorf("decrypting value: %w", err)
+	}
+	return plain, nil
+}

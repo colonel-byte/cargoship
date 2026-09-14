@@ -13,6 +13,7 @@
 - [removing-hosts](guides/removing-hosts.md)
 - [setup-inv](guides/setup-inv.md)
 - [signing-packages](guides/signing-packages.md)
+- [vault-encryption](guides/vault-encryption.md)
 
 
 -----------
@@ -30,7 +31,14 @@
   - [reset](commands/cargoship_reset.md)
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [sign](commands/cargoship_sign.md)
-  - [vault-encrypt](commands/cargoship_vault-encrypt.md)
+  - [vault](commands/cargoship_vault.md)
+    - [decrypt-file](commands/cargoship_vault_decrypt-file.md)
+    - [decrypt-path](commands/cargoship_vault_decrypt-path.md)
+    - [decrypt](commands/cargoship_vault_decrypt.md)
+    - [encrypt-file](commands/cargoship_vault_encrypt-file.md)
+    - [encrypt-path](commands/cargoship_vault_encrypt-path.md)
+    - [encrypt](commands/cargoship_vault_encrypt.md)
+    - [rekey](commands/cargoship_vault_rekey.md)
   - [version](commands/cargoship_version.md)
 
 
@@ -55,6 +63,7 @@
 - [dagger](dev/dagger.md)
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
+- [goreleaser](dev/goreleaser.md)
 - [mage](dev/mage.md)
 - [shell-completion](dev/shell-completion.md)
 - [thirdparty-src](dev/thirdparty-src.md)
