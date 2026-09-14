@@ -44,6 +44,10 @@
         "^x-": {}
       },
       "properties": {
+        "allow_unmanaged_nodes": {
+          "description": "whether an apply continues when the cluster holds a node that no host\nin the config accounts for",
+          "type": "boolean"
+        },
         "apply": {
           "$ref": "#/$defs/ApplyOptions",
           "description": "are options used by the apply subcommand"

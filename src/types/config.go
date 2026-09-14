@@ -77,6 +77,9 @@ type DistroOptions struct {
 	FirewallUpdate bool `json:"firewall,omitempty" mapstructure:"firewall" jsonschema:"default=true"`
 	// HostUpdate whether we will update the etc host file
 	HostUpdate bool `json:"hosts,omitempty" mapstructure:"hosts" jsonschema:"default=true"`
+	// AllowUnmanagedNodes whether an apply continues when the cluster holds a node that no host
+	// in the config accounts for
+	AllowUnmanagedNodes bool `json:"allow_unmanaged_nodes,omitempty" mapstructure:"allow_unmanaged_nodes"`
 	// LabelNodes whether we will check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
 	// UpdateKubeConfig whether we will update a kubeconfig file with the admin creds for the cluster
