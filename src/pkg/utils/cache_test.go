@@ -15,9 +15,13 @@
 package utils
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestResolveCachePathExplicit(t *testing.T) {
@@ -44,4 +48,32 @@ func TestResolveCachePathDefaultUsesUserCacheDir(t *testing.T) {
 	if got != wantPrefix {
 		t.Fatalf("ResolveCachePath default: got %q, want %q", got, wantPrefix)
 	}
+}
+
+func TestDownloadToCacheWithSHA256(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", tmpDir)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("test content payload"))
+	}))
+	defer ts.Close()
+
+	// sha256 of "test content payload"
+	const validSha = "ece3930c9301a5dfa3754d55161558076c4a3fa898f6fd9374c54138853ad3ea"
+
+	// Success case
+	target, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	require.NoError(t, err)
+	require.FileExists(t, target)
+
+	// Second call uses cache
+	target2, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	require.NoError(t, err)
+	require.Equal(t, target, target2)
+
+	// Mismatch case
+	_, err = DownloadToCache(ts.URL, "test/file2.txt", "invalidsha256hash")
+	require.ErrorContains(t, err, "checksum mismatch")
 }
