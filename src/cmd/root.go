@@ -79,6 +79,8 @@ const (
 	InstallUpdateFAPolicyD = "fapolicyd"
 	// InstallLabelNodes flag
 	InstallLabelNodes = "label-nodes"
+	// InstallAllowUnmanagedNodes flag
+	InstallAllowUnmanagedNodes = "allow-unmanaged-nodes"
 	// InstallUpdateKubeConfig flag
 	InstallUpdateKubeConfig = "update-kubeconfig"
 	// InstallKubeConfigPath flag

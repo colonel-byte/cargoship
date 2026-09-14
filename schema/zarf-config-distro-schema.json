@@ -44,6 +44,10 @@
         "^x-": {}
       },
       "properties": {
+        "allow_unmanaged_nodes": {
+          "description": "whether an apply continues when the cluster holds a node that no host\nin the config accounts for",
+          "type": "boolean"
+        },
         "apply": {
           "$ref": "#/$defs/ApplyOptions",
           "description": "are options used by the apply subcommand"
@@ -299,7 +303,7 @@
       "type": "string"
     },
     "zarf_cache": {
-      "description": "is the folder where oras artifacts are stored",
+      "description": "is the folder where cargoship caches what it fetches: oras artifacts, and the release assets the example generation targets read",
       "type": "string"
     }
   },

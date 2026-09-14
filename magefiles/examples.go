@@ -561,10 +561,17 @@ func fetchImageList(repoURL, tagURL, asset string) ([]string, error) {
 	return images, nil
 }
 
-// fetchReleaseLines downloads one of a release's text assets and returns its non-empty
-// lines, in file order.
+// fetchReleaseLines returns one of a release's text assets as its non-empty lines, in file
+// order, reading the cache before it reaches for the network and recording what it fetched.
+// A release's assets do not change under a tag, so the second render of a version is free;
+// CARGOSHIP_EXAMPLES_NO_CACHE covers the case where one did change.
 func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
 	url := fmt.Sprintf("%s/releases/download/%s/%s", strings.TrimSuffix(repoURL, "/"), tagURL, asset)
+
+	cache := releaseLines()
+	if lines, ok := cache.lookup(url); ok {
+		return lines, nil
+	}
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -581,11 +588,7 @@ func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
 		return nil, fmt.Errorf("reading %s: %w", url, err)
 	}
 
-	var lines []string
-	for line := range strings.SplitSeq(string(body), "\n") {
-		if line = strings.TrimSpace(line); line != "" {
-			lines = append(lines, line)
-		}
-	}
+	lines := splitReleaseLines(body)
+	cache.store(url, lines)
 	return lines, nil
 }
