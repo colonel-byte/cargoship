@@ -34,9 +34,10 @@ const registriesPath = "/etc/rancher/rke2/registries.yaml"
 type fileConfigurer struct {
 	hostos.Configurer
 
-	files   map[string]string
-	modes   map[string]fs.FileMode
-	statErr error
+	files    map[string]string
+	modes    map[string]fs.FileMode
+	statErr  error
+	writeErr error
 }
 
 func (c *fileConfigurer) FileExist(_ rigos.Host, path string) bool {
@@ -53,6 +54,9 @@ func (c *fileConfigurer) ReadFile(_ rigos.Host, path string) (string, error) {
 }
 
 func (c *fileConfigurer) WriteFile(_ rigos.Host, path string, content string, _ string) error {
+	if c.writeErr != nil {
+		return c.writeErr
+	}
 	if c.files == nil {
 		c.files = make(map[string]string)
 	}
@@ -170,4 +174,19 @@ func TestNeedsUpdateNoRestartOnlyWritesDirectly(t *testing.T) {
 	require.False(t, p.needsUpdate(h))
 	// But should have written the NoRestart file directly
 	require.JSONEq(t, `{"name":"rke2"}`, fc.files[distrocfg.DistroReleaseFile])
+}
+
+// A NoRestart file that cannot be written in place is still drift: the host is reported as
+// needing an update so the file is written on the path that drains and rewrites it.
+func TestNeedsUpdateNoRestartWriteFailureKeepsHost(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		distrocfg.DistroReleaseFile: {Content: []byte(`{"name":"rke2"}`), Mode: "0600", NoRestart: true},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+
+	fc := &fileConfigurer{files: map[string]string{}, writeErr: errors.New("write failed")}
+	h := &cluster.ZarfHost{Configurer: fc}
+
+	require.True(t, p.needsUpdate(h))
+	require.NotContains(t, fc.files, distrocfg.DistroReleaseFile)
 }

@@ -161,13 +161,19 @@ func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
 
 	if !restartRequired {
 		// All drift is in NoRestart files (e.g. distro-release.json). Write in place immediately.
+		// A write that fails leaves the file as drifted as it was found, so the host is reported
+		// as needing an update and picks the file up on the drain-and-rewrite path rather than
+		// being counted as synced by a write that did not land.
 		for path, file := range p.desired {
-			if file.NoRestart {
-				mode := file.Mode
-				if mode == "" {
-					mode = defaultFileMode
-				}
-				_ = h.WriteFile(path, string(file.Content), mode)
+			if !file.NoRestart {
+				continue
+			}
+			mode := file.Mode
+			if mode == "" {
+				mode = defaultFileMode
+			}
+			if err := h.WriteFile(path, string(file.Content), mode); err != nil {
+				return true
 			}
 		}
 		return false
