@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a2e5766f.js";
+            window.path_to_searchindex_js = "../searchindex-b5454ce0.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-f07b44f4.js"></script>
+        <script src="../toc-78edc135.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -221,6 +221,12 @@
 <ul>
 <li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
 <li>Dry run: runs, reads only. Gather distro related facts reads the engine version already on each host. That is what tells an upgrade apart from an install, and what catches a downgrade before a real run starts one.</li>
+</ul>
+</li>
+<li>Checking for nodes no longer in the config
+<ul>
+<li>Compares the nodes joined to the cluster against the hosts in the config and stops the apply when the cluster holds a node the config does not, since nothing later in an apply removes a node</li>
+<li>Dry run: runs, reads only. Checking for removed nodes lists the nodes joined to the cluster and compares them to the config. It writes nothing, and a dry run is exactly when an operator wants to be told that a host they deleted from the config is still running.</li>
 </ul>
 </li>
 <li>Prepare hosts

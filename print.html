@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a2e5766f.js";
+            window.path_to_searchindex_js = "searchindex-b5454ce0.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-f07b44f4.js"></script>
+        <script src="toc-78edc135.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -657,6 +657,53 @@ $ANSIBLE_VAULT;1.1;AES256
 </code></pre>
 <p>If a registry has a vault-encrypted credential and neither the flag nor the environment variable resolves a password, <code>apply</code> fails with an error naming the registry and the field – <code>auth.user</code>, <code>auth.pass</code>, <code>auth.token</code>, or <code>tls.ca</code> – rather than silently treating the ciphertext as a literal username or password. So does a password that does not match the document, or a <code>tls.ca</code> that decrypts to something that is not a certificate. All of it is checked as soon as the password is resolved, before the first host is connected to, so a wrong password costs you an error message rather than a half-configured cluster.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="removing-a-host-from-the-cluster"><a class="header" href="#removing-a-host-from-the-cluster">Removing a Host from the Cluster</a></h1>
+<p>This guide explains what happens when you delete a host from your Cargoship config, why an apply stops rather than reconciling the removal, and how to actually remove the machine.</p>
+<h2 id="what-an-apply-does-with-a-removed-host"><a class="header" href="#what-an-apply-does-with-a-removed-host">What an apply does with a removed host</a></h2>
+<p>Nothing, and that is deliberate. Every phase after the fact-gathering ones reads <code>.spec.hosts</code> and acts on what it finds there, so a host you delete from the config becomes invisible to all of them. The machine keeps running the engine and stays joined to the cluster while the apply that was supposed to remove it reports success.</p>
+<p>An apply catches this instead of walking past it. Right after it gathers facts, and before it changes anything, it lists the nodes joined to the cluster and compares them to the hosts in the config. If the cluster holds a node no host accounts for, the apply stops:</p>
+<pre><code>the cluster holds nodes the config does not: add the host back to the config,
+run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to
+apply anyway: worker3 (worker)
+</code></pre>
+<p>Each node is named with its role, because a leftover controller is the more dangerous case. The check is read-only, so <code>--dry-run</code> runs it too, which is where you want to find out about a removal you did not intend.</p>
+<p>A node is matched to a host by any identifier they share: the node’s name or any address it reports, against the host’s hostname, private address, or connection address. That is deliberately generous, since a false positive would stop an apply on a working cluster – it means a node whose name you overrode with <code>node-name</code> in the engine config still matches its host through its address. If the cluster cannot be reached at all, the check warns and the apply continues, because failing to reach it is not evidence that a host was removed. The node list is read with <code>kubectl</code> on a controller over the existing SSH connection, so the check works on a cluster whose firewall admits nothing but SSH from outside.</p>
+<h2 id="why-apply-refuses-instead-of-reconciling"><a class="header" href="#why-apply-refuses-instead-of-reconciling">Why apply refuses instead of reconciling</a></h2>
+<p>Removing a node properly is two jobs, and an apply can only do one of them.</p>
+<p>Draining a node and deleting its <code>Node</code> object needs the node’s name, which the API server will happily give us. Uninstalling the engine – stopping the service, removing the packages, deleting the data directory and certificates – needs an SSH connection to the machine, and the address, user and key for that lived in the host block you just deleted. An apply has no memory of previous runs, so it has no way to reach a machine the config no longer describes.</p>
+<p>Doing only the first half would be worse than doing nothing, because it looks like the removal worked. The machine keeps its certificates and keeps trying to rejoin, and if it was a controller it stays an etcd member: the cluster looks smaller while quorum is still counted against a member nobody can reach.</p>
+<p>So an apply reports the gap and leaves the cluster alone. The layer that will eventually close it is the OpenTofu provider, which still holds the removed host’s connection details in its state file when it plans the destroy, and can hand them to a targeted teardown.</p>
+<h2 id="removing-the-machine-by-hand"><a class="header" href="#removing-the-machine-by-hand">Removing the machine by hand</a></h2>
+<p>Removing a node is two steps, and they have to happen in that order. <code>install reset</code> uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running – and <code>UninstallEngine</code> acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.</p>
+<ol>
+<li>
+<p>From a controller that is staying, drain and delete the node:</p>
+<pre><code class="language-console">$ kubectl drain worker3 --ignore-daemonsets --delete-emptydir-data
+$ kubectl delete node worker3
+</code></pre>
+</li>
+<li>
+<p>Copy your config and cut <code>.spec.hosts</code> down to the host being removed, leaving the rest of the cluster settings as they are.</p>
+</li>
+<li>
+<p>Run reset against it. With the node already gone from the cluster, the deletion phases have nothing to do and the uninstall is all that remains:</p>
+<pre><code class="language-console">$ cargoship install reset ./package.tar.zst --config ./removal-config.yaml --confirm
+</code></pre>
+</li>
+<li>
+<p>Delete the host block from your real config.</p>
+</li>
+<li>
+<p>Run <code>cargoship apply</code> as usual. The check now finds nothing left over.</p>
+</li>
+</ol>
+<p>Remove controllers one at a time, and only while the remaining controllers still form a quorum. Removing two of three at once leaves etcd unable to elect a leader, and no amount of applying will fix that from the outside.</p>
+<h2 id="when-the-extra-nodes-are-deliberate"><a class="header" href="#when-the-extra-nodes-are-deliberate">When the extra nodes are deliberate</a></h2>
+<p>A cluster can hold nodes Cargoship never joined, and refusing on those would block every apply on a working setup. Pass <code>--allow-unmanaged-nodes</code> to downgrade the refusal to a warning:</p>
+<pre><code class="language-console">$ cargoship apply ./package.tar.zst --config ./cargoship-config.yaml --allow-unmanaged-nodes --confirm
+</code></pre>
+<p>It is also available as <code>distro.allow_unmanaged_nodes</code> in the Cargoship config file, and as <code>DISTRO_DISTRO_ALLOW_UNMANAGED_NODES</code> in the environment. Cargoship still leaves those nodes alone either way; the flag only chooses whether their presence is an error or a log line.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="inventory-configuration-guide"><a class="header" href="#inventory-configuration-guide">Inventory Configuration Guide</a></h1>
 <p>This guide explains how to author a cluster inventory file for bootstrapping or upgrading clusters with Cargoship.</p>
 <h2 id="basic-structure"><a class="header" href="#basic-structure">Basic Structure</a></h2>
@@ -1150,7 +1197,8 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --update-kubeconfig=false
 </code></pre>
 <h3 id="options-1"><a class="header" href="#options-1">Options</a></h3>
-<pre><code>  -a, --architecture string                     Architecture for OCI images and Zarf packages
+<pre><code>      --allow-unmanaged-nodes                   Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
+  -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
@@ -1982,6 +2030,12 @@ $ cargoship version -o json
 <ul>
 <li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
 <li>Dry run: runs, reads only. Gather distro related facts reads the engine version already on each host. That is what tells an upgrade apart from an install, and what catches a downgrade before a real run starts one.</li>
+</ul>
+</li>
+<li>Checking for nodes no longer in the config
+<ul>
+<li>Compares the nodes joined to the cluster against the hosts in the config and stops the apply when the cluster holds a node the config does not, since nothing later in an apply removes a node</li>
+<li>Dry run: runs, reads only. Checking for removed nodes lists the nodes joined to the cluster and compares them to the config. It writes nothing, and a dry run is exactly when an operator wants to be told that a host they deleted from the config is still running.</li>
 </ul>
 </li>
 <li>Prepare hosts
@@ -3402,6 +3456,35 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p><code>Detect</code> answers “does this backend manage the firewall on this node”, which requires the firewall to be running – the nftables backend deliberately reads it as “the operator configured a persistent ruleset”, not “nft is present”. Overloading it would have changed what every existing caller means. <code>Installed</code> is a plain presence check (<code>firewall-cmd</code>, <code>ufw</code>, <code>nft</code> on <code>PATH</code>), and only the skip decision uses it.</p>
 <h2 id="preferredfirewall-is-declared-on-each-leaf-os-module"><a class="header" href="#preferredfirewall-is-declared-on-each-leaf-os-module"><code>PreferredFirewall</code> is declared on each leaf OS module</a></h2>
 <p>The obvious place for the method is a shared base: <code>EnterpriseLinux</code> for the seven Enterprise Linux modules, <code>Debian</code> for Ubuntu, <code>SLES</code> for OpenSUSE. It works for the second and third, whose modules embed only their base, but not for the first. <code>RockyLinux</code> and its siblings embed both <code>linux.EnterpriseLinux</code> and <code>configurer.Linux</code>, so a method on <code>EnterpriseLinux</code> and the default on <code>configurer.Linux</code> are promoted at the same depth, and Go leaves the selector ambiguous – the modules stop satisfying <code>Configurer</code>. Declaring the method on each leaf keeps it unambiguous, at the price of seven one-line methods.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-apply-refuses-a-removed-host-instead-of-reconciling-it"><a class="header" href="#why-apply-refuses-a-removed-host-instead-of-reconciling-it">Why apply refuses a removed host instead of reconciling it</a></h1>
+<p>Deleting a host block from a cargoship config does not remove that machine from the cluster. Apply detects the leftover node and stops (<code>src/pkg/phase/13_detect_removed_hosts.go</code>); it does not drain it, delete it, or uninstall its engine. Reconciling the removal was the obvious alternative, and it is what every other declarative tool in this space does, so the choice needs an argument.</p>
+<h2 id="apply-cannot-finish-the-job"><a class="header" href="#apply-cannot-finish-the-job">Apply cannot finish the job</a></h2>
+<p>Removing a node is two pieces of work. Deleting the <code>Node</code> object needs the node’s name, which the API server will give us. Uninstalling the engine – stopping the service, removing the packages, deleting the data and config directories – needs an SSH connection, and the address, user and key for that lived in the host block that was just deleted. Apply holds no memory of previous runs, so it has no way to reach a machine the config no longer describes. <code>UninstallEngine</code> is not hard to call here; it is impossible to call, because there is nothing to connect to.</p>
+<p>Doing only the first half is worse than doing nothing. A node deleted from the API but left running keeps its certificates and keeps trying to rejoin, and for a controller <code>kubectl delete node</code> does not remove the etcd member: the cluster looks smaller while quorum is still counted against a machine nobody can reach. The failure mode of stopping is a visible leftover node and a message naming it. The failure mode of doing half is an apply that reports success and a cluster that loses quorum on the next controller restart.</p>
+<h2 id="absence-is-the-wrong-trigger-for-a-destructive-operation"><a class="header" href="#absence-is-the-wrong-trigger-for-a-destructive-operation">Absence is the wrong trigger for a destructive operation</a></h2>
+<p>Adding a host that is already there is idempotent. Removing a host that should have stayed is not. A typo in a hostname, a bad merge, a templating bug that drops a list entry – under reconcile each of those becomes a drained and destroyed node, and under refuse each becomes a stopped apply with a message. The blast radius of a false positive is not symmetric, so the default should not be either.</p>
+<h2 id="the-old-state-is-not-a-substitute-for-a-connection"><a class="header" href="#the-old-state-is-not-a-substitute-for-a-connection">The old state is not a substitute for a connection</a></h2>
+<p>The tempting way to supply the missing connection details is to take them from the provider’s prior state and generate a small config to run <code>install reset</code> against. It should not be built.</p>
+<p>A state file records what was true after the last successful apply, and reset is destructive. Between then and now the machine may have been rebuilt, re-addressed, or returned to a DHCP pool, and none of that produces a diff the provider would see, because the resource is being removed and there is nothing left to refresh against. The address is the least stable identifier a host has and the one reset would connect through, so the target becomes whatever machine currently answers there. Other kinds of state drift surface as a plan diff somebody reads; this one surfaces as a wiped machine.</p>
+<p>The generated config would also splice two points in time. The host comes from the old state, but the paths an uninstall removes come from the distro module: <code>CleanupPaths()</code> returns the data and config directories as the <em>current</em> configuration defines them. Upgrade the cluster or move the data directory and reset cleans today’s paths on a machine running yesterday’s engine, leaving the real files behind and removing whatever sits at the new ones.</p>
+<p>Making removals depend on state would also settle the separate question of keeping SSH key material out of tofu state (#309) the wrong way, by making it unsolvable.</p>
+<h2 id="the-phases-cannot-express-a-subset-anyway"><a class="header" href="#the-phases-cannot-express-a-subset-anyway">The phases cannot express a subset anyway</a></h2>
+<p>Independent of where the contents come from, there is no config that makes <code>install reset</code> remove one host from a live cluster. <code>DeleteCommon.Prepare</code> finds its leader by scanning <code>Spec.Hosts</code> for a host already running the controller service, so a config holding only the removed host has no leader: both delete phases report <code>ShouldRun() == false</code> and the node is never deleted, while <code>UninstallEngine</code> runs anyway. Adding a live controller so a leader can be found is worse, because <code>UninstallEngine.Prepare</code> sets <code>p.hosts = p.manager.Config.Spec.Hosts</code> with no filter and uninstalls the engine from it too.</p>
+<p>Neither is a bug in reset. The unfiltered list is exactly right when the instruction is “tear down this whole cluster”. The gap is that no action separates the hosts it targets from the hosts that supply cluster access, which is tracked as #339.</p>
+<h2 id="what-the-check-actually-does"><a class="header" href="#what-the-check-actually-does">What the check actually does</a></h2>
+<p><code>DetectRemovedHosts</code> runs after fact gathering and before anything is changed, lists the nodes joined to the cluster, and stops the apply when the cluster holds a node no host accounts for, naming each one with its role.</p>
+<p>The list is read by running <code>kubectl get nodes -o json</code> on the leader over the existing SSH connection, which is how every other cluster command in the phases works. <code>LabelNodes</code> is the exception: it builds a Kubernetes client dialled at <code>https://&lt;loadBalancer&gt;:6443</code> from the machine running cargoship. That was not copied here. A cluster whose firewall admits only SSH from outside is an ordinary deployment for cargoship, and a check that runs on every apply must not be the one thing that needs the API port open. Going through the leader also drops the need for the load balancer address and for reading the admin certificates.</p>
+<p>Two guards keep it from becoming a nuisance, and both exist because a false positive would stop an apply on a working cluster:</p>
+<ul>
+<li>Nodes are matched to hosts by any shared identifier: the node’s name or any address it reports, against the host’s hostname, private address, or connection address. Names alone are not enough, because an operator can set <code>node-name</code> in the engine config, and matching on names would then report every node in the cluster as removed.</li>
+<li>Only positive evidence stops the run. Failing to reach the cluster says nothing about whether a host was removed, so a failure to list the nodes warns and continues.</li>
+</ul>
+<p>The phase is read-only, so a dry run executes it. That is the run where being told about a host you deleted from the config costs nothing.</p>
+<p><code>--allow-unmanaged-nodes</code> downgrades the refusal to a warning, for clusters holding nodes cargoship never joined. Cargoship leaves those nodes alone either way; the flag only chooses whether their presence is an error or a log line.</p>
+<h2 id="what-would-justify-revisiting"><a class="header" href="#what-would-justify-revisiting">What would justify revisiting</a></h2>
+<p>Not a state file, and not inferring removal from absence. The variant that survives every argument above is a tombstone: the host stays in the config for one apply, marked for removal, so the connection details are present and current rather than remembered, and the operator is editing a file that says in the present tense which machine is to be destroyed. OpenTofu’s own <code>removed</code> block is precedent for stating a removal explicitly rather than inferring it.</p>
+<p>What that needs from the phases is exactly what #339 builds – act on this subset, use those other hosts for access – and a subset reset does both halves on the target, so the orphaned etcd member stops being a hazard. If #339 lands, the remaining work is a per-host config marker, a quorum guard before a controller is removed, and a decision on when the marker is cleaned up. This check stays either way, as the backstop for a host deleted outright rather than tombstoned.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
 <p>Cargoship’s Ansible Vault support (<code>cargoship vault encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
