@@ -41,8 +41,11 @@ type InstallCommon struct {
 	config      string
 	concurrency int
 	confirm     bool
-	logLevel    string
-	LogFormat   string
+	// dryRun reaches phase.Manager.DryRun. Only apply and reset register the flag; the other
+	// commands embedding InstallCommon carry the field unset, which is the same as off.
+	dryRun    bool
+	logLevel  string
+	LogFormat string
 	// packageVerifyFlags carries the signature verification flags for the install
 	// commands that load a package through initManager. Commands that do not load a
 	// package (reset, kube-config) embed InstallCommon but never register these flags.
@@ -128,6 +131,6 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 		TempDirectory:     distroLayout.DirPath(),
 		Concurrency:       opt.concurrency,
 		ConcurrentUploads: opt.concurrency,
-		DryRun:            false,
+		DryRun:            opt.dryRun,
 	}, nil
 }

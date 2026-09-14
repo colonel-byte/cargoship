@@ -43,6 +43,11 @@ func (p *DetectOS) Explanation() string {
 	return "Gathers information about the remote host, including: OS and OS version"
 }
 
+// ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
+func (p *DetectOS) ReadOnly() string {
+	return "Reads `/etc/os-release` and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running."
+}
+
 // Run the phase
 func (p *DetectOS) Run(ctx context.Context) error {
 	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {

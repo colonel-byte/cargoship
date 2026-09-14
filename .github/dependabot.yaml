@@ -2,15 +2,17 @@
 version: 2
 updates:
   - package-ecosystem: gomod
-    directories:
-      - "/"
+    directory: "/"
     schedule:
       interval: weekly
       day: monday
-    assignees:
-      - "a1994sc"
     allow:
       - dependency-type: "all"
+    ignore:
+      # gobwas/glob v1.0.0 removed the Glob interface type; vendored
+      # open-policy-agent/opa (transitive via sigstore/cosign) still uses it.
+      - dependency-name: "github.com/gobwas/glob"
+        update-types: ["version-update:semver-major"]
     groups:
       zarf:
         patterns:
@@ -26,7 +28,8 @@ updates:
       docker:
         patterns:
           - "github.com/docker/*"
-          - "github.com/mody/*"
+          - "github.com/moby/*"
+          - "github.com/fvbommel/sortorder"
       cosign:
         patterns:
           - "github.com/aws/*"
@@ -41,23 +44,29 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: pre-commit
-    directories:
-      - "/"
+    directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "a1994sc"
     groups:
       core:
         patterns:
           - "*"
-  - package-ecosystem: github-actions
+  - package-ecosystem: docker
     directories:
-      - "/"
+      - "/containers/base"
+      - "/containers/ubi"
     schedule:
       interval: daily
-    assignees:
-      - "a1994sc"
+    groups:
+      core:
+        patterns:
+          - "*"
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: daily
     groups:
       core:
         patterns:

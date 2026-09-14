@@ -41,7 +41,9 @@ type installApplyOptions struct {
 	firewall          bool
 	fapolicy          bool
 	labelNodes        bool
+	allowUnmanaged    bool
 	updateKubeConfig  bool
+	kubeConfigPath    string
 	vaultPasswordFile string
 }
 
@@ -63,11 +65,14 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().BoolVarP(&o.hosts, InstallUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
+	cmd.Flags().BoolVar(&o.allowUnmanaged, InstallAllowUnmanagedNodes, resolvedConfig.DistroOpts.AllowUnmanagedNodes, lang.CmdInstallAllowUnmanagedNodes)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
@@ -89,13 +94,18 @@ func newInstallApplyCommand() *cobra.Command {
 
 	cmd.MarkFlagRequired(InstallConfig)
 
+	addBuildFlags(cmd)
+	addTimeoutFlag(cmd)
+
 	return cmd
 }
 
 func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
+	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
+	// what would happen is what would push someone into running the real thing to find out.
+	if !o.confirm && !o.dryRun {
 		l.Warn("please include the --confirm argument")
 		return errors.New("pass confirm argument")
 	}
@@ -132,14 +142,23 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		return err
 	}
 
+	// Nothing decrypts these until the engine configuration is written, which is well after every
+	// host has been connected to. Check them here, while stopping still costs nothing.
+	if err := clustercfg.VerifyRegistryAuth(manager.Config, vaultPassword); err != nil {
+		l.Warn("failed to decrypt registry credentials", "err", err)
+		return err
+	}
+
 	applyOpts := action.ApplyOptions{
-		Manager:          manager,
-		ModifyHosts:      o.hosts,
-		WorkerConcurrent: o.workerCon,
-		ModifyFirewall:   o.firewall,
-		LabelNodes:       o.labelNodes,
-		UpdateKubeConfig: o.updateKubeConfig,
-		VaultPassword:    vaultPassword,
+		Manager:             manager,
+		ModifyHosts:         o.hosts,
+		WorkerConcurrent:    o.workerCon,
+		ModifyFirewall:      o.firewall,
+		LabelNodes:          o.labelNodes,
+		AllowUnmanagedNodes: o.allowUnmanaged,
+		UpdateKubeConfig:    o.updateKubeConfig,
+		KubeConfigPath:      o.kubeConfigPath,
+		VaultPassword:       vaultPassword,
 	}
 
 	return action.NewApply(applyOpts).Run(ctx)

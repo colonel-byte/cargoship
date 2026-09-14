@@ -36,6 +36,7 @@ import (
 	"github.com/k0sproject/rig"
 	"github.com/k0sproject/rig/exec"
 	"github.com/k0sproject/rig/log"
+	rigos "github.com/k0sproject/rig/os"
 	"github.com/k0sproject/rig/os/registry"
 )
 
@@ -373,6 +374,15 @@ func (h *ZarfHost) ReadFile(path string) (string, error) {
 		return "", err
 	}
 	return cfg.ReadFile(h, path)
+}
+
+// Stat returns file information for path on the host via the resolved configurer.
+func (h *ZarfHost) Stat(path string, opts ...exec.Option) (*rigos.FileInfo, error) {
+	cfg, err := h.requireConfigurer()
+	if err != nil {
+		return nil, err
+	}
+	return cfg.Stat(h, path, opts...)
 }
 
 // FileExist returns true if path exists on the host.

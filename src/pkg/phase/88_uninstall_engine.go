@@ -128,21 +128,12 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 		}
 	}
 
-	if h.Configurer.FileExist(h, p.Distro.DataDirPath()) {
-		if err := h.Execf(fmt.Sprintf("rm -rf %s", p.Distro.DataDirPath()), exec.Sudo(h)); err != nil {
-			logger.From(ctx).Warn("failed to remove engine data dir", "path", p.Distro.DataDirPath(), "error", err)
+	for _, path := range p.Distro.CleanupPaths() {
+		if !h.Configurer.FileExist(h, path) {
+			continue
 		}
-	}
-
-	confPath := p.Distro.ConfigPath()
-	switch p.Distro.(type) {
-	case *distrocfg.K3S, *distrocfg.RKE2:
-		confPath = filepath.Dir(p.Distro.ConfigPath())
-	}
-
-	if h.Configurer.FileExist(h, confPath) {
-		if err := h.Execf(fmt.Sprintf("rm -rf %s", confPath), exec.Sudo(h)); err != nil {
-			logger.From(ctx).Warn("failed to remove engine config dir", "path", confPath, "error", err)
+		if err := h.Execf(fmt.Sprintf("rm -rf %s", path), exec.Sudo(h)); err != nil {
+			logger.From(ctx).Warn("failed to remove engine path", "path", path, "error", err)
 		}
 	}
 	p.cleanUploadManifest(ctx, h)

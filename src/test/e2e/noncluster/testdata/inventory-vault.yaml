@@ -1,0 +1,34 @@
+---
+# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+#
+# holds two registries so that the whole-file commands have to walk more than one, and
+# leaves the gaps a real configuration has: a registry with a token instead of a password, one with
+# no tls block, and an empty field.
+#
+# Nothing here is contacted. The tests only read this file and rewrite copies of it.
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: test
+spec:
+  # registries the cluster pulls from
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: harbor # our mirror
+        auth:
+          user: admin
+          pass: hunter2 # rotate me
+          token: ""
+        tls:
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            aGVsbG8gd29ybGQ=
+            -----END CERTIFICATE-----
+          insecureSkipVerify: false
+      - name: quay
+        auth:
+          token: quay-token
+  hosts:
+    - hostname: node1
+      role: controller

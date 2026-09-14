@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/magefile/mage/sh"
@@ -32,6 +33,21 @@ func (Test) EndToEndCluster() error {
 		return err
 	}
 	return runE2ENoBuild("1h", "github.com/colonel-byte/cargoship/src/test/e2e/cluster/...")
+}
+
+// EndToEndClusterStage runs the same suite as EndToEndCluster, but stops at the boundary
+// phase/60 draws: it stages the files and renders the engine config without starting the
+// engine on any node, and it provisions five machines rather than ten. It takes a few minutes
+// rather than tens of them and brings up no rke2 cluster, which is what makes it runnable
+// somewhere a nine-node cluster is not. Use EndToEndCluster for the walk that bootstraps.
+func (Test) EndToEndClusterStage() error {
+	if err := stopBootlooseContainers(); err != nil {
+		return err
+	}
+	if err := os.Setenv("CARGOSHIP_E2E_STAGE_ONLY", "1"); err != nil {
+		return err
+	}
+	return runE2ENoBuild("30m", "github.com/colonel-byte/cargoship/src/test/e2e/cluster/...")
 }
 
 // CleanCluster removes the containers a bootloose cluster left behind. EndToEndCluster does
@@ -54,5 +70,8 @@ func stopBootlooseContainers() error {
 		return nil
 	}
 	fmt.Println("Removing leftover bootloose containers")
-	return sh.RunV("docker", append([]string{"rm", "-f"}, strings.Fields(ids)...)...)
+	// -v takes the anonymous volumes with the containers. Without it a local run leaves one
+	// behind per machine per run, because Docker does not reap them with the container that
+	// declared them -- see engineData in src/test/e2e/cluster/main_test.go.
+	return sh.RunV("docker", append([]string{"rm", "-fv"}, strings.Fields(ids)...)...)
 }

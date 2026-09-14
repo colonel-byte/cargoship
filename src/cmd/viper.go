@@ -184,6 +184,7 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "HostUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "FirewallUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "LabelNodes"), false)
+	v.SetDefault(configPath("DistroOpts", "AllowUnmanagedNodes"), false)
 	v.SetDefault(configPath("DistroOpts", "UpdateKubeConfig"), true)
 
 	// The keys below have no real default value beyond the Go zero value -- they're
@@ -197,6 +198,7 @@ func setDefaults() {
 	v.SetDefault(configPath("Architecture"), "")
 	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
 	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
+	v.SetDefault(configPath("DistroOpts", "KubeConfig"), "")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")

@@ -64,3 +64,9 @@ func (c SLES) UninstallPackage(h os.Host, s ...string) error {
 	}
 	return nil
 }
+
+// PreferredFirewall reports that SLES ships firewalld as its firewall front end. OpenSUSE
+// inherits it.
+func (c SLES) PreferredFirewall() string {
+	return configurer.FirewallFirewalld
+}

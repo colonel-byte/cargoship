@@ -43,6 +43,7 @@ type installEngineConfigSyncOptions struct {
 	workerCon         string
 	labelNodes        bool
 	updateKubeConfig  bool
+	kubeConfigPath    string
 	vaultPasswordFile string
 }
 
@@ -66,6 +67,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().StringVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 
@@ -86,6 +88,9 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	o.LogFormat = val
 
 	cmd.MarkFlagRequired(InstallEngineConfigSyncConfig)
+
+	addBuildFlags(cmd)
+	addTimeoutFlag(cmd)
 
 	return cmd
 }
@@ -122,12 +127,20 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		return err
 	}
 
+	// Nothing decrypts these until the engine configuration is written, which is well after every
+	// host has been connected to. Check them here, while stopping still costs nothing.
+	if err := clustercfg.VerifyRegistryAuth(manager.Config, vaultPassword); err != nil {
+		l.Warn("failed to decrypt registry credentials", "err", err)
+		return err
+	}
+
 	engineConfigSyncOpts := action.EngineConfigSyncOptions{
 		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
 		VaultPassword:    vaultPassword,
 		LabelNodes:       o.labelNodes,
 		UpdateKubeConfig: o.updateKubeConfig,
+		KubeConfigPath:   o.kubeConfigPath,
 	}
 
 	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)

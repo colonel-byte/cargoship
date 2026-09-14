@@ -23,6 +23,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +39,7 @@ const nodeRoleLabelPrefix = "node-role.kubernetes.io/"
 // LabelNodes phase state
 type LabelNodes struct {
 	GenericPhase
+	Distro    distrocfg.Distro
 	ClusterLB string
 	Enabled   bool
 	leader    *cluster.ZarfHost
@@ -56,7 +58,7 @@ func (p *LabelNodes) Explanation() string {
 // Prepare the phase
 func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, "rke2-server") && h.IsController()
+		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) > 0 {
 		p.leader = control[0]
@@ -140,25 +142,17 @@ func (p *LabelNodes) clientset() (*kubernetes.Clientset, error) {
 		return nil, errors.New("no leader host resolved")
 	}
 
-	ca, err := p.leader.ReadFile("/var/lib/rancher/rke2/server/tls/server-ca.crt")
+	creds, err := p.Distro.AdminCredentials(*p.leader, p.Distro.DataDirPath())
 	if err != nil {
-		return nil, fmt.Errorf("failed to read server-ca.crt: %w", err)
-	}
-	crt, err := p.leader.ReadFile("/var/lib/rancher/rke2/server/tls/client-admin.crt")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read client-admin.crt: %w", err)
-	}
-	key, err := p.leader.ReadFile("/var/lib/rancher/rke2/server/tls/client-admin.key")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read client-admin.key: %w", err)
+		return nil, fmt.Errorf("failed to read admin credentials: %w", err)
 	}
 
 	restConfig := &rest.Config{
 		Host: fmt.Sprintf("https://%s:6443", p.ClusterLB),
 		TLSClientConfig: rest.TLSClientConfig{
-			CAData:   []byte(ca),
-			CertData: []byte(crt),
-			KeyData:  []byte(key),
+			CAData:   creds.CertificateAuthority,
+			CertData: creds.ClientCertificate,
+			KeyData:  creds.ClientKey,
 		},
 	}
 

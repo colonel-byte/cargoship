@@ -45,6 +45,13 @@ const (
 	DataDirDefaultPath = "DataDirDefaultPath"
 )
 
+const (
+	// FirewallFirewalld is the firewall front end shipped by Enterprise Linux and SUSE.
+	FirewallFirewalld = "firewalld"
+	// FirewallUFW is the firewall front end shipped by Debian and Ubuntu.
+	FirewallUFW = "ufw"
+)
+
 // Linux is a base module for various linux OS support packages
 type Linux struct {
 	paths    map[string]string
@@ -54,6 +61,14 @@ type Linux struct {
 // OSKind returns the identifier for Linux hosts
 func (l *Linux) OSKind() string {
 	return "linux"
+}
+
+// PreferredFirewall reports that the distribution ships no firewall front end of its own. An OS
+// module for a distribution that ships one overrides this. The method is declared on each leaf OS
+// module rather than on a shared base such as EnterpriseLinux, because those modules embed both
+// their base and this one at the same depth, which would leave the promoted method ambiguous.
+func (l *Linux) PreferredFirewall() string {
+	return ""
 }
 
 // NOTE The Linux struct does not embed rig/os.Linux because it will confuse

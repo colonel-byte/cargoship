@@ -68,6 +68,9 @@ func newPackagePullCommand() *cobra.Command {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
 	}
 
+	addBuildFlags(cmd)
+	addRegistryFlags(cmd)
+
 	return cmd
 }
 

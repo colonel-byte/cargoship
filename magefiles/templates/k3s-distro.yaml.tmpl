@@ -19,9 +19,16 @@
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfDistro
 metadata:
-  name: rancher-k3s-{{ .CNI }}
+  name: rancher-k3s-{{ .Name }}
   version: {{ .Version }}
-  architecture: amd64
+{{- if .MultiArch }}
+  architectures:
+{{- range .Arches }}
+    - {{ .Arch }}
+{{- end }}
+{{- else }}
+  architecture: {{ (index .Arches 0).Arch }}
+{{- end }}
 spec:
   type: k3s
   version: {{ .Version }}
@@ -119,12 +126,22 @@ spec:
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
       files:
-        - source: {{ .BinaryURL }}
+{{- if .MultiArch }}
+        # One binary per architecture, each landing at the same target. The selector decides
+        # which one a host receives; an entry without an arch selector goes to every host.
+{{- end }}
+{{- range $arch := .Arches }}
+        - source: {{ $arch.BinaryURL }}
           target: /usr/local/bin/k3s
           executable: true
-          shasum: {{ .BinarySHA }}
+          shasum: {{ $arch.BinarySHA }}
           selector:
             package: binary
+{{- if $.MultiArch }}
+            arch:
+              - {{ $arch.Arch }}
+{{- end }}
+{{- end }}
         - source: ../../../k3s/core/killall.sh
           target: /usr/local/bin/k3s-killall.sh
           executable: true

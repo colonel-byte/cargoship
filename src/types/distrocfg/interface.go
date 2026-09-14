@@ -39,23 +39,43 @@ const (
 	ControllerService = "Control"
 )
 
+// DesiredFile is one engine config file a distro wants on a host: its content, and the mode it
+// is written with. The mode travels with the content because it varies per file -- a file the
+// engine reads as a group member is not written like one holding credentials.
+type DesiredFile struct {
+	// Content is the full desired content of the file.
+	Content []byte
+	// Mode is the file mode as chmod spells it, e.g. "0600".
+	Mode string
+}
+
 // Distro interface for any distro object
 type Distro interface {
+	// AdminCredentials returns the cluster CA certificate and the admin client key pair
+	// for a given controller host and data directory
+	AdminCredentials(cluster.ZarfHost, string) (AdminCredentials, error)
 	// BinaryName returns the engine binary name
 	BinaryName() string
 	// BinaryPath returns the full path to the engine binary
 	BinaryPath() string
+	// CleanupPaths returns every path on a host the engine owns outright, for an uninstall
+	// to remove recursively. Paths that are unset or too broad to safely remove are left out.
+	CleanupPaths() []string
 	// ConfigPath returns the full path for the config directory used by the engine
 	ConfigPath() string
 	// ConfigureEngine does distro specific configuration on a host
 	ConfigureEngine(context.Context, cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
 	// DataDirPath returns the full path for the data directory used by the engine
 	DataDirPath() string
-	// DesiredFiles returns the full set of engine config files (path -> desired content) this
+	// DesiredFiles returns the full set of engine config files (path -> desired file) this
 	// distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
 	// pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
 	// detect drift on an already-running host.
-	DesiredFiles(cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string][]byte, error)
+	DesiredFiles(cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
+	// ManagedDirs returns the directories on a host whose contents cargoship writes and owns
+	// outright, so that a file in one of them that DesiredFiles no longer names can be removed
+	// rather than left behind. A distro that keeps no such directory returns nil.
+	ManagedDirs() []string
 	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 	DistroCmdf(string, ...any) string
 	// GetClusterCIDR returns a string array with the all the known cluster cidr blocks

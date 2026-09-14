@@ -110,6 +110,72 @@ type withDryRun interface {
 	DryRun() error
 }
 
+// readOnly marks a phase that reads from hosts but never changes them, so a dry run can run it
+// as itself rather than reporting it.
+//
+// A phase that implements neither this nor withDryRun is skipped under a dry run. That default
+// is the point of the interface: dry-run safety is a property a phase has to state, so a phase
+// added later is safe without anyone having remembered to think about it.
+//
+// ReadOnly returns why the phase is safe to run and why a dry run wants it run. The reason is a
+// return value rather than a comment because magefiles/gen-docs.go renders it into
+// docs/phases/<name>.md next to the phase, so the claim a reader sees is the one the phase
+// makes, not a second copy of it that can drift.
+type readOnly interface {
+	ReadOnly() string
+}
+
+// DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the
+// phase implements, and it is exported so magefiles/gen-docs.go can label each phase in
+// docs/phases/<name>.md with the same classification Run() gates on. The docs and the gate
+// cannot disagree, because there is only one classifier.
+type DryRunBehavior int
+
+const (
+	// DryRunSkip is the default: the phase declares nothing, so a dry run reports it and
+	// does not run it.
+	DryRunSkip DryRunBehavior = iota
+	// DryRunReadOnly is a phase implementing readOnly. It reads hosts and changes nothing,
+	// so a dry run runs it as itself.
+	DryRunReadOnly
+	// DryRunOwnPath is a phase implementing withDryRun. A dry run calls DryRun() instead of
+	// Run().
+	DryRunOwnPath
+)
+
+// String is the label written into the phase docs.
+func (b DryRunBehavior) String() string {
+	switch b {
+	case DryRunReadOnly:
+		return "runs, reads only"
+	case DryRunOwnPath:
+		return "runs its own dry-run path"
+	default:
+		return "reported, not run"
+	}
+}
+
+// ClassifyDryRun reports what a dry run does with p.
+func ClassifyDryRun(p Phase) DryRunBehavior {
+	if _, ok := p.(withDryRun); ok {
+		return DryRunOwnPath
+	}
+	if _, ok := p.(readOnly); ok {
+		return DryRunReadOnly
+	}
+	return DryRunSkip
+}
+
+// DryRunNote returns the phase's own account of why a dry run runs it, or "" for a phase that
+// gives none. Only read-only phases carry one: they are the phases a dry run runs against live
+// hosts, so they are the ones a reader is entitled to an argument about.
+func DryRunNote(p Phase) string {
+	if ro, ok := p.(readOnly); ok {
+		return ro.ReadOnly()
+	}
+	return ""
+}
+
 // In-phase hooks for phases to run logic immediately before/after Run().
 // These are strictly internal hooks for phases themselves and are separate
 // from user-configured lifecycle hooks handled by the RunHooks phase.
@@ -207,6 +273,8 @@ func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error {
 // Run executes all the added Phases in order
 func (m *Manager) Run(ctx context.Context) error {
 	var ran []Phase
+	// planned collects the phases a dry run reported instead of running, for the summary below.
+	var planned []Phase
 	var result error
 
 	l := logger.From(ctx)
@@ -243,11 +311,32 @@ func (m *Manager) Run(ctx context.Context) error {
 			p.SetManager(m)
 		}
 
-		if p, ok := p.(withconfig); ok {
-			l.Debug("preparing", "phase", p.Title())
-			if err := p.Prepare(ctx, m.Config, m.Distro); err != nil {
-				result = err
-				return result
+		// Classify before Prepare, so that when Prepare fails a dry run can tell a preflight
+		// result from an artifact of the phases it just skipped. See the two uses below.
+		skipUnderDryRun := m.DryRun && ClassifyDryRun(p) == DryRunSkip
+
+		if cp, ok := p.(withconfig); ok {
+			l.Debug("preparing", "phase", title)
+			if err := cp.Prepare(ctx, m.Config, m.Distro); err != nil {
+				// A phase a dry run was going to skip cannot always prepare, because its
+				// Prepare reads state an earlier skipped phase would have created: KubeConfig
+				// and LabelNodes both look for a running controller and return
+				// ErrNoControllers when there is none. Failing here would make --dry-run
+				// useless against the cluster it is worth most on, the one with nothing
+				// installed yet.
+				//
+				// So report the phase and say the assessment is partial. The cost is the
+				// ShouldRun filter below, which this skips for that one phase, so it may be
+				// listed when a real run would not have reached it. That is the safe direction
+				// to be wrong in: a dry run that names one phase too many is read and
+				// discounted, one that names too few is believed.
+				if !skipUnderDryRun {
+					result = err
+					return result
+				}
+				l.Info("would run", "phase", title, "unassessed", err.Error())
+				planned = append(planned, p)
+				continue
 			}
 		}
 
@@ -255,6 +344,24 @@ func (m *Manager) Run(ctx context.Context) error {
 			if !p.ShouldRun() {
 				continue
 			}
+		}
+
+		// A dry run only gets past here for a phase that has said how it behaves under one:
+		// readOnly, meaning it reads hosts and changes nothing, or withDryRun, meaning it has
+		// its own dry path. Everything else is reported and skipped. That default is deliberate
+		// -- a phase added later is safe without anyone having remembered to think about it.
+		//
+		// The skip is above the before hook because a hook that fires for a phase we are about
+		// to skip changes the host by another route.
+		//
+		// Lock lands here, which is the whole reason it is not special-cased: taking the cluster
+		// lock is not something to do a half version of. So a dry run holds no lock. It cannot
+		// block a real apply, and it can report state a concurrent apply is already moving. The
+		// matching Unlock is skipped with it, so nothing releases a lock that was never taken.
+		if skipUnderDryRun {
+			l.Info("would run", "phase", title)
+			planned = append(planned, p)
+			continue
 		}
 
 		// Run in-phase before hook if implemented.
@@ -298,5 +405,27 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 	}
 
+	if m.DryRun {
+		m.logDryRunSummary(ctx, ran, planned)
+	}
+
 	return nil
+}
+
+// logDryRunSummary reports what a dry run did and what it left alone.
+//
+// Each planned phase is listed with the same Explanation() that magefiles/gen-docs.go renders
+// into docs/phases/<name>.md, so the run and the docs describe a phase in the same words by
+// construction rather than by anyone keeping two strings in step.
+//
+// The list is not a static roster. Every phase's Prepare and ShouldRun has already run against
+// the live hosts, and both only read, so a phase whose work is already done -- an engine that is
+// running, a file that is present -- is filtered out before it reaches here.
+func (m *Manager) logDryRunSummary(ctx context.Context, ran, planned []Phase) {
+	l := logger.From(ctx)
+
+	l.Info("dry run finished", "ran", len(ran), "wouldRun", len(planned))
+	for _, p := range planned {
+		l.Info("would run", "phase", p.Title(), "detail", p.Explanation())
+	}
 }

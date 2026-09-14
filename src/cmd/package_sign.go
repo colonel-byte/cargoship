@@ -107,6 +107,9 @@ func newPackageSignCommand() *cobra.Command {
 
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 
+	addBuildFlags(cmd)
+	addRegistryFlags(cmd)
+
 	return cmd
 }
 

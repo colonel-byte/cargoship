@@ -19,7 +19,32 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/api"
+	"github.com/stretchr/testify/require"
 )
+
+func TestTarballSuffix(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		compression string
+		want        string
+	}{
+		{name: "unset defaults to uncompressed", compression: "", want: ".tar"},
+		{name: "none", compression: CompressionNone, want: ".tar"},
+		{name: "gzip", compression: CompressionGzip, want: ".tar.gz"},
+		{name: "zstd", compression: CompressionZstd, want: ".tar.zst"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ZarfDistroImageConfig{Compression: tt.compression}.TarballSuffix()
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTarballSuffixUnsupported(t *testing.T) {
+	_, err := ZarfDistroImageConfig{Compression: "bzip2"}.TarballSuffix()
+	require.ErrorContains(t, err, `unsupported image compression "bzip2"`)
+}
 
 func TestMetadataArches(t *testing.T) {
 	tests := []struct {
@@ -79,6 +104,41 @@ func TestBuildDataArches(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.build.Arches(); !slices.Equal(got, tt.want) {
+				t.Errorf("Arches() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDistroArches(t *testing.T) {
+	tests := []struct {
+		name   string
+		distro ZarfDistro
+		want   api.Arches
+	}{
+		{
+			name: "build wins over metadata",
+			distro: ZarfDistro{
+				Metadata: ZarfDistroMetadata{Architectures: api.Arches{"amd64", "arm64"}},
+				Build:    ZarfDistroBuildData{Architectures: api.Arches{"arm64"}},
+			},
+			want: api.Arches{"arm64"},
+		},
+		{
+			name:   "falls back to metadata when the package is not built yet",
+			distro: ZarfDistro{Metadata: ZarfDistroMetadata{Architecture: "amd64"}},
+			want:   api.Arches{"amd64"},
+		},
+		{
+			name:   "empty when neither is set",
+			distro: ZarfDistro{},
+			want:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.distro.Arches(); !slices.Equal(got, tt.want) {
 				t.Errorf("Arches() = %v, want %v", got, tt.want)
 			}
 		})
