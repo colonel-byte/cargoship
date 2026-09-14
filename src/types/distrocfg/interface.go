@@ -47,6 +47,8 @@ type DesiredFile struct {
 	Content []byte
 	// Mode is the file mode as chmod spells it, e.g. "0600".
 	Mode string
+	// NoRestart indicates changes to this file do not require draining or restarting the engine.
+	NoRestart bool
 }
 
 // Distro interface for any distro object

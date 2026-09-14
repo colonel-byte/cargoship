@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"os"
@@ -743,6 +744,52 @@ func TestDesiredFilesEmpty(t *testing.T) {
 	if len(got) != 0 {
 		t.Fatalf("DesiredFiles() = %+v, want empty map", got)
 	}
+}
+
+func TestDesiredFilesIncludesDistroReleaseMetadata(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{
+		Metadata: distro.ZarfDistroMetadata{
+			Name:              "rancher-rke2-v1.31.0",
+			Version:           "v1.31.0",
+			AggregateChecksum: "abc123hash",
+		},
+		Spec: distro.ZarfDistroSpec{
+			Type:    "rke2",
+			Version: "v1.31.0+rke2r1",
+			Config: distro.ZarfDistroConfig{
+				ImagesConfig: distro.ZarfDistroImageConfig{
+					Images: []string{"rancher/rke2-runtime:v1.31.0", "rancher/pause:3.9"},
+				},
+				Engine: dig.Mapping{
+					config.EngineAudit: dig.Mapping{"rules": []string{"audit"}},
+				},
+			},
+		},
+	}
+	run := cluster.ZarfRuntimeMeta{}
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	require.NoError(t, err)
+
+	metaFile, ok := got[DistroReleaseFile]
+	require.True(t, ok, "DistroReleaseFile must be present in DesiredFiles")
+	require.Equal(t, modeConfigFile, metaFile.Mode)
+
+	var parsed struct {
+		Name              string   `json:"name"`
+		DistroVersion     string   `json:"distroVersion"`
+		AggregateChecksum string   `json:"aggregateChecksum"`
+		Images            []string `json:"images"`
+		ManagedFiles      []string `json:"managedFiles"`
+	}
+	err = json.Unmarshal(metaFile.Content, &parsed)
+	require.NoError(t, err)
+	require.Equal(t, "rancher-rke2-v1.31.0", parsed.Name)
+	require.Equal(t, "v1.31.0+rke2r1", parsed.DistroVersion)
+	require.Equal(t, "abc123hash", parsed.AggregateChecksum)
+	require.Equal(t, []string{"rancher/rke2-runtime:v1.31.0", "rancher/pause:3.9"}, parsed.Images)
+	require.Contains(t, parsed.ManagedFiles, filepath.Join(filepath.Dir(d.Config), "audit.yaml"))
 }
 
 func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {

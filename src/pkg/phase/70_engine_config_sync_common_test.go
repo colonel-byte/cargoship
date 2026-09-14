@@ -52,6 +52,14 @@ func (c *fileConfigurer) ReadFile(_ rigos.Host, path string) (string, error) {
 	return content, nil
 }
 
+func (c *fileConfigurer) WriteFile(_ rigos.Host, path string, content string, _ string) error {
+	if c.files == nil {
+		c.files = make(map[string]string)
+	}
+	c.files[path] = content
+	return nil
+}
+
 func (c *fileConfigurer) Stat(_ rigos.Host, path string, _ ...exec.Option) (*rigos.FileInfo, error) {
 	if c.statErr != nil {
 		return nil, c.statErr
@@ -147,4 +155,19 @@ func TestDriftReasonIsPerHost(t *testing.T) {
 
 	require.Empty(t, p.driftReason(inSync), "a host with nothing to write has no drift to report")
 	require.Equal(t, "registries.yaml (missing)", p.driftReason(drifted))
+}
+
+func TestNeedsUpdateNoRestartOnlyWritesDirectly(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		distrocfg.DistroReleaseFile: {Content: []byte(`{"name":"rke2"}`), Mode: "0600", NoRestart: true},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+
+	fc := &fileConfigurer{files: map[string]string{}}
+	h := &cluster.ZarfHost{Configurer: fc}
+
+	// Should not trigger node update/drain
+	require.False(t, p.needsUpdate(h))
+	// But should have written the NoRestart file directly
+	require.JSONEq(t, `{"name":"rke2"}`, fc.files[distrocfg.DistroReleaseFile])
 }
