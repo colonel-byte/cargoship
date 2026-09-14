@@ -15,9 +15,13 @@
 package utils
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestResolveCachePathExplicit(t *testing.T) {
@@ -44,4 +48,64 @@ func TestResolveCachePathDefaultUsesUserCacheDir(t *testing.T) {
 	if got != wantPrefix {
 		t.Fatalf("ResolveCachePath default: got %q, want %q", got, wantPrefix)
 	}
+}
+
+func TestDownloadToCacheWithSHA256(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", tmpDir)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("test content payload")); err != nil {
+			t.Errorf("writing test response: %v", err)
+		}
+	}))
+	defer ts.Close()
+
+	// sha256 of "test content payload"
+	const validSha = "ece3930c9301a5dfa3754d55161558076c4a3fa898f6fd9374c54138853ad3ea"
+
+	// Success case
+	target, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	require.NoError(t, err)
+	require.FileExists(t, target)
+
+	// Second call uses cache
+	target2, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	require.NoError(t, err)
+	require.Equal(t, target, target2)
+
+	// Mismatch case
+	_, err = DownloadToCache(ts.URL, "test/file2.txt", "invalidsha256hash")
+	require.ErrorContains(t, err, "checksum mismatch")
+}
+
+// A cache entry whose contents no longer match the checksum is replaced rather than handed back,
+// so a truncated or tampered file does not pin every later run to the bad copy.
+func TestDownloadToCacheReplacesCorruptedEntry(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", tmpDir)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("test content payload")); err != nil {
+			t.Errorf("writing test response: %v", err)
+		}
+	}))
+	defer ts.Close()
+
+	// sha256 of "test content payload"
+	const validSha = "ece3930c9301a5dfa3754d55161558076c4a3fa898f6fd9374c54138853ad3ea"
+
+	target, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(target, []byte("corrupted"), 0o644))
+
+	got, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	require.NoError(t, err)
+	require.Equal(t, target, got)
+
+	content, err := os.ReadFile(got)
+	require.NoError(t, err)
+	require.Equal(t, "test content payload", string(content))
 }
