@@ -21,9 +21,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -42,10 +42,12 @@ const exampleCacheOff = "CARGOSHIP_EXAMPLES_NO_CACHE"
 // root; resolving it once is what keeps every asset in a run agreeing on where the cache is.
 const exampleConfigPath = "cargoship-config.yaml"
 
-// releaseLinesEntry is one cached asset: the lines it held, and the URL they came from.
-// Keeping the URL is what makes a hit trustworthy -- the same asset name on the same tag can
-// be served by a different repository, so an entry fetched from some other URL is a miss
-// rather than an answer. This is the rule example/shasums.json follows for the same reason.
+// releaseLinesEntry is one cached asset: the lines it held, and the URL they came from. An
+// entry is written as JSON rather than the bytes upstream served, so that a file cut short
+// fails to parse instead of reading back as a whole asset. The file name already encodes the
+// URL, so the field is what makes an entry readable on its own -- and it is still checked on
+// the way back out, so an entry recorded against some other URL is a miss rather than an
+// answer. This is the rule example/shasums.json follows.
 type releaseLinesEntry struct {
 	URL   string   `json:"url"`
 	Lines []string `json:"lines"`
@@ -134,31 +136,33 @@ func expandHome(path string) (string, error) {
 	return filepath.Join(home, strings.TrimPrefix(strings.TrimPrefix(path, "~"), "/")), nil
 }
 
-// entryPath is where the asset one release publishes is cached. Repository, tag and asset
-// name are each escaped into a single path segment, so that a slash in any of them names a
-// file inside the cache rather than walking out of it.
-func (c *releaseLinesCache) entryPath(repoURL, tagURL, asset string) string {
+var (
+	assetScheme = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*://`)
+	assetSep    = regexp.MustCompile(`/`)
+)
+
+// entryName flattens an asset URL into one file name, the way image tarballs are named from
+// image references in phase 50: drop the scheme, and every separator becomes an underscore.
+// The whole URL is in the name, so two repositories serving the same asset on the same tag
+// cache apart, and no part of a URL can name a directory of its own or walk out of the cache.
+func entryName(assetURL string) string {
+	return assetSep.ReplaceAllLiteralString(assetScheme.ReplaceAllLiteralString(assetURL, ""), "_")
+}
+
+// entryPath is where the asset assetURL serves is cached: one flat file per asset, under the
+// one cache directory.
+func (c *releaseLinesCache) entryPath(assetURL string) string {
 	if c.dir == "" {
 		return ""
 	}
-	return filepath.Join(c.dir, repoSegment(repoURL), url.PathEscape(tagURL), url.PathEscape(asset)+".json")
-}
-
-// repoSegment renders a repository URL as one path segment, keeping the host and path so
-// that two repositories serving the same asset name on the same tag cache separately.
-func repoSegment(repoURL string) string {
-	trimmed := strings.TrimSuffix(repoURL, "/")
-	if u, err := url.Parse(trimmed); err == nil && u.Host != "" {
-		trimmed = u.Host + u.Path
-	}
-	return url.PathEscape(strings.TrimPrefix(trimmed, "/"))
+	return filepath.Join(c.dir, entryName(assetURL))
 }
 
 // lookup returns what was cached for assetURL. Anything unreadable, unparsable, empty, or
 // recorded against a different URL is a miss, so a half-written or superseded entry costs a
 // refetch rather than yielding a partial image list.
-func (c *releaseLinesCache) lookup(repoURL, tagURL, asset, assetURL string) ([]string, bool) {
-	path := c.entryPath(repoURL, tagURL, asset)
+func (c *releaseLinesCache) lookup(assetURL string) ([]string, bool) {
+	path := c.entryPath(assetURL)
 	if path == "" {
 		return nil, false
 	}
@@ -180,8 +184,8 @@ func (c *releaseLinesCache) lookup(repoURL, tagURL, asset, assetURL string) ([]s
 // store records what assetURL served. A cache that cannot be written is reported once and
 // then left alone: it costs a refetch, not a render, and repeating the same warning for
 // every asset of every tag would bury the output it is printed among.
-func (c *releaseLinesCache) store(repoURL, tagURL, asset, assetURL string, lines []string) {
-	path := c.entryPath(repoURL, tagURL, asset)
+func (c *releaseLinesCache) store(assetURL string, lines []string) {
+	path := c.entryPath(assetURL)
 	if path == "" || len(lines) == 0 {
 		return
 	}

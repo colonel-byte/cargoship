@@ -569,7 +569,7 @@ func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
 	url := fmt.Sprintf("%s/releases/download/%s/%s", strings.TrimSuffix(repoURL, "/"), tagURL, asset)
 
 	cache := releaseLines()
-	if lines, ok := cache.lookup(repoURL, tagURL, asset, url); ok {
+	if lines, ok := cache.lookup(url); ok {
 		return lines, nil
 	}
 
@@ -589,6 +589,6 @@ func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
 	}
 
 	lines := splitReleaseLines(body)
-	cache.store(repoURL, tagURL, asset, url, lines)
+	cache.store(url, lines)
 	return lines, nil
 }

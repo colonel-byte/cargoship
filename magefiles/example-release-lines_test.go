@@ -42,20 +42,24 @@ func TestReleaseLinesCacheRoundTrip(t *testing.T) {
 	url := assetURL(rke2Repo, rke2Tag, coreAsset)
 	want := []string{"rancher/rke2-runtime:v1.36.4", "rancher/pause:3.9"}
 
-	c.store(rke2Repo, rke2Tag, coreAsset, url, want)
+	c.store(url, want)
 
-	got, ok := c.lookup(rke2Repo, rke2Tag, coreAsset, url)
+	got, ok := c.lookup(url)
 	require.True(t, ok, "an asset just stored is a hit")
 	require.Equal(t, want, got)
 }
 
-// The URL an entry was fetched from is part of what makes it usable: the same asset name on
-// the same tag served from somewhere else is a miss, not an answer.
+// The URL an entry was fetched from is part of what makes it usable: an entry recorded
+// against another URL is a miss, not an answer.
 func TestReleaseLinesCacheURLMismatchIsMiss(t *testing.T) {
 	c := &releaseLinesCache{dir: t.TempDir()}
-	c.store(rke2Repo, rke2Tag, coreAsset, assetURL(rke2Repo, rke2Tag, coreAsset), []string{"rancher/pause:3.9"})
+	url := assetURL(rke2Repo, rke2Tag, coreAsset)
+	c.store(url, []string{"rancher/pause:3.9"})
 
-	_, ok := c.lookup(rke2Repo, rke2Tag, coreAsset, assetURL("https://mirror.example.com/rke2", rke2Tag, coreAsset))
+	path := c.entryPath(url)
+	require.NoError(t, os.WriteFile(path, []byte(`{"url":"https://elsewhere.example.com/x","lines":["x"]}`), 0o644))
+
+	_, ok := c.lookup(url)
 	require.False(t, ok, "an entry fetched from another URL cannot answer for this one")
 }
 
@@ -64,10 +68,10 @@ func TestReleaseLinesCacheSeparatesRepos(t *testing.T) {
 	c := &releaseLinesCache{dir: t.TempDir()}
 	mirror := "https://mirror.example.com/rke2"
 
-	c.store(rke2Repo, rke2Tag, coreAsset, assetURL(rke2Repo, rke2Tag, coreAsset), []string{"upstream"})
-	c.store(mirror, rke2Tag, coreAsset, assetURL(mirror, rke2Tag, coreAsset), []string{"mirror"})
+	c.store(assetURL(rke2Repo, rke2Tag, coreAsset), []string{"upstream"})
+	c.store(assetURL(mirror, rke2Tag, coreAsset), []string{"mirror"})
 
-	got, ok := c.lookup(rke2Repo, rke2Tag, coreAsset, assetURL(rke2Repo, rke2Tag, coreAsset))
+	got, ok := c.lookup(assetURL(rke2Repo, rke2Tag, coreAsset))
 	require.True(t, ok)
 	require.Equal(t, []string{"upstream"}, got)
 }
@@ -77,14 +81,14 @@ func TestReleaseLinesCacheSeparatesRepos(t *testing.T) {
 func TestReleaseLinesCacheTruncatedEntryIsMiss(t *testing.T) {
 	c := &releaseLinesCache{dir: t.TempDir()}
 	url := assetURL(rke2Repo, rke2Tag, coreAsset)
-	c.store(rke2Repo, rke2Tag, coreAsset, url, []string{"rancher/pause:3.9"})
+	c.store(url, []string{"rancher/pause:3.9"})
 
-	path := c.entryPath(rke2Repo, rke2Tag, coreAsset)
+	path := c.entryPath(url)
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, data[:len(data)/2], 0o644))
 
-	_, ok := c.lookup(rke2Repo, rke2Tag, coreAsset, url)
+	_, ok := c.lookup(url)
 	require.False(t, ok, "half an entry is not an asset")
 }
 
@@ -94,9 +98,9 @@ func TestReleaseLinesCacheEmptyIsNotStored(t *testing.T) {
 	c := &releaseLinesCache{dir: t.TempDir()}
 	url := assetURL(rke2Repo, rke2Tag, coreAsset)
 
-	c.store(rke2Repo, rke2Tag, coreAsset, url, nil)
+	c.store(url, nil)
 
-	_, ok := c.lookup(rke2Repo, rke2Tag, coreAsset, url)
+	_, ok := c.lookup(url)
 	require.False(t, ok)
 }
 
@@ -106,29 +110,34 @@ func TestReleaseLinesCacheOffIsANoOp(t *testing.T) {
 	c := &releaseLinesCache{}
 	url := assetURL(rke2Repo, rke2Tag, coreAsset)
 
-	require.Empty(t, c.entryPath(rke2Repo, rke2Tag, coreAsset))
-	c.store(rke2Repo, rke2Tag, coreAsset, url, []string{"rancher/pause:3.9"})
+	require.Empty(t, c.entryPath(url))
+	c.store(url, []string{"rancher/pause:3.9"})
 
-	_, ok := c.lookup(rke2Repo, rke2Tag, coreAsset, url)
+	_, ok := c.lookup(url)
 	require.False(t, ok)
 }
 
-// A slash in a tag or asset name names a file inside the cache rather than walking out of it.
+// An asset URL is one flat file name, the way an image reference is one tarball name.
+func TestEntryName(t *testing.T) {
+	require.Equal(t,
+		"github.com_rancher_rke2_releases_download_v1.36.4+rke2r1_rke2-images-core.linux-amd64.txt",
+		entryName(assetURL(rke2Repo, rke2Tag, coreAsset)))
+	require.NotEqual(t,
+		entryName(assetURL(rke2Repo, rke2Tag, coreAsset)),
+		entryName(assetURL("https://mirror.example.com/rke2", rke2Tag, coreAsset)),
+		"two repositories serving the same asset cache apart")
+}
+
+// Nothing in a URL can name a directory of its own or walk out of the cache.
 func TestEntryPathStaysInsideCacheDir(t *testing.T) {
 	dir := t.TempDir()
 	c := &releaseLinesCache{dir: dir}
 
-	path := c.entryPath(rke2Repo, "../../escape", "../../../etc/passwd")
+	path := c.entryPath("https://github.com/../../../etc/passwd/releases/download/../../x.txt")
 
+	require.Equal(t, dir, filepath.Dir(path), "the entry is written directly in the cache directory")
 	require.True(t, strings.HasPrefix(filepath.Clean(path), filepath.Clean(dir)+string(filepath.Separator)),
 		"entry path %q escaped the cache directory %q", path, dir)
-}
-
-// The repository a release came from is one path segment, host and all.
-func TestRepoSegment(t *testing.T) {
-	require.Equal(t, "github.com%2Francher%2Frke2", repoSegment(rke2Repo))
-	require.Equal(t, "github.com%2Francher%2Frke2", repoSegment(rke2Repo+"/"), "a trailing slash names the same repository")
-	require.NotEqual(t, repoSegment(rke2Repo), repoSegment("https://github.com/k3s-io/k3s"))
 }
 
 // A leading ~ resolves against the home directory; anything else is left as written.
