@@ -235,6 +235,8 @@ func TestPathIsDecryptable(t *testing.T) {
 		{".spec.config.registries[12].auth.token", true},
 		{".spec.config.registries[0].tls.ca", true},
 		{"$.spec.config.registries[0].auth.pass", true},
+		{".spec.config.values.vsphere.password", true},
+		{"$.spec.config.values.secret", true},
 		{".spec.config.registries[0].tls.insecureSkipVerify", false},
 		{".spec.config.registries[0].name", false},
 		{".spec.config.loadbalancer", false},

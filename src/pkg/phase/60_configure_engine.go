@@ -65,7 +65,12 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 		logger.From(ctx).Warn("failed to decrypt registry auth", "error", err)
 		return err
 	}
+	if err := clustercfg.DecryptValues(c.Spec.Config.Values, p.VaultPassword); err != nil {
+		logger.From(ctx).Warn("failed to decrypt values", "error", err)
+		return err
+	}
 	p.run.Registries = c.Spec.Config.Registries
+	p.run.Values = c.Spec.Config.Values
 
 	for _, h := range p.control {
 		p.run.ControllerTLS = append(p.run.ControllerTLS, h.Configurer.Hostname(h))

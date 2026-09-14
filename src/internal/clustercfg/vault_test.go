@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/k0sproject/dig"
 	vault "github.com/sosedoff/ansible-vault-go"
 )
 
@@ -400,5 +401,32 @@ func TestVerifyRegistryAuthNothingEncrypted(t *testing.T) {
 
 	if err := VerifyRegistryAuth(dis, ""); err != nil {
 		t.Fatalf("VerifyRegistryAuth() error = %v", err)
+	}
+}
+
+func TestDecryptValues(t *testing.T) {
+	const password = "testpass"
+	encSecret, err := vault.Encrypt("my-super-secret", password)
+	if err != nil {
+		t.Fatalf("vault.Encrypt() error = %v", err)
+	}
+
+	values := map[string]any{
+		"vsphere": map[string]any{
+			"password": encSecret,
+			"host":     "vcenter.local",
+		},
+	}
+
+	if err := DecryptValues(values, password); err != nil {
+		t.Fatalf("DecryptValues() error = %v", err)
+	}
+
+	sub := values["vsphere"].(dig.Mapping)
+	if sub["password"] != "my-super-secret" {
+		t.Errorf("DecryptValues() vsphere.password = %q, want %q", sub["password"], "my-super-secret")
+	}
+	if sub["host"] != "vcenter.local" {
+		t.Errorf("DecryptValues() vsphere.host = %q, want %q", sub["host"], "vcenter.local")
 	}
 }

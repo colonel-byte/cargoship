@@ -51,11 +51,12 @@ var ErrWrappedTwice = errors.New("value is Ansible Vault-encrypted more than onc
 // promises a decryption that never happens. Everything else in this package derives the paths it
 // cares about from these, so that keeping them in step is the only obligation.
 const registriesPath = "$.spec.config.registries"
+const valuesPath = "$.spec.config.values"
 
 var vaultedFields = []string{"auth.user", "auth.pass", "auth.token", "tls.ca"}
 
 // decryptablePath matches the paths whose values DecryptRegistryAuth reads at apply time.
-var decryptablePath = regexp.MustCompile(`^` + regexp.QuoteMeta(registriesPath) + `\[\d+]\.(` + fieldAlternation(vaultedFields) + `)$`)
+var decryptablePath = regexp.MustCompile(`^(` + regexp.QuoteMeta(registriesPath) + `\[\d+]\.(` + fieldAlternation(vaultedFields) + `)|` + regexp.QuoteMeta(valuesPath) + `(\..+)?)$`)
 
 // fieldAlternation renders fields as a regexp alternation, so that decryptablePath is built from
 // the same list EncryptConfig walks rather than restating it.

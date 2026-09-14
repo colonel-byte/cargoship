@@ -16,6 +16,9 @@
       ],
       "type": "object"
     },
+    "Mapping": {
+      "type": "object"
+    },
     "OpenSSH": {
       "additionalProperties": false,
       "patternProperties": {
@@ -196,6 +199,11 @@
             "$ref": "#/$defs/ZarfClusterRegistries"
           },
           "type": "array"
+        },
+        "values": {
+          "additionalProperties": true,
+          "description": "Helm-style values interface passed to distro manifests.",
+          "type": "object"
         }
       },
       "required": [

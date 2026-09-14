@@ -33,6 +33,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/types"
 	"github.com/invopop/jsonschema"
+	"github.com/k0sproject/dig"
 )
 
 // ZarfCluster is the root object of a cluster configuration document.
@@ -69,6 +70,8 @@ type ZarfRuntimeMeta struct {
 	Leader *ZarfHost
 	// Registries lists the container registries the cluster uses.
 	Registries []ZarfClusterRegistries
+	// Values holds Helm-style values passed down from the cluster inventory.
+	Values dig.Mapping
 }
 
 // ZarfClusterSpec holds the configuration and hosts for a cluster.
@@ -87,6 +90,20 @@ type ZarfClusterConfig struct {
 	Registries []ZarfClusterRegistries `json:"registries,omitempty"`
 	// Profiles maps a profile name to host and engine overrides that a host can select.
 	Profiles map[string]ZarfClusterProfiles `json:"profiles,omitempty"`
+	// Values holds free-form Helm-style values passed to distro manifests.
+	Values dig.Mapping `json:"values,omitempty"`
+}
+
+// JSONSchemaExtend ensures the free-form Values mapping is represented cleanly in jsonschema.
+func (ZarfClusterConfig) JSONSchemaExtend(s *jsonschema.Schema) {
+	values, ok := s.Properties.Get("values")
+	if !ok {
+		return
+	}
+	values.Ref = ""
+	values.Type = "object"
+	values.Description = "Helm-style values interface passed to distro manifests."
+	values.AdditionalProperties = &jsonschema.Schema{}
 }
 
 // ZarfClusterProfiles holds the host and engine overrides for one profile.

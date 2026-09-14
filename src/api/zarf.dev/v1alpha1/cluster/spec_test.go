@@ -17,6 +17,7 @@ package cluster
 import (
 	"testing"
 
+	"github.com/k0sproject/dig"
 	"github.com/stretchr/testify/require"
 )
 
@@ -398,4 +399,19 @@ dGhpcyBpcyBub3QgYSByZWFsIGNlcnRpZmljYXRl
 			require.EqualError(t, err, tc.wantErr)
 		})
 	}
+}
+
+func TestZarfClusterConfigValues(t *testing.T) {
+	cfg := ZarfClusterConfig{
+		Values: dig.Mapping{
+			"cilium": dig.Mapping{
+				"hubble": dig.Mapping{
+					"enabled": true,
+				},
+				"replicas": 2,
+			},
+		},
+	}
+	require.Equal(t, true, cfg.Values.Dig("cilium", "hubble", "enabled"))
+	require.Equal(t, 2, cfg.Values.Dig("cilium", "replicas"))
 }

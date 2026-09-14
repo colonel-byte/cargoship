@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/k0sproject/dig"
 	vault "github.com/sosedoff/ansible-vault-go"
 )
 
@@ -99,6 +100,45 @@ func DecryptRegistryAuth(dis *cluster.ZarfCluster, password string) error {
 			if err := registries[i].TLS.Validate(registries[i].Name); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+// DecryptValues recursively decrypts Ansible Vault-encrypted values inside a dig.Mapping in place.
+func DecryptValues(values dig.Mapping, password string) error {
+	for k, v := range values {
+		switch val := v.(type) {
+		case string:
+			if cluster.IsVaultEncrypted(val) {
+				if password == "" {
+					return fmt.Errorf("values %q is Ansible Vault-encrypted but no vault password was provided; pass --vault-password-file or set %s", k, VaultPasswordEnvVar)
+				}
+				plain, err := vault.Decrypt(val, password)
+				if err != nil {
+					return fmt.Errorf("values %q: decrypting: %w", k, err)
+				}
+				values[k] = plain
+			}
+		case dig.Mapping:
+			if err := DecryptValues(val, password); err != nil {
+				return err
+			}
+		case map[string]any:
+			sub := dig.Mapping(val)
+			if err := DecryptValues(sub, password); err != nil {
+				return err
+			}
+			values[k] = sub
+		case map[any]any:
+			sub := make(dig.Mapping, len(val))
+			for subK, subV := range val {
+				sub[fmt.Sprint(subK)] = subV
+			}
+			if err := DecryptValues(sub, password); err != nil {
+				return err
+			}
+			values[k] = sub
 		}
 	}
 	return nil
