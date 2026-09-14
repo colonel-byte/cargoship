@@ -17,16 +17,57 @@ package distrocfg
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"gopkg.in/yaml.v3"
 )
+
+// StateDir is where cargoship records state files describing the applied distro package.
+const StateDir = "/etc/cargoship"
+
+// DistroReleaseFile is the metadata file tracking the installed distro package on the host.
+const DistroReleaseFile = "/etc/cargoship/distro-release.json"
+
+// DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.
+func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error) {
+	if dis.Metadata.Name == "" && dis.Spec.Version == "" {
+		return "", DesiredFile{}, false, nil
+	}
+
+	managedList := make([]string, 0, len(managedFiles))
+	for p := range managedFiles {
+		if p != DistroReleaseFile {
+			managedList = append(managedList, p)
+		}
+	}
+	slices.Sort(managedList)
+
+	relData := map[string]any{
+		"name":              dis.Metadata.Name,
+		"version":           dis.Metadata.Version,
+		"distroType":        dis.Spec.Type,
+		"distroVersion":     dis.Spec.Version,
+		"description":       dis.Metadata.Description,
+		"architecture":      dis.Metadata.Architecture,
+		"aggregateChecksum": dis.Metadata.AggregateChecksum,
+		"build":             dis.Build,
+		"images":            dis.Spec.Config.ImagesConfig.Images,
+		"managedFiles":      managedList,
+	}
+	b, err := json.MarshalIndent(relData, "", "  ")
+	if err != nil {
+		return "", DesiredFile{}, false, fmt.Errorf("marshalling distro release metadata: %w", err)
+	}
+	return DistroReleaseFile, DesiredFile{Content: append(b, '\n'), Mode: "0600", NoRestart: true}, true, nil
+}
 
 var (
 	// ErrVersionNotDetected if a version is not detected

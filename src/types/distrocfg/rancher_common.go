@@ -386,6 +386,12 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = DesiredFile{Content: b, Mode: modeConfigFile}
 	}
 
+	if path, df, ok, err := DistroReleaseDesiredFile(dis, files); err != nil {
+		return nil, err
+	} else if ok {
+		files[path] = df
+	}
+
 	return files, nil
 }
 
@@ -555,11 +561,10 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 }
 
 // ManagedDirs returns the directories on a host whose contents cargoship owns outright. For
-// rke2 and k3s that is the directory holding the CA certificates written for registries that
-// carry an inline one: every file in it was put there by a registry entry, so a file with no
-// entry left behind it can go.
+// rke2 and k3s that includes the directory holding CA certificates and state metadata: every file
+// in it was put there by cargoship, so a file with no entry left behind it can go.
 func (d *RancherCommon) ManagedDirs() []string {
-	return []string{registryTLSDir}
+	return []string{registryTLSDir, StateDir}
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the engine data

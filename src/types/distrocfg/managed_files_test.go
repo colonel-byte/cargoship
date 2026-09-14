@@ -98,5 +98,5 @@ func TestRemoveStaleFilesError(t *testing.T) {
 // The CA directory is managed: cargoship writes every file in it, so it can also remove them.
 func TestManagedDirs(t *testing.T) {
 	d := &RancherCommon{}
-	require.Equal(t, []string{registryTLSDir}, d.ManagedDirs())
+	require.Equal(t, []string{registryTLSDir, StateDir}, d.ManagedDirs())
 }

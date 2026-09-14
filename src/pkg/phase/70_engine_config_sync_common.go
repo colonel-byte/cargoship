@@ -128,7 +128,58 @@ func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
 	}
 	p.drift[h] = drifted
 
-	return len(drifted) > 0
+	if len(drifted) == 0 {
+		return false
+	}
+
+	// Check if all drifted files are flagged NoRestart. If so, write them directly without triggering node drain/restart.
+	restartRequired := false
+	for path, want := range p.desired {
+		if !want.NoRestart {
+			base := filepath.Base(path)
+			for _, d := range drifted {
+				if strings.HasPrefix(d, base+" ") {
+					restartRequired = true
+					break
+				}
+			}
+		}
+		if restartRequired {
+			break
+		}
+	}
+
+	// Also check if any stale file requires engine restart (stale files in managed dirs)
+	if !restartRequired {
+		for _, d := range drifted {
+			if strings.HasSuffix(d, "(stale)") {
+				restartRequired = true
+				break
+			}
+		}
+	}
+
+	if !restartRequired {
+		// All drift is in NoRestart files (e.g. distro-release.json). Write in place immediately.
+		// A write that fails leaves the file as drifted as it was found, so the host is reported
+		// as needing an update and picks the file up on the drain-and-rewrite path rather than
+		// being counted as synced by a write that did not land.
+		for path, file := range p.desired {
+			if !file.NoRestart {
+				continue
+			}
+			mode := file.Mode
+			if mode == "" {
+				mode = defaultFileMode
+			}
+			if err := h.WriteFile(path, string(file.Content), mode); err != nil {
+				return true
+			}
+		}
+		return false
+	}
+
+	return true
 }
 
 // driftReason reports what needsUpdate found on this host, for the log line that precedes a
