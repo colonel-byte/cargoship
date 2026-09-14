@@ -50,6 +50,15 @@ Releases ship every OS/arch target twice, from two GoReleaser build definitions 
 
 Both install the binary as `cargoship`, so the two packages declare `provides: cargoship` and conflict with each other — only one can be installed at a time. Use the verification steps below to confirm which variant an artifact is.
 
+Container images are paired the same way. Each of the two image flavours ([static and UBI](goreleaser.md#container-images)) ships in both crypto variants, so a release publishes four manifests on `ghcr.io/colonel-byte/cargoship`:
+
+| Variant | Static image | UBI image |
+| :--- | :--- | :--- |
+| Stock crypto | `:<tag>`, `:latest` | `:<tag>-ubi` |
+| FIPS 140-3 | `:<tag>-fips`, `:latest-fips` | `:<tag>-ubi-fips` |
+
+The two halves of a pair share one Dockerfile and differ only in which build artifact GoReleaser feeds them — the FIPS binary installs under the same name and path, so entrypoint, user, `$HOME`, and `/workspace` are identical across all four. Picking the FIPS variant is a pure tag swap.
+
 ### Verifying a binary was built with FIPS 140-3 enabled
 
 **1. Build metadata (`go version -m`)** — the fastest check. Confirms `GOFIPS140` was set at compile time and that `fips140=on` is the binary's default `GODEBUG`:
@@ -78,3 +87,68 @@ $ GODEBUG=fips140=only ./build/cargoship_linux_amd64 version
 ```
 
 If the binary used any non-approved algorithm or mode, this would panic instead of running cleanly.
+
+### Verifying a container image was built FIPS-enabled
+
+The image adds no FIPS machinery of its own — it carries the binary verified above, so these checks are the same three checks reached through the image. Examples use the snapshot tags a local `--snapshot` run produces (`:v0.19.0-fips-amd64`); against a real release, drop the `-amd64` platform suffix and use the published tag.
+
+**1. The `fips140` label** — the cheapest triage, and the only check that works without pulling layers or running anything:
+
+```sh
+$ docker image inspect ghcr.io/colonel-byte/cargoship:<tag>-fips \
+    --format '{{ index .Config.Labels "io.github.colonel-byte.cargoship.fips140" }}'
+true
+```
+
+Set from `.goreleaser.yaml` on all four images, `"true"` on the FIPS pair and `"false"` on the stock pair. It is stated on both sides on purpose: a missing label is ambiguous between a stock image and one built before the variants existed, so treat absence as "unknown", not "no".
+
+Being a label, it records what the release config *claimed*, not what the binary *is*. It is a routing signal for scanners and admission policy; use checks 2–4 when you need the actual property.
+
+**2. Runtime enforcement (`GODEBUG=fips140=only`)** — the strongest check, and the one to reach for first, since it needs nothing but `docker run`. As with the bare binary, `only` makes the runtime refuse any crypto operation outside the FIPS-approved set, so a clean run is real evidence:
+
+```sh
+$ docker run --rm -e GODEBUG=fips140=only ghcr.io/colonel-byte/cargoship:<tag>-fips version
+0.19.1-snapshot
+```
+
+A stock image under the same variable does not necessarily fail on `version` alone — it fails once it reaches a non-approved primitive. Exercise a code path that actually does crypto for a conclusive negative.
+
+**3. Build metadata of the shipped binary (`go version -m`)** — proves `GOFIPS140` was set at compile time for the binary that is genuinely inside the image. Neither image has a shell, `go`, or (for the static one) any way to introspect itself, so copy the binary out and inspect it on the host. Note the two variants keep the binary at different paths, per the packaging difference described in the [goreleaser doc](goreleaser.md#ubi-variant):
+
+```sh
+$ cid=$(docker create ghcr.io/colonel-byte/cargoship:<tag>-fips)   # static: /usr/local/bin
+$ docker cp "$cid:/usr/local/bin/cargoship" /tmp/from-image && docker rm "$cid"
+$ go version -m /tmp/from-image | grep -i fips
+	build	DefaultGODEBUG=fips140=on
+	build	GOFIPS140=latest
+```
+
+```sh
+$ cid=$(docker create ghcr.io/colonel-byte/cargoship:<tag>-ubi-fips)   # UBI: /usr/bin
+$ docker cp "$cid:/usr/bin/cargoship" /tmp/from-ubi-image && docker rm "$cid"
+$ go version -m /tmp/from-ubi-image | grep -i fips
+	build	DefaultGODEBUG=fips140=on
+	build	GOFIPS140=latest
+```
+
+Run against a stock image, `grep` matches nothing — that empty result is the expected negative, and is what distinguishes the pair.
+
+**4. The installed package (UBI only)** — the UBI image installs the rpm rather than copying the binary, so the rpm database names the variant directly:
+
+```sh
+$ docker run --rm --entrypoint rpm ghcr.io/colonel-byte/cargoship:<tag>-ubi-fips -q cargoship-fips
+cargoship-fips-0.19.1~snapshot-1.x86_64
+```
+
+The stock image answers to `-q cargoship` instead. Since the two packages conflict, exactly one of the two queries succeeds on any given image, which makes this an unambiguous variant check on its own.
+
+**Cross-checking image against archive.** The [binary identity](goreleaser.md#binary-identity) property holds per variant: GoReleaser compiles each variant once and reuses that artifact for its archive, its packages, and both of its images. So the FIPS binary is byte-identical in all three places, and a signature verified against the FIPS archive transitively covers the FIPS images:
+
+```sh
+$ sha256sum dist/cargoship-fips_linux_amd64_v1/cargoship /tmp/from-image /tmp/from-ubi-image
+f1c536bbfc8657a46e6579f64308a06dee26436c345d807e7f3d6baa7c57a04f  dist/cargoship-fips_linux_amd64_v1/cargoship
+f1c536bbfc8657a46e6579f64308a06dee26436c345d807e7f3d6baa7c57a04f  /tmp/from-image
+f1c536bbfc8657a46e6579f64308a06dee26436c345d807e7f3d6baa7c57a04f  /tmp/from-ubi-image
+```
+
+The FIPS and stock hashes must differ from each other; if they match, the two `dockers_v2` entries are pointing at the same build id and the variants are not really distinct.

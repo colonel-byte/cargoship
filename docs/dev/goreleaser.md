@@ -14,9 +14,9 @@ A single `goreleaser release` run produces:
 
 *   **Archives** — `tar.gz` per OS/arch, named after `uname` conventions (`cargoship_Linux_x86_64.tar.gz`).
 *   **Packages** — `apk`, `deb`, and `rpm`, from the `nfpms` section, GPG-signed when `GPG_KEY_PATH` is set.
-*   **Container images** — two multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary) and `ghcr.io/colonel-byte/cargoship:<tag>-ubi` (Red Hat UBI, installs the rpm).
+*   **Container images** — four multi-platform manifests covering `linux/amd64` and `linux/arm64`, all on `ghcr.io/colonel-byte/cargoship`: `:<tag>` (Chainguard static, bare binary) and `:<tag>-ubi` (Red Hat UBI, installs the rpm), each with a FIPS 140-3 counterpart at `:<tag>-fips` and `:<tag>-ubi-fips`. See [FIPS Variants](#fips-variants).
 *   **SBOMs** — one per archive, via Syft.
-*   **Signatures** — cosign `sigstore.json` bundles over both the checksums file and every archive, plus registry signatures over both container images.
+*   **Signatures** — cosign `sigstore.json` bundles over both the checksums file and every archive, plus registry signatures over every container image.
 
 ## Build Matrix
 
@@ -40,7 +40,7 @@ Three consequences are worth internalizing:
 
 ### The Dockerfile Contract
 
-Both Dockerfiles live under `containers/` — `containers/base/Dockerfile` and `containers/ubi/Dockerfile` — and each is named explicitly by its `dockers_v2` entry's `dockerfile:` key. Neither compiles anything: GoReleaser has already built the binaries and packages by the time they run. The static image copies the binary, UBI installs the rpm. Adding a *compiling* stage to either would duplicate that work and break the guarantee described under [Binary Identity](#binary-identity).
+Both Dockerfiles live under `containers/` — `containers/base/Dockerfile` and `containers/ubi/Dockerfile` — and each is named explicitly by the `dockerfile:` key of every `dockers_v2` entry that uses it. There are two Dockerfiles but four entries: each file is built twice, once per crypto variant, with only `ids:` differing. See [FIPS Variants](#fips-variants). Neither compiles anything: GoReleaser has already built the binaries and packages by the time they run. The static image copies the binary, UBI installs the rpm. Adding a *compiling* stage to either would duplicate that work and break the guarantee described under [Binary Identity](#binary-identity).
 
 The directory name is deliberately generic: `containers/base/` is the plain-binary image whatever base it happens to sit on, so a future base swap does not force another rename. If it is ever renamed anyway, three other files have to move with it in the same commit — the `dockerfile:` key in `.goreleaser.yaml`, the lint matrix in `.github/workflows/scan-lint.yaml`, and the `directories:` list of the `docker` ecosystem in `.github/dependabot.yaml`.
 
@@ -125,6 +125,27 @@ Details worth knowing before editing it:
 
 The UBI base is substantially larger: roughly 354MB versus 137MB for the static image on amd64.
 
+### FIPS Variants
+
+Every image ships twice: once against stock Go crypto and once against the `cargoship-fips` build, which sets `GOFIPS140=latest`. That yields four `dockers_v2` entries and four published manifests.
+
+| Entry id | Dockerfile | `ids:` | Tags |
+| :--- | :--- | :--- | :--- |
+| `cargoship` | `containers/base` | `cargoship` | `:<tag>`, `:latest` |
+| `cargoship-fips` | `containers/base` | `cargoship-fips` | `:<tag>-fips`, `:latest-fips` |
+| `cargoship-ubi` | `containers/ubi` | `packagers` | `:<tag>-ubi` |
+| `cargoship-ubi-fips` | `containers/ubi` | `packagers-fips` | `:<tag>-ubi-fips` |
+
+**The Dockerfiles are shared, not forked.** The FIPS binary is still named `cargoship` and its rpm still installs under `/usr/bin`, so a Dockerfile cannot tell which variant it was handed and does not need to. `ids:` is the entire difference — it selects which upstream artifact lands in the build context.
+
+Keeping them shared is deliberate and worth preserving. A forked `containers/base-fips/Dockerfile` would double the hadolint matrix in `.github/workflows/scan-lint.yaml`, double the `directories:` list under dependabot's `docker` ecosystem, and split the base-image pins across two files that would then drift apart — for zero difference in content.
+
+**The FIPS-ness is declared with a label**, `io.github.colonel-byte.cargoship.fips140`, set in `.goreleaser.yaml` rather than in a `Dockerfile`. It has to live there: it varies per entry, and both entries read the same file. It is set on all four images — `"true"` on the FIPS pair, `"false"` on the stock pair — because an absent label cannot be distinguished from an image built before the variants existed. The key is a custom reverse-DNS one, not an `org.opencontainers.*` key, so it never collides with the `LABEL` block in either Dockerfile; see [OCI Labels](#oci-labels) for why a collision would matter.
+
+Nothing sets `GODEBUG` in the image. A `GOFIPS140` build already defaults to `fips140=on`, so the binary arrives in FIPS mode on its own, and pinning `fips140=only` in `ENV` would be a policy decision better left to the deployment. Callers who want the stricter mode pass it at `docker run` time, which is also how you verify the image — see [Verifying a container image](fips-build.md#verifying-a-container-image-was-built-fips-enabled).
+
+No workflow changes are needed for any of this. `docker_signs` leaves `artifacts` unset and so covers all four images, and the release job's existing QEMU and buildx setup already handles them.
+
 ### Image Runtime Layout
 
 *   Runs as uid/gid `65532`, which has a real `/etc/passwd` entry named `nonroot` with home `/home/nonroot` in both images, so `os/user` lookups and `$HOME` agree with each other and across variants. The static image inherits that account from its base; the UBI image creates it to match. The `USER` line stays numeric (`65532:65532`) so the image still runs correctly under a `runAsUser` that ignores names.
@@ -167,6 +188,8 @@ This pipe only runs on a real publish. A `--snapshot` run pushes nothing, so it 
 ## Binary Identity
 
 The binary is byte-identical everywhere it ships: the release archive, the apk/deb/rpm packages, the static image, and the UBI image (where it arrives via `rpm --install`). GoReleaser compiles once per target and reuses that one artifact downstream.
+
+The property holds *per crypto variant*, not across them: the stock binary is identical across stock artifacts and the FIPS binary across FIPS artifacts, and the two necessarily differ from each other. Compare like with like when checking it.
 
 This means a cosign verification against the released archive transitively covers the binary shipped in the image. Verify it yourself after a snapshot run:
 
