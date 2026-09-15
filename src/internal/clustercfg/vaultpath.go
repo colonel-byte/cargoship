@@ -547,14 +547,15 @@ func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, []
 // it cannot re-encrypt one to a different set of age recipients. rekey does both, so every reason
 // names it.
 //
-// age to age is the case worth the most care. A public key cannot decrypt and an age header names
-// no recipient, so "already encrypted to the keys you gave me" and "encrypted to somebody else's
-// key entirely" look exactly alike from here. Reporting the skip is the whole of what can be done
-// about it; see docs/agent/choice-age-encryption.md.
+// age to age is the case worth the most care. A public key cannot decrypt, and the stanzas that
+// might narrow it down are behind age's internal format package, so "already encrypted to the keys
+// you gave me" and "encrypted to somebody else's key entirely" look exactly alike from here.
+// Reporting the skip is the whole of what can be done about it; see
+// docs/agent/choice-age-encryption.md.
 func skipReason(existing, writing Format) string {
 	switch {
 	case existing == FormatAge && writing == FormatAge:
-		return "is encrypted to age recipients already, and cargoship cannot tell whether they are the ones you named, because age ciphertext does not record its recipients; run 'cargoship vault rekey' with an identity to re-encrypt it to the recipients you want"
+		return "is encrypted to age recipients already, and cargoship cannot tell whether they are the ones you named; run 'cargoship vault rekey' with an identity to re-encrypt it to the recipients you want"
 	case existing == FormatVault && writing == FormatAge:
 		return "is Ansible Vault-encrypted, and encrypt-file does not move a credential between formats; run 'cargoship vault rekey' with the vault password and the age recipients to move it onto age"
 	default:

@@ -16,10 +16,13 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
+	"os"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 const (
@@ -59,12 +62,43 @@ func addAgeFlags(cmd *cobra.Command, f *keyFlags) {
 }
 
 // keyOptions renders the flags as the options clustercfg resolves key material from.
-func (f *keyFlags) keyOptions() clustercfg.KeyOptions {
+//
+// cmd is carried in only for the passphrase prompt an encrypted SSH identity may need, which is the
+// one piece of key resolution that has to talk to a terminal.
+func (f *keyFlags) keyOptions(cmd *cobra.Command) clustercfg.KeyOptions {
 	return clustercfg.KeyOptions{
 		VaultPasswordFile: f.vaultPasswordFile,
 		AgeIdentityFiles:  f.ageIdentityFiles,
 		AgeRecipients:     f.ageRecipients,
 		AgeRecipientFiles: f.ageRecipientFiles,
+		SSHPassphrase:     sshPassphraseFunc(cmd),
+	}
+}
+
+// sshPassphraseFunc returns the callback clustercfg asks for the passphrase of an encrypted SSH
+// private key.
+//
+// It prompts only when stdin is a terminal, and otherwise returns an error naming the key. The
+// alternative -- reading the passphrase from the pipe stdin already carries -- would consume input
+// the command wanted for something else and would hang when there is none, so a scripted run fails
+// with something it can act on instead.
+//
+// clustercfg calls this lazily, only once a stanza matches the key, so a run whose key decrypts
+// nothing never reaches the prompt at all.
+func sshPassphraseFunc(cmd *cobra.Command) clustercfg.PassphraseFunc {
+	return func(path string) ([]byte, error) {
+		in, ok := cmd.InOrStdin().(*os.File)
+		if !ok || !term.IsTerminal(int(in.Fd())) {
+			return nil, fmt.Errorf("%s is protected by a passphrase, which can only be read from a terminal: decrypt the key first, or use one without a passphrase", path)
+		}
+
+		fmt.Fprintf(cmd.ErrOrStderr(), "Enter passphrase for %s: ", path)
+		passphrase, err := term.ReadPassword(int(in.Fd()))
+		fmt.Fprintln(cmd.ErrOrStderr())
+		if err != nil {
+			return nil, fmt.Errorf("reading the passphrase for %s: %w", path, err)
+		}
+		return passphrase, nil
 	}
 }
 
@@ -72,8 +106,8 @@ func (f *keyFlags) keyOptions() clustercfg.KeyOptions {
 //
 // An apply is the caller for that: a configuration holding no encrypted credential needs no key,
 // and demanding one would break every plaintext configuration that works today.
-func (f *keyFlags) resolveKeyring() (*clustercfg.Keyring, error) {
-	return clustercfg.ResolveKeyring(f.keyOptions())
+func (f *keyFlags) resolveKeyring(cmd *cobra.Command) (*clustercfg.Keyring, error) {
+	return clustercfg.ResolveKeyring(f.keyOptions(cmd))
 }
 
 // requireKeyring reads every key the flags name, treating the absence of all of them as an error
@@ -82,8 +116,8 @@ func (f *keyFlags) resolveKeyring() (*clustercfg.Keyring, error) {
 // This is what the vault commands call. Each of them exists to encrypt or decrypt one thing, so a
 // command that got no key at all cannot do its job, and saying so is better than failing later
 // inside the crypto with something less clear.
-func (f *keyFlags) requireKeyring() (*clustercfg.Keyring, error) {
-	keyring, err := f.resolveKeyring()
+func (f *keyFlags) requireKeyring(cmd *cobra.Command) (*clustercfg.Keyring, error) {
+	keyring, err := f.resolveKeyring(cmd)
 	if err != nil {
 		return nil, err
 	}

@@ -24,7 +24,11 @@ The `vault` command group keeps its name despite now covering both formats. Rena
 
 For age recipients that probe is **impossible**, and it is also **not protecting anything**.
 
-It is impossible because age ciphertext does not identify its recipients. The X25519 stanza is `-> X25519 <ephemeral share>`: two fields, no key hash, no fingerprint. That is deliberate -- ciphertext anonymity is a design goal of the format -- and it means only the *count* and *type* of stanzas can be read without a private key. A recipient is a public key, which cannot decrypt. There is nothing to compare and no way to compare it.
+It is impossible for two reasons, and the second is the durable one.
+
+An X25519 stanza is `-> X25519 <ephemeral share>`: two fields, no key hash, no fingerprint. Ciphertext anonymity is a design goal of the format. This does **not** generalise to every recipient type -- an `agessh` stanza carries a 32-bit hash of the public key, which is exactly the identifier the probe would want -- so it is not on its own a reason the probe cannot exist.
+
+The reason it cannot is that nothing here can read a stanza at all. `age.ExtractHeader` exists, but the `Stanza` fields it would yield live behind `filippo.io/age/internal/format`, and an internal package is not importable. Cargoship would have to parse the header text itself, duplicating a format it does not own, to recover an identifier that only some recipient types carry. A recipient is a public key, which cannot decrypt; there is nothing to compare against, and no supported way to reach the thing that would be compared.
 
 It is unnecessary because the invariant it defends is a property of the vault code path, not of encryption in general. `age.Decrypt` is variadic over identities, an identity file holds many, and every configured identity is tried. A document whose values are encrypted to different recipient sets is readable by anyone holding a matching key for each, so "several keys in one document" is a supported state for age rather than the broken one it is for vault.
 
@@ -56,7 +60,9 @@ The keyring therefore has to remember *where* each piece of key material came fr
 
 ## Why nothing is discovered
 
-Key material comes from flags, the config file's `age` section, `CARGOSHIP_AGE_IDENTITY_FILE`, and `CARGOSHIP_AGE_RECIPIENTS`. Nothing else. Cargoship does not read `~/.config/sops/age/keys.txt`, does not consult an agent, and never prompts.
+Key material comes from flags, the config file's `age` section, `CARGOSHIP_AGE_IDENTITY_FILE`, and `CARGOSHIP_AGE_RECIPIENTS`. Nothing else. Cargoship does not read `~/.config/sops/age/keys.txt`, does not consult an agent, and does not reach into `~/.ssh` for a key it was not pointed at.
+
+The one prompt in the whole path is for the passphrase of an SSH key the operator named, and the one derived path is the `.pub` file beside such a key; see below for why neither is an exception to this rule.
 
 This matches `ResolveVaultPassword`, which has never guessed or prompted, and the reason is the same: an apply that succeeds on one operator's machine because of a file the configuration never mentions is an apply nobody can reason about, and the failure mode shows up on someone else's machine, mid-cluster-change.
 
@@ -66,11 +72,36 @@ A recipients file that parses to no keys is an error rather than nothing to do. 
 
 ## Scope deliberately left out
 
-- **SSH keys** via `filippo.io/age/agessh`. A later change; it widens who can be a recipient without touching any of the reasoning above.
 - **age passphrases (scrypt).** It would duplicate what Ansible Vault already provides here -- a shared secret -- and age enforces scrypt-as-sole-recipient with a random label, which complicates the recipient path for no gain.
 - **Plugins.** These are a property of the `age` binary. Cargoship links the library so that encrypting and decrypting stays a pure in-process operation in a single static binary, the same reason recorded in [choice-vault-library](choice-vault-library.md).
+- **`ssh-agent`.** `agessh` needs the private key itself rather than a signing oracle, so an agent-held key cannot be used even though a passphrase-protected one on disk can.
 
 `ParseRecipients` may return a `*HybridRecipient` (post-quantum X-Wing). Passing it through costs nothing, so it works without any code of ours.
+
+## SSH keys, and the parsing they force
+
+`filippo.io/age/agessh` supplies `age.Recipient` and `age.Identity` implementations for `ssh-ed25519` and `ssh-rsa`, so an SSH key is invisible above `clustercfg`: nothing about the ciphertext, the header dispatch, or the skip reporting changes. What it widens is *who can use age at all*, since operators and CI already hold these keys and already maintain `authorized_keys` files.
+
+They go in the existing `--age-recipient`, `--age-recipients-file` and `--age-identity-file` rather than in parallel `--ssh-*` flags. That is what the `age` CLI does with `-r`/`-R`/`-i`, it keeps nine commands from growing three flags each, and it means an operator does not have to work out which kind of key they hold before choosing a flag.
+
+The cost of that decision is that cargoship has to do its own parsing, in `agessh.go`:
+
+- `age.ParseRecipients` fails the **whole file** on one line it does not recognise, and an SSH line is one. So recipients are scanned line by line here and dispatched on the `age1` prefix, which keeps a mixed file working. A line that parses as neither kind still fails the file, naming the line: skipping it would encrypt to fewer recipients than the operator listed, and the person who discovers that is the one who cannot decrypt.
+- Identities cannot be dispatched line by line at all, because an SSH private key is a multi-line PEM block. The file is read whole and routed on a `-----BEGIN ` header.
+- `parseRecipient` refuses anything beginning `AGE-SECRET-KEY-` or `-----BEGIN ` before handing it to `agessh`, because `agessh.ParseRecipient` quotes its argument back in its error where age's own parser deliberately does not. An identity file passed as a recipients file is an ordinary mistake, and a private key in a log has to be treated as compromised everywhere it was used.
+
+## Why the SSH passphrase prompt lives in src/cmd
+
+A passphrase-protected SSH key becomes an `agessh.EncryptedSSHIdentity`, which asks for the passphrase only once a stanza matches its public key and caches the decrypted key afterwards. That laziness is worth preserving: an operator holding a key nothing was encrypted to is never asked, and one whose key does match is asked once rather than once per credential. On an apply the ask therefore lands in the `VerifyRegistryAuth` preflight, before any host is touched.
+
+`clustercfg` does no terminal I/O, so `KeyOptions` carries a `PassphraseFunc` and the commands supply it. Two things fall out of that shape:
+
+- **A nil callback is an error, not a prompt.** A caller with nowhere to ask fails by construction rather than by luck, which is what CI wants.
+- **The prompt refuses a non-terminal rather than reading stdin.** Reading the passphrase from a pipe would consume input the command wanted for something else and would hang when there is none. Failing with a message naming the key is something a scripted run can act on.
+
+An older PEM key carries no public key beside its encrypted private key, so `ssh.PassphraseMissingError.PublicKey` is nil and the key has to come from the `.pub` file. That is the one path cargoship derives rather than being given, and it is derived from a path the operator named explicitly, read only when that key needs a passphrase -- which is why it does not contradict "nothing is discovered" above. The age CLI does the same.
+
+`AgeRecipientsIn` refuses an SSH private key rather than deriving a recipient from it: `agessh`'s recipient types have no text encoding to print, and `ssh-keygen` already wrote the public key into the file beside the key. Pointing at that is a better answer than any this could compute.
 
 ## Generating keys, and the refusals around it
 
@@ -87,6 +118,8 @@ The generated identity never passes through `logger`. Logging is wired to stderr
 ## Dependency
 
 `filippo.io/age` v1.3.2, BSD-3-Clause, which brings `filippo.io/hpke` v0.4.0 with it. Everything else it needs -- `chacha20poly1305`, `curve25519`, `hkdf`, `scrypt` -- was already vendored under `vendor/golang.org/x/crypto/`.
+
+`agessh` is a package of that same module, so SSH support added only `filippo.io/edwards25519` v1.2.0, which it uses to convert an Ed25519 key to X25519. `golang.org/x/crypto/ssh` was already vendored, and moved from an indirect dependency to a direct one because `clustercfg` now imports it for `ssh.PublicKey` and `ssh.PassphraseMissingError`.
 
 `ATTRIBUTION.md` covers *derived* code (k0sctl, zarf, bootloose) rather than dependencies, so it needs no entry; the vendored `LICENSE` is sufficient.
 
