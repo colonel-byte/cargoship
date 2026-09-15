@@ -208,11 +208,17 @@ Every registry credential in the file that is plaintext is encrypted to the reci
 
 Running it twice changes nothing the second time, so it is safe in a script or a pre-commit hook, and running it over a half-encrypted configuration finishes the job.
 
-There is one consequence of that worth stating plainly. `encrypt-file` **never moves a credential between formats, and never re-encrypts one to a new recipient set.** Running it with new recipients against a file whose credentials are already encrypted does nothing at all, and reports:
+There is one consequence of that worth stating plainly. `encrypt-file` **never moves a credential between formats, and never re-encrypts one to a new recipient set.** Running it with new recipients against a file whose credentials are already encrypted does nothing to the file. It does not do it quietly, though -- every credential it left alone is reported, with the reason:
 
 ```
-nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt
+WRN left this credential as it was: it is encrypted to age recipients already, and cargoship
+    cannot tell whether they are the ones you named, because age ciphertext does not record its
+    recipients; run 'cargoship vault rekey' with an identity to re-encrypt it to the recipients
+    you want  file=./cluster.yaml path=$.spec.config.registries[0].auth.pass
+INF nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt
 ```
+
+The same warning appears when the formats differ, naming the one the value is in and the `rekey` invocation that moves it. Warnings are written to stderr, so `--dry-run` piped to a file still produces a clean document.
 
 To change *which* keys a configuration is encrypted to, use `rekey`.
 
@@ -330,7 +336,7 @@ An age header does not say who a value was encrypted to. The X25519 stanza holds
 
 Two things follow, and both are worth knowing before they surprise you:
 
-* Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why `encrypt-file` skips an encrypted value rather than checking it, and why changing recipients is `rekey`'s job.
+* Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why `encrypt-file` skips an encrypted value rather than checking it, why it warns about every value it skipped rather than staying quiet, and why changing recipients is `rekey`'s job.
 * An error about a value you cannot read can never name the key you are missing. `none of the configured age identities can decrypt this value` is the whole of what is knowable.
 
 `docs/agent/choice-age-encryption.md` records the reasoning in full.

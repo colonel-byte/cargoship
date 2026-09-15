@@ -548,7 +548,7 @@ spec:
 // own. Before anchors were resolved this came back with nothing changed, which reads as a file with
 // no credentials in it rather than as one holding two in the clear.
 func TestEncryptConfigResolvesAnchors(t *testing.T) {
-	got, changed, err := EncryptConfig([]byte(anchorTestDoc), testKeyring, false)
+	got, changed, _, err := EncryptConfig([]byte(anchorTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -591,12 +591,12 @@ func TestEncryptConfigResolvesAnchors(t *testing.T) {
 // own: the second visit would find ciphertext under the new password and report it as a value the
 // old password cannot read.
 func TestRekeyConfigResolvesAnchors(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(anchorTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(anchorTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, changed, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
+	got, changed, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -604,7 +604,7 @@ func TestRekeyConfigResolvesAnchors(t *testing.T) {
 		t.Fatalf("changed = %v, want the two shared credentials once each", changed)
 	}
 
-	plain, _, err := DecryptConfig(got, rekeyKeyring)
+	plain, _, _, err := DecryptConfig(got, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
@@ -638,7 +638,7 @@ func TestEncryptAtPathThroughAlias(t *testing.T) {
 func TestEncryptConfigRejectsAnAliasWithoutAnAnchor(t *testing.T) {
 	doc := strings.Replace(anchorTestDoc, "auth: &auth", "auth:", 1)
 
-	_, _, err := EncryptConfig([]byte(doc), testKeyring, false)
+	_, _, _, err := EncryptConfig([]byte(doc), testKeyring, false)
 	if err == nil {
 		t.Fatal("EncryptConfig() error = nil, want an error naming the alias")
 	}
@@ -648,7 +648,7 @@ func TestEncryptConfigRejectsAnAliasWithoutAnAnchor(t *testing.T) {
 }
 
 func TestEncryptConfigEncryptsEveryCredential(t *testing.T) {
-	got, changed, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	got, changed, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -687,7 +687,7 @@ func TestEncryptConfigEncryptsEveryCredential(t *testing.T) {
 // TestEncryptConfigDecryptsAtApplyTime is the check that matters most: what encrypt-file writes has
 // to be what an apply reads back.
 func TestEncryptConfigDecryptsAtApplyTime(t *testing.T) {
-	got, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	got, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -721,12 +721,12 @@ func TestEncryptConfigDecryptsAtApplyTime(t *testing.T) {
 // TestEncryptConfigRoundTrip pins the property that makes the pair safe on a file under version
 // control, across a document with several registries.
 func TestEncryptConfigRoundTrip(t *testing.T) {
-	encrypted, encryptedPaths, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	encrypted, encryptedPaths, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, decryptedPaths, err := DecryptConfig(encrypted, testKeyring)
+	got, decryptedPaths, _, err := DecryptConfig(encrypted, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
@@ -739,12 +739,12 @@ func TestEncryptConfigRoundTrip(t *testing.T) {
 }
 
 func TestEncryptConfigIsIdempotent(t *testing.T) {
-	once, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	once, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	twice, changed, err := EncryptConfig(once, testKeyring, false)
+	twice, changed, _, err := EncryptConfig(once, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -766,7 +766,7 @@ func TestEncryptConfigFinishesAPartlyVaultedFile(t *testing.T) {
 	}
 	before := readPath(t, partial, done)
 
-	got, changed, err := EncryptConfig(partial, testKeyring, false)
+	got, changed, _, err := EncryptConfig(partial, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -779,18 +779,18 @@ func TestEncryptConfigFinishesAPartlyVaultedFile(t *testing.T) {
 		t.Errorf("ciphertext at %s changed", done)
 	}
 
-	if _, remaining, err := DecryptConfig(got, testKeyring); err != nil || len(remaining) != 4 {
+	if _, remaining, _, err := DecryptConfig(got, testKeyring); err != nil || len(remaining) != 4 {
 		t.Errorf("after finishing the job, DecryptConfig found %v (err = %v), want all four", remaining, err)
 	}
 }
 
 func TestEncryptConfigForceRewrapsEverything(t *testing.T) {
-	once, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	once, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	twice, changed, err := EncryptConfig(once, testKeyring, true)
+	twice, changed, _, err := EncryptConfig(once, testKeyring, true)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -799,7 +799,7 @@ func TestEncryptConfigForceRewrapsEverything(t *testing.T) {
 	}
 
 	// Unwrapping once should leave ciphertext rather than plaintext.
-	unwrapped, _, err := DecryptConfig(twice, testKeyring)
+	unwrapped, _, _, err := DecryptConfig(twice, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
@@ -809,7 +809,7 @@ func TestEncryptConfigForceRewrapsEverything(t *testing.T) {
 }
 
 func TestDecryptConfigSkipsPlaintext(t *testing.T) {
-	got, changed, err := DecryptConfig([]byte(configTestDoc), testKeyring)
+	got, changed, _, err := DecryptConfig([]byte(configTestDoc), testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
@@ -833,10 +833,10 @@ func TestConfigRejectsADocumentWithoutRegistries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, _, err := EncryptConfig([]byte(tt.doc), testKeyring, false); err == nil {
+			if _, _, _, err := EncryptConfig([]byte(tt.doc), testKeyring, false); err == nil {
 				t.Error("EncryptConfig() error = nil, want an error")
 			}
-			if _, _, err := DecryptConfig([]byte(tt.doc), testKeyring); err == nil {
+			if _, _, _, err := DecryptConfig([]byte(tt.doc), testKeyring); err == nil {
 				t.Error("DecryptConfig() error = nil, want an error")
 			}
 		})
@@ -859,14 +859,14 @@ func TestVaultedFieldsMatchPathIsDecryptable(t *testing.T) {
 // alone. The same vault password is used throughout, so encrypt-file has to pick up the new value
 // without disturbing the old one, and an apply has to read both back.
 func TestEncryptConfigRotatesOneCredential(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 	user := readPath(t, vaulted, ".spec.config.registries[0].auth.user")
 
 	// What the operator does by hand: replace the ciphertext with the new password in the clear.
-	got, changed, err := EncryptConfig(editPass(t, vaulted, "hunter3"), testKeyring, false)
+	got, changed, _, err := EncryptConfig(editPass(t, vaulted, "hunter3"), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -899,13 +899,13 @@ func TestEncryptConfigRotatesOneCredential(t *testing.T) {
 func TestEncryptConfigRejectsAnotherVaultPassword(t *testing.T) {
 	const otherPassword = "a-different-vault-password"
 
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 	edited := editPass(t, vaulted, "hunter3")
 
-	_, _, err = EncryptConfig(edited, NewVaultKeyring(otherPassword), false)
+	_, _, _, err = EncryptConfig(edited, NewVaultKeyring(otherPassword), false)
 	if err == nil {
 		t.Fatal("EncryptConfig() error = nil, want a refusal to mix vault passwords")
 	}
@@ -920,12 +920,12 @@ func TestEncryptConfigRejectsAnotherVaultPassword(t *testing.T) {
 // more, because this is the direction the fix runs in: a wrong password has to fail rather than
 // leave some values in the clear and the rest vaulted.
 func TestDecryptConfigRejectsAnotherVaultPassword(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, _, err := DecryptConfig(vaulted, NewVaultKeyring("a-different-vault-password"))
+	got, _, _, err := DecryptConfig(vaulted, NewVaultKeyring("a-different-vault-password"))
 	if err == nil {
 		t.Fatal("DecryptConfig() error = nil, want an error")
 	}
@@ -956,12 +956,12 @@ var rekeyKeyring = NewVaultKeyring(rekeyPassword)
 const passPath = "$.spec.config.registries[0].auth.pass"
 
 func TestRekeyConfigMovesEveryCredential(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, changed, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
+	got, changed, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -997,12 +997,12 @@ func TestRekeyConfigMovesEveryCredential(t *testing.T) {
 // rekey" with no new password named: every value comes back as different ciphertext that the
 // password the file already carried still reads.
 func TestRekeyConfigResaltsUnderTheSamePassword(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, changed, err := RekeyConfig(vaulted, testKeyring, testKeyring)
+	got, changed, _, err := RekeyConfig(vaulted, testKeyring, testKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -1021,7 +1021,7 @@ func TestRekeyConfigResaltsUnderTheSamePassword(t *testing.T) {
 	}
 
 	// The plaintext is what it always was, which is the part a re-salt must not disturb.
-	plain, _, err := DecryptConfig(got, testKeyring)
+	plain, _, _, err := DecryptConfig(got, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
@@ -1033,17 +1033,17 @@ func TestRekeyConfigResaltsUnderTheSamePassword(t *testing.T) {
 // TestRekeyConfigDecryptsAtApplyTime is the check that matters most, as it is for encrypt-file:
 // what a rotation writes has to be what an apply reads back, under the new password.
 func TestRekeyConfigDecryptsAtApplyTime(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	rekeyed, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
+	rekeyed, _, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
 
-	plain, _, err := DecryptConfig(rekeyed, rekeyKeyring)
+	plain, _, _, err := DecryptConfig(rekeyed, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
@@ -1056,12 +1056,12 @@ func TestRekeyConfigDecryptsAtApplyTime(t *testing.T) {
 }
 
 func TestRekeyConfigPreservesEverythingElse(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
+	got, _, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -1087,13 +1087,13 @@ func TestRekeyConfigPreservesEverythingElse(t *testing.T) {
 // back in the clear is not this command's business, and must come out the other side untouched
 // rather than vaulted under the new password as a side effect of a rotation.
 func TestRekeyConfigSkipsPlaintext(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 	edited := editPass(t, vaulted, "hunter3")
 
-	got, changed, err := RekeyConfig(edited, testKeyring, rekeyKeyring)
+	got, changed, _, err := RekeyConfig(edited, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -1109,12 +1109,12 @@ func TestRekeyConfigSkipsPlaintext(t *testing.T) {
 }
 
 func TestRekeyConfigRejectsTheWrongOldPassword(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, _, err := RekeyConfig(vaulted, NewVaultKeyring("not-the-old-password"), rekeyKeyring)
+	got, _, _, err := RekeyConfig(vaulted, NewVaultKeyring("not-the-old-password"), rekeyKeyring)
 	if err == nil {
 		t.Fatal("RekeyConfig() error = nil, want an error")
 	}
@@ -1130,7 +1130,7 @@ func TestRekeyConfigRejectsTheWrongOldPassword(t *testing.T) {
 func TestRekeyConfigRejectsAMixedFile(t *testing.T) {
 	const otherPassword = "a-different-vault-password"
 
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -1141,7 +1141,7 @@ func TestRekeyConfigRejectsAMixedFile(t *testing.T) {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
 
-	got, _, err := RekeyConfig(mixed, testKeyring, rekeyKeyring)
+	got, _, _, err := RekeyConfig(mixed, testKeyring, rekeyKeyring)
 	if err == nil {
 		t.Fatal("RekeyConfig() error = nil, want a refusal to rekey a file vaulted under two passwords")
 	}

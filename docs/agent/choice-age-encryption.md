@@ -36,6 +36,10 @@ A future change that tries to restore a general probe will find that it cannot b
 
 The one real cost is rotation-by-mistake: running `encrypt-file` with a new recipient set against an already-encrypted file does nothing, and the operator may believe it did something. This is addressed by *reporting the skip* rather than by detecting it cryptographically -- the command knows perfectly well that it skipped an encrypted value; what it cannot know is whether that was the right outcome, so it says so and lets the operator decide.
 
+`rewriteConfig`'s `wanted` callback is the only thing that knows why a value was left alone, so it carries the reason out as a `Skip{Path, Reason}`. An empty reason means the skip is not worth reporting, which keeps absent paths, empty values, and the vault-under-the-same-password case -- where the probe *did* answer the question -- silent without every caller filtering them itself. `skipReason` names `rekey` in all three cases it covers, because `rekey` is what does the thing the operator was probably attempting.
+
+The placement of the warnings matters as much as their text. `finishVaultFile` emits them **before** both its `--dry-run` branch and its `len(changed) == 0` early return, since a run that changed nothing is exactly the run the reporting exists for; emitting them after either would leave the loudest failure as the quietest output. They go to stderr through the logger, so a dry run piped to a file still yields a clean document.
+
 Changing which keys a document is encrypted to is `rekey`'s job, and always was. `rekey` reads with one key and writes with another, so cross-format migration falls straight out of the shape it already had: `rekey --vault-password-file old.txt --age-recipient age1...` is the whole vault-to-age path, with no new command and no window in which plaintext touches the disk.
 
 ## Why encryption picks a format but decryption never does
