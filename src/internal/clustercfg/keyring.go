@@ -15,6 +15,7 @@
 package clustercfg
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -87,6 +88,10 @@ type Keyring struct {
 	recipients []age.Recipient
 	// ageExplicit records the same thing as vaultExplicit, for the recipients.
 	ageExplicit bool
+
+	// sshPassphrase is how an encrypted SSH identity asks for its passphrase. It is held rather
+	// than called at resolve time because the ask is deferred until a stanza matches the key.
+	sshPassphrase PassphraseFunc
 }
 
 // KeyOptions is the key material a command was given, before any of it has been read or parsed.
@@ -99,6 +104,9 @@ type KeyOptions struct {
 	AgeRecipients []string
 	// AgeRecipientFiles are the paths passed to --age-recipients-file, each holding public keys.
 	AgeRecipientFiles []string
+	// SSHPassphrase is asked for the passphrase of an encrypted SSH identity. Leaving it nil says
+	// the caller has nowhere to ask, which makes such a key an error rather than a hang.
+	SSHPassphrase PassphraseFunc
 }
 
 // NewVaultKeyring returns a keyring holding only an Ansible Vault password, for a caller that has
@@ -124,6 +132,7 @@ func ResolveKeyring(o KeyOptions) (*Keyring, error) {
 		vaultPassword: password,
 		vaultExplicit: o.VaultPasswordFile != "",
 		ageExplicit:   len(o.AgeRecipients) > 0 || len(o.AgeRecipientFiles) > 0,
+		sshPassphrase: o.SSHPassphrase,
 	}
 
 	if err := k.loadIdentities(o.AgeIdentityFiles); err != nil {
@@ -135,8 +144,9 @@ func ResolveKeyring(o KeyOptions) (*Keyring, error) {
 	return k, nil
 }
 
-// loadIdentities reads the age private keys that decrypt, from the files given or from the
-// environment when none were.
+// loadIdentities reads the private keys that decrypt, from the files given or from the environment
+// when none were. A file may hold native age identities or an SSH private key; see
+// parseIdentityFile.
 func (k *Keyring) loadIdentities(files []string) error {
 	if len(files) == 0 {
 		if env := os.Getenv(AgeIdentityFileEnvVar); env != "" {
@@ -145,12 +155,11 @@ func (k *Keyring) loadIdentities(files []string) error {
 	}
 
 	for _, path := range files {
-		f, err := os.Open(path) //nolint:gosec // the path is the operator's own, given on the command line
+		contents, err := readKeyFile(path)
 		if err != nil {
 			return fmt.Errorf("reading age identity file: %w", err)
 		}
-		identities, err := age.ParseIdentities(f)
-		_ = f.Close() //nolint:errcheck // the file is open for reading, so the parse error is the one worth reporting
+		identities, err := parseIdentityFile(path, contents, k.sshPassphrase)
 		if err != nil {
 			return fmt.Errorf("parsing age identity file %s: %w", path, err)
 		}
@@ -162,8 +171,8 @@ func (k *Keyring) loadIdentities(files []string) error {
 	return nil
 }
 
-// loadRecipients reads the age public keys that encrypt, from the flags given or from the
-// environment when none were.
+// loadRecipients reads the public keys that encrypt, from the flags given or from the environment
+// when none were. A key may be a native age recipient or an SSH public key; see parseRecipient.
 //
 // A file that parses to no recipients is an error rather than nothing to do. Carrying on would
 // leave the keyring with a vault password and no recipients, and EncryptFormat would then quietly
@@ -175,23 +184,23 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 	}
 
 	for _, key := range keys {
-		parsed, err := age.ParseRecipients(strings.NewReader(key))
+		parsed, err := parseRecipient(key)
+		if errors.Is(err, errRecipientIsSecret) {
+			// Deliberately without the key: see the note on errRecipientIsSecret.
+			return fmt.Errorf("parsing an age recipient: %w", err)
+		}
 		if err != nil {
 			return fmt.Errorf("parsing age recipient %q: %w", key, err)
 		}
-		if len(parsed) == 0 {
-			return fmt.Errorf("age recipient %q is empty", key)
-		}
-		k.recipients = append(k.recipients, parsed...)
+		k.recipients = append(k.recipients, parsed)
 	}
 
 	for _, path := range files {
-		f, err := os.Open(path) //nolint:gosec // the path is the operator's own, given on the command line
+		contents, err := readKeyFile(path)
 		if err != nil {
 			return fmt.Errorf("reading age recipients file: %w", err)
 		}
-		parsed, err := age.ParseRecipients(f)
-		_ = f.Close() //nolint:errcheck // the file is open for reading, so the parse error is the one worth reporting
+		parsed, err := parseRecipients(bytes.NewReader(contents))
 		if err != nil {
 			return fmt.Errorf("parsing age recipients file %s: %w", path, err)
 		}

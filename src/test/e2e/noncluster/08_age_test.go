@@ -464,7 +464,7 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", other.recipient)
 		require.NoError(t, err)
 		require.Contains(t, stderr, "WRN")
-		require.Contains(t, stderr, "does not record its recipients")
+		require.Contains(t, stderr, "cannot tell whether they are the ones you named")
 		require.Contains(t, stderr, "rekey")
 		require.Contains(t, stderr, "nothing to encrypt")
 		require.Contains(t, stderr, "auth.pass")
@@ -515,8 +515,8 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 
 		stdout, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient, "--dry-run")
 		require.NoError(t, err)
-		require.Contains(t, stderr, "does not record its recipients")
-		require.NotContains(t, stdout, "does not record its recipients")
+		require.Contains(t, stderr, "cannot tell whether they are the ones you named")
+		require.NotContains(t, stdout, "cannot tell whether they are the ones you named")
 		require.Contains(t, stdout, "apiVersion:")
 	})
 

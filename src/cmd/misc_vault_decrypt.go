@@ -52,7 +52,7 @@ func newVaultDecryptCommand() *cobra.Command {
 }
 
 func (o *vaultDecryptOptions) run(cmd *cobra.Command, args []string) error {
-	keyring, err := o.requireKeyring()
+	keyring, err := o.requireKeyring(cmd)
 	if err != nil {
 		return err
 	}

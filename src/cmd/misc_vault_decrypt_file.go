@@ -53,7 +53,7 @@ func newVaultDecryptFileCommand() *cobra.Command {
 func (o *vaultDecryptFileOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	keyring, err := o.requireKeyring()
+	keyring, err := o.requireKeyring(cmd)
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,7 @@ $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargosh
 ```
   -h, --help            help for keygen
   -o, --output string   Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead.
-  -y, --public-key      Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given.
+  -y, --public-key      Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given. This reads age identity files; the public key of an SSH key is in the ".pub" file beside it.
 ```
 
 ### Options inherited from parent commands

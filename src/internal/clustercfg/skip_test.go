@@ -87,7 +87,7 @@ func TestEncryptConfigAgeToAgeReportsEverySkip(t *testing.T) {
 		t.Fatalf("skipped = %v, want all four credentials", skipPaths(skipped))
 	}
 	for _, skip := range skipped {
-		if !strings.Contains(skip.Reason, "does not record its recipients") {
+		if !strings.Contains(skip.Reason, "cannot tell whether they are the ones you named") {
 			t.Errorf("reason for %s = %q, want it to say the recipients cannot be checked", skip.Path, skip.Reason)
 		}
 		if !strings.Contains(skip.Reason, "rekey") {
@@ -193,7 +193,7 @@ func TestEncryptConfigMixedFormatsReportsBothReasons(t *testing.T) {
 	}
 	for _, skip := range skipped {
 		wantAge := skip.Path == path
-		gotAge := strings.Contains(skip.Reason, "does not record its recipients")
+		gotAge := strings.Contains(skip.Reason, "cannot tell whether they are the ones you named")
 		if gotAge != wantAge {
 			t.Errorf("reason for %s = %q, want the reason for the format it is in", skip.Path, skip.Reason)
 		}

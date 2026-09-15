@@ -206,7 +206,10 @@ $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt && git add ./cluster.yaml
 
 # Encrypt to the age recipients a team keeps in its config file, with no keys on the command line
-$ cargoship vault encrypt-file ./cluster.yaml`
+$ cargoship vault encrypt-file ./cluster.yaml
+
+# Encrypt to the SSH keys a team already distributes, using its authorized_keys file as it is
+$ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys`
 
 	// CmdVaultDecryptFileExample vault decrypt-file example
 	CmdVaultDecryptFileExample = `# Decrypt every registry credential in a cluster configuration
@@ -217,6 +220,9 @@ $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass
 
 # Decrypt a configuration encrypted to an age recipient
 $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ./key.txt
+
+# Decrypt one encrypted to an SSH public key, using the private key it pairs with
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25519
 
 # Rotate the password a whole configuration is vaulted with
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt

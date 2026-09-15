@@ -143,8 +143,23 @@ func WriteAgeIdentity(w io.Writer, id *age.X25519Identity) error {
 // An identity that is not an X25519 key is an error rather than a line quietly passed over. The
 // answer this is asked for is "who can read the values encrypted to this key", and a short answer
 // to that question is worse than no answer: the operator acts on it.
+//
+// An SSH private key is refused for the same reason and answered rather than derived. agessh's
+// recipients have no text encoding to print, and ssh-keygen already wrote the public key into the
+// ".pub" file beside the key, so pointing at that is a better answer than any this could compute.
 func AgeRecipientsIn(r io.Reader) ([]string, error) {
-	identities, err := age.ParseIdentities(r)
+	contents, err := io.ReadAll(io.LimitReader(r, keyFileSizeLimit+1))
+	if err != nil {
+		return nil, fmt.Errorf("reading age identities: %w", err)
+	}
+	if len(contents) > keyFileSizeLimit {
+		return nil, fmt.Errorf("the identities are longer than %d bytes", keyFileSizeLimit)
+	}
+	if bytes.HasPrefix(bytes.TrimLeft(contents, " \t\r\n"), []byte(pemHeaderPrefix)) {
+		return nil, errors.New("that is an SSH private key, whose public key this cannot print: use the \".pub\" file ssh-keygen wrote beside it, or run 'ssh-keygen -y -f' against it")
+	}
+
+	identities, err := age.ParseIdentities(bytes.NewReader(contents))
 	if err != nil {
 		return nil, fmt.Errorf("reading age identities: %w", err)
 	}
