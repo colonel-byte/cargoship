@@ -123,7 +123,7 @@ func TestDecryptRegistryAuthNoEncryptedValues(t *testing.T) {
 		},
 	}
 
-	if err := DecryptRegistryAuth(dis, ""); err != nil {
+	if err := DecryptRegistryAuth(dis, NewVaultKeyring("")); err != nil {
 		t.Fatalf("DecryptRegistryAuth() error = %v", err)
 	}
 
@@ -156,7 +156,7 @@ func TestDecryptRegistryAuthDecryptsEncryptedFields(t *testing.T) {
 		},
 	}
 
-	if err := DecryptRegistryAuth(dis, password); err != nil {
+	if err := DecryptRegistryAuth(dis, NewVaultKeyring(password)); err != nil {
 		t.Fatalf("DecryptRegistryAuth() error = %v", err)
 	}
 
@@ -186,14 +186,14 @@ func TestDecryptRegistryAuthMissingPassword(t *testing.T) {
 		},
 	}
 
-	err = DecryptRegistryAuth(dis, "")
+	err = DecryptRegistryAuth(dis, NewVaultKeyring(""))
 	if err == nil {
 		t.Fatal("DecryptRegistryAuth() error = nil, want an error for missing vault password")
 	}
 }
 
 func TestEncryptValueRoundTrip(t *testing.T) {
-	encrypted, err := EncryptValue("mysecret", "testpass")
+	encrypted, err := EncryptValue("mysecret", NewVaultKeyring("testpass"))
 	if err != nil {
 		t.Fatalf("EncryptValue() error = %v", err)
 	}
@@ -211,7 +211,7 @@ func TestEncryptValueRoundTrip(t *testing.T) {
 }
 
 func TestEncryptValueEmptyPassword(t *testing.T) {
-	_, err := EncryptValue("mysecret", "")
+	_, err := EncryptValue("mysecret", NewVaultKeyring(""))
 	if err == nil {
 		t.Fatal("EncryptValue() error = nil, want an error for empty password")
 	}
@@ -231,7 +231,7 @@ func TestDecryptRegistryAuthWrongPassword(t *testing.T) {
 		},
 	}
 
-	err = DecryptRegistryAuth(dis, "wrongpass")
+	err = DecryptRegistryAuth(dis, NewVaultKeyring("wrongpass"))
 	if err == nil {
 		t.Fatal("DecryptRegistryAuth() error = nil, want an error for wrong vault password")
 	}
@@ -259,7 +259,7 @@ func TestDecryptRegistryAuthDecryptsInlineCA(t *testing.T) {
 		},
 	}
 
-	if err := DecryptRegistryAuth(dis, password); err != nil {
+	if err := DecryptRegistryAuth(dis, NewVaultKeyring(password)); err != nil {
 		t.Fatalf("DecryptRegistryAuth() error = %v", err)
 	}
 
@@ -285,7 +285,7 @@ func TestDecryptRegistryAuthRejectsDecryptedCAThatIsNotACertificate(t *testing.T
 		},
 	}
 
-	err = DecryptRegistryAuth(dis, password)
+	err = DecryptRegistryAuth(dis, NewVaultKeyring(password))
 	if err == nil {
 		t.Fatal("DecryptRegistryAuth() error = nil, want an error for a decrypted value that is not a certificate")
 	}
@@ -311,7 +311,7 @@ func TestVerifyRegistryAuthLeavesTheDocumentAlone(t *testing.T) {
 		},
 	}
 
-	if err := VerifyRegistryAuth(dis, password); err != nil {
+	if err := VerifyRegistryAuth(dis, NewVaultKeyring(password)); err != nil {
 		t.Fatalf("VerifyRegistryAuth() error = %v", err)
 	}
 
@@ -338,7 +338,7 @@ func TestVerifyRegistryAuthMissingPassword(t *testing.T) {
 		},
 	}
 
-	err = VerifyRegistryAuth(dis, "")
+	err = VerifyRegistryAuth(dis, NewVaultKeyring(""))
 	if err == nil {
 		t.Fatal("VerifyRegistryAuth() error = nil, want an error for missing vault password")
 	}
@@ -362,7 +362,7 @@ func TestVerifyRegistryAuthWrongPassword(t *testing.T) {
 		},
 	}
 
-	if err := VerifyRegistryAuth(dis, "wrongpass"); err == nil {
+	if err := VerifyRegistryAuth(dis, NewVaultKeyring("wrongpass")); err == nil {
 		t.Fatal("VerifyRegistryAuth() error = nil, want an error for wrong vault password")
 	}
 }
@@ -384,7 +384,7 @@ func TestVerifyRegistryAuthRejectsDecryptedCAThatIsNotACertificate(t *testing.T)
 		},
 	}
 
-	if err := VerifyRegistryAuth(dis, password); err == nil {
+	if err := VerifyRegistryAuth(dis, NewVaultKeyring(password)); err == nil {
 		t.Fatal("VerifyRegistryAuth() error = nil, want an error for a decrypted value that is not a certificate")
 	}
 }
@@ -398,7 +398,7 @@ func TestVerifyRegistryAuthNothingEncrypted(t *testing.T) {
 		},
 	}
 
-	if err := VerifyRegistryAuth(dis, ""); err != nil {
+	if err := VerifyRegistryAuth(dis, NewVaultKeyring("")); err != nil {
 		t.Fatalf("VerifyRegistryAuth() error = %v", err)
 	}
 }

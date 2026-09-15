@@ -27,6 +27,9 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
 ### Options
 
 ```
+      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray               An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray         Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity

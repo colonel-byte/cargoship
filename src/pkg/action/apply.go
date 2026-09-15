@@ -25,6 +25,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
@@ -58,8 +59,8 @@ type ApplyOptions struct {
 	// AllowUnmanagedNodes lets an apply continue when the cluster holds a node no host in the
 	// config accounts for, rather than stopping on it
 	AllowUnmanagedNodes bool
-	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
-	VaultPassword string
+	// Keyring decrypts encrypted registry credentials, in either supported format
+	Keyring *clustercfg.Keyring
 }
 
 // Apply state logic
@@ -119,8 +120,8 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 
 			&phase.ConfigureEngine{
-				Distro:        d,
-				VaultPassword: opts.VaultPassword,
+				Distro:  d,
+				Keyring: opts.Keyring,
 			},
 			&phase.InitializeControllers{
 				Distro: d,
@@ -142,14 +143,14 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 			&phase.EngineConfigSyncController{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
-					Distro:        d,
-					VaultPassword: opts.VaultPassword,
+					Distro:  d,
+					Keyring: opts.Keyring,
 				},
 			},
 			&phase.EngineConfigSyncWorker{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
-					Distro:        d,
-					VaultPassword: opts.VaultPassword,
+					Distro:  d,
+					Keyring: opts.Keyring,
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},

@@ -6,6 +6,7 @@
 
 # Guides
 
+- [age-encryption](guides/age-encryption.md)
 - [firewall](guides/firewall.md)
 - [multi-architecture](guides/multi-architecture.md)
 - [profile-concurrency](guides/profile-concurrency.md)
@@ -75,6 +76,7 @@
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
+- [choice-age-encryption](agent/choice-age-encryption.md)
 - [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
 - [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)

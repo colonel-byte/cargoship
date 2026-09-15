@@ -2,6 +2,8 @@
 
 This guide explains how Cargoship encrypts registry credentials in a cluster configuration with Ansible Vault, and how to read them back out. It covers the four fields Cargoship decrypts, the `cargoship vault` commands, and the password-rotation workflow.
 
+Ansible Vault is one of two formats Cargoship reads. The other is [age](https://github.com/FiloSottile/age), which encrypts to a set of public keys instead of a shared password -- see [age-encryption](age-encryption.md). The same commands write both, one configuration can hold both, and `vault rekey` moves a configuration from one to the other. Everything below describes the Ansible Vault side.
+
 ## What Cargoship Decrypts
 
 A cluster configuration holds registry credentials in plain sight. Encrypting them lets you commit the file.
