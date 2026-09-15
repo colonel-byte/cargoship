@@ -15,11 +15,13 @@
 package utils
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -66,17 +68,17 @@ func TestDownloadToCacheWithSHA256(t *testing.T) {
 	const validSha = "ece3930c9301a5dfa3754d55161558076c4a3fa898f6fd9374c54138853ad3ea"
 
 	// Success case
-	target, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	target, err := DownloadToCache(t.Context(), ts.URL, "test/file.txt", validSha)
 	require.NoError(t, err)
 	require.FileExists(t, target)
 
 	// Second call uses cache
-	target2, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	target2, err := DownloadToCache(t.Context(), ts.URL, "test/file.txt", validSha)
 	require.NoError(t, err)
 	require.Equal(t, target, target2)
 
 	// Mismatch case
-	_, err = DownloadToCache(ts.URL, "test/file2.txt", "invalidsha256hash")
+	_, err = DownloadToCache(t.Context(), ts.URL, "test/file2.txt", "invalidsha256hash")
 	require.ErrorContains(t, err, "checksum mismatch")
 }
 
@@ -97,15 +99,35 @@ func TestDownloadToCacheReplacesCorruptedEntry(t *testing.T) {
 	// sha256 of "test content payload"
 	const validSha = "ece3930c9301a5dfa3754d55161558076c4a3fa898f6fd9374c54138853ad3ea"
 
-	target, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	target, err := DownloadToCache(t.Context(), ts.URL, "test/file.txt", validSha)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(target, []byte("corrupted"), 0o644))
 
-	got, err := DownloadToCache(ts.URL, "test/file.txt", validSha)
+	got, err := DownloadToCache(t.Context(), ts.URL, "test/file.txt", validSha)
 	require.NoError(t, err)
 	require.Equal(t, target, got)
 
 	content, err := os.ReadFile(got)
 	require.NoError(t, err)
 	require.Equal(t, "test content payload", string(content))
+}
+
+// A server that accepts the connection and then goes silent must not hang the
+// caller. The context is the lever for that, so check it actually reaches the
+// request rather than only being accepted as an argument.
+func TestDownloadToCacheHonoursContextCancellation(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer ts.Close()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	_, err := DownloadToCache(ctx, ts.URL, "hang/file.txt")
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Less(t, time.Since(start), 5*time.Second)
 }

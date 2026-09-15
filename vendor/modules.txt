@@ -995,6 +995,30 @@ github.com/go-openapi/validate
 ## explicit; go 1.25.0
 github.com/go-piv/piv-go/v2/piv
 github.com/go-piv/piv-go/v2/third_party/rsa
+# github.com/go-sprout/sprout v1.1.1
+## explicit; go 1.25.0
+github.com/go-sprout/sprout
+github.com/go-sprout/sprout/internal/helpers
+github.com/go-sprout/sprout/internal/runtime
+github.com/go-sprout/sprout/registry/backward
+github.com/go-sprout/sprout/registry/checksum
+github.com/go-sprout/sprout/registry/conversion
+github.com/go-sprout/sprout/registry/crypto
+github.com/go-sprout/sprout/registry/encoding
+github.com/go-sprout/sprout/registry/env
+github.com/go-sprout/sprout/registry/filesystem
+github.com/go-sprout/sprout/registry/maps
+github.com/go-sprout/sprout/registry/numeric
+github.com/go-sprout/sprout/registry/random
+github.com/go-sprout/sprout/registry/reflect
+github.com/go-sprout/sprout/registry/regexp
+github.com/go-sprout/sprout/registry/semver
+github.com/go-sprout/sprout/registry/slices
+github.com/go-sprout/sprout/registry/std
+github.com/go-sprout/sprout/registry/strings
+github.com/go-sprout/sprout/registry/time
+github.com/go-sprout/sprout/registry/uniqueid
+github.com/go-sprout/sprout/sprigin
 # github.com/go-viper/mapstructure/v2 v2.5.0
 ## explicit; go 1.18
 github.com/go-viper/mapstructure/v2
