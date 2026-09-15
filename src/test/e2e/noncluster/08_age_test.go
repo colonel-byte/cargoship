@@ -228,6 +228,150 @@ func TestCargoshipAgeEncrypt(t *testing.T) {
 	})
 }
 
+// TestCargoshipAgeKeygen exercises the command that removes age-keygen from the prerequisites, and
+// the care it takes with the one output that is a secret.
+func TestCargoshipAgeKeygen(t *testing.T) {
+	t.Run("the generated key encrypts and decrypts a configuration", func(t *testing.T) {
+		clearKeyEnv(t)
+		identityFile := filepath.Join(t.TempDir(), "key.txt")
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "keygen", "--output", identityFile)
+		require.NoError(t, err)
+
+		// The public key is on stderr so that the file holds the private key alone.
+		_, recipient, found := strings.Cut(strings.TrimSpace(stderr), "Public key: ")
+		require.True(t, found, "got %q", stderr)
+		recipient = strings.TrimSpace(recipient)
+		require.True(t, strings.HasPrefix(recipient, "age1"), "got %q", recipient)
+
+		original, err := os.ReadFile(vaultInventory)
+		require.NoError(t, err)
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		require.NoError(t, os.WriteFile(config, original, 0o600))
+
+		_, _, err = e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", recipient)
+		require.NoError(t, err)
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--age-identity-file", identityFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(original), string(got))
+	})
+
+	t.Run("the identity file is readable only by its owner", func(t *testing.T) {
+		clearKeyEnv(t)
+		identityFile := filepath.Join(t.TempDir(), "key.txt")
+
+		_, _, err := e2e.Cargoship(t, "vault", "keygen", "--output", identityFile)
+		require.NoError(t, err)
+
+		info, err := os.Stat(identityFile)
+		require.NoError(t, err)
+		require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+
+		contents, err := os.ReadFile(identityFile)
+		require.NoError(t, err)
+		require.Contains(t, string(contents), "AGE-SECRET-KEY-1")
+	})
+
+	// Overwriting an identity file destroys the only copy of a key, and every value encrypted to it
+	// with it. There is no recovering from that, so the command refuses.
+	t.Run("an existing identity file is never overwritten", func(t *testing.T) {
+		clearKeyEnv(t)
+		identityFile := filepath.Join(t.TempDir(), "key.txt")
+
+		_, _, err := e2e.Cargoship(t, "vault", "keygen", "--output", identityFile)
+		require.NoError(t, err)
+		before, err := os.ReadFile(identityFile)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "keygen", "--output", identityFile)
+		require.Error(t, err)
+		require.Contains(t, stderr, "exists already")
+
+		after, err := os.ReadFile(identityFile)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(after))
+	})
+
+	t.Run("without an output file the key goes to stdout", func(t *testing.T) {
+		clearKeyEnv(t)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "keygen")
+		require.NoError(t, err)
+		require.Contains(t, stdout, "AGE-SECRET-KEY-1")
+
+		// And what it wrote is an identity file, not just something that looks like one.
+		identityFile := filepath.Join(t.TempDir(), "key.txt")
+		require.NoError(t, os.WriteFile(identityFile, []byte(stdout), 0o600))
+
+		encrypted, _, err := e2e.Cargoship(t, "vault", "encrypt", "hunter2",
+			"--age-recipient", publicKeyIn(t, stdout))
+		require.NoError(t, err)
+
+		plain, stderr, err := cargoshipStdin(t, encrypted, "vault", "decrypt", "--age-identity-file", identityFile)
+		require.NoError(t, err, stderr)
+		require.Equal(t, "hunter2", strings.TrimRight(plain, "\n"))
+	})
+
+	t.Run("recovers the public key from an identity file", func(t *testing.T) {
+		clearKeyEnv(t)
+		key := newAgeKey(t)
+
+		stdout, _, err := e2e.Cargoship(t, "vault", "keygen", "--public-key", key.identityFile)
+		require.NoError(t, err)
+		require.Equal(t, key.recipient, strings.TrimSpace(stdout))
+	})
+
+	t.Run("reads an identity from stdin", func(t *testing.T) {
+		clearKeyEnv(t)
+		key := newAgeKey(t)
+
+		identity, err := os.ReadFile(key.identityFile)
+		require.NoError(t, err)
+
+		stdout, stderr, err := cargoshipStdin(t, string(identity), "vault", "keygen", "--public-key")
+		require.NoError(t, err, stderr)
+		require.Equal(t, key.recipient, strings.TrimSpace(stdout))
+	})
+
+	t.Run("refuses to write a public key to an output file", func(t *testing.T) {
+		clearKeyEnv(t)
+		key := newAgeKey(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "keygen", "--public-key", key.identityFile,
+			"--output", filepath.Join(t.TempDir(), "recipients.txt"))
+		require.Error(t, err)
+		require.Contains(t, stderr, "public keys are not secret")
+	})
+
+	// A recipients file is the easy thing to pass by mistake, and it holds no private key to take a
+	// public one from.
+	t.Run("reports a file that holds no identity", func(t *testing.T) {
+		clearKeyEnv(t)
+		key := newAgeKey(t)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "keygen", "--public-key", key.recipientFile)
+		require.Error(t, err)
+		require.Contains(t, stderr, "reading age identities")
+	})
+}
+
+// publicKeyIn pulls the recipient out of the "# public key:" comment a generated identity carries,
+// which is the only place it is recorded once the command has exited.
+func publicKeyIn(t *testing.T, identity string) string {
+	t.Helper()
+
+	for _, line := range strings.Split(identity, "\n") {
+		if after, found := strings.CutPrefix(line, "# public key: "); found {
+			return strings.TrimSpace(after)
+		}
+	}
+	t.Fatalf("no public key comment in %q", identity)
+	return ""
+}
+
 // TestCargoshipAgeEncryptFile exercises the file commands with age keys, including the migration
 // off Ansible Vault, which is a rekey rather than a command of its own.
 func TestCargoshipAgeEncryptFile(t *testing.T) {

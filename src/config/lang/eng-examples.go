@@ -238,6 +238,21 @@ $ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt --
 $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recipients-file ./recipients.txt
 `
 
+	// CmdVaultKeygenExample vault keygen example
+	CmdVaultKeygenExample = `# Generate a key pair, writing the private key to a file and printing the public key
+$ cargoship vault keygen --output ~/.age/cargoship.key
+
+# The same, redirecting instead, which leaves the file mode up to your shell
+$ cargoship vault keygen > ~/.age/cargoship.key
+
+# Recover the public key from an identity file you still hold
+$ cargoship vault keygen --public-key ~/.age/cargoship.key
+
+# Encrypt a configuration to the key that was just generated, and read it back
+$ cargoship vault encrypt-file ./cluster.yaml --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargoship.key
+`
+
 	// CmdVaultDecryptExample vault decrypt example
 	CmdVaultDecryptExample = `# Decrypt a value copied out of a config file
 $ cargoship vault decrypt '$ANSIBLE_VAULT;1.1;AES256

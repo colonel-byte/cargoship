@@ -39,6 +39,7 @@
     - [encrypt-file](commands/cargoship_vault_encrypt-file.md)
     - [encrypt-path](commands/cargoship_vault_encrypt-path.md)
     - [encrypt](commands/cargoship_vault_encrypt.md)
+    - [keygen](commands/cargoship_vault_keygen.md)
     - [rekey](commands/cargoship_vault_rekey.md)
   - [version](commands/cargoship_version.md)
 
