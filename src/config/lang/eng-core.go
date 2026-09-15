@@ -101,11 +101,11 @@ const (
 	// CmdVaultEncryptFlagPasswordFile flag description
 	CmdVaultEncryptFlagPasswordFile = "Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
 	// CmdFlagAgeIdentityFile flag description
-	CmdFlagAgeIdentityFile = "Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE."
+	CmdFlagAgeIdentityFile = "Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE."
 	// CmdFlagAgeRecipient flag description
-	CmdFlagAgeRecipient = "An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault."
+	CmdFlagAgeRecipient = "A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault."
 	// CmdFlagAgeRecipientsFile flag description
-	CmdFlagAgeRecipientsFile = "Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file."
+	CmdFlagAgeRecipientsFile = "Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file."
 	// CmdVaultEncryptPathShort vault encrypt-path short
 	CmdVaultEncryptPathShort = "Encrypts the values a config file already holds at one or more YAML paths, in place"
 	// CmdVaultEncryptPathLong vault encrypt-path long
@@ -133,7 +133,7 @@ const (
 	// CmdVaultKeygenFlagOutput flag description
 	CmdVaultKeygenFlagOutput = "Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead."
 	// CmdVaultKeygenFlagPublicKey flag description
-	CmdVaultKeygenFlagPublicKey = "Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given."
+	CmdVaultKeygenFlagPublicKey = "Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given. This reads age identity files; the public key of an SSH key is in the \".pub\" file beside it."
 	// CmdVaultDecryptShort vault decrypt short
 	CmdVaultDecryptShort = "Decrypts an Ansible Vault or age value, printing the plaintext"
 	// CmdVaultDecryptLong vault decrypt long

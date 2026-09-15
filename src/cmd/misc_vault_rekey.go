@@ -61,7 +61,7 @@ func newVaultRekeyCommand() *cobra.Command {
 func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	from, err := o.requireKeyring()
+	from, err := o.requireKeyring(cmd)
 	if err != nil {
 		return err
 	}

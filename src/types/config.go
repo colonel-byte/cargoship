@@ -70,15 +70,17 @@ type DistroConfig struct {
 // which is what makes a shared recipient set something a team can commit alongside the config
 // rather than something every command line has to restate.
 type AgeOptions struct {
-	// IdentityFiles are paths to age identity files, each holding the private keys that decrypt
-	// registry credentials. Equivalent to repeating --age-identity-file.
-	IdentityFiles []string `json:"identity_files,omitempty" mapstructure:"identity_files" jsonschema:"example=/home/operator/.age/cargoship.key"`
-	// Recipients are age public keys that registry credentials are encrypted to. Equivalent to
-	// repeating --age-recipient.
-	Recipients []string `json:"recipients,omitempty" mapstructure:"recipients" jsonschema:"example=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p,example=age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh"`
-	// RecipientsFiles are paths to files holding age public keys, one per line, with # comments
-	// allowed. Equivalent to repeating --age-recipients-file.
-	RecipientsFiles []string `json:"recipients_files,omitempty" mapstructure:"recipients_files" jsonschema:"example=/etc/cargoship/recipients.txt"`
+	// IdentityFiles are paths to identity files, each holding either the age private keys that
+	// decrypt registry credentials or an SSH private key. Equivalent to repeating
+	// --age-identity-file.
+	IdentityFiles []string `json:"identity_files,omitempty" mapstructure:"identity_files" jsonschema:"example=/home/operator/.age/cargoship.key,example=/home/operator/.ssh/id_ed25519"`
+	// Recipients are the public keys registry credentials are encrypted to, each either an age
+	// recipient or an SSH public key. Equivalent to repeating --age-recipient.
+	Recipients []string `json:"recipients,omitempty" mapstructure:"recipients" jsonschema:"example=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p,example=age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh,example=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample operator@example.com"`
+	// RecipientsFiles are paths to files holding public keys, one per line, with # comments
+	// allowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as
+	// it is. Equivalent to repeating --age-recipients-file.
+	RecipientsFiles []string `json:"recipients_files,omitempty" mapstructure:"recipients_files" jsonschema:"example=/etc/cargoship/recipients.txt,example=/etc/cargoship/authorized_keys"`
 }
 
 // DistroOptions holds the values for the `.distro` section of the config file

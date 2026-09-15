@@ -55,7 +55,7 @@ func newVaultEncryptFileCommand() *cobra.Command {
 func (o *vaultEncryptFileOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	keyring, err := o.requireKeyring()
+	keyring, err := o.requireKeyring(cmd)
 	if err != nil {
 		return err
 	}
