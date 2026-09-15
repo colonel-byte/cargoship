@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.22.2](https://github.com/colonel-byte/cargoship/compare/v0.22.1...v0.22.2) (2026-09-15)
+
+
+### Features
+
+* detect a host removed from the config ([#340](https://github.com/colonel-byte/cargoship/issues/340)) ([89278c0](https://github.com/colonel-byte/cargoship/commit/89278c0bd84c7c48750cc5195b93182920aedd25))
+* **distrocfg:** record installed distro release metadata on hosts ([#378](https://github.com/colonel-byte/cargoship/issues/378)) ([6a15aac](https://github.com/colonel-byte/cargoship/commit/6a15aac77a21a59fbd75425ecf1df04bec8fd455))
+* **engineconfig:** add k3s and rke2 v1.37 generated engine config ([#377](https://github.com/colonel-byte/cargoship/issues/377)) ([2a2ffdc](https://github.com/colonel-byte/cargoship/commit/2a2ffdcec105c0af22990ab4e6341f77ff3d42e8))
+* **utils:** add DownloadToCache helper ([#379](https://github.com/colonel-byte/cargoship/issues/379)) ([fa4b120](https://github.com/colonel-byte/cargoship/commit/fa4b12023e422995a0be02c3c527b89e712cd8bc))
+
+
+### Miscellaneous
+
+* **examples:** cache downloaded release asset lists ([#376](https://github.com/colonel-byte/cargoship/issues/376)) ([a8a04d1](https://github.com/colonel-byte/cargoship/commit/a8a04d1c42bf945a0f4008519688fecb1ff6c8c5))
+
+
+### CI/CD
+
+* **action:** disable require main pr check ([#390](https://github.com/colonel-byte/cargoship/issues/390)) ([a6502d2](https://github.com/colonel-byte/cargoship/commit/a6502d2d44cecdf6c08db65d420d662b93551994))
+* add language_version tied to go.mod ([#375](https://github.com/colonel-byte/cargoship/issues/375)) ([6c191c5](https://github.com/colonel-byte/cargoship/commit/6c191c5e90be4c36bf3953dc812e79aea693801a))
+
+
+### Build
+
+* **deps:** bump ubi9/ubi-minimal from `186a94b` to `e5161a7` ([#381](https://github.com/colonel-byte/cargoship/issues/381)) ([4811f95](https://github.com/colonel-byte/cargoship/commit/4811f95af6ba39b77fde86f64c7d308d59f9a689))
+* **deps:** bump ubi9/ubi-minimal from `d235f60` to `186a94b` ([#373](https://github.com/colonel-byte/cargoship/issues/373)) ([3ff2627](https://github.com/colonel-byte/cargoship/commit/3ff26277b26c635dc4422798a870617bd880c1cf))
+
 ## [0.22.1](https://github.com/colonel-byte/cargoship/compare/v0.22.0...v0.22.1) (2026-09-13)
 
 
