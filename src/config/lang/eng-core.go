@@ -126,6 +126,14 @@ const (
 	CmdVaultRekeyFlagNewPasswordFile = "Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the key the file already uses, or pass --age-recipient instead to move the file onto age. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened."
 	// CmdVaultRekeyFlagDryRun flag description
 	CmdVaultRekeyFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
+	// CmdVaultKeygenShort vault keygen short
+	CmdVaultKeygenShort = "Generates an age key pair, or prints the public key of one you already hold"
+	// CmdVaultKeygenLong vault keygen long
+	CmdVaultKeygenLong = "Generates an age key pair in the format age-keygen writes, so that the age distribution is not a prerequisite for encrypting a configuration with age, and the file stays readable by 'age --decrypt' and anything else that speaks the format. The identity -- the private key, AGE-SECRET-KEY-1... -- goes to --output, or to stdout when that is omitted; the recipient -- the public key, age1... -- goes to stderr, so that the file holds the private key alone and the public key can be copied straight into a recipients file. With --public-key it generates nothing and instead prints the public keys held in IDENTITY_FILE, or in stdin when no file is given, which is how a recipient is recovered from a private key you still have. A key pair is not registered anywhere: pass the public key to 'cargoship vault encrypt' as --age-recipient, and the file back as --age-identity-file to read those values again."
+	// CmdVaultKeygenFlagOutput flag description
+	CmdVaultKeygenFlagOutput = "Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead."
+	// CmdVaultKeygenFlagPublicKey flag description
+	CmdVaultKeygenFlagPublicKey = "Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given."
 	// CmdVaultDecryptShort vault decrypt short
 	CmdVaultDecryptShort = "Decrypts an Ansible Vault or age value, printing the plaintext"
 	// CmdVaultDecryptLong vault decrypt long

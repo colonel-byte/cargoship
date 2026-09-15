@@ -72,6 +72,18 @@ A recipients file that parses to no keys is an error rather than nothing to do. 
 
 `ParseRecipients` may return a `*HybridRecipient` (post-quantum X-Wing). Passing it through costs nothing, so it works without any code of ours.
 
+## Generating keys, and the refusals around it
+
+`cargoship vault keygen` exists because everything else here otherwise assumes the `age` distribution is installed, when cargoship already links the library that generates a key pair. It writes byte-for-byte what `age-keygen` writes, deliberately: a file only cargoship could read would strand an operator who later wants `age --decrypt`, and interoperability is the reason for supporting the format at all.
+
+Three refusals are load-bearing, and none of them should be softened into a prompt or an overwrite:
+
+- **`--output` never overwrites.** Replacing an identity file destroys the only copy of a key, and every value in a committed configuration encrypted to it becomes unreadable by anyone, permanently. `O_CREATE|O_EXCL` makes the check part of the create, so there is no window between asking and writing. A `--force` flag here would be a flag whose only use is the unrecoverable case.
+- **`--output` is refused with `--public-key`.** It keeps one meaning -- the file holding a private key that was just generated -- and so keeps the no-overwrite rule from having an exception attached to it. A public key needs no such care and redirects perfectly well.
+- **An identity that is not X25519 is an error in `AgeRecipientsIn`, not a skipped line.** The question being asked is "who can read values encrypted to this key," and a short answer to that is worse than no answer, because the operator acts on it.
+
+The generated identity never passes through `logger`. Logging is wired to stderr and may be scraped centrally, and a private key that reaches a log aggregator has to be treated as compromised everywhere it was used. Without `--output` the key goes to stdout so that `cargoship vault keygen > key.txt` works; the terminal warning covers the case where there is no redirect and the key lands in scrollback.
+
 ## Dependency
 
 `filippo.io/age` v1.3.2, BSD-3-Clause, which brings `filippo.io/hpke` v0.4.0 with it. Everything else it needs -- `chacha20poly1305`, `curve25519`, `hkdf`, `scrypt` -- was already vendored under `vendor/golang.org/x/crypto/`.
