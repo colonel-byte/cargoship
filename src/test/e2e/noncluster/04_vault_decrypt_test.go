@@ -79,7 +79,7 @@ func TestCargoshipVaultDecrypt(t *testing.T) {
 	t.Run("errors on a value that is not encrypted", func(t *testing.T) {
 		_, stderr, err := e2e.Cargoship(t, "vault", "decrypt", "hunter2", "--vault-password-file", passwordFile, "--no-color")
 		require.Error(t, err)
-		require.Contains(t, stderr, "not Ansible Vault-encrypted")
+		require.Contains(t, stderr, "value is not encrypted")
 	})
 
 	t.Run("errors without a vault password", func(t *testing.T) {

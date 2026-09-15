@@ -96,7 +96,7 @@ func TestDecryptAtPathAgeRestoresTheDocument(t *testing.T) {
 func TestEncryptConfigWritesAge(t *testing.T) {
 	k := newAgeKeyring(t)
 
-	got, changed, err := EncryptConfig([]byte(configTestDoc), k, false)
+	got, changed, _, err := EncryptConfig([]byte(configTestDoc), k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -139,11 +139,11 @@ func TestEncryptConfigWritesAge(t *testing.T) {
 func TestEncryptConfigAgeIsIdempotent(t *testing.T) {
 	k := newAgeKeyring(t)
 
-	once, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	once, _, _, err := EncryptConfig([]byte(configTestDoc), k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
-	twice, changed, err := EncryptConfig(once, k, false)
+	twice, changed, _, err := EncryptConfig(once, k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() second pass error = %v", err)
 	}
@@ -160,12 +160,12 @@ func TestEncryptConfigAgeIsIdempotent(t *testing.T) {
 // there is nothing here to compare. The operator gets a no-op today and a warning after PR 2; rekey
 // is what actually moves the file.
 func TestEncryptConfigSkipsVaultValuesWhenWritingAge(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, changed, err := EncryptConfig(vaulted, newAgeKeyring(t), false)
+	got, changed, _, err := EncryptConfig(vaulted, newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig(age over vault) error = %v", err)
 	}
@@ -184,7 +184,7 @@ func TestDecryptRegistryAuthMixedFormats(t *testing.T) {
 	ageKeyring := newAgeKeyring(t)
 
 	// The first registry's credentials are vaulted; the second's token is age-encrypted.
-	doc, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	doc, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -231,7 +231,7 @@ func TestDecryptRegistryAuthMixedFormats(t *testing.T) {
 // format needs. Being told to pass a vault password for an age value is worse than being told
 // nothing, and a mixed document makes that easy to get wrong.
 func TestDecryptRegistryAuthMissingAgeIdentity(t *testing.T) {
-	doc, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
+	doc, _, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -256,7 +256,7 @@ func TestDecryptRegistryAuthMissingAgeIdentity(t *testing.T) {
 // document encrypted to a recipient nobody on this machine holds. Nothing in the ciphertext says
 // whose key it is, so the pre-flight is the only thing that catches it.
 func TestDecryptRegistryAuthWrongAgeIdentity(t *testing.T) {
-	doc, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
+	doc, _, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -280,7 +280,7 @@ func TestDecryptRegistryAuthWrongAgeIdentity(t *testing.T) {
 func TestRekeyConfigMigratesVaultToAge(t *testing.T) {
 	ageKeyring := newAgeKeyring(t)
 
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -300,7 +300,7 @@ func TestRekeyConfigMigratesVaultToAge(t *testing.T) {
 		t.Error("rotated = false for a migration onto age recipients")
 	}
 
-	got, changed, err := RekeyConfig(vaulted, from, to)
+	got, changed, _, err := RekeyConfig(vaulted, from, to)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -336,7 +336,7 @@ func TestRekeyConfigMigratesVaultToAge(t *testing.T) {
 func TestRekeyConfigResaltsAge(t *testing.T) {
 	k := newAgeKeyring(t)
 
-	once, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	once, _, _, err := EncryptConfig([]byte(configTestDoc), k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -349,7 +349,7 @@ func TestRekeyConfigResaltsAge(t *testing.T) {
 		t.Error("rotated = false; recipients always name a target to write to")
 	}
 
-	twice, changed, err := RekeyConfig(once, k, to)
+	twice, changed, _, err := RekeyConfig(once, k, to)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -373,7 +373,7 @@ func TestRekeyConfigResaltsAge(t *testing.T) {
 // TestRekeyConfigRejectsAnAgeValueItCannotRead covers the message an operator sees when a file was
 // encrypted to someone else's key. It cannot say whose, so it says what to check.
 func TestRekeyConfigRejectsAnAgeValueItCannotRead(t *testing.T) {
-	doc, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
+	doc, _, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -384,7 +384,7 @@ func TestRekeyConfigRejectsAnAgeValueItCannotRead(t *testing.T) {
 		t.Fatalf("RekeyTarget() error = %v", err)
 	}
 
-	_, _, err = RekeyConfig(doc, from, to)
+	_, _, _, err = RekeyConfig(doc, from, to)
 	if err == nil {
 		t.Fatal("RekeyConfig() error = nil, want one for a value it cannot read")
 	}
@@ -403,7 +403,7 @@ func TestEncryptValueRefusesTwoExplicitFormats(t *testing.T) {
 	k.vaultPassword = testPassword
 	k.vaultExplicit = true
 
-	if _, _, err := EncryptConfig([]byte(configTestDoc), k, false); err == nil {
+	if _, _, _, err := EncryptConfig([]byte(configTestDoc), k, false); err == nil {
 		t.Fatal("EncryptConfig() error = nil, want a refusal naming both formats")
 	} else if !strings.Contains(err.Error(), "pass one or the other") {
 		t.Errorf("EncryptConfig() error = %q, want it to mention \"pass one or the other\"", err)

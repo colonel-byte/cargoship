@@ -303,6 +303,79 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		require.Equal(t, string(original), string(got))
 	})
 
+	// The mistake the skip reporting exists for. Nothing here is an error, the file is already
+	// encrypted, and without the warning the run that did nothing would be the quietest output the
+	// command has.
+	t.Run("encrypting an age file to new recipients warns instead of silently doing nothing", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+		other := newAgeKey(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", other.recipient)
+		require.NoError(t, err)
+		require.Contains(t, stderr, "WRN")
+		require.Contains(t, stderr, "does not record its recipients")
+		require.Contains(t, stderr, "rekey")
+		require.Contains(t, stderr, "nothing to encrypt")
+		require.Contains(t, stderr, "auth.pass")
+
+		after, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(after), "the file should be untouched")
+
+		// And the command it names does the job.
+		_, stderr, err = e2e.Cargoship(t, "vault", "rekey", config,
+			"--age-identity-file", key.identityFile, "--age-recipient", other.recipient)
+		require.NoError(t, err)
+		require.Contains(t, stderr, "count=4")
+
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--age-identity-file", other.identityFile)
+		require.NoError(t, err)
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(original), string(got))
+	})
+
+	t.Run("encrypting a vaulted file to age recipients names rekey", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+		require.Contains(t, stderr, "does not move a credential between formats")
+		require.Contains(t, stderr, "rekey")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "$ANSIBLE_VAULT")
+		require.NotContains(t, string(got), ageHeader)
+	})
+
+	// Warnings go to stderr, so a dry run piped somewhere still gets a document and not a document
+	// with a complaint in the middle of it.
+	t.Run("a dry run warns on stderr and leaves stdout clean", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+
+		stdout, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient, "--dry-run")
+		require.NoError(t, err)
+		require.Contains(t, stderr, "does not record its recipients")
+		require.NotContains(t, stdout, "does not record its recipients")
+		require.Contains(t, stdout, "apiVersion:")
+	})
+
 	// The migration path, and the reason it needs no command of its own: the old password reads,
 	// the recipients write, and the plaintext never lands on disk.
 	t.Run("rekey moves a vaulted file onto age", func(t *testing.T) {

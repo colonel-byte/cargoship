@@ -124,7 +124,7 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-path", config, path, "--vault-password-file", passwordFile, "--no-color")
 		require.Error(t, err)
-		require.Contains(t, stderr, "already Ansible Vault-encrypted")
+		require.Contains(t, stderr, "value is encrypted already")
 		require.Contains(t, stderr, "--force")
 	})
 
