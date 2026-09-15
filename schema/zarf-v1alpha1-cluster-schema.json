@@ -355,7 +355,8 @@
           "description": "is the login secret for the remote registry.",
           "examples": [
             "hunter2",
-            "$ANSIBLE_VAULT;1.1;AES256..."
+            "$ANSIBLE_VAULT;1.1;AES256...",
+            "-----BEGIN AGE ENCRYPTED FILE-----..."
           ],
           "type": "string"
         },
@@ -363,7 +364,8 @@
           "description": "authenticates to the remote registry instead of a username and password.",
           "examples": [
             "abc123",
-            "$ANSIBLE_VAULT;1.1;AES256..."
+            "$ANSIBLE_VAULT;1.1;AES256...",
+            "-----BEGIN AGE ENCRYPTED FILE-----..."
           ],
           "type": "string"
         },
@@ -371,7 +373,8 @@
           "description": "is the login name for the remote registry.",
           "examples": [
             "myuser",
-            "$ANSIBLE_VAULT;1.1;AES256..."
+            "$ANSIBLE_VAULT;1.1;AES256...",
+            "-----BEGIN AGE ENCRYPTED FILE-----..."
           ],
           "type": "string"
         }

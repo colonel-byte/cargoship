@@ -53,6 +53,32 @@ type DistroConfig struct {
 	TempDirectory string `json:"tmp_dir,omitempty" mapstructure:"tmp_dir" jsonschema:"default=/tmp"`
 	// Timeout the longest we will run long ran tasks before failing
 	Timeout string `json:"timeout,omitempty" mapstructure:"timeout" jsonschema:"default=20m"`
+	// AgeOpts are the age keys used to encrypt and decrypt registry credentials
+	AgeOpts AgeOptions `json:"age,omitempty" mapstructure:"age"`
+}
+
+// AgeOptions holds the values for the `.age` section of the config file, the age alternative to
+// the Ansible Vault password given by --vault-password-file.
+//
+// It sits at the root rather than under `.distro` because both halves of the workflow read it: the
+// `cargoship vault` commands that write ciphertext into a cluster configuration, and the install
+// commands that read it back at apply time.
+//
+// Each is a list because age is built around encrypting to more than one key: a configuration is
+// normally encrypted to every operator who has to apply it plus whatever CI holds, and an operator
+// may hold more than one identity. Recipients here are equivalent to repeating --age-recipient,
+// which is what makes a shared recipient set something a team can commit alongside the config
+// rather than something every command line has to restate.
+type AgeOptions struct {
+	// IdentityFiles are paths to age identity files, each holding the private keys that decrypt
+	// registry credentials. Equivalent to repeating --age-identity-file.
+	IdentityFiles []string `json:"identity_files,omitempty" mapstructure:"identity_files" jsonschema:"example=/home/operator/.age/cargoship.key"`
+	// Recipients are age public keys that registry credentials are encrypted to. Equivalent to
+	// repeating --age-recipient.
+	Recipients []string `json:"recipients,omitempty" mapstructure:"recipients" jsonschema:"example=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p,example=age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh"`
+	// RecipientsFiles are paths to files holding age public keys, one per line, with # comments
+	// allowed. Equivalent to repeating --age-recipients-file.
+	RecipientsFiles []string `json:"recipients_files,omitempty" mapstructure:"recipients_files" jsonschema:"example=/etc/cargoship/recipients.txt"`
 }
 
 // DistroOptions holds the values for the `.distro` section of the config file

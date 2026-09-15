@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
@@ -31,8 +32,8 @@ type EngineConfigSyncOptions struct {
 	// WorkerConcurrent number of workers that will be synced at a time, as a fixed
 	// count ("5") or a percentage of the batch ("25%")
 	WorkerConcurrent string
-	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
-	VaultPassword string
+	// Keyring decrypts encrypted registry credentials, in either supported format
+	Keyring *clustercfg.Keyring
 	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool
 	// UpdateKubeConfig whether to update a kubeconfig file with the admin creds for the cluster
@@ -77,14 +78,14 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync {
 
 			&phase.EngineConfigSyncController{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
-					Distro:        d,
-					VaultPassword: opts.VaultPassword,
+					Distro:  d,
+					Keyring: opts.Keyring,
 				},
 			},
 			&phase.EngineConfigSyncWorker{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
-					Distro:        d,
-					VaultPassword: opts.VaultPassword,
+					Distro:  d,
+					Keyring: opts.Keyring,
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},

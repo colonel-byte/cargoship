@@ -4,6 +4,7 @@ go 1.27.0
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.1
+	filippo.io/age v1.3.2
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/containerd/containerd/v2 v2.3.5
@@ -59,6 +60,7 @@ require (
 	cuelabs.dev/go/oci/ociregistry v0.0.0-20260601085548-328ff8e2c943 // indirect
 	cuelang.org/go v0.17.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
+	filippo.io/hpke v0.4.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.7 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider v0.20.0 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/ecsmetadata v0.0.10 // indirect

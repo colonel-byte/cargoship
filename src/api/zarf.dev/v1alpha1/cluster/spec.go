@@ -331,6 +331,29 @@ func IsVaultEncrypted(value string) bool {
 	return strings.HasPrefix(strings.TrimSpace(value), VaultHeader)
 }
 
+// AgeHeader marks a value in a cluster configuration as armored age ciphertext, the alternative
+// to Ansible Vault. Cargoship decrypts such a value at apply time with an age identity rather
+// than a password.
+//
+// The string is written out rather than taken from filippo.io/age/armor so that this package,
+// which defines the API types every other package loads a configuration into, stays free of
+// crypto dependencies. TestAgeHeaderMatchesArmorHeader pins the two together.
+const AgeHeader = "-----BEGIN AGE ENCRYPTED FILE-----"
+
+// IsAgeEncrypted reports whether value is age ciphertext rather than a plain value.
+func IsAgeEncrypted(value string) bool {
+	return strings.HasPrefix(strings.TrimSpace(value), AgeHeader)
+}
+
+// IsEncrypted reports whether value is ciphertext in either of the formats cargoship decrypts.
+//
+// A configuration can hold both: the two headers tell them apart, so nothing has to be told
+// which format a document uses, and a document part-way through a migration between them
+// applies the same as one that is not.
+func IsEncrypted(value string) bool {
+	return IsVaultEncrypted(value) || IsAgeEncrypted(value)
+}
+
 // Validate returns an error when the TLS settings cannot be applied. A nil receiver is valid:
 // TLS is optional. name identifies the registry in the error.
 func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error {
@@ -340,9 +363,9 @@ func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error {
 	if t.CA != "" && t.CAFile != "" {
 		return fmt.Errorf("registry %q: set tls.ca or tls.caFile, not both", name)
 	}
-	// A vault-encrypted CA is still ciphertext at this point. It is checked again once apply
-	// decrypts it, which is the first moment there is a certificate to look at.
-	if t.CA != "" && !IsVaultEncrypted(t.CA) {
+	// An encrypted CA is still ciphertext at this point, in either format. It is checked again
+	// once apply decrypts it, which is the first moment there is a certificate to look at.
+	if t.CA != "" && !IsEncrypted(t.CA) {
 		block, _ := pem.Decode([]byte(t.CA))
 		if block == nil || block.Type != "CERTIFICATE" {
 			return fmt.Errorf("registry %q: tls.ca is not a PEM-encoded certificate", name)
@@ -355,17 +378,19 @@ func (t *ZarfClusterRegistryTLS) Validate(name ZarfClusterRegistrieName) error {
 }
 
 // ZarfClusterRegistryAuth holds the credentials for a container registry.
-// Username, Password, and Token may each be given in plaintext, or as an
-// Ansible Vault-encrypted string (the output of `ansible-vault encrypt_string`,
-// starting with "$ANSIBLE_VAULT"), in which case cargoship decrypts it at apply
-// time using the vault password given via --vault-password-file.
+// Username, Password, and Token may each be given in plaintext, or encrypted in
+// either of the two formats cargoship reads: an Ansible Vault string (the output
+// of `ansible-vault encrypt_string`, starting with "$ANSIBLE_VAULT"), or armored
+// age ciphertext (starting with "-----BEGIN AGE ENCRYPTED FILE-----"). Cargoship
+// decrypts either at apply time, using the vault password given via
+// --vault-password-file or the age identity given via --age-identity-file.
 type ZarfClusterRegistryAuth struct {
 	// Username is the login name for the remote registry.
-	Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256..."`
+	Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
 	// Password is the login secret for the remote registry.
-	Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256..."`
+	Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
 	// Token authenticates to the remote registry instead of a username and password.
-	Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256..."`
+	Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
 }
 
 // endpointSchemeRegex matches a URL that already names a scheme, e.g. "https://" or "http://".

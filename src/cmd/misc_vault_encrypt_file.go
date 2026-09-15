@@ -25,9 +25,9 @@ import (
 )
 
 type vaultEncryptFileOptions struct {
-	vaultPasswordFile string
-	dryRun            bool
-	force             bool
+	keyFlags
+	dryRun bool
+	force  bool
 }
 
 func newVaultEncryptFileCommand() *cobra.Command {
@@ -45,6 +45,7 @@ func newVaultEncryptFileCommand() *cobra.Command {
 	// Not marked required, for the same reason as on encrypt: the environment variables
 	// ResolveVaultPassword falls back to are unreachable if cobra rejects the command first.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
+	addAgeFlags(cmd, &o.keyFlags)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultEncryptFileFlagDryRun)
 	cmd.Flags().BoolVar(&o.force, MiscVaultForce, false, lang.CmdVaultEncryptFileFlagForce)
 
@@ -54,7 +55,7 @@ func newVaultEncryptFileCommand() *cobra.Command {
 func (o *vaultEncryptFileOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	password, err := requireVaultPassword(o.vaultPasswordFile)
+	keyring, err := o.requireKeyring()
 	if err != nil {
 		return err
 	}
@@ -64,7 +65,7 @@ func (o *vaultEncryptFileOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	encrypted, changed, err := clustercfg.EncryptConfig(src, password, o.force)
+	encrypted, changed, err := clustercfg.EncryptConfig(src, keyring, o.force)
 	if err != nil {
 		return err
 	}

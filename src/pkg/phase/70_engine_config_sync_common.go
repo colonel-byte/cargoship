@@ -42,12 +42,12 @@ const defaultFileMode = "0600"
 type EngineConfigSyncHosts struct {
 	GenericPhase
 	Distro distrocfg.Distro
-	// VaultPassword decrypts Ansible Vault-encrypted registry credentials.
-	VaultPassword string
-	desired       map[string]distrocfg.DesiredFile
-	service       string
-	hosts         cluster.ZarfHosts
-	leader        *cluster.ZarfHost
+	// Keyring decrypts encrypted registry credentials, in either supported format.
+	Keyring *clustercfg.Keyring
+	desired map[string]distrocfg.DesiredFile
+	service string
+	hosts   cluster.ZarfHosts
+	leader  *cluster.ZarfHost
 	// drift records why each host was selected. Prepare fills it while deciding which hosts to
 	// sync, so Run can say what it is draining a node for without reading every file off that
 	// host a second time. It is keyed by host pointer rather than by name: the same pointers
@@ -74,7 +74,7 @@ func (p *EngineConfigSyncHosts) prepareLeader() error {
 }
 
 func (p *EngineConfigSyncHosts) loadDesiredConfig(c *cluster.ZarfCluster, dis distro.ZarfDistro) error {
-	if err := clustercfg.DecryptRegistryAuth(c, p.VaultPassword); err != nil {
+	if err := clustercfg.DecryptRegistryAuth(c, p.Keyring); err != nil {
 		return err
 	}
 	run := cluster.ZarfRuntimeMeta{Registries: c.Spec.Config.Registries}
