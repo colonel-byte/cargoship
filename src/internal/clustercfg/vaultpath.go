@@ -26,21 +26,35 @@ import (
 	"github.com/goccy/go-yaml/ast"
 )
 
-// ErrAlreadyEncrypted reports that the value at the requested path is Ansible Vault ciphertext
-// already, so encrypting it again would bury the plaintext under a second layer that nothing
+// ErrAlreadyEncrypted reports that the value at the requested path is ciphertext already, in
+// either format, so encrypting it again would bury the plaintext under a second layer that nothing
 // unwraps.
-var ErrAlreadyEncrypted = errors.New("value is already Ansible Vault-encrypted")
+var ErrAlreadyEncrypted = errors.New("value is encrypted already")
 
-// ErrNotEncrypted reports that the value at the requested path is plaintext, so there is nothing
-// to decrypt. Rewriting it anyway would be a no-op that still rewrote the file, which is worth
-// saying out loud rather than reporting as success.
-var ErrNotEncrypted = errors.New("value is not Ansible Vault-encrypted")
+// ErrNotEncrypted reports that the value at the requested path carries neither format's header, so
+// it is plaintext and there is nothing to decrypt. Rewriting it anyway would be a no-op that still
+// rewrote the file, which is worth saying out loud rather than reporting as success.
+var ErrNotEncrypted = errors.New("value is not encrypted")
 
 // ErrWrappedTwice reports that the value at the requested path is ciphertext whose plaintext is
 // itself ciphertext -- what encrypt-path --force produces. Rekeying it would move the outer layer
-// onto the new password and leave the inner one on the old, which no single password can read
-// back, so it is refused rather than half done.
-var ErrWrappedTwice = errors.New("value is Ansible Vault-encrypted more than once")
+// onto the new key and leave the inner one on the old, which no single key can read back, so it is
+// refused rather than half done. The layers need not be in the same format for that to be true.
+var ErrWrappedTwice = errors.New("value is encrypted more than once")
+
+// Skip records a registry credential a whole-file rewrite left as it was, and why, so that the
+// command can say so rather than reporting a run that did nothing as a run with nothing to do.
+//
+// An empty Reason means the skip is not worth reporting: a path that is absent, a value that is
+// empty, or one already in exactly the state the command was asked to put it in. That convention
+// keeps the uninteresting majority silent without every caller having to filter them out.
+type Skip struct {
+	// Path is the credential's path in the document, as go-yaml spells it.
+	Path string
+	// Reason reads as the predicate of a sentence whose subject is the value at Path, so that a
+	// command can render it as a message without restating what it is about.
+	Reason string
+}
 
 // registriesPath is where a cluster configuration keeps the registries whose credentials are
 // vaulted, and vaultedFields are the fields of one of them that DecryptRegistryAuth reads at apply
@@ -474,12 +488,17 @@ func keyColumnOn(line string, valueColumn int) (int, bool) {
 
 // EncryptConfig encrypts every registry credential in src that cargoship decrypts at apply time --
 // each registry's auth.user, auth.pass, auth.token and tls.ca -- and returns the rewritten
-// document along with the paths it changed. Everything else is left exactly as it was, by the same
-// byte-level splice EncryptAtPath uses.
+// document, the paths it changed, and the credentials it left alone that are worth saying
+// something about. Everything else is left exactly as it was, by the same byte-level splice
+// EncryptAtPath uses.
 //
 // A field that is absent, empty, or encrypted already is skipped rather than treated as an error,
 // so running this over a configuration that is partly encrypted finishes the job, and running it
 // twice changes nothing the second time. Pass reencrypt to wrap values that are ciphertext already.
+//
+// Most of those skips are the point of the command and are returned with no reason, which means
+// they are not worth reporting. The ones that come back with a reason are the cases where what the
+// operator asked for and what happened may differ -- see skipReason.
 //
 // A value already under Ansible Vault, being encrypted with an Ansible Vault password, has to be
 // one that password can read, and it is an error when it is not. Skipping it quietly would leave
@@ -493,28 +512,54 @@ func keyColumnOn(line string, valueColumn int) (int, bool) {
 // wanted: the invariant it protects belongs to vault, where one password covers the document.
 // age decrypts against every identity an operator holds, so a document encrypted to several
 // recipients is an ordinary document rather than a broken one.
-func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, error) {
+func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, []Skip, error) {
 	// Resolved once, before anything is read, so that a keyring naming no format -- or naming two
 	// -- fails on its own terms rather than as an error about the first credential in the file.
 	writing, err := k.EncryptFormat()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return rewriteConfig(src, func(value string) (bool, error) {
+	return rewriteConfig(src, func(value string) (bool, string, error) {
 		existing, encrypted := FormatOf(value)
 		if reencrypt || !encrypted {
-			return true, nil
+			return true, "", nil
 		}
 		if existing == FormatVault && writing == FormatVault {
 			if _, err := DecryptValue(value, k); err != nil {
-				return false, errors.New("is Ansible Vault-encrypted with a different password; decrypt the file with the password it was vaulted under before encrypting it with this one")
+				return false, "", errors.New("is Ansible Vault-encrypted with a different password; decrypt the file with the password it was vaulted under before encrypting it with this one")
 			}
+			// The probe answered the question this command exists to ask, so the skip is the
+			// right outcome and there is nothing to report.
+			return false, "", nil
 		}
-		return false, nil
+		return false, skipReason(existing, writing), nil
 	}, func(doc []byte, path string) ([]byte, error) {
 		return EncryptAtPath(doc, path, k, true)
 	})
+}
+
+// skipReason explains why EncryptConfig left a value that is already encrypted as it was, for the
+// three cases where the operator's intent and the result may well differ.
+//
+// Each of them is a value this command cannot put into the state it was asked for, because
+// encrypt-file only ever encrypts plaintext -- it does not move a credential between formats, and
+// it cannot re-encrypt one to a different set of age recipients. rekey does both, so every reason
+// names it.
+//
+// age to age is the case worth the most care. A public key cannot decrypt and an age header names
+// no recipient, so "already encrypted to the keys you gave me" and "encrypted to somebody else's
+// key entirely" look exactly alike from here. Reporting the skip is the whole of what can be done
+// about it; see docs/agent/choice-age-encryption.md.
+func skipReason(existing, writing Format) string {
+	switch {
+	case existing == FormatAge && writing == FormatAge:
+		return "is encrypted to age recipients already, and cargoship cannot tell whether they are the ones you named, because age ciphertext does not record its recipients; run 'cargoship vault rekey' with an identity to re-encrypt it to the recipients you want"
+	case existing == FormatVault && writing == FormatAge:
+		return "is Ansible Vault-encrypted, and encrypt-file does not move a credential between formats; run 'cargoship vault rekey' with the vault password and the age recipients to move it onto age"
+	default:
+		return "is age-encrypted, and encrypt-file does not move a credential between formats; run 'cargoship vault rekey' with an age identity and the new vault password to move it onto Ansible Vault"
+	}
 }
 
 // DecryptConfig is the inverse of EncryptConfig: it decrypts every encrypted registry credential in
@@ -522,11 +567,16 @@ func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, er
 // ciphertext is skipped, so what comes back is a document with no encrypted credentials left in it
 // however many of them there were to begin with.
 //
+// It returns no skips worth reporting. The only thing it skips is a value that is plaintext
+// already, which is the state it was asked to produce.
+//
 // A document holding both formats decrypts in one pass, provided the keyring carries the key
 // material for both, because each value is read according to its own header.
-func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, error) {
-	return rewriteConfig(src, func(value string) (bool, error) {
-		return cluster.IsEncrypted(value), nil
+func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, []Skip, error) {
+	return rewriteConfig(src, func(value string) (bool, string, error) {
+		// The only value this skips is one that is plaintext already, which is exactly the state
+		// the command was asked to produce, so nothing is reported.
+		return cluster.IsEncrypted(value), "", nil
 	}, func(doc []byte, path string) ([]byte, error) {
 		return DecryptAtPath(doc, path, k)
 	})
@@ -536,6 +586,9 @@ func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, error) {
 // returns the rewritten document along with the paths it changed. A field that is absent, empty, or
 // plaintext is skipped, so what comes back is a document whose ciphertext is all under one key and
 // whose plaintext was never written anywhere.
+//
+// Like DecryptConfig it returns no skips worth reporting: a value it passes over is one there was
+// nothing to rekey about.
 //
 // This is also how a configuration moves between the two formats: read it with the old vault
 // password, write it to age recipients. Nothing else is needed, because the write side already
@@ -550,26 +603,33 @@ func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, error) {
 // encryption, so a second run rewrites the same values to different ciphertext. Passing the same
 // keyring as both old and new is that property put to use rather than a mistake: every value comes
 // back under fresh randomness, readable with the key the file already carried.
-func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, error) {
-	return rewriteConfig(src, func(value string) (bool, error) {
+func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, []Skip, error) {
+	return rewriteConfig(src, func(value string) (bool, string, error) {
 		format, encrypted := FormatOf(value)
 		if !encrypted {
-			return false, nil
+			// Plaintext is skipped silently, as it always has been: rekeying does not encrypt
+			// anything that was not encrypted before, and a configuration part way through being
+			// filled in would otherwise warn about every value still to be encrypted.
+			return false, "", nil
 		}
 		if _, err := DecryptValue(value, from); err != nil {
 			if format == FormatAge {
-				return false, errors.New("cannot be read with the age identities provided; is it encrypted to a recipient you do not hold a key for?")
+				return false, "", errors.New("cannot be read with the age identities provided; is it encrypted to a recipient you do not hold a key for?")
 			}
-			return false, errors.New("cannot be read with the old vault password; is it vaulted under a different one?")
+			return false, "", errors.New("cannot be read with the old vault password; is it vaulted under a different one?")
 		}
-		return true, nil
+		return true, "", nil
 	}, func(doc []byte, path string) ([]byte, error) {
 		return RekeyAtPath(doc, path, from, to)
 	})
 }
 
 // rewriteConfig applies rewrite to every registry credential path whose current value satisfies
-// wanted, returning the rewritten document and the paths that were changed. An error from wanted is
+// wanted, returning the rewritten document, the paths that were changed, and the paths wanted
+// turned down with something to say about it.
+//
+// wanted is the only thing that knows why a value was left alone, so it is what carries the reason
+// out; rewriteConfig pairs it with the path and reports nothing of its own. An error from wanted is
 // reported against the path it was asked about, which is the one thing the caller cannot say for
 // itself. A value two registries share through an anchor is rewritten once, under the first path
 // that reaches it.
@@ -578,18 +638,19 @@ func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, error) {
 // one value moves every offset after it. The paths themselves do not move, so walking them in
 // order is enough, and a configuration holds few enough of them for the reparsing to be beside the
 // point.
-func rewriteConfig(src []byte, wanted func(string) (bool, error), rewrite func([]byte, string) ([]byte, error)) ([]byte, []string, error) {
+func rewriteConfig(src []byte, wanted func(string) (bool, string, error), rewrite func([]byte, string) ([]byte, error)) ([]byte, []string, []Skip, error) {
 	paths, err := credentialPaths(src)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	doc := src
 	changed := []string{}
+	skipped := []Skip{}
 	for _, path := range paths {
 		value, ok, err := scalarAtPath(doc, path)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		// An empty value is skipped alongside a missing one: a credential nobody set is not
 		// worth replacing with ciphertext that decrypts to nothing.
@@ -597,21 +658,24 @@ func rewriteConfig(src []byte, wanted func(string) (bool, error), rewrite func([
 			continue
 		}
 
-		want, err := wanted(value)
+		want, reason, err := wanted(value)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s %w", path, err)
+			return nil, nil, nil, fmt.Errorf("%s %w", path, err)
 		}
 		if !want {
+			if reason != "" {
+				skipped = append(skipped, Skip{Path: path, Reason: reason})
+			}
 			continue
 		}
 
 		doc, err = rewrite(doc, path)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		changed = append(changed, path)
 	}
-	return doc, changed, nil
+	return doc, changed, skipped, nil
 }
 
 // credentialPaths returns the registry credential paths in src that are worth walking: every field

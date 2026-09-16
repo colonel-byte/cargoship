@@ -138,7 +138,7 @@ func TestCargoshipVaultDecryptPath(t *testing.T) {
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--no-color")
 		require.Error(t, err)
-		require.Contains(t, stderr, "not Ansible Vault-encrypted")
+		require.Contains(t, stderr, "value is not encrypted")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)

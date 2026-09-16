@@ -63,7 +63,7 @@ func (o *vaultDecryptFileOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	decrypted, changed, err := clustercfg.DecryptConfig(src, keyring)
+	decrypted, changed, skipped, err := clustercfg.DecryptConfig(src, keyring)
 	if err != nil {
 		return err
 	}
@@ -74,5 +74,5 @@ func (o *vaultDecryptFileOptions) run(cmd *cobra.Command, args []string) error {
 		logger.From(cmd.Context()).Warn("the file now holds these values in plaintext", "file", file, "count", len(changed))
 	}
 
-	return finishVaultFile(cmd, file, decrypted, changed, o.dryRun, "decrypted", "nothing to decrypt: no registry credential in this file is encrypted")
+	return finishVaultFile(cmd, file, decrypted, changed, skipped, o.dryRun, "decrypted", "nothing to decrypt: no registry credential in this file is encrypted")
 }

@@ -81,7 +81,7 @@ func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	rekeyed, changed, err := clustercfg.RekeyConfig(src, from, to)
+	rekeyed, changed, skipped, err := clustercfg.RekeyConfig(src, from, to)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 		verb, nothingToDo = "re-salted", "nothing to re-salt: no registry credential in this file is encrypted"
 	}
 
-	return finishVaultFile(cmd, file, rekeyed, changed, o.dryRun, verb, nothingToDo)
+	return finishVaultFile(cmd, file, rekeyed, changed, skipped, o.dryRun, verb, nothingToDo)
 }
 
 // resolveNewVaultPassword reads the password to rekey onto, which unlike every other vault password
