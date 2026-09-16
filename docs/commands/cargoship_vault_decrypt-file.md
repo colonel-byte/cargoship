@@ -6,7 +6,7 @@ Decrypts every registry credential in a config file, in place
 
 ### Synopsis
 
-Decrypts every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of 'cargoship vault encrypt-file', and leaves the credentials readable to anyone who can read the file.
+Decrypts every encrypted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of 'cargoship vault encrypt-file', and leaves the credentials readable to anyone who can read the file.
 
 ```
 cargoship vault decrypt-file FILE [flags]
@@ -18,8 +18,14 @@ cargoship vault decrypt-file FILE [flags]
 # Decrypt every registry credential in a cluster configuration
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
 
-# Check that every vaulted credential decrypts, without writing plaintext to disk
+# Check that every encrypted credential decrypts, without writing plaintext to disk
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt --dry-run > /dev/null
+
+# Decrypt a configuration encrypted to an age recipient
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ./key.txt
+
+# Decrypt one encrypted to an SSH public key, using the private key it pairs with
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25519
 
 # Rotate the password a whole configuration is vaulted with
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt
@@ -29,9 +35,12 @@ $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.t
 ### Options
 
 ```
-      --dry-run                      Print the resulting document to stdout instead of writing it back to FILE.
-  -h, --help                         help for decrypt-file
-      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
+  -h, --help                              help for decrypt-file
+      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 
 ### Options inherited from parent commands
@@ -45,5 +54,5 @@ $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.t
 
 ### SEE ALSO
 
-* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
 

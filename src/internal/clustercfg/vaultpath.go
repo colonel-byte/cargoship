@@ -24,23 +24,38 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/token"
 )
 
-// ErrAlreadyEncrypted reports that the value at the requested path is Ansible Vault ciphertext
-// already, so encrypting it again would bury the plaintext under a second layer that nothing
+// ErrAlreadyEncrypted reports that the value at the requested path is ciphertext already, in
+// either format, so encrypting it again would bury the plaintext under a second layer that nothing
 // unwraps.
-var ErrAlreadyEncrypted = errors.New("value is already Ansible Vault-encrypted")
+var ErrAlreadyEncrypted = errors.New("value is encrypted already")
 
-// ErrNotEncrypted reports that the value at the requested path is plaintext, so there is nothing
-// to decrypt. Rewriting it anyway would be a no-op that still rewrote the file, which is worth
-// saying out loud rather than reporting as success.
-var ErrNotEncrypted = errors.New("value is not Ansible Vault-encrypted")
+// ErrNotEncrypted reports that the value at the requested path carries neither format's header, so
+// it is plaintext and there is nothing to decrypt. Rewriting it anyway would be a no-op that still
+// rewrote the file, which is worth saying out loud rather than reporting as success.
+var ErrNotEncrypted = errors.New("value is not encrypted")
 
 // ErrWrappedTwice reports that the value at the requested path is ciphertext whose plaintext is
 // itself ciphertext -- what encrypt-path --force produces. Rekeying it would move the outer layer
-// onto the new password and leave the inner one on the old, which no single password can read
-// back, so it is refused rather than half done.
-var ErrWrappedTwice = errors.New("value is Ansible Vault-encrypted more than once")
+// onto the new key and leave the inner one on the old, which no single key can read back, so it is
+// refused rather than half done. The layers need not be in the same format for that to be true.
+var ErrWrappedTwice = errors.New("value is encrypted more than once")
+
+// Skip records a registry credential a whole-file rewrite left as it was, and why, so that the
+// command can say so rather than reporting a run that did nothing as a run with nothing to do.
+//
+// An empty Reason means the skip is not worth reporting: a path that is absent, a value that is
+// empty, or one already in exactly the state the command was asked to put it in. That convention
+// keeps the uninteresting majority silent without every caller having to filter them out.
+type Skip struct {
+	// Path is the credential's path in the document, as go-yaml spells it.
+	Path string
+	// Reason reads as the predicate of a sentence whose subject is the value at Path, so that a
+	// command can render it as a message without restating what it is about.
+	Reason string
+}
 
 // registriesPath is where a cluster configuration keeps the registries whose credentials are
 // vaulted, and vaultedFields are the fields of one of them that DecryptRegistryAuth reads at apply
@@ -77,10 +92,13 @@ func PathIsDecryptable(yamlPath string) bool {
 	return decryptablePath.MatchString(path.String())
 }
 
-// EncryptAtPath returns src with the scalar at yamlPath replaced by its Ansible Vault ciphertext,
-// written as a literal block scalar. Every other byte of src is preserved -- comments, key order,
-// quoting and indentation elsewhere in the document all survive, so the result is still the
-// operator's file rather than a re-rendering of it.
+// EncryptAtPath returns src with the scalar at yamlPath replaced by its ciphertext, written as a
+// literal block scalar. Every other byte of src is preserved -- comments, key order, quoting and
+// indentation elsewhere in the document all survive, so the result is still the operator's file
+// rather than a re-rendering of it.
+//
+// Which of the two formats is written is the keyring's decision; the splice is the same either way,
+// because both formats are ASCII text a literal block scalar holds unchanged.
 //
 // That byte-level splice is deliberate. Replacing the node in the parsed document and printing it
 // back would be shorter, but go-yaml re-indents a multi-line literal by slicing each continuation
@@ -88,16 +106,16 @@ func PathIsDecryptable(yamlPath string) bool {
 // registry credential lives.
 //
 // If the value is ciphertext already, it returns ErrAlreadyEncrypted unless reencrypt is set.
-func EncryptAtPath(src []byte, yamlPath, password string, reencrypt bool) ([]byte, error) {
+func EncryptAtPath(src []byte, yamlPath string, k *Keyring, reencrypt bool) ([]byte, error) {
 	node, plain, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
-	if cluster.IsVaultEncrypted(plain) && !reencrypt {
+	if cluster.IsEncrypted(plain) && !reencrypt {
 		return nil, fmt.Errorf("%s: %w", path, ErrAlreadyEncrypted)
 	}
 
-	encrypted, err := EncryptValue(plain, password)
+	encrypted, err := EncryptValue(plain, k)
 	if err != nil {
 		return nil, err
 	}
@@ -133,42 +151,77 @@ func scalarNodeAtPath(src []byte, yamlPath string) (ast.Node, string, string, er
 // spliceCiphertext writes encrypted over the value node holds, as a literal block scalar.
 //
 // The ciphertext is stripped rather than clipped, so what is stored does not depend on whether the
-// vault library left a trailing newline on it.
+// encrypting library left a trailing newline on it. age armor always ends in one; Ansible Vault
+// does not.
+//
+// A value inside a flow collection is quoted onto one line instead. YAML has no block scalar in
+// flow style, so writing one there produces a document that no longer parses -- and the parse it
+// fails is this package's own, on the very next path it walks, reported against a line the
+// operator's file does not have.
 func spliceCiphertext(src []byte, node ast.Node, encrypted string) ([]byte, error) {
-	return spliceScalar(src, node, "|-", strings.Split(strings.TrimRight(encrypted, "\n"), "\n"))
+	stripped := strings.TrimRight(encrypted, "\n")
+	if inFlowCollection(node) {
+		return spliceScalar(src, node, quoteScalar(stripped), nil)
+	}
+	return spliceScalar(src, node, "|-", strings.Split(stripped, "\n"))
 }
 
-// DecryptAtPath returns src with the Ansible Vault ciphertext at yamlPath replaced by its
-// plaintext, preserving every other byte of src for the same reasons, and by the same means, as
-// EncryptAtPath.
+// inFlowCollection reports whether the value node holds sits inside a "{a: b}" or "[a, b]", by
+// counting the flow delimiters the lexer produced before it. A delimiter that closes a collection
+// the value is not in cancels the one that opened it, so what is left over is the collections still
+// open where the value sits.
+//
+// Counting tokens rather than bytes is what makes this right about the cases that look like flow
+// and are not: a brace inside a quoted scalar or a comment is part of that token, and never a
+// delimiter of its own.
+func inFlowCollection(node ast.Node) bool {
+	depth := 0
+	for t := node.GetToken().Prev; t != nil; t = t.Prev {
+		switch t.Type {
+		case token.MappingStartType, token.SequenceStartType:
+			depth++
+		case token.MappingEndType, token.SequenceEndType:
+			depth--
+		}
+	}
+	return depth > 0
+}
+
+// DecryptAtPath returns src with the ciphertext at yamlPath replaced by its plaintext, preserving
+// every other byte of src for the same reasons, and by the same means, as EncryptAtPath. The
+// value's own header says which format it is in.
 //
 // The plaintext is written in whichever scalar style holds it faithfully: plain where YAML allows
 // it, a literal block for something multi-line such as a PEM certificate, and a quoted string for
 // anything the other two would change on the way back in. If the value is plaintext already, it
 // returns ErrNotEncrypted.
-func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
+func DecryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
 	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
-	if !cluster.IsVaultEncrypted(encrypted) {
+	if !cluster.IsEncrypted(encrypted) {
 		return nil, fmt.Errorf("%s: %w", path, ErrNotEncrypted)
 	}
 
-	plain, err := DecryptValue(encrypted, password)
+	plain, err := DecryptValue(encrypted, k)
 	if err != nil {
 		return nil, err
 	}
 
-	head, tail, err := renderScalar(plain)
+	head, tail, err := renderScalar(plain, inFlowCollection(node))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return spliceScalar(src, node, head, tail)
 }
 
-// RekeyAtPath returns src with the Ansible Vault ciphertext at yamlPath re-wrapped under
-// newPassword, preserving every other byte of src by the same splice EncryptAtPath uses.
+// RekeyAtPath returns src with the ciphertext at yamlPath re-wrapped under the "to" keyring,
+// preserving every other byte of src by the same splice EncryptAtPath uses.
+//
+// The two keyrings do not have to hold the same format, and that is the whole migration path
+// between them: read with a vault password, write to age recipients, in one pass that never puts
+// the plaintext on disk.
 //
 // The plaintext is never rendered back into the document. The value is decrypted, encrypted again,
 // and spliced in as ciphertext, so the plaintext exists only as a string in memory -- which is the
@@ -179,24 +232,24 @@ func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
 //
 // A value that is plaintext returns ErrNotEncrypted, and one wrapped more than once
 // ErrWrappedTwice.
-func RekeyAtPath(src []byte, yamlPath, oldPassword, newPassword string) ([]byte, error) {
+func RekeyAtPath(src []byte, yamlPath string, from, to *Keyring) ([]byte, error) {
 	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
-	if !cluster.IsVaultEncrypted(encrypted) {
+	if !cluster.IsEncrypted(encrypted) {
 		return nil, fmt.Errorf("%s: %w", path, ErrNotEncrypted)
 	}
 
-	plain, err := DecryptValue(encrypted, oldPassword)
+	plain, err := DecryptValue(encrypted, from)
 	if err != nil {
 		return nil, err
 	}
-	if cluster.IsVaultEncrypted(plain) {
+	if cluster.IsEncrypted(plain) {
 		return nil, fmt.Errorf("%s: %w", path, ErrWrappedTwice)
 	}
 
-	rekeyed, err := EncryptValue(plain, newPassword)
+	rekeyed, err := EncryptValue(plain, to)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +265,10 @@ func RekeyAtPath(src []byte, yamlPath, oldPassword, newPassword string) ([]byte,
 // instead: a value holding a control character, which it writes raw into a plain scalar; and a
 // multi-line value with trailing whitespace on a line, which survives a block scalar only until
 // something that trims trailing whitespace touches the file.
-func renderScalar(value string) (string, []string, error) {
+//
+// In flow style there is no third case to weigh: a flow collection holds no block scalar, so the
+// value is quoted onto one line whatever it holds.
+func renderScalar(value string, flow bool) (string, []string, error) {
 	if !utf8.ValidString(value) {
 		// A YAML scalar holds text, so there is no style that can carry arbitrary bytes. Saying so
 		// leaves the ciphertext in place, which is better than writing a file whose value no longer
@@ -221,7 +277,9 @@ func renderScalar(value string) (string, []string, error) {
 	}
 
 	scalar := ""
-	if blockSafe(value) {
+	if flow {
+		scalar = quoteScalar(value)
+	} else if blockSafe(value) {
 		encoded, err := goyaml.Marshal(value)
 		if err != nil {
 			return "", nil, fmt.Errorf("rendering the decrypted value as YAML: %w", err)
@@ -466,74 +524,149 @@ func keyColumnOn(line string, valueColumn int) (int, bool) {
 
 // EncryptConfig encrypts every registry credential in src that cargoship decrypts at apply time --
 // each registry's auth.user, auth.pass, auth.token and tls.ca -- and returns the rewritten
-// document along with the paths it changed. Everything else is left exactly as it was, by the same
-// byte-level splice EncryptAtPath uses.
+// document, the paths it changed, and the credentials it left alone that are worth saying
+// something about. Everything else is left exactly as it was, by the same byte-level splice
+// EncryptAtPath uses.
 //
 // A field that is absent, empty, or encrypted already is skipped rather than treated as an error,
-// so running this over a configuration that is partly vaulted finishes the job, and running it
+// so running this over a configuration that is partly encrypted finishes the job, and running it
 // twice changes nothing the second time. Pass reencrypt to wrap values that are ciphertext already.
 //
-// A value that is encrypted already has to be one this password can read, and it is an error when
-// it is not. Skipping it quietly would leave the file holding ciphertext under two different vault
-// passwords, and an apply decrypts a registry's fields with one password, so the result would be a
-// configuration no password can read back -- found out about at apply time, several phases in,
-// rather than here.
-func EncryptConfig(src []byte, password string, reencrypt bool) ([]byte, []string, error) {
-	return rewriteConfig(src, func(value string) (bool, error) {
-		if reencrypt || !cluster.IsVaultEncrypted(value) {
-			return true, nil
+// Most of those skips are the point of the command and are returned with no reason, which means
+// they are not worth reporting. The ones that come back with a reason are the cases where what the
+// operator asked for and what happened may differ -- see skipReason.
+//
+// A value already under Ansible Vault, being encrypted with an Ansible Vault password, has to be
+// one that password can read, and it is an error when it is not. Skipping it quietly would leave
+// the file holding ciphertext under two different vault passwords, and an apply decrypts a
+// registry's fields with one password, so the result would be a configuration no password can read
+// back -- found out about at apply time, several phases in, rather than here.
+//
+// There is no equivalent check for age, and cannot be. Encrypting needs only a public key, which
+// cannot decrypt anything, and an age header records no recipient identifier -- the X25519 stanza
+// is deliberately anonymous, so that ciphertext does not reveal who can read it. Nor is the check
+// wanted: the invariant it protects belongs to vault, where one password covers the document.
+// age decrypts against every identity an operator holds, so a document encrypted to several
+// recipients is an ordinary document rather than a broken one.
+func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, []Skip, error) {
+	// Resolved once, before anything is read, so that a keyring naming no format -- or naming two
+	// -- fails on its own terms rather than as an error about the first credential in the file.
+	writing, err := k.EncryptFormat()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return rewriteConfig(src, func(value string) (bool, string, error) {
+		existing, encrypted := FormatOf(value)
+		if reencrypt || !encrypted {
+			return true, "", nil
 		}
-		if _, err := DecryptValue(value, password); err != nil {
-			return false, errors.New("is Ansible Vault-encrypted with a different password; decrypt the file with the password it was vaulted under before encrypting it with this one")
+		if existing == FormatVault && writing == FormatVault {
+			if _, err := DecryptValue(value, k); err != nil {
+				return false, "", errors.New("is Ansible Vault-encrypted with a different password; decrypt the file with the password it was vaulted under before encrypting it with this one")
+			}
+			// The probe answered the question this command exists to ask, so the skip is the
+			// right outcome and there is nothing to report.
+			return false, "", nil
 		}
-		return false, nil
+		return false, skipReason(existing, writing), nil
 	}, func(doc []byte, path string) ([]byte, error) {
-		return EncryptAtPath(doc, path, password, true)
+		return EncryptAtPath(doc, path, k, true)
 	})
 }
 
-// DecryptConfig is the inverse of EncryptConfig: it decrypts every vaulted registry credential in
+// skipReason explains why EncryptConfig left a value that is already encrypted as it was, for the
+// three cases where the operator's intent and the result may well differ.
+//
+// Each of them is a value this command cannot put into the state it was asked for, because
+// encrypt-file only ever encrypts plaintext -- it does not move a credential between formats, and
+// it cannot re-encrypt one to a different set of age recipients. rekey does both, so every reason
+// names it.
+//
+// age to age is the case worth the most care. A public key cannot decrypt, and the stanzas that
+// might narrow it down are behind age's internal format package, so "already encrypted to the keys
+// you gave me" and "encrypted to somebody else's key entirely" look exactly alike from here.
+// Reporting the skip is the whole of what can be done about it; see
+// docs/agent/choice-age-encryption.md.
+func skipReason(existing, writing Format) string {
+	switch {
+	case existing == FormatAge && writing == FormatAge:
+		return "is encrypted to age recipients already, and cargoship cannot tell whether they are the ones you named; run 'cargoship vault rekey' with an identity to re-encrypt it to the recipients you want"
+	case existing == FormatVault && writing == FormatAge:
+		return "is Ansible Vault-encrypted, and encrypt-file does not move a credential between formats; run 'cargoship vault rekey' with the vault password and the age recipients to move it onto age"
+	default:
+		return "is age-encrypted, and encrypt-file does not move a credential between formats; run 'cargoship vault rekey' with an age identity and the new vault password to move it onto Ansible Vault"
+	}
+}
+
+// DecryptConfig is the inverse of EncryptConfig: it decrypts every encrypted registry credential in
 // src and returns the rewritten document along with the paths it changed. A field that is not
-// ciphertext is skipped, so what comes back is a document with no vaulted credentials left in it
+// ciphertext is skipped, so what comes back is a document with no encrypted credentials left in it
 // however many of them there were to begin with.
-func DecryptConfig(src []byte, password string) ([]byte, []string, error) {
-	return rewriteConfig(src, func(value string) (bool, error) {
-		return cluster.IsVaultEncrypted(value), nil
+//
+// It returns no skips worth reporting. The only thing it skips is a value that is plaintext
+// already, which is the state it was asked to produce.
+//
+// A document holding both formats decrypts in one pass, provided the keyring carries the key
+// material for both, because each value is read according to its own header.
+func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, []Skip, error) {
+	return rewriteConfig(src, func(value string) (bool, string, error) {
+		// The only value this skips is one that is plaintext already, which is exactly the state
+		// the command was asked to produce, so nothing is reported.
+		return cluster.IsEncrypted(value), "", nil
 	}, func(doc []byte, path string) ([]byte, error) {
-		return DecryptAtPath(doc, path, password)
+		return DecryptAtPath(doc, path, k)
 	})
 }
 
-// RekeyConfig re-wraps every vaulted registry credential in src under newPassword and returns the
-// rewritten document along with the paths it changed. A field that is absent, empty, or plaintext
-// is skipped, so what comes back is a document whose ciphertext is all under one password and whose
-// plaintext was never written anywhere.
+// RekeyConfig re-wraps every encrypted registry credential in src under the "to" keyring and
+// returns the rewritten document along with the paths it changed. A field that is absent, empty, or
+// plaintext is skipped, so what comes back is a document whose ciphertext is all under one key and
+// whose plaintext was never written anywhere.
 //
-// Every value it touches has to be readable with oldPassword, and it is an error when one is not.
-// There is no way to rekey a file already holding ciphertext under two passwords into a working
-// state -- an apply reads a registry's fields with a single password -- so stopping is the only
-// answer that does not produce a configuration no password can read back.
+// Like DecryptConfig it returns no skips worth reporting: a value it passes over is one there was
+// nothing to rekey about.
 //
-// Unlike EncryptConfig this is not idempotent, and cannot be: Ansible Vault salts every
+// This is also how a configuration moves between the two formats: read it with the old vault
+// password, write it to age recipients. Nothing else is needed, because the write side already
+// asks the keyring which format to produce.
+//
+// Every value it touches has to be readable with the "from" keyring, and it is an error when one is
+// not. There is no way to rekey a file already holding ciphertext under two vault passwords into a
+// working state -- an apply reads a registry's fields with a single password -- so stopping is the
+// only answer that does not produce a configuration no password can read back.
+//
+// Unlike EncryptConfig this is not idempotent, and cannot be: both formats randomize every
 // encryption, so a second run rewrites the same values to different ciphertext. Passing the same
-// password as both old and new is that property put to use rather than a mistake: every value
-// comes back under a fresh salt, readable with the password the file already carried.
-func RekeyConfig(src []byte, oldPassword, newPassword string) ([]byte, []string, error) {
-	return rewriteConfig(src, func(value string) (bool, error) {
-		if !cluster.IsVaultEncrypted(value) {
-			return false, nil
+// keyring as both old and new is that property put to use rather than a mistake: every value comes
+// back under fresh randomness, readable with the key the file already carried.
+func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, []Skip, error) {
+	return rewriteConfig(src, func(value string) (bool, string, error) {
+		format, encrypted := FormatOf(value)
+		if !encrypted {
+			// Plaintext is skipped silently, as it always has been: rekeying does not encrypt
+			// anything that was not encrypted before, and a configuration part way through being
+			// filled in would otherwise warn about every value still to be encrypted.
+			return false, "", nil
 		}
-		if _, err := DecryptValue(value, oldPassword); err != nil {
-			return false, errors.New("cannot be read with the old vault password; is it vaulted under a different one?")
+		if _, err := DecryptValue(value, from); err != nil {
+			if format == FormatAge {
+				return false, "", errors.New("cannot be read with the age identities provided; is it encrypted to a recipient you do not hold a key for?")
+			}
+			return false, "", errors.New("cannot be read with the old vault password; is it vaulted under a different one?")
 		}
-		return true, nil
+		return true, "", nil
 	}, func(doc []byte, path string) ([]byte, error) {
-		return RekeyAtPath(doc, path, oldPassword, newPassword)
+		return RekeyAtPath(doc, path, from, to)
 	})
 }
 
 // rewriteConfig applies rewrite to every registry credential path whose current value satisfies
-// wanted, returning the rewritten document and the paths that were changed. An error from wanted is
+// wanted, returning the rewritten document, the paths that were changed, and the paths wanted
+// turned down with something to say about it.
+//
+// wanted is the only thing that knows why a value was left alone, so it is what carries the reason
+// out; rewriteConfig pairs it with the path and reports nothing of its own. An error from wanted is
 // reported against the path it was asked about, which is the one thing the caller cannot say for
 // itself. A value two registries share through an anchor is rewritten once, under the first path
 // that reaches it.
@@ -542,18 +675,19 @@ func RekeyConfig(src []byte, oldPassword, newPassword string) ([]byte, []string,
 // one value moves every offset after it. The paths themselves do not move, so walking them in
 // order is enough, and a configuration holds few enough of them for the reparsing to be beside the
 // point.
-func rewriteConfig(src []byte, wanted func(string) (bool, error), rewrite func([]byte, string) ([]byte, error)) ([]byte, []string, error) {
+func rewriteConfig(src []byte, wanted func(string) (bool, string, error), rewrite func([]byte, string) ([]byte, error)) ([]byte, []string, []Skip, error) {
 	paths, err := credentialPaths(src)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	doc := src
 	changed := []string{}
+	skipped := []Skip{}
 	for _, path := range paths {
 		value, ok, err := scalarAtPath(doc, path)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		// An empty value is skipped alongside a missing one: a credential nobody set is not
 		// worth replacing with ciphertext that decrypts to nothing.
@@ -561,21 +695,24 @@ func rewriteConfig(src []byte, wanted func(string) (bool, error), rewrite func([
 			continue
 		}
 
-		want, err := wanted(value)
+		want, reason, err := wanted(value)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s %w", path, err)
+			return nil, nil, nil, fmt.Errorf("%s %w", path, err)
 		}
 		if !want {
+			if reason != "" {
+				skipped = append(skipped, Skip{Path: path, Reason: reason})
+			}
 			continue
 		}
 
 		doc, err = rewrite(doc, path)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		changed = append(changed, path)
 	}
-	return doc, changed, nil
+	return doc, changed, skipped, nil
 }
 
 // credentialPaths returns the registry credential paths in src that are worth walking: every field

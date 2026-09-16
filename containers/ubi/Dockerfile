@@ -18,7 +18,7 @@
 # hoisted into an ARG: dependabot's Dockerfile parser only reads literal FROM
 # lines and cannot resolve a reference that arrives through a build arg. Keep
 # every FROM in this file on the same digest.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:186a94b76e386782f576c9c49813b16dceb2ba63102af5a28405dcefec2806d0
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:7b8e25a1b56ca4d00219198f3b5b51a3e1693a5c4f5369c5e190d7d6cb3f980e
 
 ARG TARGETPLATFORM
 

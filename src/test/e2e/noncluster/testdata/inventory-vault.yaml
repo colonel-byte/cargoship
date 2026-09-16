@@ -28,7 +28,7 @@ spec:
           insecureSkipVerify: false
       - name: quay
         auth:
-          token: quay-token
+          token: "tok #2"
   hosts:
     - hostname: node1
       role: controller

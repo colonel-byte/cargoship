@@ -19,7 +19,6 @@ version: 2
 
 before:
   hooks:
-    - go mod tidy
     - go generate ./...
 
 builds:
@@ -143,9 +142,8 @@ dockers_v2:
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.created: "{{ .CommitDate }}"
 
-# Use the auto-generated changelog github provides
 changelog:
-  use: github-native
+  sort: asc
 
 signs:
   - id: checksum

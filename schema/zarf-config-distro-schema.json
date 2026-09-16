@@ -1,5 +1,49 @@
 {
   "$defs": {
+    "AgeOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.age` section of the config file, the age alternative to the Ansible Vault password given by --vault-password-file.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "identity_files": {
+          "description": "are paths to identity files, each holding either the age private keys that\ndecrypt registry credentials or an SSH private key. Equivalent to repeating\n--age-identity-file.",
+          "items": {
+            "examples": [
+              "/home/operator/.age/cargoship.key",
+              "/home/operator/.ssh/id_ed25519"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "recipients": {
+          "description": "are the public keys registry credentials are encrypted to, each either an age\nrecipient or an SSH public key. Equivalent to repeating --age-recipient.",
+          "items": {
+            "examples": [
+              "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p",
+              "age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh",
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample operator@example.com"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "recipients_files": {
+          "description": "are paths to files holding public keys, one per line, with # comments\nallowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as\nit is. Equivalent to repeating --age-recipients-file.",
+          "items": {
+            "examples": [
+              "/etc/cargoship/recipients.txt",
+              "/etc/cargoship/authorized_keys"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "ApplyOptions": {
       "additionalProperties": false,
       "description": "holds the values for the `.distro.apply` section of the config file",
@@ -255,6 +299,10 @@
     "^x-": {}
   },
   "properties": {
+    "age": {
+      "$ref": "#/$defs/AgeOptions",
+      "description": "are the age keys used to encrypt and decrypt registry credentials"
+    },
     "architecture": {
       "description": "the CPU architecture to use for OCI operations",
       "type": "string"

@@ -24,6 +24,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// sharedAuthInventoryFixture is the smallest inventory that shares a credential: one account under
+// an anchor, and a second registry that reaches it through an alias.
+const sharedAuthInventoryFixture = "src/test/e2e/noncluster/testdata/inventory-shared-auth.yaml"
+
 // TestCargoshipVaultEncryptFile exercises `vault encrypt-file` and `vault decrypt-file` against a
 // config file on disk: which fields they walk, what they leave alone, and the round trip between
 // them.
@@ -57,22 +61,11 @@ func TestCargoshipVaultEncryptFile(t *testing.T) {
 	// A configuration that shares one auth block between two registries: the credential lives under
 	// the anchor, and the second registry holds an alias to it.
 	t.Run("encrypts a credential two registries share through an anchor", func(t *testing.T) {
-		const anchored = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
-spec:
-  config:
-    registries:
-      - name: docker.io
-        auth: &auth
-          user: robot
-          pass: hunter2
-      - name: test.io
-        auth: *auth
-  hosts:
-    - name: node1
-`
+		anchored, err := os.ReadFile(sharedAuthInventoryFixture)
+		require.NoError(t, err)
+
 		config := filepath.Join(t.TempDir(), "cluster.yaml")
-		require.NoError(t, os.WriteFile(config, []byte(anchored), 0o600))
+		require.NoError(t, os.WriteFile(config, anchored, 0o600))
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
 		require.NoError(t, err)
@@ -92,7 +85,7 @@ spec:
 		require.NoError(t, err)
 		got, err = os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, anchored, string(got))
+		require.Equal(t, string(anchored), string(got))
 	})
 
 	t.Run("encrypts every credential and leaves everything else alone", func(t *testing.T) {

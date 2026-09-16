@@ -6,6 +6,7 @@
 
 # Guides
 
+- [age-encryption](guides/age-encryption.md)
 - [firewall](guides/firewall.md)
 - [multi-architecture](guides/multi-architecture.md)
 - [profile-concurrency](guides/profile-concurrency.md)
@@ -38,6 +39,7 @@
     - [encrypt-file](commands/cargoship_vault_encrypt-file.md)
     - [encrypt-path](commands/cargoship_vault_encrypt-path.md)
     - [encrypt](commands/cargoship_vault_encrypt.md)
+    - [keygen](commands/cargoship_vault_keygen.md)
     - [rekey](commands/cargoship_vault_rekey.md)
   - [version](commands/cargoship_version.md)
 
@@ -75,6 +77,7 @@
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
+- [choice-age-encryption](agent/choice-age-encryption.md)
 - [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
 - [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)

@@ -16,6 +16,7 @@ package clustercfg
 
 import (
 	"errors"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -28,31 +29,11 @@ import (
 	vault "github.com/sosedoff/ansible-vault-go"
 )
 
-// pathTestDoc covers the shapes a registry credential is written in: a bare scalar, a quoted one,
-// a scalar carrying a trailing comment, and a multi-line PEM block.
-const pathTestDoc = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
-spec:
-  # keep this comment exactly where it is
-  config:
-    loadbalancer: lb.example.com
-    registries:
-      - name: harbor # a trailing comment
-        auth:
-          user: admin
-          pass: hunter2 # not the password you think
-          token: "tok #1"
-        tls:
-          ca: |
-            -----BEGIN CERTIFICATE-----
-            aGVsbG8gd29ybGQ=
-            -----END CERTIFICATE-----
-          insecureSkipVerify: false
-  hosts:
-    - name: node1
-`
-
 const testPassword = "correct horse battery staple"
+
+// testKeyring is testPassword in the form every encrypt and decrypt entry point takes. The raw
+// password is kept beside it for the assertions that go straight to the vault library.
+var testKeyring = NewVaultKeyring(testPassword)
 
 func TestEncryptAtPathRoundTrip(t *testing.T) {
 	tests := []struct {
@@ -69,7 +50,7 @@ func TestEncryptAtPathRoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := EncryptAtPath([]byte(pathTestDoc), tt.path, testPassword, false)
+			got, err := EncryptAtPath(readPathsInventoryFixture(t), tt.path, testKeyring, false)
 			if err != nil {
 				t.Fatalf("EncryptAtPath() error = %v", err)
 			}
@@ -93,16 +74,26 @@ func TestEncryptAtPathRoundTrip(t *testing.T) {
 // of splicing it: printing a replaced node back out drops comments and truncates ciphertext nested
 // in a sequence, and both would show up here.
 func TestEncryptAtPathPreservesEverythingElse(t *testing.T) {
-	got, err := EncryptAtPath([]byte(pathTestDoc), ".spec.config.registries[0].auth.pass", testPassword, false)
+	got, err := EncryptAtPath(readPathsInventoryFixture(t), ".spec.config.registries[0].auth.pass", testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
 
 	gotLines := strings.Split(string(got), "\n")
-	wantLines := strings.Split(pathTestDoc, "\n")
+	wantLines := strings.Split(string(readPathsInventoryFixture(t)), "\n")
 
-	// Everything above the replaced value is untouched.
-	const replaced = 10 // 0-based index of the "pass:" line
+	// Everything above the replaced value is untouched. The line is found rather than counted to,
+	// so that a comment added to the fixture does not read as the command having moved something.
+	replaced := -1
+	for i, line := range wantLines {
+		if strings.HasPrefix(line, "          pass: ") {
+			replaced = i
+			break
+		}
+	}
+	if replaced < 0 {
+		t.Fatalf("the fixture holds no pass line:\n%s", strings.Join(wantLines, "\n"))
+	}
 	for i := range replaced {
 		if gotLines[i] != wantLines[i] {
 			t.Errorf("line %d = %q, want %q", i+1, gotLines[i], wantLines[i])
@@ -132,14 +123,14 @@ func TestEncryptAtPathPreservesEverythingElse(t *testing.T) {
 // TestEncryptAtPathDecryptsAtApplyTime checks the whole point of the command: a document it has
 // written is one the apply path can still read.
 func TestEncryptAtPathDecryptsAtApplyTime(t *testing.T) {
-	got := []byte(pathTestDoc)
+	got := readPathsInventoryFixture(t)
 	for _, path := range []string{
 		".spec.config.registries[0].auth.user",
 		".spec.config.registries[0].auth.pass",
 		".spec.config.registries[0].tls.ca",
 	} {
 		var err error
-		if got, err = EncryptAtPath(got, path, testPassword, false); err != nil {
+		if got, err = EncryptAtPath(got, path, testKeyring, false); err != nil {
 			t.Fatalf("EncryptAtPath(%s) error = %v", path, err)
 		}
 	}
@@ -148,7 +139,7 @@ func TestEncryptAtPathDecryptsAtApplyTime(t *testing.T) {
 	if err := goyaml.Unmarshal(got, dis); err != nil {
 		t.Fatalf("goyaml.Unmarshal() error = %v", err)
 	}
-	if err := DecryptRegistryAuth(dis, testPassword); err != nil {
+	if err := DecryptRegistryAuth(dis, testKeyring); err != nil {
 		t.Fatalf("DecryptRegistryAuth() error = %v", err)
 	}
 
@@ -166,16 +157,16 @@ func TestEncryptAtPathDecryptsAtApplyTime(t *testing.T) {
 
 func TestEncryptAtPathRejectsAlreadyEncrypted(t *testing.T) {
 	const path = ".spec.config.registries[0].auth.pass"
-	once, err := EncryptAtPath([]byte(pathTestDoc), path, testPassword, false)
+	once, err := EncryptAtPath(readPathsInventoryFixture(t), path, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
 
-	if _, err := EncryptAtPath(once, path, testPassword, false); !errors.Is(err, ErrAlreadyEncrypted) {
+	if _, err := EncryptAtPath(once, path, testKeyring, false); !errors.Is(err, ErrAlreadyEncrypted) {
 		t.Fatalf("EncryptAtPath() error = %v, want ErrAlreadyEncrypted", err)
 	}
 
-	twice, err := EncryptAtPath(once, path, testPassword, true)
+	twice, err := EncryptAtPath(once, path, testKeyring, true)
 	if err != nil {
 		t.Fatalf("EncryptAtPath(reencrypt) error = %v", err)
 	}
@@ -207,7 +198,7 @@ func TestEncryptAtPathErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := EncryptAtPath([]byte(pathTestDoc), tt.path, testPassword, false)
+			_, err := EncryptAtPath(readPathsInventoryFixture(t), tt.path, testKeyring, false)
 			if err == nil {
 				t.Fatalf("EncryptAtPath() error = nil, want one containing %q", tt.wantErr)
 			}
@@ -219,7 +210,7 @@ func TestEncryptAtPathErrors(t *testing.T) {
 }
 
 func TestEncryptAtPathRejectsInvalidYAML(t *testing.T) {
-	_, err := EncryptAtPath([]byte("spec:\n\tpass: x\n"), ".spec.pass", testPassword, false)
+	_, err := EncryptAtPath([]byte("spec:\n\tpass: x\n"), ".spec.pass", testKeyring, false)
 	if err == nil || !strings.Contains(err.Error(), "parsing YAML") {
 		t.Fatalf("EncryptAtPath() error = %v, want one containing %q", err, "parsing YAML")
 	}
@@ -307,12 +298,12 @@ func TestDecryptAtPathRoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			encrypted, err := EncryptAtPath([]byte(pathTestDoc), tt.path, testPassword, false)
+			encrypted, err := EncryptAtPath(readPathsInventoryFixture(t), tt.path, testKeyring, false)
 			if err != nil {
 				t.Fatalf("EncryptAtPath() error = %v", err)
 			}
 
-			got, err := DecryptAtPath(encrypted, tt.path, testPassword)
+			got, err := DecryptAtPath(encrypted, tt.path, testKeyring)
 			if err != nil {
 				t.Fatalf("DecryptAtPath() error = %v", err)
 			}
@@ -335,16 +326,17 @@ func TestDecryptAtPathRestoresTheDocument(t *testing.T) {
 		".spec.config.loadbalancer",
 	} {
 		t.Run(path, func(t *testing.T) {
-			encrypted, err := EncryptAtPath([]byte(pathTestDoc), path, testPassword, false)
+			doc := readPathsInventoryFixture(t)
+			encrypted, err := EncryptAtPath(doc, path, testKeyring, false)
 			if err != nil {
 				t.Fatalf("EncryptAtPath() error = %v", err)
 			}
-			got, err := DecryptAtPath(encrypted, path, testPassword)
+			got, err := DecryptAtPath(encrypted, path, testKeyring)
 			if err != nil {
 				t.Fatalf("DecryptAtPath() error = %v", err)
 			}
-			if string(got) != pathTestDoc {
-				t.Errorf("round trip changed the document:\n got:\n%s\nwant:\n%s", got, pathTestDoc)
+			if string(got) != string(doc) {
+				t.Errorf("round trip changed the document:\n got:\n%s\nwant:\n%s", got, doc)
 			}
 		})
 	}
@@ -384,13 +376,13 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 	const path = ".spec.config.registries[0].auth.pass"
 	for _, want := range values {
 		t.Run(strconv.Quote(want), func(t *testing.T) {
-			ciphertext, err := EncryptValue(want, testPassword)
+			ciphertext, err := EncryptValue(want, testKeyring)
 			if err != nil {
 				t.Fatalf("EncryptValue() error = %v", err)
 			}
 			// Put the ciphertext in the document the way encrypt-path would, so the decrypt runs
 			// against a real block scalar rather than a hand-built one.
-			doc, err := EncryptAtPath([]byte(pathTestDoc), path, testPassword, false)
+			doc, err := EncryptAtPath(readPathsInventoryFixture(t), path, testKeyring, false)
 			if err != nil {
 				t.Fatalf("EncryptAtPath() error = %v", err)
 			}
@@ -403,7 +395,7 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 				t.Fatalf("spliceScalar() error = %v", err)
 			}
 
-			got, err := DecryptAtPath(doc, path, testPassword)
+			got, err := DecryptAtPath(doc, path, testKeyring)
 			if err != nil {
 				t.Fatalf("DecryptAtPath() error = %v", err)
 			}
@@ -419,7 +411,7 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 }
 
 func TestDecryptAtPathRejectsPlaintext(t *testing.T) {
-	_, err := DecryptAtPath([]byte(pathTestDoc), ".spec.config.registries[0].auth.pass", testPassword)
+	_, err := DecryptAtPath(readPathsInventoryFixture(t), ".spec.config.registries[0].auth.pass", testKeyring)
 	if !errors.Is(err, ErrNotEncrypted) {
 		t.Fatalf("DecryptAtPath() error = %v, want ErrNotEncrypted", err)
 	}
@@ -427,11 +419,11 @@ func TestDecryptAtPathRejectsPlaintext(t *testing.T) {
 
 func TestDecryptAtPathRejectsTheWrongPassword(t *testing.T) {
 	const path = ".spec.config.registries[0].auth.pass"
-	encrypted, err := EncryptAtPath([]byte(pathTestDoc), path, testPassword, false)
+	encrypted, err := EncryptAtPath(readPathsInventoryFixture(t), path, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
-	if _, err := DecryptAtPath(encrypted, path, "not the password"); err == nil {
+	if _, err := DecryptAtPath(encrypted, path, NewVaultKeyring("not the password")); err == nil {
 		t.Fatal("DecryptAtPath() error = nil, want a decryption failure")
 	}
 }
@@ -449,7 +441,7 @@ func TestDecryptAtPathErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := DecryptAtPath([]byte(pathTestDoc), tt.path, testPassword); err == nil {
+			if _, err := DecryptAtPath(readPathsInventoryFixture(t), tt.path, testKeyring); err == nil {
 				t.Errorf("DecryptAtPath(%q) error = nil, want an error", tt.path)
 			}
 		})
@@ -457,18 +449,18 @@ func TestDecryptAtPathErrors(t *testing.T) {
 }
 
 func TestDecryptValue(t *testing.T) {
-	encrypted, err := EncryptValue("hunter2", testPassword)
+	encrypted, err := EncryptValue("hunter2", testKeyring)
 	if err != nil {
 		t.Fatalf("EncryptValue() error = %v", err)
 	}
-	got, err := DecryptValue(encrypted, testPassword)
+	got, err := DecryptValue(encrypted, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptValue() error = %v", err)
 	}
 	if got != "hunter2" {
 		t.Errorf("DecryptValue() = %q, want %q", got, "hunter2")
 	}
-	if _, err := DecryptValue("hunter2", testPassword); !errors.Is(err, ErrNotEncrypted) {
+	if _, err := DecryptValue("hunter2", testKeyring); !errors.Is(err, ErrNotEncrypted) {
 		t.Errorf("DecryptValue(plaintext) error = %v, want ErrNotEncrypted", err)
 	}
 }
@@ -493,92 +485,149 @@ func mustParse(t *testing.T, doc []byte) *ast.File {
 	return file
 }
 
-// configTestDoc holds two registries so that the whole-file commands have to walk more than one,
-// and leaves gaps a real configuration has: a registry with a token instead of a password, one
-// with no tls block, and an empty field.
-const configTestDoc = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
-spec:
-  # keep this comment exactly where it is
-  config:
-    loadbalancer: lb.example.com
-    registries:
-      - name: harbor # our mirror
-        auth:
-          user: admin
-          pass: hunter2 # rotate me
-          token: ""
-        tls:
-          ca: |
-            -----BEGIN CERTIFICATE-----
-            aGVsbG8gd29ybGQ=
-            -----END CERTIFICATE-----
-          insecureSkipVerify: false
-      - name: quay
-        auth:
-          token: "tok #2"
-  hosts:
-    - name: node1
-`
+const (
+	anchoredInventoryFixture      = "../../test/e2e/noncluster/testdata/inventory-anchors.yaml"
+	vaultInventoryFixture         = "../../test/e2e/noncluster/testdata/inventory-vault.yaml"
+	mergeOverrideInventoryFixture = "../../test/e2e/noncluster/testdata/inventory-merge-override.yaml"
+	listMergeInventoryFixture     = "../../test/e2e/noncluster/testdata/inventory-list-merge.yaml"
+	pathsInventoryFixture         = "../../test/e2e/noncluster/testdata/inventory-paths.yaml"
+	flowInventoryFixture          = "../../test/e2e/noncluster/testdata/inventory-flow.yaml"
+)
 
-// anchorTestDoc shares one auth block between two registries, the way a configuration pulling from
-// two names on the same host is written. The value lives under the anchor; the second registry
-// holds an alias to it.
-const anchorTestDoc = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
-spec:
-  config:
-    loadbalancer: lb.example.com
-    registries:
-      - name: docker.io
-        auth: &auth
-          user: robot
-          pass: hunter2
-      - name: test.io
-        auth: *auth
-  hosts:
-    - name: node1
-`
+func readAnchoredInventoryFixture(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(anchoredInventoryFixture)
+	if err != nil {
+		t.Fatalf("reading fixture %s: %v", anchoredInventoryFixture, err)
+	}
+	return data
+}
+
+func readVaultInventoryFixture(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(vaultInventoryFixture)
+	if err != nil {
+		t.Fatalf("reading fixture %s: %v", vaultInventoryFixture, err)
+	}
+	return data
+}
+
+func readMergeOverrideInventoryFixture(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(mergeOverrideInventoryFixture)
+	if err != nil {
+		t.Fatalf("reading fixture %s: %v", mergeOverrideInventoryFixture, err)
+	}
+	return data
+}
+
+func readListMergeInventoryFixture(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(listMergeInventoryFixture)
+	if err != nil {
+		t.Fatalf("reading fixture %s: %v", listMergeInventoryFixture, err)
+	}
+	return data
+}
+
+func readFlowInventoryFixture(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(flowInventoryFixture)
+	if err != nil {
+		t.Fatalf("reading fixture %s: %v", flowInventoryFixture, err)
+	}
+	return data
+}
+
+func readPathsInventoryFixture(t *testing.T) []byte {
+	t.Helper()
+	data, err := os.ReadFile(pathsInventoryFixture)
+	if err != nil {
+		t.Fatalf("reading fixture %s: %v", pathsInventoryFixture, err)
+	}
+	return data
+}
 
 // TestEncryptConfigResolvesAnchors covers the document go-yaml's path filter cannot walk on its
-// own. Before anchors were resolved this came back with nothing changed, which reads as a file with
-// no credentials in it rather than as one holding two in the clear.
+// own: resolving anchors, aliases, and merge keys so that each shared credential is encrypted once.
 func TestEncryptConfigResolvesAnchors(t *testing.T) {
-	got, changed, err := EncryptConfig([]byte(anchorTestDoc), testPassword, false)
+	fixture := readAnchoredInventoryFixture(t)
+	got, changed, _, err := EncryptConfig(fixture, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	// Once each: the second registry's fields are the first's, so encrypting them again would be a
-	// second pass over the same bytes.
+	// Once each: a value two registries share is one value, so the second registry's path names
+	// bytes the first has already rewritten and is left out rather than walked twice.
 	want := []string{
 		"$.spec.config.registries[0].auth.user",
 		"$.spec.config.registries[0].auth.pass",
+		"$.spec.config.registries[0].tls.ca",
+		"$.spec.config.registries[2].auth.user",
+		"$.spec.config.registries[2].auth.pass",
+		"$.spec.config.registries[3].auth.token",
+		"$.spec.config.registries[4].auth.user",
+		"$.spec.config.registries[4].auth.pass",
 	}
 	if strings.Join(changed, ",") != strings.Join(want, ",") {
 		t.Fatalf("changed = %v, want %v", changed, want)
 	}
-	if strings.Contains(string(got), "pass: hunter2") {
-		t.Errorf("the shared password is still in the clear:\n%s", got)
+	for _, plaintext := range []string{"hunter2", "correct-horse", "ghcr-token", "proxy-robot", "proxy-pass"} {
+		if strings.Contains(string(got), plaintext) {
+			t.Errorf("the credential %q is still in the clear:\n%s", plaintext, got)
+		}
 	}
-	if !strings.Contains(string(got), "auth: *auth") {
-		t.Errorf("the alias did not survive:\n%s", got)
+	for _, marker := range []string{
+		"auth: &robot-auth",
+		"auth: *robot-auth",
+		"tls: &internal-tls",
+		"tls: *internal-tls",
+		"<<: *internal-tls",
+		"<<: &proxy-auth-tls",
+		"<<: *proxy-auth-tls",
+	} {
+		if !strings.Contains(string(got), marker) {
+			t.Errorf("the marker %q did not survive:\n%s", marker, got)
+		}
 	}
 
-	// Both registries read the credential back, which is what sharing it is for.
+	// All registries read the credentials back, which is what sharing is for.
 	var dis cluster.ZarfCluster
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}
-	if err := DecryptRegistryAuth(&dis, testPassword); err != nil {
+	if err := DecryptRegistryAuth(&dis, testKeyring); err != nil {
 		t.Fatalf("DecryptRegistryAuth() error = %v", err)
 	}
-	for i, registry := range dis.Spec.Config.Registries {
-		if registry.Authentication.Username != "robot" {
-			t.Errorf("registry %d user = %q, want %q", i, registry.Authentication.Username, "robot")
-		}
-		if registry.Authentication.Password != "hunter2" {
-			t.Errorf("registry %d pass = %q, want %q", i, registry.Authentication.Password, "hunter2")
+	for _, registry := range dis.Spec.Config.Registries {
+		switch registry.Name {
+		case "registry.test.local", "mirror.test.local":
+			if registry.Authentication.Username != "robot" {
+				t.Errorf("registry %s user = %q, want %q", registry.Name, registry.Authentication.Username, "robot")
+			}
+			if registry.Authentication.Password != "hunter2" {
+				t.Errorf("registry %s pass = %q, want %q", registry.Name, registry.Authentication.Password, "hunter2")
+			}
+		case "lab.test.local":
+			if registry.Authentication.Username != "lab-robot" {
+				t.Errorf("registry %s user = %q, want %q", registry.Name, registry.Authentication.Username, "lab-robot")
+			}
+			if registry.Authentication.Password != "correct-horse" {
+				t.Errorf("registry %s pass = %q, want %q", registry.Name, registry.Authentication.Password, "correct-horse")
+			}
+		case "ghcr.test.local":
+			if registry.Authentication.Token != "ghcr-token" {
+				t.Errorf("registry %s token = %q, want %q", registry.Name, registry.Authentication.Token, "ghcr-token")
+			}
+		case "proxy.test.local", "proxy-mirror.test.local":
+			if registry.Authentication.Username != "proxy-robot" {
+				t.Errorf("registry %s user = %q, want %q", registry.Name, registry.Authentication.Username, "proxy-robot")
+			}
+			if registry.Authentication.Password != "proxy-pass" {
+				t.Errorf("registry %s pass = %q, want %q", registry.Name, registry.Authentication.Password, "proxy-pass")
+			}
+		default:
+			t.Errorf("registry %q is not one this test checks; the fixture and this list have drifted apart", registry.Name)
 		}
 	}
 }
@@ -587,39 +636,132 @@ func TestEncryptConfigResolvesAnchors(t *testing.T) {
 // own: the second visit would find ciphertext under the new password and report it as a value the
 // old password cannot read.
 func TestRekeyConfigResolvesAnchors(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(anchorTestDoc), testPassword, false)
+	fixture := readAnchoredInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(fixture, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, changed, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	got, changed, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
-	if len(changed) != 2 {
-		t.Fatalf("changed = %v, want the two shared credentials once each", changed)
+	want := []string{
+		"$.spec.config.registries[0].auth.user",
+		"$.spec.config.registries[0].auth.pass",
+		"$.spec.config.registries[0].tls.ca",
+		"$.spec.config.registries[2].auth.user",
+		"$.spec.config.registries[2].auth.pass",
+		"$.spec.config.registries[3].auth.token",
+		"$.spec.config.registries[4].auth.user",
+		"$.spec.config.registries[4].auth.pass",
+	}
+	if strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want the shared credentials once each: %v", changed, want)
 	}
 
-	plain, _, err := DecryptConfig(got, rekeyPassword)
+	plain, _, _, err := DecryptConfig(got, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
-	if string(plain) != anchorTestDoc {
-		t.Errorf("round trip through a rotation changed the document:\n%s\nwant:\n%s", plain, anchorTestDoc)
+	if string(plain) != string(fixture) {
+		t.Errorf("round trip through a rotation changed the document:\n%s\nwant:\n%s", plain, string(fixture))
+	}
+}
+
+// TestEncryptConfigMergeKeyOverride is the case that used to leave a credential in the clear: the
+// merged keys were placed ahead of the mapping's own, so the walk reached the shared password
+// through both registries, rewrote it twice over, and never saw the one written beside the merge.
+// encrypt-file then reported the file as done over a password still sitting in it.
+//
+// There is no apply-time half to this test, for the reason inventory-merge-override.yaml gives: the
+// decoder refuses the document. That refusal is the operator's answer for what the file means; it is
+// not a reason for the command that exists to get credentials out of the clear to leave one there.
+func TestEncryptConfigMergeKeyOverride(t *testing.T) {
+	fixture := readMergeOverrideInventoryFixture(t)
+	got, changed, _, err := EncryptConfig(fixture, testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	want := []string{
+		"$.spec.config.registries[0].auth.user",
+		"$.spec.config.registries[0].auth.pass",
+		"$.spec.config.registries[1].auth.user",
+		"$.spec.config.registries[1].auth.pass",
+	}
+	if strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want %v", changed, want)
+	}
+	for _, plaintext := range []string{"shared-user", "shared-pass", "own-user", "own-pass"} {
+		if strings.Contains(string(got), plaintext) {
+			t.Errorf("the credential %q is still in the clear:\n%s", plaintext, got)
+		}
+	}
+	if !strings.Contains(string(got), "<<: *shared-auth") {
+		t.Errorf("the merge did not survive:\n%s", got)
+	}
+}
+
+// TestEncryptConfigResolvesASequenceMerge covers the list form of a merge key, which used to be
+// walked past without a word: the registry read as one holding no credentials at all rather than as
+// one reaching three through the merge, and encrypt-file reported the file as done over all three.
+// There is no apply-time half here, for the reason inventory-list-merge.yaml gives.
+func TestEncryptConfigResolvesASequenceMerge(t *testing.T) {
+	fixture := readListMergeInventoryFixture(t)
+	got, changed, _, err := EncryptConfig(fixture, testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	want := []string{
+		"$.spec.config.registries[0].auth.user",
+		"$.spec.config.registries[0].auth.pass",
+		"$.spec.config.registries[0].tls.ca",
+	}
+	if strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want %v", changed, want)
+	}
+	for _, plaintext := range []string{"list-user", "list-pass", "list-ca"} {
+		if strings.Contains(string(got), plaintext) {
+			t.Errorf("the credential %q is still in the clear:\n%s", plaintext, got)
+		}
+	}
+	for _, marker := range []string{"        <<:", "          - auth:", "          - tls:"} {
+		if !strings.Contains(string(got), marker) {
+			t.Errorf("the marker %q did not survive:\n%s", marker, got)
+		}
+	}
+}
+
+// TestEncryptConfigRejectsAMergeKeyNamingAScalar is the other half of resolving merges, as rejecting
+// an alias with no anchor is for aliases: a merge this package cannot follow has to say so, rather
+// than report the keys behind it as absent and the file as having had nothing to do.
+func TestEncryptConfigRejectsAMergeKeyNamingAScalar(t *testing.T) {
+	fixture := readAnchoredInventoryFixture(t)
+	doc := strings.Replace(string(fixture), "<<: *ssh-defaults", "<<: not-a-mapping", 1)
+
+	_, _, _, err := EncryptConfig([]byte(doc), testKeyring, false)
+	if err == nil {
+		t.Fatal("EncryptConfig() error = nil, want an error naming the merge key")
+	}
+	if !strings.Contains(err.Error(), "merge key") {
+		t.Errorf("error = %v, want it to name the merge key", err)
 	}
 }
 
 // TestEncryptAtPathThroughAlias covers naming the aliased registry rather than the anchored one:
 // the value it reaches is the anchored one, so that is what gets rewritten.
 func TestEncryptAtPathThroughAlias(t *testing.T) {
-	got, err := EncryptAtPath([]byte(anchorTestDoc), ".spec.config.registries[1].auth.pass", testPassword, false)
+	fixture := readAnchoredInventoryFixture(t)
+	got, err := EncryptAtPath(fixture, ".spec.config.registries[1].auth.pass", testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
 	if strings.Contains(string(got), "pass: hunter2") {
 		t.Errorf("the shared password is still in the clear:\n%s", got)
 	}
-	if !strings.Contains(string(got), "auth: *auth") {
+	if !strings.Contains(string(got), "auth: *robot-auth") {
 		t.Errorf("the alias did not survive:\n%s", got)
 	}
 
@@ -632,19 +774,21 @@ func TestEncryptAtPathThroughAlias(t *testing.T) {
 // TestEncryptConfigRejectsAnAliasWithoutAnAnchor is the other half of resolving them: a document
 // this package cannot walk has to say so, rather than come back reporting nothing to do.
 func TestEncryptConfigRejectsAnAliasWithoutAnAnchor(t *testing.T) {
-	doc := strings.Replace(anchorTestDoc, "auth: &auth", "auth:", 1)
+	fixture := readAnchoredInventoryFixture(t)
+	doc := strings.Replace(string(fixture), "auth: &robot-auth", "auth:", 1)
 
-	_, _, err := EncryptConfig([]byte(doc), testPassword, false)
+	_, _, _, err := EncryptConfig([]byte(doc), testKeyring, false)
 	if err == nil {
 		t.Fatal("EncryptConfig() error = nil, want an error naming the alias")
 	}
-	if !strings.Contains(err.Error(), "*auth") {
+	if !strings.Contains(err.Error(), "*robot-auth") {
 		t.Errorf("error = %v, want it to name the alias", err)
 	}
 }
 
 func TestEncryptConfigEncryptsEveryCredential(t *testing.T) {
-	got, changed, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	got, changed, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -666,7 +810,7 @@ func TestEncryptConfigEncryptsEveryCredential(t *testing.T) {
 	if value := readPath(t, got, ".spec.config.loadbalancer"); value != "lb.example.com" {
 		t.Errorf("loadbalancer = %q, want it left alone", value)
 	}
-	if !strings.Contains(string(got), "  # keep this comment exactly where it is") {
+	if !strings.Contains(string(got), "  # registries the cluster pulls from") {
 		t.Errorf("comment did not survive:\n%s", got)
 	}
 	if !strings.Contains(string(got), "          insecureSkipVerify: false") {
@@ -683,7 +827,8 @@ func TestEncryptConfigEncryptsEveryCredential(t *testing.T) {
 // TestEncryptConfigDecryptsAtApplyTime is the check that matters most: what encrypt-file writes has
 // to be what an apply reads back.
 func TestEncryptConfigDecryptsAtApplyTime(t *testing.T) {
-	got, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	got, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -692,7 +837,7 @@ func TestEncryptConfigDecryptsAtApplyTime(t *testing.T) {
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}
-	if err := DecryptRegistryAuth(&dis, testPassword); err != nil {
+	if err := DecryptRegistryAuth(&dis, testKeyring); err != nil {
 		t.Fatalf("DecryptRegistryAuth() error = %v", err)
 	}
 
@@ -717,30 +862,32 @@ func TestEncryptConfigDecryptsAtApplyTime(t *testing.T) {
 // TestEncryptConfigRoundTrip pins the property that makes the pair safe on a file under version
 // control, across a document with several registries.
 func TestEncryptConfigRoundTrip(t *testing.T) {
-	encrypted, encryptedPaths, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	encrypted, encryptedPaths, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, decryptedPaths, err := DecryptConfig(encrypted, testPassword)
+	got, decryptedPaths, _, err := DecryptConfig(encrypted, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
 	if strings.Join(decryptedPaths, ",") != strings.Join(encryptedPaths, ",") {
 		t.Errorf("decrypted %v, want the %v that were encrypted", decryptedPaths, encryptedPaths)
 	}
-	if string(got) != configTestDoc {
-		t.Errorf("round trip changed the document:\n got:\n%s\nwant:\n%s", got, configTestDoc)
+	if string(got) != string(doc) {
+		t.Errorf("round trip changed the document:\n got:\n%s\nwant:\n%s", got, string(doc))
 	}
 }
 
 func TestEncryptConfigIsIdempotent(t *testing.T) {
-	once, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	once, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	twice, changed, err := EncryptConfig(once, testPassword, false)
+	twice, changed, _, err := EncryptConfig(once, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -755,14 +902,15 @@ func TestEncryptConfigIsIdempotent(t *testing.T) {
 // TestEncryptConfigFinishesAPartlyVaultedFile covers the case an operator actually hits: some
 // values were encrypted by hand, and encrypt-file has to pick up the rest without touching them.
 func TestEncryptConfigFinishesAPartlyVaultedFile(t *testing.T) {
+	doc := readVaultInventoryFixture(t)
 	const done = "$.spec.config.registries[0].auth.pass"
-	partial, err := EncryptAtPath([]byte(configTestDoc), done, testPassword, false)
+	partial, err := EncryptAtPath(doc, done, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
 	before := readPath(t, partial, done)
 
-	got, changed, err := EncryptConfig(partial, testPassword, false)
+	got, changed, _, err := EncryptConfig(partial, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -775,18 +923,19 @@ func TestEncryptConfigFinishesAPartlyVaultedFile(t *testing.T) {
 		t.Errorf("ciphertext at %s changed", done)
 	}
 
-	if _, remaining, err := DecryptConfig(got, testPassword); err != nil || len(remaining) != 4 {
+	if _, remaining, _, err := DecryptConfig(got, testKeyring); err != nil || len(remaining) != 4 {
 		t.Errorf("after finishing the job, DecryptConfig found %v (err = %v), want all four", remaining, err)
 	}
 }
 
 func TestEncryptConfigForceRewrapsEverything(t *testing.T) {
-	once, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	once, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	twice, changed, err := EncryptConfig(once, testPassword, true)
+	twice, changed, _, err := EncryptConfig(once, testKeyring, true)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -795,7 +944,7 @@ func TestEncryptConfigForceRewrapsEverything(t *testing.T) {
 	}
 
 	// Unwrapping once should leave ciphertext rather than plaintext.
-	unwrapped, _, err := DecryptConfig(twice, testPassword)
+	unwrapped, _, _, err := DecryptConfig(twice, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
@@ -805,14 +954,15 @@ func TestEncryptConfigForceRewrapsEverything(t *testing.T) {
 }
 
 func TestDecryptConfigSkipsPlaintext(t *testing.T) {
-	got, changed, err := DecryptConfig([]byte(configTestDoc), testPassword)
+	doc := readVaultInventoryFixture(t)
+	got, changed, _, err := DecryptConfig(doc, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
 	if len(changed) != 0 {
 		t.Errorf("changed = %v, want nothing to decrypt", changed)
 	}
-	if string(got) != configTestDoc {
+	if string(got) != string(doc) {
 		t.Errorf("a document with nothing to decrypt was rewritten:\n%s", got)
 	}
 }
@@ -829,10 +979,10 @@ func TestConfigRejectsADocumentWithoutRegistries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, _, err := EncryptConfig([]byte(tt.doc), testPassword, false); err == nil {
+			if _, _, _, err := EncryptConfig([]byte(tt.doc), testKeyring, false); err == nil {
 				t.Error("EncryptConfig() error = nil, want an error")
 			}
-			if _, _, err := DecryptConfig([]byte(tt.doc), testPassword); err == nil {
+			if _, _, _, err := DecryptConfig([]byte(tt.doc), testKeyring); err == nil {
 				t.Error("DecryptConfig() error = nil, want an error")
 			}
 		})
@@ -855,14 +1005,15 @@ func TestVaultedFieldsMatchPathIsDecryptable(t *testing.T) {
 // alone. The same vault password is used throughout, so encrypt-file has to pick up the new value
 // without disturbing the old one, and an apply has to read both back.
 func TestEncryptConfigRotatesOneCredential(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 	user := readPath(t, vaulted, ".spec.config.registries[0].auth.user")
 
 	// What the operator does by hand: replace the ciphertext with the new password in the clear.
-	got, changed, err := EncryptConfig(editPass(t, vaulted, "hunter3"), testPassword, false)
+	got, changed, _, err := EncryptConfig(editPass(t, vaulted, "hunter3"), testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -877,7 +1028,7 @@ func TestEncryptConfigRotatesOneCredential(t *testing.T) {
 	if err := goyaml.Unmarshal(got, &dis); err != nil {
 		t.Fatalf("unmarshalling:\n%s\nerror = %v", got, err)
 	}
-	if err := DecryptRegistryAuth(&dis, testPassword); err != nil {
+	if err := DecryptRegistryAuth(&dis, testKeyring); err != nil {
 		t.Fatalf("DecryptRegistryAuth() error = %v", err)
 	}
 	if got, want := dis.Spec.Config.Registries[0].Authentication.Username, "admin"; got != want {
@@ -895,13 +1046,14 @@ func TestEncryptConfigRotatesOneCredential(t *testing.T) {
 func TestEncryptConfigRejectsAnotherVaultPassword(t *testing.T) {
 	const otherPassword = "a-different-vault-password"
 
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 	edited := editPass(t, vaulted, "hunter3")
 
-	_, _, err = EncryptConfig(edited, otherPassword, false)
+	_, _, _, err = EncryptConfig(edited, NewVaultKeyring(otherPassword), false)
 	if err == nil {
 		t.Fatal("EncryptConfig() error = nil, want a refusal to mix vault passwords")
 	}
@@ -916,12 +1068,13 @@ func TestEncryptConfigRejectsAnotherVaultPassword(t *testing.T) {
 // more, because this is the direction the fix runs in: a wrong password has to fail rather than
 // leave some values in the clear and the rest vaulted.
 func TestDecryptConfigRejectsAnotherVaultPassword(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, _, err := DecryptConfig(vaulted, "a-different-vault-password")
+	got, _, _, err := DecryptConfig(vaulted, NewVaultKeyring("a-different-vault-password"))
 	if err == nil {
 		t.Fatal("DecryptConfig() error = nil, want an error")
 	}
@@ -934,7 +1087,7 @@ func TestDecryptConfigRejectsAnotherVaultPassword(t *testing.T) {
 // operator editing the file by hand.
 func editPass(t *testing.T, doc []byte, value string) []byte {
 	t.Helper()
-	got, err := DecryptAtPath(doc, "$.spec.config.registries[0].auth.pass", testPassword)
+	got, err := DecryptAtPath(doc, "$.spec.config.registries[0].auth.pass", testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptAtPath() error = %v", err)
 	}
@@ -946,15 +1099,19 @@ func editPass(t *testing.T, doc []byte, value string) []byte {
 // test asserting a value moved cannot pass by accident.
 const rekeyPassword = "a-new-vault-password"
 
+// rekeyKeyring is rekeyPassword in keyring form, the counterpart to testKeyring.
+var rekeyKeyring = NewVaultKeyring(rekeyPassword)
+
 const passPath = "$.spec.config.registries[0].auth.pass"
 
 func TestRekeyConfigMovesEveryCredential(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, changed, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	got, changed, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -977,10 +1134,10 @@ func TestRekeyConfigMovesEveryCredential(t *testing.T) {
 		if !cluster.IsVaultEncrypted(value) {
 			t.Errorf("value at %s = %q, want ciphertext", path, value)
 		}
-		if _, err := DecryptValue(value, rekeyPassword); err != nil {
+		if _, err := DecryptValue(value, rekeyKeyring); err != nil {
 			t.Errorf("value at %s does not decrypt with the new password: %v", path, err)
 		}
-		if _, err := DecryptValue(value, testPassword); err == nil {
+		if _, err := DecryptValue(value, testKeyring); err == nil {
 			t.Errorf("value at %s still decrypts with the old password", path)
 		}
 	}
@@ -990,12 +1147,13 @@ func TestRekeyConfigMovesEveryCredential(t *testing.T) {
 // rekey" with no new password named: every value comes back as different ciphertext that the
 // password the file already carried still reads.
 func TestRekeyConfigResaltsUnderTheSamePassword(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, changed, err := RekeyConfig(vaulted, testPassword, testPassword)
+	got, changed, _, err := RekeyConfig(vaulted, testKeyring, testKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -1008,58 +1166,60 @@ func TestRekeyConfigResaltsUnderTheSamePassword(t *testing.T) {
 		if value == readPath(t, vaulted, path) {
 			t.Errorf("value at %s is byte-identical, want a fresh salt", path)
 		}
-		if _, err := DecryptValue(value, testPassword); err != nil {
+		if _, err := DecryptValue(value, testKeyring); err != nil {
 			t.Errorf("value at %s no longer decrypts with the password it was vaulted under: %v", path, err)
 		}
 	}
 
 	// The plaintext is what it always was, which is the part a re-salt must not disturb.
-	plain, _, err := DecryptConfig(got, testPassword)
+	plain, _, _, err := DecryptConfig(got, testKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
-	if string(plain) != configTestDoc {
-		t.Errorf("a re-salt changed the document:\n%s\nwant:\n%s", plain, configTestDoc)
+	if string(plain) != string(doc) {
+		t.Errorf("a re-salt changed the document:\n%s\nwant:\n%s", plain, string(doc))
 	}
 }
 
 // TestRekeyConfigDecryptsAtApplyTime is the check that matters most, as it is for encrypt-file:
 // what a rotation writes has to be what an apply reads back, under the new password.
 func TestRekeyConfigDecryptsAtApplyTime(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	rekeyed, _, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	rekeyed, _, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
 
-	plain, _, err := DecryptConfig(rekeyed, rekeyPassword)
+	plain, _, _, err := DecryptConfig(rekeyed, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("DecryptConfig() error = %v", err)
 	}
 
 	// Back to the document it started as, which is the strongest statement that nothing was lost
 	// on the way through two encryptions.
-	if string(plain) != configTestDoc {
-		t.Errorf("round trip through a rotation changed the document:\n%s\nwant:\n%s", plain, configTestDoc)
+	if string(plain) != string(doc) {
+		t.Errorf("round trip through a rotation changed the document:\n%s\nwant:\n%s", plain, string(doc))
 	}
 }
 
 func TestRekeyConfigPreservesEverythingElse(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, _, err := RekeyConfig(vaulted, testPassword, rekeyPassword)
+	got, _, _, err := RekeyConfig(vaulted, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
 
-	if !strings.Contains(string(got), "  # keep this comment exactly where it is") {
+	if !strings.Contains(string(got), "  # registries the cluster pulls from") {
 		t.Errorf("comment did not survive:\n%s", got)
 	}
 	if !strings.Contains(string(got), "pass: |- # rotate me") {
@@ -1080,13 +1240,14 @@ func TestRekeyConfigPreservesEverythingElse(t *testing.T) {
 // back in the clear is not this command's business, and must come out the other side untouched
 // rather than vaulted under the new password as a side effect of a rotation.
 func TestRekeyConfigSkipsPlaintext(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 	edited := editPass(t, vaulted, "hunter3")
 
-	got, changed, err := RekeyConfig(edited, testPassword, rekeyPassword)
+	got, changed, _, err := RekeyConfig(edited, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyConfig() error = %v", err)
 	}
@@ -1102,12 +1263,13 @@ func TestRekeyConfigSkipsPlaintext(t *testing.T) {
 }
 
 func TestRekeyConfigRejectsTheWrongOldPassword(t *testing.T) {
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 
-	got, _, err := RekeyConfig(vaulted, "not-the-old-password", rekeyPassword)
+	got, _, _, err := RekeyConfig(vaulted, NewVaultKeyring("not-the-old-password"), rekeyKeyring)
 	if err == nil {
 		t.Fatal("RekeyConfig() error = nil, want an error")
 	}
@@ -1123,18 +1285,19 @@ func TestRekeyConfigRejectsTheWrongOldPassword(t *testing.T) {
 func TestRekeyConfigRejectsAMixedFile(t *testing.T) {
 	const otherPassword = "a-different-vault-password"
 
-	vaulted, _, err := EncryptConfig([]byte(configTestDoc), testPassword, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
 	// Take one value back to plaintext and vault it again under a password nothing else uses.
 	edited := editPass(t, vaulted, "hunter3")
-	mixed, err := EncryptAtPath(edited, passPath, otherPassword, false)
+	mixed, err := EncryptAtPath(edited, passPath, NewVaultKeyring(otherPassword), false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
 
-	got, _, err := RekeyConfig(mixed, testPassword, rekeyPassword)
+	got, _, _, err := RekeyConfig(mixed, testKeyring, rekeyKeyring)
 	if err == nil {
 		t.Fatal("RekeyConfig() error = nil, want a refusal to rekey a file vaulted under two passwords")
 	}
@@ -1149,7 +1312,7 @@ func TestRekeyConfigRejectsAMixedFile(t *testing.T) {
 }
 
 func TestRekeyAtPathRejectsPlaintext(t *testing.T) {
-	_, err := RekeyAtPath([]byte(pathTestDoc), passPath, testPassword, rekeyPassword)
+	_, err := RekeyAtPath(readPathsInventoryFixture(t), passPath, testKeyring, rekeyKeyring)
 	if !errors.Is(err, ErrNotEncrypted) {
 		t.Fatalf("RekeyAtPath() error = %v, want ErrNotEncrypted", err)
 	}
@@ -1159,16 +1322,16 @@ func TestRekeyAtPathRejectsPlaintext(t *testing.T) {
 // it would move the outer layer to the new password and leave the inner one on the old, which is a
 // value no single password can read back -- so it is refused rather than half done.
 func TestRekeyAtPathRejectsADoubleWrappedValue(t *testing.T) {
-	once, err := EncryptAtPath([]byte(pathTestDoc), passPath, testPassword, false)
+	once, err := EncryptAtPath(readPathsInventoryFixture(t), passPath, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
-	twice, err := EncryptAtPath(once, passPath, testPassword, true)
+	twice, err := EncryptAtPath(once, passPath, testKeyring, true)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
 
-	if _, err := RekeyAtPath(twice, passPath, testPassword, rekeyPassword); !errors.Is(err, ErrWrappedTwice) {
+	if _, err := RekeyAtPath(twice, passPath, testKeyring, rekeyKeyring); !errors.Is(err, ErrWrappedTwice) {
 		t.Fatalf("RekeyAtPath() error = %v, want ErrWrappedTwice", err)
 	}
 }
@@ -1183,34 +1346,135 @@ func TestRekeyAtPathCarriesAValueDecryptWouldRefuse(t *testing.T) {
 		t.Fatal("the fixture is supposed to be invalid UTF-8")
 	}
 
-	encrypted, err := EncryptValue(secret, testPassword)
+	encrypted, err := EncryptValue(secret, testKeyring)
 	if err != nil {
 		t.Fatalf("EncryptValue() error = %v", err)
 	}
-	node, _, _, err := scalarNodeAtPath([]byte(pathTestDoc), passPath)
+	node, _, _, err := scalarNodeAtPath(readPathsInventoryFixture(t), passPath)
 	if err != nil {
 		t.Fatalf("scalarNodeAtPath() error = %v", err)
 	}
-	doc, err := spliceCiphertext([]byte(pathTestDoc), node, encrypted)
+	doc, err := spliceCiphertext(readPathsInventoryFixture(t), node, encrypted)
 	if err != nil {
 		t.Fatalf("spliceCiphertext() error = %v", err)
 	}
 
 	// The premise: decrypting this value into the document is the thing that cannot be done.
-	if _, err := DecryptAtPath(doc, passPath, testPassword); err == nil {
+	if _, err := DecryptAtPath(doc, passPath, testKeyring); err == nil {
 		t.Fatal("DecryptAtPath() error = nil, want a refusal to write a non-UTF-8 value back")
 	}
 
-	got, err := RekeyAtPath(doc, passPath, testPassword, rekeyPassword)
+	got, err := RekeyAtPath(doc, passPath, testKeyring, rekeyKeyring)
 	if err != nil {
 		t.Fatalf("RekeyAtPath() error = %v", err)
 	}
 
-	plain, err := DecryptValue(readPath(t, got, passPath), rekeyPassword)
+	plain, err := DecryptValue(readPath(t, got, passPath), rekeyKeyring)
 	if err != nil {
 		t.Fatalf("DecryptValue() error = %v", err)
 	}
 	if plain != secret {
 		t.Errorf("plaintext = %q, want %q", plain, secret)
+	}
+}
+
+// TestEncryptConfigRewritesFlowStyle covers the spelling that used to stop encrypt-file dead: a
+// credential inside a "{a: b}". A literal block written there is not YAML, so the rewrite produced
+// a document this package could not parse on its very next path -- and reported that as a parse
+// error against the operator's file, at a line and column the file did not have.
+func TestEncryptConfigRewritesFlowStyle(t *testing.T) {
+	fixture := readFlowInventoryFixture(t)
+
+	got, changed, _, err := EncryptConfig(fixture, testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptConfig() error = %v", err)
+	}
+
+	want := []string{
+		"$.spec.config.registries[0].auth.user",
+		"$.spec.config.registries[0].auth.pass",
+		"$.spec.config.registries[1].auth.user",
+		"$.spec.config.registries[1].tls.ca",
+		"$.spec.config.registries[2].auth.token",
+	}
+	if strings.Join(changed, ",") != strings.Join(want, ",") {
+		t.Fatalf("changed = %v, want %v", changed, want)
+	}
+	for _, plaintext := range []string{"flow-user", "flow-pass", "nested-user", "nested-ca", "whole-token"} {
+		if strings.Contains(string(got), plaintext) {
+			t.Errorf("the credential %q is still in the clear:\n%s", plaintext, got)
+		}
+	}
+
+	// The keys beside the rewritten ones are still where they were, which is what carrying the rest
+	// of the flow collection over means.
+	for _, marker := range []string{"insecureSkipVerify: false", "name: whole.test.local"} {
+		if !strings.Contains(string(got), marker) {
+			t.Errorf("the marker %q did not survive:\n%s", marker, got)
+		}
+	}
+
+	// The encrypted document still loads, which is the whole of what went wrong before.
+	if _, err := Parse(t.Context(), got); err != nil {
+		t.Fatalf("the encrypted document does not decode: %v\n%s", err, got)
+	}
+
+	back, _, _, err := DecryptConfig(got, testKeyring)
+	if err != nil {
+		t.Fatalf("DecryptConfig() error = %v", err)
+	}
+	dis, err := Parse(t.Context(), back)
+	if err != nil {
+		t.Fatalf("the decrypted document does not decode: %v\n%s", err, back)
+	}
+	registries := dis.Spec.Config.Registries
+	if len(registries) != 3 {
+		t.Fatalf("registries = %d, want 3", len(registries))
+	}
+	for i, want := range []struct{ user, pass, token, ca string }{
+		{user: "flow-user", pass: "flow-pass"},
+		{user: "nested-user", ca: "nested-ca"},
+		{token: "whole-token"},
+	} {
+		auth := registries[i].Authentication
+		if auth.Username != want.user || auth.Password != want.pass || auth.Token != want.token {
+			t.Errorf("registry %d auth = %+v, want user=%q pass=%q token=%q", i, auth, want.user, want.pass, want.token)
+		}
+		ca := ""
+		if registries[i].TLS != nil {
+			ca = registries[i].TLS.CA
+		}
+		if ca != want.ca {
+			t.Errorf("registry %d ca = %q, want %q", i, ca, want.ca)
+		}
+	}
+}
+
+// TestEncryptAtPathKeepsFlowStyleOnOneLine pins how the value is written, which is the part that
+// makes the document still parse: one quoted scalar, and whatever shared the collection with it
+// still on the same line.
+func TestEncryptAtPathKeepsFlowStyleOnOneLine(t *testing.T) {
+	fixture := readFlowInventoryFixture(t)
+
+	got, err := EncryptAtPath(fixture, ".spec.config.registries[0].auth.pass", testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+
+	line := ""
+	for _, l := range strings.Split(string(got), "\n") {
+		if strings.Contains(l, "user: flow-user") {
+			line = l
+			break
+		}
+	}
+	if line == "" {
+		t.Fatalf("the flow mapping is gone:\n%s", got)
+	}
+	if !strings.HasPrefix(strings.TrimSpace(line), "auth: {user: flow-user, pass: \"$ANSIBLE_VAULT;1.1;AES256\\n") {
+		t.Errorf("flow line = %q, want the pass quoted onto the same line", line)
+	}
+	if !strings.HasSuffix(line, "}") {
+		t.Errorf("flow line = %q, want it to still close the mapping", line)
 	}
 }

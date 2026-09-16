@@ -36,15 +36,15 @@ import (
 
 type installApplyOptions struct {
 	InstallCommon
-	workerCon         string
-	hosts             bool
-	firewall          bool
-	fapolicy          bool
-	labelNodes        bool
-	allowUnmanaged    bool
-	updateKubeConfig  bool
-	kubeConfigPath    string
-	vaultPasswordFile string
+	workerCon        string
+	hosts            bool
+	firewall         bool
+	fapolicy         bool
+	labelNodes       bool
+	allowUnmanaged   bool
+	updateKubeConfig bool
+	kubeConfigPath   string
+	keyFlags
 }
 
 func newInstallApplyCommand() *cobra.Command {
@@ -75,6 +75,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.allowUnmanaged, InstallAllowUnmanagedNodes, resolvedConfig.DistroOpts.AllowUnmanagedNodes, lang.CmdInstallAllowUnmanagedNodes)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+	addAgeFlags(cmd, &o.keyFlags)
 
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
@@ -136,15 +137,20 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 
 	manager.SetTimout(d)
 
-	vaultPassword, err := clustercfg.ResolveVaultPassword(o.vaultPasswordFile)
+	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
+	// and demanding one would break every plaintext configuration that works today.
+	keyring, err := o.resolveKeyring(cmd)
 	if err != nil {
-		l.Warn("failed to resolve vault password", "err", err)
+		l.Warn("failed to resolve encryption keys", "err", err)
 		return err
 	}
 
 	// Nothing decrypts these until the engine configuration is written, which is well after every
-	// host has been connected to. Check them here, while stopping still costs nothing.
-	if err := clustercfg.VerifyRegistryAuth(manager.Config, vaultPassword); err != nil {
+	// host has been connected to. Check them here, while stopping still costs nothing. It matters
+	// more for age than it ever did for vault: an age value records nothing about which recipients
+	// it was encrypted to, so this is the only check that catches a configuration encrypted to a
+	// key nobody on this machine holds.
+	if err := clustercfg.VerifyRegistryAuth(manager.Config, keyring); err != nil {
 		l.Warn("failed to decrypt registry credentials", "err", err)
 		return err
 	}
@@ -158,7 +164,7 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		AllowUnmanagedNodes: o.allowUnmanaged,
 		UpdateKubeConfig:    o.updateKubeConfig,
 		KubeConfigPath:      o.kubeConfigPath,
-		VaultPassword:       vaultPassword,
+		Keyring:             keyring,
 	}
 
 	return action.NewApply(applyOpts).Run(ctx)

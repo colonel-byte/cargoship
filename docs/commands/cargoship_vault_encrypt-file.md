@@ -6,7 +6,7 @@ Encrypts every registry credential in a config file, in place
 
 ### Synopsis
 
-Encrypts every registry credential FILE holds that cargoship decrypts at apply time -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly vaulted configuration finishes the job and running it twice changes nothing the second time.
+Encrypts every registry credential FILE holds that cargoship decrypts at apply time -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what 'cargoship vault rekey' is for. Every credential skipped for a reason worth knowing about is reported, so a run that changes nothing says which values it left alone and why.
 
 ```
 cargoship vault encrypt-file FILE [flags]
@@ -23,15 +23,24 @@ $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass
 
 # Vault a configuration before committing it
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt && git add ./cluster.yaml
+
+# Encrypt to the age recipients a team keeps in its config file, with no keys on the command line
+$ cargoship vault encrypt-file ./cluster.yaml
+
+# Encrypt to the SSH keys a team already distributes, using its authorized_keys file as it is
+$ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys
 ```
 
 ### Options
 
 ```
-      --dry-run                      Print the resulting document to stdout instead of writing it back to FILE.
-      --force                        Encrypt values that are Ansible Vault ciphertext already, wrapping them a second time.
-  -h, --help                         help for encrypt-file
-      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
+      --force                             Encrypt values that are encrypted already, wrapping them a second time.
+  -h, --help                              help for encrypt-file
+      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 
 ### Options inherited from parent commands
@@ -45,5 +54,5 @@ $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass
 
 ### SEE ALSO
 
-* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
 

@@ -51,21 +51,39 @@ func ResolveVaultPassword(passwordFile string) (string, error) {
 	return os.Getenv(AnsibleVaultPasswordEnvVar), nil
 }
 
-// DecryptRegistryAuth decrypts any Ansible Vault-encrypted Username, Password,
-// or Token fields on dis.Spec.Config.Registries in place, along with an inline
-// TLS CA certificate given the same way. Fields that don't carry the
-// $ANSIBLE_VAULT header are left untouched.
+// missingKeyHint names what an operator has to supply to read a value in format, for an error
+// raised because they supplied none of it.
+//
+// The hint follows the value rather than the command: a document holding both formats needs both
+// kinds of key, and being told to pass a vault password for an age value is worse than being told
+// nothing.
+func missingKeyHint(format Format) string {
+	switch format {
+	case FormatAge:
+		return fmt.Sprintf("pass --age-identity-file or set %s", AgeIdentityFileEnvVar)
+	default:
+		return fmt.Sprintf("pass --vault-password-file or set %s", VaultPasswordEnvVar)
+	}
+}
+
+// DecryptRegistryAuth decrypts any encrypted Username, Password, or Token fields on
+// dis.Spec.Config.Registries in place, along with an inline TLS CA certificate given the same way.
+// Fields that carry neither ciphertext header are left untouched.
+//
+// Each field is decrypted according to its own header, so one registry can hold an Ansible Vault
+// password beside an age-encrypted token. That is what makes migrating between the two formats a
+// sequence of ordinary edits rather than a cutover.
 //
 // A CA certificate is public and does not need encrypting, but accepting one
-// encrypted means a document can be vaulted as a whole without cargoship
+// encrypted means a document can be encrypted as a whole without cargoship
 // rejecting the parts that did not have to be. The decrypted TLS settings are
 // validated here, since load time saw only ciphertext.
-func DecryptRegistryAuth(dis *cluster.ZarfCluster, password string) error {
+func DecryptRegistryAuth(dis *cluster.ZarfCluster, k *Keyring) error {
 	registries := dis.Spec.Config.Registries
 	for i := range registries {
 		auth := &registries[i].Authentication
 		// Named so that an error can say which value could not be read rather than only which
-		// registry it belonged to. A document usually vaults more than one of them.
+		// registry it belonged to. A document usually encrypts more than one of them.
 		fields := []struct {
 			name  string
 			value *string
@@ -82,13 +100,14 @@ func DecryptRegistryAuth(dis *cluster.ZarfCluster, password string) error {
 		}
 		decrypted := false
 		for _, field := range fields {
-			if !cluster.IsVaultEncrypted(*field.value) {
+			format, encrypted := FormatOf(*field.value)
+			if !encrypted {
 				continue
 			}
-			if password == "" {
-				return fmt.Errorf("registry %q: %s is Ansible Vault-encrypted but no vault password was provided; pass --vault-password-file or set %s", registries[i].Name, field.name, VaultPasswordEnvVar)
+			if !k.CanDecrypt(format) {
+				return fmt.Errorf("registry %q: %s is %s-encrypted but no key to read it was provided; %s", registries[i].Name, field.name, format, missingKeyHint(format))
 			}
-			plain, err := vault.Decrypt(*field.value, password)
+			plain, err := decryptWith(*field.value, format, k)
 			if err != nil {
 				return fmt.Errorf("registry %q: decrypting %s: %w", registries[i].Name, field.name, err)
 			}
@@ -104,15 +123,19 @@ func DecryptRegistryAuth(dis *cluster.ZarfCluster, password string) error {
 	return nil
 }
 
-// VerifyRegistryAuth reports whether every Ansible Vault-encrypted registry value in dis can be
-// decrypted with password, and whether what comes out is usable, leaving dis unchanged.
+// VerifyRegistryAuth reports whether every encrypted registry value in dis can be decrypted with
+// the keyring, and whether what comes out is usable, leaving dis unchanged.
 //
 // The values are only needed once the engine configuration is written, which is several phases
 // into an apply -- long after cargoship has connected to every host, and on a sync, after it has
-// started draining nodes. A password that was never supplied, or one that does not match the
-// document, is worth finding out about before any of that happens rather than partway through it,
-// so a command calls this as soon as it has resolved the password.
-func VerifyRegistryAuth(dis *cluster.ZarfCluster, password string) error {
+// started draining nodes. A key that was never supplied, or one that does not fit the document, is
+// worth finding out about before any of that happens rather than partway through it, so a command
+// calls this as soon as it has resolved the keyring.
+//
+// It matters more for age than it did for vault. An age value does not record which recipients it
+// was encrypted to, so this pre-flight is the only thing that catches a document encrypted to a key
+// nobody on this machine holds.
+func VerifyRegistryAuth(dis *cluster.ZarfCluster, k *Keyring) error {
 	if dis == nil {
 		return nil
 	}
@@ -129,31 +152,59 @@ func VerifyRegistryAuth(dis *cluster.ZarfCluster, password string) error {
 			probe.Spec.Config.Registries[i].TLS = &clone
 		}
 	}
-	return DecryptRegistryAuth(probe, password)
+	return DecryptRegistryAuth(probe, k)
 }
 
-// EncryptValue encrypts value with the given Ansible Vault password, producing
-// a string suitable for use as a registry auth field (see DecryptRegistryAuth).
-func EncryptValue(value, password string) (string, error) {
-	encrypted, err := vault.Encrypt(value, password)
+// EncryptValue encrypts value with the keyring, producing a string suitable for use as a registry
+// auth field (see DecryptRegistryAuth).
+//
+// Which format comes out is the keyring's decision, made once in EncryptFormat, so that every
+// command that writes ciphertext writes it the same way.
+func EncryptValue(value string, k *Keyring) (string, error) {
+	format, err := k.EncryptFormat()
 	if err != nil {
-		return "", fmt.Errorf("encrypting value: %w", err)
+		return "", err
 	}
-	return encrypted, nil
+	switch format {
+	case FormatAge:
+		return encryptAge(value, k.recipients)
+	default:
+		encrypted, err := vault.Encrypt(value, k.vaultPassword)
+		if err != nil {
+			return "", fmt.Errorf("encrypting value: %w", err)
+		}
+		return encrypted, nil
+	}
 }
 
-// DecryptValue decrypts a single Ansible Vault-encrypted value with the given
-// password, returning the plaintext EncryptValue was given.
+// DecryptValue decrypts a single encrypted value with the keyring, returning the plaintext
+// EncryptValue was given.
+//
+// The value's header says which format it is in, so this reads whatever a document holds without
+// being told, and does not care which format the same keyring would encrypt with.
 //
 // DecryptRegistryAuth is what an apply runs; this is for the operator reading a
 // value back out of a configuration by hand.
-func DecryptValue(value, password string) (string, error) {
-	if !cluster.IsVaultEncrypted(value) {
+func DecryptValue(value string, k *Keyring) (string, error) {
+	format, encrypted := FormatOf(value)
+	if !encrypted {
 		return "", ErrNotEncrypted
 	}
-	plain, err := vault.Decrypt(value, password)
+	if !k.CanDecrypt(format) {
+		return "", fmt.Errorf("value is %s-encrypted but no key to read it was provided; %s", format, missingKeyHint(format))
+	}
+	plain, err := decryptWith(value, format, k)
 	if err != nil {
 		return "", fmt.Errorf("decrypting value: %w", err)
 	}
 	return plain, nil
+}
+
+// decryptWith decrypts a value already known to be in format, so the two callers that dispatch on
+// a header do not each repeat the switch.
+func decryptWith(value string, format Format, k *Keyring) (string, error) {
+	if format == FormatAge {
+		return decryptAge(value, k.identities)
+	}
+	return vault.Decrypt(value, k.vaultPassword)
 }

@@ -30,6 +30,10 @@ const vaultInventory = "src/test/e2e/noncluster/testdata/inventory-vault.yaml"
 // share, and one block of SSH defaults every host merges.
 const anchoredInventoryFixture = "src/test/e2e/noncluster/testdata/inventory-anchors.yaml"
 
+// mergeOverrideInventoryFixture is an inventory the vault commands resolve and the decoder an apply
+// reads the file with refuses: a merge key that overrides one of the keys it merges.
+const mergeOverrideInventoryFixture = "src/test/e2e/noncluster/testdata/inventory-merge-override.yaml"
+
 // TestCargoshipVaultAnchoredInventory runs the file commands over that inventory. A shared value
 // is one value however many registries name it, so it is encrypted once, rekeyed once, and every
 // alias and merge key that reaches it is still there afterwards.
@@ -63,19 +67,19 @@ func TestCargoshipVaultAnchoredInventory(t *testing.T) {
 		return config
 	}
 
-	// Six values, not eight: the account and the trust bundle the mirrors share are each named
-	// twice in the document but are one value, and the registry that merges the trust bundle
-	// reaches the same one.
+	// Eight values: the account and the trust bundle the mirrors share are each named
+	// twice in the document but are one value, the registry that merges the trust bundle
+	// reaches the same one, and the top-level proxy merge adds one shared user and pass.
 	t.Run("encrypts each shared value once", func(t *testing.T) {
 		config := writeDoc(t)
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
 		require.NoError(t, err)
-		require.Contains(t, stderr, "count=6")
+		require.Contains(t, stderr, "count=8")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		for _, plaintext := range []string{"hunter2", "correct-horse", "ghcr-token", "aGVsbG8gd29ybGQ="} {
+		for _, plaintext := range []string{"hunter2", "correct-horse", "ghcr-token", "proxy-robot", "proxy-pass", "aGVsbG8gd29ybGQ="} {
 			require.NotContains(t, string(got), plaintext, "%q should not be left in the clear", plaintext)
 		}
 
@@ -95,6 +99,8 @@ func TestCargoshipVaultAnchoredInventory(t *testing.T) {
 			"tls: &internal-tls",
 			"tls: *internal-tls",
 			"          <<: *internal-tls",
+			"        <<: &proxy-auth-tls",
+			"        <<: *proxy-auth-tls",
 			"        <<: &ssh-defaults",
 			"        <<: *ssh-defaults",
 		} {
@@ -112,7 +118,7 @@ func TestCargoshipVaultAnchoredInventory(t *testing.T) {
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "rekey", config, "--vault-password-file", passwordFile, "--new-vault-password-file", newPasswordFile, "--no-color")
 		require.NoError(t, err)
-		require.Contains(t, stderr, "count=6")
+		require.Contains(t, stderr, "count=8")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
@@ -160,4 +166,42 @@ func TestCargoshipVaultAnchoredInventory(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "hunter2", decrypted)
 	})
+}
+
+// TestCargoshipVaultWarnsWhenTheFileWillNotApply covers the gap between what these commands resolve
+// and what an apply loads. encrypt-file reaches a credential behind a merge key that overrides one
+// of the keys it merges; the decoder reads that as the same key written twice and refuses the whole
+// document. Encrypting it is still right -- the credential should not sit in the clear either way
+// -- but the operator hears about the refusal here rather than at apply time.
+func TestCargoshipVaultWarnsWhenTheFileWillNotApply(t *testing.T) {
+	passwordFile := filepath.Join(t.TempDir(), "vault-password")
+	const password = "supersecret"
+	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
+
+	original, err := os.ReadFile(mergeOverrideInventoryFixture)
+	require.NoError(t, err)
+
+	config := filepath.Join(t.TempDir(), "inventory-merge-override.yaml")
+	require.NoError(t, os.WriteFile(config, original, 0o600))
+
+	_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--vault-password-file", passwordFile, "--no-color")
+	require.NoError(t, err, "a file that will not apply is a warning, not a failure")
+	require.Contains(t, stderr, "an apply will refuse it")
+	require.Contains(t, stderr, "count=4")
+
+	got, err := os.ReadFile(config)
+	require.NoError(t, err)
+	for _, plaintext := range []string{"shared-user", "shared-pass", "own-user", "own-pass"} {
+		require.NotContains(t, string(got), plaintext, "%q should not be left in the clear", plaintext)
+	}
+
+	// A file that does load says nothing, so the warning stays worth reading.
+	clean := filepath.Join(t.TempDir(), "inventory-anchors.yaml")
+	anchored, err := os.ReadFile(anchoredInventoryFixture)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(clean, anchored, 0o600))
+
+	_, stderr, err = e2e.Cargoship(t, "vault", "encrypt-file", clean, "--vault-password-file", passwordFile, "--no-color")
+	require.NoError(t, err)
+	require.NotContains(t, stderr, "an apply will refuse it")
 }

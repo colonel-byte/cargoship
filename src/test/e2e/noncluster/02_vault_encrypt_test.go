@@ -103,13 +103,15 @@ func TestCargoshipVaultEncrypt(t *testing.T) {
 		require.Equal(t, value, decrypted)
 	})
 
-	t.Run("no password anywhere errors", func(t *testing.T) {
+	t.Run("no key anywhere errors", func(t *testing.T) {
 		t.Setenv("CARGOSHIP_VAULT_PASSWORD", "")
 		t.Setenv("ANSIBLE_VAULT_PASSWORD", "")
+		t.Setenv("CARGOSHIP_AGE_RECIPIENTS", "")
+		t.Setenv("CARGOSHIP_AGE_IDENTITY_FILE", "")
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt", "value")
 		require.Error(t, err)
-		require.Contains(t, stderr, "no vault password found")
+		require.Contains(t, stderr, "no encryption key found")
 	})
 
 	t.Run("empty stdin errors", func(t *testing.T) {

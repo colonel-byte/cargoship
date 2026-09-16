@@ -30,12 +30,15 @@ func TestCargoshipVaultDecryptPath(t *testing.T) {
 	const password = "supersecret"
 	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
 
-	// encryptedDoc is vaultPathDoc with the value at path encrypted, which is the state
+	original, err := os.ReadFile(pathsInventoryFixture)
+	require.NoError(t, err)
+
+	// encryptedDoc is the fixture with the value at path encrypted, which is the state
 	// decrypt-path is meant to undo.
 	encryptedDoc := func(t *testing.T, path string) string {
 		t.Helper()
 		config := filepath.Join(t.TempDir(), "cluster.yaml")
-		require.NoError(t, os.WriteFile(config, []byte(vaultPathDoc), 0o600))
+		require.NoError(t, os.WriteFile(config, original, 0o600))
 
 		_, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, path, "--vault-password-file", passwordFile)
 		require.NoError(t, err)
@@ -56,14 +59,14 @@ func TestCargoshipVaultDecryptPath(t *testing.T) {
 
 				got, err := os.ReadFile(config)
 				require.NoError(t, err)
-				require.Equal(t, vaultPathDoc, string(got), "encrypt then decrypt should give back the original file")
+				require.Equal(t, string(original), string(got), "encrypt then decrypt should give back the original file")
 			})
 		}
 	})
 
 	t.Run("decrypts several paths in one run", func(t *testing.T) {
 		config := filepath.Join(t.TempDir(), "cluster.yaml")
-		require.NoError(t, os.WriteFile(config, []byte(vaultPathDoc), 0o600))
+		require.NoError(t, os.WriteFile(config, original, 0o600))
 
 		paths := []string{
 			".spec.config.registries[0].auth.user",
@@ -78,7 +81,7 @@ func TestCargoshipVaultDecryptPath(t *testing.T) {
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, vaultPathDoc, string(got), "encrypting then decrypting the same set should give back the original file")
+		require.Equal(t, string(original), string(got), "encrypting then decrypting the same set should give back the original file")
 	})
 
 	t.Run("writes nothing when one of several paths fails", func(t *testing.T) {
@@ -125,7 +128,7 @@ func TestCargoshipVaultDecryptPath(t *testing.T) {
 
 		stdout, _, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--dry-run")
 		require.NoError(t, err)
-		require.Contains(t, stdout, "pass: hunter2 # rotate me")
+		require.Contains(t, stdout, "pass: hunter2 # not the password you think")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
@@ -134,15 +137,15 @@ func TestCargoshipVaultDecryptPath(t *testing.T) {
 
 	t.Run("refuses a value that is not encrypted", func(t *testing.T) {
 		config := filepath.Join(t.TempDir(), "cluster.yaml")
-		require.NoError(t, os.WriteFile(config, []byte(vaultPathDoc), 0o600))
+		require.NoError(t, os.WriteFile(config, original, 0o600))
 
 		_, stderr, err := e2e.Cargoship(t, "vault", "decrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--no-color")
 		require.Error(t, err)
-		require.Contains(t, stderr, "not Ansible Vault-encrypted")
+		require.Contains(t, stderr, "value is not encrypted")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, vaultPathDoc, string(got), "a failed run should not touch the file")
+		require.Equal(t, string(original), string(got), "a failed run should not touch the file")
 	})
 
 	t.Run("errors on the wrong password", func(t *testing.T) {

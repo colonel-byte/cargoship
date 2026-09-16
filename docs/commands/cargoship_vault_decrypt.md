@@ -2,11 +2,11 @@
 
 ## cargoship vault decrypt
 
-Decrypts an Ansible Vault value, printing the plaintext
+Decrypts an Ansible Vault or age value, printing the plaintext
 
 ### Synopsis
 
-Decrypts VALUE, a $ANSIBLE_VAULT-prefixed string produced by 'cargoship vault encrypt', and prints the plaintext to stdout. If VALUE is omitted, it is read from stdin. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file.
+Decrypts VALUE, a string produced by 'cargoship vault encrypt' in either format, and prints the plaintext to stdout. The format is read from the value itself: a $ANSIBLE_VAULT prefix needs the vault password, an -----BEGIN AGE ENCRYPTED FILE----- prefix needs --age-identity-file. If VALUE is omitted, it is read from stdin, which is the easier way to hand over an age value, since one begins with dashes and is read as a flag when given as an argument; after the flags, '--' works too. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file.
 
 ```
 cargoship vault decrypt [VALUE] [flags]
@@ -27,13 +27,22 @@ $ cargoship vault decrypt --vault-password-file ./vault-pass.txt < ./encrypted-c
 
 # Check a value round-trips under the password a config will be applied with
 $ cargoship vault encrypt hunter2 --vault-password-file ./vault-pass.txt | cargoship vault decrypt --vault-password-file ./vault-pass.txt
+
+# Decrypt an age value; pipe it in, since an age value begins with dashes and reads as a flag
+$ cargoship vault decrypt --age-identity-file ./key.txt < ./encrypted-token.txt
+
+# The same value as an argument, with "--" after the flags to end flag parsing
+$ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-token.txt)"
 ```
 
 ### Options
 
 ```
-  -h, --help                         help for decrypt
-      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
+  -h, --help                              help for decrypt
+      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 
 ### Options inherited from parent commands
@@ -47,5 +56,5 @@ $ cargoship vault encrypt hunter2 --vault-password-file ./vault-pass.txt | cargo
 
 ### SEE ALSO
 
-* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
 
