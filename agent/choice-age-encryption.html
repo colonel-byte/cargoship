@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3d2f5dec.js";
+            window.path_to_searchindex_js = "../searchindex-fd31fba2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-86ca0880.js"></script>
@@ -204,6 +204,8 @@
 <p>A future change that tries to restore a general probe will find that it cannot be written, and a change that tries to approximate one – trial-decrypting with a configured identity, say – would be answering a different question (<em>can I read this?</em>) than the one the probe asks (<em>is this under the key I am writing with?</em>), while making <code>encrypt-file</code> require a private key it otherwise has no use for.</p>
 <h3 id="what-that-leaves-and-how-it-is-handled"><a class="header" href="#what-that-leaves-and-how-it-is-handled">What that leaves, and how it is handled</a></h3>
 <p>The one real cost is rotation-by-mistake: running <code>encrypt-file</code> with a new recipient set against an already-encrypted file does nothing, and the operator may believe it did something. This is addressed by <em>reporting the skip</em> rather than by detecting it cryptographically – the command knows perfectly well that it skipped an encrypted value; what it cannot know is whether that was the right outcome, so it says so and lets the operator decide.</p>
+<p><code>rewriteConfig</code>’s <code>wanted</code> callback is the only thing that knows why a value was left alone, so it carries the reason out as a <code>Skip{Path, Reason}</code>. An empty reason means the skip is not worth reporting, which keeps absent paths, empty values, and the vault-under-the-same-password case – where the probe <em>did</em> answer the question – silent without every caller filtering them itself. <code>skipReason</code> names <code>rekey</code> in all three cases it covers, because <code>rekey</code> is what does the thing the operator was probably attempting.</p>
+<p>The placement of the warnings matters as much as their text. <code>finishVaultFile</code> emits them <strong>before</strong> both its <code>--dry-run</code> branch and its <code>len(changed) == 0</code> early return, since a run that changed nothing is exactly the run the reporting exists for; emitting them after either would leave the loudest failure as the quietest output. They go to stderr through the logger, so a dry run piped to a file still yields a clean document.</p>
 <p>Changing which keys a document is encrypted to is <code>rekey</code>’s job, and always was. <code>rekey</code> reads with one key and writes with another, so cross-format migration falls straight out of the shape it already had: <code>rekey --vault-password-file old.txt --age-recipient age1...</code> is the whole vault-to-age path, with no new command and no window in which plaintext touches the disk.</p>
 <h2 id="why-encryption-picks-a-format-but-decryption-never-does"><a class="header" href="#why-encryption-picks-a-format-but-decryption-never-does">Why encryption picks a format but decryption never does</a></h2>
 <p>Decryption reads the header. Encryption has to choose, and the rules are in <code>Keyring.EncryptFormat</code>:</p>

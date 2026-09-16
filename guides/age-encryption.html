@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3d2f5dec.js";
+            window.path_to_searchindex_js = "../searchindex-fd31fba2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-86ca0880.js"></script>
@@ -318,9 +318,14 @@ X25519 recipients
 </code></pre>
 <p>Every registry credential in the file that is plaintext is encrypted to the recipients; anything absent, empty, or <strong>encrypted already in either format</strong> is skipped. Comments, key order, and the rest of the document survive byte for byte.</p>
 <p>Running it twice changes nothing the second time, so it is safe in a script or a pre-commit hook, and running it over a half-encrypted configuration finishes the job.</p>
-<p>There is one consequence of that worth stating plainly. <code>encrypt-file</code> <strong>never moves a credential between formats, and never re-encrypts one to a new recipient set.</strong> Running it with new recipients against a file whose credentials are already encrypted does nothing at all, and reports:</p>
-<pre><code>nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt
+<p>There is one consequence of that worth stating plainly. <code>encrypt-file</code> <strong>never moves a credential between formats, and never re-encrypts one to a new recipient set.</strong> Running it with new recipients against a file whose credentials are already encrypted does nothing to the file. It does not do it quietly, though – every credential it left alone is reported, with the reason:</p>
+<pre><code>WRN left this credential as it was: it is encrypted to age recipients already, and cargoship
+    cannot tell whether they are the ones you named, because age ciphertext does not record its
+    recipients; run 'cargoship vault rekey' with an identity to re-encrypt it to the recipients
+    you want  file=./cluster.yaml path=$.spec.config.registries[0].auth.pass
+INF nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt
 </code></pre>
+<p>The same warning appears when the formats differ, naming the one the value is in and the <code>rekey</code> invocation that moves it. Warnings are written to stderr, so <code>--dry-run</code> piped to a file still produces a clean document.</p>
 <p>To change <em>which</em> keys a configuration is encrypted to, use <code>rekey</code>.</p>
 <h3 id="decrypting-a-whole-configuration"><a class="header" href="#decrypting-a-whole-configuration">Decrypting a Whole Configuration</a></h3>
 <pre><code>cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargoship.key
@@ -391,7 +396,7 @@ X25519 recipients
 <p>An age header does not say who a value was encrypted to. The X25519 stanza holds an ephemeral share and nothing else – no key identifier, no fingerprint – by design, so that ciphertext does not leak its audience. Only the number of recipients and the <em>type</em> of each is readable.</p>
 <p>Two things follow, and both are worth knowing before they surprise you:</p>
 <ul>
-<li>Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why <code>encrypt-file</code> skips an encrypted value rather than checking it, and why changing recipients is <code>rekey</code>’s job.</li>
+<li>Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why <code>encrypt-file</code> skips an encrypted value rather than checking it, why it warns about every value it skipped rather than staying quiet, and why changing recipients is <code>rekey</code>’s job.</li>
 <li>An error about a value you cannot read can never name the key you are missing. <code>none of the configured age identities can decrypt this value</code> is the whole of what is knowable.</li>
 </ul>
 <p><code>docs/agent/choice-age-encryption.md</code> records the reasoning in full.</p>

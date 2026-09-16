@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d2f5dec.js";
+            window.path_to_searchindex_js = "searchindex-fd31fba2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-86ca0880.js"></script>
@@ -416,9 +416,14 @@ X25519 recipients
 </code></pre>
 <p>Every registry credential in the file that is plaintext is encrypted to the recipients; anything absent, empty, or <strong>encrypted already in either format</strong> is skipped. Comments, key order, and the rest of the document survive byte for byte.</p>
 <p>Running it twice changes nothing the second time, so it is safe in a script or a pre-commit hook, and running it over a half-encrypted configuration finishes the job.</p>
-<p>There is one consequence of that worth stating plainly. <code>encrypt-file</code> <strong>never moves a credential between formats, and never re-encrypts one to a new recipient set.</strong> Running it with new recipients against a file whose credentials are already encrypted does nothing at all, and reports:</p>
-<pre><code>nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt
+<p>There is one consequence of that worth stating plainly. <code>encrypt-file</code> <strong>never moves a credential between formats, and never re-encrypts one to a new recipient set.</strong> Running it with new recipients against a file whose credentials are already encrypted does nothing to the file. It does not do it quietly, though – every credential it left alone is reported, with the reason:</p>
+<pre><code>WRN left this credential as it was: it is encrypted to age recipients already, and cargoship
+    cannot tell whether they are the ones you named, because age ciphertext does not record its
+    recipients; run 'cargoship vault rekey' with an identity to re-encrypt it to the recipients
+    you want  file=./cluster.yaml path=$.spec.config.registries[0].auth.pass
+INF nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt
 </code></pre>
+<p>The same warning appears when the formats differ, naming the one the value is in and the <code>rekey</code> invocation that moves it. Warnings are written to stderr, so <code>--dry-run</code> piped to a file still produces a clean document.</p>
 <p>To change <em>which</em> keys a configuration is encrypted to, use <code>rekey</code>.</p>
 <h3 id="decrypting-a-whole-configuration"><a class="header" href="#decrypting-a-whole-configuration">Decrypting a Whole Configuration</a></h3>
 <pre><code>cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargoship.key
@@ -489,7 +494,7 @@ X25519 recipients
 <p>An age header does not say who a value was encrypted to. The X25519 stanza holds an ephemeral share and nothing else – no key identifier, no fingerprint – by design, so that ciphertext does not leak its audience. Only the number of recipients and the <em>type</em> of each is readable.</p>
 <p>Two things follow, and both are worth knowing before they surprise you:</p>
 <ul>
-<li>Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why <code>encrypt-file</code> skips an encrypted value rather than checking it, and why changing recipients is <code>rekey</code>’s job.</li>
+<li>Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why <code>encrypt-file</code> skips an encrypted value rather than checking it, why it warns about every value it skipped rather than staying quiet, and why changing recipients is <code>rekey</code>’s job.</li>
 <li>An error about a value you cannot read can never name the key you are missing. <code>none of the configured age identities can decrypt this value</code> is the whole of what is knowable.</li>
 </ul>
 <p><code>docs/agent/choice-age-encryption.md</code> records the reasoning in full.</p>
@@ -1307,7 +1312,12 @@ cargoship vault rekey FILE
 <li>Running it <strong>twice changes nothing</strong> the second time, so it is safe in a script or a pre-commit hook.</li>
 </ul>
 <p>This is what makes the ordinary credential rotation easy. Paste the new registry password into the file in the clear, leave the vaulted username alone, and run <code>encrypt-file</code>: it picks up the one value you changed and does not re-wrap the rest. Because Ansible Vault salts every encryption, re-wrapping them would change every one of those lines in the diff for no reason.</p>
-<p><code>--dry-run</code> prints the resulting document to stdout and leaves the file alone. <code>--force</code> re-encrypts values that are ciphertext already, wrapping them a second time – which is almost never what you want, since an apply unwraps only one layer.</p>
+<p>A credential encrypted with <a href="#age-encryption">age</a> is skipped too, since this command never moves a value between the two formats. That skip is reported rather than passed over in silence:</p>
+<pre><code>WRN left this credential as it was: it is age-encrypted, and encrypt-file does not move a
+    credential between formats; run 'cargoship vault rekey' with an age identity and the new
+    vault password to move it onto Ansible Vault  file=./cluster.yaml path=$.spec.config.registries[0].auth.pass
+</code></pre>
+<p><code>--dry-run</code> prints the resulting document to stdout and leaves the file alone; warnings go to stderr, so the document it prints stays clean. <code>--force</code> re-encrypts values that are ciphertext already, wrapping them a second time – which is almost never what you want, since an apply unwraps only one layer.</p>
 <h3 id="decrypting-a-whole-configuration-1"><a class="header" href="#decrypting-a-whole-configuration-1">Decrypting a Whole Configuration</a></h3>
 <pre><code>cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
 </code></pre>
@@ -2076,7 +2086,7 @@ $ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-to
 <h2 id="cargoship-vault-encrypt-file"><a class="header" href="#cargoship-vault-encrypt-file">cargoship vault encrypt-file</a></h2>
 <p>Encrypts every registry credential in a config file, in place</p>
 <h3 id="synopsis-5"><a class="header" href="#synopsis-5">Synopsis</a></h3>
-<p>Encrypts every registry credential FILE holds that cargoship decrypts at apply time – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what ‘cargoship vault rekey’ is for.</p>
+<p>Encrypts every registry credential FILE holds that cargoship decrypts at apply time – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what ‘cargoship vault rekey’ is for. Every credential skipped for a reason worth knowing about is reported, so a run that changes nothing says which values it left alone and why.</p>
 <pre><code>cargoship vault encrypt-file FILE [flags]
 </code></pre>
 <h3 id="examples-13"><a class="header" href="#examples-13">Examples</a></h3>
@@ -3591,6 +3601,8 @@ mage generate:updatePins            # refresh every line already pinned
 <p>A future change that tries to restore a general probe will find that it cannot be written, and a change that tries to approximate one – trial-decrypting with a configured identity, say – would be answering a different question (<em>can I read this?</em>) than the one the probe asks (<em>is this under the key I am writing with?</em>), while making <code>encrypt-file</code> require a private key it otherwise has no use for.</p>
 <h3 id="what-that-leaves-and-how-it-is-handled"><a class="header" href="#what-that-leaves-and-how-it-is-handled">What that leaves, and how it is handled</a></h3>
 <p>The one real cost is rotation-by-mistake: running <code>encrypt-file</code> with a new recipient set against an already-encrypted file does nothing, and the operator may believe it did something. This is addressed by <em>reporting the skip</em> rather than by detecting it cryptographically – the command knows perfectly well that it skipped an encrypted value; what it cannot know is whether that was the right outcome, so it says so and lets the operator decide.</p>
+<p><code>rewriteConfig</code>’s <code>wanted</code> callback is the only thing that knows why a value was left alone, so it carries the reason out as a <code>Skip{Path, Reason}</code>. An empty reason means the skip is not worth reporting, which keeps absent paths, empty values, and the vault-under-the-same-password case – where the probe <em>did</em> answer the question – silent without every caller filtering them itself. <code>skipReason</code> names <code>rekey</code> in all three cases it covers, because <code>rekey</code> is what does the thing the operator was probably attempting.</p>
+<p>The placement of the warnings matters as much as their text. <code>finishVaultFile</code> emits them <strong>before</strong> both its <code>--dry-run</code> branch and its <code>len(changed) == 0</code> early return, since a run that changed nothing is exactly the run the reporting exists for; emitting them after either would leave the loudest failure as the quietest output. They go to stderr through the logger, so a dry run piped to a file still yields a clean document.</p>
 <p>Changing which keys a document is encrypted to is <code>rekey</code>’s job, and always was. <code>rekey</code> reads with one key and writes with another, so cross-format migration falls straight out of the shape it already had: <code>rekey --vault-password-file old.txt --age-recipient age1...</code> is the whole vault-to-age path, with no new command and no window in which plaintext touches the disk.</p>
 <h2 id="why-encryption-picks-a-format-but-decryption-never-does"><a class="header" href="#why-encryption-picks-a-format-but-decryption-never-does">Why encryption picks a format but decryption never does</a></h2>
 <p>Decryption reads the header. Encryption has to choose, and the rules are in <code>Keyring.EncryptFormat</code>:</p>

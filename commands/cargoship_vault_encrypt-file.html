@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3d2f5dec.js";
+            window.path_to_searchindex_js = "../searchindex-fd31fba2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-86ca0880.js"></script>
@@ -186,7 +186,7 @@
 <h2 id="cargoship-vault-encrypt-file"><a class="header" href="#cargoship-vault-encrypt-file">cargoship vault encrypt-file</a></h2>
 <p>Encrypts every registry credential in a config file, in place</p>
 <h3 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h3>
-<p>Encrypts every registry credential FILE holds that cargoship decrypts at apply time – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what ‘cargoship vault rekey’ is for.</p>
+<p>Encrypts every registry credential FILE holds that cargoship decrypts at apply time – each registry’s auth.user, auth.pass, auth.token and tls.ca – and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what ‘cargoship vault rekey’ is for. Every credential skipped for a reason worth knowing about is reported, so a run that changes nothing says which values it left alone and why.</p>
 <pre><code>cargoship vault encrypt-file FILE [flags]
 </code></pre>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
