@@ -30,9 +30,9 @@ import (
 const MiscVaultForce = "force"
 
 type vaultEncryptPathOptions struct {
-	vaultPasswordFile string
-	dryRun            bool
-	force             bool
+	keyFlags
+	dryRun bool
+	force  bool
 }
 
 func newVaultEncryptPathCommand() *cobra.Command {
@@ -50,6 +50,7 @@ func newVaultEncryptPathCommand() *cobra.Command {
 	// Not marked required, for the same reason as on vault-encrypt: the environment variables
 	// ResolveVaultPassword falls back to are unreachable if cobra rejects the command first.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
+	addAgeFlags(cmd, &o.keyFlags)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultEncryptPathFlagDryRun)
 	cmd.Flags().BoolVar(&o.force, MiscVaultForce, false, lang.CmdVaultEncryptPathFlagForce)
 
@@ -59,7 +60,7 @@ func newVaultEncryptPathCommand() *cobra.Command {
 func (o *vaultEncryptPathOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	password, err := requireVaultPassword(o.vaultPasswordFile)
+	keyring, err := o.requireKeyring()
 	if err != nil {
 		return err
 	}
@@ -79,7 +80,7 @@ func (o *vaultEncryptPathOptions) run(cmd *cobra.Command, args []string) error {
 	// rather than half done.
 	doc := src
 	for _, path := range paths {
-		doc, err = clustercfg.EncryptAtPath(doc, path, password, o.force)
+		doc, err = clustercfg.EncryptAtPath(doc, path, keyring, o.force)
 		if errors.Is(err, clustercfg.ErrAlreadyEncrypted) {
 			// --force belongs to the command, so the suggestion to use it is added here rather than
 			// carried in the error the encrypting package returns.

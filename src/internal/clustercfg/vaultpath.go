@@ -77,10 +77,13 @@ func PathIsDecryptable(yamlPath string) bool {
 	return decryptablePath.MatchString(path.String())
 }
 
-// EncryptAtPath returns src with the scalar at yamlPath replaced by its Ansible Vault ciphertext,
-// written as a literal block scalar. Every other byte of src is preserved -- comments, key order,
-// quoting and indentation elsewhere in the document all survive, so the result is still the
-// operator's file rather than a re-rendering of it.
+// EncryptAtPath returns src with the scalar at yamlPath replaced by its ciphertext, written as a
+// literal block scalar. Every other byte of src is preserved -- comments, key order, quoting and
+// indentation elsewhere in the document all survive, so the result is still the operator's file
+// rather than a re-rendering of it.
+//
+// Which of the two formats is written is the keyring's decision; the splice is the same either way,
+// because both formats are ASCII text a literal block scalar holds unchanged.
 //
 // That byte-level splice is deliberate. Replacing the node in the parsed document and printing it
 // back would be shorter, but go-yaml re-indents a multi-line literal by slicing each continuation
@@ -88,16 +91,16 @@ func PathIsDecryptable(yamlPath string) bool {
 // registry credential lives.
 //
 // If the value is ciphertext already, it returns ErrAlreadyEncrypted unless reencrypt is set.
-func EncryptAtPath(src []byte, yamlPath, password string, reencrypt bool) ([]byte, error) {
+func EncryptAtPath(src []byte, yamlPath string, k *Keyring, reencrypt bool) ([]byte, error) {
 	node, plain, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
-	if cluster.IsVaultEncrypted(plain) && !reencrypt {
+	if cluster.IsEncrypted(plain) && !reencrypt {
 		return nil, fmt.Errorf("%s: %w", path, ErrAlreadyEncrypted)
 	}
 
-	encrypted, err := EncryptValue(plain, password)
+	encrypted, err := EncryptValue(plain, k)
 	if err != nil {
 		return nil, err
 	}
@@ -133,29 +136,30 @@ func scalarNodeAtPath(src []byte, yamlPath string) (ast.Node, string, string, er
 // spliceCiphertext writes encrypted over the value node holds, as a literal block scalar.
 //
 // The ciphertext is stripped rather than clipped, so what is stored does not depend on whether the
-// vault library left a trailing newline on it.
+// encrypting library left a trailing newline on it. age armor always ends in one; Ansible Vault
+// does not.
 func spliceCiphertext(src []byte, node ast.Node, encrypted string) ([]byte, error) {
 	return spliceScalar(src, node, "|-", strings.Split(strings.TrimRight(encrypted, "\n"), "\n"))
 }
 
-// DecryptAtPath returns src with the Ansible Vault ciphertext at yamlPath replaced by its
-// plaintext, preserving every other byte of src for the same reasons, and by the same means, as
-// EncryptAtPath.
+// DecryptAtPath returns src with the ciphertext at yamlPath replaced by its plaintext, preserving
+// every other byte of src for the same reasons, and by the same means, as EncryptAtPath. The
+// value's own header says which format it is in.
 //
 // The plaintext is written in whichever scalar style holds it faithfully: plain where YAML allows
 // it, a literal block for something multi-line such as a PEM certificate, and a quoted string for
 // anything the other two would change on the way back in. If the value is plaintext already, it
 // returns ErrNotEncrypted.
-func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
+func DecryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
 	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
-	if !cluster.IsVaultEncrypted(encrypted) {
+	if !cluster.IsEncrypted(encrypted) {
 		return nil, fmt.Errorf("%s: %w", path, ErrNotEncrypted)
 	}
 
-	plain, err := DecryptValue(encrypted, password)
+	plain, err := DecryptValue(encrypted, k)
 	if err != nil {
 		return nil, err
 	}
@@ -167,8 +171,12 @@ func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
 	return spliceScalar(src, node, head, tail)
 }
 
-// RekeyAtPath returns src with the Ansible Vault ciphertext at yamlPath re-wrapped under
-// newPassword, preserving every other byte of src by the same splice EncryptAtPath uses.
+// RekeyAtPath returns src with the ciphertext at yamlPath re-wrapped under the "to" keyring,
+// preserving every other byte of src by the same splice EncryptAtPath uses.
+//
+// The two keyrings do not have to hold the same format, and that is the whole migration path
+// between them: read with a vault password, write to age recipients, in one pass that never puts
+// the plaintext on disk.
 //
 // The plaintext is never rendered back into the document. The value is decrypted, encrypted again,
 // and spliced in as ciphertext, so the plaintext exists only as a string in memory -- which is the
@@ -179,24 +187,24 @@ func DecryptAtPath(src []byte, yamlPath, password string) ([]byte, error) {
 //
 // A value that is plaintext returns ErrNotEncrypted, and one wrapped more than once
 // ErrWrappedTwice.
-func RekeyAtPath(src []byte, yamlPath, oldPassword, newPassword string) ([]byte, error) {
+func RekeyAtPath(src []byte, yamlPath string, from, to *Keyring) ([]byte, error) {
 	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
 	}
-	if !cluster.IsVaultEncrypted(encrypted) {
+	if !cluster.IsEncrypted(encrypted) {
 		return nil, fmt.Errorf("%s: %w", path, ErrNotEncrypted)
 	}
 
-	plain, err := DecryptValue(encrypted, oldPassword)
+	plain, err := DecryptValue(encrypted, from)
 	if err != nil {
 		return nil, err
 	}
-	if cluster.IsVaultEncrypted(plain) {
+	if cluster.IsEncrypted(plain) {
 		return nil, fmt.Errorf("%s: %w", path, ErrWrappedTwice)
 	}
 
-	rekeyed, err := EncryptValue(plain, newPassword)
+	rekeyed, err := EncryptValue(plain, to)
 	if err != nil {
 		return nil, err
 	}
@@ -470,65 +478,93 @@ func keyColumnOn(line string, valueColumn int) (int, bool) {
 // byte-level splice EncryptAtPath uses.
 //
 // A field that is absent, empty, or encrypted already is skipped rather than treated as an error,
-// so running this over a configuration that is partly vaulted finishes the job, and running it
+// so running this over a configuration that is partly encrypted finishes the job, and running it
 // twice changes nothing the second time. Pass reencrypt to wrap values that are ciphertext already.
 //
-// A value that is encrypted already has to be one this password can read, and it is an error when
-// it is not. Skipping it quietly would leave the file holding ciphertext under two different vault
-// passwords, and an apply decrypts a registry's fields with one password, so the result would be a
-// configuration no password can read back -- found out about at apply time, several phases in,
-// rather than here.
-func EncryptConfig(src []byte, password string, reencrypt bool) ([]byte, []string, error) {
+// A value already under Ansible Vault, being encrypted with an Ansible Vault password, has to be
+// one that password can read, and it is an error when it is not. Skipping it quietly would leave
+// the file holding ciphertext under two different vault passwords, and an apply decrypts a
+// registry's fields with one password, so the result would be a configuration no password can read
+// back -- found out about at apply time, several phases in, rather than here.
+//
+// There is no equivalent check for age, and cannot be. Encrypting needs only a public key, which
+// cannot decrypt anything, and an age header records no recipient identifier -- the X25519 stanza
+// is deliberately anonymous, so that ciphertext does not reveal who can read it. Nor is the check
+// wanted: the invariant it protects belongs to vault, where one password covers the document.
+// age decrypts against every identity an operator holds, so a document encrypted to several
+// recipients is an ordinary document rather than a broken one.
+func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, error) {
+	// Resolved once, before anything is read, so that a keyring naming no format -- or naming two
+	// -- fails on its own terms rather than as an error about the first credential in the file.
+	writing, err := k.EncryptFormat()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return rewriteConfig(src, func(value string) (bool, error) {
-		if reencrypt || !cluster.IsVaultEncrypted(value) {
+		existing, encrypted := FormatOf(value)
+		if reencrypt || !encrypted {
 			return true, nil
 		}
-		if _, err := DecryptValue(value, password); err != nil {
-			return false, errors.New("is Ansible Vault-encrypted with a different password; decrypt the file with the password it was vaulted under before encrypting it with this one")
+		if existing == FormatVault && writing == FormatVault {
+			if _, err := DecryptValue(value, k); err != nil {
+				return false, errors.New("is Ansible Vault-encrypted with a different password; decrypt the file with the password it was vaulted under before encrypting it with this one")
+			}
 		}
 		return false, nil
 	}, func(doc []byte, path string) ([]byte, error) {
-		return EncryptAtPath(doc, path, password, true)
+		return EncryptAtPath(doc, path, k, true)
 	})
 }
 
-// DecryptConfig is the inverse of EncryptConfig: it decrypts every vaulted registry credential in
+// DecryptConfig is the inverse of EncryptConfig: it decrypts every encrypted registry credential in
 // src and returns the rewritten document along with the paths it changed. A field that is not
-// ciphertext is skipped, so what comes back is a document with no vaulted credentials left in it
+// ciphertext is skipped, so what comes back is a document with no encrypted credentials left in it
 // however many of them there were to begin with.
-func DecryptConfig(src []byte, password string) ([]byte, []string, error) {
+//
+// A document holding both formats decrypts in one pass, provided the keyring carries the key
+// material for both, because each value is read according to its own header.
+func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, error) {
 	return rewriteConfig(src, func(value string) (bool, error) {
-		return cluster.IsVaultEncrypted(value), nil
+		return cluster.IsEncrypted(value), nil
 	}, func(doc []byte, path string) ([]byte, error) {
-		return DecryptAtPath(doc, path, password)
+		return DecryptAtPath(doc, path, k)
 	})
 }
 
-// RekeyConfig re-wraps every vaulted registry credential in src under newPassword and returns the
-// rewritten document along with the paths it changed. A field that is absent, empty, or plaintext
-// is skipped, so what comes back is a document whose ciphertext is all under one password and whose
-// plaintext was never written anywhere.
+// RekeyConfig re-wraps every encrypted registry credential in src under the "to" keyring and
+// returns the rewritten document along with the paths it changed. A field that is absent, empty, or
+// plaintext is skipped, so what comes back is a document whose ciphertext is all under one key and
+// whose plaintext was never written anywhere.
 //
-// Every value it touches has to be readable with oldPassword, and it is an error when one is not.
-// There is no way to rekey a file already holding ciphertext under two passwords into a working
-// state -- an apply reads a registry's fields with a single password -- so stopping is the only
-// answer that does not produce a configuration no password can read back.
+// This is also how a configuration moves between the two formats: read it with the old vault
+// password, write it to age recipients. Nothing else is needed, because the write side already
+// asks the keyring which format to produce.
 //
-// Unlike EncryptConfig this is not idempotent, and cannot be: Ansible Vault salts every
+// Every value it touches has to be readable with the "from" keyring, and it is an error when one is
+// not. There is no way to rekey a file already holding ciphertext under two vault passwords into a
+// working state -- an apply reads a registry's fields with a single password -- so stopping is the
+// only answer that does not produce a configuration no password can read back.
+//
+// Unlike EncryptConfig this is not idempotent, and cannot be: both formats randomize every
 // encryption, so a second run rewrites the same values to different ciphertext. Passing the same
-// password as both old and new is that property put to use rather than a mistake: every value
-// comes back under a fresh salt, readable with the password the file already carried.
-func RekeyConfig(src []byte, oldPassword, newPassword string) ([]byte, []string, error) {
+// keyring as both old and new is that property put to use rather than a mistake: every value comes
+// back under fresh randomness, readable with the key the file already carried.
+func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, error) {
 	return rewriteConfig(src, func(value string) (bool, error) {
-		if !cluster.IsVaultEncrypted(value) {
+		format, encrypted := FormatOf(value)
+		if !encrypted {
 			return false, nil
 		}
-		if _, err := DecryptValue(value, oldPassword); err != nil {
+		if _, err := DecryptValue(value, from); err != nil {
+			if format == FormatAge {
+				return false, errors.New("cannot be read with the age identities provided; is it encrypted to a recipient you do not hold a key for?")
+			}
 			return false, errors.New("cannot be read with the old vault password; is it vaulted under a different one?")
 		}
 		return true, nil
 	}, func(doc []byte, path string) ([]byte, error) {
-		return RekeyAtPath(doc, path, oldPassword, newPassword)
+		return RekeyAtPath(doc, path, from, to)
 	})
 }
 

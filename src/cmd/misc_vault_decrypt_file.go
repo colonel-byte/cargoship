@@ -25,8 +25,8 @@ import (
 )
 
 type vaultDecryptFileOptions struct {
-	vaultPasswordFile string
-	dryRun            bool
+	keyFlags
+	dryRun bool
 }
 
 func newVaultDecryptFileCommand() *cobra.Command {
@@ -44,6 +44,7 @@ func newVaultDecryptFileCommand() *cobra.Command {
 	// Not marked required, for the same reason as on encrypt: the environment variables
 	// ResolveVaultPassword falls back to are unreachable if cobra rejects the command first.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
+	addAgeFlags(cmd, &o.keyFlags)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultDecryptFileFlagDryRun)
 
 	return cmd
@@ -52,7 +53,7 @@ func newVaultDecryptFileCommand() *cobra.Command {
 func (o *vaultDecryptFileOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	password, err := requireVaultPassword(o.vaultPasswordFile)
+	keyring, err := o.requireKeyring()
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,7 @@ func (o *vaultDecryptFileOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	decrypted, changed, err := clustercfg.DecryptConfig(src, password)
+	decrypted, changed, err := clustercfg.DecryptConfig(src, keyring)
 	if err != nil {
 		return err
 	}

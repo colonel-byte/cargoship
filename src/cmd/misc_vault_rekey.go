@@ -27,7 +27,7 @@ import (
 const MiscVaultNewPasswordFile = "new-vault-password-file"
 
 type vaultRekeyOptions struct {
-	vaultPasswordFile    string
+	keyFlags
 	newVaultPasswordFile string
 	dryRun               bool
 }
@@ -48,6 +48,10 @@ func newVaultRekeyCommand() *cobra.Command {
 	// environment fallbacks included, because that is where the password a file is already vaulted
 	// under is likely to be sitting.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
+	// The age flags are read as the key to rekey *onto*, not as a second way of naming the old one:
+	// a recipient is a public key and cannot decrypt anything, so it has no other use here. That is
+	// what makes moving a file from Ansible Vault to age one command rather than a new one.
+	addAgeFlags(cmd, &o.keyFlags)
 	cmd.Flags().StringVar(&o.newVaultPasswordFile, MiscVaultNewPasswordFile, "", lang.CmdVaultRekeyFlagNewPasswordFile)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultRekeyFlagDryRun)
 
@@ -57,12 +61,17 @@ func newVaultRekeyCommand() *cobra.Command {
 func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	oldPassword, err := requireVaultPassword(o.vaultPasswordFile)
+	from, err := o.requireKeyring()
 	if err != nil {
 		return err
 	}
 
-	newPassword, err := resolveNewVaultPassword(o.newVaultPasswordFile, oldPassword)
+	newPassword, err := resolveNewVaultPassword(o.newVaultPasswordFile)
+	if err != nil {
+		return err
+	}
+
+	to, rotated, err := from.RekeyTarget(newPassword)
 	if err != nil {
 		return err
 	}
@@ -72,17 +81,16 @@ func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	rekeyed, changed, err := clustercfg.RekeyConfig(src, oldPassword, newPassword)
+	rekeyed, changed, err := clustercfg.RekeyConfig(src, from, to)
 	if err != nil {
 		return err
 	}
 
-	// Rekeying onto the password the file already carries re-salts every value and leaves it
-	// readable with the same password as before. That is a supported thing to ask for, but it is
-	// not a rotation, so it is reported as what it is rather than as a password change that did
-	// not happen.
+	// Rekeying onto the key the file already carries re-salts every value and leaves it readable
+	// with the same key as before. That is a supported thing to ask for, but it is not a rotation,
+	// so it is reported as what it is rather than as a key change that did not happen.
 	verb, nothingToDo := "rekeyed", "nothing to rekey: no registry credential in this file is encrypted"
-	if newPassword == oldPassword {
+	if !rotated {
 		verb, nothingToDo = "re-salted", "nothing to re-salt: no registry credential in this file is encrypted"
 	}
 
@@ -94,13 +102,13 @@ func (o *vaultRekeyOptions) run(cmd *cobra.Command, args []string) error {
 // the password a configuration is vaulted under now, so honouring them here would turn an omitted
 // flag into a silent rotation onto the password the file started with.
 //
-// An omitted flag instead means the old password, which re-salts every value under the password the
-// file already uses -- a fresh salt and fresh ciphertext for a configuration whose password is
+// An omitted flag instead leaves the target to RekeyTarget, which re-salts every value under the
+// key the file already uses -- a fresh salt and fresh ciphertext for a configuration whose key is
 // fine but whose ciphertext an operator would rather not keep, without the plaintext ever reaching
 // disk. Naming a file holding the old password does the same thing, and is reported the same way.
-func resolveNewVaultPassword(passwordFile, oldPassword string) (string, error) {
+func resolveNewVaultPassword(passwordFile string) (string, error) {
 	if passwordFile == "" {
-		return oldPassword, nil
+		return "", nil
 	}
 
 	// Going through ResolveVaultPassword is safe only because the empty case is handled above: given
