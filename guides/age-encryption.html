@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-205b19ab.js";
+            window.path_to_searchindex_js = "../searchindex-9da9b91f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-08a866d0.js"></script>
@@ -240,6 +240,7 @@ age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh
 age1lggyhqrw2nlhcxprm67z43rta597azn8gknawjehu9d9dl0jq3yqqvfafg
 </code></pre>
 <p>The comment has to be on its own line. A <code>#</code> after a key on the same line is read as part of the key, and the file fails to parse with the line number. This is age’s own format, and <code>age --recipients-file</code> reads the same file.</p>
+<p>SSH public keys go in the same flags and the same file; see <a href="#using-an-ssh-key">Using an SSH Key</a>.</p>
 <p>Every recipient named across every flag is encrypted to, so a value can be readable by several people at once. This is the normal case, not a migration state.</p>
 <p>When no recipient flag is given, Cargoship reads <code>CARGOSHIP_AGE_RECIPIENTS</code>, which holds whitespace-separated public keys:</p>
 <pre><code>export CARGOSHIP_AGE_RECIPIENTS="age1ql3z... age19h0n..."
@@ -250,8 +251,31 @@ age1lggyhqrw2nlhcxprm67z43rta597azn8gknawjehu9d9dl0jq3yqqvfafg
 </code></pre>
 <p>Repeatable, and a single file may hold several identities. Every identity Cargoship has been given is tried against a value, so holding keys for two teams in one file works.</p>
 <p>When no identity flag is given, Cargoship reads <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, which holds exactly one path. A list would need a separator, and every separator worth choosing is legal in a file name.</p>
+<h3 id="using-an-ssh-key"><a class="header" href="#using-an-ssh-key">Using an SSH Key</a></h3>
+<p>An <code>ssh-ed25519</code> or <code>ssh-rsa</code> key works anywhere an age key does, and goes in the same three flags. There are no <code>--ssh-*</code> flags, because there is no point in making an operator work out which kind of key they hold before choosing a flag:</p>
+<pre><code>cargoship vault encrypt-file ./cluster.yaml --age-recipient "$(cat ~/.ssh/id_ed25519.pub)"
+cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys
+cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25519
+</code></pre>
+<p>This is worth doing because the keys already exist. A team that maintains an <code>authorized_keys</code> file can encrypt a configuration to it as it stands – options in front of a key and comments behind it parse fine – and nobody has to generate, distribute, or lose a new key.</p>
+<p>A recipients file may mix the two kinds freely, which is what makes a gradual move onto native age keys possible:</p>
+<pre><code># alice, on her age key already
+age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+
+# bob, still on his SSH key
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample bob@example.com
+</code></pre>
+<p>A line that is neither – an <code>ecdsa-sha2-nistp256</code> key, say, which age does not support – fails the whole file with its line number rather than being skipped. Skipping it would encrypt to fewer people than the file lists, and the one who finds out is the one who cannot decrypt.</p>
+<p>Three things differ from a native age key:</p>
+<ul>
+<li><strong>A passphrase-protected private key is prompted for on a terminal, and fails without one.</strong> The prompt happens only once a value turns out to be encrypted to that key, and the decrypted key is then reused for the rest of the run. Under CI, or with input piped in, the command fails immediately and says so; it does not read the passphrase out of standard input and does not hang. If that is where the key has to be used, decrypt it first with <code>ssh-keygen -p</code>.</li>
+<li><strong>The public key is not derived from the private one.</strong> <code>cargoship vault keygen --public-key</code> reads age identity files only. <code>ssh-keygen</code> already wrote the public key into the <code>.pub</code> file beside the key, and <code>ssh-keygen -y -f ~/.ssh/id_ed25519</code> prints it again.</li>
+<li><strong>SSH recipients are not anonymous.</strong> See <a href="#recipients-are-anonymous">Recipients Are Anonymous</a> below.</li>
+</ul>
+<p>Upstream’s own advice is that these key types exist for compatibility with keys you already have, and that a native age key is preferable otherwise. <code>cargoship vault keygen</code> makes one.</p>
 <h3 id="nothing-is-discovered"><a class="header" href="#nothing-is-discovered">Nothing Is Discovered</a></h3>
-<p>Cargoship reads key material from the flags, the config file, and those two environment variables. It reads nothing else. It does not look in <code>~/.config/sops/age/keys.txt</code>, it does not look in <code>$XDG_CONFIG_HOME/age</code>, it does not read an <code>age</code> agent, and it never prompts.</p>
+<p>Cargoship reads key material from the flags, the config file, and those two environment variables. It reads nothing else. It does not look in <code>~/.config/sops/age/keys.txt</code>, it does not look in <code>$XDG_CONFIG_HOME/age</code>, it does not read an <code>age</code> agent, and it does not pick your SSH key up out of <code>~/.ssh</code> because it happens to be there.</p>
+<p>The one path derived rather than given is the <code>.pub</code> file beside a passphrase-protected SSH key, which older key formats do not carry their public key inside. That path comes from the identity file the operator named on the command line, and is read only when that key needs a passphrase.</p>
 <p>This matches <code>ResolveVaultPassword</code>, which has always behaved the same way, and it is deliberate: an apply that succeeds on one operator’s machine because of a file the configuration never mentions is an apply nobody can reason about.</p>
 <h3 id="keys-in-the-config-file"><a class="header" href="#keys-in-the-config-file">Keys in the Config File</a></h3>
 <p>All three flags can be defaulted from the <code>age</code> section of <code>cargoship-config.yaml</code>, so a team can commit its recipient set once instead of restating it on every command:</p>
@@ -400,8 +424,9 @@ INF nothing to encrypt: every registry credential is encrypted already, or there
 <pre><code>cargoship apply ./cluster.yaml --age-identity-file ~/.age/cargoship.key --dry-run
 </code></pre>
 <h2 id="recipients-are-anonymous"><a class="header" href="#recipients-are-anonymous">Recipients Are Anonymous</a></h2>
-<p>An age header does not say who a value was encrypted to. The X25519 stanza holds an ephemeral share and nothing else – no key identifier, no fingerprint – by design, so that ciphertext does not leak its audience. Only the number of recipients and the <em>type</em> of each is readable.</p>
-<p>Two things follow, and both are worth knowing before they surprise you:</p>
+<p>An age header written to a native <code>age1...</code> recipient does not say who the value was encrypted to. The X25519 stanza holds an ephemeral share and nothing else – no key identifier, no fingerprint – by design, so that ciphertext does not leak its audience.</p>
+<p><strong>SSH recipients are the exception.</strong> An <code>ssh-ed25519</code> or <code>ssh-rsa</code> stanza carries a short 32-bit hash of the public key, so someone holding a copy of the ciphertext and a list of candidate public keys can tell which of them it was encrypted to. If who can read a configuration is itself something you do not want in a committed file, use native age keys.</p>
+<p>Either way, two things follow, because Cargoship reads no stanza at all – age keeps that parser internal, so nothing here can see even the recipient hash:</p>
 <ul>
 <li>Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why <code>encrypt-file</code> skips an encrypted value rather than checking it, why it warns about every value it skipped rather than staying quiet, and why changing recipients is <code>rekey</code>’s job.</li>
 <li>An error about a value you cannot read can never name the key you are missing. <code>none of the configured age identities can decrypt this value</code> is the whole of what is knowable.</li>
@@ -417,7 +442,8 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
 </code></pre>
 <h2 id="what-is-not-supported"><a class="header" href="#what-is-not-supported">What Is Not Supported</a></h2>
 <ul>
-<li><strong>SSH keys as recipients or identities.</strong> age itself accepts <code>ssh-ed25519</code> and <code>ssh-rsa</code> keys; Cargoship accepts only native age keys, <code>age1...</code> and <code>AGE-SECRET-KEY-1...</code>. SSH key support is a later change.</li>
+<li><strong><code>ssh-agent</code>.</strong> A passphrase-protected SSH key is prompted for directly; a key held in an agent is not reachable, because age’s SSH support needs the private key itself rather than a signing oracle.</li>
+<li><strong>SSH key types other than <code>ssh-ed25519</code> and <code>ssh-rsa</code>.</strong> <code>ecdsa-*</code> and <code>sk-*</code> keys are not supported by age.</li>
 <li><strong>age passphrases (scrypt).</strong> age can encrypt to a passphrase instead of a public key. Cargoship does not expose that, because it is the thing Ansible Vault already does here – a shared secret – and having two ways to spell it would help nobody.</li>
 <li><strong>Plugins</strong> (<code>age-plugin-yubikey</code> and friends). Cargoship links the age library rather than shelling out to the <code>age</code> binary, and plugin support is a property of the binary.</li>
 </ul>

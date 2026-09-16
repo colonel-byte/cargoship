@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-205b19ab.js";
+            window.path_to_searchindex_js = "searchindex-9da9b91f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-08a866d0.js"></script>
@@ -338,6 +338,7 @@ age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh
 age1lggyhqrw2nlhcxprm67z43rta597azn8gknawjehu9d9dl0jq3yqqvfafg
 </code></pre>
 <p>The comment has to be on its own line. A <code>#</code> after a key on the same line is read as part of the key, and the file fails to parse with the line number. This is age’s own format, and <code>age --recipients-file</code> reads the same file.</p>
+<p>SSH public keys go in the same flags and the same file; see <a href="#using-an-ssh-key">Using an SSH Key</a>.</p>
 <p>Every recipient named across every flag is encrypted to, so a value can be readable by several people at once. This is the normal case, not a migration state.</p>
 <p>When no recipient flag is given, Cargoship reads <code>CARGOSHIP_AGE_RECIPIENTS</code>, which holds whitespace-separated public keys:</p>
 <pre><code>export CARGOSHIP_AGE_RECIPIENTS="age1ql3z... age19h0n..."
@@ -348,8 +349,31 @@ age1lggyhqrw2nlhcxprm67z43rta597azn8gknawjehu9d9dl0jq3yqqvfafg
 </code></pre>
 <p>Repeatable, and a single file may hold several identities. Every identity Cargoship has been given is tried against a value, so holding keys for two teams in one file works.</p>
 <p>When no identity flag is given, Cargoship reads <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, which holds exactly one path. A list would need a separator, and every separator worth choosing is legal in a file name.</p>
+<h3 id="using-an-ssh-key"><a class="header" href="#using-an-ssh-key">Using an SSH Key</a></h3>
+<p>An <code>ssh-ed25519</code> or <code>ssh-rsa</code> key works anywhere an age key does, and goes in the same three flags. There are no <code>--ssh-*</code> flags, because there is no point in making an operator work out which kind of key they hold before choosing a flag:</p>
+<pre><code>cargoship vault encrypt-file ./cluster.yaml --age-recipient "$(cat ~/.ssh/id_ed25519.pub)"
+cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys
+cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25519
+</code></pre>
+<p>This is worth doing because the keys already exist. A team that maintains an <code>authorized_keys</code> file can encrypt a configuration to it as it stands – options in front of a key and comments behind it parse fine – and nobody has to generate, distribute, or lose a new key.</p>
+<p>A recipients file may mix the two kinds freely, which is what makes a gradual move onto native age keys possible:</p>
+<pre><code># alice, on her age key already
+age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+
+# bob, still on his SSH key
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample bob@example.com
+</code></pre>
+<p>A line that is neither – an <code>ecdsa-sha2-nistp256</code> key, say, which age does not support – fails the whole file with its line number rather than being skipped. Skipping it would encrypt to fewer people than the file lists, and the one who finds out is the one who cannot decrypt.</p>
+<p>Three things differ from a native age key:</p>
+<ul>
+<li><strong>A passphrase-protected private key is prompted for on a terminal, and fails without one.</strong> The prompt happens only once a value turns out to be encrypted to that key, and the decrypted key is then reused for the rest of the run. Under CI, or with input piped in, the command fails immediately and says so; it does not read the passphrase out of standard input and does not hang. If that is where the key has to be used, decrypt it first with <code>ssh-keygen -p</code>.</li>
+<li><strong>The public key is not derived from the private one.</strong> <code>cargoship vault keygen --public-key</code> reads age identity files only. <code>ssh-keygen</code> already wrote the public key into the <code>.pub</code> file beside the key, and <code>ssh-keygen -y -f ~/.ssh/id_ed25519</code> prints it again.</li>
+<li><strong>SSH recipients are not anonymous.</strong> See <a href="#recipients-are-anonymous">Recipients Are Anonymous</a> below.</li>
+</ul>
+<p>Upstream’s own advice is that these key types exist for compatibility with keys you already have, and that a native age key is preferable otherwise. <code>cargoship vault keygen</code> makes one.</p>
 <h3 id="nothing-is-discovered"><a class="header" href="#nothing-is-discovered">Nothing Is Discovered</a></h3>
-<p>Cargoship reads key material from the flags, the config file, and those two environment variables. It reads nothing else. It does not look in <code>~/.config/sops/age/keys.txt</code>, it does not look in <code>$XDG_CONFIG_HOME/age</code>, it does not read an <code>age</code> agent, and it never prompts.</p>
+<p>Cargoship reads key material from the flags, the config file, and those two environment variables. It reads nothing else. It does not look in <code>~/.config/sops/age/keys.txt</code>, it does not look in <code>$XDG_CONFIG_HOME/age</code>, it does not read an <code>age</code> agent, and it does not pick your SSH key up out of <code>~/.ssh</code> because it happens to be there.</p>
+<p>The one path derived rather than given is the <code>.pub</code> file beside a passphrase-protected SSH key, which older key formats do not carry their public key inside. That path comes from the identity file the operator named on the command line, and is read only when that key needs a passphrase.</p>
 <p>This matches <code>ResolveVaultPassword</code>, which has always behaved the same way, and it is deliberate: an apply that succeeds on one operator’s machine because of a file the configuration never mentions is an apply nobody can reason about.</p>
 <h3 id="keys-in-the-config-file"><a class="header" href="#keys-in-the-config-file">Keys in the Config File</a></h3>
 <p>All three flags can be defaulted from the <code>age</code> section of <code>cargoship-config.yaml</code>, so a team can commit its recipient set once instead of restating it on every command:</p>
@@ -498,8 +522,9 @@ INF nothing to encrypt: every registry credential is encrypted already, or there
 <pre><code>cargoship apply ./cluster.yaml --age-identity-file ~/.age/cargoship.key --dry-run
 </code></pre>
 <h2 id="recipients-are-anonymous"><a class="header" href="#recipients-are-anonymous">Recipients Are Anonymous</a></h2>
-<p>An age header does not say who a value was encrypted to. The X25519 stanza holds an ephemeral share and nothing else – no key identifier, no fingerprint – by design, so that ciphertext does not leak its audience. Only the number of recipients and the <em>type</em> of each is readable.</p>
-<p>Two things follow, and both are worth knowing before they surprise you:</p>
+<p>An age header written to a native <code>age1...</code> recipient does not say who the value was encrypted to. The X25519 stanza holds an ephemeral share and nothing else – no key identifier, no fingerprint – by design, so that ciphertext does not leak its audience.</p>
+<p><strong>SSH recipients are the exception.</strong> An <code>ssh-ed25519</code> or <code>ssh-rsa</code> stanza carries a short 32-bit hash of the public key, so someone holding a copy of the ciphertext and a list of candidate public keys can tell which of them it was encrypted to. If who can read a configuration is itself something you do not want in a committed file, use native age keys.</p>
+<p>Either way, two things follow, because Cargoship reads no stanza at all – age keeps that parser internal, so nothing here can see even the recipient hash:</p>
 <ul>
 <li>Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why <code>encrypt-file</code> skips an encrypted value rather than checking it, why it warns about every value it skipped rather than staying quiet, and why changing recipients is <code>rekey</code>’s job.</li>
 <li>An error about a value you cannot read can never name the key you are missing. <code>none of the configured age identities can decrypt this value</code> is the whole of what is knowable.</li>
@@ -515,7 +540,8 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
 </code></pre>
 <h2 id="what-is-not-supported"><a class="header" href="#what-is-not-supported">What Is Not Supported</a></h2>
 <ul>
-<li><strong>SSH keys as recipients or identities.</strong> age itself accepts <code>ssh-ed25519</code> and <code>ssh-rsa</code> keys; Cargoship accepts only native age keys, <code>age1...</code> and <code>AGE-SECRET-KEY-1...</code>. SSH key support is a later change.</li>
+<li><strong><code>ssh-agent</code>.</strong> A passphrase-protected SSH key is prompted for directly; a key held in an agent is not reachable, because age’s SSH support needs the private key itself rather than a signing oracle.</li>
+<li><strong>SSH key types other than <code>ssh-ed25519</code> and <code>ssh-rsa</code>.</strong> <code>ecdsa-*</code> and <code>sk-*</code> keys are not supported by age.</li>
 <li><strong>age passphrases (scrypt).</strong> age can encrypt to a passphrase instead of a public key. Cargoship does not expose that, because it is the thing Ansible Vault already does here – a shared secret – and having two ways to spell it would help nobody.</li>
 <li><strong>Plugins</strong> (<code>age-plugin-yubikey</code> and friends). Cargoship links the age library rather than shelling out to the <code>age</code> binary, and plugin support is a property of the binary.</li>
 </ul>
@@ -1449,9 +1475,9 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --update-kubeconfig=false
 </code></pre>
 <h3 id="options-1"><a class="header" href="#options-1">Options</a></h3>
-<pre><code>      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray               An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray         Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray               A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray         Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
       --allow-unmanaged-nodes                   Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
@@ -1559,9 +1585,9 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
 $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --update-kubeconfig=false
 </code></pre>
 <h3 id="options-3"><a class="header" href="#options-3">Options</a></h3>
-<pre><code>      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray               An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray         Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray               A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray         Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
@@ -1979,14 +2005,17 @@ $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass
 # Decrypt a configuration encrypted to an age recipient
 $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ./key.txt
 
+# Decrypt one encrypted to an SSH public key, using the private key it pairs with
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25519
+
 # Rotate the password a whole configuration is vaulted with
 $ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt
 $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.txt
 </code></pre>
 <h3 id="options-12"><a class="header" href="#options-12">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
       --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
   -h, --help                              help for decrypt-file
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
@@ -2025,9 +2054,9 @@ $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt
 </code></pre>
 <h3 id="options-13"><a class="header" href="#options-13">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
       --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
   -h, --help                              help for decrypt-path
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
@@ -2072,9 +2101,9 @@ $ cargoship vault decrypt --age-identity-file ./key.txt &lt; ./encrypted-token.t
 $ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-token.txt)"
 </code></pre>
 <h3 id="options-14"><a class="header" href="#options-14">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
   -h, --help                              help for decrypt
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
@@ -2109,11 +2138,14 @@ $ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass
 
 # Encrypt to the age recipients a team keeps in its config file, with no keys on the command line
 $ cargoship vault encrypt-file ./cluster.yaml
+
+# Encrypt to the SSH keys a team already distributes, using its authorized_keys file as it is
+$ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys
 </code></pre>
 <h3 id="options-15"><a class="header" href="#options-15">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
       --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
       --force                             Encrypt values that are encrypted already, wrapping them a second time.
   -h, --help                              help for encrypt-file
@@ -2155,9 +2187,9 @@ $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.t
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
 </code></pre>
 <h3 id="options-16"><a class="header" href="#options-16">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
       --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
       --force                             Encrypt the value even though it is encrypted already, wrapping it a second time.
   -h, --help                              help for encrypt-path
@@ -2202,9 +2234,9 @@ $ cargoship vault encrypt my-registry-password --age-recipient age1ql3z7hjy54pw3
 $ cargoship vault encrypt my-registry-password --age-recipients-file ./recipients.txt
 </code></pre>
 <h3 id="options-17"><a class="header" href="#options-17">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
   -h, --help                              help for encrypt
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
@@ -2245,7 +2277,7 @@ $ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargosh
 <h3 id="options-18"><a class="header" href="#options-18">Options</a></h3>
 <pre><code>  -h, --help            help for keygen
   -o, --output string   Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead.
-  -y, --public-key      Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given.
+  -y, --public-key      Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given. This reads age identity files; the public key of an SSH key is in the ".pub" file beside it.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-17"><a class="header" href="#options-inherited-from-parent-commands-17">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
@@ -2284,9 +2316,9 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
 
 </code></pre>
 <h3 id="options-19"><a class="header" href="#options-19">Options</a></h3>
-<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
-      --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
-      --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
       --dry-run                           Print the resulting document to stdout instead of writing it back to FILE.
   -h, --help                              help for rekey
       --new-vault-password-file string    Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the key the file already uses, or pass --age-recipient instead to move the file onto age. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened.
@@ -3642,7 +3674,9 @@ mage generate:updatePins            # refresh every line already pinned
 <h2 id="why-the-probe-cannot-be-re-added"><a class="header" href="#why-the-probe-cannot-be-re-added">Why the probe cannot be re-added</a></h2>
 <p><code>EncryptConfig</code> probe-decrypts any value that is already ciphertext. The probe answers exactly one question – <em>is this value under the same key I am about to encrypt with?</em> – and it exists because <code>DecryptRegistryAuth</code> applies one vault password to every field in the document. A file encrypted under two vault passwords is a file no apply can read, so the probe turns that state into an error at write time rather than a failure on the cluster later.</p>
 <p>For age recipients that probe is <strong>impossible</strong>, and it is also <strong>not protecting anything</strong>.</p>
-<p>It is impossible because age ciphertext does not identify its recipients. The X25519 stanza is <code>-&gt; X25519 &lt;ephemeral share&gt;</code>: two fields, no key hash, no fingerprint. That is deliberate – ciphertext anonymity is a design goal of the format – and it means only the <em>count</em> and <em>type</em> of stanzas can be read without a private key. A recipient is a public key, which cannot decrypt. There is nothing to compare and no way to compare it.</p>
+<p>It is impossible for two reasons, and the second is the durable one.</p>
+<p>An X25519 stanza is <code>-&gt; X25519 &lt;ephemeral share&gt;</code>: two fields, no key hash, no fingerprint. Ciphertext anonymity is a design goal of the format. This does <strong>not</strong> generalise to every recipient type – an <code>agessh</code> stanza carries a 32-bit hash of the public key, which is exactly the identifier the probe would want – so it is not on its own a reason the probe cannot exist.</p>
+<p>The reason it cannot is that nothing here can read a stanza at all. <code>age.ExtractHeader</code> exists, but the <code>Stanza</code> fields it would yield live behind <code>filippo.io/age/internal/format</code>, and an internal package is not importable. Cargoship would have to parse the header text itself, duplicating a format it does not own, to recover an identifier that only some recipient types carry. A recipient is a public key, which cannot decrypt; there is nothing to compare against, and no supported way to reach the thing that would be compared.</p>
 <p>It is unnecessary because the invariant it defends is a property of the vault code path, not of encryption in general. <code>age.Decrypt</code> is variadic over identities, an identity file holds many, and every configured identity is tried. A document whose values are encrypted to different recipient sets is readable by anyone holding a matching key for each, so “several keys in one document” is a supported state for age rather than the broken one it is for vault.</p>
 <p>So <code>EncryptConfig</code> probes only when the existing value is Ansible Vault <strong>and</strong> the format being written is Ansible Vault. Every other combination skips the value on the strength of <code>IsEncrypted</code> alone, which is all idempotency needs. <code>TestEncryptConfigSkipsVaultValuesWhenWritingAge</code> and <code>TestEncryptConfigAgeIsIdempotent</code> hold that shape in place.</p>
 <p>A future change that tries to restore a general probe will find that it cannot be written, and a change that tries to approximate one – trial-decrypting with a configured identity, say – would be answering a different question (<em>can I read this?</em>) than the one the probe asks (<em>is this under the key I am writing with?</em>), while making <code>encrypt-file</code> require a private key it otherwise has no use for.</p>
@@ -3661,17 +3695,36 @@ mage generate:updatePins            # refresh every line already pinned
 <p>The keyring therefore has to remember <em>where</em> each piece of key material came from, which is what the <code>vaultExplicit</code> and <code>ageExplicit</code> fields are for. A recipient from the config file’s <code>age</code> section counts as explicit: committing a recipient set once is the intended way for a team to work, and it is as deliberate as typing the flag.</p>
 <p><code>RekeyTarget</code> refuses the same collision for the same reason – <code>--new-vault-password-file</code> and <code>--age-recipient</code> each name the key to rekey <em>onto</em>.</p>
 <h2 id="why-nothing-is-discovered"><a class="header" href="#why-nothing-is-discovered">Why nothing is discovered</a></h2>
-<p>Key material comes from flags, the config file’s <code>age</code> section, <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, and <code>CARGOSHIP_AGE_RECIPIENTS</code>. Nothing else. Cargoship does not read <code>~/.config/sops/age/keys.txt</code>, does not consult an agent, and never prompts.</p>
+<p>Key material comes from flags, the config file’s <code>age</code> section, <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, and <code>CARGOSHIP_AGE_RECIPIENTS</code>. Nothing else. Cargoship does not read <code>~/.config/sops/age/keys.txt</code>, does not consult an agent, and does not reach into <code>~/.ssh</code> for a key it was not pointed at.</p>
+<p>The one prompt in the whole path is for the passphrase of an SSH key the operator named, and the one derived path is the <code>.pub</code> file beside such a key; see below for why neither is an exception to this rule.</p>
 <p>This matches <code>ResolveVaultPassword</code>, which has never guessed or prompted, and the reason is the same: an apply that succeeds on one operator’s machine because of a file the configuration never mentions is an apply nobody can reason about, and the failure mode shows up on someone else’s machine, mid-cluster-change.</p>
 <p>The environment variables differ in shape for a concrete reason. <code>CARGOSHIP_AGE_RECIPIENTS</code> is a whitespace-separated list because a public key contains no whitespace, so the split is unambiguous. <code>CARGOSHIP_AGE_IDENTITY_FILE</code> holds a single path, because a list of paths needs a separator and every separator worth choosing is legal in a file name.</p>
 <p>A recipients file that parses to no keys is an error rather than nothing to do. Carrying on would leave a keyring with a vault password and no recipients, and <code>EncryptFormat</code> would then quietly choose Ansible Vault – writing the secret under a key the operator did not ask for, which is precisely the outcome rule 2 above exists to prevent.</p>
 <h2 id="scope-deliberately-left-out"><a class="header" href="#scope-deliberately-left-out">Scope deliberately left out</a></h2>
 <ul>
-<li><strong>SSH keys</strong> via <code>filippo.io/age/agessh</code>. A later change; it widens who can be a recipient without touching any of the reasoning above.</li>
 <li><strong>age passphrases (scrypt).</strong> It would duplicate what Ansible Vault already provides here – a shared secret – and age enforces scrypt-as-sole-recipient with a random label, which complicates the recipient path for no gain.</li>
 <li><strong>Plugins.</strong> These are a property of the <code>age</code> binary. Cargoship links the library so that encrypting and decrypting stays a pure in-process operation in a single static binary, the same reason recorded in <a href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">choice-vault-library</a>.</li>
+<li><strong><code>ssh-agent</code>.</strong> <code>agessh</code> needs the private key itself rather than a signing oracle, so an agent-held key cannot be used even though a passphrase-protected one on disk can.</li>
 </ul>
 <p><code>ParseRecipients</code> may return a <code>*HybridRecipient</code> (post-quantum X-Wing). Passing it through costs nothing, so it works without any code of ours.</p>
+<h2 id="ssh-keys-and-the-parsing-they-force"><a class="header" href="#ssh-keys-and-the-parsing-they-force">SSH keys, and the parsing they force</a></h2>
+<p><code>filippo.io/age/agessh</code> supplies <code>age.Recipient</code> and <code>age.Identity</code> implementations for <code>ssh-ed25519</code> and <code>ssh-rsa</code>, so an SSH key is invisible above <code>clustercfg</code>: nothing about the ciphertext, the header dispatch, or the skip reporting changes. What it widens is <em>who can use age at all</em>, since operators and CI already hold these keys and already maintain <code>authorized_keys</code> files.</p>
+<p>They go in the existing <code>--age-recipient</code>, <code>--age-recipients-file</code> and <code>--age-identity-file</code> rather than in parallel <code>--ssh-*</code> flags. That is what the <code>age</code> CLI does with <code>-r</code>/<code>-R</code>/<code>-i</code>, it keeps nine commands from growing three flags each, and it means an operator does not have to work out which kind of key they hold before choosing a flag.</p>
+<p>The cost of that decision is that cargoship has to do its own parsing, in <code>agessh.go</code>:</p>
+<ul>
+<li><code>age.ParseRecipients</code> fails the <strong>whole file</strong> on one line it does not recognise, and an SSH line is one. So recipients are scanned line by line here and dispatched on the <code>age1</code> prefix, which keeps a mixed file working. A line that parses as neither kind still fails the file, naming the line: skipping it would encrypt to fewer recipients than the operator listed, and the person who discovers that is the one who cannot decrypt.</li>
+<li>Identities cannot be dispatched line by line at all, because an SSH private key is a multi-line PEM block. The file is read whole and routed on a <code>-----BEGIN </code> header.</li>
+<li><code>parseRecipient</code> refuses anything beginning <code>AGE-SECRET-KEY-</code> or <code>-----BEGIN </code> before handing it to <code>agessh</code>, because <code>agessh.ParseRecipient</code> quotes its argument back in its error where age’s own parser deliberately does not. An identity file passed as a recipients file is an ordinary mistake, and a private key in a log has to be treated as compromised everywhere it was used.</li>
+</ul>
+<h2 id="why-the-ssh-passphrase-prompt-lives-in-srccmd"><a class="header" href="#why-the-ssh-passphrase-prompt-lives-in-srccmd">Why the SSH passphrase prompt lives in src/cmd</a></h2>
+<p>A passphrase-protected SSH key becomes an <code>agessh.EncryptedSSHIdentity</code>, which asks for the passphrase only once a stanza matches its public key and caches the decrypted key afterwards. That laziness is worth preserving: an operator holding a key nothing was encrypted to is never asked, and one whose key does match is asked once rather than once per credential. On an apply the ask therefore lands in the <code>VerifyRegistryAuth</code> preflight, before any host is touched.</p>
+<p><code>clustercfg</code> does no terminal I/O, so <code>KeyOptions</code> carries a <code>PassphraseFunc</code> and the commands supply it. Two things fall out of that shape:</p>
+<ul>
+<li><strong>A nil callback is an error, not a prompt.</strong> A caller with nowhere to ask fails by construction rather than by luck, which is what CI wants.</li>
+<li><strong>The prompt refuses a non-terminal rather than reading stdin.</strong> Reading the passphrase from a pipe would consume input the command wanted for something else and would hang when there is none. Failing with a message naming the key is something a scripted run can act on.</li>
+</ul>
+<p>An older PEM key carries no public key beside its encrypted private key, so <code>ssh.PassphraseMissingError.PublicKey</code> is nil and the key has to come from the <code>.pub</code> file. That is the one path cargoship derives rather than being given, and it is derived from a path the operator named explicitly, read only when that key needs a passphrase – which is why it does not contradict “nothing is discovered” above. The age CLI does the same.</p>
+<p><code>AgeRecipientsIn</code> refuses an SSH private key rather than deriving a recipient from it: <code>agessh</code>’s recipient types have no text encoding to print, and <code>ssh-keygen</code> already wrote the public key into the file beside the key. Pointing at that is a better answer than any this could compute.</p>
 <h2 id="generating-keys-and-the-refusals-around-it"><a class="header" href="#generating-keys-and-the-refusals-around-it">Generating keys, and the refusals around it</a></h2>
 <p><code>cargoship vault keygen</code> exists because everything else here otherwise assumes the <code>age</code> distribution is installed, when cargoship already links the library that generates a key pair. It writes byte-for-byte what <code>age-keygen</code> writes, deliberately: a file only cargoship could read would strand an operator who later wants <code>age --decrypt</code>, and interoperability is the reason for supporting the format at all.</p>
 <p>Three refusals are load-bearing, and none of them should be softened into a prompt or an overwrite:</p>
@@ -3683,6 +3736,7 @@ mage generate:updatePins            # refresh every line already pinned
 <p>The generated identity never passes through <code>logger</code>. Logging is wired to stderr and may be scraped centrally, and a private key that reaches a log aggregator has to be treated as compromised everywhere it was used. Without <code>--output</code> the key goes to stdout so that <code>cargoship vault keygen &gt; key.txt</code> works; the terminal warning covers the case where there is no redirect and the key lands in scrollback.</p>
 <h2 id="dependency"><a class="header" href="#dependency">Dependency</a></h2>
 <p><code>filippo.io/age</code> v1.3.2, BSD-3-Clause, which brings <code>filippo.io/hpke</code> v0.4.0 with it. Everything else it needs – <code>chacha20poly1305</code>, <code>curve25519</code>, <code>hkdf</code>, <code>scrypt</code> – was already vendored under <code>vendor/golang.org/x/crypto/</code>.</p>
+<p><code>agessh</code> is a package of that same module, so SSH support added only <code>filippo.io/edwards25519</code> v1.2.0, which it uses to convert an Ed25519 key to X25519. <code>golang.org/x/crypto/ssh</code> was already vendored, and moved from an indirect dependency to a direct one because <code>clustercfg</code> now imports it for <code>ssh.PublicKey</code> and <code>ssh.PassphraseMissingError</code>.</p>
 <p><code>ATTRIBUTION.md</code> covers <em>derived</em> code (k0sctl, zarf, bootloose) rather than dependencies, so it needs no entry; the vendored <code>LICENSE</code> is sufficient.</p>
 <h2 id="armoring-and-the-one-thing-it-costs"><a class="header" href="#armoring-and-the-one-thing-it-costs">Armoring, and the one thing it costs</a></h2>
 <p>age values are armored because they live in YAML scalars and the binary format does not. Two consequences are worth knowing:</p>
