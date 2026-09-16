@@ -24,28 +24,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// vaultPathDoc is a cluster configuration carrying the shapes vault encrypt-path has to rewrite:
-// a scalar with a trailing comment, and a multi-line PEM block with a sibling key after it.
-const vaultPathDoc = `apiVersion: zarf.dev/v1alpha1
-kind: ZarfCluster
-spec:
-  # registries the cluster pulls from
-  config:
-    loadbalancer: lb.example.com
-    registries:
-      - name: harbor # our mirror
-        auth:
-          user: admin
-          pass: hunter2 # rotate me
-        tls:
-          ca: |
-            -----BEGIN CERTIFICATE-----
-            aGVsbG8gd29ybGQ=
-            -----END CERTIFICATE-----
-          insecureSkipVerify: false
-  hosts:
-    - name: node1
-`
+// pathsInventoryFixture is one registry written in every shape a credential comes in: a bare
+// scalar, a quoted one carrying a character that starts a comment, a scalar with a trailing
+// comment, and a multi-line PEM block with a sibling key after it. Those are the shapes
+// vault encrypt-path has to rewrite without disturbing anything around them.
+const pathsInventoryFixture = "src/test/e2e/noncluster/testdata/inventory-paths.yaml"
 
 // TestCargoshipVaultEncryptPath exercises the `vault encrypt-path` command against a config file
 // on disk: what it writes back, what it leaves alone, and its error paths.
@@ -54,12 +37,16 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 	const password = "supersecret"
 	require.NoError(t, os.WriteFile(passwordFile, []byte(password), 0o600))
 
-	// writeDoc puts a fresh copy of vaultPathDoc in its own directory, so that one subtest's
-	// rewrite cannot be seen by another.
+	original, err := os.ReadFile(pathsInventoryFixture)
+	require.NoError(t, err)
+
+	// The fixture is copied rather than used in place: this command rewrites the file it is given,
+	// the checked-in one has to stay as it is, and one subtest's rewrite must not be seen by
+	// another.
 	writeDoc := func(t *testing.T) string {
 		t.Helper()
 		path := filepath.Join(t.TempDir(), "cluster.yaml")
-		require.NoError(t, os.WriteFile(path, []byte(vaultPathDoc), 0o600))
+		require.NoError(t, os.WriteFile(path, original, 0o600))
 		return path
 	}
 
@@ -71,9 +58,9 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Contains(t, string(got), "pass: |- # rotate me", "the trailing comment should survive")
-		require.Contains(t, string(got), "  # registries the cluster pulls from", "comments elsewhere should survive")
-		require.Contains(t, string(got), "      - name: harbor # our mirror")
+		require.Contains(t, string(got), "pass: |- # not the password you think", "the trailing comment should survive")
+		require.Contains(t, string(got), "  # keep this comment exactly where it is", "comments elsewhere should survive")
+		require.Contains(t, string(got), "      - name: harbor # a trailing comment")
 
 		decrypted, err := vault.Decrypt(vaultValueAt(t, string(got), "pass: |-"), password)
 		require.NoError(t, err)
@@ -100,11 +87,11 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 
 		stdout, _, err := e2e.Cargoship(t, "vault", "encrypt-path", config, ".spec.config.registries[0].auth.pass", "--vault-password-file", passwordFile, "--dry-run")
 		require.NoError(t, err)
-		require.Contains(t, stdout, "pass: |- # rotate me")
+		require.Contains(t, stdout, "pass: |- # not the password you think")
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, vaultPathDoc, string(got))
+		require.Equal(t, string(original), string(got))
 	})
 
 	t.Run("warns when the path is not one cargoship decrypts", func(t *testing.T) {
@@ -140,7 +127,7 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Contains(t, string(got), "pass: |- # rotate me", "the trailing comment should survive")
+		require.Contains(t, string(got), "pass: |- # not the password you think", "the trailing comment should survive")
 		require.Contains(t, string(got), "          insecureSkipVerify: false", "the key after the CA block should survive")
 		require.Contains(t, string(got), "    loadbalancer: lb.example.com", "a path that was not named should be left alone")
 
@@ -168,7 +155,7 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, vaultPathDoc, string(got), "the path that did encrypt should not have been written")
+		require.Equal(t, string(original), string(got), "the path that did encrypt should not have been written")
 	})
 
 	t.Run("rejects the same path named twice, however it is spelled", func(t *testing.T) {
@@ -183,7 +170,7 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, vaultPathDoc, string(got), "a failed run should not touch the file")
+		require.Equal(t, string(original), string(got), "a failed run should not touch the file")
 	})
 
 	t.Run("errors on a missing file", func(t *testing.T) {
@@ -201,7 +188,7 @@ func TestCargoshipVaultEncryptPath(t *testing.T) {
 
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
-		require.Equal(t, vaultPathDoc, string(got), "a failed run should not touch the file")
+		require.Equal(t, string(original), string(got), "a failed run should not touch the file")
 	})
 
 	t.Run("errors without a vault password", func(t *testing.T) {

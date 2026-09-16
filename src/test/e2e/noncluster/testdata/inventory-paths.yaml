@@ -1,34 +1,31 @@
 ---
 # yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
-#
-# holds two registries so that the whole-file commands have to walk more than one, and
-# leaves the gaps a real configuration has: a registry with a token instead of a password, one with
-# no tls block, and an empty field.
+# One registry written in every shape a credential comes in, for the commands that take a single
+# YAML path: a bare scalar, a quoted one carrying a character that starts a comment, a scalar with a
+# trailing comment beside it, and a multi-line PEM block. What a path command rewrites is the value
+# alone, so each shape has to come back out of a round trip as the bytes that went in.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfCluster
 metadata:
-  name: test
+  name: paths
 spec:
-  # registries the cluster pulls from
+  # keep this comment exactly where it is
   config:
     loadbalancer: lb.example.com
     registries:
-      - name: harbor # our mirror
+      - name: harbor # a trailing comment
         auth:
           user: admin
-          pass: hunter2 # rotate me
-          token: ""
+          pass: hunter2 # not the password you think
+          token: "tok #1"
         tls:
           ca: |
             -----BEGIN CERTIFICATE-----
             aGVsbG8gd29ybGQ=
             -----END CERTIFICATE-----
           insecureSkipVerify: false
-      - name: quay
-        auth:
-          token: "tok #2"
   hosts:
     - hostname: node1
       role: controller

@@ -402,7 +402,7 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
 		require.Contains(t, string(got), ageHeader)
-		for _, plaintext := range []string{"hunter2", "quay-token", "aGVsbG8gd29ybGQ="} {
+		for _, plaintext := range []string{"hunter2", "tok #2", "aGVsbG8gd29ybGQ="} {
 			require.NotContains(t, string(got), plaintext, "%q should not be left in the clear", plaintext)
 		}
 		// Nothing outside the credentials moves.
@@ -437,7 +437,7 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		require.Contains(t, string(encrypted), ageHeader)
 		require.NotContains(t, string(encrypted), "hunter2")
 		// Only the one path moved: the token beside it is still in the clear.
-		require.Contains(t, string(encrypted), "quay-token")
+		require.Contains(t, string(encrypted), "tok #2")
 
 		_, _, err = e2e.Cargoship(t, "vault", "decrypt-path", config, path, "--age-identity-file", key.identityFile)
 		require.NoError(t, err)

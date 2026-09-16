@@ -24,6 +24,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/token"
 )
 
 // ErrAlreadyEncrypted reports that the value at the requested path is ciphertext already, in
@@ -152,8 +153,38 @@ func scalarNodeAtPath(src []byte, yamlPath string) (ast.Node, string, string, er
 // The ciphertext is stripped rather than clipped, so what is stored does not depend on whether the
 // encrypting library left a trailing newline on it. age armor always ends in one; Ansible Vault
 // does not.
+//
+// A value inside a flow collection is quoted onto one line instead. YAML has no block scalar in
+// flow style, so writing one there produces a document that no longer parses -- and the parse it
+// fails is this package's own, on the very next path it walks, reported against a line the
+// operator's file does not have.
 func spliceCiphertext(src []byte, node ast.Node, encrypted string) ([]byte, error) {
-	return spliceScalar(src, node, "|-", strings.Split(strings.TrimRight(encrypted, "\n"), "\n"))
+	stripped := strings.TrimRight(encrypted, "\n")
+	if inFlowCollection(node) {
+		return spliceScalar(src, node, quoteScalar(stripped), nil)
+	}
+	return spliceScalar(src, node, "|-", strings.Split(stripped, "\n"))
+}
+
+// inFlowCollection reports whether the value node holds sits inside a "{a: b}" or "[a, b]", by
+// counting the flow delimiters the lexer produced before it. A delimiter that closes a collection
+// the value is not in cancels the one that opened it, so what is left over is the collections still
+// open where the value sits.
+//
+// Counting tokens rather than bytes is what makes this right about the cases that look like flow
+// and are not: a brace inside a quoted scalar or a comment is part of that token, and never a
+// delimiter of its own.
+func inFlowCollection(node ast.Node) bool {
+	depth := 0
+	for t := node.GetToken().Prev; t != nil; t = t.Prev {
+		switch t.Type {
+		case token.MappingStartType, token.SequenceStartType:
+			depth++
+		case token.MappingEndType, token.SequenceEndType:
+			depth--
+		}
+	}
+	return depth > 0
 }
 
 // DecryptAtPath returns src with the ciphertext at yamlPath replaced by its plaintext, preserving
@@ -178,7 +209,7 @@ func DecryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
 		return nil, err
 	}
 
-	head, tail, err := renderScalar(plain)
+	head, tail, err := renderScalar(plain, inFlowCollection(node))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
@@ -234,7 +265,10 @@ func RekeyAtPath(src []byte, yamlPath string, from, to *Keyring) ([]byte, error)
 // instead: a value holding a control character, which it writes raw into a plain scalar; and a
 // multi-line value with trailing whitespace on a line, which survives a block scalar only until
 // something that trims trailing whitespace touches the file.
-func renderScalar(value string) (string, []string, error) {
+//
+// In flow style there is no third case to weigh: a flow collection holds no block scalar, so the
+// value is quoted onto one line whatever it holds.
+func renderScalar(value string, flow bool) (string, []string, error) {
 	if !utf8.ValidString(value) {
 		// A YAML scalar holds text, so there is no style that can carry arbitrary bytes. Saying so
 		// leaves the ciphertext in place, which is better than writing a file whose value no longer
@@ -243,7 +277,9 @@ func renderScalar(value string) (string, []string, error) {
 	}
 
 	scalar := ""
-	if blockSafe(value) {
+	if flow {
+		scalar = quoteScalar(value)
+	} else if blockSafe(value) {
 		encoded, err := goyaml.Marshal(value)
 		if err != nil {
 			return "", nil, fmt.Errorf("rendering the decrypted value as YAML: %w", err)
