@@ -1,5 +1,11 @@
 ---
 version: 2
+registries:
+  docker-hub:
+    type: docker-registry
+    url: registry.hub.docker.com
+    username: ${{ secrets.DOCKER_HUB_USER }}
+    password: ${{ secrets.DOCKER_HUB_TOKEN }}
 updates:
   - package-ecosystem: gomod
     directory: "/"
@@ -57,6 +63,8 @@ updates:
     directories:
       - "/containers/base"
       - "/containers/ubi"
+    registries:
+      - docker-hub
     schedule:
       interval: daily
     groups:
