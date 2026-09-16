@@ -59,18 +59,6 @@ updates:
       core:
         patterns:
           - "*"
-  - package-ecosystem: docker
-    directories:
-      - "/containers/base"
-      - "/containers/ubi"
-    registries:
-      - docker-hub
-    schedule:
-      interval: daily
-    groups:
-      core:
-        patterns:
-          - "*"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
@@ -79,3 +67,18 @@ updates:
       core:
         patterns:
           - "*"
+  # One entry per directory, ungrouped: Dependabot appends "in the <name> group
+  # across N directories" to PR titles when `directories` and `groups` are set,
+  # pushing the title past commitlint's 100-char header-max-length.
+  - package-ecosystem: docker
+    directory: "/containers/base"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+  - package-ecosystem: docker
+    directory: "/containers/ubi"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
