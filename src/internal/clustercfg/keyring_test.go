@@ -205,18 +205,19 @@ func TestResolveKeyringErrors(t *testing.T) {
 			KeyOptions{AgeIdentityFiles: []string{writeFile(t, "key.txt", id.Recipient().String()+"\n")}},
 			"parsing age identity file",
 		},
+		// The error must not quote the key back, since it is private key material and parse errors
+		// get printed and logged; TestParseRecipientDoesNotEchoPrivateKeys holds that in place.
 		{
 			"recipient that is a private key",
 			KeyOptions{AgeRecipients: []string{id.String()}},
-			"parsing age recipient",
+			"not a public key",
 		},
 		// A recipients file of nothing but comments is the one to refuse loudest: carrying on would
-		// leave a keyring that quietly falls back to Ansible Vault. age refuses it first, which is
-		// why the message here is its wording and not the keyring's own guard.
+		// leave a keyring that quietly falls back to Ansible Vault.
 		{
 			"recipients file holding no keys",
 			KeyOptions{AgeRecipientFiles: []string{writeFile(t, "recipients.txt", "# nobody yet\n")}},
-			"no recipients found",
+			"holds no recipients",
 		},
 	}
 

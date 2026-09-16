@@ -124,7 +124,7 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 
 	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
 	// and demanding one would break every plaintext configuration that works today.
-	keyring, err := o.resolveKeyring()
+	keyring, err := o.resolveKeyring(cmd)
 	if err != nil {
 		l.Warn("failed to resolve encryption keys", "err", err)
 		return err

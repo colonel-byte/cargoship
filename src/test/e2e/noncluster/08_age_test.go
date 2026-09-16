@@ -402,7 +402,7 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
 		require.Contains(t, string(got), ageHeader)
-		for _, plaintext := range []string{"hunter2", "quay-token", "aGVsbG8gd29ybGQ="} {
+		for _, plaintext := range []string{"hunter2", "tok #2", "aGVsbG8gd29ybGQ="} {
 			require.NotContains(t, string(got), plaintext, "%q should not be left in the clear", plaintext)
 		}
 		// Nothing outside the credentials moves.
@@ -437,7 +437,7 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		require.Contains(t, string(encrypted), ageHeader)
 		require.NotContains(t, string(encrypted), "hunter2")
 		// Only the one path moved: the token beside it is still in the clear.
-		require.Contains(t, string(encrypted), "quay-token")
+		require.Contains(t, string(encrypted), "tok #2")
 
 		_, _, err = e2e.Cargoship(t, "vault", "decrypt-path", config, path, "--age-identity-file", key.identityFile)
 		require.NoError(t, err)
@@ -464,7 +464,7 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", other.recipient)
 		require.NoError(t, err)
 		require.Contains(t, stderr, "WRN")
-		require.Contains(t, stderr, "does not record its recipients")
+		require.Contains(t, stderr, "cannot tell whether they are the ones you named")
 		require.Contains(t, stderr, "rekey")
 		require.Contains(t, stderr, "nothing to encrypt")
 		require.Contains(t, stderr, "auth.pass")
@@ -515,8 +515,8 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 
 		stdout, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient, "--dry-run")
 		require.NoError(t, err)
-		require.Contains(t, stderr, "does not record its recipients")
-		require.NotContains(t, stdout, "does not record its recipients")
+		require.Contains(t, stderr, "cannot tell whether they are the ones you named")
+		require.NotContains(t, stdout, "cannot tell whether they are the ones you named")
 		require.Contains(t, stdout, "apiVersion:")
 	})
 

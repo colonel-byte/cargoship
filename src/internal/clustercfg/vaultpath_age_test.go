@@ -50,7 +50,7 @@ func TestEncryptAtPathAgeRoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := EncryptAtPath([]byte(pathTestDoc), tt.path, k, false)
+			got, err := EncryptAtPath(readPathsInventoryFixture(t), tt.path, k, false)
 			if err != nil {
 				t.Fatalf("EncryptAtPath() error = %v", err)
 			}
@@ -77,7 +77,7 @@ func TestDecryptAtPathAgeRestoresTheDocument(t *testing.T) {
 	k := newAgeKeyring(t)
 	const path = ".spec.config.registries[0].auth.pass"
 
-	encrypted, err := EncryptAtPath([]byte(pathTestDoc), path, k, false)
+	encrypted, err := EncryptAtPath(readPathsInventoryFixture(t), path, k, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}
@@ -95,8 +95,9 @@ func TestDecryptAtPathAgeRestoresTheDocument(t *testing.T) {
 
 func TestEncryptConfigWritesAge(t *testing.T) {
 	k := newAgeKeyring(t)
+	doc := readVaultInventoryFixture(t)
 
-	got, changed, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	got, changed, _, err := EncryptConfig(doc, k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -138,8 +139,9 @@ func TestEncryptConfigWritesAge(t *testing.T) {
 // right answer for the common case and the reason PR 2 reports the skip.
 func TestEncryptConfigAgeIsIdempotent(t *testing.T) {
 	k := newAgeKeyring(t)
+	doc := readVaultInventoryFixture(t)
 
-	once, _, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	once, _, _, err := EncryptConfig(doc, k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -160,7 +162,8 @@ func TestEncryptConfigAgeIsIdempotent(t *testing.T) {
 // there is nothing here to compare. The operator gets a no-op today and a warning after PR 2; rekey
 // is what actually moves the file.
 func TestEncryptConfigSkipsVaultValuesWhenWritingAge(t *testing.T) {
-	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -182,9 +185,10 @@ func TestEncryptConfigSkipsVaultValuesWhenWritingAge(t *testing.T) {
 // all of it. That is what makes a migration a sequence of ordinary edits.
 func TestDecryptRegistryAuthMixedFormats(t *testing.T) {
 	ageKeyring := newAgeKeyring(t)
+	rawDoc := readVaultInventoryFixture(t)
 
 	// The first registry's credentials are vaulted; the second's token is age-encrypted.
-	doc, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	doc, _, _, err := EncryptConfig(rawDoc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -231,7 +235,8 @@ func TestDecryptRegistryAuthMixedFormats(t *testing.T) {
 // format needs. Being told to pass a vault password for an age value is worse than being told
 // nothing, and a mixed document makes that easy to get wrong.
 func TestDecryptRegistryAuthMissingAgeIdentity(t *testing.T) {
-	doc, _, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
+	rawDoc := readVaultInventoryFixture(t)
+	doc, _, _, err := EncryptConfig(rawDoc, newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -256,7 +261,8 @@ func TestDecryptRegistryAuthMissingAgeIdentity(t *testing.T) {
 // document encrypted to a recipient nobody on this machine holds. Nothing in the ciphertext says
 // whose key it is, so the pre-flight is the only thing that catches it.
 func TestDecryptRegistryAuthWrongAgeIdentity(t *testing.T) {
-	doc, _, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
+	rawDoc := readVaultInventoryFixture(t)
+	doc, _, _, err := EncryptConfig(rawDoc, newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -279,8 +285,9 @@ func TestDecryptRegistryAuthWrongAgeIdentity(t *testing.T) {
 // recipients, in one pass that never puts the plaintext on disk.
 func TestRekeyConfigMigratesVaultToAge(t *testing.T) {
 	ageKeyring := newAgeKeyring(t)
+	rawDoc := readVaultInventoryFixture(t)
 
-	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), testKeyring, false)
+	vaulted, _, _, err := EncryptConfig(rawDoc, testKeyring, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -335,8 +342,9 @@ func TestRekeyConfigMigratesVaultToAge(t *testing.T) {
 // same plaintext twice produces different bytes, so a re-salt with no new key is not a no-op.
 func TestRekeyConfigResaltsAge(t *testing.T) {
 	k := newAgeKeyring(t)
+	doc := readVaultInventoryFixture(t)
 
-	once, _, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	once, _, _, err := EncryptConfig(doc, k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -373,7 +381,8 @@ func TestRekeyConfigResaltsAge(t *testing.T) {
 // TestRekeyConfigRejectsAnAgeValueItCannotRead covers the message an operator sees when a file was
 // encrypted to someone else's key. It cannot say whose, so it says what to check.
 func TestRekeyConfigRejectsAnAgeValueItCannotRead(t *testing.T) {
-	doc, _, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
+	rawDoc := readVaultInventoryFixture(t)
+	doc, _, _, err := EncryptConfig(rawDoc, newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -399,11 +408,12 @@ func TestRekeyConfigRejectsAnAgeValueItCannotRead(t *testing.T) {
 // in a single format, and choosing on the operator's behalf means writing a secret under a key they
 // did not pick.
 func TestEncryptValueRefusesTwoExplicitFormats(t *testing.T) {
+	doc := readVaultInventoryFixture(t)
 	k := newAgeKeyring(t)
 	k.vaultPassword = testPassword
 	k.vaultExplicit = true
 
-	if _, _, _, err := EncryptConfig([]byte(configTestDoc), k, false); err == nil {
+	if _, _, _, err := EncryptConfig(doc, k, false); err == nil {
 		t.Fatal("EncryptConfig() error = nil, want a refusal naming both formats")
 	} else if !strings.Contains(err.Error(), "pass one or the other") {
 		t.Errorf("EncryptConfig() error = %q, want it to mention \"pass one or the other\"", err)

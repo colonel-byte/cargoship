@@ -8,31 +8,34 @@
       },
       "properties": {
         "identity_files": {
-          "description": "are paths to age identity files, each holding the private keys that decrypt\nregistry credentials. Equivalent to repeating --age-identity-file.",
+          "description": "are paths to identity files, each holding either the age private keys that\ndecrypt registry credentials or an SSH private key. Equivalent to repeating\n--age-identity-file.",
           "items": {
             "examples": [
-              "/home/operator/.age/cargoship.key"
+              "/home/operator/.age/cargoship.key",
+              "/home/operator/.ssh/id_ed25519"
             ],
             "type": "string"
           },
           "type": "array"
         },
         "recipients": {
-          "description": "are age public keys that registry credentials are encrypted to. Equivalent to\nrepeating --age-recipient.",
+          "description": "are the public keys registry credentials are encrypted to, each either an age\nrecipient or an SSH public key. Equivalent to repeating --age-recipient.",
           "items": {
             "examples": [
               "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p",
-              "age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh"
+              "age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh",
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample operator@example.com"
             ],
             "type": "string"
           },
           "type": "array"
         },
         "recipients_files": {
-          "description": "are paths to files holding age public keys, one per line, with # comments\nallowed. Equivalent to repeating --age-recipients-file.",
+          "description": "are paths to files holding public keys, one per line, with # comments\nallowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as\nit is. Equivalent to repeating --age-recipients-file.",
           "items": {
             "examples": [
-              "/etc/cargoship/recipients.txt"
+              "/etc/cargoship/recipients.txt",
+              "/etc/cargoship/authorized_keys"
             ],
             "type": "string"
           },

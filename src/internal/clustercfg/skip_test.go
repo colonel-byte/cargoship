@@ -32,7 +32,8 @@ func skipPaths(skips []Skip) []string {
 // Encrypting a plaintext configuration reports no skips. The absent and empty fields the document
 // holds are skipped, and that is exactly the kind of skip nobody wants to hear about.
 func TestEncryptConfigReportsNoSkipsForPlaintext(t *testing.T) {
-	_, changed, skipped, err := EncryptConfig([]byte(configTestDoc), NewVaultKeyring("testpass"), false)
+	doc := readVaultInventoryFixture(t)
+	_, changed, skipped, err := EncryptConfig(doc, NewVaultKeyring("testpass"), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -47,9 +48,10 @@ func TestEncryptConfigReportsNoSkipsForPlaintext(t *testing.T) {
 // The probe answers the question encrypt-file exists to ask, so a value already vaulted under the
 // password being encrypted with is a silent skip rather than a warning on every second run.
 func TestEncryptConfigVaultUnderTheSamePasswordIsSilent(t *testing.T) {
+	doc := readVaultInventoryFixture(t)
 	k := NewVaultKeyring("testpass")
 
-	once, _, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	once, _, _, err := EncryptConfig(doc, k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -69,9 +71,10 @@ func TestEncryptConfigVaultUnderTheSamePasswordIsSilent(t *testing.T) {
 // The case the reporting exists for. Encrypting an age-encrypted file to age recipients does
 // nothing, and cannot tell whether that was right, so every credential comes back as a skip.
 func TestEncryptConfigAgeToAgeReportsEverySkip(t *testing.T) {
+	doc := readVaultInventoryFixture(t)
 	k := newAgeKeyring(t)
 
-	once, _, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	once, _, _, err := EncryptConfig(doc, k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -87,7 +90,7 @@ func TestEncryptConfigAgeToAgeReportsEverySkip(t *testing.T) {
 		t.Fatalf("skipped = %v, want all four credentials", skipPaths(skipped))
 	}
 	for _, skip := range skipped {
-		if !strings.Contains(skip.Reason, "does not record its recipients") {
+		if !strings.Contains(skip.Reason, "cannot tell whether they are the ones you named") {
 			t.Errorf("reason for %s = %q, want it to say the recipients cannot be checked", skip.Path, skip.Reason)
 		}
 		if !strings.Contains(skip.Reason, "rekey") {
@@ -99,7 +102,8 @@ func TestEncryptConfigAgeToAgeReportsEverySkip(t *testing.T) {
 // The migration case: a vaulted file, age recipients. encrypt-file does not move a credential
 // between formats, so it says what does.
 func TestEncryptConfigVaultValuesWithAgeRecipientsReportSkips(t *testing.T) {
-	vaulted, _, _, err := EncryptConfig([]byte(configTestDoc), NewVaultKeyring("testpass"), false)
+	doc := readVaultInventoryFixture(t)
+	vaulted, _, _, err := EncryptConfig(doc, NewVaultKeyring("testpass"), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -126,7 +130,8 @@ func TestEncryptConfigVaultValuesWithAgeRecipientsReportSkips(t *testing.T) {
 
 // The mirror image, which an operator moving back to a shared password walks into.
 func TestEncryptConfigAgeValuesWithAVaultPasswordReportSkips(t *testing.T) {
-	aged, _, _, err := EncryptConfig([]byte(configTestDoc), newAgeKeyring(t), false)
+	doc := readVaultInventoryFixture(t)
+	aged, _, _, err := EncryptConfig(doc, newAgeKeyring(t), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -150,9 +155,10 @@ func TestEncryptConfigAgeValuesWithAVaultPasswordReportSkips(t *testing.T) {
 
 // --force is the operator saying they know, so there is nothing left to tell them.
 func TestEncryptConfigForceReportsNoSkips(t *testing.T) {
+	doc := readVaultInventoryFixture(t)
 	k := newAgeKeyring(t)
 
-	once, _, _, err := EncryptConfig([]byte(configTestDoc), k, false)
+	once, _, _, err := EncryptConfig(doc, k, false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -172,10 +178,11 @@ func TestEncryptConfigForceReportsNoSkips(t *testing.T) {
 // A document holding one credential in each format, encrypted with an age keyring: the vaulted
 // values and the age ones are each skipped for their own reason, and the reasons differ.
 func TestEncryptConfigMixedFormatsReportsBothReasons(t *testing.T) {
+	doc := readVaultInventoryFixture(t)
 	ageKeyring := newAgeKeyring(t)
 
 	const path = "$.spec.config.registries[0].auth.pass"
-	mixed, _, _, err := EncryptConfig([]byte(configTestDoc), NewVaultKeyring("testpass"), false)
+	mixed, _, _, err := EncryptConfig(doc, NewVaultKeyring("testpass"), false)
 	if err != nil {
 		t.Fatalf("EncryptConfig() error = %v", err)
 	}
@@ -193,7 +200,7 @@ func TestEncryptConfigMixedFormatsReportsBothReasons(t *testing.T) {
 	}
 	for _, skip := range skipped {
 		wantAge := skip.Path == path
-		gotAge := strings.Contains(skip.Reason, "does not record its recipients")
+		gotAge := strings.Contains(skip.Reason, "cannot tell whether they are the ones you named")
 		if gotAge != wantAge {
 			t.Errorf("reason for %s = %q, want the reason for the format it is in", skip.Path, skip.Reason)
 		}
@@ -202,11 +209,12 @@ func TestEncryptConfigMixedFormatsReportsBothReasons(t *testing.T) {
 
 // Decrypting and rekeying skip only values there was nothing to do about, so neither reports one.
 func TestDecryptAndRekeyConfigReportNoSkips(t *testing.T) {
+	doc := readVaultInventoryFixture(t)
 	k := NewVaultKeyring("testpass")
 
 	// One credential vaulted, the rest left as plaintext, so both calls have something to skip.
 	const path = "$.spec.config.registries[0].auth.pass"
-	partial, err := EncryptAtPath([]byte(configTestDoc), path, k, false)
+	partial, err := EncryptAtPath(doc, path, k, false)
 	if err != nil {
 		t.Fatalf("EncryptAtPath() error = %v", err)
 	}

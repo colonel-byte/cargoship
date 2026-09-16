@@ -55,7 +55,7 @@ func newVaultEncryptFileCommand() *cobra.Command {
 func (o *vaultEncryptFileOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	keyring, err := o.requireKeyring()
+	keyring, err := o.requireKeyring(cmd)
 	if err != nil {
 		return err
 	}
@@ -89,6 +89,17 @@ func finishVaultFile(cmd *cobra.Command, file string, doc []byte, changed []stri
 
 	for _, skip := range skipped {
 		l.Warn("left this credential as it was: it "+skip.Reason, "file", file, "path", skip.Path)
+	}
+
+	// These commands resolve anchors, aliases and merge keys for themselves, and resolve more of
+	// them than the decoder an apply reads the file with does -- a merge key that overrides a key
+	// it merges, or one naming a list of mappings, are both shapes this rewrite handles and that
+	// decoder refuses. Getting the credentials out of the clear is still the right thing to do with
+	// such a file, but the operator should hear now that it will not apply, rather than at apply
+	// time with no clue which of the two commands to believe.
+	if _, err := clustercfg.Parse(cmd.Context(), doc); err != nil {
+		l.Warn("this file does not load as a cluster configuration, so an apply will refuse it; the credentials in it were still "+verb,
+			"file", file, "error", err)
 	}
 
 	if dryRun {

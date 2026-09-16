@@ -85,7 +85,7 @@ func TestCargoshipVaultRekey(t *testing.T) {
 		got, err := os.ReadFile(config)
 		require.NoError(t, err)
 		require.NotContains(t, string(got), "hunter2", "the rekeyed password should never appear in the clear")
-		require.NotContains(t, string(got), "quay-token")
+		require.NotContains(t, string(got), "tok #2")
 		require.NotContains(t, string(got), "admin")
 	})
 

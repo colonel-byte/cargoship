@@ -16,6 +16,7 @@ package clustercfg
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
@@ -90,11 +91,61 @@ func resolveAnchors(node ast.Node, anchors map[string]ast.Node) (ast.Node, error
 		return value, nil
 
 	case *ast.MappingNode:
+		// A merge key stands for the keys of the mappings it names, which the path filter cannot
+		// walk either: a registry that reaches its credentials through "<<: *auth" holds no auth
+		// key of its own for the filter to find. Adding them to the mapping is what makes the
+		// document walkable, and the order they are added in is their precedence, because the
+		// filter answers with the first key it matches.
+		//
+		// YAML gives a mapping's own keys precedence over merged ones, and an earlier merge source
+		// precedence over a later one. So the mapping's own keys come first, then each merged key
+		// no earlier key already set. A merged key that is already set is dropped rather than added
+		// a second time: it is not the value this mapping resolves to, and keeping it would leave
+		// the mapping holding the same key twice.
+		var own, merged, merges []*ast.MappingValueNode
 		for _, value := range n.Values {
-			if _, err := resolveAnchors(value, anchors); err != nil {
+			resolved, err := resolveAnchors(value, anchors)
+			if err != nil {
 				return nil, err
 			}
+			mv, ok := resolved.(*ast.MappingValueNode)
+			if !ok {
+				// Every value of a mapping is a key and its value, and resolving one gives it back,
+				// so this is unreachable. It is an error rather than a skip because dropping the
+				// value here is what reporting a credential as absent looks like.
+				return nil, fmt.Errorf("the mapping entry at line %d resolved to a %s rather than to a key and its value",
+					value.GetToken().Position.Line, strings.ToLower(resolved.Type().String()))
+			}
+			if mv.Key == nil || !mv.Key.IsMergeKey() {
+				own = append(own, mv)
+				continue
+			}
+			sources, err := mergeSources(mv)
+			if err != nil {
+				return nil, err
+			}
+			merged = append(merged, sources...)
+			// The merge key itself is kept so that nothing the parser built is dropped from the
+			// tree. Nothing reads it: the splices in this package rewrite the bytes the tokens
+			// point at rather than write the tree back out.
+			merges = append(merges, mv)
 		}
+
+		named := make(map[string]bool, len(own))
+		for _, mv := range own {
+			named[mappingKeyName(mv)] = true
+		}
+		values := make([]*ast.MappingValueNode, 0, len(own)+len(merged)+len(merges))
+		values = append(values, own...)
+		for _, mv := range merged {
+			name := mappingKeyName(mv)
+			if name != "" && named[name] {
+				continue
+			}
+			named[name] = true
+			values = append(values, mv)
+		}
+		n.Values = append(values, merges...)
 		return n, nil
 
 	case *ast.MappingValueNode:
@@ -122,5 +173,57 @@ func resolveAnchors(node ast.Node, anchors map[string]ast.Node) (ast.Node, error
 
 	default:
 		return node, nil
+	}
+}
+
+// mappingKeyName returns the key a mapping entry is written under. An entry this package cannot
+// name comes back as the empty string, which is never treated as a key another entry already set.
+func mappingKeyName(mv *ast.MappingValueNode) string {
+	if mv.Key == nil {
+		return ""
+	}
+	return mv.Key.GetToken().Value
+}
+
+// mergeSources returns the entries a merge key contributes, in the order it names them. YAML lets a
+// merge key take one mapping or a list of them, and either may be written as an alias, which
+// resolveAnchors has already replaced by the mapping the anchor holds.
+//
+// Anything else is an error rather than a merge that quietly adds nothing. A merge this package
+// walks past is a set of keys it cannot reach, and the whole-file commands would then report the
+// document as having had nothing to do -- which reads as success over credentials still sitting
+// there in the clear.
+func mergeSources(mv *ast.MappingValueNode) ([]*ast.MappingValueNode, error) {
+	line := mv.GetToken().Position.Line
+
+	switch target := mv.Value.(type) {
+	case *ast.MappingNode:
+		return target.Values, nil
+
+	case *ast.MappingValueNode:
+		// A mapping holding a single key, which the parser hands back as the entry itself.
+		return []*ast.MappingValueNode{target}, nil
+
+	case *ast.SequenceNode:
+		var sources []*ast.MappingValueNode
+		for _, value := range target.Values {
+			switch source := value.(type) {
+			case *ast.MappingNode:
+				sources = append(sources, source.Values...)
+			case *ast.MappingValueNode:
+				sources = append(sources, source)
+			default:
+				return nil, fmt.Errorf("the merge key at line %d names a %s in its list; a merge key takes a mapping or a list of mappings",
+					line, strings.ToLower(value.Type().String()))
+			}
+		}
+		return sources, nil
+
+	case nil:
+		return nil, fmt.Errorf("the merge key at line %d names nothing; a merge key takes a mapping or a list of mappings", line)
+
+	default:
+		return nil, fmt.Errorf("the merge key at line %d names a %s; a merge key takes a mapping or a list of mappings",
+			line, strings.ToLower(target.Type().String()))
 	}
 }
