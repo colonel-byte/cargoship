@@ -730,8 +730,8 @@ github.com/coreos/go-oidc/v3/oidc
 # github.com/cpuguy83/go-md2man/v2 v2.0.7
 ## explicit; go 1.12
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/creasty/defaults v1.8.0
-## explicit; go 1.14
+# github.com/creasty/defaults v1.10.0
+## explicit; go 1.22
 github.com/creasty/defaults
 # github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 ## explicit
@@ -1473,7 +1473,7 @@ github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.30
 ## explicit; go 1.23
 github.com/mattn/go-runewidth
-# github.com/mattn/go-shellwords v1.0.14
+# github.com/mattn/go-shellwords v1.0.15
 ## explicit; go 1.13
 github.com/mattn/go-shellwords
 # github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
