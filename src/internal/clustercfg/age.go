@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"filippo.io/age"
 	"filippo.io/age/armor"
@@ -103,4 +104,59 @@ func explainNoIdentityMatch(err error) error {
 		return errors.New("none of the configured age identities can decrypt this value")
 	}
 	return fmt.Errorf("none of the configured age identities can decrypt this value; it is encrypted to %s recipients", strings.Join(noMatch.StanzaTypes, ", "))
+}
+
+// GenerateAgeIdentity returns a new X25519 key pair.
+//
+// X25519 rather than a choice of algorithms because it is the one age generates: the post-quantum
+// recipient type cargoship accepts on the encryption side comes from somewhere else, and there is
+// nothing to pick between here.
+func GenerateAgeIdentity() (*age.X25519Identity, error) {
+	id, err := age.GenerateX25519Identity()
+	if err != nil {
+		return nil, fmt.Errorf("generating an age key pair: %w", err)
+	}
+	return id, nil
+}
+
+// WriteAgeIdentity writes id to w in the format age-keygen writes, so that the file is readable by
+// the age distribution as well as by cargoship.
+//
+// Matching that format exactly is the point rather than a nicety. An operator who later wants to
+// read a value with 'age --decrypt', or to hand the key to something else that speaks age, would be
+// stranded by a file only cargoship understands, and the whole reason for supporting age is that it
+// is not a format of cargoship's own.
+//
+// The public key is written as a comment beside the private one because it is the only copy an
+// operator has once the terminal output is gone, and 'keygen -y' reads it back from here.
+func WriteAgeIdentity(w io.Writer, id *age.X25519Identity) error {
+	_, err := fmt.Fprintf(w, "# created: %s\n# public key: %s\n%s\n",
+		time.Now().Format(time.RFC3339), id.Recipient(), id)
+	if err != nil {
+		return fmt.Errorf("writing the age identity: %w", err)
+	}
+	return nil
+}
+
+// AgeRecipientsIn reads an identity file and returns the public keys of the identities it holds.
+//
+// An identity that is not an X25519 key is an error rather than a line quietly passed over. The
+// answer this is asked for is "who can read the values encrypted to this key", and a short answer
+// to that question is worse than no answer: the operator acts on it.
+func AgeRecipientsIn(r io.Reader) ([]string, error) {
+	identities, err := age.ParseIdentities(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading age identities: %w", err)
+	}
+
+	recipients := make([]string, 0, len(identities))
+	for _, identity := range identities {
+		x25519, ok := identity.(*age.X25519Identity)
+		if !ok {
+			return nil, fmt.Errorf("age identity %d of %d is a %T, which has no public key to print",
+				len(recipients)+1, len(identities), identity)
+		}
+		recipients = append(recipients, x25519.Recipient().String())
+	}
+	return recipients, nil
 }

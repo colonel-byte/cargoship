@@ -32,5 +32,6 @@ Groups the commands that read and write encrypted values for a cluster configura
 * [cargoship vault encrypt](./cargoship_vault_encrypt.md)	 - Encrypts a value with Ansible Vault or age, for use in a registry's user/pass/token fields
 * [cargoship vault encrypt-file](./cargoship_vault_encrypt-file.md)	 - Encrypts every registry credential in a config file, in place
 * [cargoship vault encrypt-path](./cargoship_vault_encrypt-path.md)	 - Encrypts the values a config file already holds at one or more YAML paths, in place
+* [cargoship vault keygen](./cargoship_vault_keygen.md)	 - Generates an age key pair, or prints the public key of one you already hold
 * [cargoship vault rekey](./cargoship_vault_rekey.md)	 - Re-wraps every encrypted registry credential in a config file, optionally under a new key
 

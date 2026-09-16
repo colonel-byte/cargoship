@@ -33,23 +33,32 @@ Nothing records the format in the schema, and no flag selects it for reading. Th
 
 ### Making a Key Pair
 
-Cargoship reads the key formats [`age`](https://github.com/FiloSottile/age) itself writes. Use `age-keygen`:
+Cargoship makes a key pair itself, so the [`age`](https://github.com/FiloSottile/age) distribution is not something you have to install first:
 
 ```
-age-keygen -o ~/.age/cargoship.key
+cargoship vault keygen --output ~/.age/cargoship.key
 ```
 
-It writes the identity -- the private key, `AGE-SECRET-KEY-1...` -- to the file, and prints the recipient -- the public key, `age1...` -- to stderr. The public key is also in the file, on a `# public key:` comment line, so you can recover it later:
+It writes the identity -- the private key, `AGE-SECRET-KEY-1...` -- to the file with mode `0600`, and prints the recipient -- the public key, `age1...` -- to stderr. It will not overwrite a file that already exists: replacing an identity makes every value encrypted to the old key unreadable, by anyone, permanently. Move the old file aside if you mean to replace it.
+
+`age-keygen -o ~/.age/cargoship.key` does the same thing and writes the same file. The format is age's, not Cargoship's, which is the point: the key stays usable with `age --decrypt` and anything else that speaks it.
+
+The public key is also in the file, on a `# public key:` comment line, so you can recover it later:
 
 ```
-age-keygen -y ~/.age/cargoship.key
+cargoship vault keygen --public-key ~/.age/cargoship.key
 ```
 
-Restrict the identity file to the user that runs Cargoship:
+`age-keygen -y ~/.age/cargoship.key` is the equivalent, and `-y` is the short flag here too.
+
+Omitting `--output` writes the private key to stdout instead, which makes the redirect work:
 
 ```
+cargoship vault keygen > ~/.age/cargoship.key
 chmod 600 ~/.age/cargoship.key
 ```
+
+The `chmod` matters in that form and not the other: a redirect creates the file with whatever mode your shell gives it. Run bare, with no redirect, the command warns -- the key is then on the screen and in that terminal's scrollback.
 
 The public key is not a secret. Commit it, publish it, put it in a ticket.
 
@@ -159,7 +168,10 @@ cargoship vault decrypt [VALUE]
 cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...]
 cargoship vault decrypt-file FILE
 cargoship vault rekey FILE
+cargoship vault keygen [IDENTITY_FILE]
 ```
+
+`keygen` is the only one of them that takes no key material, since it is the command that makes some.
 
 ### Encrypting a Value
 
