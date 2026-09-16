@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fd31fba2.js";
+            window.path_to_searchindex_js = "../searchindex-205b19ab.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-86ca0880.js"></script>
+        <script src="../toc-08a866d0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -209,15 +209,20 @@
 <p>Nothing records the format in the schema, and no flag selects it for reading. That is what lets one document mix the two.</p>
 <h2 id="keys"><a class="header" href="#keys">Keys</a></h2>
 <h3 id="making-a-key-pair"><a class="header" href="#making-a-key-pair">Making a Key Pair</a></h3>
-<p>Cargoship reads the key formats <a href="https://github.com/FiloSottile/age"><code>age</code></a> itself writes. Use <code>age-keygen</code>:</p>
-<pre><code>age-keygen -o ~/.age/cargoship.key
+<p>Cargoship makes a key pair itself, so the <a href="https://github.com/FiloSottile/age"><code>age</code></a> distribution is not something you have to install first:</p>
+<pre><code>cargoship vault keygen --output ~/.age/cargoship.key
 </code></pre>
-<p>It writes the identity – the private key, <code>AGE-SECRET-KEY-1...</code> – to the file, and prints the recipient – the public key, <code>age1...</code> – to stderr. The public key is also in the file, on a <code># public key:</code> comment line, so you can recover it later:</p>
-<pre><code>age-keygen -y ~/.age/cargoship.key
+<p>It writes the identity – the private key, <code>AGE-SECRET-KEY-1...</code> – to the file with mode <code>0600</code>, and prints the recipient – the public key, <code>age1...</code> – to stderr. It will not overwrite a file that already exists: replacing an identity makes every value encrypted to the old key unreadable, by anyone, permanently. Move the old file aside if you mean to replace it.</p>
+<p><code>age-keygen -o ~/.age/cargoship.key</code> does the same thing and writes the same file. The format is age’s, not Cargoship’s, which is the point: the key stays usable with <code>age --decrypt</code> and anything else that speaks it.</p>
+<p>The public key is also in the file, on a <code># public key:</code> comment line, so you can recover it later:</p>
+<pre><code>cargoship vault keygen --public-key ~/.age/cargoship.key
 </code></pre>
-<p>Restrict the identity file to the user that runs Cargoship:</p>
-<pre><code>chmod 600 ~/.age/cargoship.key
+<p><code>age-keygen -y ~/.age/cargoship.key</code> is the equivalent, and <code>-y</code> is the short flag here too.</p>
+<p>Omitting <code>--output</code> writes the private key to stdout instead, which makes the redirect work:</p>
+<pre><code>cargoship vault keygen &gt; ~/.age/cargoship.key
+chmod 600 ~/.age/cargoship.key
 </code></pre>
+<p>The <code>chmod</code> matters in that form and not the other: a redirect creates the file with whatever mode your shell gives it. Run bare, with no redirect, the command warns – the key is then on the screen and in that terminal’s scrollback.</p>
 <p>The public key is not a secret. Commit it, publish it, put it in a ticket.</p>
 <h3 id="recipients-the-keys-that-encrypt"><a class="header" href="#recipients-the-keys-that-encrypt">Recipients: the Keys That Encrypt</a></h3>
 <p>Three flags name recipients, and all three are repeatable:</p>
@@ -293,7 +298,9 @@ cargoship vault decrypt [VALUE]
 cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...]
 cargoship vault decrypt-file FILE
 cargoship vault rekey FILE
+cargoship vault keygen [IDENTITY_FILE]
 </code></pre>
+<p><code>keygen</code> is the only one of them that takes no key material, since it is the command that makes some.</p>
 <h3 id="encrypting-a-value"><a class="header" href="#encrypting-a-value">Encrypting a Value</a></h3>
 <pre><code>cargoship vault encrypt my-registry-password --age-recipient age1ql3z...
 </code></pre>

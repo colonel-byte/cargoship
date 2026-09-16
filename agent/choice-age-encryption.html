@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fd31fba2.js";
+            window.path_to_searchindex_js = "../searchindex-205b19ab.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-86ca0880.js"></script>
+        <script src="../toc-08a866d0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -228,6 +228,15 @@
 <li><strong>Plugins.</strong> These are a property of the <code>age</code> binary. Cargoship links the library so that encrypting and decrypting stays a pure in-process operation in a single static binary, the same reason recorded in <a href="choice-vault-library.html">choice-vault-library</a>.</li>
 </ul>
 <p><code>ParseRecipients</code> may return a <code>*HybridRecipient</code> (post-quantum X-Wing). Passing it through costs nothing, so it works without any code of ours.</p>
+<h2 id="generating-keys-and-the-refusals-around-it"><a class="header" href="#generating-keys-and-the-refusals-around-it">Generating keys, and the refusals around it</a></h2>
+<p><code>cargoship vault keygen</code> exists because everything else here otherwise assumes the <code>age</code> distribution is installed, when cargoship already links the library that generates a key pair. It writes byte-for-byte what <code>age-keygen</code> writes, deliberately: a file only cargoship could read would strand an operator who later wants <code>age --decrypt</code>, and interoperability is the reason for supporting the format at all.</p>
+<p>Three refusals are load-bearing, and none of them should be softened into a prompt or an overwrite:</p>
+<ul>
+<li><strong><code>--output</code> never overwrites.</strong> Replacing an identity file destroys the only copy of a key, and every value in a committed configuration encrypted to it becomes unreadable by anyone, permanently. <code>O_CREATE|O_EXCL</code> makes the check part of the create, so there is no window between asking and writing. A <code>--force</code> flag here would be a flag whose only use is the unrecoverable case.</li>
+<li><strong><code>--output</code> is refused with <code>--public-key</code>.</strong> It keeps one meaning – the file holding a private key that was just generated – and so keeps the no-overwrite rule from having an exception attached to it. A public key needs no such care and redirects perfectly well.</li>
+<li><strong>An identity that is not X25519 is an error in <code>AgeRecipientsIn</code>, not a skipped line.</strong> The question being asked is “who can read values encrypted to this key,” and a short answer to that is worse than no answer, because the operator acts on it.</li>
+</ul>
+<p>The generated identity never passes through <code>logger</code>. Logging is wired to stderr and may be scraped centrally, and a private key that reaches a log aggregator has to be treated as compromised everywhere it was used. Without <code>--output</code> the key goes to stdout so that <code>cargoship vault keygen &gt; key.txt</code> works; the terminal warning covers the case where there is no redirect and the key lands in scrollback.</p>
 <h2 id="dependency"><a class="header" href="#dependency">Dependency</a></h2>
 <p><code>filippo.io/age</code> v1.3.2, BSD-3-Clause, which brings <code>filippo.io/hpke</code> v0.4.0 with it. Everything else it needs – <code>chacha20poly1305</code>, <code>curve25519</code>, <code>hkdf</code>, <code>scrypt</code> – was already vendored under <code>vendor/golang.org/x/crypto/</code>.</p>
 <p><code>ATTRIBUTION.md</code> covers <em>derived</em> code (k0sctl, zarf, bootloose) rather than dependencies, so it needs no entry; the vendored <code>LICENSE</code> is sufficient.</p>

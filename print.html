@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fd31fba2.js";
+            window.path_to_searchindex_js = "searchindex-205b19ab.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-86ca0880.js"></script>
+        <script src="toc-08a866d0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -307,15 +307,20 @@ cargoship create ./distro-defs -o ./build/
 <p>Nothing records the format in the schema, and no flag selects it for reading. That is what lets one document mix the two.</p>
 <h2 id="keys"><a class="header" href="#keys">Keys</a></h2>
 <h3 id="making-a-key-pair"><a class="header" href="#making-a-key-pair">Making a Key Pair</a></h3>
-<p>Cargoship reads the key formats <a href="https://github.com/FiloSottile/age"><code>age</code></a> itself writes. Use <code>age-keygen</code>:</p>
-<pre><code>age-keygen -o ~/.age/cargoship.key
+<p>Cargoship makes a key pair itself, so the <a href="https://github.com/FiloSottile/age"><code>age</code></a> distribution is not something you have to install first:</p>
+<pre><code>cargoship vault keygen --output ~/.age/cargoship.key
 </code></pre>
-<p>It writes the identity – the private key, <code>AGE-SECRET-KEY-1...</code> – to the file, and prints the recipient – the public key, <code>age1...</code> – to stderr. The public key is also in the file, on a <code># public key:</code> comment line, so you can recover it later:</p>
-<pre><code>age-keygen -y ~/.age/cargoship.key
+<p>It writes the identity – the private key, <code>AGE-SECRET-KEY-1...</code> – to the file with mode <code>0600</code>, and prints the recipient – the public key, <code>age1...</code> – to stderr. It will not overwrite a file that already exists: replacing an identity makes every value encrypted to the old key unreadable, by anyone, permanently. Move the old file aside if you mean to replace it.</p>
+<p><code>age-keygen -o ~/.age/cargoship.key</code> does the same thing and writes the same file. The format is age’s, not Cargoship’s, which is the point: the key stays usable with <code>age --decrypt</code> and anything else that speaks it.</p>
+<p>The public key is also in the file, on a <code># public key:</code> comment line, so you can recover it later:</p>
+<pre><code>cargoship vault keygen --public-key ~/.age/cargoship.key
 </code></pre>
-<p>Restrict the identity file to the user that runs Cargoship:</p>
-<pre><code>chmod 600 ~/.age/cargoship.key
+<p><code>age-keygen -y ~/.age/cargoship.key</code> is the equivalent, and <code>-y</code> is the short flag here too.</p>
+<p>Omitting <code>--output</code> writes the private key to stdout instead, which makes the redirect work:</p>
+<pre><code>cargoship vault keygen &gt; ~/.age/cargoship.key
+chmod 600 ~/.age/cargoship.key
 </code></pre>
+<p>The <code>chmod</code> matters in that form and not the other: a redirect creates the file with whatever mode your shell gives it. Run bare, with no redirect, the command warns – the key is then on the screen and in that terminal’s scrollback.</p>
 <p>The public key is not a secret. Commit it, publish it, put it in a ticket.</p>
 <h3 id="recipients-the-keys-that-encrypt"><a class="header" href="#recipients-the-keys-that-encrypt">Recipients: the Keys That Encrypt</a></h3>
 <p>Three flags name recipients, and all three are repeatable:</p>
@@ -391,7 +396,9 @@ cargoship vault decrypt [VALUE]
 cargoship vault decrypt-path FILE YAML_PATH [YAML_PATH...]
 cargoship vault decrypt-file FILE
 cargoship vault rekey FILE
+cargoship vault keygen [IDENTITY_FILE]
 </code></pre>
+<p><code>keygen</code> is the only one of them that takes no key material, since it is the command that makes some.</p>
 <h3 id="encrypting-a-value"><a class="header" href="#encrypting-a-value">Encrypting a Value</a></h3>
 <pre><code>cargoship vault encrypt my-registry-password --age-recipient age1ql3z...
 </code></pre>
@@ -1950,6 +1957,7 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms
 <li><a href="#encrypt">cargoship vault encrypt</a>	 - Encrypts a value with Ansible Vault or age, for use in a registry’s user/pass/token fields</li>
 <li><a href="#encrypt-file">cargoship vault encrypt-file</a>	 - Encrypts every registry credential in a config file, in place</li>
 <li><a href="#encrypt-path">cargoship vault encrypt-path</a>	 - Encrypts the values a config file already holds at one or more YAML paths, in place</li>
+<li><a href="#keygen">cargoship vault keygen</a>	 - Generates an age key pair, or prints the public key of one you already hold</li>
 <li><a href="#rekey">cargoship vault rekey</a>	 - Re-wraps every encrypted registry credential in a config file, optionally under a new key</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -2211,15 +2219,54 @@ $ cargoship vault encrypt my-registry-password --age-recipients-file ./recipient
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="keygen"><a href="#keygen" class="header">keygen</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-vault-keygen"><a class="header" href="#cargoship-vault-keygen">cargoship vault keygen</a></h2>
+<p>Generates an age key pair, or prints the public key of one you already hold</p>
+<h3 id="synopsis-8"><a class="header" href="#synopsis-8">Synopsis</a></h3>
+<p>Generates an age key pair in the format age-keygen writes, so that the age distribution is not a prerequisite for encrypting a configuration with age, and the file stays readable by ‘age –decrypt’ and anything else that speaks the format. The identity – the private key, AGE-SECRET-KEY-1… – goes to –output, or to stdout when that is omitted; the recipient – the public key, age1… – goes to stderr, so that the file holds the private key alone and the public key can be copied straight into a recipients file. With –public-key it generates nothing and instead prints the public keys held in IDENTITY_FILE, or in stdin when no file is given, which is how a recipient is recovered from a private key you still have. A key pair is not registered anywhere: pass the public key to ‘cargoship vault encrypt’ as –age-recipient, and the file back as –age-identity-file to read those values again.</p>
+<pre><code>cargoship vault keygen [IDENTITY_FILE] [flags]
+</code></pre>
+<h3 id="examples-16"><a class="header" href="#examples-16">Examples</a></h3>
+<pre><code># Generate a key pair, writing the private key to a file and printing the public key
+$ cargoship vault keygen --output ~/.age/cargoship.key
+
+# The same, redirecting instead, which leaves the file mode up to your shell
+$ cargoship vault keygen &gt; ~/.age/cargoship.key
+
+# Recover the public key from an identity file you still hold
+$ cargoship vault keygen --public-key ~/.age/cargoship.key
+
+# Encrypt a configuration to the key that was just generated, and read it back
+$ cargoship vault encrypt-file ./cluster.yaml --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargoship.key
+
+</code></pre>
+<h3 id="options-18"><a class="header" href="#options-18">Options</a></h3>
+<pre><code>  -h, --help            help for keygen
+  -o, --output string   Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead.
+  -y, --public-key      Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given.
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-17"><a class="header" href="#options-inherited-from-parent-commands-17">Options inherited from parent commands</a></h3>
+<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
+</code></pre>
+<h3 id="see-also-18"><a class="header" href="#see-also-18">SEE ALSO</a></h3>
+<ul>
+<li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="rekey"><a href="#rekey" class="header">rekey</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-vault-rekey"><a class="header" href="#cargoship-vault-rekey">cargoship vault rekey</a></h2>
 <p>Re-wraps every encrypted registry credential in a config file, optionally under a new key</p>
-<h3 id="synopsis-8"><a class="header" href="#synopsis-8">Synopsis</a></h3>
+<h3 id="synopsis-9"><a class="header" href="#synopsis-9">Synopsis</a></h3>
 <p>Re-wraps every encrypted registry credential FILE holds – each registry’s auth.user, auth.pass, auth.token and tls.ca – under the key named by –new-vault-password-file or by –age-recipient, leaving comments, key order, and the rest of the document untouched. Naming age recipients while reading with the vault password is how a configuration moves from Ansible Vault to age; naming neither re-wraps the values under the key they already carry, which gives every one of them fresh ciphertext without changing the key. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the keys given, and the command stops without touching FILE if one is not, because a configuration encrypted under two keys is one no single key can read back.</p>
 <pre><code>cargoship vault rekey FILE [flags]
 </code></pre>
-<h3 id="examples-16"><a class="header" href="#examples-16">Examples</a></h3>
+<h3 id="examples-17"><a class="header" href="#examples-17">Examples</a></h3>
 <pre><code># Move every encrypted registry credential in a cluster configuration to a new vault password
 $ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt
 
@@ -2236,7 +2283,7 @@ $ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt --
 $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recipients-file ./recipients.txt
 
 </code></pre>
-<h3 id="options-18"><a class="header" href="#options-18">Options</a></h3>
+<h3 id="options-19"><a class="header" href="#options-19">Options</a></h3>
 <pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray         An age public key to encrypt registry credentials to, for example age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray   Path to a file holding age public keys, one per line. Repeatable; also settable as age.recipients_files in the cargoship config file.
@@ -2245,13 +2292,13 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
       --new-vault-password-file string    Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the key the file already uses, or pass --age-recipient instead to move the file onto age. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened.
       --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-17"><a class="header" href="#options-inherited-from-parent-commands-17">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-18"><a class="header" href="#options-inherited-from-parent-commands-18">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-18"><a class="header" href="#see-also-18">SEE ALSO</a></h3>
+<h3 id="see-also-19"><a class="header" href="#see-also-19">SEE ALSO</a></h3>
 <ul>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
@@ -2260,11 +2307,11 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-version"><a class="header" href="#cargoship-version">cargoship version</a></h2>
 <p>Shows the version of the running binary</p>
-<h3 id="synopsis-9"><a class="header" href="#synopsis-9">Synopsis</a></h3>
+<h3 id="synopsis-10"><a class="header" href="#synopsis-10">Synopsis</a></h3>
 <p>Displays the version of the release that the current binary was built from.</p>
 <pre><code>cargoship version [flags]
 </code></pre>
-<h3 id="examples-17"><a class="header" href="#examples-17">Examples</a></h3>
+<h3 id="examples-18"><a class="header" href="#examples-18">Examples</a></h3>
 <pre><code># Print the version of the running binary
 $ cargoship version
 
@@ -2274,17 +2321,17 @@ $ cargoship version --output yaml
 # Print it as JSON, for piping into jq
 $ cargoship version -o json
 </code></pre>
-<h3 id="options-19"><a class="header" href="#options-19">Options</a></h3>
+<h3 id="options-20"><a class="header" href="#options-20">Options</a></h3>
 <pre><code>  -h, --help                  help for version
   -o, --output outputFormat   output format (yaml|json)
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-18"><a class="header" href="#options-inherited-from-parent-commands-18">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-19"><a class="header" href="#options-inherited-from-parent-commands-19">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-19"><a class="header" href="#see-also-19">SEE ALSO</a></h3>
+<h3 id="see-also-20"><a class="header" href="#see-also-20">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -3625,6 +3672,15 @@ mage generate:updatePins            # refresh every line already pinned
 <li><strong>Plugins.</strong> These are a property of the <code>age</code> binary. Cargoship links the library so that encrypting and decrypting stays a pure in-process operation in a single static binary, the same reason recorded in <a href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">choice-vault-library</a>.</li>
 </ul>
 <p><code>ParseRecipients</code> may return a <code>*HybridRecipient</code> (post-quantum X-Wing). Passing it through costs nothing, so it works without any code of ours.</p>
+<h2 id="generating-keys-and-the-refusals-around-it"><a class="header" href="#generating-keys-and-the-refusals-around-it">Generating keys, and the refusals around it</a></h2>
+<p><code>cargoship vault keygen</code> exists because everything else here otherwise assumes the <code>age</code> distribution is installed, when cargoship already links the library that generates a key pair. It writes byte-for-byte what <code>age-keygen</code> writes, deliberately: a file only cargoship could read would strand an operator who later wants <code>age --decrypt</code>, and interoperability is the reason for supporting the format at all.</p>
+<p>Three refusals are load-bearing, and none of them should be softened into a prompt or an overwrite:</p>
+<ul>
+<li><strong><code>--output</code> never overwrites.</strong> Replacing an identity file destroys the only copy of a key, and every value in a committed configuration encrypted to it becomes unreadable by anyone, permanently. <code>O_CREATE|O_EXCL</code> makes the check part of the create, so there is no window between asking and writing. A <code>--force</code> flag here would be a flag whose only use is the unrecoverable case.</li>
+<li><strong><code>--output</code> is refused with <code>--public-key</code>.</strong> It keeps one meaning – the file holding a private key that was just generated – and so keeps the no-overwrite rule from having an exception attached to it. A public key needs no such care and redirects perfectly well.</li>
+<li><strong>An identity that is not X25519 is an error in <code>AgeRecipientsIn</code>, not a skipped line.</strong> The question being asked is “who can read values encrypted to this key,” and a short answer to that is worse than no answer, because the operator acts on it.</li>
+</ul>
+<p>The generated identity never passes through <code>logger</code>. Logging is wired to stderr and may be scraped centrally, and a private key that reaches a log aggregator has to be treated as compromised everywhere it was used. Without <code>--output</code> the key goes to stdout so that <code>cargoship vault keygen &gt; key.txt</code> works; the terminal warning covers the case where there is no redirect and the key lands in scrollback.</p>
 <h2 id="dependency"><a class="header" href="#dependency">Dependency</a></h2>
 <p><code>filippo.io/age</code> v1.3.2, BSD-3-Clause, which brings <code>filippo.io/hpke</code> v0.4.0 with it. Everything else it needs – <code>chacha20poly1305</code>, <code>curve25519</code>, <code>hkdf</code>, <code>scrypt</code> – was already vendored under <code>vendor/golang.org/x/crypto/</code>.</p>
 <p><code>ATTRIBUTION.md</code> covers <em>derived</em> code (k0sctl, zarf, bootloose) rather than dependencies, so it needs no entry; the vendored <code>LICENSE</code> is sufficient.</p>
