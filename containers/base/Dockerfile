@@ -23,7 +23,7 @@
 # The base image is pinned by digest, written literally rather than hoisted into
 # an ARG: dependabot's Dockerfile parser only reads literal FROM lines and cannot
 # resolve a reference that arrives through a build arg.
-FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS skeleton
+FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS skeleton
 
 ARG UID=65532
 ARG GID=65532
@@ -40,7 +40,7 @@ RUN mkdir -p \
 # with SSL_CERT_FILE pointing at it, and a 1777 /tmp, so none of that is repeated
 # here -- the skeleton above only adds the subdirectories the CLI expects, at the
 # same ownership and mode the base already uses.
-FROM cgr.dev/chainguard/static:latest@sha256:bf639cba19ba56329e6907ac26a7afcdde57a80b6aa66d5100da6883196e6b82
+FROM registry1.dso.mil/chainguard/cgr.dev/chainguard/static@sha256:fa805e7de94d389ef192ffe48a27a03f066fda8f02bddb76096742eed49fa9e8
 
 # The whole skeleton tree is copied at its root on purpose. A COPY whose
 # destination directory does not yet exist creates that directory root-owned and
