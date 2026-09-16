@@ -66,6 +66,10 @@ const (
 	modeRegistries = "0640"
 )
 
+// helmChartConfigSuffix is what cargoship names the HelmChartConfig it writes for a chart, and
+// what tells its files apart from the engine's own in the same directory.
+const helmChartConfigSuffix = "-config.yaml"
+
 // registryTLSDir is where cargoship writes CA certificates given inline in the cluster
 // configuration. It is cargoship's own directory rather than the engine's, since these files
 // are cargoship's to create, replace, and remove.
@@ -208,28 +212,6 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 			nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.Leader.Configurer.LongHostname(run.Leader))
 		}
 
-		for k, v := range nodeConfig.DigMapping(config.EngineManifest) {
-			values, err := helmValuesContent(v)
-			if err != nil {
-				logger.From(ctx).Warn("failed to render helm values", "chart", k, "error", err)
-				continue
-			}
-			config := dig.Mapping{}
-			config[keyAPIVersion] = "helm.cattle.io/v1"
-			config[keyKind] = "HelmChartConfig"
-			config[keyMetadata] = map[string]string{
-				"name":      k,
-				"namespace": "kube-system",
-			}
-			config[keySpec] = map[string]string{
-				"valuesContent": values,
-			}
-			err = d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
-			if err != nil {
-				logger.From(ctx).Warn("failed to write", "file", fmt.Sprintf("%s-config.yaml", k))
-			}
-		}
-
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
 			if v, err := host.ExecOutput("getent passwd etcd"); err != nil && v == "" {
 				logger.From(ctx).Info("need to create an etcd user for profile", "host", host.Connection.String())
@@ -349,7 +331,7 @@ func (d *RancherCommon) engineServiceRunning(h *cluster.ZarfHost) bool {
 // DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
 // the given host/run/dis, keyed by their full destination path. Content is identical across
 // hosts of the same run (no host-varying fields are involved), unlike config.yaml.
-func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *RancherCommon) DesiredFiles(host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	if len(run.Registries) > 0 {
@@ -386,12 +368,70 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = DesiredFile{Content: b, Mode: modeConfigFile}
 	}
 
+	if host.IsController() {
+		manifests, err := d.helmChartConfigs(nodeConfig)
+		if err != nil {
+			return nil, err
+		}
+		for path, df := range manifests {
+			files[path] = df
+		}
+	}
+
 	if path, df, ok, err := DistroReleaseDesiredFile(dis, files); err != nil {
 		return nil, err
 	} else if ok {
 		files[path] = df
 	}
 
+	return files, nil
+}
+
+// manifestDir is where the engine reads the manifests it applies on startup and watches for
+// changes afterwards. Only controllers have one.
+func (d *RancherCommon) manifestDir() string {
+	return filepath.Join(d.Data, "server", "manifests")
+}
+
+// helmChartConfigs renders `.spec.config.engine.manifest` into one HelmChartConfig file per
+// chart, keyed by the path it is written to.
+//
+// These are the only files cargoship writes that something else acts on: the engine's own helm
+// controller reads them and reconciles the chart, at whatever point in its startup it gets to
+// them. That makes them safe to rewrite under a running engine -- a changed value reaches the
+// chart without the node being drained -- which is what NoRestart says here.
+func (d *RancherCommon) helmChartConfigs(nodeConfig dig.Mapping) (map[string]DesiredFile, error) {
+	manifests := nodeConfig.DigMapping(config.EngineManifest)
+	if len(manifests) == 0 {
+		return nil, nil
+	}
+
+	files := make(map[string]DesiredFile, len(manifests))
+	for chart, v := range manifests {
+		values, err := helmValuesContent(v)
+		if err != nil {
+			return nil, fmt.Errorf("rendering helm values for chart %s: %w", chart, err)
+		}
+		b, err := marshalYAML(dig.Mapping{
+			keyAPIVersion: "helm.cattle.io/v1",
+			keyKind:       "HelmChartConfig",
+			keyMetadata: map[string]string{
+				"name":      chart,
+				"namespace": "kube-system",
+			},
+			keySpec: map[string]string{
+				"valuesContent": values,
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("rendering HelmChartConfig for chart %s: %w", chart, err)
+		}
+		files[filepath.Join(d.manifestDir(), chart+helmChartConfigSuffix)] = DesiredFile{
+			Content:   b,
+			Mode:      modeConfigFile,
+			NoRestart: true,
+		}
+	}
 	return files, nil
 }
 
@@ -560,11 +600,17 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	}
 }
 
-// ManagedDirs returns the directories on a host whose contents cargoship owns outright. For
-// rke2 and k3s that includes the directory holding CA certificates and state metadata: every file
-// in it was put there by cargoship, so a file with no entry left behind it can go.
-func (d *RancherCommon) ManagedDirs() []string {
-	return []string{registryTLSDir, StateDir}
+// ManagedDirs returns the directories on a host cargoship prunes. For rke2 and k3s that is the
+// directory holding CA certificates, the one holding state metadata -- every file in both was
+// put there by cargoship, so a file with no entry left behind it can go -- and the engine's
+// manifest directory, which cargoship shares with the engine and where it prunes only the
+// HelmChartConfig files it writes itself.
+func (d *RancherCommon) ManagedDirs() []ManagedDir {
+	return []ManagedDir{
+		{Path: registryTLSDir},
+		{Path: StateDir},
+		{Path: d.manifestDir(), Glob: "*" + helmChartConfigSuffix},
+	}
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the engine data

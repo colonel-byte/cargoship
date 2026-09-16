@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package helmvalues renders Helm-style value templates and parses Helm-style
-// --set expressions into the nested interface values a chart expects.
+// Package helmvalues renders Helm-style value templates and reads and writes
+// the nested interface values those templates draw on.
+//
+// Values are addressed by ZEP-0021 value paths: a leading dot followed by
+// dot-separated keys, with list indices written after a key, as in
+// .servers[0].port. A lone "." names the root.
 //
 // Scalar typing follows Helm's strvals package rather than Go's own parsing
 // rules, so a value that travels through cargoship lands in a chart as the same
@@ -297,109 +301,6 @@ func EvaluateValuesTemplates(v any, data any, opts ...Option) (any, error) {
 	}
 }
 
-// ParseSet parses a Helm-style --set key=value string into a nested map[string]any structure.
-//
-// Values are typed by Helm's rules (see typedScalar). A list is written either
-// as {a,b,c} (Helm's form) or [a,b,c], and may nest. Surrounding a value in
-// quotes suppresses typing, so bool="true" is the string "true".
-//
-// A key may index into a list, so servers[0].port=80 creates servers as a
-// one-element list. A backslash escapes a separator that belongs to the key or
-// the value itself: annotations.example\.com/team=infra sets the single key
-// "example.com/team", and cmd=a\,b keeps the comma inside the value.
-func ParseSet(s string) (map[string]any, error) {
-	result := make(map[string]any)
-	for _, part := range splitTopLevel(s) {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		eqIdx := indexUnescaped(part, '=')
-		if eqIdx == -1 {
-			return nil, fmt.Errorf("invalid set format %q (missing '=')", part)
-		}
-		key := strings.TrimSpace(part[:eqIdx])
-		val := parseSetValue(strings.TrimSpace(part[eqIdx+1:]))
-
-		if err := setPath(result, key, val); err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
-}
-
-// splitTopLevel splits s on commas that are not inside a bracketed group, inside
-// quotes, or escaped. Nesting is tracked as a depth count, so the inner "]" of
-// "[1,[2,3]]" does not end the outer group and let the following comma split the
-// list in half.
-//
-// A backslash and the character after it are both kept, so the later unescape
-// pass can tell "a\,b" from "a,b". Inside quotes a backslash is literal, since
-// quoting already protects the whole value.
-//
-// Empty fields are preserved; callers decide whether an empty field is an empty
-// string or a field to skip.
-func splitTopLevel(s string) []string {
-	var (
-		parts     []string
-		cur       strings.Builder
-		depth     int
-		inQuote   bool
-		escaped   bool
-		quoteChar rune
-	)
-	for _, r := range s {
-		switch {
-		case inQuote:
-			if r == quoteChar {
-				inQuote = false
-			}
-			cur.WriteRune(r)
-		case escaped:
-			escaped = false
-			cur.WriteRune(r)
-		case r == '\\':
-			escaped = true
-			cur.WriteRune(r)
-		case r == '"' || r == '\'':
-			inQuote = true
-			quoteChar = r
-			cur.WriteRune(r)
-		case r == '[' || r == '{':
-			depth++
-			cur.WriteRune(r)
-		case r == ']' || r == '}':
-			if depth > 0 {
-				depth--
-			}
-			cur.WriteRune(r)
-		case r == ',' && depth == 0:
-			parts = append(parts, cur.String())
-			cur.Reset()
-		default:
-			cur.WriteRune(r)
-		}
-	}
-	return append(parts, cur.String())
-}
-
-// indexUnescaped returns the index of the first unescaped occurrence of sep, or
-// -1. Used to find the "=" of an assignment, so a key may contain an escaped one.
-func indexUnescaped(s string, sep byte) int {
-	escaped := false
-	for i := 0; i < len(s); i++ {
-		switch {
-		case escaped:
-			escaped = false
-		case s[i] == '\\':
-			escaped = true
-		case s[i] == sep:
-			return i
-		}
-	}
-	return -1
-}
-
 // splitEscaped splits s on unescaped occurrences of sep, keeping every backslash
 // for the unescape pass that follows.
 func splitEscaped(s string, sep byte) []string {
@@ -427,16 +328,17 @@ func splitEscaped(s string, sep byte) []string {
 }
 
 // structuralChars are the characters this parser gives meaning to. A backslash
-// before one of them removes that meaning, which is how a.b\.c names the two
+// before one of them removes that meaning, which is how .a.b\.c names the two
 // keys "a" and "b.c".
 //
 // A backslash before anything else is left in place, both characters intact.
 // Helm drops it, turning "C:\temp" into "C:temp"; keeping it is a deliberate
-// divergence, because a Windows path is a plausible chart value and the
-// backslash in one is not an escape attempt.
+// divergence from upstream, because a Windows path is a plausible chart value
+// and the backslash in one is not an escape attempt. Reconcile this with Zarf
+// before the package is offered upstream.
 const structuralChars = `.,[]{}=\`
 
-// unescape resolves the escapes splitTopLevel and splitEscaped left in place.
+// unescape resolves the escapes splitEscaped left in place.
 func unescape(s string) string {
 	if !strings.ContainsRune(s, '\\') {
 		return s
@@ -467,60 +369,10 @@ func unescape(s string) string {
 	return b.String()
 }
 
-// parseSetValue converts the right-hand side of one --set assignment into a Go value.
-func parseSetValue(raw string) any {
-	if unquoted, ok := unquote(raw); ok {
-		return unquoted
-	}
-	if body, ok := listBody(raw); ok {
-		if strings.TrimSpace(body) == "" {
-			return []any{}
-		}
-		rawItems := splitTopLevel(body)
-		items := make([]any, 0, len(rawItems))
-		for _, item := range rawItems {
-			items = append(items, parseSetValue(strings.TrimSpace(item)))
-		}
-		return items
-	}
-	return typedScalar(unescape(raw))
-}
-
-// listBody returns the contents of a bracketed list. Helm writes lists as
-// {a,b,c}; [a,b,c] is accepted too since it is the form YAML users reach for.
-func listBody(s string) (string, bool) {
-	if len(s) < 2 {
-		return "", false
-	}
-	switch {
-	case s[0] == '[' && s[len(s)-1] == ']',
-		s[0] == '{' && s[len(s)-1] == '}':
-		return s[1 : len(s)-1], true
-	}
-	return "", false
-}
-
-// unquote strips one matching pair of surrounding quotes and reports whether it
-// did. Quoting is how a caller says a value is a string, so a quoted value is
-// never typed afterwards - it is the only way to write "0755" or "true" and get
-// a string back.
-func unquote(s string) (string, bool) {
-	if len(s) < 2 {
-		return s, false
-	}
-	q := s[0]
-	if q != '"' && q != '\'' {
-		return s, false
-	}
-	if s[len(s)-1] != q {
-		return s, false
-	}
-	return s[1 : len(s)-1], true
-}
-
 // typedScalar converts a raw string into the Go type Helm's strvals.typedVal
-// would produce for it. The rules are Helm's on purpose, including the two that
-// look like omissions:
+// would produce for it. It is what types the output of a rendered template, so
+// that "{{ .Values.enabled }}" yields a real boolean. The rules are Helm's on
+// purpose, including the two that look like omissions:
 //
 // A leading zero keeps the value a string. Image tags, zip codes and account
 // numbers live in chart values, and turning "0755" into 755 corrupts them. Only
@@ -549,13 +401,13 @@ func typedScalar(val string) any {
 	return val
 }
 
-// maxIndex bounds a list index in a --set path, matching Helm's
-// strvals.MaxIndex. A path arrives from a command line or a config file, and the
-// list is grown to fit the index, so without a bound "a[9999999]=x" asks for a
-// ten-million-element slice.
+// maxIndex bounds a list index in a value path, matching Helm's
+// strvals.MaxIndex. A path arrives from a package definition or a config file,
+// and the list is grown to fit the index, so without a bound ".a[9999999]" asks
+// for a ten-million-element slice.
 const maxIndex = 63
 
-// pathSegment is one dot-separated step of a --set path: a map key followed by
+// pathSegment is one dot-separated step of a value path: a map key followed by
 // any list indices written after it. "servers[0][1]" is a single segment whose
 // key is "servers" and whose indices are 0 and 1.
 type pathSegment struct {
@@ -563,32 +415,13 @@ type pathSegment struct {
 	indices []int
 }
 
-// setPath assigns val at path within dst, creating the maps and lists along the
-// way.
-//
-// path is a --set key, written without a leading dot. The Zarf Values form that
-// does take one is handled by SetValuePath.
-func setPath(dst map[string]any, path string, val any) error {
-	if strings.HasPrefix(path, ".") {
-		return fmt.Errorf("invalid set key %q: a --set key takes no leading dot", path)
-	}
-	segs, err := parsePath(path)
-	if err != nil {
-		return err
-	}
-	// dst is a non-nil map and segs is never empty, so the container returned is
-	// dst itself.
-	_, err = setSegments(dst, segs, val, "")
-	return err
-}
-
 // valuePath converts a Zarf Values path into the segments SetValuePath and
 // GetValuePath walk.
 //
 // The leading "." is required. ZEP-0021 writes every sourcePath and targetPath
-// with one, and a lone "." names the root of the values. Requiring it keeps the
-// two path dialects apart: a --set key (foo.bar=1) cannot be passed where a
-// values path belongs, or the reverse, without the mistake being reported.
+// with one, and a lone "." names the root of the values. Requiring it also
+// catches a path written in the dotted form a chart's own values use
+// (foo.bar), which would otherwise silently address the wrong key.
 func valuePath(path string) ([]pathSegment, error) {
 	if !strings.HasPrefix(path, ".") {
 		return nil, fmt.Errorf("invalid values path %q: must start with a dot", path)
@@ -622,6 +455,27 @@ func SetValuePath(dst map[string]any, path string, val any) error {
 	}
 	_, err = setSegments(dst, segs, val, "")
 	return err
+}
+
+// ApplyMapping copies the value at source in values to target in dst, and
+// reports whether values defined source at all.
+//
+// A source the values do not define leaves dst untouched, so whatever dst
+// already held stands as the default. That is what makes a mapping safe to
+// declare for every knob a package exposes: a cluster that says nothing about
+// one of them gets the package's own setting, not a zero value.
+func ApplyMapping(dst map[string]any, values map[string]any, source string, target string) (bool, error) {
+	val, ok, err := GetValuePath(values, source)
+	if err != nil {
+		return false, fmt.Errorf("values source %q: %w", source, err)
+	}
+	if !ok {
+		return false, nil
+	}
+	if err := SetValuePath(dst, target, val); err != nil {
+		return false, fmt.Errorf("values target %q: %w", target, err)
+	}
+	return true, nil
 }
 
 // GetValuePath reads the value at a Zarf Values path in src. The path must start
@@ -677,7 +531,7 @@ func asMap(v any) (map[string]any, bool) {
 	return nil, false
 }
 
-// parsePath splits a --set key into its segments.
+// parsePath splits the dotted body of a value path into its segments.
 func parsePath(path string) ([]pathSegment, error) {
 	raws := splitEscaped(path, '.')
 	segs := make([]pathSegment, 0, len(raws))
@@ -749,7 +603,10 @@ func setSegments(cur any, segs []pathSegment, val any, at string) (any, error) {
 	if len(segs) == 0 {
 		return val, nil
 	}
-	m, ok := cur.(map[string]any)
+	// asMap, rather than a plain assertion, so a write can walk a structure that
+	// was decoded into dig.Mapping or map[any]any - the engine configuration is
+	// one - and keep writing into the map that is already there.
+	m, ok := asMap(cur)
 	if !ok {
 		if cur != nil {
 			return nil, fmt.Errorf("path conflict at key %q: %T is not a map", at, cur)

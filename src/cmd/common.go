@@ -124,9 +124,20 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 
 	logger.From(ctx).Debug("distro information", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
 
+	// The cluster file overrides the values the package was built with, and the
+	// result is checked against the package's schema here, before any phase runs.
+	values, err := distroLayout.Values(ctx, cluster.Spec.Config.Values)
+	if err != nil {
+		return nil, err
+	}
+	if err := distroLayout.ApplyValues(values); err != nil {
+		return nil, err
+	}
+
 	return &phase.Manager{
 		Config:            &cluster,
 		Distro:            &distroLayout.Distro,
+		Values:            values,
 		DistroID:          distroLayout.Distro.Spec.Type,
 		TempDirectory:     distroLayout.DirPath(),
 		Concurrency:       opt.concurrency,

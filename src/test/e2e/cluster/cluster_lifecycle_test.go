@@ -39,8 +39,8 @@ import (
 // back from the package, so that the manager step compares the loaded package against
 // something that did not come from the same file it is testing.
 const (
-	examplePackage   = "example/rke2-cilium/v1_35/v1.35.0-rke2r1"
-	installedVersion = "1.35.0-rke2r1"
+	examplePackage   = "example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1"
+	installedVersion = "1.36.4-rke2r1"
 )
 
 // Test_00_CreatePackage builds the distro package every later step installs. It builds it

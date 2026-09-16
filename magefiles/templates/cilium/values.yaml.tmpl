@@ -1,0 +1,21 @@
+# This file is generated in magefiles/templates/cilium/values.yaml.tmpl.
+
+# The values this package is built with. A cluster overrides any of them in its
+# inventory file under spec.config.values, and cargoship checks the result
+# against values.schema.json before it installs anything.
+cilium:
+  encryption:
+    # Transparent pod-to-pod encryption, using WireGuard. Costs throughput, so it
+    # is off unless a cluster asks for it.
+    enabled: false
+  l2announcements:
+    # Answer ARP for LoadBalancer addresses, so services are reachable on a flat
+    # network with no BGP and no external load balancer.
+    enabled: true
+  hubble:
+    ui:
+      # The Hubble web interface, and the relay it reads from.
+      enabled: true
+      # Serve the interface over IPv6. Off because the frontend fails to start when
+      # it binds IPv6 on a node that has none.
+      ipv6: false

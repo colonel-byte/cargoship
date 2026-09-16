@@ -639,6 +639,10 @@
           ],
           "type": "string"
         },
+        "values": {
+          "$ref": "#/$defs/ZarfDistroValues",
+          "description": "holds the default values the package is built with, and the schema they must satisfy."
+        },
         "version": {
           "description": "is the version of the distro engine.",
           "type": "string"
@@ -649,6 +653,70 @@
         "version",
         "config"
       ],
+      "type": "object"
+    },
+    "ZarfDistroValueMapping": {
+      "additionalProperties": false,
+      "description": "projects one value onto one place in the engine configuration.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "source": {
+          "description": "is the dotted path to read from the resolved values, e.g. .cilium.encryption.enabled",
+          "examples": [
+            ".cilium.encryption.enabled"
+          ],
+          "type": "string"
+        },
+        "target": {
+          "description": "is the dotted path to write, relative to spec.config.engine,\ne.g. .manifest.rke2-cilium.encryption.enabled",
+          "examples": [
+            ".manifest.rke2-cilium.encryption.enabled"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroValues": {
+      "additionalProperties": false,
+      "description": "declares the values a package ships with.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "files": {
+          "description": "lists the YAML values files cargoship merges, in order, to build the package's default values. Each entry is a path relative to the package definition, an absolute path, or a URL. A later file overrides an earlier one, key by key.",
+          "items": {
+            "examples": [
+              "values.yaml",
+              "overrides/prod.yaml",
+              "https://example.com/values.yaml"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mappings": {
+          "description": "project values onto the engine configuration, so that one value a\ncluster sets reaches wherever the distro needs it. Each mapping reads the\nsource path out of the resolved values and writes it to the target path,\nwhich is relative to spec.config.engine. A source the values do not define\nis left alone, so the package's own engine configuration stands as the\ndefault.",
+          "items": {
+            "$ref": "#/$defs/ZarfDistroValueMapping"
+          },
+          "type": "array"
+        },
+        "schema": {
+          "description": "is the JSON Schema document the merged values must satisfy. Cargoship checks the values against it when it builds the package, and refuses to build when they do not match. The schema must not use $ref.",
+          "examples": [
+            "values.schema.json"
+          ],
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "ZarfFile": {

@@ -1408,3 +1408,64 @@ func TestHelmValuesContent(t *testing.T) {
 		})
 	}
 }
+
+// manifestEngine is an engine configuration whose manifest section carries both kinds of chart
+// entry the section allows: a mapping cargoship marshals, and a YAML string it passes through.
+func manifestEngine() dig.Mapping {
+	return dig.Mapping{
+		config.EngineManifest: dig.Mapping{
+			"rke2-cilium": dig.Mapping{
+				"encryption": dig.Mapping{"enabled": true},
+			},
+			"rancher-vsphere-cpi": "vCenter:\n  host: \"\"\n",
+		},
+	}
+}
+
+// The HelmChartConfig files are part of the desired set, so they are written, checked for drift,
+// and pruned the way every other file cargoship puts on a host is.
+func TestDesiredFilesHelmChartConfigs(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = manifestEngine()
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	require.NoError(t, err)
+
+	manifests := filepath.Join(d.Data, "server", "manifests")
+	ciliumPath := filepath.Join(manifests, "rke2-cilium-config.yaml")
+	vspherePath := filepath.Join(manifests, "rancher-vsphere-cpi-config.yaml")
+	require.Len(t, got, 2)
+	require.Contains(t, got, ciliumPath)
+	require.Contains(t, got, vspherePath)
+
+	// The engine's helm controller reconciles these on its own, so a changed value does not
+	// have to wait for a node to be drained and restarted.
+	require.True(t, got[ciliumPath].NoRestart, "a chart config does not need the engine restarted")
+	require.Equal(t, modeConfigFile, got[ciliumPath].Mode)
+
+	var chartConfig dig.Mapping
+	require.NoError(t, yaml.Unmarshal(got[ciliumPath].Content, &chartConfig))
+	require.Equal(t, "HelmChartConfig", chartConfig["kind"])
+	require.Equal(t, "helm.cattle.io/v1", chartConfig["apiVersion"])
+	require.Equal(t, "rke2-cilium", chartConfig.DigMapping("metadata")["name"])
+	require.Equal(t, "kube-system", chartConfig.DigMapping("metadata")["namespace"])
+	require.Contains(t, chartConfig.DigString("spec", "valuesContent"), "enabled: true")
+
+	// A string entry is the values file's own contents, and reaches the chart as written.
+	var vsphereConfig dig.Mapping
+	require.NoError(t, yaml.Unmarshal(got[vspherePath].Content, &vsphereConfig))
+	require.Equal(t, "vCenter:\n  host: \"\"\n", vsphereConfig.DigString("spec", "valuesContent"))
+}
+
+// Only controllers read the manifest directory, so only controllers are given anything to put
+// in it.
+func TestDesiredFilesHelmChartConfigsControllerOnly(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = manifestEngine()
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
+	require.NoError(t, err)
+	require.Empty(t, got, "an agent carries no chart configuration")
+}

@@ -35,7 +35,7 @@ func (p *EngineConfigSyncController) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *EngineConfigSyncController) Explanation() string {
-	return "If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially"
+	return "If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially. Chart values are written in place instead, since the engine reconciles them without a restart"
 }
 
 // Prepare the phase

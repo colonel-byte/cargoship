@@ -27,6 +27,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -34,9 +35,11 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/cfg"
+	"github.com/colonel-byte/cargoship/src/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -215,6 +218,18 @@ func validateDistroPaths(dis distro.ZarfDistro) error {
 	if !isCleanPath(dis.Metadata.Version) {
 		return fmt.Errorf("package metadata version %q would result in an invalid path", dis.Metadata.Version)
 	}
+	// Values paths in a built package name files inside the package. Anything
+	// else - an absolute path, a traversal, a URL left over from the source
+	// distro.yaml - would make installing the package read, or fetch, something
+	// outside it.
+	for _, f := range dis.Spec.Values.Files {
+		if !isContainedPath(f) {
+			return fmt.Errorf("values file %q is not contained in the package", f)
+		}
+	}
+	if dis.Spec.Values.Schema != "" && !isContainedPath(dis.Spec.Values.Schema) {
+		return fmt.Errorf("values schema %q is not contained in the package", dis.Spec.Values.Schema)
+	}
 	return nil
 }
 
@@ -222,6 +237,86 @@ func validateDistroPaths(dis distro.ZarfDistro) error {
 // it must not be ".." and must not contain path separators.
 func isCleanPath(s string) bool {
 	return s != ".." && !strings.ContainsAny(s, `/\`)
+}
+
+// isContainedPath returns true if s is a relative path that stays inside the
+// directory it is resolved against. Unlike isCleanPath it allows separators,
+// since the paths it guards name files in nested package directories.
+func isContainedPath(s string) bool {
+	if s == "" || helpers.IsURL(s) || filepath.IsAbs(s) || path.IsAbs(s) {
+		return false
+	}
+	// A Windows volume ("C:values") is absolute on Windows only, so reject it
+	// everywhere rather than let a package validate on one OS and not another.
+	if strings.ContainsRune(s, ':') {
+		return false
+	}
+	clean := path.Clean(filepath.ToSlash(s))
+	return clean != ".." && !strings.HasPrefix(clean, "../")
+}
+
+// LoadValues merges the values files a package ships with, in order, then the
+// given overrides, and checks the result against the package's values schema.
+//
+// The file paths are taken from the package's own distro.yaml, so they are
+// resolved against dirPath and validated by validateDistroPaths before they get
+// here. Overrides come from outside the package - a cluster inventory, say - so
+// they are merged before the schema check, not after: an override that breaks
+// the schema has to fail as loudly as a bad values file would.
+func LoadValues(ctx context.Context, dirPath string, vals distro.ZarfDistroValues, overrides ...map[string]any) (map[string]any, error) {
+	merged, err := helmvalues.LoadFiles(ctx, dirPath, "", vals.Files)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read values files: %w", err)
+	}
+	for _, o := range overrides {
+		merged = helmvalues.MergeValues(merged, o)
+	}
+	if vals.Schema == "" {
+		return merged, nil
+	}
+	schema, err := helmvalues.LoadSchema(filepath.Join(dirPath, filepath.FromSlash(vals.Schema)))
+	if err != nil {
+		return nil, fmt.Errorf("unable to read values schema: %w", err)
+	}
+	if err := schema.Validate(merged); err != nil {
+		return nil, fmt.Errorf("values do not satisfy the schema: %w", err)
+	}
+	return merged, nil
+}
+
+// ApplyValues projects the resolved values onto the package's engine
+// configuration, following the mappings the package declares.
+//
+// The engine configuration is what the package ships; the mappings decide which
+// parts of it a cluster is allowed to move. Applying them here, once, keeps
+// every phase reading a single already-resolved engine configuration.
+func (d *DistroLayout) ApplyValues(values map[string]any) error {
+	mappings := d.Distro.Spec.Values.Mappings
+	if len(mappings) == 0 {
+		return nil
+	}
+	if d.Distro.Spec.Config.Engine == nil {
+		d.Distro.Spec.Config.Engine = dig.Mapping{}
+	}
+	for _, m := range mappings {
+		if _, err := helmvalues.ApplyMapping(d.Distro.Spec.Config.Engine, values, m.Source, m.Target); err != nil {
+			return fmt.Errorf("unable to apply values mapping: %w", err)
+		}
+	}
+	// A mapping writes plain maps, so every branch it walked through is now a
+	// map[string]any rather than the dig.Mapping the package decoded into. Dup
+	// puts those branches back, because dig's DigMapping replaces a value that
+	// is not a Mapping with an empty one instead of reading it -- the engine
+	// manifest section would come back empty for a caller that reached it
+	// without duplicating the configuration first.
+	d.Distro.Spec.Config.Engine = d.Distro.Spec.Config.Engine.Dup()
+	return nil
+}
+
+// Values returns the merged, schema-checked values the package was built with,
+// with any overrides applied on top.
+func (d *DistroLayout) Values(ctx context.Context, overrides ...map[string]any) (map[string]any, error) {
+	return LoadValues(ctx, d.dirPath, d.Distro.Spec.Values, overrides...)
 }
 
 // normalizePermissions canonicalizes file and directory permissions in the

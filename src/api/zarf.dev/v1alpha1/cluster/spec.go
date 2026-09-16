@@ -87,6 +87,11 @@ type ZarfClusterConfig struct {
 	Registries []ZarfClusterRegistries `json:"registries,omitempty"`
 	// Profiles maps a profile name to host and engine overrides that a host can select.
 	Profiles map[string]ZarfClusterProfiles `json:"profiles,omitempty"`
+	// Values overrides the values the distro package was built with. It is the same
+	// nested structure the package ships, addressed by the same dotted paths, and it
+	// must still satisfy the package's values schema. Keys the package does not
+	// define are kept, so a cluster can carry values a later package version reads.
+	Values map[string]any `json:"values,omitempty"`
 }
 
 // ZarfClusterProfiles holds the host and engine overrides for one profile.

@@ -150,15 +150,16 @@ func TestCargoshipCreate(t *testing.T) {
 }
 
 // TestCargoshipCreateExample builds a real distro from example/, which downloads the rke2
-// release tarball and every pinned image -- roughly 1.5GB. Skipped under -short so PR CI
-// can run the rest of the suite in seconds.
+// release tarballs and every pinned image for both architectures the example covers --
+// several gigabytes. Skipped under -short so PR CI can run the rest of the suite in
+// seconds.
 func TestCargoshipCreateExample(t *testing.T) {
 	if testing.Short() {
 		t.Skip("example packages download ~1.5GB of engine artifacts and images")
 	}
 	t.Setenv("CARGOSHIP_CONFIG", "src/test/e2e/cargoship-config.yaml")
 
-	_, _, err := e2e.Cargoship(t, "create", "example/rke2-cilium/v1_35/v1.35.0-rke2r1")
+	_, _, err := e2e.Cargoship(t, "create", "example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1")
 	require.NoError(t, err)
 }
 

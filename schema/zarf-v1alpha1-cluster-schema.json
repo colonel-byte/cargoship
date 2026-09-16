@@ -196,6 +196,10 @@
             "$ref": "#/$defs/ZarfClusterRegistries"
           },
           "type": "array"
+        },
+        "values": {
+          "description": "overrides the values the distro package was built with. It is the same\nnested structure the package ships, addressed by the same dotted paths, and it\nmust still satisfy the package's values schema. Keys the package does not\ndefine are kept, so a cluster can carry values a later package version reads.",
+          "type": "object"
         }
       },
       "required": [

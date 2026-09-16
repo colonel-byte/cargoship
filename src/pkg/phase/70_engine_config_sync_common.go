@@ -44,10 +44,14 @@ type EngineConfigSyncHosts struct {
 	Distro distrocfg.Distro
 	// Keyring decrypts encrypted registry credentials, in either supported format.
 	Keyring *clustercfg.Keyring
-	desired map[string]distrocfg.DesiredFile
-	service string
-	hosts   cluster.ZarfHosts
-	leader  *cluster.ZarfHost
+	// desired is what every host carries, and controllerDesired is that plus the files only a
+	// controller gets -- the HelmChartConfig manifests the engine's helm controller reads.
+	// Both are built once, since neither depends on the host beyond its role.
+	desired           map[string]distrocfg.DesiredFile
+	controllerDesired map[string]distrocfg.DesiredFile
+	service           string
+	hosts             cluster.ZarfHosts
+	leader            *cluster.ZarfHost
 	// drift records why each host was selected. Prepare fills it while deciding which hosts to
 	// sync, so Run can say what it is draining a node for without reading every file off that
 	// host a second time. It is keyed by host pointer rather than by name: the same pointers
@@ -84,7 +88,23 @@ func (p *EngineConfigSyncHosts) loadDesiredConfig(c *cluster.ZarfCluster, dis di
 		return err
 	}
 	p.desired = desired
+
+	controllerDesired, err := p.Distro.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, run, dis)
+	if err != nil {
+		return err
+	}
+	p.controllerDesired = controllerDesired
 	return nil
+}
+
+// filesFor is the set of files a host is meant to carry. A controller carries what every host
+// carries and then some, so an agent is never asked for a file that only a controller writes,
+// and a controller is never told a manifest it does have is stale.
+func (p *EngineConfigSyncHosts) filesFor(h *cluster.ZarfHost) map[string]distrocfg.DesiredFile {
+	if h.IsController() && p.controllerDesired != nil {
+		return p.controllerDesired
+	}
+	return p.desired
 }
 
 // driftedFiles names the desired files the host does not already have, each with the reason it
@@ -94,7 +114,7 @@ func (p *EngineConfigSyncHosts) loadDesiredConfig(c *cluster.ZarfCluster, dis di
 // reads the same way from one run to the next.
 func (p *EngineConfigSyncHosts) driftedFiles(h *cluster.ZarfHost) []string {
 	var drifted []string
-	for path, want := range p.desired {
+	for path, want := range p.filesFor(h) {
 		base := filepath.Base(path)
 		if !h.FileExist(path) {
 			drifted = append(drifted, base+" (missing)")
@@ -112,7 +132,7 @@ func (p *EngineConfigSyncHosts) driftedFiles(h *cluster.ZarfHost) []string {
 	}
 	sort.Strings(drifted)
 
-	for _, path := range distrocfg.StaleFiles(h, p.Distro.ManagedDirs(), p.desired) {
+	for _, path := range distrocfg.StaleFiles(h, p.Distro.ManagedDirs(), p.filesFor(h)) {
 		drifted = append(drifted, filepath.Base(path)+" (stale)")
 	}
 	return drifted
@@ -134,7 +154,7 @@ func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
 
 	// Check if all drifted files are flagged NoRestart. If so, write them directly without triggering node drain/restart.
 	restartRequired := false
-	for path, want := range p.desired {
+	for path, want := range p.filesFor(h) {
 		if !want.NoRestart {
 			base := filepath.Base(path)
 			for _, d := range drifted {
@@ -164,7 +184,7 @@ func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
 		// A write that fails leaves the file as drifted as it was found, so the host is reported
 		// as needing an update and picks the file up on the drain-and-rewrite path rather than
 		// being counted as synced by a write that did not land.
-		for path, file := range p.desired {
+		for path, file := range p.filesFor(h) {
 			if !file.NoRestart {
 				continue
 			}
@@ -214,7 +234,7 @@ func fileModeMatches(h *cluster.ZarfHost, path, want string) bool {
 }
 
 func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHost) error {
-	for path, file := range p.desired {
+	for path, file := range p.filesFor(h) {
 		mode := file.Mode
 		if mode == "" {
 			mode = defaultFileMode
@@ -225,7 +245,7 @@ func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHos
 	}
 	// The node is already stopped and about to be restarted, which is the one moment a file the
 	// configuration no longer calls for can be removed without the engine noticing it go.
-	return distrocfg.RemoveStaleFiles(h, p.Distro.ManagedDirs(), p.desired)
+	return distrocfg.RemoveStaleFiles(h, p.Distro.ManagedDirs(), p.filesFor(h))
 }
 
 func (p *EngineConfigSyncHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
