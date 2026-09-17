@@ -6,9 +6,10 @@
 addons:
   # The bundled charts k3s is told not to install. Setting this in an inventory
   # replaces the whole list rather than adding to it, so name every chart the
-  # cluster wants left out.
+  # cluster wants left out. This package leaves all of them installed; a cluster
+  # that runs its own ingress or its own load balancer names them here.
   #
-  # k3s ships coredns, servicelb, traefik, local-storage, and metrics-server. This
-  # package leaves all of them installed; a cluster that runs its own ingress or
-  # its own load balancer names them here.
+  # Only the charts k3s {{ .Minor }} packages may be named: values.schema.json
+  # carries that build's own list, extracted from the engine's source, and a name
+  # outside it fails before anything is installed.
   disabled: []

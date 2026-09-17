@@ -30,6 +30,8 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+
+	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
 )
 
 const (
@@ -264,6 +266,13 @@ type exampleVersion struct {
 	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
 	CoreImages        []string // the release's own image manifest
 	CNIImages         []string // the flavor's own manifests, concatenated, when it has any
+
+	// Addons is every packaged component this distro/version accepts in `disable:`, read
+	// from the vocabulary mage generate:engineConfig extracts from the engine's own source.
+	// A flavor's values schema restricts addons.disabled to these, so the list a package
+	// ships is the list that build actually packages -- v1.37 of RKE2 knows
+	// rke2-gateway-api-crd and v1.34 does not, and each version's schema says so.
+	Addons []string
 
 	// Arches is every architecture the example targets, and the files each of them installs.
 	// MultiArch says whether there is more than one, which is what decides both how the
@@ -500,6 +509,14 @@ func writeExample(tmpl *template.Template, repoURL, tag string, spec exampleDist
 // data as the definition, so a value that has to agree with the definition can be written
 // once and used in both.
 func writeExampleValues(dir string, f exampleFlavor, v exampleVersion) error {
+	// The schema enumerates addons.disabled, and an empty enumeration rejects every value
+	// rather than allowing any, so a flavor whose version has no extracted vocabulary is a
+	// failure to report here -- not a package that silently cannot disable anything. Pull
+	// that version's source (mage generate:pullEngineSource) and regenerate.
+	if len(f.values) > 0 && len(v.Addons) == 0 {
+		return fmt.Errorf("no generated addon vocabulary for %s %s: run mage generate:pullEngineSource and mage generate:engineConfig for that minor line", v.Name, v.Version)
+	}
+
 	for _, path := range f.values {
 		tmpl, err := template.New(filepath.Base(path)).ParseFiles(path)
 		if err != nil {
@@ -549,6 +566,12 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 
 	if spec.derive != nil {
 		spec.derive(&v)
+	}
+
+	// Missing only for a version whose source was never pulled into this build, which
+	// writeExampleValues turns into an error rather than a schema that accepts nothing.
+	if entry, ok := gen.Lookup(spec.name, v.Version); ok {
+		v.Addons = entry.Addons
 	}
 
 	return v, nil

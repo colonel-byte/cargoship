@@ -168,14 +168,9 @@ spec:
 
 This works because a mapping copies the value as it stands, lists included. Templating cannot produce a list: rendering re-types a fully templated scalar into a boolean, a number, or a string, never into a sequence. A value that has to reach the engine as a list has to arrive through a mapping.
 
-The names are the chart names the engine itself uses:
+The names are the chart names the engine itself uses, and which ones a build packages is a property of that build rather than of the engine: RKE2 1.37 carries `rke2-gateway-api-crd` and `rke2-security-responder`, RKE2 1.34 carries neither, and K3s calls its charts by bare names (`coredns`, `servicelb`, `traefik`, `local-storage`, `metrics-server`, `runtimes`). Rather than keep a list here that drifts from what is packaged, every example's `values.schema.json` enumerates its own version's charts under `addons.disabled`. That list is generated from the engine's source -- see [mage](../dev/mage.md) and [thirdparty-src](../dev/thirdparty-src.md) -- so it is the vocabulary that build actually ships. Read the schema next to the `distro.yaml` you are installing.
 
-| Engine | Charts it installs unless disabled |
-| --- | --- |
-| RKE2 | `rke2-coredns`, `rke2-ingress-nginx`, `rke2-metrics-server`, `rke2-snapshot-controller`, `rke2-snapshot-controller-crd`, `rke2-snapshot-validation-webhook`, and `rke2-traefik` with `rke2-traefik-crd` on the builds that carry them |
-| K3s | `coredns`, `servicelb`, `traefik`, `local-storage`, `metrics-server` |
-
-A name neither engine knows is accepted and does nothing, which is what keeps one inventory usable across engine versions that ship different sets.
+**An unknown name fails two different ways, depending on the package.** Where the schema enumerates the charts, as the examples do, an inventory naming one the build does not package -- a typo, or a chart from a later release -- fails validation before anything is written to a host. Where it does not, the name reaches `config.yaml` unchanged: cargoship warns that the build packages no such component and leaves the entry in place, since dropping it would quietly install the very chart the cluster asked to be without. Either way the mistake is visible; only the enumerated form catches it before the install starts.
 
 Two other things follow from disabling a chart:
 

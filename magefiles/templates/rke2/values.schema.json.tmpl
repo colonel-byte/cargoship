@@ -57,10 +57,14 @@
       "properties": {
         "disabled": {
           "type": "array",
-          "description": "The bundled charts rke2 is told not to install. Replaces the package's own list rather than adding to it.",
+          "description": "The bundled charts rke2 is told not to install. Replaces the package's own list rather than adding to it. Only the components rke2 {{ .Minor }} packages are accepted.",
           "items": {
             "type": "string",
-            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+            "enum": [
+{{- range $i, $addon := .Addons }}{{ if $i }},{{ end }}
+              {{ printf "%q" $addon }}
+{{- end }}
+            ]
           },
           "uniqueItems": true
         }

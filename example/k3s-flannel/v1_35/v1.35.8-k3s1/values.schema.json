@@ -9,10 +9,17 @@
       "properties": {
         "disabled": {
           "type": "array",
-          "description": "The bundled charts k3s is told not to install. Replaces the package's own list rather than adding to it.",
+          "description": "The bundled charts k3s is told not to install. Replaces the package's own list rather than adding to it. Only the components k3s 1.35 packages are accepted.",
           "items": {
             "type": "string",
-            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+            "enum": [
+              "coredns",
+              "servicelb",
+              "traefik",
+              "local-storage",
+              "metrics-server",
+              "runtimes"
+            ]
           },
           "uniqueItems": true
         }

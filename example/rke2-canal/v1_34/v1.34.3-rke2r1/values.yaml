@@ -8,9 +8,8 @@ addons:
   # replaces the whole list rather than adding to it, so name every chart the
   # cluster wants left out, including the ones listed here.
   #
-  # rke2 ships rke2-coredns, rke2-ingress-nginx, rke2-metrics-server,
-  # rke2-snapshot-controller, rke2-snapshot-controller-crd,
-  # rke2-snapshot-validation-webhook, and, on builds that carry it, rke2-traefik
-  # with rke2-traefik-crd.
+  # Only the charts rke2 1.34 packages may be named: values.schema.json
+  # carries that build's own list, extracted from the engine's source, and a name
+  # outside it fails before anything is installed.
   disabled:
     - rke2-ingress-nginx
