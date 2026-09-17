@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d4b3e29f.js";
+            window.path_to_searchindex_js = "../searchindex-1db27351.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-0e37f961.js"></script>
+        <script src="../toc-40a8627f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,7 +187,7 @@
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
 <p>Cargoship uses <code>mage</code> as its primary task runner and automation tool instead of a traditional <code>Makefile</code>. The implementation resides in the <code>magefiles/</code> directory, which acts as the central repository for:</p>
 <ul>
-<li>Building binaries (both containerized with Dagger and natively on the host).</li>
+<li>Building binaries for the host and for the release target platforms.</li>
 <li>Running end-to-end (e2e) tests.</li>
 <li>Generating documentation from the codebase.</li>
 <li>Generating and publishing JSON schemas from Go types.</li>
@@ -195,32 +195,21 @@
 <p>The entry point of the automation layer is <code>magefiles/core/core.go</code>, which bootstraps the runtime and exposes exported functions as Makefile-like executable targets.</p>
 <h2 id="namespace-architecture"><a class="header" href="#namespace-architecture">Namespace Architecture</a></h2>
 <p>Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as <code>mage &lt;namespace&gt;:&lt;target&gt;</code>, and target names are case-insensitive, so <code>mage generate:engineconfig</code> and <code>mage generate:engineConfig</code> are the same command. Run <code>mage -l</code> for the authoritative list on your checkout.</p>
-<h3 id="dagger-namespace"><a class="header" href="#dagger-namespace"><code>Dagger</code> Namespace</a></h3>
-<p>The <code>Dagger</code> namespace is the default target and the primary build path. It manages containerized and reproducible builds of the Cargoship binary:</p>
+<h3 id="build-namespace"><a class="header" href="#build-namespace"><code>Build</code> Namespace</a></h3>
+<p>The <code>Build</code> namespace is the default target and the build path for the Cargoship binary. It compiles natively with the host’s Go toolchain:</p>
 <ul>
-<li><code>Toolchain</code> — Configures the local Dagger toolchain.</li>
 <li><code>Binary</code> — Compiles the binary for the host’s platform.</li>
 <li><code>Linuxamd64</code> / <code>Linuxarm64</code> — Compiles Linux binaries.</li>
 <li><code>Macamd64</code> / <code>Macarm64</code> — Compiles macOS binaries.</li>
-<li><code>All</code> — Compiles and exports all release binaries to <code>build/</code> concurrently.</li>
+<li><code>All</code> — Compiles all release binaries into <code>build/</code>.</li>
 </ul>
-<pre><code class="language-sh">mage dagger:toolchain     # update the dagger build environment (run once, or after a dagger upgrade)
-mage dagger:binary        # build for this host's OS/arch
-mage dagger:linuxamd64    # build build/cargoship_linux_amd64
-mage dagger:linuxarm64    # build build/cargoship_linux_arm64
-mage dagger:macamd64      # build build/cargoship_darwin_amd64
-mage dagger:macarm64      # build build/cargoship_darwin_arm64
-mage dagger:all           # build every release binary into build/
-mage                      # same as `mage dagger:all` -- it is the default target
-</code></pre>
-<h3 id="build-namespace"><a class="header" href="#build-namespace"><code>Build</code> Namespace</a></h3>
-<p>The <code>Build</code> namespace mirrors the compilation targets of the <code>Dagger</code> namespace but bypasses containerization, executing compilation natively on the host’s Go toolchain. This path is intended for quick, local development, and it is the one to use when Docker or Dagger is not available.</p>
-<pre><code class="language-sh">mage build:binary         # build for this host's OS/arch, no container
-mage build:linuxamd64
-mage build:linuxarm64
-mage build:macamd64
-mage build:macarm64
+<pre><code class="language-sh">mage build:binary         # build for this host's OS/arch
+mage build:linuxamd64     # build build/cargoship_linux_amd64
+mage build:linuxarm64     # build build/cargoship_linux_arm64
+mage build:macamd64       # build build/cargoship_darwin_amd64
+mage build:macarm64       # build build/cargoship_darwin_arm64
 mage build:all            # build every release binary into build/
+mage                      # same as `mage build:all` -- it is the default target
 </code></pre>
 <h3 id="dev-namespace"><a class="header" href="#dev-namespace"><code>Dev</code> Namespace</a></h3>
 <p>The <code>Dev</code> namespace aggregates convenience tasks for day-to-day development:</p>
@@ -238,9 +227,9 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
 <ul>
-<li><code>EndToEnd</code> — Builds Cargoship for the host via Dagger, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.</li>
+<li><code>EndToEnd</code> — Builds Cargoship for the host, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.</li>
 </ul>
-<pre><code class="language-sh">mage test:endToEnd        # build via dagger, then run the e2e suite
+<pre><code class="language-sh">mage test:endToEnd        # build the binary, then run the e2e suite
 </code></pre>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
@@ -301,7 +290,6 @@ mage generate:examples
 <h2 id="file-by-file-reference"><a class="header" href="#file-by-file-reference">File-by-File Reference</a></h2>
 <ul>
 <li><strong><code>core/core.go</code>:</strong> Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in <code>magefiles/</code>) so it does not collide with the <code>func main()</code> that the <code>mage</code> CLI generates on the fly — see <a href="#running-mage-directly-without-the-cli">Running Mage Directly</a> below.</li>
-<li><strong><code>dagger.go</code>:</strong> Houses user-facing targets for containerized compilation via Dagger.</li>
 <li><strong><code>build.go</code>:</strong> Defines compilation tasks utilizing the local host Go toolchain.</li>
 <li><strong><code>dev.go</code>:</strong> Defines convenience tasks under the <code>Dev</code> and <code>Test</code> namespaces.</li>
 <li><strong><code>gen-docs.go</code>:</strong> Performs Cobra command extraction and phase parser generation to update everything inside the <code>docs/</code> tree.</li>
@@ -317,7 +305,7 @@ mage generate:examples
 <li><strong><code>example-release-lines.go</code>:</strong> The cache behind <code>fetchReleaseLines</code>: where it lives, how an asset URL is flattened into one file name, how an entry is trusted, and the atomic write that keeps a half-written entry from being read back as a whole asset.</li>
 <li><strong><code>engine-pins.go</code>:</strong> Shared, target-free layer over <code>thirdparty-src/pins.json</code>: reading, writing, tag parsing, and tag resolution used by the four <code>gen-engine-*.go</code> targets.</li>
 <li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code> and <code>k3s-distro.yaml.tmpl</code>, one per distro that has examples.</li>
-<li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See <a href="build-flags.html">build-flags</a> for what each flag/env var does and why.</li>
+<li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, host compilation, and compiler flag construction. See <a href="build-flags.html">build-flags</a> for what each flag/env var does and why.</li>
 <li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
 </ul>
 <hr>
@@ -329,7 +317,7 @@ mage generate:examples
 <tr><th style="text-align: left">Output Directory / File</th><th style="text-align: left">Description</th><th style="text-align: left">Target</th></tr>
 </thead>
 <tbody>
-<tr><td style="text-align: left"><code>build/cargoship_*</code></td><td style="text-align: left">Compiled release binaries</td><td style="text-align: left"><code>Dagger.All</code> / <code>Build.All</code></td></tr>
+<tr><td style="text-align: left"><code>build/cargoship_*</code></td><td style="text-align: left">Compiled release binaries</td><td style="text-align: left"><code>Build.All</code></td></tr>
 <tr><td style="text-align: left"><code>docs/commands/*</code></td><td style="text-align: left">Auto-generated CLI documentation</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
@@ -345,7 +333,7 @@ mage generate:examples
 </div>
 <hr>
 <h2 id="running-mage-directly-without-the-cli"><a class="header" href="#running-mage-directly-without-the-cli">Running Mage Directly (Without the CLI)</a></h2>
-<p>Normally you invoke tasks through the installed <code>mage</code> binary, e.g. <code>mage dagger:binary</code>. The <code>mage</code> CLI works by scanning <code>magefiles/</code> for exported functions and namespaces, then generating its own <code>func main()</code> (written to a gitignored <code>mage_output_file.go</code>) that wires those functions up to CLI subcommands before compiling and running the result.</p>
+<p>Normally you invoke tasks through the installed <code>mage</code> binary, e.g. <code>mage build:binary</code>. The <code>mage</code> CLI works by scanning <code>magefiles/</code> for exported functions and namespaces, then generating its own <code>func main()</code> (written to a gitignored <code>mage_output_file.go</code>) that wires those functions up to CLI subcommands before compiling and running the result.</p>
 <p>Because that generated file declares <code>package main</code> with its own <code>func main()</code>, it cannot coexist with a second, hand-written <code>func main()</code> in the same package — hence <code>core/core.go</code> (which does exactly that, via <code>mage.Main()</code>) is split out into its own <code>magefiles/core</code> subpackage rather than sitting alongside the task files in <code>magefiles/</code>.</p>
 <p>This split means <code>core/core.go</code> can also be run on its own, bypassing the <code>mage</code> CLI entirely:</p>
 <pre><code class="language-sh">go run ./magefiles/core
@@ -356,7 +344,7 @@ mage generate:examples
 <li>You want a single, explicit <code>go run</code> invocation instead of depending on a separately-installed tool.</li>
 </ul>
 <p>Task selection still works the same way — pass the namespace:target as an argument, e.g.:</p>
-<pre><code class="language-sh">go run ./magefiles/core dagger:binary
+<pre><code class="language-sh">go run ./magefiles/core build:binary
 </code></pre>
 <p>Note that <code>magefiles/</code> itself remains its own <code>package main</code> for the <code>mage</code> CLI’s benefit; <code>core/core.go</code> is a separate package and binary, not part of that compiled unit.</p>
 

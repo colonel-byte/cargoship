@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d4b3e29f.js";
+            window.path_to_searchindex_js = "searchindex-1db27351.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-0e37f961.js"></script>
+        <script src="toc-40a8627f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -260,7 +260,7 @@ cargoship create ./distro-defs -o ./build/
 <p>An inventory authoring guide is available in <a href="./docs/guides/setup-inv.html">docs/guides/setup-inv.md</a>.</p>
 <hr>
 <h2 id="development-and-build-workflows"><a class="header" href="#development-and-build-workflows">Development and Build Workflows</a></h2>
-<p>Task automation is built using <strong>Mage</strong>, with <strong>Dagger</strong> acting as the containerized execution engine.</p>
+<p>Task automation is built using <strong>Mage</strong>, which drives builds, tests and code generation with the host Go toolchain.</p>
 <h3 id="mage-automation"><a class="header" href="#mage-automation">Mage Automation</a></h3>
 <p>Mage handles tasks including local compilation, e2e test execution, schema updates, and documentation generation. Key generated files include:</p>
 <ul>
@@ -270,8 +270,6 @@ cargoship create ./distro-defs -o ./build/
 <li><code>docs/SUMMARY.md</code> (mdBook layout manifest)</li>
 <li><code>schema/*.json</code> (YAML validations)</li>
 </ul>
-<h3 id="dagger-builds"><a class="header" href="#dagger-builds">Dagger Builds</a></h3>
-<p>Dagger coordinates hermetic, multi-platform compilation inside containerized Go environments. It ensures that compiled binaries are reproducible and decoupled from the developer’s local compiler version.</p>
 <h3 id="continuous-integration-ci-and-releases"><a class="header" href="#continuous-integration-ci-and-releases">Continuous Integration (CI) and Releases</a></h3>
 <p>GitHub Actions workflows run lint checks, dependency validation, cross-compilation, and end-to-end tests for every pull request. Releases are managed through <strong>GoReleaser</strong>, automating build signing, verification, and asset publishing.</p>
 <hr>

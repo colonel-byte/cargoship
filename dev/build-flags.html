@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d4b3e29f.js";
+            window.path_to_searchindex_js = "../searchindex-1db27351.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-0e37f961.js"></script>
+        <script src="../toc-40a8627f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,12 +183,8 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="build-flags-and-environment"><a class="header" href="#build-flags-and-environment">Build Flags and Environment</a></h1>
-<p>This document explains the compiler flags, linker flags, and environment variables used when compiling the <code>cargoship</code> binary, and why each one is set. These are defined in two places that must be kept in sync:</p>
-<ul>
-<li><code>src/pkg/utils/build/utils.go</code> — used by the Mage host build path (<code>magefiles/utils.go</code>).</li>
-<li><code>.dagger/utils/utils.go</code> — used by the Dagger containerized build path (<code>.dagger/build-local.go</code>).</li>
-</ul>
-<p>Both expose the same two functions, <code>LDFlags(version, commit string) string</code> and <code>GCFLags() string</code>, and both build sites additionally set <code>CGO_ENABLED=0</code> and pass <code>-trimpath</code> directly in their <code>go build</code> invocation rather than through these shared helpers.</p>
+<p>This document explains the compiler flags, linker flags, and environment variables used when compiling the <code>cargoship</code> binary, and why each one is set. They are defined in <code>src/pkg/utils/build/utils.go</code>, which the Mage host build path (<code>magefiles/utils.go</code>) uses.</p>
+<p>That package exposes two functions, <code>LDFlags(version, commit string) string</code> and <code>GCFLags() string</code>. The build site additionally sets <code>CGO_ENABLED=0</code> and passes <code>-trimpath</code> directly in its <code>go build</code> invocation rather than through these shared helpers.</p>
 <h2 id="why-this-matters"><a class="header" href="#why-this-matters">Why this matters</a></h2>
 <p>An unoptimized <code>go build</code> of this repo produces a binary well over 130MB on Linux/amd64, mostly because <code>cargoship</code> pulls in large transitive dependency trees (<code>k8s.io/client-go</code>, <code>zarf</code>’s signing stack, cloud SDKs, etc.) and, without <code>CGO_ENABLED=0</code>, dynamically links against glibc. The flags below were chosen specifically to keep the shipped binary as small and portable as possible without changing behavior.</p>
 <p>Measured impact on a Linux/amd64 build of this repo:</p>
@@ -210,7 +206,7 @@
 <p>Forces a pure-Go, statically-linked binary.</p>
 <ul>
 <li><strong>Why:</strong> on a native Linux/amd64 host, Go’s default is <code>CGO_ENABLED=1</code> whenever a C toolchain is present, which produces a dynamically-linked binary against glibc. This repo doesn’t need cgo (no imports rely on it), so leaving it enabled only adds size and a runtime dependency on the host’s libc/dynamic linker. Disabling it saved ~28% of binary size in testing and makes binaries fully static and portable across Linux distros/container base images.</li>
-<li><strong>Where set:</strong> <code>env["CGO_ENABLED"] = "0"</code> in <code>magefiles/utils.go</code>’s <code>hostBuildLocal</code>, and <code>WithEnvVariable("CGO_ENABLED", "0")</code> in <code>.dagger/build-local.go</code>.</li>
+<li><strong>Where set:</strong> <code>env["CGO_ENABLED"] = "0"</code> in <code>magefiles/utils.go</code>’s <code>hostBuildLocal</code>.</li>
 </ul>
 <h3 id="goos--goarch"><a class="header" href="#goos--goarch"><code>GOOS</code> / <code>GOARCH</code></a></h3>
 <p>Standard Go cross-compilation target selection, set per invocation from the <code>os</code>/<code>arch</code> arguments passed to the build functions. Not size-related; documented here only because they’re set alongside <code>CGO_ENABLED</code> in the same env map/chain.</p>
@@ -219,7 +215,7 @@
 <p>Strips local filesystem paths (e.g. <code>/home/user/git/cargoship/...</code>) from the compiled binary, replacing them with module paths.</p>
 <ul>
 <li><strong>Why:</strong> without it, absolute build-machine paths get embedded in the binary (used for panic traces and debug info paths), which leaks local environment details and hurts build reproducibility. It also shaves a small amount of size (a few hundred KB) since fewer/shorter path strings end up in the binary.</li>
-<li><strong>Where set:</strong> directly in the <code>go build</code> command string in both <code>magefiles/utils.go</code> and <code>.dagger/build-local.go</code>.</li>
+<li><strong>Where set:</strong> directly in the <code>go build</code> command string in <code>magefiles/utils.go</code>.</li>
 </ul>
 <h3 id="-a"><a class="header" href="#-a"><code>-a</code></a></h3>
 <p>Forces rebuilding of all packages, including the standard library, rather than reusing cached <code>.a</code> files.</p>
@@ -270,7 +266,7 @@
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../dev/dagger.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dev/e2e-phase-tests.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -284,7 +280,7 @@
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../dev/dagger.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dev/e2e-phase-tests.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

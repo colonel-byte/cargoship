@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d4b3e29f.js";
+            window.path_to_searchindex_js = "../searchindex-1db27351.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-0e37f961.js"></script>
+        <script src="../toc-40a8627f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
                     <main>
                         <h1 id="goreleaser-release-pipeline"><a class="header" href="#goreleaser-release-pipeline">GoReleaser Release Pipeline</a></h1>
 <p>This document describes how Cargoship turns a pushed tag into published artifacts: archives, Linux packages, container images, and signatures. The pipeline is defined by <code>.goreleaser.yaml</code> at the repository root and driven by <code>.github/workflows/release.yaml</code>.</p>
-<p>This is the <em>release</em> path. It is distinct from the <a href="dagger.html">Dagger</a> and <a href="mage.html">Mage</a> pipelines, which build binaries for local development and CI checks.</p>
+<p>This is the <em>release</em> path. It is distinct from the <a href="mage.html">Mage</a> pipeline, which builds binaries for local development and CI checks.</p>
 <h2 id="trigger"><a class="header" href="#trigger">Trigger</a></h2>
 <p>The workflow runs on any pushed tag. Tags are normally created by release-please, so the practical sequence is: merge the release PR, release-please pushes the tag, the goreleaser workflow fires.</p>
 <h2 id="what-gets-published"><a class="header" href="#what-gets-published">What Gets Published</a></h2>
