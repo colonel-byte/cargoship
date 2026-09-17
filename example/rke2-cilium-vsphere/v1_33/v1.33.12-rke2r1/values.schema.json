@@ -55,10 +55,11 @@
       "properties": {
         "disabled": {
           "type": "array",
-          "description": "The bundled charts rke2 is told not to install. Replaces the package's own list rather than adding to it. Only the components rke2 1.33 packages are accepted.",
+          "description": "The bundled charts rke2 is told not to install. Replaces the package's own list rather than adding to it. The components rke2 1.33 packages are offered as suggestions, not as the whole vocabulary: any rke2- chart is accepted, including ones the engine bundles without advertising them under --disable, and cargoship warns when it configures a node with a name this build does not package.",
           "items": {
             "type": "string",
-            "enum": [
+            "pattern": "^rke2-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "examples": [
               "rke2-calico",
               "rke2-calico-crd",
               "rke2-canal",
