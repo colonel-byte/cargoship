@@ -74,6 +74,11 @@ const caPEM = "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICA
 // a trailing space, an embedded "#", a line that looks like a YAML key, or a control character.
 // A wrong choice produces a document that still parses, which is why a table test can miss it and
 // an operator finds out when the credential reaches a host mangled.
+//
+// Running both formats through the same body is what makes the ciphertext's own shape part of the
+// input. Ansible Vault is one header line and hexadecimal; age is armor whose lines are base64 and
+// whose last byte is a newline the splice has to strip. The plaintext side is identical, so any
+// difference in the result is the splice reacting to the ciphertext rather than to the value.
 func FuzzDecryptAtPathRoundTrip(f *testing.F) {
 	f.Add("hunter2")
 	f.Add("")
@@ -88,51 +93,58 @@ func FuzzDecryptAtPathRoundTrip(f *testing.F) {
 	f.Add("null")
 	f.Add("control\x01character")
 	f.Add("tab\tand\rcarriage return")
-	f.Add("héllo wörld \U0001f680")
+	f.Add("h\u00e9llo w\u00f6rld \U0001f680")
 	f.Add("\xff\xfe not valid utf-8")
 
 	f.Fuzz(func(t *testing.T, value string) {
-		encrypted, err := clustercfg.EncryptValue(value, fuzzKeyring)
-		require.NoError(t, err)
+		for _, keyring := range encryptKeyrings() {
+			encrypted, err := clustercfg.EncryptValue(value, keyring.ring)
+			require.NoError(t, err, "%s", keyring.name)
 
-		decrypted, err := clustercfg.DecryptAtPath(docWithCiphertext(encrypted), passPath, fuzzKeyring)
-		if !utf8.ValidString(value) {
-			// A YAML scalar holds text, so a value that is not UTF-8 is refused rather than
-			// written back as something that no longer decodes to what went in.
-			require.Error(t, err, "invalid UTF-8 was written back into the document")
-			return
+			decrypted, err := clustercfg.DecryptAtPath(docWithCiphertext(encrypted), passPath, keyring.ring)
+			if !utf8.ValidString(value) {
+				// A YAML scalar holds text, so a value that is not UTF-8 is refused rather than
+				// written back as something that no longer decodes to what went in.
+				require.Error(t, err, "%s wrote invalid UTF-8 back into the document", keyring.name)
+				continue
+			}
+			require.NoError(t, err, "%s", keyring.name)
+
+			require.Equal(t, value, credentialIn(t, decrypted), "%s: value did not survive the round trip", keyring.name)
+			requireNeighboursIntact(t, decrypted)
+
+			// Encrypting the rewritten document and decrypting it again has to land on the same
+			// value: the style DecryptAtPath chose must be one the tool can read back, not merely
+			// one that parses. A value that is itself ciphertext is skipped because re-encrypting
+			// it is refused by design, which is what ErrAlreadyEncrypted says. Either format's
+			// header counts -- a keyring reads whichever one a document holds.
+			if cluster.IsEncrypted(value) {
+				continue
+			}
+			reencrypted, err := clustercfg.EncryptAtPath(decrypted, passPath, keyring.ring, false)
+			require.NoError(t, err, "%s: a document written by DecryptAtPath cannot be encrypted again", keyring.name)
+			again, err := clustercfg.DecryptAtPath(reencrypted, passPath, keyring.ring)
+			require.NoError(t, err, "%s", keyring.name)
+			require.Equal(t, value, credentialIn(t, again), "%s: value changed on the second round trip", keyring.name)
+			requireNeighboursIntact(t, again)
 		}
-		require.NoError(t, err)
-
-		require.Equal(t, value, credentialIn(t, decrypted), "value did not survive the round trip")
-		requireNeighboursIntact(t, decrypted)
-
-		// Encrypting the rewritten document and decrypting it again has to land on the same value:
-		// the style DecryptAtPath chose must be one the tool can read back, not merely one that
-		// parses. A value that is itself ciphertext is skipped because re-encrypting it is refused
-		// by design, which is what ErrAlreadyEncrypted says.
-		if cluster.IsVaultEncrypted(value) {
-			return
-		}
-		reencrypted, err := clustercfg.EncryptAtPath(decrypted, passPath, fuzzKeyring, false)
-		require.NoError(t, err, "a document written by DecryptAtPath cannot be encrypted again")
-		again, err := clustercfg.DecryptAtPath(reencrypted, passPath, fuzzKeyring)
-		require.NoError(t, err)
-		require.Equal(t, value, credentialIn(t, again), "value changed on the second round trip")
-		requireNeighboursIntact(t, again)
 	})
 }
 
-// FuzzRekeyAtPathPreservesValue asserts that rekeying moves a credential onto a new password
-// without touching the plaintext or the rest of the document.
+// FuzzRekeyAtPathPreservesValue asserts that rekeying moves a credential onto a new key without
+// touching the plaintext or the rest of the document -- including when the new key is in the other
+// format, which is how a configuration migrates from Ansible Vault to age.
+//
+// The crossing cases are the reason this fuzzes all four combinations rather than one. A migration
+// decrypts with one library and encrypts with the other in a single pass, and the ciphertext that
+// comes out is a different length and shape from the one that went in, so the splice is being asked
+// to replace a block with an unlike block -- the case where an offset that is off by one produces a
+// document that still parses.
 //
 // Rekeying never renders the plaintext back into YAML, so it accepts values DecryptAtPath refuses
 // -- one that is not UTF-8 rekeys without trouble. That difference is why this is its own target
 // rather than a case in the one above.
 func FuzzRekeyAtPathPreservesValue(f *testing.F) {
-	const newPassword = "a different vault password"
-	newKeyring := clustercfg.NewVaultKeyring(newPassword)
-
 	f.Add("hunter2")
 	f.Add("")
 	f.Add(caPEM)
@@ -140,27 +152,34 @@ func FuzzRekeyAtPathPreservesValue(f *testing.F) {
 	f.Add("control\x01character")
 
 	f.Fuzz(func(t *testing.T, value string) {
-		encrypted, err := clustercfg.EncryptValue(value, fuzzKeyring)
-		require.NoError(t, err)
+		for _, pair := range rekeyPairs() {
+			encrypted, err := clustercfg.EncryptValue(value, pair.from)
+			require.NoError(t, err, "%s", pair.name)
 
-		rekeyed, err := clustercfg.RekeyAtPath(docWithCiphertext(encrypted), passPath, fuzzKeyring, newKeyring)
-		if cluster.IsVaultEncrypted(value) {
-			// A value whose plaintext is itself ciphertext cannot be rekeyed: the outer layer would
-			// move to the new password and the inner one would not, leaving a value no single
-			// password reads back.
-			require.ErrorIs(t, err, clustercfg.ErrWrappedTwice)
-			return
+			rekeyed, err := clustercfg.RekeyAtPath(docWithCiphertext(encrypted), passPath, pair.from, pair.to)
+			if cluster.IsEncrypted(value) {
+				// A value whose plaintext is itself ciphertext cannot be rekeyed: the outer layer
+				// would move to the new key and the inner one would not, leaving a value no single
+				// key reads back.
+				require.ErrorIs(t, err, clustercfg.ErrWrappedTwice, "%s", pair.name)
+				continue
+			}
+			require.NoError(t, err, "%s", pair.name)
+			requireNeighboursIntact(t, rekeyed)
+
+			ciphertext := credentialIn(t, rekeyed)
+			plain, err := clustercfg.DecryptValue(ciphertext, pair.to)
+			require.NoError(t, err, "%s: the new key does not read the rekeyed value", pair.name)
+			require.Equal(t, value, plain, "%s: rekeying changed the plaintext", pair.name)
+
+			// Rotating onto the same vault password re-salts rather than rotates, so the old key
+			// still reads the result and there is nothing further to assert.
+			if pair.from == pair.to {
+				continue
+			}
+			_, err = clustercfg.DecryptValue(ciphertext, pair.from)
+			require.Error(t, err, "%s: the old key still reads the rekeyed value", pair.name)
 		}
-		require.NoError(t, err)
-		requireNeighboursIntact(t, rekeyed)
-
-		ciphertext := credentialIn(t, rekeyed)
-		_, err = clustercfg.DecryptValue(ciphertext, fuzzKeyring)
-		require.Error(t, err, "the old password still reads the rekeyed value")
-
-		plain, err := clustercfg.DecryptValue(ciphertext, newKeyring)
-		require.NoError(t, err)
-		require.Equal(t, value, plain, "rekeying changed the plaintext")
 	})
 }
 

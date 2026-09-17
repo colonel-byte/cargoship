@@ -5,11 +5,20 @@ The `src/test/e2e/fuzz` package holds Go's native fuzz targets. Unlike the other
 ## Layout
 
 ```
-src/test/e2e/fuzz/main_test.go                package documentation and the shared vault keyring
-src/test/e2e/fuzz/vault_value_fuzz_test.go    value-level targets: EncryptValue/DecryptValue
-src/test/e2e/fuzz/vault_path_fuzz_test.go     document-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath, and the path predicates
-src/test/e2e/fuzz/testdata/fuzz/<Target>/     committed crashers, one directory per target
+src/test/e2e/fuzz/main_test.go                    package documentation
+src/test/e2e/fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
+src/test/e2e/fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
+src/test/e2e/fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
+src/test/e2e/fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
+src/test/e2e/fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
+src/test/e2e/fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per target
 ```
+
+## Both formats, every time
+
+cargoship writes two ciphertext formats, Ansible Vault and age, and one keyring can carry both. Every target that encrypts therefore runs its body once per format rather than picking one: `encryptKeyrings()` returns the two encrypting keyrings and `rekeyPairs()` returns the four rekey directions (vault to vault, vault to age, age to age, age to vault). Both are in `keyring_test.go`, and both are built once in `TestMain` so that key generation is not paid per execution.
+
+`TestMain` also unsets `CARGOSHIP_AGE_IDENTITY_FILE`, `CARGOSHIP_AGE_RECIPIENTS`, `CARGOSHIP_VAULT_PASSWORD` and `ANSIBLE_VAULT_PASSWORD` before it builds anything. A developer who has those set in their shell would otherwise be fuzzing against different key material than CI, which is the kind of difference that makes a reported crasher unreproducible.
 
 ## Running
 
@@ -33,12 +42,23 @@ $ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzzti
 Because only one target runs per invocation, a sweep is a loop:
 
 ```console
-$ for t in FuzzEncryptValueRoundTrip FuzzDecryptValueRejectsGarbage FuzzDecryptAtPathRoundTrip FuzzRekeyAtPathPreservesValue FuzzPathIsDecryptable; do
+$ for t in $(grep -ho '^func \(Fuzz[A-Za-z]*\)' src/test/e2e/fuzz/*_test.go | cut -d' ' -f2); do
       go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./src/test/e2e/fuzz/ || break
   done
 ```
 
-Expect very different throughput between the two kinds of target. The ones that only push strings through a parser run at roughly 85,000 executions per second; the ones that encrypt a value run the Ansible Vault key derivation on every execution and manage a few hundred. Both are useful, but a document-level target needs minutes where a path target needs seconds.
+Expect very different throughput between the two kinds of target. The ones that only push strings through a parser run at tens of thousands of executions per second; the ones that encrypt a value run the Ansible Vault key derivation on every execution and manage a few dozen. The spread across a 30 second budget is roughly three orders of magnitude:
+
+```
+FuzzRekeyTargetPicksOneKey                1,806,844      no encryption, key selection only
+FuzzPathIsDecryptable                      2,033,626      path parsing only
+FuzzDecryptValueRejectsGarbage             2,531,710      almost every input is rejected before any key derivation
+FuzzSpliceAcrossDocumentShapes                 3,664      one vault encryption per execution
+FuzzDecryptAtPathRoundTrip                     2,082      encrypt, splice, decrypt, re-encrypt
+FuzzRekeyAtPathPreservesValue                  1,498      four rekey directions per execution
+```
+
+Both kinds are useful, but a target that encrypts needs minutes where a parsing target needs seconds. The cost is Ansible Vault's PBKDF2 and is not worth engineering around: it is the same derivation an operator pays, and lowering it would mean fuzzing against key material the product does not use.
 
 ## The corpus
 
@@ -46,13 +66,16 @@ There are two corpora, and only one of them is in the repository.
 
 Inputs the fuzzer generates live in the build cache, under `$(go env GOCACHE)/fuzz/`. They are shared across runs on the same machine, are not portable, and are not meant to be committed; `go clean -fuzzcache` discards them, which is worth doing when a target has been rewritten and its cached corpus is exercising a shape that no longer exists.
 
-Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `src/test/e2e/fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The three currently committed are the defects found when these targets were written:
+Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `src/test/e2e/fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:
 
 ```
-FuzzDecryptAtPathRoundTrip/89831cc049267b2c    string("\n")     a credential of one line break, written as an empty block scalar, read back as ""
-FuzzPathIsDecryptable/477bd66902831e69         string("0[0")    an unclosed index, which panicked inside go-yaml instead of erroring
-FuzzPathIsDecryptable/ebc8a2cafef15425         string("'$'")    a path whose canonical spelling, "$.$", the parser then rejects
+FuzzDecryptAtPathRoundTrip/89831cc049267b2c              string("\n")  a credential of one line break, written as an empty block scalar, read back as ""
+FuzzPathIsDecryptable/477bd66902831e69                   string("0[0") an unclosed index, which panicked inside go-yaml instead of erroring
+FuzzPathIsDecryptable/ebc8a2cafef15425                   string("'$'") a path whose canonical spelling, "$.$", the parser then rejects
+FuzzEncryptAtPathArbitraryDocument/d370f7a72740b34b      a flow mapping holding a bare entry, into which the splice wrote a block scalar
 ```
+
+The last of those is open. `EncryptAtPath` writes a literal block scalar into a flow mapping such as `{0, pass: 00}`, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. `inFlowCollection` in `src/internal/clustercfg/vaultpath.go` is meant to catch exactly this and misses when a bare entry -- a key with an implicit null value -- precedes the target key. Until it is fixed a plain `go test` of this package is red, which is the intended state: the corpus entry is the defect report.
 
 Those same failures are also written up as ordinary table cases next to the code they broke -- see `TestEncryptAtPathReadsBackWhatDecryptWrote` and `TestCanonicalYAMLPath` in `src/internal/clustercfg/vaultpath_test.go`. Keep doing both: the corpus file is what stops the target regressing, and the named case with a comment is what explains the defect to the next reader.
 
@@ -95,6 +118,8 @@ Include the input in failure messages. `require.NoError(t, err, "%q canonicalise
 *   **A target whose oracle is regenerated per run will disagree with the cached corpus.** Vault ciphertext is salted, so a value encrypted now does not equal the same value encrypted in the run that produced the corpus entry. State the property (`cluster.IsVaultEncrypted(blob)`) rather than comparing against a freshly computed ciphertext.
 *   **Reading a single YAML path is not the same as decoding the document.** `goyaml.Path.Read` drops the trailing newline of a clipped block scalar where `goyaml.Unmarshal` keeps it, which fails a PEM round trip for a reason that has nothing to do with the code under test. Decode into `cluster.ZarfCluster`, which is also what an apply does.
 *   **A failing seed stops the run before the fuzzing starts.** `failure while testing seed corpus entry` means the target is red on input it was given, not on input it found. Fix that first; until it is fixed the target is not fuzzing at all.
+*   **A target that varies the document shape has to vary it the way a real file does.** `blockScalar` in `vault_document_fuzz_test.go` takes a chomp indicator because the TLS CA neighbour is a PEM block that keeps its trailing newline; rendering it with `|-` strips that newline and fails the neighbour assertion for a reason that has nothing to do with the splice.
+*   **Line endings are deliberately not one of the shape knobs.** A document saved with CRLF is one the splice mishandles today: `DecryptAtPath` refuses a multi-line value in such a document, and `spliceScalar` writes bare line feeds into it when it does splice one. Fuzzing that axis reports the same known defect on every input rather than finding a new one. Put the knob back once the splice carries the document's own line ending.
 
 ## Where to look next
 
