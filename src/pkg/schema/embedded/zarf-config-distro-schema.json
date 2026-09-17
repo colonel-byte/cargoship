@@ -1,0 +1,359 @@
+{
+  "$defs": {
+    "AgeOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.age` section of the config file, the age alternative to the Ansible Vault password given by --vault-password-file.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "identity_files": {
+          "description": "are paths to identity files, each holding either the age private keys that\ndecrypt registry credentials or an SSH private key. Equivalent to repeating\n--age-identity-file.",
+          "items": {
+            "examples": [
+              "/home/operator/.age/cargoship.key",
+              "/home/operator/.ssh/id_ed25519"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "recipients": {
+          "description": "are the public keys registry credentials are encrypted to, each either an age\nrecipient or an SSH public key. Equivalent to repeating --age-recipient.",
+          "items": {
+            "examples": [
+              "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p",
+              "age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh",
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample operator@example.com"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "recipients_files": {
+          "description": "are paths to files holding public keys, one per line, with # comments\nallowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as\nit is. Equivalent to repeating --age-recipients-file.",
+          "items": {
+            "examples": [
+              "/etc/cargoship/recipients.txt",
+              "/etc/cargoship/authorized_keys"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ApplyOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.distro.apply` section of the config file",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {},
+      "type": "object"
+    },
+    "DistroCreateOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.distro.create` section of the config file",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "registry_override": {
+          "$ref": "#/$defs/RegistryOverrideMap",
+          "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"
+        }
+      },
+      "type": "object"
+    },
+    "DistroDeployOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.distro.deploy` section of the config file",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "retries": {
+          "description": "how many times we will try to push a package",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "DistroOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.distro` section of the config file",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "allow_unmanaged_nodes": {
+          "description": "whether an apply continues when the cluster holds a node that no host\nin the config accounts for",
+          "type": "boolean"
+        },
+        "apply": {
+          "$ref": "#/$defs/ApplyOptions",
+          "description": "are options used by the apply subcommand"
+        },
+        "certificate_identity": {
+          "description": "required identity claim in the signing certificate",
+          "type": "string"
+        },
+        "certificate_identity_regexp": {
+          "description": "equired identity claim in the signing certificate, allows usage of regex",
+          "type": "string"
+        },
+        "certificate_oidc_issuer": {
+          "description": "required OIDC issuer claim in the signing certificate",
+          "type": "string"
+        },
+        "certificate_oidc_issuer_regexp": {
+          "description": "required OIDC issuer claim in the signing certificate, allows usage of regex",
+          "type": "string"
+        },
+        "concurrency": {
+          "description": "how many nodes we will try to interact with at a time, 0 means that all nodes will be done at once",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "create": {
+          "$ref": "#/$defs/DistroCreateOptions",
+          "description": "are options used by the create subcommand"
+        },
+        "deploy": {
+          "$ref": "#/$defs/DistroDeployOptions",
+          "description": "are options used by the deploy subcommand"
+        },
+        "fapolicyd": {
+          "default": true,
+          "description": "whether we will update hosts with fapolicyd",
+          "type": "boolean"
+        },
+        "firewall": {
+          "default": true,
+          "description": "whether we will update the host firewall",
+          "type": "boolean"
+        },
+        "hosts": {
+          "default": true,
+          "description": "whether we will update the etc host file",
+          "type": "boolean"
+        },
+        "insecure_ignore_tlog": {
+          "type": "string"
+        },
+        "kubeconfig": {
+          "description": "path of the kubeconfig file the admin creds are merged into, the standard\nlocation -- KUBECONFIG, else ~/.kube/config -- when empty",
+          "type": "string"
+        },
+        "label_nodes": {
+          "default": true,
+          "description": "whether we will check and add the node-role.kubernetes.io/\u003cprofile\u003e label on nodes",
+          "type": "boolean"
+        },
+        "oci_concurrency": {
+          "description": "is how many concurrent oci artifacts that will be pushed at a time",
+          "type": "integer"
+        },
+        "output": {
+          "description": "the folder that we will create the distro tar balls in",
+          "type": "string"
+        },
+        "public_key": {
+          "description": "path to public key file for validating signed packages",
+          "type": "string"
+        },
+        "publish": {
+          "$ref": "#/$defs/DistroPublishOptions",
+          "description": "are options used by the publish subcommand"
+        },
+        "reset": {
+          "$ref": "#/$defs/ResetOptions",
+          "description": "ResetOptions are options used by the reset subcommand"
+        },
+        "retry": {
+          "description": "number of retries we will try",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trusted_root": {
+          "description": "path to a Sigstore TrustedRoot JSON",
+          "type": "string"
+        },
+        "type": {
+          "description": "of distro we are interacting with",
+          "enum": [
+            "rke2",
+            "k3s"
+          ],
+          "type": "string"
+        },
+        "update_kubeconfig": {
+          "default": true,
+          "description": "whether we will update a kubeconfig file with the admin creds for the cluster",
+          "type": "boolean"
+        },
+        "use_signed_timestamps": {
+          "description": "verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data.",
+          "type": "string"
+        },
+        "verify": {
+          "description": "the Cargoship package signature",
+          "enum": [
+            "never",
+            "if-possible",
+            "always"
+          ],
+          "type": "string"
+        },
+        "worker_concurrency": {
+          "description": "number of worker nodes that will be upgraded at once, as a fixed count\n(\"5\") or a percentage of the batch (\"25%\")",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "DistroPublishOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.distro.publish` section of the config file",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "signing_key": {
+          "description": "is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package",
+          "examples": [
+            "/home/runner/.cosign/sign.key",
+            "env://[ENV_VAR]",
+            "awskms://[ENDPOINT]/[ID/ALIAS/ARN]",
+            "openbao://[KEY]"
+          ],
+          "type": "string"
+        },
+        "signing_key_password": {
+          "description": "the password for the private key used for signing",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "RegistryOverrideMap": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "maps a source registry to the registry cargoship uses instead.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "docker.io": {
+          "type": "string"
+        },
+        "gcr.io": {
+          "type": "string"
+        },
+        "ghcr.io": {
+          "type": "string"
+        },
+        "public.ecr.aws": {
+          "type": "string"
+        },
+        "quay.io": {
+          "type": "string"
+        },
+        "registry.k8s.io": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ResetOptions": {
+      "additionalProperties": false,
+      "description": "holds the values for the `.distro.reset` section of the config file",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {},
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/colonel-byte/cargoship/src/types/distro-config",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "holds the values for the `.`, or root, section of the config file",
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "age": {
+      "$ref": "#/$defs/AgeOptions",
+      "description": "are the age keys used to encrypt and decrypt registry credentials"
+    },
+    "architecture": {
+      "description": "the CPU architecture to use for OCI operations",
+      "type": "string"
+    },
+    "distro": {
+      "$ref": "#/$defs/DistroOptions",
+      "description": "are various options used by the command"
+    },
+    "log_file": {
+      "description": "enables always writing a full-verbosity debug log to a file, regardless of LogLevel",
+      "type": "boolean"
+    },
+    "log_format": {
+      "default": "console",
+      "description": "how the logs are displayed well running",
+      "enum": [
+        "console",
+        "json",
+        "dev"
+      ],
+      "type": "string"
+    },
+    "log_level": {
+      "default": "info",
+      "description": "the level of logs that will be displayed",
+      "enum": [
+        "warn",
+        "info",
+        "debug",
+        "trace"
+      ],
+      "type": "string"
+    },
+    "no_color": {
+      "description": "whether to disable terminal color codes in logging and stdout prints",
+      "type": "boolean"
+    },
+    "timeout": {
+      "default": "20m",
+      "description": "the longest we will run long ran tasks before failing",
+      "type": "string"
+    },
+    "tmp_dir": {
+      "default": "/tmp",
+      "description": "the directory where we store stuff before deleting them",
+      "type": "string"
+    },
+    "zarf_cache": {
+      "description": "is the folder where cargoship caches what it fetches: oras artifacts, and the release assets the example generation targets read",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

@@ -293,6 +293,24 @@ $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
 $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt`
 
+	// CmdSchemaExample schema example
+	CmdSchemaExample = `# Write the inventory schema next to an inventory file, for an editor to read
+$ cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+
+# Then point the inventory at it, as its first line
+$ head -1 ./inventory.yaml
+# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
+
+# Compose in a package's own values, so spec.config.values completes too
+$ cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json
+
+# The same, straight from a package source directory, before it is built
+$ cargoship schema inventory --package ./example/rke2-cilium-vsphere/v1_37/v1.37.0-rke2r1
+
+# The schema for a distro.yaml, and for a cargoship config file
+$ cargoship schema package -o ./distro.schema.json
+$ cargoship schema config -o ./cargoship.schema.json`
+
 	// CmdVersionExample version example
 	CmdVersionExample = `# Print the version of the running binary
 $ cargoship version
