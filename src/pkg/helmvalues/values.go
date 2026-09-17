@@ -30,6 +30,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -97,7 +98,8 @@ func newOptions(opts []Option) options {
 }
 
 // FuncMap returns the sprig-compatible template FuncMap, minus the functions
-// that read host state, plus cargoship's own helpers.
+// that read host state, plus the Helm serialization helpers sprig itself lacks
+// and, with WithCreateFuncs, cargoship's own create-time helpers.
 //
 // The sprig compatibility layer is used rather than a hand-picked set of sprout
 // registries because the raw registries register none of the sprig aliases -
@@ -110,6 +112,7 @@ func FuncMap(opts ...Option) template.FuncMap {
 	for _, name := range deniedFuncs {
 		delete(fm, name)
 	}
+	maps.Copy(fm, helmExtras())
 
 	if o.createFuncs {
 		addCreateFuncs(o.ctx, fm)
