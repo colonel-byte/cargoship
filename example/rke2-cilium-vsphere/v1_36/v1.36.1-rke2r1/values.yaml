@@ -11,9 +11,11 @@ addons:
   # replaces the whole list rather than adding to it, so name every chart the
   # cluster wants left out, including the ones listed here.
   #
-  # Only the charts rke2 1.36 packages may be named: values.schema.json
-  # carries that build's own list, extracted from the engine's source, and a name
-  # outside it fails before anything is installed.
+  # values.schema.json carries the charts rke2 1.36 packages, extracted
+  # from the engine's source, and an editor offers them here as completions. That
+  # list is the engine's own --disable help text, which does not name every chart
+  # the build bundles, so any rke2- chart is accepted rather than only those --
+  # cargoship warns when it configures a node with one this build does not package.
   disabled:
     - rke2-ingress-nginx
 cilium:

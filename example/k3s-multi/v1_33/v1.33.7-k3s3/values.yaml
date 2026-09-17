@@ -12,7 +12,9 @@ addons:
   # cluster wants left out. This package leaves all of them installed; a cluster
   # that runs its own ingress or its own load balancer names them here.
   #
-  # Only the charts k3s 1.33 packages may be named: values.schema.json
-  # carries that build's own list, extracted from the engine's source, and a name
-  # outside it fails before anything is installed.
+  # values.schema.json carries the charts k3s 1.33 packages, extracted
+  # from the engine's source, and an editor offers them here as completions. That
+  # list is the engine's own --disable help text, which does not name every chart
+  # the build bundles, so a name outside it is accepted rather than rejected --
+  # cargoship warns when it configures a node with one this build does not package.
   disabled: []
