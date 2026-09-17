@@ -131,6 +131,57 @@ Both shapes are in the examples: `example/rke2-cilium-vsphere` spends its values
 
 Use a mapping when a value has one destination and its type should survive untouched. Use a template when one value drives several keys, when the value needs reshaping on the way, or when the package has to emit or omit a whole block. A package may use both.
 
+## Disabling bundled addons
+
+RKE2 and K3s both install a set of charts of their own -- ingress, a load balancer, metrics, DNS -- and both are told to leave one out through a single `disable` key in `config.yaml`. Every example package exposes that key as a value, so which addons a cluster runs is a cluster's decision rather than a packaging one:
+
+```yaml
+# values.yaml, in the package
+addons:
+  disabled:
+    - rke2-ingress-nginx
+```
+
+```yaml
+# distro.yaml, in the package
+spec:
+  values:
+    mappings:
+      - source: .addons.disabled
+        target: .config.disable
+```
+
+An inventory names the charts it wants left out:
+
+```yaml
+spec:
+  config:
+    values:
+      addons:
+        disabled:
+          - rke2-ingress-nginx
+          - rke2-traefik
+          - rke2-traefik-crd
+```
+
+**The list is replaced, not merged.** Values merge per key, and a list is one value, so an inventory that sets `addons.disabled` decides the whole list. Repeat the entries the package disables by default -- `rke2-ingress-nginx` above -- or they come back.
+
+This works because a mapping copies the value as it stands, lists included. Templating cannot produce a list: rendering re-types a fully templated scalar into a boolean, a number, or a string, never into a sequence. A value that has to reach the engine as a list has to arrive through a mapping.
+
+The names are the chart names the engine itself uses:
+
+| Engine | Charts it installs unless disabled |
+| --- | --- |
+| RKE2 | `rke2-coredns`, `rke2-ingress-nginx`, `rke2-metrics-server`, `rke2-snapshot-controller`, `rke2-snapshot-controller-crd`, `rke2-snapshot-validation-webhook`, and `rke2-traefik` with `rke2-traefik-crd` on the builds that carry them |
+| K3s | `coredns`, `servicelb`, `traefik`, `local-storage`, `metrics-server` |
+
+A name neither engine knows is accepted and does nothing, which is what keeps one inventory usable across engine versions that ship different sets.
+
+Two other things follow from disabling a chart:
+
+- **No `HelmChartConfig` is written for it.** A package may configure a chart under `spec.config.engine.manifest` and still have it disabled by an inventory. Cargoship skips the manifest for a disabled chart rather than configuring something that will not be installed, and a file left over from an earlier run is removed the next time the node is synced.
+- **Agents are unaffected.** `disable` is a server-only key. It is dropped from an agent's `config.yaml` along with every other controller-only key, and only controllers carry chart manifests in the first place.
+
 ## What renders
 
 Templating is deliberately not applied everywhere. Three surfaces render:

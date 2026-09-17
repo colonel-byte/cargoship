@@ -21,9 +21,11 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1515,4 +1517,73 @@ func TestDesiredFilesHelmChartConfigsControllerOnly(t *testing.T) {
 	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Empty(t, got, "an agent carries no chart configuration")
+}
+
+// A chart the engine was told not to install has nothing to configure, so cargoship writes no
+// HelmChartConfig for it. Its neighbours are unaffected, which is what keeps a package that
+// disables one bundled chart from losing the configuration of the rest.
+func TestDesiredFilesHelmChartConfigsSkipsDisabledCharts(t *testing.T) {
+	manifests := filepath.Join(newTestRancher().Data, "server", "manifests")
+	ciliumPath := filepath.Join(manifests, "rke2-cilium-config.yaml")
+	vspherePath := filepath.Join(manifests, "rancher-vsphere-cpi-config.yaml")
+
+	tests := map[string]struct {
+		disable any
+		want    []string
+	}{
+		"a list is the shape a values mapping produces": {
+			disable: []any{"rke2-cilium"},
+			want:    []string{vspherePath},
+		},
+		"a typed list is the shape the generated config carries": {
+			disable: []string{"rke2-cilium", "rancher-vsphere-cpi"},
+		},
+		"the engines also accept a single name written bare": {
+			disable: "rke2-cilium",
+			want:    []string{vspherePath},
+		},
+		"surrounding whitespace is not part of the name": {
+			disable: []any{" rke2-cilium\n"},
+			want:    []string{vspherePath},
+		},
+		"a name no chart is configured under does nothing": {
+			disable: []any{"rke2-ingress-nginx"},
+			want:    []string{ciliumPath, vspherePath},
+		},
+		"an empty entry disables nothing": {
+			disable: []any{""},
+			want:    []string{ciliumPath, vspherePath},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			d := newTestRancher()
+			dis := distro.ZarfDistro{}
+			dis.Spec.Config.Engine = manifestEngine()
+			dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyDisable: tt.disable}
+
+			got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+			require.NoError(t, err)
+
+			paths := slices.Collect(maps.Keys(got))
+			slices.Sort(paths)
+			want := slices.Clone(tt.want)
+			slices.Sort(want)
+			require.Equal(t, want, paths)
+		})
+	}
+}
+
+// The disable key is the engine's own, so a package that never mentions it is written exactly as
+// it was before disabling a chart was something values could ask for.
+func TestDesiredFilesHelmChartConfigsWithoutDisable(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = manifestEngine()
+	dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyNodeLabel: []string{"role=worker"}}
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
 }

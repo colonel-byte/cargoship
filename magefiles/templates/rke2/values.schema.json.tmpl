@@ -1,9 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "rke2-cilium values",
-  "description": "Generated in magefiles/templates/cilium/values.schema.json.tmpl.",
+  "title": "rancher-rke2-{{ .Name }} values",
+  "description": "Generated in magefiles/templates/rke2/values.schema.json.tmpl.",
   "type": "object",
   "properties": {
+{{- if eq .CNI "cilium" }}
     "cilium": {
       "type": "object",
       "properties": {
@@ -46,6 +47,22 @@
             }
           },
           "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+{{- end }}
+    "addons": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "type": "array",
+          "description": "The bundled charts rke2 is told not to install. Replaces the package's own list rather than adding to it.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          },
+          "uniqueItems": true
         }
       },
       "additionalProperties": false

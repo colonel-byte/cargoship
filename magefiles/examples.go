@@ -144,12 +144,21 @@ type exampleDistroSpec struct {
 	fetch func(v *exampleVersion, repoURL string) error
 }
 
-// exampleCiliumValues are the values files every cilium flavor ships: the knobs a cluster
-// turns without rebuilding the package, and the schema they are checked against.
-var exampleCiliumValues = []string{
-	"magefiles/templates/cilium/values.yaml.tmpl",
-	"magefiles/templates/cilium/values.schema.json.tmpl",
-}
+// exampleRKE2Values and exampleK3sValues are the values files a flavor of each distro ships:
+// the knobs a cluster turns without rebuilding the package, and the schema they are checked
+// against. There is one pair per distro rather than one per flavor because a package carries a
+// single schema, so everything a flavor exposes has to be described in the same document. The
+// templates branch on the flavor for the parts that are not common to all of them.
+var (
+	exampleRKE2Values = []string{
+		"magefiles/templates/rke2/values.yaml.tmpl",
+		"magefiles/templates/rke2/values.schema.json.tmpl",
+	}
+	exampleK3sValues = []string{
+		"magefiles/templates/k3s/values.yaml.tmpl",
+		"magefiles/templates/k3s/values.schema.json.tmpl",
+	}
+)
 
 // exampleDistros is every distro the example targets render.
 var exampleDistros = []exampleDistroSpec{
@@ -166,7 +175,7 @@ var exampleDistros = []exampleDistroSpec{
 				arches:            exampleMultiArches,
 				minors:            exampleMultiMinors,
 				replacesKubeProxy: true,
-				values:            exampleCiliumValues,
+				values:            exampleRKE2Values,
 			},
 			{
 				cni:               "cilium",
@@ -175,12 +184,13 @@ var exampleDistros = []exampleDistroSpec{
 				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt", "rke2-images-vsphere.linux-amd64.txt"},
 				replacesKubeProxy: true,
 				cloudProvider:     "rancher-vsphere",
-				values:            exampleCiliumValues,
+				values:            exampleRKE2Values,
 			},
 			{
 				cni:        "canal",
 				dir:        "example/rke2-canal",
 				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
+				values:     exampleRKE2Values,
 			},
 			{
 				cni:        "canal",
@@ -189,6 +199,7 @@ var exampleDistros = []exampleDistroSpec{
 				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
 				arches:     exampleMultiArches,
 				minors:     exampleMultiMinors,
+				values:     exampleRKE2Values,
 			},
 		},
 		derive: func(v *exampleVersion) {
@@ -213,13 +224,14 @@ var exampleDistros = []exampleDistroSpec{
 		// k3s ships its CNI in the binary, so flannel is what a stock k3s runs, and its
 		// images are already in k3s-images.txt.
 		flavors: []exampleFlavor{
-			{cni: "flannel", dir: "example/k3s-flannel"},
+			{cni: "flannel", dir: "example/k3s-flannel", values: exampleK3sValues},
 			{
 				cni:    "flannel",
 				name:   "multi",
 				dir:    "example/k3s-multi",
 				arches: exampleMultiArches,
 				minors: exampleMultiMinors,
+				values: exampleK3sValues,
 			},
 		},
 		derive: func(v *exampleVersion) {
