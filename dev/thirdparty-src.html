@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-530ce2b5.js";
+            window.path_to_searchindex_js = "../searchindex-b0af9f39.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-08a866d0.js"></script>
@@ -185,7 +185,7 @@
                         <h1 id="third-party-engine-source-thirdparty-src"><a class="header" href="#third-party-engine-source-thirdparty-src">Third-Party Engine Source (<code>thirdparty-src/</code>)</a></h1>
 <p>This document explains what lives under <code>thirdparty-src/</code> and why it’s handled differently from the rest of the repository.</p>
 <h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
-<p><code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> holds raw, unmodified source files pulled from an upstream engine repo (k3s and RKE2) at an exact tag — e.g. <code>thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}</code>, pulled from k3s-io/k3s at tag <code>v1.35.3+k3s1</code>. <code>version</code> is truncated to the minor version (<code>v1_35</code>, not the full <code>v1.35.3-k3s1</code> patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. RKE2 additionally pulls <code>zz_root.go</code> and <code>zz_k3sopts.go</code> — see “RKE2’s flag composition” below. The <code>zz_</code> prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under <code>src/pkg/engineconfig/gen</code>.</p>
+<p><code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> holds raw, unmodified source files pulled from an upstream engine repo (k3s and RKE2) at an exact tag — e.g. <code>thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}</code>, pulled from k3s-io/k3s at tag <code>v1.35.3+k3s1</code>. <code>version</code> is truncated to the minor version (<code>v1_35</code>, not the full <code>v1.35.3-k3s1</code> patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. RKE2 additionally pulls <code>zz_root.go</code> and <code>zz_k3sopts.go</code> — see “RKE2’s flag composition” below. Both distros also pull the file that declares their packaged components (<code>zz_stage.go</code> for k3s, <code>zz_types.go</code> for RKE2) — see “Packaged components (<code>--disable</code>)” below. The <code>zz_</code> prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under <code>src/pkg/engineconfig/gen</code>.</p>
 <p>These files exist so <code>src/pkg/engineconfig/extract</code> can statically parse them with <code>go/ast</code> to recover the <code>urfave/cli</code> flag declarations k3s/RKE2 ships for a given version. That, in turn, lets <code>mage generate:engineConfig</code> (see <code>magefiles/gen-engine-config.go</code>) generate a typed Go struct describing the valid <code>config.yaml</code> keys for that version — see <code>docs/agent/design-config-codegen.md</code> for the full design rationale.</p>
 <h2 id="why-source-files-instead-of-a-module-dependency"><a class="header" href="#why-source-files-instead-of-a-module-dependency">Why source files instead of a module dependency</a></h2>
 <p>k3s and RKE2 are not safe to <code>go get</code>/import as library dependencies: their <code>go.mod</code> files carry <code>replace</code> directives that would leak into (and corrupt) this module’s own dependency graph (see golang/go#30354). Statically parsing their source text with <code>go/parser</code> sidesteps that entirely — the files are never compiled, never imported, and never linked into any Cargoship binary. They exist purely as text for the extractor to read.</p>
@@ -200,6 +200,8 @@
       zz_agent.go
       zz_root.go               # rke2 only -- commonFlag, shared by server/agent
       zz_k3sopts.go            # rke2 only -- K3SFlagOption/copyFlag/dropFlag/hideFlag
+      zz_stage.go              # k3s only  -- DisableItems, the packaged components
+      zz_types.go              # rke2 only -- DisableItems/CNIItems/IngressItems
       SOURCE.txt               # repo, tag, resolved commit, and pulled file list
   pins.json                    # the pinned tags and file lists, see below
   go.mod                       # module boundary marker, see above
@@ -208,6 +210,22 @@
 <p>RKE2 doesn’t declare its <code>config.yaml</code> flags outright the way k3s does. <code>zz_server.go</code>/<code>zz_agent.go</code> import k3s’s own command and wrap it at runtime via <code>mustCmdFromK3S(cmd, K3SFlagSet{...})</code> (defined in <code>zz_k3sopts.go</code>): a map, keyed by k3s flag name, of <code>copyFlag</code>/<code>dropFlag</code>/<code>hideFlag</code> (or an inline <code>{Usage: "...", Hide: true}</code>-style literal) saying whether that k3s flag survives into RKE2 at all, and whether it’s hidden. RKE2 then appends a small literal of its own additions (<code>serverFlag</code>/<code>deprecatedFlags</code>) and a shared <code>commonFlag</code> literal declared in <code>zz_root.go</code>.</p>
 <p><code>mage generate:engineConfig</code> reproduces this: for each RKE2 target it extracts the sibling k3s manifest (<code>thirdparty-src/k3s/&lt;version&gt;/</code>), applies the <code>K3SFlagSet</code> transform parsed from RKE2’s <code>zz_server.go</code>/<code>zz_agent.go</code>, then appends RKE2’s own additions and <code>commonFlag</code>. This is why an RKE2 version’s pull must always be paired with a k3s pull at the same minor version.</p>
 <p>Some of <code>commonFlag</code>’s entries have a computed <code>Name</code> (a package constant, e.g. <code>images.KubeAPIServer</code>, or a concatenation like <code>podtemplate.KubeAPIServer + "-extra-mount"</code>) rather than a string literal. Those aren’t statically resolvable to a flag name without also pulling and evaluating <code>pkg/images</code>/<code>pkg/podtemplate</code>, so they’re listed in the generated file’s “not resolvable” comment block instead of silently guessed at or dropped.</p>
+<h2 id="packaged-components---disable"><a class="header" href="#packaged-components---disable">Packaged components (<code>--disable</code>)</a></h2>
+<p>The flag extraction above recovers flag <em>names</em>. <code>disable:</code> is the one key whose <em>values</em> also come from a fixed, version-specific vocabulary — the packaged components (addons) the engine deploys unless told not to — and neither distro declares that vocabulary in the files that hold the <code>[]cli.Flag{...}</code> literal, so each pulls one more file for it.</p>
+<p>k3s declares it as a comma-separated string const in <code>pkg/cli/cmds/stage.go</code>, pulled as <code>zz_stage.go</code>:</p>
+<pre><code class="language-go">const DisableItems = "coredns, servicelb, traefik, local-storage, metrics-server, runtimes"
+</code></pre>
+<p>There is a second, build-tagged copy of that const in <code>pkg/cli/cmds/nostage.go</code> (<code>//go:build no_stage</code>) listing a strict subset. Cargoship targets the ordinary <code>!no_stage</code> build, so only <code>stage.go</code> is pulled.</p>
+<p>RKE2 declares three string slices in <code>pkg/cli/types.go</code>, pulled as <code>zz_types.go</code>:</p>
+<pre><code class="language-go">var (
+	DisableItems = []string{"rke2-coredns", "rke2-metrics-server", "rke2-snapshot-controller", ...}
+	CNIItems     = []string{"calico", "canal", "cilium", "flannel"}
+	IngressItems = []string{"traefik", "ingress-nginx"}
+)
+</code></pre>
+<p><code>zz_server.go</code> refers to those as <code>rke2cli.DisableItems</code> / <code>rke2cli.CNIItems</code> when building its usage strings, which is why they can’t be recovered from <code>zz_server.go</code> alone.</p>
+<p><strong>RKE2’s list is a computed union, not a copy of <code>DisableItems</code>.</strong> <code>disableExceptSelected</code> (in <code>zz_server.go</code>) pushes every <em>un-selected</em> CNI and ingress chart onto <code>--disable</code> at startup — <code>rke2-&lt;item&gt;</code> and <code>rke2-&lt;item&gt;-crd</code> for each entry of <code>CNIItems</code> and <code>IngressItems</code> — and <code>validateCNI</code> adds a literal <code>rke2-multus</code>/<code>rke2-multus-crd</code> pair the same way. So <code>disable: [rke2-ingress-nginx]</code> is legal even though <code>rke2-ingress-nginx</code> appears nowhere in <code>DisableItems</code>; this repo’s own <code>example/rke2-*/distro.yaml</code> relies on exactly that. <code>mage generate:engineConfig</code> reproduces the union: <code>DisableItems</code>, plus the chart-name pair for each CNI and ingress item, plus every string-literal <code>clx.Set("disable", ...)</code> call it finds in <code>zz_server.go</code> — sorted and deduplicated so the generated file is stable across runs.</p>
+<p><code>src/pkg/engineconfig/extract/components.go</code> does the parsing: <code>StringListDecl</code> handles both the const-string and <code>[]string{...}</code> shapes, and <code>DisableSetCalls</code> scans for the <code>Set("disable", ...)</code> calls.</p>
 <h2 id="pulling-a-new-version"><a class="header" href="#pulling-a-new-version">Pulling a new version</a></h2>
 <p><code>thirdparty-src/pins.json</code> is the single source of truth for what gets pulled: one entry per upstream repo, listing the files to copy and every tag to copy them at.</p>
 <pre><code class="language-json">{
@@ -215,7 +233,7 @@
     {
       "name": "k3s",
       "repo": "https://github.com/k3s-io/k3s",
-      "files": ["pkg/cli/cmds/server.go", "pkg/cli/cmds/agent.go"],
+      "files": ["pkg/cli/cmds/server.go", "pkg/cli/cmds/agent.go", "pkg/cli/cmds/stage.go"],
       "tags": ["v1.36.4+k3s1", "v1.35.8+k3s1"]
     },
     {
@@ -225,7 +243,8 @@
         "pkg/cli/cmds/server.go",
         "pkg/cli/cmds/agent.go",
         "pkg/cli/cmds/root.go",
-        "pkg/cli/cmds/k3sopts.go"
+        "pkg/cli/cmds/k3sopts.go",
+        "pkg/cli/types.go"
       ],
       "tags": ["v1.36.3+rke2r1", "v1.35.7+rke2r1"]
     }
@@ -240,8 +259,8 @@ mage generate:updatePins            # refresh every line already pinned
 </code></pre>
 <p><code>generate:updatePins</code> runs that same cycle over every minor line in the manifest, which is the usual way to answer “are we behind upstream?”. Both targets touch the network, and both leave struct generation to you: follow with <code>mage generate:engineConfig</code> for any version that moved. The version directory name is sanitized into a valid Go package name (dots become underscores) since it becomes the generated package’s directory and name directly.</p>
 <h2 id="consuming-it"><a class="header" href="#consuming-it">Consuming it</a></h2>
-<p><code>mage generate:engineConfig</code> walks every <code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> directory and writes generated structs to <code>src/pkg/engineconfig/gen/&lt;distro&gt;/&lt;version&gt;/</code>. For k3s (and any distro that declares its flags outright) it parses whichever of <code>zz_server.go</code>/<code>zz_agent.go</code> it finds directly; for RKE2 it composes as described above. See <code>docs/dev/mage.md</code> for the broader <code>Generate</code> namespace.</p>
-<p>It also (re)writes <code>src/pkg/engineconfig/gen/zz_registry.go</code>, wiring every distro/version it just generated into <code>gen.Registry</code> so nothing needs hand-maintaining as new versions are pulled. <code>src/types/distrocfg</code> (<code>RancherCommon.ConfigureEngine</code>) uses <code>gen.Lookup</code> to find the struct matching a node’s distro and minor version, and drops (with a warning) any <code>config.yaml</code> key that isn’t a real flag for it – falling back to the previous unvalidated, pass-everything-through behavior with a warning if that distro/version was never pulled/generated. See “Consumption: wired into <code>src/types/distrocfg</code>” in <code>docs/agent/design-config-codegen.md</code> for the full picture.</p>
+<p><code>mage generate:engineConfig</code> walks every <code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> directory and writes generated structs to <code>src/pkg/engineconfig/gen/&lt;distro&gt;/&lt;version&gt;/</code>, alongside a <code>zz_addons.go</code> holding that version’s <code>Addons</code> (valid <code>disable:</code> values), <code>CNIs</code>, and <code>IngressControllers</code>. <code>zz_addons.go</code> is written for every version even when nothing was extracted — the generated registry references those vars from every package, so one package without them would not compile. An empty <code>Addons</code> means no component source was pulled for that version, and consumers treat it as “no data to check against” rather than “nothing is valid”. For k3s (and any distro that declares its flags outright) it parses whichever of <code>zz_server.go</code>/<code>zz_agent.go</code> it finds directly; for RKE2 it composes as described above. See <code>docs/dev/mage.md</code> for the broader <code>Generate</code> namespace.</p>
+<p>It also (re)writes <code>src/pkg/engineconfig/gen/zz_registry.go</code>, wiring every distro/version it just generated into <code>gen.Registry</code> so nothing needs hand-maintaining as new versions are pulled. <code>src/types/distrocfg</code> (<code>RancherCommon.ConfigureEngine</code>) uses <code>gen.Lookup</code> to find the struct matching a node’s distro and minor version, and drops (with a warning) any <code>config.yaml</code> key that isn’t a real flag for it – falling back to the previous unvalidated, pass-everything-through behavior with a warning if that distro/version was never pulled/generated. On controllers it also checks each <code>disable:</code> value against <code>Entry.Addons</code> via <code>gen.UnknownAddons</code>; an unrecognized component is warned about but <strong>kept</strong>, since the addon vocabulary is composed rather than read straight off a declaration and dropping the entry would silently deploy something the user asked to be without. See “Consumption: wired into <code>src/types/distrocfg</code>” in <code>docs/agent/design-config-codegen.md</code> for the full picture.</p>
 
                     </main>
 

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-530ce2b5.js";
+            window.path_to_searchindex_js = "../searchindex-b0af9f39.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-08a866d0.js"></script>
@@ -273,7 +273,7 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 <p><code>ExampleLine &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> — Renders an example for <em>every</em> non-RC release on one minor line of that distro, rather than only the pinned one, so <code>rke2 v1.36</code> backfills <code>v1.36.0+rke2r1</code> through the newest <code>v1.36</code> release into <code>example/rke2-cilium/v1_36/</code>, <code>example/rke2-canal/v1_36/</code>, and <code>example/rke2-multi-cni-canal/v1_36/</code>. A flavor that names minor lines is only rendered for the lines it names, so asking for a line a multi-architecture flavor does not cover renders the other flavors alone. The leading <code>v</code> is optional. Once written, <code>Examples</code> keeps those files current, since it re-renders every example directory on disk. Touches the network, through the same release-asset cache <code>Examples</code> uses.</p>
 </li>
 <li>
-<p><code>EngineConfig</code> — Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="thirdparty-src.html">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>src/pkg/engineconfig/gen/</code>.</p>
+<p><code>EngineConfig</code> — Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="thirdparty-src.html">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>src/pkg/engineconfig/gen/</code>, plus each version’s packaged-component vocabulary (the valid <code>disable:</code>, <code>cni:</code>, and <code>ingress-controller:</code> values) in a <code>zz_addons.go</code> alongside them.</p>
 </li>
 </ul>
 <pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
