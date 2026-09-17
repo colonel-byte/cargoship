@@ -1,9 +1,11 @@
-# yaml-language-server: $schema=values.schema.json
+---
 # This file is generated in magefiles/templates/rke2/values.yaml.tmpl.
 
 # The values this package is built with. A cluster overrides any of them in its
 # inventory file under spec.config.values, and cargoship checks the result
 # against values.schema.json before it installs anything.
+
+# yaml-language-server: $schema=values.schema.json
 addons:
   # The bundled charts rke2 is told not to install. Setting this in an inventory
   # replaces the whole list rather than adding to it, so name every chart the
