@@ -26,17 +26,22 @@ spec:
   type: rke2
   version: 1.37.0-rke2r1
   # The values a cluster may override in its inventory file, under spec.config.values,
-  # or on the command line with --values. They reach the cilium HelmChartConfig this
-  # package writes, so the same package installs with or without encryption, hubble ui,
-  # and the rest, without being rebuilt.
+  # or on the command line with --values. Every flavor exposes the bundled charts rke2
+  # installs; the cilium flavors also expose the chart's own settings, so the same
+  # package installs with or without encryption, hubble ui, and the rest, without being
+  # rebuilt.
   values:
     files:
       - values.yaml
     schema: values.schema.json
-    # This flavor uses mappings: each one moves a single value onto a single key of the
-    # engine configuration, with no templating involved. The multi-cni-cilium flavor
-    # shows the other way of spending these same values.
     mappings:
+      # A mapping copies the value as it stands, list included, so the charts a cluster
+      # names under addons.disabled become the engine's own disable list.
+      - source: .addons.disabled
+        target: .config.disable
+      # This flavor spends its cilium values on mappings too: each one moves a single
+      # value onto a single key of the engine configuration, with no templating involved.
+      # The multi-cni-cilium flavor shows the other way of spending these same values.
       - source: .cilium.encryption.enabled
         target: .manifest.rke2-cilium.encryption.enabled
       - source: .cilium.l2announcements.enabled
@@ -70,8 +75,8 @@ spec:
         # provider's bundled CPI and CSI charts. Every other bundled provider is disabled.
         cloud-provider-name: rancher-vsphere
         disable-kube-proxy: true
-        disable:
-          - rke2-ingress-nginx
+        # There is no disable list here: .addons.disabled supplies it, and this package's
+        # own values.yaml carries the entry that used to be written in this file.
         embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB

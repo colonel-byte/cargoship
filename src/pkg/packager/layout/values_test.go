@@ -18,6 +18,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -268,6 +269,62 @@ func TestApplyValues(t *testing.T) {
 		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
 		if err := l.ApplyValues(values); err == nil {
 			t.Fatal("ApplyValues accepted a target path without a leading dot")
+		}
+	})
+}
+
+// A mapping copies whatever the value is, so a list is how a package exposes a
+// key the engine reads as one -- the disable list every rke2 and k3s example
+// projects .addons.disabled onto. Nothing else can produce one: a template
+// renders into a scalar, so a list has to arrive through a mapping.
+func TestApplyValuesProjectsAList(t *testing.T) {
+	layout := func() *DistroLayout {
+		d := distro.ZarfDistro{}
+		d.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+			{Source: ".addons.disabled", Target: ".config.disable"},
+		}
+		d.Spec.Config.Engine = dig.Mapping{
+			"config": dig.Mapping{"disable": []any{"rke2-ingress-nginx"}},
+		}
+		return &DistroLayout{Distro: d}
+	}
+
+	t.Run("the cluster's list replaces the package's", func(t *testing.T) {
+		l := layout()
+		values := map[string]any{"addons": map[string]any{
+			"disabled": []any{"rke2-ingress-nginx", "rke2-traefik", "rke2-traefik-crd"},
+		}}
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		// Read it the way the distro does, through the mapping Dup rebuilds: a
+		// list that came back as anything else would be written to config.yaml
+		// as that instead.
+		got := l.Distro.Spec.Config.Engine.DigMapping("config")["disable"]
+		want := []any{"rke2-ingress-nginx", "rke2-traefik", "rke2-traefik-crd"}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("config.disable = %#v, want %#v", got, want)
+		}
+	})
+
+	t.Run("an empty list is still a list", func(t *testing.T) {
+		l := layout()
+		if err := l.ApplyValues(map[string]any{"addons": map[string]any{"disabled": []any{}}}); err != nil {
+			t.Fatal(err)
+		}
+		if got := l.Distro.Spec.Config.Engine.DigMapping("config")["disable"]; !reflect.DeepEqual(got, []any{}) {
+			t.Fatalf("config.disable = %#v, want an empty list", got)
+		}
+	})
+
+	t.Run("a cluster that sets nothing keeps the package's list", func(t *testing.T) {
+		l := layout()
+		if err := l.ApplyValues(map[string]any{}); err != nil {
+			t.Fatal(err)
+		}
+		got := l.Distro.Spec.Config.Engine.DigMapping("config")["disable"]
+		if !reflect.DeepEqual(got, []any{"rke2-ingress-nginx"}) {
+			t.Fatalf("config.disable = %#v, want the package default", got)
 		}
 	})
 }

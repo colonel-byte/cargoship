@@ -106,8 +106,9 @@ const (
 	keyConfigs = "configs"
 	// keyDataDir is the config.yaml key holding the directory the engine keeps its state in.
 	keyDataDir = "data-dir"
-	// keyDisable is the config.yaml key listing the packaged components the engine must not
-	// deploy. Controllers only -- agents deploy nothing.
+	// keyDisable is the config.yaml key naming the bundled charts the engine must not install.
+	// Both engines accept it on a server only, so validateEngineConfig drops it from an agent's
+	// config.yaml on its own.
 	keyDisable = "disable"
 	// keyETCD passes flags through to etcd. Controllers only.
 	keyETCD = "etcd-arg"
@@ -426,9 +427,16 @@ func (d *RancherCommon) helmChartConfigs(nodeConfig dig.Mapping) (map[string]Des
 	if len(manifests) == 0 {
 		return nil, nil
 	}
+	disabled := disabledCharts(nodeConfig)
 
 	files := make(map[string]DesiredFile, len(manifests))
 	for chart, v := range manifests {
+		// A chart the engine was told not to install has nothing to configure. Leaving the
+		// file out of the desired set is also what gets one written by an earlier run removed,
+		// since the manifest directory is pruned against that set.
+		if disabled[chart] {
+			continue
+		}
 		values, err := helmValuesContent(v)
 		if err != nil {
 			return nil, fmt.Errorf("rendering helm values for chart %s: %w", chart, err)
@@ -454,6 +462,37 @@ func (d *RancherCommon) helmChartConfigs(nodeConfig dig.Mapping) (map[string]Des
 		}
 	}
 	return files, nil
+}
+
+// disabledCharts reads the charts named under the engine configuration's disable key, which is
+// how both engines are told to leave a bundled chart uninstalled.
+//
+// The key is a list in every configuration cargoship generates, and that is what a values mapping
+// onto `.config.disable` produces, but both engines also accept it written once as a bare string.
+// Both are read here so a package that spells it either way behaves the same.
+func disabledCharts(nodeConfig dig.Mapping) map[string]bool {
+	disabled := map[string]bool{}
+	add := func(name string) {
+		if name = strings.TrimSpace(name); name != "" {
+			disabled[name] = true
+		}
+	}
+
+	switch v := nodeConfig.DigMapping(config.EngineConfig)[keyDisable].(type) {
+	case string:
+		add(v)
+	case []string:
+		for _, name := range v {
+			add(name)
+		}
+	case []any:
+		for _, name := range v {
+			if s, ok := name.(string); ok {
+				add(s)
+			}
+		}
+	}
+	return disabled
 }
 
 // buildRegistriesConfig builds the registry mapping (mirrors/configs) rke2 and k3s read from
