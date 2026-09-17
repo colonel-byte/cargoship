@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=values.schema.json
 # This file is generated in magefiles/templates/rke2/values.yaml.tmpl.
 
 # The values this package is built with. A cluster overrides any of them in its
