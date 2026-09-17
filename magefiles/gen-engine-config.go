@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -40,6 +41,19 @@ const (
 	// rke2FlagOptsFile declares the copyFlag/dropFlag/hideFlag/ignoreFlag vars that a RKE2
 	// K3SFlagSet{...} literal's entries reference by bare identifier.
 	rke2FlagOptsFile = "zz_k3sopts.go"
+
+	// k3sComponentsFile holds k3s's "DisableItems" const -- the packaged components --disable
+	// accepts, as a comma-separated string. It is the !no_stage build of the pair; the
+	// no_stage variant lists a strict subset and is not what we ship against.
+	k3sComponentsFile = "zz_stage.go"
+	// rke2ComponentsFile holds RKE2's DisableItems/CNIItems/IngressItems slices, which
+	// zz_server.go references as rke2cli.DisableItems rather than declaring inline.
+	rke2ComponentsFile = "zz_types.go"
+
+	// componentsDecl names the declarations read out of the files above.
+	disableItemsDecl = "DisableItems"
+	cniItemsDecl     = "CNIItems"
+	ingressItemsDecl = "IngressItems"
 )
 
 // engineConfigTarget maps the source file name for one urfave/cli command to the struct it
@@ -155,7 +169,7 @@ func generateEngineConfigVersion(distro, version string) (map[string]bool, error
 	outDir := filepath.Join(engineConfigOut, distro, pkgName)
 
 	fset := token.NewFileSet()
-	files, err := parseGoFiles(fset, srcDir, targetSourceFiles())
+	files, err := parseGoFiles(fset, srcDir, append(targetSourceFiles(), k3sComponentsFile))
 	if err != nil {
 		return nil, err
 	}
@@ -193,6 +207,14 @@ func generateEngineConfigVersion(distro, version string) (map[string]bool, error
 		}
 		written[t.target] = true
 	}
+
+	var components extract.Components
+	if f, ok := files[k3sComponentsFile]; ok {
+		components.Disable, _ = extract.StringListDecl(disableItemsDecl, f)
+	}
+	if err := writeEngineComponents(outDir, pkgName, distro, version, components); err != nil {
+		return written, err
+	}
 	return written, nil
 }
 
@@ -208,7 +230,7 @@ func generateRKE2ConfigVersion(version string) (map[string]bool, error) {
 
 	fset := token.NewFileSet()
 
-	rke2Files, err := parseGoFiles(fset, rke2Dir, append(targetSourceFiles(), rke2CommonFlagsFile, rke2FlagOptsFile))
+	rke2Files, err := parseGoFiles(fset, rke2Dir, append(targetSourceFiles(), rke2CommonFlagsFile, rke2FlagOptsFile, rke2ComponentsFile))
 	if err != nil {
 		return nil, err
 	}
@@ -294,6 +316,10 @@ func generateRKE2ConfigVersion(version string) (map[string]bool, error) {
 		}
 		written[t.target] = true
 	}
+
+	if err := writeEngineComponents(outDir, pkgName, "rke2", version, rke2Components(rke2Files)); err != nil {
+		return written, err
+	}
 	return written, nil
 }
 
@@ -314,6 +340,71 @@ func writeEngineConfig(outDir, pkgName string, t engineConfigTarget, manifest ex
 
 	unresolved := unresolvedNames(manifest.Flags)
 	fmt.Printf("Successfully generated %s (%d flags, %d unresolved)\n", outPath, len(manifest.Flags)-len(unresolved), len(unresolved))
+	return nil
+}
+
+// rke2Components recovers the values RKE2's server actually accepts in `disable:`. RKE2
+// advertises only pkg/cli/types.go's DisableItems, but disableExceptSelected (zz_server.go)
+// also pushes every un-selected CNI and ingress chart onto --disable at startup, which is why a
+// config can legally say `disable: [rke2-ingress-nginx]` even though that name is nowhere in
+// DisableItems. The generated list is that full effective union, so a real value is never
+// reported as unknown.
+func rke2Components(files map[string]*ast.File) extract.Components {
+	componentsFile, ok := files[rke2ComponentsFile]
+	if !ok {
+		return extract.Components{}
+	}
+
+	disable, _ := extract.StringListDecl(disableItemsDecl, componentsFile)
+	cni, _ := extract.StringListDecl(cniItemsDecl, componentsFile)
+	ingress, _ := extract.StringListDecl(ingressItemsDecl, componentsFile)
+
+	disable = append(disable, rke2ChartNames(cni)...)
+	disable = append(disable, rke2ChartNames(ingress)...)
+	// The multus charts are disabled by a literal clx.Set("disable", ...) in validateCNI
+	// rather than being listed anywhere, so they have to be read off the call itself.
+	if serverFile, ok := files["zz_server.go"]; ok {
+		disable = append(disable, extract.DisableSetCalls(serverFile)...)
+	}
+
+	slices.Sort(disable)
+	return extract.Components{
+		Disable: slices.Compact(disable),
+		CNI:     cni,
+		Ingress: ingress,
+	}
+}
+
+// rke2ChartNames is the chart pair disableExceptSelected adds per selectable item.
+func rke2ChartNames(items []string) []string {
+	names := make([]string, 0, len(items)*2)
+	for _, item := range items {
+		names = append(names, "rke2-"+item, "rke2-"+item+"-crd")
+	}
+	return names
+}
+
+// writeEngineComponents emits zz_addons.go next to the target structs. It is written for every
+// distro/version, empty lists included: writeRegistry references these vars from every generated
+// package, so one package without them breaks the build.
+func writeEngineComponents(outDir, pkgName, distro, version string, components extract.Components) error {
+	src, err := gen.GenerateComponents(gen.ComponentsOptions{
+		PackageName: pkgName,
+		Distro:      distro,
+		Version:     version,
+		Components:  components,
+	})
+	if err != nil {
+		return fmt.Errorf("generating components: %w", err)
+	}
+
+	outPath := filepath.Join(outDir, "zz_addons.go")
+	if err := os.WriteFile(outPath, src, 0o644); err != nil {
+		return err
+	}
+
+	fmt.Printf("Successfully generated %s (%d addons, %d cni, %d ingress)\n",
+		outPath, len(components.Disable), len(components.CNI), len(components.Ingress))
 	return nil
 }
 
@@ -395,7 +486,8 @@ func writeRegistry(entries []registryEntry) error {
 		fmt.Fprintf(&buf, "\t%q: {\n", distro)
 		for _, e := range byDistro[distro] {
 			alias := registryImportAlias(e)
-			fmt.Fprintf(&buf, "\t\t%q: {Server: %s.ServerConfig{}, Agent: %s.AgentConfig{}},\n", e.Pkg, alias, alias)
+			fmt.Fprintf(&buf, "\t\t%q: {Server: %s.ServerConfig{}, Agent: %s.AgentConfig{}, Addons: %s.Addons, CNIs: %s.CNIs, IngressControllers: %s.IngressControllers},\n",
+				e.Pkg, alias, alias, alias, alias, alias)
 		}
 		buf.WriteString("\t},\n")
 	}
