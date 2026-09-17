@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b0af9f39.js";
+            window.path_to_searchindex_js = "../searchindex-371724e6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-08a866d0.js"></script>
@@ -205,7 +205,7 @@ $ go test -mod=vendor -count=1 -v -timeout=30m ./src/test/e2e/noncluster/...
 </code></pre>
 <ul>
 <li><code>-count=1</code> disables the test result cache. Without it, a green run is cached and a rebuilt binary will not re-trigger it, since the binary is not one of the inputs <code>go test</code> hashes.</li>
-<li><code>-short</code> skips <code>TestCargoshipCreateExample</code>, which builds <code>example/rke2-cilium</code> for real and downloads roughly 1.5GB of engine artifacts and images. Everything else uses <code>testdata/minimal</code>, an image-free distro that builds into a 386-byte package in milliseconds.</li>
+<li><code>-short</code> skips <code>TestCargoshipCreateExample</code>, which builds <code>example/rke2-multi-cni-cilium</code> for real and downloads the engine artifacts and images for both of the architectures that example covers. Everything else uses <code>testdata/minimal</code>, an image-free distro that builds into a 386-byte package in milliseconds.</li>
 <li><code>-timeout</code> defaults to 10 minutes, which is ample for a <code>-short</code> run and not necessarily enough for a full one on a cold cache.</li>
 </ul>
 <h3 id="one-test-or-one-subtest"><a class="header" href="#one-test-or-one-subtest">One test, or one subtest</a></h3>

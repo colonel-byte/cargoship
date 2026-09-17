@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b0af9f39.js";
+            window.path_to_searchindex_js = "../searchindex-371724e6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-08a866d0.js"></script>
@@ -315,7 +315,7 @@
 </li>
 <li>Sync Registry Config Controller
 <ul>
-<li>If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially</li>
+<li>If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially. Chart values are written in place instead, since the engine reconciles them without a restart</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
