@@ -51,10 +51,9 @@ import (
 	zlang "github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
-	"github.com/zarf-dev/zarf/src/pkg/template"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -134,9 +133,21 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 	l.Debug("assembling distro in temp folder", "tmp", buildPath)
 
-	onCreate := d.Spec.Actions.OnCreate
+	// Values are resolved before anything that could reference them runs. The onCreate
+	// actions below template against them, and the copies this writes into the build path
+	// are covered by the checksums taken later. The order has one consequence worth
+	// knowing: an onCreate action cannot write a values file that the same build reads.
+	d, values, err := packageValues(ctx, d, distroPath, buildPath)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
+	onCreate := d.Spec.Actions.OnCreate
+	// One variable config spans both action sets, so a variable the before actions
+	// set is still readable by the after actions.
+	varCfg := newVariableConfig(ctx)
+
+	if err := runCreateActions(ctx, distroPath, onCreate.Defaults, onCreate.Before, values, varCfg); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -183,15 +194,8 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 		}
 	}
 
-	if err := actions.Run(ctx, distroPath, onCreate.Defaults, onCreate.After, nil, nil, template.StateAccess{}); err != nil {
-		return nil, fmt.Errorf("unable to run component before action: %w", err)
-	}
-
-	// Values have to land in the build path before the checksums are taken,
-	// since those are computed by walking the directory.
-	d, err = packageValues(ctx, d, distroPath, buildPath)
-	if err != nil {
-		return nil, err
+	if err := runCreateActions(ctx, distroPath, onCreate.Defaults, onCreate.After, values, varCfg); err != nil {
+		return nil, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
@@ -229,29 +233,34 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 }
 
 // packageValues copies the distro's values files and their schema into the
-// package, rewrites the spec to point at those copies, and validates the merged
-// values against the schema.
+// package, rewrites the spec to point at those copies, validates the merged
+// values against the schema, and returns the merged values.
 //
 // Values are resolved once, here, and the resolved copies are what both the
 // validation and the package see. A values file referenced by URL is therefore
 // fetched at create time and shipped: an install into an air-gapped cluster
 // must not depend on reaching that URL again, and a package that validated at
 // create time must not become invalid later because the URL changed.
-func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, buildPath string) (_ distro.ZarfDistro, err error) {
+//
+// The returned values are what the onCreate actions template against. They are the
+// package's own defaults: a cluster's overrides do not exist yet at create time, so an
+// action sees the same values every build, while the surfaces rendered at install time see
+// the overridden ones.
+func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, buildPath string) (_ distro.ZarfDistro, _ value.Values, err error) {
 	vals := d.Spec.Values
 	if len(vals.Files) == 0 && vals.Schema == "" {
-		return d, nil
+		return d, nil, nil
 	}
 	l := logger.From(ctx)
 
 	valuesPath := filepath.Join(buildPath, config.ValuesDir)
 	if err := os.MkdirAll(valuesPath, helpers.ReadExecuteAllWriteUser); err != nil {
-		return d, err
+		return d, nil, err
 	}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return d, err
+		return d, nil, err
 	}
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
@@ -259,7 +268,7 @@ func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, 
 
 	sources, err := helmvalues.ResolveFiles(ctx, distroPath, tmpDir, vals.Files)
 	if err != nil {
-		return d, fmt.Errorf("unable to resolve values files: %w", err)
+		return d, nil, fmt.Errorf("unable to resolve values files: %w", err)
 	}
 
 	// The index prefix keeps merge order visible in the package and keeps two
@@ -268,7 +277,7 @@ func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, 
 	for i, src := range sources {
 		rel := filepath.Join(config.ValuesDir, fmt.Sprintf("%d-%s", i, filepath.Base(src)))
 		if err := helpers.CreatePathAndCopy(src, filepath.Join(buildPath, rel)); err != nil {
-			return d, fmt.Errorf("unable to add values file %s to the package: %w", vals.Files[i], err)
+			return d, nil, fmt.Errorf("unable to add values file %s to the package: %w", vals.Files[i], err)
 		}
 		packaged = append(packaged, filepath.ToSlash(rel))
 	}
@@ -280,7 +289,7 @@ func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, 
 		}
 		rel := filepath.Join(config.ValuesDir, config.ValuesSchema)
 		if err := helpers.CreatePathAndCopy(src, filepath.Join(buildPath, rel)); err != nil {
-			return d, fmt.Errorf("unable to add values schema %s to the package: %w", vals.Schema, err)
+			return d, nil, fmt.Errorf("unable to add values schema %s to the package: %w", vals.Schema, err)
 		}
 		vals.Schema = filepath.ToSlash(rel)
 	}
@@ -290,10 +299,36 @@ func packageValues(ctx context.Context, d distro.ZarfDistro, distroPath string, 
 	// Validate what shipped, not what was pointed at.
 	merged, err := layout.LoadValues(ctx, buildPath, d.Spec.Values)
 	if err != nil {
-		return d, err
+		return d, nil, err
 	}
 	l.Debug("packaged values", "files", len(packaged), "keys", len(merged))
-	return d, nil
+
+	checkMappings(ctx, d, merged)
+
+	return d, merged, nil
+}
+
+// checkMappings applies the distro's value mappings to a throwaway copy of the engine
+// config and reports the ones that cannot be applied: a path missing its leading dot, or a
+// target under a chart entry that is a string rather than a map.
+//
+// Without this, the first time anyone finds out is on the cluster being installed, because
+// install time is the only thing that applies a mapping for real. It warns rather than
+// fails: a mapping that has always been wrong should not turn a package that builds today
+// into one that does not.
+func checkMappings(ctx context.Context, d distro.ZarfDistro, values map[string]any) {
+	if len(d.Spec.Values.Mappings) == 0 {
+		return
+	}
+
+	l := logger.From(ctx)
+	engine := d.Spec.Config.Engine.Dup()
+	for _, m := range d.Spec.Values.Mappings {
+		if _, err := helmvalues.ApplyMapping(engine, values, m.Source, m.Target); err != nil {
+			l.Warn("values mapping cannot be applied and will fail at install time",
+				"source", m.Source, "target", m.Target, "error", err)
+		}
+	}
 }
 
 func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.ZarfFile) error {

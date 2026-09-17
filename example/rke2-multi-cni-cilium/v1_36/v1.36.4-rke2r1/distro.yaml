@@ -27,23 +27,14 @@ metadata:
 spec:
   type: rke2
   version: 1.36.4-rke2r1
-  # The values a cluster may override in its inventory file, under spec.config.values.
-  # Each mapping below moves one of them into the cilium HelmChartConfig this package
-  # writes, so the same package installs with or without encryption, hubble ui, and the
-  # rest, without being rebuilt.
+  # The values a cluster may override in its inventory file, under spec.config.values,
+  # or on the command line with --values. They reach the cilium HelmChartConfig this
+  # package writes, so the same package installs with or without encryption, hubble ui,
+  # and the rest, without being rebuilt.
   values:
     files:
       - values.yaml
     schema: values.schema.json
-    mappings:
-      - source: .cilium.encryption.enabled
-        target: .manifest.rke2-cilium.encryption.enabled
-      - source: .cilium.l2announcements.enabled
-        target: .manifest.rke2-cilium.l2announcements.enabled
-      - source: .cilium.hubble.ui.enabled
-        target: .manifest.rke2-cilium.hubble.ui.enabled
-      - source: .cilium.hubble.ui.ipv6
-        target: .manifest.rke2-cilium.hubble.ui.frontend.server.ipv6.enabled
   actions:
     onCreate:
       before:
@@ -126,14 +117,18 @@ spec:
                   - rook-ceph
                   - zarf
       manifest:
-        rke2-cilium:
+        # This flavor drives the chart from .Values rather than from mappings. The block
+        # is a string, so cargoship renders it whole at install time and a value can
+        # decide whether an entire subtree is written -- which one mapping per leaf
+        # cannot express. The chart values themselves are unchanged.
+        rke2-cilium: |-
           kubeProxyReplacement: true
           k8sServiceHost: "localhost"
           k8sServicePort: 6443
           l2announcements:
-            enabled: true
+            enabled: {{ .Values.cilium.l2announcements.enabled }}
           encryption:
-            enabled: false
+            enabled: {{ .Values.cilium.encryption.enabled }}
             type: wireguard
           tolerations:
             - operator: Exists
@@ -154,6 +149,7 @@ spec:
           hostFirewall:
             enabled: false
           enablePolicy: default
+          {{- if .Values.cilium.hubble.ui.enabled }}
           hubble:
             enabled: true
             relay:
@@ -165,9 +161,15 @@ spec:
               frontend:
                 server:
                   ipv6:
-                    enabled: false
+                    enabled: {{ .Values.cilium.hubble.ui.ipv6 }}
               tolerations:
                 - operator: Exists
+          {{- else }}
+          # Hubble's relay and web interface are what the observability images are for,
+          # so a cluster that does not want the interface does not run either.
+          hubble:
+            enabled: false
+          {{- end }}
     os:
       sysctl:
         # Istio related sysctl overrides

@@ -75,6 +75,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.allowUnmanaged, InstallAllowUnmanagedNodes, resolvedConfig.DistroOpts.AllowUnmanagedNodes, lang.CmdInstallAllowUnmanagedNodes)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 	addAgeFlags(cmd, &o.keyFlags)
 
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)

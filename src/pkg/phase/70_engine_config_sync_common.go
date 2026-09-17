@@ -138,7 +138,7 @@ func (p *EngineConfigSyncHosts) driftedFiles(h *cluster.ZarfHost) []string {
 	return drifted
 }
 
-func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
+func (p *EngineConfigSyncHosts) needsUpdate(ctx context.Context, h *cluster.ZarfHost) bool {
 	drifted := p.driftedFiles(h)
 
 	p.driftMu.Lock()
@@ -180,10 +180,12 @@ func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
 	}
 
 	if !restartRequired {
-		// All drift is in NoRestart files (e.g. distro-release.json). Write in place immediately.
+		// All drift is in NoRestart files -- a HelmChartConfig the engine re-reads on its
+		// own, say, or distro-release.json. Write them in place immediately.
 		// A write that fails leaves the file as drifted as it was found, so the host is reported
 		// as needing an update and picks the file up on the drain-and-rewrite path rather than
 		// being counted as synced by a write that did not land.
+		var written []string
 		for path, file := range p.filesFor(h) {
 			if !file.NoRestart {
 				continue
@@ -195,7 +197,16 @@ func (p *EngineConfigSyncHosts) needsUpdate(h *cluster.ZarfHost) bool {
 			if err := h.WriteFile(path, string(file.Content), mode); err != nil {
 				return true
 			}
+			written = append(written, path)
 		}
+		// The host never appears in the list of hosts this phase acts on, so without
+		// this the run reads as though nothing happened -- which is what a values change
+		// that lands entirely in manifests would otherwise look like.
+		sort.Strings(written)
+		// drifted is used rather than driftReason: this function holds driftMu, and
+		// driftReason takes it for itself.
+		logger.From(ctx).Info("updating files in place, the engine picks these up without a restart",
+			"host", h, "files", written, "drifted", strings.Join(drifted, ", "))
 		return false
 	}
 

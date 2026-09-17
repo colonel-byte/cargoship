@@ -15,6 +15,7 @@
 package phase
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"testing"
@@ -154,8 +155,8 @@ func TestDriftReasonIsPerHost(t *testing.T) {
 	}}
 	drifted := &cluster.ZarfHost{Configurer: &fileConfigurer{}}
 
-	require.False(t, p.needsUpdate(inSync))
-	require.True(t, p.needsUpdate(drifted))
+	require.False(t, p.needsUpdate(context.Background(), inSync))
+	require.True(t, p.needsUpdate(context.Background(), drifted))
 
 	require.Empty(t, p.driftReason(inSync), "a host with nothing to write has no drift to report")
 	require.Equal(t, "registries.yaml (missing)", p.driftReason(drifted))
@@ -171,7 +172,7 @@ func TestNeedsUpdateNoRestartOnlyWritesDirectly(t *testing.T) {
 	h := &cluster.ZarfHost{Configurer: fc}
 
 	// Should not trigger node update/drain
-	require.False(t, p.needsUpdate(h))
+	require.False(t, p.needsUpdate(context.Background(), h))
 	// But should have written the NoRestart file directly
 	require.JSONEq(t, `{"name":"rke2"}`, fc.files[distrocfg.DistroReleaseFile])
 }
@@ -187,7 +188,7 @@ func TestNeedsUpdateNoRestartWriteFailureKeepsHost(t *testing.T) {
 	fc := &fileConfigurer{files: map[string]string{}, writeErr: errors.New("write failed")}
 	h := &cluster.ZarfHost{Configurer: fc}
 
-	require.True(t, p.needsUpdate(h))
+	require.True(t, p.needsUpdate(context.Background(), h))
 	require.NotContains(t, fc.files, distrocfg.DistroReleaseFile)
 }
 

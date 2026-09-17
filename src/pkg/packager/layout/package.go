@@ -30,8 +30,10 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/cfg"
@@ -285,32 +287,104 @@ func LoadValues(ctx context.Context, dirPath string, vals distro.ZarfDistroValue
 }
 
 // ApplyValues projects the resolved values onto the package's engine
-// configuration, following the mappings the package declares.
+// configuration: it renders the templates the configuration contains, then
+// follows the mappings the package declares.
 //
-// The engine configuration is what the package ships; the mappings decide which
-// parts of it a cluster is allowed to move. Applying them here, once, keeps
-// every phase reading a single already-resolved engine configuration.
+// The engine configuration is what the package ships; templates and mappings
+// decide which parts of it a cluster is allowed to move. A mapping moves one
+// leaf and is the right tool when that is all a knob does; a template can also
+// decide whether a block is written at all. Doing both here, once, keeps every
+// phase reading a single already-resolved engine configuration, and puts the
+// result ahead of the install-time check that drops engine config keys the
+// distro version does not recognize.
+//
+// Rendering happens before the mappings, not after, so that the text being
+// executed is the text the package author wrote. A value that arrives from a
+// cluster inventory and happens to contain "{{" is written through as the
+// characters it is.
 func (d *DistroLayout) ApplyValues(values map[string]any) error {
-	mappings := d.Distro.Spec.Values.Mappings
-	if len(mappings) == 0 {
-		return nil
-	}
 	if d.Distro.Spec.Config.Engine == nil {
 		d.Distro.Spec.Config.Engine = dig.Mapping{}
 	}
-	for _, m := range mappings {
+
+	rendered, err := helmvalues.EvaluateValuesTemplates(d.Distro.Spec.Config.Engine, templateData(values))
+	if err != nil {
+		return fmt.Errorf("unable to render the engine configuration: %w", err)
+	}
+	engine, ok := rendered.(dig.Mapping)
+	if !ok {
+		return fmt.Errorf("rendering the engine configuration produced a %T, expected a mapping", rendered)
+	}
+	d.Distro.Spec.Config.Engine = engine
+
+	for _, m := range d.Distro.Spec.Values.Mappings {
 		if _, err := helmvalues.ApplyMapping(d.Distro.Spec.Config.Engine, values, m.Source, m.Target); err != nil {
 			return fmt.Errorf("unable to apply values mapping: %w", err)
 		}
 	}
-	// A mapping writes plain maps, so every branch it walked through is now a
-	// map[string]any rather than the dig.Mapping the package decoded into. Dup
-	// puts those branches back, because dig's DigMapping replaces a value that
-	// is not a Mapping with an empty one instead of reading it -- the engine
-	// manifest section would come back empty for a caller that reached it
-	// without duplicating the configuration first.
+	// Rendering and mappings both write plain maps, so every branch they walked
+	// through is now a map[string]any rather than the dig.Mapping the package
+	// decoded into. Dup puts those branches back, because dig's DigMapping
+	// replaces a value that is not a Mapping with an empty one instead of
+	// reading it -- the engine manifest section would come back empty for a
+	// caller that reached it without duplicating the configuration first.
 	d.Distro.Spec.Config.Engine = d.Distro.Spec.Config.Engine.Dup()
 	return nil
+}
+
+// RenderFiles renders, in place in the extracted package, the contents of every file the
+// package marked as a template.
+//
+// Doing it here rather than inside an upload phase keeps it to a single pass. The package
+// is extracted and its checksums verified by the time a caller has a DistroLayout, and both
+// the generic upload phase and the per-profile one read these same staged paths afterwards.
+// Writing the result back over the staged file also keeps each file at the index it was
+// packaged under, which is the directory name those phases rebuild the path from.
+//
+// Templating is opt-in per file because most of what a package ships is a tarball or an
+// RPM, and a template pass over one of those would either corrupt it or fail on a brace
+// that happens to appear in the middle of a binary.
+func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any) error {
+	render := func(dir string, files v1alpha1.ZarfFiles) error {
+		for i, f := range files {
+			if f == nil || !f.IsTemplate() {
+				continue
+			}
+			staged := filepath.Join(d.dirPath, dir, strconv.Itoa(i), filepath.Base(f.Target))
+			raw, err := os.ReadFile(staged)
+			if err != nil {
+				return fmt.Errorf("unable to read %s for templating: %w", f.Target, err)
+			}
+			out, err := helmvalues.RenderTemplate(string(raw), templateData(values))
+			if err != nil {
+				return fmt.Errorf("unable to render %s: %w", f.Target, err)
+			}
+			if out == string(raw) {
+				continue
+			}
+			info, err := os.Stat(staged)
+			if err != nil {
+				return fmt.Errorf("unable to stat %s: %w", f.Target, err)
+			}
+			if err := os.WriteFile(staged, []byte(out), info.Mode().Perm()); err != nil {
+				return fmt.Errorf("unable to write the rendered %s: %w", f.Target, err)
+			}
+			logger.From(ctx).Debug("rendered package file", "target", f.Target, "staged", staged)
+		}
+		return nil
+	}
+
+	if err := render(config.FilesDir, d.Distro.Spec.Config.Files); err != nil {
+		return err
+	}
+	return render(config.OSDir, d.Distro.Spec.Config.OS.Files)
+}
+
+// templateData is what a package's templates are evaluated against. Values are
+// namespaced under .Values, the spelling ZEP-0021 and Helm charts both use, which
+// leaves the other roots free for whatever a template is given access to later.
+func templateData(values map[string]any) map[string]any {
+	return map[string]any{"Values": values}
 }
 
 // Values returns the merged, schema-checked values the package was built with,
