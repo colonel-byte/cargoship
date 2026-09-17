@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-cf38bc40.js";
+            window.path_to_searchindex_js = "../searchindex-7468d72d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-cdf8f992.js"></script>
+        <script src="../toc-9d485484.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,6 +193,31 @@ metadata:
   name: bubbles
 </code></pre>
 <p>The <code>.metadata.name</code> field sets the cluster name. Cargoship uses this to configure the context name in the resulting <code>kubeconfig</code> (e.g., <code>bubbles</code>).</p>
+<h2 id="editor-support"><a class="header" href="#editor-support">Editor Support</a></h2>
+<p>The <code>yaml-language-server</code> comment on the first line is what makes an editor complete and check the file as you write it. The URL above reads the schema from GitHub’s default branch, which is convenient and wrong in two situations: an air-gapped machine cannot fetch it at all, and <code>yaml-language-server</code> says nothing when a fetch fails, so the file silently stops being checked; and a machine that can fetch it is checking against unreleased <code>main</code> rather than the release it is running.</p>
+<p><code>cargoship schema</code> writes the schema out of the binary, so it is the schema that build validates against and it needs no network:</p>
+<pre><code class="language-sh">cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+</code></pre>
+<p>Then point the inventory at the local copy:</p>
+<pre><code class="language-yaml">---
+# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
+kind: ZarfCluster
+metadata:
+  name: bubbles
+</code></pre>
+<h2 id="package-values"><a class="header" href="#package-values">Package Values</a></h2>
+<p>The <code>.spec.config.values</code> section overrides the values the distro package was built with. It is the one part of an inventory whose vocabulary belongs to the package rather than to cargoship, so the schema above leaves it untyped – and a hosted schema never could do better:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    values:
+      addons:
+        disabled:
+          - rke2-ingress-nginx
+</code></pre>
+<p>Pass <code>--package</code> to compose the package’s own values schema into the inventory schema, and the block completes and checks like the rest of the file:</p>
+<pre><code class="language-sh">cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json
+</code></pre>
+<p><code>--package</code> takes anything <code>cargoship apply</code> takes – a tarball, an <code>oci://</code> or <code>https://</code> reference – or a package source directory, so it works before the package is built. The composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships: it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation. See the <a href="package-values.html">package values guide</a> for what a package may expose and how the merge works.</p>
 <h2 id="global-configuration"><a class="header" href="#global-configuration">Global Configuration</a></h2>
 <p>The <code>.spec.config</code> section configures cluster-wide settings, such as load balancer endpoints:</p>
 <pre><code class="language-yaml">spec:
