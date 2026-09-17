@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "rke2-cilium values",
+  "description": "Generated in magefiles/templates/cilium/values.schema.json.tmpl.",
+  "type": "object",
+  "properties": {
+    "cilium": {
+      "type": "object",
+      "properties": {
+        "encryption": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Encrypt pod-to-pod traffic with WireGuard."
+            }
+          },
+          "additionalProperties": false
+        },
+        "l2announcements": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Announce LoadBalancer addresses over ARP."
+            }
+          },
+          "additionalProperties": false
+        },
+        "hubble": {
+          "type": "object",
+          "properties": {
+            "ui": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Run the Hubble UI and its relay."
+                },
+                "ipv6": {
+                  "type": "boolean",
+                  "description": "Serve the Hubble UI frontend over IPv6."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

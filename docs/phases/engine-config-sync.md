@@ -12,7 +12,7 @@
 1. Gathering facts about the distro installed
     - Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running
 1. Sync Registry Config Controller
-    - If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially
+    - If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially. Chart values are written in place instead, since the engine reconciles them without a restart
 1. Sync Registry Config Worker
     - If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit
 1. Updating kubeconfig file with the current cluster

@@ -16,12 +16,37 @@ package distrocfg
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/k0sproject/rig/exec"
 )
+
+// ManagedDir is a directory cargoship prunes, and how much of it it is allowed to prune.
+type ManagedDir struct {
+	// Path is the directory on the host.
+	Path string
+	// Glob limits pruning to the file names it matches, for a directory cargoship shares with
+	// something else. An empty Glob means every file in the directory is cargoship's.
+	//
+	// The engine's manifest directory is the case this exists for: cargoship writes the
+	// HelmChartConfig files in it, while the engine ships its own charts there, and removing
+	// those would take the cluster apart.
+	Glob string
+}
+
+// prunes reports whether a file in the directory is one cargoship may remove.
+func (d ManagedDir) prunes(path string) bool {
+	if d.Glob == "" {
+		return true
+	}
+	ok, err := filepath.Match(d.Glob, filepath.Base(path))
+	// A malformed pattern matches nothing, which leaves the file alone. Pruning is cleanup,
+	// and cleanup is not worth deleting something on a guess.
+	return err == nil && ok
+}
 
 // StaleFiles returns the files under dirs that desired no longer names, sorted by path.
 //
@@ -34,11 +59,14 @@ import (
 //
 // A directory that does not exist, or that cannot be listed, contributes nothing: pruning is
 // cleanup, and there is no point failing an apply over it.
-func StaleFiles(h *cluster.ZarfHost, dirs []string, desired map[string]DesiredFile) []string {
+func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) []string {
 	var stale []string
 	for _, dir := range dirs {
-		for _, path := range listFiles(h, dir) {
-			if _, ok := desired[path]; !ok {
+		for _, path := range listFiles(h, dir.Path) {
+			if _, ok := desired[path]; ok {
+				continue
+			}
+			if dir.prunes(path) {
 				stale = append(stale, path)
 			}
 		}
@@ -49,7 +77,7 @@ func StaleFiles(h *cluster.ZarfHost, dirs []string, desired map[string]DesiredFi
 
 // RemoveStaleFiles deletes the files StaleFiles finds. It reports the first deletion error, so a
 // file that cannot be removed is surfaced rather than left to be rediscovered on every run.
-func RemoveStaleFiles(h *cluster.ZarfHost, dirs []string, desired map[string]DesiredFile) error {
+func RemoveStaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) error {
 	for _, path := range StaleFiles(h, dirs, desired) {
 		if err := h.DeleteFile(path); err != nil {
 			return fmt.Errorf("removing stale file %s: %w", path, err)

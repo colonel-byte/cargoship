@@ -26,198 +26,156 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseSet(t *testing.T) {
+func TestValuePathParsing(t *testing.T) {
 	tests := []struct {
 		name    string
-		input   string
+		path    string
+		val     any
 		want    map[string]any
 		wantErr string
 	}{
 		{
-			name:  "simple string",
-			input: "foo=bar",
-			want:  map[string]any{"foo": "bar"},
-		},
-		{
-			name:  "nested and typed values",
-			input: "chart.enabled=true,chart.replicas=3,chart.tags=[a,b,c]",
-			want: map[string]any{
-				"chart": map[string]any{
-					"enabled":  true,
-					"replicas": int64(3),
-					"tags":     []any{"a", "b", "c"},
-				},
-			},
-		},
-		{
-			// Helm's --set does not parse floats, and parsing them would turn the
-			// version "1.10" into 1.1 and drop a digit.
-			name:  "decimals stay strings",
-			input: "ratio=1.5,version=1.10",
-			want:  map[string]any{"ratio": "1.5", "version": "1.10"},
-		},
-		{
-			// Image tags, zip codes and account numbers all live in chart values.
-			name:  "leading zero stays a string",
-			input: "tag=0755,zip=02134,zero=0",
-			want:  map[string]any{"tag": "0755", "zip": "02134", "zero": int64(0)},
-		},
-		{
-			name:  "null becomes nil",
-			input: "disabled=null,alsoNull=NULL",
-			want:  map[string]any{"disabled": nil, "alsoNull": nil},
-		},
-		{
-			name:  "booleans are case insensitive",
-			input: "a=TRUE,b=False",
-			want:  map[string]any{"a": true, "b": false},
-		},
-		{
-			name:  "quotes suppress typing and are stripped",
-			input: `a="true",b='3',c="0755"`,
-			want:  map[string]any{"a": "true", "b": "3", "c": "0755"},
-		},
-		{
-			name:  "commas inside quotes do not split entries",
-			input: `msg="hello, world",other=1`,
-			want:  map[string]any{"msg": "hello, world", "other": int64(1)},
-		},
-		{
-			name:  "nested lists keep their nesting",
-			input: "a=[1,[2,3]],b=4",
-			want: map[string]any{
-				"a": []any{int64(1), []any{int64(2), int64(3)}},
-				"b": int64(4),
-			},
-		},
-		{
-			name:  "helm brace list form",
-			input: "a={x,y},b={1,{2,3}}",
-			want: map[string]any{
-				"a": []any{"x", "y"},
-				"b": []any{int64(1), []any{int64(2), int64(3)}},
-			},
-		},
-		{
-			name:  "empty list",
-			input: "a=[],b={}",
-			want:  map[string]any{"a": []any{}, "b": []any{}},
-		},
-		{
-			name:  "trailing comma is skipped",
-			input: "a=1,",
-			want:  map[string]any{"a": int64(1)},
-		},
-		{
-			name:    "missing equals",
-			input:   "foo",
-			wantErr: "missing '='",
-		},
-		{
-			name:    "scalar in the middle of a path",
-			input:   "a=1,a.b=2",
-			wantErr: `path conflict at key "a"`,
-		},
-		{
-			name:  "list index creates a list",
-			input: "servers[0].port=80",
-			want: map[string]any{
-				"servers": []any{map[string]any{"port": int64(80)}},
-			},
-		},
-		{
-			name:  "list index on a scalar element",
-			input: "tags[0]=a,tags[1]=b",
-			want:  map[string]any{"tags": []any{"a", "b"}},
-		},
-		{
-			// Helm leaves the positions before the one that was set empty.
-			name:  "skipped positions are nil",
-			input: "tags[2]=c",
-			want:  map[string]any{"tags": []any{nil, nil, "c"}},
-		},
-		{
-			name:  "nested list indices",
-			input: "grid[0][1]=x",
-			want:  map[string]any{"grid": []any{[]any{nil, "x"}}},
-		},
-		{
-			name:  "index deep in a path",
-			input: "a.b[0].c=1",
+			name: "index deep in a path",
+			path: ".a.b[0].c",
+			val:  int64(1),
 			want: map[string]any{
 				"a": map[string]any{"b": []any{map[string]any{"c": int64(1)}}},
 			},
 		},
 		{
-			name:  "escaped dot stays in the key",
-			input: `annotations.example\.com/team=infra`,
+			// Helm leaves the positions before the one that was set empty.
+			name: "skipped positions are nil",
+			path: ".tags[2]",
+			val:  "c",
+			want: map[string]any{"tags": []any{nil, nil, "c"}},
+		},
+		{
+			name: "nested list indices",
+			path: ".grid[0][1]",
+			val:  "x",
+			want: map[string]any{"grid": []any{[]any{nil, "x"}}},
+		},
+		{
+			name: "escaped dot stays in the key",
+			path: `.annotations.example\.com/team`,
+			val:  "infra",
 			want: map[string]any{
 				"annotations": map[string]any{"example.com/team": "infra"},
 			},
 		},
 		{
-			name:  "escaped comma stays in the value",
-			input: `cmd=a\,b,other=1`,
-			want:  map[string]any{"cmd": "a,b", "other": int64(1)},
+			name: "escaped bracket stays in the key",
+			path: `.a\[0\]`,
+			val:  "x",
+			want: map[string]any{"a[0]": "x"},
 		},
 		{
-			// Helm would drop this backslash and hand the chart "C:temp".
-			name:  "backslash before a plain character is kept",
-			input: `path=C:\temp`,
-			want:  map[string]any{"path": `C:\temp`},
-		},
-		{
-			name:  "escaped bracket stays in the key",
-			input: `a\[0\]=x`,
-			want:  map[string]any{"a[0]": "x"},
+			// Helm would drop this backslash and hand the chart the key "atemp".
+			name: "backslash before a plain character is kept",
+			path: `.a\temp`,
+			val:  "x",
+			want: map[string]any{`a\temp`: "x"},
 		},
 		{
 			name:    "index beyond the maximum",
-			input:   "a[64]=x",
+			path:    ".a[64]",
+			val:     "x",
 			wantErr: "exceeds the maximum of 63",
 		},
 		{
 			name:    "index is not a number",
-			input:   "a[x]=1",
+			path:    ".a[x]",
+			val:     int64(1),
 			wantErr: `invalid list index "x"`,
 		},
 		{
 			name:    "unclosed index",
-			input:   "a[0=1",
+			path:    ".a[0",
+			val:     int64(1),
 			wantErr: "expected a [index]",
 		},
 		{
 			name:    "empty key",
-			input:   "a..b=1",
+			path:    ".a..b",
+			val:     int64(1),
 			wantErr: "empty key",
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dst := map[string]any{}
+			err := SetValuePath(dst, tt.path, tt.val)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, dst)
+		})
+	}
+}
+
+// A path that walks through a value of the wrong shape is reported rather than
+// overwriting what is already there.
+func TestValuePathConflicts(t *testing.T) {
+	tests := []struct {
+		name    string
+		dst     map[string]any
+		path    string
+		wantErr string
+	}{
 		{
-			// The leading-dot form belongs to a Zarf Values path, not a --set key.
-			name:    "leading dot is rejected",
-			input:   ".a.b=1",
-			wantErr: "takes no leading dot",
+			name:    "scalar in the middle of a path",
+			dst:     map[string]any{"a": int64(1)},
+			path:    ".a.b",
+			wantErr: `path conflict at key "a"`,
 		},
 		{
 			name:    "index into a scalar",
-			input:   "a=1,a[0]=2",
+			dst:     map[string]any{"a": int64(1)},
+			path:    ".a[0]",
 			wantErr: `path conflict at key "a": int64 is not a list`,
 		},
 		{
 			name:    "map key under a list",
-			input:   "a[0]=1,a.b=2",
+			dst:     map[string]any{"a": []any{int64(1)}},
+			path:    ".a.b",
 			wantErr: `path conflict at key "a": []interface {} is not a map`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseSet(tt.input)
-			if tt.wantErr != "" {
-				require.ErrorContains(t, err, tt.wantErr)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.want, got)
+			err := SetValuePath(tt.dst, tt.path, int64(2))
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+// typedScalar types the output of a rendered template, so these rules decide
+// what a chart receives for "{{ .Values.x }}".
+func TestTypedScalar(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		in   string
+		want any
+	}{
+		{name: "booleans are case insensitive", in: "TRUE", want: true},
+		{name: "false", in: "False", want: false},
+		{name: "null becomes nil", in: "NULL", want: nil},
+		{name: "integer", in: "3", want: int64(3)},
+		{name: "bare zero is a number", in: "0", want: int64(0)},
+		// Helm does not parse floats, and parsing them would turn the version
+		// "1.10" into 1.1 and drop a digit.
+		{name: "decimals stay strings", in: "1.10", want: "1.10"},
+		// Image tags, zip codes and account numbers all live in chart values.
+		{name: "leading zero stays a string", in: "0755", want: "0755"},
+		{name: "empty stays empty", in: "", want: ""},
+		{name: "plain string", in: "nginx", want: "nginx"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, typedScalar(tt.in))
 		})
 	}
 }

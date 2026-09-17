@@ -74,10 +74,11 @@ type Distro interface {
 	// pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
 	// detect drift on an already-running host.
 	DesiredFiles(cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
-	// ManagedDirs returns the directories on a host whose contents cargoship writes and owns
-	// outright, so that a file in one of them that DesiredFiles no longer names can be removed
-	// rather than left behind. A distro that keeps no such directory returns nil.
-	ManagedDirs() []string
+	// ManagedDirs returns the directories on a host cargoship prunes, so that a file in one of
+	// them that DesiredFiles no longer names can be removed rather than left behind. A
+	// directory cargoship shares with the engine names the files that are its own. A distro
+	// that keeps no such directory returns nil.
+	ManagedDirs() []ManagedDir
 	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 	DistroCmdf(string, ...any) string
 	// GetClusterCIDR returns a string array with the all the known cluster cidr blocks
