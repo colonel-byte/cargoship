@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-371724e6.js";
+            window.path_to_searchindex_js = "searchindex-ed625baa.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-08a866d0.js"></script>
+        <script src="toc-cdf8f992.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -781,6 +781,163 @@ metadata:
 <h2 id="applying"><a class="header" href="#applying">Applying</a></h2>
 <p>Each host in the inventory receives the files its own architecture selects, so a mixed-architecture cluster installs from the one package: an <code>arm64</code> worker gets the <code>arm64</code> binary, an <code>amd64</code> controller gets the <code>amd64</code> one, and both get the entries with no <code>arch</code> selector. Images are likewise exported per host architecture, so each host loads a tarball holding the images built for it.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="package-values"><a class="header" href="#package-values">Package Values</a></h1>
+<p>A cargoship package ships with a set of values: Helm-style configuration, addressed by dotted paths, that a cluster can override without rebuilding the package. Values reach the engine configuration in two ways – structural <em>mappings</em>, and Go <em>templates</em> that read <code>.Values</code> – and they are also available to the files a package uploads and to the actions that build it.</p>
+<p>This guide covers authoring values in a package, overriding them from a cluster inventory or the command line, and choosing between mappings and templates.</p>
+<h2 id="declaring-values-in-a-package"><a class="header" href="#declaring-values-in-a-package">Declaring values in a package</a></h2>
+<p>Values live under <code>spec.values</code> of a <code>distro.yaml</code>:</p>
+<pre><code class="language-yaml">spec:
+  values:
+    files:
+      - values.yaml
+      - overrides/prod.yaml
+    schema: values.schema.json
+</code></pre>
+<p><code>files</code> are merged in order, key by key, with a later file winning over an earlier one. Each entry is a path relative to the package definition, an absolute path, or a URL. Cargoship copies them into the package as <code>values/&lt;index&gt;-&lt;basename&gt;</code>, so two files that share a base name do not collide.</p>
+<p><code>schema</code> is a JSON Schema document the merged values must satisfy. Cargoship checks the values against it while building the package and refuses to build when they do not match, so a typo is caught by whoever builds the package rather than by whoever installs it. The schema must not use <code>$ref</code>. Set <code>"additionalProperties": false</code> on the root object: without it, a misspelled top-level key in a cluster inventory is silently ignored instead of rejected.</p>
+<p>A values file is ordinary YAML:</p>
+<pre><code class="language-yaml">cilium:
+  encryption:
+    enabled: false
+  hubble:
+    ui:
+      enabled: false
+      ipv6: false
+</code></pre>
+<h2 id="overriding-values"><a class="header" href="#overriding-values">Overriding values</a></h2>
+<p>Values are resolved from three sources, each winning over the one before it:</p>
+<ol>
+<li>The values files the package ships with.</li>
+<li><code>spec.config.values</code> in the cluster inventory.</li>
+<li>One or more <code>--values &lt;file&gt;</code> flags on the command line.</li>
+</ol>
+<p>The inventory carries the values a cluster always wants:</p>
+<pre><code class="language-yaml">kind: ZarfCluster
+spec:
+  config:
+    values:
+      cilium:
+        encryption:
+          enabled: true
+</code></pre>
+<p>The flag carries the ones that change between runs:</p>
+<pre><code class="language-sh">cargoship apply ./package.tar.zst --config inventory.yaml --values ./encryption-off.yaml
+</code></pre>
+<p><code>--values</code> may be given more than once, with a later file winning over an earlier one, and it is accepted by <code>cargoship apply</code>, <code>cargoship prepare</code>, and <code>cargoship engine-config-sync</code>. There is no <code>-f</code> shorthand: <code>apply</code> already binds <code>-f</code> to <code>--update-fapolicyd</code>.</p>
+<p>Merging is per key, not per document. An override that sets <code>cilium.encryption.enabled</code> leaves every other key under <code>cilium</code> as the package defined it.</p>
+<p>The merged values are checked against the package’s schema again at install time, so an inventory that sets a key the package does not accept fails before anything is written to a host.</p>
+<h2 id="mappings"><a class="header" href="#mappings">Mappings</a></h2>
+<p>A mapping projects one value onto one place in the engine configuration:</p>
+<pre><code class="language-yaml">spec:
+  values:
+    mappings:
+      - source: .cilium.encryption.enabled
+        target: .manifest.rke2-cilium.encryption.enabled
+</code></pre>
+<p><code>source</code> is read out of the resolved values. <code>target</code> is written relative to <code>spec.config.engine</code>. Both paths must begin with a dot. A source the values do not define is left alone, so the package’s own engine configuration stands as the default.</p>
+<p>Mappings are structural: the value keeps its YAML type, and nothing in the package has to be written as a template. They are the right tool when a value lands on exactly one key.</p>
+<p>A mapping that cannot be applied – a path without a leading dot, or a target underneath a chart entry that is a YAML string rather than a map – is reported as a warning when the package is built, and again when it is installed. It does not fail the build. The feature is new, and a hard failure on a package that installs correctly today is the wrong first move.</p>
+<h2 id="templates"><a class="header" href="#templates">Templates</a></h2>
+<p>A template reads <code>.Values</code> directly, anywhere in the engine configuration:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    engine:
+      manifest:
+        rke2-cilium:
+          encryption:
+            enabled: "{{ .Values.cilium.encryption.enabled }}"
+</code></pre>
+<p>A scalar that is <em>entirely</em> one template is re-typed after rendering, the same way Helm’s <code>--set</code> typing works, so the example above lands in the generated <code>HelmChartConfig</code> as a YAML boolean rather than the string <code>"true"</code>. A scalar that mixes text and templating stays a string.</p>
+<p>Rendering happens before the mappings are applied, and before the engine configuration is validated. Package-authored text is therefore what gets executed: a value supplied by a cluster inventory that happens to contain <code>{{</code> is written through as literal text, never evaluated.</p>
+<h3 id="conditionals"><a class="header" href="#conditionals">Conditionals</a></h3>
+<p>Templating can do the one thing mappings cannot: decide whether a block of configuration exists at all. Rendering walks the parsed structure one scalar at a time and never re-parses a document, so a conditional only works inside a chart entry written as a YAML block scalar:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    engine:
+      manifest:
+        rke2-cilium: |-
+          kubeProxyReplacement: true
+          encryption:
+            enabled: {{ .Values.cilium.encryption.enabled }}
+          {{- if .Values.cilium.hubble.ui.enabled }}
+          hubble:
+            enabled: true
+            ui:
+              enabled: true
+          {{- else }}
+          hubble:
+            enabled: false
+          {{- end }}
+</code></pre>
+<p>Both shapes are in the examples: <code>example/rke2-cilium-vsphere</code> spends its values through mappings, and <code>example/rke2-multi-cni-cilium</code> spends the same values through a templated block scalar.</p>
+<h3 id="which-to-reach-for"><a class="header" href="#which-to-reach-for">Which to reach for</a></h3>
+<p>Use a mapping when a value has one destination and its type should survive untouched. Use a template when one value drives several keys, when the value needs reshaping on the way, or when the package has to emit or omit a whole block. A package may use both.</p>
+<h2 id="what-renders"><a class="header" href="#what-renders">What renders</a></h2>
+<p>Templating is deliberately not applied everywhere. Three surfaces render:</p>
+<ul>
+<li>
+<p><strong><code>spec.config.engine</code></strong> – always, without an opt-in. This is the subtree that becomes the engine’s configuration and its <code>HelmChartConfig</code> manifests.</p>
+</li>
+<li>
+<p><strong><code>spec.config.files</code> and <code>spec.config.os.files</code></strong> – per file, when the entry sets <code>template: true</code>. It defaults to false, because most files are binaries or archives that a template pass would corrupt.</p>
+<pre><code class="language-yaml">spec:
+  config:
+    files:
+      - source: audit-policy.yaml
+        target: /etc/rancher/rke2/audit-policy.yaml
+        template: true
+</code></pre>
+<p>The file is rendered once, in place in the extracted package, before any phase uploads it.</p>
+</li>
+<li>
+<p><strong><code>spec.actions.onCreate</code></strong> – per action, when the action sets <code>template: true</code>. This renders at build time, on the machine building the package, and covers the action’s <code>cmd</code> and its <code>wait</code> block.</p>
+</li>
+</ul>
+<p><code>spec.config.os.sysctl</code>, <code>spec.config.os.environment</code>, and <code>spec.config.os.fapolicyd</code> do not render.</p>
+<p>A template that names a value the package does not define is an error, not an empty string, on every surface.</p>
+<h2 id="rendered-manifests-on-a-running-cluster"><a class="header" href="#rendered-manifests-on-a-running-cluster">Rendered manifests on a running cluster</a></h2>
+<p>The <code>HelmChartConfig</code> manifests a template produces are written to the engine’s manifest directory, which the Rancher engines re-read on their own. Cargoship marks them as not requiring a restart: <code>cargoship engine-config-sync</code> compares them on disk, writes the drift in place, and logs the paths it wrote. No node is drained for a values change that lands only in manifests.</p>
+<h2 id="available-functions"><a class="header" href="#available-functions">Available functions</a></h2>
+<p>Templates are rendered with the sprig-compatible function set from <a href="https://github.com/go-sprout/sprout">sprout</a>, which is what a Helm chart author already expects: <code>toYaml</code>, <code>upper</code>, <code>b64enc</code>, <code>default</code>, <code>quote</code>, the arithmetic and list helpers, and the rest.</p>
+<p>Four functions are removed: <code>env</code>, <code>expandEnv</code>, <code>expandenv</code>, and <code>getHostByName</code>. A package author writes the templates and an operator runs them, so leaving these in place would let a package read the operator’s environment into chart values, or resolve names against the operator’s DNS. Helm removes the same four for the same reason. They are removed rather than stubbed, so a package that uses one fails to parse instead of quietly rendering an empty string.</p>
+<p>Five functions Helm defines and sprig itself lacks are added back: <code>toToml</code>, <code>fromToml</code>, <code>toYamlPretty</code>, <code>fromYamlArray</code>, and <code>fromJsonArray</code>. As in Helm, these report a parse failure in band – in the returned value – rather than failing the render.</p>
+<h3 id="create-only-functions"><a class="header" href="#create-only-functions">Create-only functions</a></h3>
+<p>Four more functions are available to <code>onCreate</code> actions, and only there:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>fileExists &lt;path&gt;</code></td><td>Whether a path exists on the machine building the package.</td></tr>
+<tr><td><code>cachedFileExists &lt;relative path&gt;</code></td><td>Whether a file exists under cargoship’s cache directory.</td></tr>
+<tr><td><code>cachedFilePath &lt;relative path&gt;</code></td><td>The absolute path of a file in cargoship’s cache directory.</td></tr>
+<tr><td><code>downloadToCache &lt;url&gt; &lt;relative path&gt; [sha256]</code></td><td>Downloads a URL into the cache and returns the local path.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Pulling a missing artifact into the cache is the whole point of a create action, so these belong there. They are not available to values, manifests, files, or anything that runs at install time: a template that renders chart values should not be able to probe the deploy host or issue HTTP requests. A template that names one outside an action fails at parse time.</p>
+<p>Each of these returns its error rather than a zero value, so a cache directory that cannot be read stops the build instead of reading as “the file is not there” and sending the package down the wrong branch.</p>
+<p>Because the create-time function set is cargoship’s own, cargoship – not the vendored Zarf action runner – renders <code>onCreate</code> actions. Zarf still <em>executes</em> them, with its shells, retries, timeouts, and output capture unchanged, and <code>.Constants</code> and <code>.Variables</code> still resolve. Actions are rendered one at a time, in order, so a variable one action sets is readable by the next.</p>
+<pre><code class="language-yaml">spec:
+  actions:
+    onCreate:
+      before:
+        - description: pull the chart
+          template: true
+          cmd: |
+            {{- if not (cachedFileExists "charts/cilium.tgz") }}
+            curl -sSLo {{ cachedFilePath "charts/cilium.tgz" }} {{ .Values.cilium.chartURL }}
+            {{- end }}
+</code></pre>
+<p>One consequence of resolving values before the build runs: an <code>onCreate</code> action cannot produce a values file that the same build then reads. Values are resolved, schema-checked, and packaged before the first action runs.</p>
+<h2 id="verifying-a-package"><a class="header" href="#verifying-a-package">Verifying a package</a></h2>
+<p>Build the package and read the rendered output back:</p>
+<pre><code class="language-sh">cargoship create ./example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1
+cargoship apply &lt;package&gt; --config inventory.yaml --dry-run
+</code></pre>
+<p>Values are resolved, the schema is checked, and every surface is rendered before the first phase runs, so a bad value or a template that names a key the package does not define fails ahead of any change to a host. A dry run stops there.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="per-profile-update-concurrency"><a class="header" href="#per-profile-update-concurrency">Per-Profile Update Concurrency</a></h1>
 <p>This guide explains why a cluster admin may want to set a different concurrency limit per node profile, and how to configure it.</p>
 <h2 id="the-problem-with-one-global-concurrency-limit"><a class="header" href="#the-problem-with-one-global-concurrency-limit">The problem with one global concurrency limit</a></h2>
@@ -1137,7 +1294,7 @@ cargoship sign ./my-package.tar.zst --signing-key ./cosign.key --output oci://gh
 <p>Cargoship warns you when you use neither mechanism. The signature then stops being verifiable when the certificate expires.</p>
 <h3 id="private-sigstore-deployments"><a class="header" href="#private-sigstore-deployments">Private Sigstore Deployments</a></h3>
 <p><code>--fulcio-url</code>, <code>--rekor-url</code>, <code>--oidc-issuer</code>, and <code>--oidc-client-id</code> direct the keyless flow to a self-hosted Sigstore stack instead of the public instances. Everyone who verifies those signatures needs the matching <code>--trusted-root</code>. See <a href="#transparency-log-and-trusted-root">Transparency Log and Trusted Root</a>.</p>
-<h2 id="verifying-a-package"><a class="header" href="#verifying-a-package">Verifying a Package</a></h2>
+<h2 id="verifying-a-package-1"><a class="header" href="#verifying-a-package-1">Verifying a Package</a></h2>
 <p>Every command that loads a package accepts <code>--verify</code>: <code>sign</code>, <code>publish</code>, <code>pull</code>, <code>apply</code>, <code>prepare</code>, and <code>engine-config-sync</code>. The flag takes one of three modes.</p>
 <div class="table-wrapper">
 <table>
@@ -1501,6 +1658,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --update-kubeconfig                       Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --values stringArray                      Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
       --vault-password-file string              Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
       --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
   -w, --work-concurrency string                 Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
@@ -1606,6 +1764,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --update-kubeconfig                       Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --values stringArray                      Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
       --vault-password-file string              Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
       --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
   -w, --work-concurrency string                 Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
@@ -1694,6 +1853,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --values stringArray                      Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
       --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
   -w, --work-concurrency string                 Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
@@ -3836,6 +3996,23 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 </ul>
 <p><a href="https://github.com/google/go-containerregistry"><code>github.com/google/go-containerregistry</code></a>’s <code>pkg/registry</code> package was used instead. It’s the same kind of thing Cargoship’s own crane-adjacent tooling already depends on transitively (it was in <code>go.sum</code> already, unused), so promoting it to a direct dependency added exactly one new package to <code>vendor/</code> and nothing else – <code>go mod tidy</code> only moved the existing entry from indirect to direct. <code>pkg/registry.New()</code> returns a plain <code>http.Handler</code> with no storage-backend options to drag in a dependency tree: wrap it in a stock <code>net/http.Server</code>, <code>Listen</code> on <code>:0</code>, done.</p>
 <p>Net effect: same job (an in-memory OCI-compliant registry for tests), zero new transitive dependencies, no build breakage.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-engines-manifest-directory-is-pruned-through-a-glob"><a class="header" href="#why-the-engines-manifest-directory-is-pruned-through-a-glob">Why the engine’s manifest directory is pruned through a glob</a></h1>
+<p>Cargoship prunes the directories it owns. <code>StaleFiles</code> (<code>src/types/distrocfg/managed_files.go</code>) lists every file under each of a distro’s <code>ManagedDirs</code> and removes the ones the current configuration no longer asks for, so a registry CA certificate dropped from a cluster inventory does not sit on every node forever. Pruning runs while a node is stopped and about to be restarted, which is the one moment a file can be removed without the engine noticing it go.</p>
+<p>That works because a managed directory holds only files cargoship put there. Two of the three qualify outright: <code>/etc/cargoship/tls</code> and the state directory were created by cargoship and are cargoship’s to empty. The third is not cargoship’s at all.</p>
+<h2 id="the-manifest-directory-is-shared"><a class="header" href="#the-manifest-directory-is-shared">The manifest directory is shared</a></h2>
+<p><code>&lt;data&gt;/server/manifests</code> belongs to the engine. RKE2 and K3s ship their own manifests there – the CNI chart, CoreDNS, metrics-server, the ingress controller – and lay them down again on startup. Cargoship writes into the same directory because that is where a <code>HelmChartConfig</code> has to live for the engine’s helm controller to read it: the values a package’s <code>spec.config.engine.manifest</code> subtree produces become one <code>&lt;chart&gt;-config.yaml</code> per chart (<code>src/types/distrocfg/rancher_common.go</code>).</p>
+<p>Pruning that directory the way the other two are pruned would delete every manifest the engine put there on the first sync, which takes the cluster apart. Not pruning it at all would leave a <code>HelmChartConfig</code> behind for a chart a package no longer configures, and the helm controller would keep reconciling the chart to values nobody asks for any more – the exact failure <code>StaleFiles</code> exists to prevent, on the files where it matters most, since these are the only files cargoship writes that something else then acts on.</p>
+<h2 id="the-glob"><a class="header" href="#the-glob">The glob</a></h2>
+<p><code>ManagedDir</code> therefore carries an optional <code>Glob</code>, and the manifest directory sets it to <code>*-config.yaml</code> – the same suffix cargoship names its own <code>HelmChartConfig</code> files with. An empty glob means the whole directory is cargoship’s, which is what the other two use.</p>
+<p>The suffix is the whole mechanism for telling the two sets of files apart, so it is a single constant, <code>helmChartConfigSuffix</code>, used both by the writer and by the glob. A rename in one place that missed the other would either start pruning the engine’s files or stop pruning cargoship’s.</p>
+<h2 id="alternatives-considered"><a class="header" href="#alternatives-considered">Alternatives considered</a></h2>
+<p><strong>A separate directory for cargoship’s manifests.</strong> There is no such thing: the helm controller watches one path, and a <code>HelmChartConfig</code> outside it is inert.</p>
+<p><strong>A marker inside each file, read before deleting.</strong> Pruning would then have to read every file in the directory over SSH on every sync, on every node, to decide about a handful of them. The name already carries the same information, and it carries it without a read.</p>
+<p><strong>Recording what was written, as the ufw backend does.</strong> The ufw firewall backend keeps a state file of the rules it applied, because ufw cannot express “replace everything I own”. Here the desired set is already in hand at prune time – <code>filesFor(host)</code> is what drift detection just compared against – so a state file would add a thing to keep in sync for no new information.</p>
+<p><strong>A prefix instead of a suffix.</strong> A prefix would have to be cargoship’s own, which would rename every <code>HelmChartConfig</code> the project has ever written and orphan the files already on upgraded nodes. The suffix is what the files are already called.</p>
+<p>A malformed pattern matches nothing rather than everything (<code>ManagedDir.prunes</code>). Pruning is cleanup, and cleanup is not worth deleting something on a guess.</p>
+<p>See <a href="#package-values">package-values</a> for how a package produces the <code>HelmChartConfig</code> files this glob scopes pruning to.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table"><a class="header" href="#why-the-nftables-backend-shells-out-to-nft-and-owns-a-single-table">Why the nftables backend shells out to <code>nft</code> and owns a single table</a></h1>
 <p>Cargoship’s firewall support (<code>cargoship apply --firewall</code>) renders a backend-neutral <code>firewall.Plan</code> onto whichever firewall a node runs. <code>firewalld</code> and <code>ufw</code> cover Enterprise Linux and Debian-family hosts that use a front end. The <code>nftables</code> backend (<code>src/pkg/firewall/nftables.go</code>) covers the rest: Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all. Several design choices there are not obvious from the code, and each had an alternative that was considered and rejected.</p>
