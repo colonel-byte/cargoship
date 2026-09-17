@@ -5,7 +5,8 @@
       "repo": "https://github.com/k3s-io/k3s",
       "files": [
         "pkg/cli/cmds/server.go",
-        "pkg/cli/cmds/agent.go"
+        "pkg/cli/cmds/agent.go",
+        "pkg/cli/cmds/stage.go"
       ],
       "tags": [
         "v1.37.0+k3s1",
@@ -21,7 +22,8 @@
         "pkg/cli/cmds/server.go",
         "pkg/cli/cmds/agent.go",
         "pkg/cli/cmds/root.go",
-        "pkg/cli/cmds/k3sopts.go"
+        "pkg/cli/cmds/k3sopts.go",
+        "pkg/cli/types.go"
       ],
       "tags": [
         "v1.37.0+rke2r1",

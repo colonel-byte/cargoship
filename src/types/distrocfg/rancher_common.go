@@ -102,6 +102,9 @@ const (
 	keyConfigs = "configs"
 	// keyDataDir is the config.yaml key holding the directory the engine keeps its state in.
 	keyDataDir = "data-dir"
+	// keyDisable is the config.yaml key listing the packaged components the engine must not
+	// deploy. Controllers only -- agents deploy nothing.
+	keyDisable = "disable"
 	// keyETCD passes flags through to etcd. Controllers only.
 	keyETCD = "etcd-arg"
 	// keyEndpoint is the mirrors key holding the addresses to pull from, in order.
@@ -335,6 +338,24 @@ func (d *RancherCommon) validateEngineConfig(ctx context.Context, version string
 			logger.From(ctx).Debug("engine config key not recognized for this distro/version, dropping it from config.yaml", "distro", d.ID, "version", version, "key", k)
 			delete(cfg, k)
 		}
+	}
+
+	if isController {
+		d.warnUnknownAddons(ctx, version, entry.Addons, cfg)
+	}
+}
+
+// warnUnknownAddons warns about any `disable:` entry that isn't a packaged component of this
+// distro/version. Unlike an unrecognized key, the value is left in place: the addon vocabulary
+// is composed (RKE2's, in particular, is derived from its CNI and ingress chart names rather
+// than read off a single declaration), so a false positive here is more likely than in the key
+// check -- and dropping the entry would silently deploy a component the user asked to be
+// without. An empty Addons means that version's component source was never pulled, so there is
+// nothing to check against.
+func (d *RancherCommon) warnUnknownAddons(ctx context.Context, version string, addons []string, cfg dig.Mapping) {
+	for _, name := range gen.UnknownAddons(cfg[keyDisable], addons) {
+		logger.From(ctx).Warn("engine config disables a component this distro/version does not package, leaving it in config.yaml",
+			"distro", d.ID, "version", version, "component", name)
 	}
 }
 

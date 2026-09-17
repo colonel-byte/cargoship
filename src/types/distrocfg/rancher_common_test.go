@@ -103,6 +103,53 @@ func TestValidateEngineConfigChecksAgentVsServerTarget(t *testing.T) {
 	require.Contains(t, agentBuf.String(), `key=cluster-cidr`)
 }
 
+func TestValidateEngineConfigWarnsOnUnknownAddonButKeepsIt(t *testing.T) {
+	ctx, buf := testLoggerContext()
+	d := &RancherCommon{Common: Common{ID: "k3s"}}
+
+	cfg := dig.Mapping{"disable": []any{"traefik", "not-a-component"}}
+
+	d.validateEngineConfig(ctx, "1.35.3-k3s1", true, cfg)
+
+	// Warned about, but written through: dropping it would deploy a component the user
+	// explicitly asked to be without.
+	require.Equal(t, dig.Mapping{"disable": []any{"traefik", "not-a-component"}}, cfg)
+
+	out := buf.String()
+	require.Contains(t, out, "level=WARN")
+	require.Contains(t, out, "does not package")
+	require.Contains(t, out, "component=not-a-component")
+	require.NotContains(t, out, "component=traefik")
+}
+
+func TestValidateEngineConfigRKE2ChartsFromTheCNIUnionAreKnown(t *testing.T) {
+	// rke2-ingress-nginx and rke2-canal are absent from rke2's own DisableItems -- they only
+	// become valid through the chart union disableExceptSelected builds, which is exactly what
+	// example/rke2-*/distro.yaml relies on.
+	ctx, buf := testLoggerContext()
+	d := &RancherCommon{Common: Common{ID: "rke2"}}
+
+	cfg := dig.Mapping{"disable": []any{"rke2-ingress-nginx", "rke2-canal"}}
+
+	d.validateEngineConfig(ctx, "1.35.8-rke2r1", true, cfg)
+
+	require.NotContains(t, buf.String(), "does not package")
+}
+
+func TestValidateEngineConfigSkipsAddonCheckOnAgents(t *testing.T) {
+	// "disable" is a server-only flag, so on an agent the key check has already removed it and
+	// there is nothing left to warn about.
+	ctx, buf := testLoggerContext()
+	d := &RancherCommon{Common: Common{ID: "k3s"}}
+
+	cfg := dig.Mapping{"disable": []any{"not-a-component"}}
+
+	d.validateEngineConfig(ctx, "1.35.3-k3s1", false, cfg)
+
+	require.NotContains(t, cfg, "disable")
+	require.NotContains(t, buf.String(), "does not package")
+}
+
 func TestBuildRegistriesConfigNoAuth(t *testing.T) {
 	registries := []cluster.ZarfClusterRegistries{
 		{

@@ -74,8 +74,12 @@ type AssembleOptions struct {
 	types.RemoteOptions
 }
 
-// logUnknownEngineConfig logs engine config keys the distro version being packaged does not
-// recognize, so a typo is visible here rather than only on every node at install time.
+// keyDisable is the engine config key listing packaged components the engine must not deploy.
+const keyDisable = "disable"
+
+// logUnknownEngineConfig logs engine config keys -- and `disable:` values -- the distro version
+// being packaged does not recognize, so a typo is visible here rather than only on every node at
+// install time.
 //
 // This only ever logs, at debug. The generated schemas cover the versions whose source has been
 // pulled into this build, which is not necessarily the version a package targets, and a package
@@ -106,6 +110,14 @@ func logUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
 			l.Debug("engine config key not recognized for this distro/version, it will be dropped at install time",
 				"distro", d.Spec.Type, "version", d.Spec.Version, "key", k)
 		}
+	}
+
+	// Unlike an unrecognized key, an unrecognized packaged component survives install: the
+	// addon vocabulary is composed rather than read off a flag list, so it is reported and
+	// kept. See RancherCommon.warnUnknownAddons.
+	for _, name := range gen.UnknownAddons(cfg[keyDisable], entry.Addons) {
+		l.Debug("engine config disables a component this distro/version does not package",
+			"distro", d.Spec.Type, "version", d.Spec.Version, "component", name)
 	}
 }
 
