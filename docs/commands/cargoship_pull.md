@@ -30,34 +30,33 @@ $ cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 --verify=always --certifi
 ### Options
 
 ```
+  -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
   -h, --help                                    help for pull
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+      --insecure-skip-tls-verify                Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                              Path to public key file for validating signed packages
       --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
   -o, --output string                           Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
+      --plain-http                              Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --shasum string                           Shasum of the package to pull
+      --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
       --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
+      --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string        Architecture for OCI images and Zarf packages
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --timeout string             Set the timeout for how long functions will last.
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO

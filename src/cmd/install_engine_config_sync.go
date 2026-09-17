@@ -40,11 +40,11 @@ const (
 
 type installEngineConfigSyncOptions struct {
 	InstallCommon
-	workerCon         string
-	labelNodes        bool
-	updateKubeConfig  bool
-	kubeConfigPath    string
-	vaultPasswordFile string
+	workerCon        string
+	labelNodes       bool
+	updateKubeConfig bool
+	kubeConfigPath   string
+	keyFlags
 }
 
 func newInstallEngineConfigSyncCommand() *cobra.Command {
@@ -70,6 +70,8 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
+	addAgeFlags(cmd, &o.keyFlags)
 
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
@@ -88,6 +90,9 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	o.LogFormat = val
 
 	cmd.MarkFlagRequired(InstallEngineConfigSyncConfig)
+
+	addBuildFlags(cmd)
+	addTimeoutFlag(cmd)
 
 	return cmd
 }
@@ -118,15 +123,17 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 	}
 	manager.SetTimout(d)
 
-	vaultPassword, err := clustercfg.ResolveVaultPassword(o.vaultPasswordFile)
+	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
+	// and demanding one would break every plaintext configuration that works today.
+	keyring, err := o.resolveKeyring(cmd)
 	if err != nil {
-		l.Warn("failed to resolve vault password", "err", err)
+		l.Warn("failed to resolve encryption keys", "err", err)
 		return err
 	}
 
 	// Nothing decrypts these until the engine configuration is written, which is well after every
 	// host has been connected to. Check them here, while stopping still costs nothing.
-	if err := clustercfg.VerifyRegistryAuth(manager.Config, vaultPassword); err != nil {
+	if err := clustercfg.VerifyRegistryAuth(manager.Config, keyring); err != nil {
 		l.Warn("failed to decrypt registry credentials", "err", err)
 		return err
 	}
@@ -134,7 +141,7 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 	engineConfigSyncOpts := action.EngineConfigSyncOptions{
 		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
-		VaultPassword:    vaultPassword,
+		Keyring:          keyring,
 		LabelNodes:       o.labelNodes,
 		UpdateKubeConfig: o.updateKubeConfig,
 		KubeConfigPath:   o.kubeConfigPath,

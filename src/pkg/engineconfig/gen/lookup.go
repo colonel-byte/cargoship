@@ -17,6 +17,7 @@ package gen
 import (
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -26,6 +27,14 @@ import (
 type Entry struct {
 	Server any
 	Agent  any
+	// Addons is the set of packaged components this distro/version accepts in `disable:`.
+	// Empty when no component source was pulled for it -- consumers must treat empty as "no
+	// data", not as "nothing is valid".
+	Addons []string
+	// CNIs and IngressControllers are the values `cni:` and `ingress-controller:` accept.
+	// Both are empty for distros that declare no such flag (k3s).
+	CNIs               []string
+	IngressControllers []string
 }
 
 var minorVersionPattern = regexp.MustCompile(`(\d+)\.(\d+)`)
@@ -73,4 +82,51 @@ func Keys(v any) map[string]struct{} {
 		}
 	}
 	return keys
+}
+
+// UnknownAddons returns the entries of a config.yaml `disable:` value that aren't packaged
+// components of the distro/version addons came from, sorted. It reports nothing when addons is
+// empty -- a version whose component source was never pulled has no vocabulary to check against,
+// and treating that as "everything is unknown" would be worse than not checking at all.
+//
+// disable is the raw decoded value, which is a YAML list in practice but is legal as a bare
+// scalar, so both shapes are accepted.
+func UnknownAddons(disable any, addons []string) []string {
+	if len(addons) == 0 {
+		return nil
+	}
+
+	known := make(map[string]struct{}, len(addons))
+	for _, a := range addons {
+		known[a] = struct{}{}
+	}
+
+	var unknown []string
+	for _, v := range disableValues(disable) {
+		if _, ok := known[v]; !ok {
+			unknown = append(unknown, v)
+		}
+	}
+	slices.Sort(unknown)
+	return slices.Compact(unknown)
+}
+
+// disableValues normalizes a decoded `disable:` value into the component names it names.
+func disableValues(disable any) []string {
+	switch v := disable.(type) {
+	case string:
+		return []string{v}
+	case []string:
+		return v
+	case []any:
+		values := make([]string, 0, len(v))
+		for _, el := range v {
+			if s, ok := el.(string); ok {
+				values = append(values, s)
+			}
+		}
+		return values
+	default:
+		return nil
+	}
 }

@@ -90,7 +90,7 @@ jobs:
           # See keepClusterEnvVar in the same file.
           CARGOSHIP_E2E_KEEP_CLUSTER: "1"
           # Everything the test build needs is vendored, so make any accidental network
-          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          # access fail fast. Matches magefiles/utils.go.
           CGO_ENABLED: 0
           GOFLAGS: -mod=vendor
           GOPROXY: "off"
@@ -171,7 +171,7 @@ jobs:
           # journals. See keepClusterEnvVar in src/test/e2e/cluster/main_test.go.
           CARGOSHIP_E2E_KEEP_CLUSTER: "1"
           # Everything the test build needs is vendored, so make any accidental network
-          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          # access fail fast. Matches magefiles/utils.go.
           CGO_ENABLED: 0
           GOFLAGS: -mod=vendor
           GOPROXY: "off"

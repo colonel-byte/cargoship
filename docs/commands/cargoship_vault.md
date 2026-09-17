@@ -2,11 +2,11 @@
 
 ## cargoship vault
 
-Encrypts and decrypts cluster configuration values with Ansible Vault
+Encrypts and decrypts cluster configuration values with Ansible Vault or age
 
 ### Synopsis
 
-Groups the commands that read and write Ansible Vault ciphertext for a cluster configuration. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, using the password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable.
+Groups the commands that read and write encrypted values for a cluster configuration, in either of the two formats cargoship supports: Ansible Vault, keyed by a shared password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable, and age, keyed by public keys given via --age-recipient and read back with --age-identity-file. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time. Which format a value is in is read from the value itself, so one configuration can hold both, and moving between them is 'cargoship vault rekey'. The group is still called vault because renaming it would break every script that calls it.
 
 ### Options
 
@@ -17,26 +17,21 @@ Groups the commands that read and write Ansible Vault ciphertext for a cluster c
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string        Architecture for OCI images and Zarf packages
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --timeout string             Set the timeout for how long functions will last.
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO
 
 * [cargoship](./cargoship.md)	 - CLI for cargoship installs
-* [cargoship vault decrypt](./cargoship_vault_decrypt.md)	 - Decrypts an Ansible Vault value, printing the plaintext
+* [cargoship vault decrypt](./cargoship_vault_decrypt.md)	 - Decrypts an Ansible Vault or age value, printing the plaintext
 * [cargoship vault decrypt-file](./cargoship_vault_decrypt-file.md)	 - Decrypts every registry credential in a config file, in place
 * [cargoship vault decrypt-path](./cargoship_vault_decrypt-path.md)	 - Decrypts the values a config file holds at one or more YAML paths, in place
-* [cargoship vault encrypt](./cargoship_vault_encrypt.md)	 - Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
+* [cargoship vault encrypt](./cargoship_vault_encrypt.md)	 - Encrypts a value with Ansible Vault or age, for use in a registry's user/pass/token fields
 * [cargoship vault encrypt-file](./cargoship_vault_encrypt-file.md)	 - Encrypts every registry credential in a config file, in place
 * [cargoship vault encrypt-path](./cargoship_vault_encrypt-path.md)	 - Encrypts the values a config file already holds at one or more YAML paths, in place
-* [cargoship vault rekey](./cargoship_vault_rekey.md)	 - Re-wraps every encrypted registry credential in a config file, optionally under a new vault password
+* [cargoship vault keygen](./cargoship_vault_keygen.md)	 - Generates an age key pair, or prints the public key of one you already hold
+* [cargoship vault rekey](./cargoship_vault_rekey.md)	 - Re-wraps every encrypted registry credential in a config file, optionally under a new key
 

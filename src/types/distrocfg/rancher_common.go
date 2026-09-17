@@ -66,6 +66,10 @@ const (
 	modeRegistries = "0640"
 )
 
+// helmChartConfigSuffix is what cargoship names the HelmChartConfig it writes for a chart, and
+// what tells its files apart from the engine's own in the same directory.
+const helmChartConfigSuffix = "-config.yaml"
+
 // registryTLSDir is where cargoship writes CA certificates given inline in the cluster
 // configuration. It is cargoship's own directory rather than the engine's, since these files
 // are cargoship's to create, replace, and remove.
@@ -102,6 +106,10 @@ const (
 	keyConfigs = "configs"
 	// keyDataDir is the config.yaml key holding the directory the engine keeps its state in.
 	keyDataDir = "data-dir"
+	// keyDisable is the config.yaml key naming the bundled charts the engine must not install.
+	// Both engines accept it on a server only, so validateEngineConfig drops it from an agent's
+	// config.yaml on its own.
+	keyDisable = "disable"
 	// keyETCD passes flags through to etcd. Controllers only.
 	keyETCD = "etcd-arg"
 	// keyEndpoint is the mirrors key holding the addresses to pull from, in order.
@@ -206,28 +214,6 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host cluster.ZarfHo
 
 		if !host.Metadata.IsLeader {
 			nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.Leader.Configurer.LongHostname(run.Leader))
-		}
-
-		for k, v := range nodeConfig.DigMapping(config.EngineManifest) {
-			values, err := helmValuesContent(v)
-			if err != nil {
-				logger.From(ctx).Warn("failed to render helm values", "chart", k, "error", err)
-				continue
-			}
-			config := dig.Mapping{}
-			config[keyAPIVersion] = "helm.cattle.io/v1"
-			config[keyKind] = "HelmChartConfig"
-			config[keyMetadata] = map[string]string{
-				"name":      k,
-				"namespace": "kube-system",
-			}
-			config[keySpec] = map[string]string{
-				"valuesContent": values,
-			}
-			err = d.writeYAML(ctx, host, config, fmt.Sprintf("%s/server/manifests/%s-config.yaml", d.Data, k))
-			if err != nil {
-				logger.From(ctx).Warn("failed to write", "file", fmt.Sprintf("%s-config.yaml", k))
-			}
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
@@ -336,6 +322,24 @@ func (d *RancherCommon) validateEngineConfig(ctx context.Context, version string
 			delete(cfg, k)
 		}
 	}
+
+	if isController {
+		d.warnUnknownAddons(ctx, version, entry.Addons, cfg)
+	}
+}
+
+// warnUnknownAddons warns about any `disable:` entry that isn't a packaged component of this
+// distro/version. Unlike an unrecognized key, the value is left in place: the addon vocabulary
+// is composed (RKE2's, in particular, is derived from its CNI and ingress chart names rather
+// than read off a single declaration), so a false positive here is more likely than in the key
+// check -- and dropping the entry would silently deploy a component the user asked to be
+// without. An empty Addons means that version's component source was never pulled, so there is
+// nothing to check against.
+func (d *RancherCommon) warnUnknownAddons(ctx context.Context, version string, addons []string, cfg dig.Mapping) {
+	for _, name := range gen.UnknownAddons(cfg[keyDisable], addons) {
+		logger.From(ctx).Warn("engine config disables a component this distro/version does not package, leaving it in config.yaml",
+			"distro", d.ID, "version", version, "component", name)
+	}
 }
 
 func (d *RancherCommon) engineServiceRunning(h *cluster.ZarfHost) bool {
@@ -349,7 +353,7 @@ func (d *RancherCommon) engineServiceRunning(h *cluster.ZarfHost) bool {
 // DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
 // the given host/run/dis, keyed by their full destination path. Content is identical across
 // hosts of the same run (no host-varying fields are involved), unlike config.yaml.
-func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *RancherCommon) DesiredFiles(host cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	if len(run.Registries) > 0 {
@@ -386,7 +390,109 @@ func (d *RancherCommon) DesiredFiles(_ cluster.ZarfHost, run cluster.ZarfRuntime
 		files[filepath.Join(filepath.Dir(d.Config), "pss.yaml")] = DesiredFile{Content: b, Mode: modeConfigFile}
 	}
 
+	if host.IsController() {
+		manifests, err := d.helmChartConfigs(nodeConfig)
+		if err != nil {
+			return nil, err
+		}
+		for path, df := range manifests {
+			files[path] = df
+		}
+	}
+
+	if path, df, ok, err := DistroReleaseDesiredFile(dis, files); err != nil {
+		return nil, err
+	} else if ok {
+		files[path] = df
+	}
+
 	return files, nil
+}
+
+// manifestDir is where the engine reads the manifests it applies on startup and watches for
+// changes afterwards. Only controllers have one.
+func (d *RancherCommon) manifestDir() string {
+	return filepath.Join(d.Data, "server", "manifests")
+}
+
+// helmChartConfigs renders `.spec.config.engine.manifest` into one HelmChartConfig file per
+// chart, keyed by the path it is written to.
+//
+// These are the only files cargoship writes that something else acts on: the engine's own helm
+// controller reads them and reconciles the chart, at whatever point in its startup it gets to
+// them. That makes them safe to rewrite under a running engine -- a changed value reaches the
+// chart without the node being drained -- which is what NoRestart says here.
+func (d *RancherCommon) helmChartConfigs(nodeConfig dig.Mapping) (map[string]DesiredFile, error) {
+	manifests := nodeConfig.DigMapping(config.EngineManifest)
+	if len(manifests) == 0 {
+		return nil, nil
+	}
+	disabled := disabledCharts(nodeConfig)
+
+	files := make(map[string]DesiredFile, len(manifests))
+	for chart, v := range manifests {
+		// A chart the engine was told not to install has nothing to configure. Leaving the
+		// file out of the desired set is also what gets one written by an earlier run removed,
+		// since the manifest directory is pruned against that set.
+		if disabled[chart] {
+			continue
+		}
+		values, err := helmValuesContent(v)
+		if err != nil {
+			return nil, fmt.Errorf("rendering helm values for chart %s: %w", chart, err)
+		}
+		b, err := marshalYAML(dig.Mapping{
+			keyAPIVersion: "helm.cattle.io/v1",
+			keyKind:       "HelmChartConfig",
+			keyMetadata: map[string]string{
+				"name":      chart,
+				"namespace": "kube-system",
+			},
+			keySpec: map[string]string{
+				"valuesContent": values,
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("rendering HelmChartConfig for chart %s: %w", chart, err)
+		}
+		files[filepath.Join(d.manifestDir(), chart+helmChartConfigSuffix)] = DesiredFile{
+			Content:   b,
+			Mode:      modeConfigFile,
+			NoRestart: true,
+		}
+	}
+	return files, nil
+}
+
+// disabledCharts reads the charts named under the engine configuration's disable key, which is
+// how both engines are told to leave a bundled chart uninstalled.
+//
+// The key is a list in every configuration cargoship generates, and that is what a values mapping
+// onto `.config.disable` produces, but both engines also accept it written once as a bare string.
+// Both are read here so a package that spells it either way behaves the same.
+func disabledCharts(nodeConfig dig.Mapping) map[string]bool {
+	disabled := map[string]bool{}
+	add := func(name string) {
+		if name = strings.TrimSpace(name); name != "" {
+			disabled[name] = true
+		}
+	}
+
+	switch v := nodeConfig.DigMapping(config.EngineConfig)[keyDisable].(type) {
+	case string:
+		add(v)
+	case []string:
+		for _, name := range v {
+			add(name)
+		}
+	case []any:
+		for _, name := range v {
+			if s, ok := name.(string); ok {
+				add(s)
+			}
+		}
+	}
+	return disabled
 }
 
 // buildRegistriesConfig builds the registry mapping (mirrors/configs) rke2 and k3s read from
@@ -554,12 +660,17 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	}
 }
 
-// ManagedDirs returns the directories on a host whose contents cargoship owns outright. For
-// rke2 and k3s that is the directory holding the CA certificates written for registries that
-// carry an inline one: every file in it was put there by a registry entry, so a file with no
-// entry left behind it can go.
-func (d *RancherCommon) ManagedDirs() []string {
-	return []string{registryTLSDir}
+// ManagedDirs returns the directories on a host cargoship prunes. For rke2 and k3s that is the
+// directory holding CA certificates, the one holding state metadata -- every file in both was
+// put there by cargoship, so a file with no entry left behind it can go -- and the engine's
+// manifest directory, which cargoship shares with the engine and where it prunes only the
+// HelmChartConfig files it writes itself.
+func (d *RancherCommon) ManagedDirs() []ManagedDir {
+	return []ManagedDir{
+		{Path: registryTLSDir},
+		{Path: StateDir},
+		{Path: d.manifestDir(), Glob: "*" + helmChartConfigSuffix},
+	}
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the engine data

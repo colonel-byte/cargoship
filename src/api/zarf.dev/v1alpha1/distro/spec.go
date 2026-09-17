@@ -103,6 +103,34 @@ type ZarfDistroSpec struct {
 	Actions ZarfDistroActions `json:"actions,omitempty"`
 	// Config holds the distro engine configuration.
 	Config ZarfDistroConfig `json:"config"`
+	// Values holds the default values the package is built with, and the schema they must satisfy.
+	Values ZarfDistroValues `json:"values,omitempty"`
+}
+
+// ZarfDistroValues declares the values a package ships with. Values are the
+// Helm-style configuration described by ZEP-0021: a nested structure addressed
+// by dotted paths, which templates in the package read as .Values.
+type ZarfDistroValues struct {
+	// Files lists the YAML values files cargoship merges, in order, to build the package's default values. Each entry is a path relative to the package definition, an absolute path, or a URL. A later file overrides an earlier one, key by key.
+	Files []string `json:"files,omitempty" jsonschema:"example=values.yaml,example=overrides/prod.yaml,example=https://example.com/values.yaml"`
+	// Schema is the JSON Schema document the merged values must satisfy. Cargoship checks the values against it when it builds the package, and refuses to build when they do not match. The schema must not use $ref.
+	Schema string `json:"schema,omitempty" jsonschema:"example=values.schema.json"`
+	// Mappings project values onto the engine configuration, so that one value a
+	// cluster sets reaches wherever the distro needs it. Each mapping reads the
+	// source path out of the resolved values and writes it to the target path,
+	// which is relative to spec.config.engine. A source the values do not define
+	// is left alone, so the package's own engine configuration stands as the
+	// default.
+	Mappings []ZarfDistroValueMapping `json:"mappings,omitempty"`
+}
+
+// ZarfDistroValueMapping projects one value onto one place in the engine configuration.
+type ZarfDistroValueMapping struct {
+	// Source is the dotted path to read from the resolved values, e.g. .cilium.encryption.enabled
+	Source string `json:"source" jsonschema:"example=.cilium.encryption.enabled"`
+	// Target is the dotted path to write, relative to spec.config.engine,
+	// e.g. .manifest.rke2-cilium.encryption.enabled
+	Target string `json:"target" jsonschema:"example=.manifest.rke2-cilium.encryption.enabled"`
 }
 
 // ZarfDistroActions defines the actions cargoship runs during specific phases of building the distro package.

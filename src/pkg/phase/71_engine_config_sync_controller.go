@@ -35,7 +35,7 @@ func (p *EngineConfigSyncController) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *EngineConfigSyncController) Explanation() string {
-	return "If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially"
+	return "If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially. Chart values are written in place instead, since the engine reconciles them without a restart"
 }
 
 // Prepare the phase
@@ -50,8 +50,8 @@ func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.Zar
 	candidates := p.manager.Config.Spec.Hosts.Controllers()
 	var mu sync.Mutex
 	var matched cluster.ZarfHosts
-	if err := p.parallelDo(ctx, candidates, func(_ context.Context, h *cluster.ZarfHost) error {
-		if p.needsUpdate(h) {
+	if err := p.parallelDo(ctx, candidates, func(ctx context.Context, h *cluster.ZarfHost) error {
+		if p.needsUpdate(ctx, h) {
 			mu.Lock()
 			matched = append(matched, h)
 			mu.Unlock()

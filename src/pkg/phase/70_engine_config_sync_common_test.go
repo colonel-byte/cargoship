@@ -15,6 +15,7 @@
 package phase
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"testing"
@@ -34,9 +35,10 @@ const registriesPath = "/etc/rancher/rke2/registries.yaml"
 type fileConfigurer struct {
 	hostos.Configurer
 
-	files   map[string]string
-	modes   map[string]fs.FileMode
-	statErr error
+	files    map[string]string
+	modes    map[string]fs.FileMode
+	statErr  error
+	writeErr error
 }
 
 func (c *fileConfigurer) FileExist(_ rigos.Host, path string) bool {
@@ -50,6 +52,17 @@ func (c *fileConfigurer) ReadFile(_ rigos.Host, path string) (string, error) {
 		return "", errors.New("no such file")
 	}
 	return content, nil
+}
+
+func (c *fileConfigurer) WriteFile(_ rigos.Host, path string, content string, _ string) error {
+	if c.writeErr != nil {
+		return c.writeErr
+	}
+	if c.files == nil {
+		c.files = make(map[string]string)
+	}
+	c.files[path] = content
+	return nil
 }
 
 func (c *fileConfigurer) Stat(_ rigos.Host, path string, _ ...exec.Option) (*rigos.FileInfo, error) {
@@ -68,10 +81,10 @@ func (c *fileConfigurer) Stat(_ rigos.Host, path string, _ ...exec.Option) (*rig
 type managedDirsDistro struct {
 	distrocfg.Distro
 
-	dirs []string
+	dirs []distrocfg.ManagedDir
 }
 
-func (d *managedDirsDistro) ManagedDirs() []string { return d.dirs }
+func (d *managedDirsDistro) ManagedDirs() []distrocfg.ManagedDir { return d.dirs }
 
 func newSyncPhase(cfg *fileConfigurer, desired map[string]distrocfg.DesiredFile) (*EngineConfigSyncHosts, *cluster.ZarfHost) {
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
@@ -142,9 +155,61 @@ func TestDriftReasonIsPerHost(t *testing.T) {
 	}}
 	drifted := &cluster.ZarfHost{Configurer: &fileConfigurer{}}
 
-	require.False(t, p.needsUpdate(inSync))
-	require.True(t, p.needsUpdate(drifted))
+	require.False(t, p.needsUpdate(context.Background(), inSync))
+	require.True(t, p.needsUpdate(context.Background(), drifted))
 
 	require.Empty(t, p.driftReason(inSync), "a host with nothing to write has no drift to report")
 	require.Equal(t, "registries.yaml (missing)", p.driftReason(drifted))
+}
+
+func TestNeedsUpdateNoRestartOnlyWritesDirectly(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		distrocfg.DistroReleaseFile: {Content: []byte(`{"name":"rke2"}`), Mode: "0600", NoRestart: true},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+
+	fc := &fileConfigurer{files: map[string]string{}}
+	h := &cluster.ZarfHost{Configurer: fc}
+
+	// Should not trigger node update/drain
+	require.False(t, p.needsUpdate(context.Background(), h))
+	// But should have written the NoRestart file directly
+	require.JSONEq(t, `{"name":"rke2"}`, fc.files[distrocfg.DistroReleaseFile])
+}
+
+// A NoRestart file that cannot be written in place is still drift: the host is reported as
+// needing an update so the file is written on the path that drains and rewrites it.
+func TestNeedsUpdateNoRestartWriteFailureKeepsHost(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		distrocfg.DistroReleaseFile: {Content: []byte(`{"name":"rke2"}`), Mode: "0600", NoRestart: true},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+
+	fc := &fileConfigurer{files: map[string]string{}, writeErr: errors.New("write failed")}
+	h := &cluster.ZarfHost{Configurer: fc}
+
+	require.True(t, p.needsUpdate(context.Background(), h))
+	require.NotContains(t, fc.files, distrocfg.DistroReleaseFile)
+}
+
+// A controller is checked against the files only it carries; an agent is not, so a chart
+// configuration that belongs on a controller is never reported missing from an agent.
+func TestFilesForByRole(t *testing.T) {
+	const chartConfig = "/var/lib/rancher/rke2/server/manifests/rke2-cilium-config.yaml"
+
+	p := &EngineConfigSyncHosts{
+		Distro:  &managedDirsDistro{},
+		desired: map[string]distrocfg.DesiredFile{registriesPath: {Content: []byte("---\n")}},
+		controllerDesired: map[string]distrocfg.DesiredFile{
+			registriesPath: {Content: []byte("---\n")},
+			chartConfig:    {Content: []byte("---\n"), NoRestart: true},
+		},
+	}
+
+	controller := &cluster.ZarfHost{Role: cluster.RoleController}
+	require.Contains(t, p.filesFor(controller), chartConfig)
+
+	worker := &cluster.ZarfHost{Role: cluster.RoleWorker}
+	require.NotContains(t, p.filesFor(worker), chartConfig)
+	require.Contains(t, p.filesFor(worker), registriesPath)
 }

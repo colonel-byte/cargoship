@@ -45,6 +45,20 @@ spec:
       - name: ghcr.test.local
         auth:
           token: ghcr-token # rotate me
+      # A proxy registry that merges authentication and tls settings at the top level via a merge key.
+      - name: proxy.test.local
+        proxy:
+          url: registry.test.local
+        <<: &proxy-auth-tls
+          auth:
+            user: proxy-robot
+            pass: proxy-pass
+          tls:
+            <<: *internal-tls
+      - name: proxy-mirror.test.local
+        proxy:
+          url: registry.test.local
+        <<: *proxy-auth-tls
   hosts:
     # Every host reaches its SSH defaults through the merge and names only its own address.
     - hostname: e2e-anchors-01

@@ -18,11 +18,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -100,6 +103,53 @@ func TestValidateEngineConfigChecksAgentVsServerTarget(t *testing.T) {
 	require.NotContains(t, agentCfg, "cluster-cidr")
 	require.Contains(t, agentBuf.String(), "engine config key not recognized")
 	require.Contains(t, agentBuf.String(), `key=cluster-cidr`)
+}
+
+func TestValidateEngineConfigWarnsOnUnknownAddonButKeepsIt(t *testing.T) {
+	ctx, buf := testLoggerContext()
+	d := &RancherCommon{Common: Common{ID: "k3s"}}
+
+	cfg := dig.Mapping{"disable": []any{"traefik", "not-a-component"}}
+
+	d.validateEngineConfig(ctx, "1.35.3-k3s1", true, cfg)
+
+	// Warned about, but written through: dropping it would deploy a component the user
+	// explicitly asked to be without.
+	require.Equal(t, dig.Mapping{"disable": []any{"traefik", "not-a-component"}}, cfg)
+
+	out := buf.String()
+	require.Contains(t, out, "level=WARN")
+	require.Contains(t, out, "does not package")
+	require.Contains(t, out, "component=not-a-component")
+	require.NotContains(t, out, "component=traefik")
+}
+
+func TestValidateEngineConfigRKE2ChartsFromTheCNIUnionAreKnown(t *testing.T) {
+	// rke2-ingress-nginx and rke2-canal are absent from rke2's own DisableItems -- they only
+	// become valid through the chart union disableExceptSelected builds, which is exactly what
+	// example/rke2-*/distro.yaml relies on.
+	ctx, buf := testLoggerContext()
+	d := &RancherCommon{Common: Common{ID: "rke2"}}
+
+	cfg := dig.Mapping{"disable": []any{"rke2-ingress-nginx", "rke2-canal"}}
+
+	d.validateEngineConfig(ctx, "1.35.8-rke2r1", true, cfg)
+
+	require.NotContains(t, buf.String(), "does not package")
+}
+
+func TestValidateEngineConfigSkipsAddonCheckOnAgents(t *testing.T) {
+	// "disable" is a server-only flag, so on an agent the key check has already removed it and
+	// there is nothing left to warn about.
+	ctx, buf := testLoggerContext()
+	d := &RancherCommon{Common: Common{ID: "k3s"}}
+
+	cfg := dig.Mapping{"disable": []any{"not-a-component"}}
+
+	d.validateEngineConfig(ctx, "1.35.3-k3s1", false, cfg)
+
+	require.NotContains(t, cfg, "disable")
+	require.NotContains(t, buf.String(), "does not package")
 }
 
 func TestBuildRegistriesConfigNoAuth(t *testing.T) {
@@ -745,6 +795,52 @@ func TestDesiredFilesEmpty(t *testing.T) {
 	}
 }
 
+func TestDesiredFilesIncludesDistroReleaseMetadata(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{
+		Metadata: distro.ZarfDistroMetadata{
+			Name:              "rancher-rke2-v1.31.0",
+			Version:           "v1.31.0",
+			AggregateChecksum: "abc123hash",
+		},
+		Spec: distro.ZarfDistroSpec{
+			Type:    "rke2",
+			Version: "v1.31.0+rke2r1",
+			Config: distro.ZarfDistroConfig{
+				ImagesConfig: distro.ZarfDistroImageConfig{
+					Images: []string{"rancher/rke2-runtime:v1.31.0", "rancher/pause:3.9"},
+				},
+				Engine: dig.Mapping{
+					config.EngineAudit: dig.Mapping{"rules": []string{"audit"}},
+				},
+			},
+		},
+	}
+	run := cluster.ZarfRuntimeMeta{}
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	require.NoError(t, err)
+
+	metaFile, ok := got[DistroReleaseFile]
+	require.True(t, ok, "DistroReleaseFile must be present in DesiredFiles")
+	require.Equal(t, modeConfigFile, metaFile.Mode)
+
+	var parsed struct {
+		Name              string   `json:"name"`
+		DistroVersion     string   `json:"distroVersion"`
+		AggregateChecksum string   `json:"aggregateChecksum"`
+		Images            []string `json:"images"`
+		ManagedFiles      []string `json:"managedFiles"`
+	}
+	err = json.Unmarshal(metaFile.Content, &parsed)
+	require.NoError(t, err)
+	require.Equal(t, "rancher-rke2-v1.31.0", parsed.Name)
+	require.Equal(t, "v1.31.0+rke2r1", parsed.DistroVersion)
+	require.Equal(t, "abc123hash", parsed.AggregateChecksum)
+	require.Equal(t, []string{"rancher/rke2-runtime:v1.31.0", "rancher/pause:3.9"}, parsed.Images)
+	require.Contains(t, parsed.ManagedFiles, filepath.Join(filepath.Dir(d.Config), "audit.yaml"))
+}
+
 func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 	d := newTestRancher()
 	dis := distro.ZarfDistro{}
@@ -1360,4 +1456,134 @@ func TestHelmValuesContent(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// manifestEngine is an engine configuration whose manifest section carries both kinds of chart
+// entry the section allows: a mapping cargoship marshals, and a YAML string it passes through.
+func manifestEngine() dig.Mapping {
+	return dig.Mapping{
+		config.EngineManifest: dig.Mapping{
+			"rke2-cilium": dig.Mapping{
+				"encryption": dig.Mapping{"enabled": true},
+			},
+			"rancher-vsphere-cpi": "vCenter:\n  host: \"\"\n",
+		},
+	}
+}
+
+// The HelmChartConfig files are part of the desired set, so they are written, checked for drift,
+// and pruned the way every other file cargoship puts on a host is.
+func TestDesiredFilesHelmChartConfigs(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = manifestEngine()
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	require.NoError(t, err)
+
+	manifests := filepath.Join(d.Data, "server", "manifests")
+	ciliumPath := filepath.Join(manifests, "rke2-cilium-config.yaml")
+	vspherePath := filepath.Join(manifests, "rancher-vsphere-cpi-config.yaml")
+	require.Len(t, got, 2)
+	require.Contains(t, got, ciliumPath)
+	require.Contains(t, got, vspherePath)
+
+	// The engine's helm controller reconciles these on its own, so a changed value does not
+	// have to wait for a node to be drained and restarted.
+	require.True(t, got[ciliumPath].NoRestart, "a chart config does not need the engine restarted")
+	require.Equal(t, modeConfigFile, got[ciliumPath].Mode)
+
+	var chartConfig dig.Mapping
+	require.NoError(t, yaml.Unmarshal(got[ciliumPath].Content, &chartConfig))
+	require.Equal(t, "HelmChartConfig", chartConfig["kind"])
+	require.Equal(t, "helm.cattle.io/v1", chartConfig["apiVersion"])
+	require.Equal(t, "rke2-cilium", chartConfig.DigMapping("metadata")["name"])
+	require.Equal(t, "kube-system", chartConfig.DigMapping("metadata")["namespace"])
+	require.Contains(t, chartConfig.DigString("spec", "valuesContent"), "enabled: true")
+
+	// A string entry is the values file's own contents, and reaches the chart as written.
+	var vsphereConfig dig.Mapping
+	require.NoError(t, yaml.Unmarshal(got[vspherePath].Content, &vsphereConfig))
+	require.Equal(t, "vCenter:\n  host: \"\"\n", vsphereConfig.DigString("spec", "valuesContent"))
+}
+
+// Only controllers read the manifest directory, so only controllers are given anything to put
+// in it.
+func TestDesiredFilesHelmChartConfigsControllerOnly(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = manifestEngine()
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
+	require.NoError(t, err)
+	require.Empty(t, got, "an agent carries no chart configuration")
+}
+
+// A chart the engine was told not to install has nothing to configure, so cargoship writes no
+// HelmChartConfig for it. Its neighbours are unaffected, which is what keeps a package that
+// disables one bundled chart from losing the configuration of the rest.
+func TestDesiredFilesHelmChartConfigsSkipsDisabledCharts(t *testing.T) {
+	manifests := filepath.Join(newTestRancher().Data, "server", "manifests")
+	ciliumPath := filepath.Join(manifests, "rke2-cilium-config.yaml")
+	vspherePath := filepath.Join(manifests, "rancher-vsphere-cpi-config.yaml")
+
+	tests := map[string]struct {
+		disable any
+		want    []string
+	}{
+		"a list is the shape a values mapping produces": {
+			disable: []any{"rke2-cilium"},
+			want:    []string{vspherePath},
+		},
+		"a typed list is the shape the generated config carries": {
+			disable: []string{"rke2-cilium", "rancher-vsphere-cpi"},
+		},
+		"the engines also accept a single name written bare": {
+			disable: "rke2-cilium",
+			want:    []string{vspherePath},
+		},
+		"surrounding whitespace is not part of the name": {
+			disable: []any{" rke2-cilium\n"},
+			want:    []string{vspherePath},
+		},
+		"a name no chart is configured under does nothing": {
+			disable: []any{"rke2-ingress-nginx"},
+			want:    []string{ciliumPath, vspherePath},
+		},
+		"an empty entry disables nothing": {
+			disable: []any{""},
+			want:    []string{ciliumPath, vspherePath},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			d := newTestRancher()
+			dis := distro.ZarfDistro{}
+			dis.Spec.Config.Engine = manifestEngine()
+			dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyDisable: tt.disable}
+
+			got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+			require.NoError(t, err)
+
+			paths := slices.Collect(maps.Keys(got))
+			slices.Sort(paths)
+			want := slices.Clone(tt.want)
+			slices.Sort(want)
+			require.Equal(t, want, paths)
+		})
+	}
+}
+
+// The disable key is the engine's own, so a package that never mentions it is written exactly as
+// it was before disabling a chart was something values could ask for.
+func TestDesiredFilesHelmChartConfigsWithoutDisable(t *testing.T) {
+	d := newTestRancher()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Engine = manifestEngine()
+	dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyNodeLabel: []string{"role=worker"}}
+
+	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
 }

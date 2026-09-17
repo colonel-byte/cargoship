@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "rancher-rke2-multi-cni-cilium values",
+  "description": "Generated in magefiles/templates/rke2/values.schema.json.tmpl.",
+  "type": "object",
+  "properties": {
+    "cilium": {
+      "type": "object",
+      "properties": {
+        "encryption": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Encrypt pod-to-pod traffic with WireGuard."
+            }
+          },
+          "additionalProperties": false
+        },
+        "l2announcements": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Announce LoadBalancer addresses over ARP."
+            }
+          },
+          "additionalProperties": false
+        },
+        "hubble": {
+          "type": "object",
+          "properties": {
+            "ui": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Run the Hubble UI and its relay."
+                },
+                "ipv6": {
+                  "type": "boolean",
+                  "description": "Serve the Hubble UI frontend over IPv6."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "addons": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "type": "array",
+          "description": "The bundled charts rke2 is told not to install. Replaces the package's own list rather than adding to it. The components rke2 1.36 packages are offered as suggestions, not as the whole vocabulary: any rke2- chart is accepted, including ones the engine bundles without advertising them under --disable, and cargoship warns when it configures a node with a name this build does not package.",
+          "items": {
+            "type": "string",
+            "pattern": "^rke2-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "examples": [
+              "rke2-calico",
+              "rke2-calico-crd",
+              "rke2-canal",
+              "rke2-canal-crd",
+              "rke2-cilium",
+              "rke2-cilium-crd",
+              "rke2-coredns",
+              "rke2-flannel",
+              "rke2-flannel-crd",
+              "rke2-ingress-nginx",
+              "rke2-ingress-nginx-crd",
+              "rke2-metrics-server",
+              "rke2-multus",
+              "rke2-snapshot-controller",
+              "rke2-snapshot-controller-crd",
+              "rke2-snapshot-validation-webhook",
+              "rke2-traefik",
+              "rke2-traefik-crd"
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -55,6 +55,8 @@ type ZarfFile struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Target is the path on the remote host where cargoship writes the file.
 	Target string `json:"target"`
+	// Template renders the file's contents as a Go template against the package's values before cargoship uploads it. It defaults to false, because most files are binaries or archives that a template pass would corrupt.
+	Template *bool `json:"template,omitempty"`
 	// TargetIsDir indicates that Target is a directory. Cargoship uses this mainly for image uploads.
 	TargetIsDir bool `json:"isDirectory,omitempty"`
 	// User is the user that owns the file.
@@ -100,6 +102,13 @@ func (s BinarySelector) MatchesArch(arch api.Arch) bool {
 		return true
 	}
 	return slices.Contains(s.Arch, arch)
+}
+
+// IsTemplate reports whether this file's contents are rendered against the package's
+// values before upload. Unset means no, so a package that says nothing about templating
+// ships the bytes it was built with.
+func (u *ZarfFile) IsTemplate() bool {
+	return u.Template != nil && *u.Template
 }
 
 // String returns Name. If Name is empty, it returns Source instead.

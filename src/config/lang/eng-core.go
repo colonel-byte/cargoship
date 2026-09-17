@@ -58,12 +58,16 @@ const (
 	CmdInstallFlagDryRun = "Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm."
 	// CmdInstallFlagTimeout install flag timeout
 	CmdInstallFlagTimeout = "Set the timeout for how long functions will last."
+	// CmdInstallFlagValues install flag values
+	CmdInstallFlagValues = "Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file."
 	// CmdInstallFlagVaultPasswordFile install flag vault password file
 	CmdInstallFlagVaultPasswordFile = "Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
 	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. \"25%\"), set to 0 for unlimited."
 	// CmdInstallHostUpdate install flag host
 	CmdInstallHostUpdate = "Whether to update all the host nodes /etc/hosts file."
+	// CmdInstallAllowUnmanagedNodes install flag allow unmanaged nodes
+	CmdInstallAllowUnmanagedNodes = "Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone."
 	// CmdInstallLabelNodes install flag label nodes
 	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig."
 	// CmdInstallKubeConfigPath install flag kubeconfig path
@@ -87,55 +91,69 @@ const (
 	// CmdSha256SumFlagExtractPath flag description
 	CmdSha256SumFlagExtractPath = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
 	// CmdVaultShort vault short
-	CmdVaultShort = "Encrypts and decrypts cluster configuration values with Ansible Vault"
+	CmdVaultShort = "Encrypts and decrypts cluster configuration values with Ansible Vault or age"
 	// CmdVaultLong vault long
-	CmdVaultLong = "Groups the commands that read and write Ansible Vault ciphertext for a cluster configuration. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, using the password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable."
+	CmdVaultLong = "Groups the commands that read and write encrypted values for a cluster configuration, in either of the two formats cargoship supports: Ansible Vault, keyed by a shared password given via --vault-password-file or the CARGOSHIP_VAULT_PASSWORD environment variable, and age, keyed by public keys given via --age-recipient and read back with --age-identity-file. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time. Which format a value is in is read from the value itself, so one configuration can hold both, and moving between them is 'cargoship vault rekey'. The group is still called vault because renaming it would break every script that calls it."
 	// CmdVaultEncryptDeprecated deprecation notice for the top-level vault-encrypt spelling
 	CmdVaultEncryptDeprecated = `use "cargoship vault encrypt" instead.`
 	// CmdVaultEncryptShort vault encrypt short
-	CmdVaultEncryptShort = "Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields"
+	CmdVaultEncryptShort = "Encrypts a value with Ansible Vault or age, for use in a registry's user/pass/token fields"
 	// CmdVaultEncryptLong vault encrypt long
-	CmdVaultEncryptLong = "Encrypts VALUE with Ansible Vault, producing a $ANSIBLE_VAULT-prefixed string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal."
+	CmdVaultEncryptLong = "Encrypts VALUE, producing a string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. With --age-recipient or --age-recipients-file the output is armored age ciphertext beginning with -----BEGIN AGE ENCRYPTED FILE-----; otherwise it is Ansible Vault ciphertext beginning with $ANSIBLE_VAULT. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal."
 	// CmdVaultEncryptFlagPasswordFile flag description
 	CmdVaultEncryptFlagPasswordFile = "Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable."
+	// CmdFlagAgeIdentityFile flag description
+	CmdFlagAgeIdentityFile = "Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE."
+	// CmdFlagAgeRecipient flag description
+	CmdFlagAgeRecipient = "A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault."
+	// CmdFlagAgeRecipientsFile flag description
+	CmdFlagAgeRecipientsFile = "Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file."
 	// CmdVaultEncryptPathShort vault encrypt-path short
 	CmdVaultEncryptPathShort = "Encrypts the values a config file already holds at one or more YAML paths, in place"
 	// CmdVaultEncryptPathLong vault encrypt-path long
-	CmdVaultEncryptPathLong = "Encrypts the values FILE holds at each YAML_PATH with Ansible Vault and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has encrypted, so a path that is missing or encrypted already leaves FILE as it was rather than partly rewritten. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, and warns about a path anywhere else, because nothing unwraps a value encrypted elsewhere."
+	CmdVaultEncryptPathLong = "Encrypts the values FILE holds at each YAML_PATH and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has encrypted, so a path that is missing or encrypted already leaves FILE as it was rather than partly rewritten. Cargoship decrypts a registry's user/pass/token and tls.ca fields at apply time, and warns about a path anywhere else, because nothing unwraps a value encrypted elsewhere."
 	// CmdVaultEncryptPathFlagDryRun flag description
 	CmdVaultEncryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultEncryptPathFlagForce flag description
-	CmdVaultEncryptPathFlagForce = "Encrypt the value even though it is Ansible Vault ciphertext already, wrapping it a second time."
+	CmdVaultEncryptPathFlagForce = "Encrypt the value even though it is encrypted already, wrapping it a second time."
 	// CmdVaultEncryptFileShort vault encrypt-file short
 	CmdVaultEncryptFileShort = "Encrypts every registry credential in a config file, in place"
 	// CmdVaultEncryptFileLong vault encrypt-file long
-	CmdVaultEncryptFileLong = "Encrypts every registry credential FILE holds that cargoship decrypts at apply time -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly vaulted configuration finishes the job and running it twice changes nothing the second time."
+	CmdVaultEncryptFileLong = "Encrypts every registry credential FILE holds that cargoship decrypts at apply time -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes them back to FILE as block scalars, leaving comments, key order, and the rest of the document untouched. A field that is absent, empty, or encrypted already is skipped, so running this over a partly encrypted configuration finishes the job and running it twice changes nothing the second time. That skip applies to a value in the other format too: this command never moves a credential between Ansible Vault and age, which is what 'cargoship vault rekey' is for. Every credential skipped for a reason worth knowing about is reported, so a run that changes nothing says which values it left alone and why."
 	// CmdVaultEncryptFileFlagDryRun flag description
 	CmdVaultEncryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultEncryptFileFlagForce flag description
-	CmdVaultEncryptFileFlagForce = "Encrypt values that are Ansible Vault ciphertext already, wrapping them a second time."
+	CmdVaultEncryptFileFlagForce = "Encrypt values that are encrypted already, wrapping them a second time."
 	// CmdVaultRekeyFlagNewPasswordFile flag description
-	CmdVaultRekeyFlagNewPasswordFile = "Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the password the file already uses. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened."
+	CmdVaultRekeyFlagNewPasswordFile = "Path to a file containing the Ansible Vault password to move to. Omit it to re-salt every value under the key the file already uses, or pass --age-recipient instead to move the file onto age. Deliberately without an environment fallback: the environment holds the password the file is vaulted under now, so an omitted flag would otherwise look like a rotation that never happened."
 	// CmdVaultRekeyFlagDryRun flag description
 	CmdVaultRekeyFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
+	// CmdVaultKeygenShort vault keygen short
+	CmdVaultKeygenShort = "Generates an age key pair, or prints the public key of one you already hold"
+	// CmdVaultKeygenLong vault keygen long
+	CmdVaultKeygenLong = "Generates an age key pair in the format age-keygen writes, so that the age distribution is not a prerequisite for encrypting a configuration with age, and the file stays readable by 'age --decrypt' and anything else that speaks the format. The identity -- the private key, AGE-SECRET-KEY-1... -- goes to --output, or to stdout when that is omitted; the recipient -- the public key, age1... -- goes to stderr, so that the file holds the private key alone and the public key can be copied straight into a recipients file. With --public-key it generates nothing and instead prints the public keys held in IDENTITY_FILE, or in stdin when no file is given, which is how a recipient is recovered from a private key you still have. A key pair is not registered anywhere: pass the public key to 'cargoship vault encrypt' as --age-recipient, and the file back as --age-identity-file to read those values again."
+	// CmdVaultKeygenFlagOutput flag description
+	CmdVaultKeygenFlagOutput = "Path to write the generated identity to, created with mode 0600. An existing file is never overwritten, because anything encrypted to the key it holds would become unreadable. Omit it to write to stdout instead."
+	// CmdVaultKeygenFlagPublicKey flag description
+	CmdVaultKeygenFlagPublicKey = "Print the public keys held in IDENTITY_FILE instead of generating a key pair. Reads stdin when no file is given. This reads age identity files; the public key of an SSH key is in the \".pub\" file beside it."
 	// CmdVaultDecryptShort vault decrypt short
-	CmdVaultDecryptShort = "Decrypts an Ansible Vault value, printing the plaintext"
+	CmdVaultDecryptShort = "Decrypts an Ansible Vault or age value, printing the plaintext"
 	// CmdVaultDecryptLong vault decrypt long
-	CmdVaultDecryptLong = "Decrypts VALUE, a $ANSIBLE_VAULT-prefixed string produced by 'cargoship vault encrypt', and prints the plaintext to stdout. If VALUE is omitted, it is read from stdin. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file."
+	CmdVaultDecryptLong = "Decrypts VALUE, a string produced by 'cargoship vault encrypt' in either format, and prints the plaintext to stdout. The format is read from the value itself: a $ANSIBLE_VAULT prefix needs the vault password, an -----BEGIN AGE ENCRYPTED FILE----- prefix needs --age-identity-file. If VALUE is omitted, it is read from stdin, which is the easier way to hand over an age value, since one begins with dashes and is read as a flag when given as an argument; after the flags, '--' works too. The plaintext is written as it is, with a trailing newline added only when it does not already end in one, so that a multi-line value can be redirected straight into a file."
 	// CmdVaultDecryptPathShort vault decrypt-path short
 	CmdVaultDecryptPathShort = "Decrypts the values a config file holds at one or more YAML paths, in place"
 	// CmdVaultDecryptPathLong vault decrypt-path long
-	CmdVaultDecryptPathLong = "Decrypts the Ansible Vault values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of 'cargoship vault encrypt-path', and leaves the values readable to anyone who can read the file."
+	CmdVaultDecryptPathLong = "Decrypts the encrypted values FILE holds at each YAML_PATH and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. Each YAML_PATH names a value inside FILE rather than a file on disk: it is a YAML path such as '.spec.config.registries[0].auth.pass', and the leading '$' go-yaml uses is optional. Quote it, since it usually contains characters a shell would otherwise expand. Give as many as you like -- FILE is written once, after every one of them has decrypted, so a path that is missing or plaintext already leaves FILE as it was. This is the inverse of 'cargoship vault encrypt-path', and leaves the values readable to anyone who can read the file."
 	// CmdVaultDecryptPathFlagDryRun flag description
 	CmdVaultDecryptPathFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdVaultDecryptFileShort vault decrypt-file short
 	CmdVaultDecryptFileShort = "Decrypts every registry credential in a config file, in place"
 	// CmdVaultDecryptFileLong vault decrypt-file long
-	CmdVaultDecryptFileLong = "Decrypts every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of 'cargoship vault encrypt-file', and leaves the credentials readable to anyone who can read the file."
+	CmdVaultDecryptFileLong = "Decrypts every encrypted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- and writes the plaintext back to FILE, leaving comments, key order, and the rest of the document untouched. A field that is not encrypted is skipped. This is the inverse of 'cargoship vault encrypt-file', and leaves the credentials readable to anyone who can read the file."
 	// CmdVaultRekeyShort vault rekey short
-	CmdVaultRekeyShort = "Re-wraps every encrypted registry credential in a config file, optionally under a new vault password"
+	CmdVaultRekeyShort = "Re-wraps every encrypted registry credential in a config file, optionally under a new key"
 	// CmdVaultRekeyLong vault rekey long
-	CmdVaultRekeyLong = "Re-wraps every vaulted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- under the password named by --new-vault-password-file, leaving comments, key order, and the rest of the document untouched. With that flag omitted the values are re-wrapped under the password they already carry, which gives every one of them a fresh salt and fresh ciphertext without changing the password. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the old password, and the command stops without touching FILE if one is not, because a configuration vaulted under two passwords is one no password can read back."
+	CmdVaultRekeyLong = "Re-wraps every encrypted registry credential FILE holds -- each registry's auth.user, auth.pass, auth.token and tls.ca -- under the key named by --new-vault-password-file or by --age-recipient, leaving comments, key order, and the rest of the document untouched. Naming age recipients while reading with the vault password is how a configuration moves from Ansible Vault to age; naming neither re-wraps the values under the key they already carry, which gives every one of them fresh ciphertext without changing the key. The plaintext is never written to FILE: each value is decrypted and encrypted again in memory, which is what makes this safer than a decrypt-file followed by an encrypt-file, where the file holds the credentials in the clear in between. Every encrypted value has to be readable with the keys given, and the command stops without touching FILE if one is not, because a configuration encrypted under two keys is one no single key can read back."
 	// CmdVaultDecryptFileFlagDryRun flag description
 	CmdVaultDecryptFileFlagDryRun = "Print the resulting document to stdout instead of writing it back to FILE."
 	// CmdViperErrLoadingConfigFile error text
@@ -164,6 +182,31 @@ const (
 	CmdPackageFlagVerify = "Verify the Cargoship package signature"
 	// CmdPackageCreateFlagReproducible create flag reproducible
 	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package."
+	// CmdSchemaShort schema short
+	CmdSchemaShort = "Writes out a JSON Schema for one of cargoship's own file formats"
+	// CmdSchemaLong schema long
+	CmdSchemaLong = "Writes out the JSON Schema for KIND -- 'inventory' for a cluster file, 'package' for a distro.yaml, 'config' for a cargoship config file -- so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to --output. Point an editor at a written file with a '# yaml-language-server: $schema=<path>' comment on the first line. With --package, the package's own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship -- so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation."
+	// CmdSchemaFlagOutput flag description
+	CmdSchemaFlagOutput = "Path to write the schema to. Omit it to write to stdout."
+	// CmdSchemaFlagPackage flag description
+	CmdSchemaFlagPackage = "Graft a package's own values schema onto spec.config.values. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
+
+	// CmdValidateShort validate short
+	CmdValidateShort = "Checks a cluster inventory, package definition, or config file against its schema"
+	// CmdValidateLong validate long
+	CmdValidateLong = "Checks one or more files against the JSON Schema cargoship generates for that file format, " +
+		"reporting every problem rather than the first. Cargoship parses these files without strict key checking, " +
+		"so a misspelled key is dropped rather than reported; this catches that, along with a wrong type and a value " +
+		"outside an enumerated list. The schema is read from the binary, so no network access is needed.\n\n" +
+		"The schema is chosen from the document's own 'kind' field. A cargoship config file declares no kind and has " +
+		"to be named with --kind.\n\n" +
+		"spec.config.values is untyped in the inventory schema, because its shape belongs to whichever package is " +
+		"being installed. Pass --package to check it as well."
+	// CmdValidateFlagKind flag description
+	CmdValidateFlagKind = "Name the schema to check against instead of reading the document's 'kind' field. Required for a cargoship config file, which declares no kind."
+	// CmdValidateFlagPackage flag description
+	CmdValidateFlagPackage = "Check spec.config.values against a package's own values schema. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
+
 	// CmdDistroSignShort sign short
 	CmdDistroSignShort = "Signs an existing Cargoship distro package"
 	// CmdDistroSignLong sign long

@@ -27,6 +27,20 @@ metadata:
 spec:
   type: rke2
   version: 1.36.4-rke2r1
+  # The values a cluster may override in its inventory file, under spec.config.values,
+  # or on the command line with --values. Every flavor exposes the bundled charts rke2
+  # installs; the cilium flavors also expose the chart's own settings, so the same
+  # package installs with or without encryption, hubble ui, and the rest, without being
+  # rebuilt.
+  values:
+    files:
+      - values.yaml
+    schema: values.schema.json
+    mappings:
+      # A mapping copies the value as it stands, list included, so the charts a cluster
+      # names under addons.disabled become the engine's own disable list.
+      - source: .addons.disabled
+        target: .config.disable
   actions:
     onCreate:
       before:
@@ -50,8 +64,8 @@ spec:
         cni:
           - canal
         disable-cloud-controller: true
-        disable:
-          - rke2-ingress-nginx
+        # There is no disable list here: .addons.disabled supplies it, and this package's
+        # own values.yaml carries the entry that used to be written in this file.
         embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB
@@ -108,6 +122,13 @@ spec:
                   - rook-ceph
                   - zarf
     os:
+      env:
+        CRI_CONFIG_FILE: |-
+          /var/lib/rancher/rke2/agent/etc/crictl.yaml
+        KUBECONFIG: |-
+          /etc/rancher/rke2/rke2.yaml
+        RKE2_CONFIG_FILE: |-
+          /etc/rancher/rke2/config.yaml
       sysctl:
         # Istio related sysctl overrides
         "fs.inotify.max_user_watches": 11048576

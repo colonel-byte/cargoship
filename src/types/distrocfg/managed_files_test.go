@@ -49,7 +49,7 @@ func TestStaleFiles(t *testing.T) {
 		"/etc/rancher/rke2/registries.yaml":         {Content: []byte("---\n"), Mode: modeRegistries},
 	}
 
-	got := StaleFiles(&cluster.ZarfHost{}, []string{registryTLSDir}, desired)
+	got := StaleFiles(&cluster.ZarfHost{}, []ManagedDir{{Path: registryTLSDir}}, desired)
 
 	require.Equal(t, []string{
 		"/etc/cargoship/tls/also-gone.example.com.crt",
@@ -62,7 +62,7 @@ func TestStaleFilesNothingToDo(t *testing.T) {
 	withListing(t, map[string][]string{registryTLSDir: nil})
 
 	require.Nil(t, StaleFiles(&cluster.ZarfHost{}, nil, nil), "no managed directories, no stale files")
-	require.Nil(t, StaleFiles(&cluster.ZarfHost{}, []string{registryTLSDir}, nil), "an empty directory has no stale files")
+	require.Nil(t, StaleFiles(&cluster.ZarfHost{}, []ManagedDir{{Path: registryTLSDir}}, nil), "an empty directory has no stale files")
 }
 
 func TestRemoveStaleFiles(t *testing.T) {
@@ -79,7 +79,7 @@ func TestRemoveStaleFiles(t *testing.T) {
 		"/etc/cargoship/tls/kept.example.com.crt": {Content: []byte(testCAPEM), Mode: modeConfigFile},
 	}
 
-	require.NoError(t, RemoveStaleFiles(host, []string{registryTLSDir}, desired))
+	require.NoError(t, RemoveStaleFiles(host, []ManagedDir{{Path: registryTLSDir}}, desired))
 	require.NotContains(t, fake.files, "/etc/cargoship/tls/gone.example.com.crt", "the stale certificate is removed")
 	require.Contains(t, fake.files, "/etc/cargoship/tls/kept.example.com.crt", "the desired certificate is left alone")
 }
@@ -91,12 +91,42 @@ func TestRemoveStaleFilesError(t *testing.T) {
 
 	host := &cluster.ZarfHost{Configurer: &fakeConfigurer{deleteFileErr: errors.New("permission denied")}}
 
-	err := RemoveStaleFiles(host, []string{registryTLSDir}, nil)
+	err := RemoveStaleFiles(host, []ManagedDir{{Path: registryTLSDir}}, nil)
 	require.ErrorContains(t, err, "/etc/cargoship/tls/gone.example.com.crt")
 }
 
 // The CA directory is managed: cargoship writes every file in it, so it can also remove them.
+// The manifest directory is shared with the engine, so only what cargoship names there is its
+// to remove.
 func TestManagedDirs(t *testing.T) {
-	d := &RancherCommon{}
-	require.Equal(t, []string{registryTLSDir}, d.ManagedDirs())
+	d := &RancherCommon{Data: "/var/lib/rancher/rke2"}
+	require.Equal(t, []ManagedDir{
+		{Path: registryTLSDir},
+		{Path: StateDir},
+		{Path: "/var/lib/rancher/rke2/server/manifests", Glob: "*-config.yaml"},
+	}, d.ManagedDirs())
+}
+
+// Pruning a directory cargoship shares with the engine takes the files it writes there and
+// nothing else: the engine's own bundled charts live in the same directory, and removing one
+// would take a component of the cluster with it.
+func TestStaleFilesGlob(t *testing.T) {
+	const manifests = "/var/lib/rancher/rke2/server/manifests"
+	withListing(t, map[string][]string{
+		manifests: {
+			manifests + "/rke2-cilium-config.yaml",
+			manifests + "/rancher-vsphere-cpi-config.yaml",
+			manifests + "/rke2-coredns.yaml",
+			manifests + "/rke2-ingress-nginx.yaml",
+		},
+	})
+
+	desired := map[string]DesiredFile{
+		manifests + "/rke2-cilium-config.yaml": {Content: []byte("---\n"), Mode: modeConfigFile},
+	}
+
+	got := StaleFiles(&cluster.ZarfHost{}, []ManagedDir{{Path: manifests, Glob: "*-config.yaml"}}, desired)
+
+	require.Equal(t, []string{manifests + "/rancher-vsphere-cpi-config.yaml"}, got,
+		"only a chart config the engine configuration no longer asks for is stale")
 }

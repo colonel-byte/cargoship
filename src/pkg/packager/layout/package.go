@@ -27,16 +27,21 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/internal/cfg"
+	"github.com/colonel-byte/cargoship/src/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/src/pkg/helpers"
 	"github.com/colonel-byte/cargoship/src/pkg/utils"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/signing"
@@ -215,6 +220,18 @@ func validateDistroPaths(dis distro.ZarfDistro) error {
 	if !isCleanPath(dis.Metadata.Version) {
 		return fmt.Errorf("package metadata version %q would result in an invalid path", dis.Metadata.Version)
 	}
+	// Values paths in a built package name files inside the package. Anything
+	// else - an absolute path, a traversal, a URL left over from the source
+	// distro.yaml - would make installing the package read, or fetch, something
+	// outside it.
+	for _, f := range dis.Spec.Values.Files {
+		if !isContainedPath(f) {
+			return fmt.Errorf("values file %q is not contained in the package", f)
+		}
+	}
+	if dis.Spec.Values.Schema != "" && !isContainedPath(dis.Spec.Values.Schema) {
+		return fmt.Errorf("values schema %q is not contained in the package", dis.Spec.Values.Schema)
+	}
 	return nil
 }
 
@@ -222,6 +239,158 @@ func validateDistroPaths(dis distro.ZarfDistro) error {
 // it must not be ".." and must not contain path separators.
 func isCleanPath(s string) bool {
 	return s != ".." && !strings.ContainsAny(s, `/\`)
+}
+
+// isContainedPath returns true if s is a relative path that stays inside the
+// directory it is resolved against. Unlike isCleanPath it allows separators,
+// since the paths it guards name files in nested package directories.
+func isContainedPath(s string) bool {
+	if s == "" || helpers.IsURL(s) || filepath.IsAbs(s) || path.IsAbs(s) {
+		return false
+	}
+	// A Windows volume ("C:values") is absolute on Windows only, so reject it
+	// everywhere rather than let a package validate on one OS and not another.
+	if strings.ContainsRune(s, ':') {
+		return false
+	}
+	clean := path.Clean(filepath.ToSlash(s))
+	return clean != ".." && !strings.HasPrefix(clean, "../")
+}
+
+// LoadValues merges the values files a package ships with, in order, then the
+// given overrides, and checks the result against the package's values schema.
+//
+// The file paths are taken from the package's own distro.yaml, so they are
+// resolved against dirPath and validated by validateDistroPaths before they get
+// here. Overrides come from outside the package - a cluster inventory, say - so
+// they are merged before the schema check, not after: an override that breaks
+// the schema has to fail as loudly as a bad values file would.
+func LoadValues(ctx context.Context, dirPath string, vals distro.ZarfDistroValues, overrides ...map[string]any) (map[string]any, error) {
+	merged, err := helmvalues.LoadFiles(ctx, dirPath, "", vals.Files)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read values files: %w", err)
+	}
+	for _, o := range overrides {
+		merged = helmvalues.MergeValues(merged, o)
+	}
+	if vals.Schema == "" {
+		return merged, nil
+	}
+	schema, err := helmvalues.LoadSchema(filepath.Join(dirPath, filepath.FromSlash(vals.Schema)))
+	if err != nil {
+		return nil, fmt.Errorf("unable to read values schema: %w", err)
+	}
+	if err := schema.Validate(merged); err != nil {
+		return nil, fmt.Errorf("values do not satisfy the schema: %w", err)
+	}
+	return merged, nil
+}
+
+// ApplyValues projects the resolved values onto the package's engine
+// configuration: it renders the templates the configuration contains, then
+// follows the mappings the package declares.
+//
+// The engine configuration is what the package ships; templates and mappings
+// decide which parts of it a cluster is allowed to move. A mapping moves one
+// leaf and is the right tool when that is all a knob does; a template can also
+// decide whether a block is written at all. Doing both here, once, keeps every
+// phase reading a single already-resolved engine configuration, and puts the
+// result ahead of the install-time check that drops engine config keys the
+// distro version does not recognize.
+//
+// Rendering happens before the mappings, not after, so that the text being
+// executed is the text the package author wrote. A value that arrives from a
+// cluster inventory and happens to contain "{{" is written through as the
+// characters it is.
+func (d *DistroLayout) ApplyValues(values map[string]any) error {
+	if d.Distro.Spec.Config.Engine == nil {
+		d.Distro.Spec.Config.Engine = dig.Mapping{}
+	}
+
+	rendered, err := helmvalues.EvaluateValuesTemplates(d.Distro.Spec.Config.Engine, templateData(values))
+	if err != nil {
+		return fmt.Errorf("unable to render the engine configuration: %w", err)
+	}
+	engine, ok := rendered.(dig.Mapping)
+	if !ok {
+		return fmt.Errorf("rendering the engine configuration produced a %T, expected a mapping", rendered)
+	}
+	d.Distro.Spec.Config.Engine = engine
+
+	for _, m := range d.Distro.Spec.Values.Mappings {
+		if _, err := helmvalues.ApplyMapping(d.Distro.Spec.Config.Engine, values, m.Source, m.Target); err != nil {
+			return fmt.Errorf("unable to apply values mapping: %w", err)
+		}
+	}
+	// Rendering and mappings both write plain maps, so every branch they walked
+	// through is now a map[string]any rather than the dig.Mapping the package
+	// decoded into. Dup puts those branches back, because dig's DigMapping
+	// replaces a value that is not a Mapping with an empty one instead of
+	// reading it -- the engine manifest section would come back empty for a
+	// caller that reached it without duplicating the configuration first.
+	d.Distro.Spec.Config.Engine = d.Distro.Spec.Config.Engine.Dup()
+	return nil
+}
+
+// RenderFiles renders, in place in the extracted package, the contents of every file the
+// package marked as a template.
+//
+// Doing it here rather than inside an upload phase keeps it to a single pass. The package
+// is extracted and its checksums verified by the time a caller has a DistroLayout, and both
+// the generic upload phase and the per-profile one read these same staged paths afterwards.
+// Writing the result back over the staged file also keeps each file at the index it was
+// packaged under, which is the directory name those phases rebuild the path from.
+//
+// Templating is opt-in per file because most of what a package ships is a tarball or an
+// RPM, and a template pass over one of those would either corrupt it or fail on a brace
+// that happens to appear in the middle of a binary.
+func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any) error {
+	render := func(dir string, files v1alpha1.ZarfFiles) error {
+		for i, f := range files {
+			if f == nil || !f.IsTemplate() {
+				continue
+			}
+			staged := filepath.Join(d.dirPath, dir, strconv.Itoa(i), filepath.Base(f.Target))
+			raw, err := os.ReadFile(staged)
+			if err != nil {
+				return fmt.Errorf("unable to read %s for templating: %w", f.Target, err)
+			}
+			out, err := helmvalues.RenderTemplate(string(raw), templateData(values))
+			if err != nil {
+				return fmt.Errorf("unable to render %s: %w", f.Target, err)
+			}
+			if out == string(raw) {
+				continue
+			}
+			info, err := os.Stat(staged)
+			if err != nil {
+				return fmt.Errorf("unable to stat %s: %w", f.Target, err)
+			}
+			if err := os.WriteFile(staged, []byte(out), info.Mode().Perm()); err != nil {
+				return fmt.Errorf("unable to write the rendered %s: %w", f.Target, err)
+			}
+			logger.From(ctx).Debug("rendered package file", "target", f.Target, "staged", staged)
+		}
+		return nil
+	}
+
+	if err := render(config.FilesDir, d.Distro.Spec.Config.Files); err != nil {
+		return err
+	}
+	return render(config.OSDir, d.Distro.Spec.Config.OS.Files)
+}
+
+// templateData is what a package's templates are evaluated against. Values are
+// namespaced under .Values, the spelling ZEP-0021 and Helm charts both use, which
+// leaves the other roots free for whatever a template is given access to later.
+func templateData(values map[string]any) map[string]any {
+	return map[string]any{"Values": values}
+}
+
+// Values returns the merged, schema-checked values the package was built with,
+// with any overrides applied on top.
+func (d *DistroLayout) Values(ctx context.Context, overrides ...map[string]any) (map[string]any, error) {
+	return LoadValues(ctx, d.dirPath, d.Distro.Spec.Values, overrides...)
 }
 
 // normalizePermissions canonicalizes file and directory permissions in the

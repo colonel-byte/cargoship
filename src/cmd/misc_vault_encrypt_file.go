@@ -25,9 +25,9 @@ import (
 )
 
 type vaultEncryptFileOptions struct {
-	vaultPasswordFile string
-	dryRun            bool
-	force             bool
+	keyFlags
+	dryRun bool
+	force  bool
 }
 
 func newVaultEncryptFileCommand() *cobra.Command {
@@ -45,6 +45,7 @@ func newVaultEncryptFileCommand() *cobra.Command {
 	// Not marked required, for the same reason as on encrypt: the environment variables
 	// ResolveVaultPassword falls back to are unreachable if cobra rejects the command first.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
+	addAgeFlags(cmd, &o.keyFlags)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdVaultEncryptFileFlagDryRun)
 	cmd.Flags().BoolVar(&o.force, MiscVaultForce, false, lang.CmdVaultEncryptFileFlagForce)
 
@@ -54,7 +55,7 @@ func newVaultEncryptFileCommand() *cobra.Command {
 func (o *vaultEncryptFileOptions) run(cmd *cobra.Command, args []string) error {
 	file := args[0]
 
-	password, err := requireVaultPassword(o.vaultPasswordFile)
+	keyring, err := o.requireKeyring(cmd)
 	if err != nil {
 		return err
 	}
@@ -64,21 +65,42 @@ func (o *vaultEncryptFileOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %s: %w", file, err)
 	}
 
-	encrypted, changed, err := clustercfg.EncryptConfig(src, password, o.force)
+	encrypted, changed, skipped, err := clustercfg.EncryptConfig(src, keyring, o.force)
 	if err != nil {
 		return err
 	}
 
-	return finishVaultFile(cmd, file, encrypted, changed, o.dryRun, "encrypted", "nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt")
+	return finishVaultFile(cmd, file, encrypted, changed, skipped, o.dryRun, "encrypted", "nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt")
 }
 
-// finishVaultFile reports what a whole-file rewrite did and writes the result, which encrypt-file
-// and decrypt-file do the same way.
+// finishVaultFile reports what a whole-file rewrite did and writes the result, which encrypt-file,
+// decrypt-file and rekey all do the same way.
 //
 // A run that changed nothing still prints the document under --dry-run, so that piping the output
 // somewhere does not depend on whether there happened to be anything to do.
-func finishVaultFile(cmd *cobra.Command, file string, doc []byte, changed []string, dryRun bool, verb, nothingToDo string) error {
+//
+// Skips are warned about before either of those, and that placement is the point of reporting them
+// at all. A run that changed nothing is exactly where a mistake hides -- asking for new age
+// recipients against a file that is already encrypted does nothing, and without this it would say
+// so in the quietest way the command has. Warnings go to stderr through the logger, so a dry run
+// piped to a file still gets a clean document.
+func finishVaultFile(cmd *cobra.Command, file string, doc []byte, changed []string, skipped []clustercfg.Skip, dryRun bool, verb, nothingToDo string) error {
 	l := logger.From(cmd.Context())
+
+	for _, skip := range skipped {
+		l.Warn("left this credential as it was: it "+skip.Reason, "file", file, "path", skip.Path)
+	}
+
+	// These commands resolve anchors, aliases and merge keys for themselves, and resolve more of
+	// them than the decoder an apply reads the file with does -- a merge key that overrides a key
+	// it merges, or one naming a list of mappings, are both shapes this rewrite handles and that
+	// decoder refuses. Getting the credentials out of the clear is still the right thing to do with
+	// such a file, but the operator should hear now that it will not apply, rather than at apply
+	// time with no clue which of the two commands to believe.
+	if _, err := clustercfg.Parse(cmd.Context(), doc); err != nil {
+		l.Warn("this file does not load as a cluster configuration, so an apply will refuse it; the credentials in it were still "+verb,
+			"file", file, "error", err)
+	}
 
 	if dryRun {
 		_, err := cmd.OutOrStdout().Write(doc)

@@ -35,7 +35,7 @@ var CommonRegistries = []string{
 
 // DistroConfig holds the values for the `.`, or root, section of the config file
 type DistroConfig struct {
-	// CachePath is the folder where oras artifacts are stored
+	// CachePath is the folder where cargoship caches what it fetches: oras artifacts, and the release assets the example generation targets read
 	CachePath string `json:"zarf_cache,omitempty" mapstructure:"zarf_cache"`
 	// DistroOpts are various options used by the command
 	DistroOpts DistroOptions `json:"distro,omitempty" mapstructure:"distro"`
@@ -53,6 +53,34 @@ type DistroConfig struct {
 	TempDirectory string `json:"tmp_dir,omitempty" mapstructure:"tmp_dir" jsonschema:"default=/tmp"`
 	// Timeout the longest we will run long ran tasks before failing
 	Timeout string `json:"timeout,omitempty" mapstructure:"timeout" jsonschema:"default=20m"`
+	// AgeOpts are the age keys used to encrypt and decrypt registry credentials
+	AgeOpts AgeOptions `json:"age,omitempty" mapstructure:"age"`
+}
+
+// AgeOptions holds the values for the `.age` section of the config file, the age alternative to
+// the Ansible Vault password given by --vault-password-file.
+//
+// It sits at the root rather than under `.distro` because both halves of the workflow read it: the
+// `cargoship vault` commands that write ciphertext into a cluster configuration, and the install
+// commands that read it back at apply time.
+//
+// Each is a list because age is built around encrypting to more than one key: a configuration is
+// normally encrypted to every operator who has to apply it plus whatever CI holds, and an operator
+// may hold more than one identity. Recipients here are equivalent to repeating --age-recipient,
+// which is what makes a shared recipient set something a team can commit alongside the config
+// rather than something every command line has to restate.
+type AgeOptions struct {
+	// IdentityFiles are paths to identity files, each holding either the age private keys that
+	// decrypt registry credentials or an SSH private key. Equivalent to repeating
+	// --age-identity-file.
+	IdentityFiles []string `json:"identity_files,omitempty" mapstructure:"identity_files" jsonschema:"example=/home/operator/.age/cargoship.key,example=/home/operator/.ssh/id_ed25519"`
+	// Recipients are the public keys registry credentials are encrypted to, each either an age
+	// recipient or an SSH public key. Equivalent to repeating --age-recipient.
+	Recipients []string `json:"recipients,omitempty" mapstructure:"recipients" jsonschema:"example=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p,example=age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh,example=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample operator@example.com"`
+	// RecipientsFiles are paths to files holding public keys, one per line, with # comments
+	// allowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as
+	// it is. Equivalent to repeating --age-recipients-file.
+	RecipientsFiles []string `json:"recipients_files,omitempty" mapstructure:"recipients_files" jsonschema:"example=/etc/cargoship/recipients.txt,example=/etc/cargoship/authorized_keys"`
 }
 
 // DistroOptions holds the values for the `.distro` section of the config file
@@ -77,6 +105,9 @@ type DistroOptions struct {
 	FirewallUpdate bool `json:"firewall,omitempty" mapstructure:"firewall" jsonschema:"default=true"`
 	// HostUpdate whether we will update the etc host file
 	HostUpdate bool `json:"hosts,omitempty" mapstructure:"hosts" jsonschema:"default=true"`
+	// AllowUnmanagedNodes whether an apply continues when the cluster holds a node that no host
+	// in the config accounts for
+	AllowUnmanagedNodes bool `json:"allow_unmanaged_nodes,omitempty" mapstructure:"allow_unmanaged_nodes"`
 	// LabelNodes whether we will check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
 	// UpdateKubeConfig whether we will update a kubeconfig file with the admin creds for the cluster

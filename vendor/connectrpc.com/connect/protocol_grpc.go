@@ -235,11 +235,9 @@ func (g *grpcClient) Peer() Peer {
 }
 
 func (g *grpcClient) WriteRequestHeader(_ StreamType, header http.Header) {
+	setUserAgentIfAbsent(header, defaultGrpcUserAgent)
 	// We know these header keys are in canonical form, so we can bypass all the
 	// checks in Header.Set.
-	if getHeaderCanonical(header, headerUserAgent) == "" {
-		header[headerUserAgent] = []string{defaultGrpcUserAgent}
-	}
 	if g.web && getHeaderCanonical(header, headerXUserAgent) == "" {
 		// The gRPC-Web pseudo-specification seems to require X-User-Agent rather
 		// than User-Agent for all clients, even if they're not browser-based. This
@@ -366,7 +364,7 @@ func (cc *grpcClientConn) CloseRequest() error {
 }
 
 func (cc *grpcClientConn) Receive(msg any) error {
-	if err := cc.duplexCall.BlockUntilResponseReady(); err != nil {
+	if _, err := cc.duplexCall.blockUntilResponseReady(); err != nil {
 		return err
 	}
 	err := cc.unmarshaler.Unmarshal(msg)
@@ -421,12 +419,12 @@ func (cc *grpcClientConn) Receive(msg any) error {
 }
 
 func (cc *grpcClientConn) ResponseHeader() http.Header {
-	_ = cc.duplexCall.BlockUntilResponseReady()
+	_, _ = cc.duplexCall.blockUntilResponseReady()
 	return cc.responseHeader
 }
 
 func (cc *grpcClientConn) ResponseTrailer() http.Header {
-	_ = cc.duplexCall.BlockUntilResponseReady()
+	_, _ = cc.duplexCall.blockUntilResponseReady()
 	return cc.responseTrailer
 }
 

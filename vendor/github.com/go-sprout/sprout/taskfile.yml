@@ -1,0 +1,49 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: Hello, World!
+
+env:
+  # Force UTC to dont have any issue across developers environments for date tests
+  TZ: UTC
+
+tasks:
+  lint:
+    aliases: [linter, linters, l]
+    desc: Run linters on the project code
+    summary: |
+      Run linters on the project code and generate a report with the results.
+    cmds:
+      - go install github.com/Antonboom/testifylint@v1.4.0
+      - golangci-lint run
+  test:
+    aliases: [tests, t]
+    desc: Run tests with coverage
+    summary: Run tests with coverage and generate a coverage report in coverage.out
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+  test-doc:
+    aliases: [tdoc, tdocu, tdocum]
+    desc: Run tests to validate all documentation examples
+    summary: |
+      Run tests to validate all documentation examples and generate a report
+      with the results.
+    cmds:
+      - go run ./tools/docvalidator
+  test-compatibility:
+    aliases: [tc, tcomp]
+    desc: Run tests to validate the backward compatibility between sprigin and sprig
+    dir: ./sprigin/compatibility
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+  bench:
+    aliases: [benchmarks, benchs, b]
+    desc: Run benchmarks between sprig and current sprout implementation
+    summary: |
+      Run benchmarks between sprig and current sprout implementation and
+      generate a benchmark report, a cpu profile and a memory profile.
+    dir: ./benchmarks
+    cmds:
+      - go test -run=^$$ -bench ^Benchmark -benchmem -benchtime=250x -cpuprofile cpu.out -memprofile mem.out

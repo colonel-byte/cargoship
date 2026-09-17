@@ -317,11 +317,9 @@ func (c *connectClient) Peer() Peer {
 }
 
 func (c *connectClient) WriteRequestHeader(streamType StreamType, header http.Header) {
+	setUserAgentIfAbsent(header, defaultConnectUserAgent)
 	// We know these header keys are in canonical form, so we can bypass all the
 	// checks in Header.Set.
-	if getHeaderCanonical(header, headerUserAgent) == "" {
-		header[headerUserAgent] = []string{defaultConnectUserAgent}
-	}
 	header[connectHeaderProtocolVersion] = []string{connectProtocolVersion}
 	header[headerContentType] = []string{
 		connectContentTypeForCodecName(streamType, c.Codec.Name()),
@@ -476,7 +474,7 @@ func (cc *connectUnaryClientConn) CloseRequest() error {
 }
 
 func (cc *connectUnaryClientConn) Receive(msg any) error {
-	if err := cc.duplexCall.BlockUntilResponseReady(); err != nil {
+	if _, err := cc.duplexCall.blockUntilResponseReady(); err != nil {
 		return err
 	}
 	if err := cc.unmarshaler.Unmarshal(msg); err != nil {
@@ -486,12 +484,12 @@ func (cc *connectUnaryClientConn) Receive(msg any) error {
 }
 
 func (cc *connectUnaryClientConn) ResponseHeader() http.Header {
-	_ = cc.duplexCall.BlockUntilResponseReady()
+	_, _ = cc.duplexCall.blockUntilResponseReady()
 	return cc.responseHeader
 }
 
 func (cc *connectUnaryClientConn) ResponseTrailer() http.Header {
-	_ = cc.duplexCall.BlockUntilResponseReady()
+	_, _ = cc.duplexCall.blockUntilResponseReady()
 	return cc.responseTrailer
 }
 
@@ -603,7 +601,7 @@ func (cc *connectStreamingClientConn) CloseRequest() error {
 }
 
 func (cc *connectStreamingClientConn) Receive(msg any) error {
-	if err := cc.duplexCall.BlockUntilResponseReady(); err != nil {
+	if _, err := cc.duplexCall.blockUntilResponseReady(); err != nil {
 		return err
 	}
 	err := cc.unmarshaler.Unmarshal(msg)
@@ -636,12 +634,12 @@ func (cc *connectStreamingClientConn) Receive(msg any) error {
 }
 
 func (cc *connectStreamingClientConn) ResponseHeader() http.Header {
-	_ = cc.duplexCall.BlockUntilResponseReady()
+	_, _ = cc.duplexCall.blockUntilResponseReady()
 	return cc.responseHeader
 }
 
 func (cc *connectStreamingClientConn) ResponseTrailer() http.Header {
-	_ = cc.duplexCall.BlockUntilResponseReady()
+	_, _ = cc.duplexCall.blockUntilResponseReady()
 	return cc.responseTrailer
 }
 
@@ -730,7 +728,7 @@ func (hc *connectUnaryHandlerConn) Close(err error) error {
 		hc.mergeResponseHeader(err)
 		// If the handler received a GET request and the resource hasn't changed,
 		// return a 304.
-		if len(hc.peer.Query) > 0 && IsNotModifiedError(err) {
+		if hc.request.Method == http.MethodGet && IsNotModifiedError(err) {
 			hc.responseWriter.WriteHeader(http.StatusNotModified)
 			return hc.request.Body.Close()
 		}
@@ -1017,7 +1015,7 @@ func (m *connectUnaryRequestMarshaler) marshalWithGet(message any) *Error {
 	}
 	if !isTooBig {
 		url := m.buildGetURL(data, false /* compressed */)
-		if m.getURLMaxBytes <= 0 || len(url.String()) < m.getURLMaxBytes {
+		if m.getURLMaxBytes <= 0 || len(url.String()) <= m.getURLMaxBytes {
 			m.writeWithGet(url)
 			return nil
 		}
@@ -1044,7 +1042,7 @@ func (m *connectUnaryRequestMarshaler) marshalWithGet(message any) *Error {
 		return NewError(CodeResourceExhausted, fmt.Errorf("compressed message size %d exceeds sendMaxBytes %d", compressed.Len(), m.sendMaxBytes))
 	}
 	url := m.buildGetURL(compressed.Bytes(), true /* compressed */)
-	if m.getURLMaxBytes <= 0 || len(url.String()) < m.getURLMaxBytes {
+	if m.getURLMaxBytes <= 0 || len(url.String()) <= m.getURLMaxBytes {
 		m.writeWithGet(url)
 		return nil
 	}

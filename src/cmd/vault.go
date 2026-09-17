@@ -35,6 +35,7 @@ func newVaultCommand() *cobra.Command {
 	cmd.AddCommand(newVaultDecryptPathCommand())
 	cmd.AddCommand(newVaultDecryptFileCommand())
 	cmd.AddCommand(newVaultRekeyCommand())
+	cmd.AddCommand(newVaultKeygenCommand())
 
 	return cmd
 }

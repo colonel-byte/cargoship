@@ -1,0 +1,5 @@
+{
+  "env": {
+    "TMPDIR": "/tmp/cargoship"
+  }
+}

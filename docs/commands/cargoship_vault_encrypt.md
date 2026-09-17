@@ -2,11 +2,11 @@
 
 ## cargoship vault encrypt
 
-Encrypts a value with Ansible Vault, for use in a registry's user/pass/token fields
+Encrypts a value with Ansible Vault or age, for use in a registry's user/pass/token fields
 
 ### Synopsis
 
-Encrypts VALUE with Ansible Vault, producing a $ANSIBLE_VAULT-prefixed string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal.
+Encrypts VALUE, producing a string that cargoship decrypts automatically at apply time when placed in a registry's user/pass/token field. With --age-recipient or --age-recipients-file the output is armored age ciphertext beginning with -----BEGIN AGE ENCRYPTED FILE-----; otherwise it is Ansible Vault ciphertext beginning with $ANSIBLE_VAULT. If VALUE is omitted, it is read from stdin, or prompted for with hidden input when stdin is a terminal.
 
 ```
 cargoship vault encrypt [VALUE] [flags]
@@ -26,31 +26,34 @@ $ printf my-registry-password | cargoship vault encrypt --vault-password-file ./
 
 # Encrypt the contents of a file
 $ cargoship vault encrypt --vault-password-file ./vault-pass.txt < ./registry-token.txt
+
+# Encrypt to age public keys instead, so no shared password has to be handed around
+$ cargoship vault encrypt my-registry-password --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+
+# Encrypt to every key a team keeps in one file, each of whom can decrypt on their own
+$ cargoship vault encrypt my-registry-password --age-recipients-file ./recipients.txt
 ```
 
 ### Options
 
 ```
-  -h, --help                         help for encrypt
-      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
+      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
+  -h, --help                              help for encrypt
+      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string        Architecture for OCI images and Zarf packages
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --timeout string             Set the timeout for how long functions will last.
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO
 
-* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
 

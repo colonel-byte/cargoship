@@ -1,5 +1,124 @@
 # Changelog
 
+## [0.24.0](https://github.com/colonel-byte/cargoship/compare/v0.23.0...v0.24.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** add validate command ([#417](https://github.com/colonel-byte/cargoship/issues/417))
+* **schema:** generate schema file ([#416](https://github.com/colonel-byte/cargoship/issues/416))
+
+### Features
+
+* **assemble:** resolve values before the build runs ([#403](https://github.com/colonel-byte/cargoship/issues/403)) ([8c62cb5](https://github.com/colonel-byte/cargoship/commit/8c62cb5aa36318f4bac81e0cc8dce8d259fba8df))
+* **cli:** add validate command ([#417](https://github.com/colonel-byte/cargoship/issues/417)) ([d0ca618](https://github.com/colonel-byte/cargoship/commit/d0ca61866d5b121935f46b38add40d7e978e3f78))
+* **engine-config-sync:** report the files written in place ([#405](https://github.com/colonel-byte/cargoship/issues/405)) ([c52caef](https://github.com/colonel-byte/cargoship/commit/c52caeffc081bd3b811f08ca7b2229ea1c0eadfb))
+* **engineconfig:** validate disable values against generated addon lists ([#409](https://github.com/colonel-byte/cargoship/issues/409)) ([9947469](https://github.com/colonel-byte/cargoship/commit/994746920f1c50c8fb8fc85cfeff9fd661e3c91f))
+* **examples:** give the example packages values files and schemas ([#401](https://github.com/colonel-byte/cargoship/issues/401)) ([a6ec737](https://github.com/colonel-byte/cargoship/commit/a6ec7373db841096424cdda5c5c3198cbfa52a4b))
+* **examples:** show values templating, and document it ([#406](https://github.com/colonel-byte/cargoship/issues/406)) ([129b4ef](https://github.com/colonel-byte/cargoship/commit/129b4ef63d3911d93810f2e21fc4ad313e99dfc8))
+* **helmvalues:** add Helm-style value templating and values plumbing ([#400](https://github.com/colonel-byte/cargoship/issues/400)) ([a74a2af](https://github.com/colonel-byte/cargoship/commit/a74a2af721a322943d43acdee14dc50d8e2edf2d))
+* **helmvalues:** add the Helm serialization functions sprig lacks ([#402](https://github.com/colonel-byte/cargoship/issues/402)) ([adafd63](https://github.com/colonel-byte/cargoship/commit/adafd63aafc3155c66a6e1891d5d5e0172b4f969))
+* refine schema more ([#415](https://github.com/colonel-byte/cargoship/issues/415)) ([459ba17](https://github.com/colonel-byte/cargoship/commit/459ba17e03389279b85d25a45ca2b89484e77631))
+* **schema:** generate schema file ([#416](https://github.com/colonel-byte/cargoship/issues/416)) ([b20df28](https://github.com/colonel-byte/cargoship/commit/b20df28fe486db5a9ba7b3fe15a9b28272c92e6e))
+* **values:** disable bundled engine addons from the inventory ([#408](https://github.com/colonel-byte/cargoship/issues/408)) ([92c9ba5](https://github.com/colonel-byte/cargoship/commit/92c9ba5f6a33c190cf7575f89c7e333d59dd7b5e))
+* **values:** render the engine configuration and templated files at … ([#404](https://github.com/colonel-byte/cargoship/issues/404)) ([0545780](https://github.com/colonel-byte/cargoship/commit/05457801ced792e2f30a4d0faf027da08f1008cb))
+
+
+### CI/CD
+
+* **example:** add schema support in-editor ([#414](https://github.com/colonel-byte/cargoship/issues/414)) ([47443df](https://github.com/colonel-byte/cargoship/commit/47443dff9f75fc028ce9f6816173a4de5bad2754))
+* **example:** expand packages ([#413](https://github.com/colonel-byte/cargoship/issues/413)) ([4bcb523](https://github.com/colonel-byte/cargoship/commit/4bcb52331d56d6f1425a31712eb74b9bde440202))
+* **example:** generate all examples ([#412](https://github.com/colonel-byte/cargoship/issues/412)) ([4326533](https://github.com/colonel-byte/cargoship/commit/4326533f3922c4a9bfd4132e9edd7290f6ec57b1))
+
+
+### Build
+
+* **deps:** bump chainguard/cgr.dev/chainguard/static from `fa805e7` to `90b7f22` ([#411](https://github.com/colonel-byte/cargoship/issues/411)) ([902711a](https://github.com/colonel-byte/cargoship/commit/902711ac30eddeac653cc184db532c7adfaa77d1))
+
+## [0.23.0](https://github.com/colonel-byte/cargoship/compare/v0.22.1...v0.23.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* change base image for non-ubi image ([#399](https://github.com/colonel-byte/cargoship/issues/399))
+
+### Features
+
+* **cluster:** accept SSH keys as age keys ([#391](https://github.com/colonel-byte/cargoship/issues/391)) ([1323ef9](https://github.com/colonel-byte/cargoship/commit/1323ef946c2e4b2897c279efdf2de7904ca5f77e))
+* **clustercfg:** report registry credentials encrypt-file unchanged ([#387](https://github.com/colonel-byte/cargoship/issues/387)) ([b850c09](https://github.com/colonel-byte/cargoship/commit/b850c0946bb958e7273733a5bb866d8516d96611))
+* detect a host removed from the config ([#340](https://github.com/colonel-byte/cargoship/issues/340)) ([89278c0](https://github.com/colonel-byte/cargoship/commit/89278c0bd84c7c48750cc5195b93182920aedd25))
+* **distrocfg:** record installed distro release metadata on hosts ([#378](https://github.com/colonel-byte/cargoship/issues/378)) ([6a15aac](https://github.com/colonel-byte/cargoship/commit/6a15aac77a21a59fbd75425ecf1df04bec8fd455))
+* **engineconfig:** add k3s and rke2 v1.37 generated engine config ([#377](https://github.com/colonel-byte/cargoship/issues/377)) ([2a2ffdc](https://github.com/colonel-byte/cargoship/commit/2a2ffdcec105c0af22990ab4e6341f77ff3d42e8))
+* **utils:** add DownloadToCache helper ([#379](https://github.com/colonel-byte/cargoship/issues/379)) ([fa4b120](https://github.com/colonel-byte/cargoship/commit/fa4b12023e422995a0be02c3c527b89e712cd8bc))
+* **vault:** support age alongside ansible vault ([#386](https://github.com/colonel-byte/cargoship/issues/386)) ([d838275](https://github.com/colonel-byte/cargoship/commit/d838275f1976736ba1a62d057e70a02c1d829958))
+* **vault:** vendor age-keygen ([#389](https://github.com/colonel-byte/cargoship/issues/389)) ([4efb76c](https://github.com/colonel-byte/cargoship/commit/4efb76cbf73fd041d6674916552ce35b3382eea3))
+
+
+### Miscellaneous
+
+* **examples:** cache downloaded release asset lists ([#376](https://github.com/colonel-byte/cargoship/issues/376)) ([a8a04d1](https://github.com/colonel-byte/cargoship/commit/a8a04d1c42bf945a0f4008519688fecb1ff6c8c5))
+
+
+### CI/CD
+
+* **action:** disable require main pr check ([#390](https://github.com/colonel-byte/cargoship/issues/390)) ([a6502d2](https://github.com/colonel-byte/cargoship/commit/a6502d2d44cecdf6c08db65d420d662b93551994))
+* add language_version tied to go.mod ([#375](https://github.com/colonel-byte/cargoship/issues/375)) ([6c191c5](https://github.com/colonel-byte/cargoship/commit/6c191c5e90be4c36bf3953dc812e79aea693801a))
+* change base image for non-ubi image ([#399](https://github.com/colonel-byte/cargoship/issues/399)) ([4d9f93a](https://github.com/colonel-byte/cargoship/commit/4d9f93a8261474266deaa7f138453df7087b7835))
+* **dependabot:** add docker registry auth ([#395](https://github.com/colonel-byte/cargoship/issues/395)) ([30c4623](https://github.com/colonel-byte/cargoship/commit/30c462306750177ffd7a350a3a1fc4bd4ba5a31b))
+* **dependabot:** add registry1 auth ([#398](https://github.com/colonel-byte/cargoship/issues/398)) ([863afa8](https://github.com/colonel-byte/cargoship/commit/863afa85830258c07e57c4f9331cbed826fc0179))
+
+
+### Build
+
+* **deps:** bump sigs.k8s.io/controller-runtime from 0.25.0 to 0.25.1 ([#396](https://github.com/colonel-byte/cargoship/issues/396)) ([2a24295](https://github.com/colonel-byte/cargoship/commit/2a24295f7d659776a5790dc6084f918f996a538a))
+* **deps:** bump the misc group across 1 directory with 2 updates ([#397](https://github.com/colonel-byte/cargoship/issues/397)) ([8b57a7e](https://github.com/colonel-byte/cargoship/commit/8b57a7e0aa36cf9b855a7354347d0eb6a9c66a04))
+* **deps:** bump ubi9/ubi-minimal from `186a94b` to `e5161a7` ([#381](https://github.com/colonel-byte/cargoship/issues/381)) ([4811f95](https://github.com/colonel-byte/cargoship/commit/4811f95af6ba39b77fde86f64c7d308d59f9a689))
+* **deps:** bump ubi9/ubi-minimal from `d235f60` to `186a94b` ([#373](https://github.com/colonel-byte/cargoship/issues/373)) ([3ff2627](https://github.com/colonel-byte/cargoship/commit/3ff26277b26c635dc4422798a870617bd880c1cf))
+* **deps:** bump ubi9/ubi-minimal from `e5161a7` to `7b8e25a` ([#393](https://github.com/colonel-byte/cargoship/issues/393)) ([eae8bbc](https://github.com/colonel-byte/cargoship/commit/eae8bbcd9f2a00a73a0b611c7e7bd71d8da2c17a))
+
+## [0.22.1](https://github.com/colonel-byte/cargoship/compare/v0.22.0...v0.22.1) (2026-09-13)
+
+
+### CI/CD
+
+* **gorelease:** add 'latest' tag ([#372](https://github.com/colonel-byte/cargoship/issues/372)) ([d4c0f1e](https://github.com/colonel-byte/cargoship/commit/d4c0f1ed892ef7fce3f742116e75e76c55554912))
+
+
+### Build
+
+* **deps:** Bump the cosign group with 20 updates ([#369](https://github.com/colonel-byte/cargoship/issues/369)) ([8f00046](https://github.com/colonel-byte/cargoship/commit/8f000467b5f612f6bf61f77718a30eb3e70a2367))
+* **deps:** Bump the misc group with 6 updates ([#370](https://github.com/colonel-byte/cargoship/issues/370)) ([7bc188f](https://github.com/colonel-byte/cargoship/commit/7bc188fc74c85e0ffcdbfb5cd3c3f2ed7c996701))
+
+## [0.22.0](https://github.com/colonel-byte/cargoship/compare/v0.21.0...v0.22.0) (2026-09-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* add docker images ([#364](https://github.com/colonel-byte/cargoship/issues/364))
+* add code owners file ([#366](https://github.com/colonel-byte/cargoship/issues/366))
+
+### Features
+
+* **cli:** remove unneeded global flags ([#361](https://github.com/colonel-byte/cargoship/issues/361)) ([1185e46](https://github.com/colonel-byte/cargoship/commit/1185e460b5eec1e160adf95cd1e8dbeb5d006e65))
+
+
+### Refactoring
+
+* **test:** make it more easy to track ([#362](https://github.com/colonel-byte/cargoship/issues/362)) ([bde3b68](https://github.com/colonel-byte/cargoship/commit/bde3b68d026850b3568b907b96a390d975869c93))
+
+
+### CI/CD
+
+* add code owners file ([#366](https://github.com/colonel-byte/cargoship/issues/366)) ([5053f9e](https://github.com/colonel-byte/cargoship/commit/5053f9eecd347aebc189236a05fe1b36f8ce25f7))
+* add docker images ([#364](https://github.com/colonel-byte/cargoship/issues/364)) ([a3a5070](https://github.com/colonel-byte/cargoship/commit/a3a5070695757712f3d13f8d5c60f39490843b20))
+* add pre-commit checking ([#365](https://github.com/colonel-byte/cargoship/issues/365)) ([e19472a](https://github.com/colonel-byte/cargoship/commit/e19472a34b7e9bdd99b1357fd260d4d08989b5d5))
+
+
+### Build
+
+* **deps:** Bump alpine from 3.22 to 3.24 ([#368](https://github.com/colonel-byte/cargoship/issues/368)) ([6f85407](https://github.com/colonel-byte/cargoship/commit/6f85407a36937f2f82f56906a3b1032f706a6127))
+* **deps:** Bump the golang group 11 updates ([#367](https://github.com/colonel-byte/cargoship/issues/367)) ([d727bd3](https://github.com/colonel-byte/cargoship/commit/d727bd3037b57900654fda92be9b97357e97647f))
+
 ## [0.21.0](https://github.com/colonel-byte/cargoship/compare/v0.20.1...v0.21.0) (2026-09-11)
 
 

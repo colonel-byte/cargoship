@@ -11,17 +11,11 @@ cargoship COMMAND [flags]
 ### Options
 
 ```
-  -a, --architecture string        Architecture for OCI images and Zarf packages
-  -h, --help                       help for cargoship
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-file                   Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string           Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable terminal color codes in logging and stdout prints.
-      --plain-http                 Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --timeout string             Set the timeout for how long functions will last.
-      --tmpdir string              Specify the temporary directory to use for intermediate files (default "/tmp")
-      --zarf-cache string          Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
+  -h, --help                help for cargoship
+      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
 ```
 
 ### SEE ALSO
@@ -34,8 +28,10 @@ cargoship COMMAND [flags]
 * [cargoship publish](./cargoship_publish.md)	 - Publish the Cargoship Package to an OCI registry
 * [cargoship pull](./cargoship_pull.md)	 - Pulls a Cargoship package from a remote registry and save to the local file system
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
+* [cargoship schema](./cargoship_schema.md)	 - Writes out a JSON Schema for one of cargoship's own file formats
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
-* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault
+* [cargoship validate](./cargoship_validate.md)	 - Checks a cluster inventory, package definition, or config file against its schema
+* [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

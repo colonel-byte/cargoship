@@ -32,8 +32,14 @@
 // found by a long fuzz run into a permanent regression test once its file is committed.
 package fuzz
 
+import "github.com/colonel-byte/cargoship/src/internal/clustercfg"
+
 // fuzzPassword is the vault password every target in this file encrypts under. These targets fuzz
 // the value and the path, not the password: a wrong password is covered by the table tests in
 // clustercfg, and varying it here would spend most of the corpus on inputs that fail for the
 // uninteresting reason.
 const fuzzPassword = "correct horse battery staple"
+
+// fuzzKeyring is fuzzPassword in the form the encrypt and decrypt entry points take. The raw
+// password is kept for the rekey target, which needs a second keyring to rotate to.
+var fuzzKeyring = clustercfg.NewVaultKeyring(fuzzPassword)

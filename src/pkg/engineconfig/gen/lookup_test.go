@@ -60,3 +60,50 @@ func TestKeysNonStructReturnsEmpty(t *testing.T) {
 	require.Empty(t, Keys(nil))
 	require.Empty(t, Keys("not a struct"))
 }
+
+func TestUnknownAddonsListShape(t *testing.T) {
+	addons := []string{"rke2-coredns", "rke2-ingress-nginx"}
+	unknown := UnknownAddons([]any{"rke2-ingress-nginx", "rke2-typo", "rke2-coredns"}, addons)
+	require.Equal(t, []string{"rke2-typo"}, unknown)
+}
+
+func TestUnknownAddonsScalarAndStringSlice(t *testing.T) {
+	addons := []string{"coredns", "traefik"}
+	require.Empty(t, UnknownAddons("traefik", addons))
+	require.Equal(t, []string{"nope"}, UnknownAddons("nope", addons))
+	require.Equal(t, []string{"nope"}, UnknownAddons([]string{"coredns", "nope"}, addons))
+}
+
+// A version whose component source was never pulled has no vocabulary, so nothing is reported.
+func TestUnknownAddonsNoVocabulary(t *testing.T) {
+	require.Nil(t, UnknownAddons([]any{"anything"}, nil))
+}
+
+func TestUnknownAddonsAbsentOrOddValue(t *testing.T) {
+	addons := []string{"coredns"}
+	require.Empty(t, UnknownAddons(nil, addons))
+	require.Empty(t, UnknownAddons(42, addons))
+	require.Equal(t, []string{"nope"}, UnknownAddons([]any{"nope", 42, nil}, addons))
+}
+
+func TestUnknownAddonsDeduplicates(t *testing.T) {
+	require.Equal(t, []string{"nope"}, UnknownAddons([]any{"nope", "nope"}, []string{"coredns"}))
+}
+
+// The registry the generator wrote must actually carry the addon vocabulary, or every consumer
+// silently skips the check.
+func TestRegistryCarriesAddons(t *testing.T) {
+	k3s, ok := Lookup("k3s", "v1.37.0+k3s1")
+	require.True(t, ok)
+	require.Contains(t, k3s.Addons, "traefik")
+	require.Empty(t, k3s.CNIs)
+
+	rke2, ok := Lookup("rke2", "v1.37.0+rke2r1")
+	require.True(t, ok)
+	require.Contains(t, rke2.Addons, "rke2-coredns")
+	// Not in rke2's own DisableItems -- only reachable through the CNI/ingress chart union.
+	require.Contains(t, rke2.Addons, "rke2-ingress-nginx")
+	require.Contains(t, rke2.Addons, "rke2-multus-crd")
+	require.Contains(t, rke2.CNIs, "cilium")
+	require.Contains(t, rke2.IngressControllers, "traefik")
+}

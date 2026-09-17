@@ -5,7 +5,7 @@ The `src/test/e2e/fuzz` package holds Go's native fuzz targets. Unlike the other
 ## Layout
 
 ```
-src/test/e2e/fuzz/main_test.go                package documentation and the shared vault password
+src/test/e2e/fuzz/main_test.go                package documentation and the shared vault keyring
 src/test/e2e/fuzz/vault_value_fuzz_test.go    value-level targets: EncryptValue/DecryptValue
 src/test/e2e/fuzz/vault_path_fuzz_test.go     document-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath, and the path predicates
 src/test/e2e/fuzz/testdata/fuzz/<Target>/     committed crashers, one directory per target
@@ -67,10 +67,10 @@ func FuzzEncryptValueRoundTrip(f *testing.F) {
 	f.Add("\xff\xfe not valid utf-8")
 
 	f.Fuzz(func(t *testing.T, value string) {
-		encrypted, err := clustercfg.EncryptValue(value, fuzzPassword)
+		encrypted, err := clustercfg.EncryptValue(value, fuzzKeyring)
 		require.NoError(t, err)
 
-		decrypted, err := clustercfg.DecryptValue(encrypted, fuzzPassword)
+		decrypted, err := clustercfg.DecryptValue(encrypted, fuzzKeyring)
 		require.NoError(t, err)
 		require.Equal(t, value, decrypted, "value did not survive the round trip")
 	})

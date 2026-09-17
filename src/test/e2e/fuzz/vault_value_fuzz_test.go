@@ -41,10 +41,10 @@ func FuzzEncryptValueRoundTrip(f *testing.F) {
 	f.Add("\xff\xfe not valid utf-8")
 
 	f.Fuzz(func(t *testing.T, value string) {
-		encrypted, err := clustercfg.EncryptValue(value, fuzzPassword)
+		encrypted, err := clustercfg.EncryptValue(value, fuzzKeyring)
 		require.NoError(t, err)
 
-		decrypted, err := clustercfg.DecryptValue(encrypted, fuzzPassword)
+		decrypted, err := clustercfg.DecryptValue(encrypted, fuzzKeyring)
 		require.NoError(t, err)
 		require.Equal(t, value, decrypted, "value did not survive the round trip")
 	})
@@ -59,7 +59,7 @@ func FuzzEncryptValueRoundTrip(f *testing.F) {
 // when the call succeeds: DecryptValue reports ErrNotEncrypted for anything without the vault
 // header, so a value it decrypted has to have carried one.
 func FuzzDecryptValueRejectsGarbage(f *testing.F) {
-	valid, err := clustercfg.EncryptValue("hunter2", fuzzPassword)
+	valid, err := clustercfg.EncryptValue("hunter2", fuzzKeyring)
 	require.NoError(f, err)
 
 	f.Add(valid)
@@ -72,7 +72,7 @@ func FuzzDecryptValueRejectsGarbage(f *testing.F) {
 	f.Add("")
 
 	f.Fuzz(func(t *testing.T, blob string) {
-		if _, err := clustercfg.DecryptValue(blob, fuzzPassword); err == nil {
+		if _, err := clustercfg.DecryptValue(blob, fuzzKeyring); err == nil {
 			require.True(t, cluster.IsVaultEncrypted(blob), "decrypted a value carrying no vault header: %q", blob)
 		}
 	})

@@ -35,7 +35,7 @@ $ go test -mod=vendor -count=1 -v -timeout=30m ./src/test/e2e/noncluster/...
 ```
 
 *   `-count=1` disables the test result cache. Without it, a green run is cached and a rebuilt binary will not re-trigger it, since the binary is not one of the inputs `go test` hashes.
-*   `-short` skips `TestCargoshipCreateExample`, which builds `example/rke2-cilium` for real and downloads roughly 1.5GB of engine artifacts and images. Everything else uses `testdata/minimal`, an image-free distro that builds into a 386-byte package in milliseconds.
+*   `-short` skips `TestCargoshipCreateExample`, which builds `example/rke2-multi-cni-cilium` for real and downloads the engine artifacts and images for both of the architectures that example covers. Everything else uses `testdata/minimal`, an image-free distro that builds into a 386-byte package in milliseconds.
 *   `-timeout` defaults to 10 minutes, which is ample for a `-short` run and not necessarily enough for a full one on a cold cache.
 
 ### One test, or one subtest
@@ -58,7 +58,7 @@ $ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires
 ## Environment variables
 
 *   **`CARGOSHIP_E2E_TMPDIR`** — parent directory for the temp dirs the harness creates, one per `e2e.Cargoship` call, plus the shared minimal package. Unset means the system temp directory. Point it at `build/tmp` to keep all test scratch inside the repo, which makes it easy to see what a run left behind: `CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...`.
-*   **`TMPDIR`** — respected by the binary itself for anything it does not put under its own `--tmpdir`. Worth setting alongside the above for the same reason.
+*   **`TMPDIR`** — respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.
 *   **`CARGOSHIP_E2E_KEEP_REGISTRY_LOG`** — set to any non-empty value to keep the in-memory registry's request log for passing tests as well as failing ones. See "Artifacts and logs" below.
 *   **`CARGOSHIP_CONFIG`** — the config file the binary loads. Only `TestCargoshipCreateExample` sets it (to `src/test/e2e/cargoship-config.yaml`); every other test passes flags explicitly so that what is being tested is visible in the test.
 
@@ -66,13 +66,13 @@ $ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires
 
 `e2e.Cargoship` runs the binary with `exec.PrintCfg()`, so its stdout and stderr are written through to the test process's stdout and stderr, not into `t.Log`. `go test` buffers that per package and prints it only when the package fails; add `-v` to see it as it happens.
 
-Two flags are appended to every invocation automatically: `--no-color`, so assertions are matching plain text, and `--tmpdir <fresh dir>`, removed when the call returns.
+One flag is appended to every invocation automatically: `--no-color`, so assertions are matching plain text. Each invocation also gets a fresh staging directory, passed as `DISTRO_TMP_DIR` and removed when the call returns. It is the environment variable rather than `--tmpdir` because only the commands that stage package content register that flag — passing it to `version` or `vault` fails argument parsing.
 
 ## Artifacts and logs
 
 *   **In-memory registry log.** The registry used by the publish, pull and sign tests writes one line per HTTP request to a file under the user cache directory, `~/.cache/cargoship/e2e-logs/registry-<timestamp>.log` (`$XDG_CACHE_HOME/cargoship/e2e-logs` if that is set), named the way the CLI names its own log files in `logs/`, rather than to stderr where it would bury the test output. A passing test deletes its log; a failing one keeps it and prints the path in the failure output. Set `CARGOSHIP_E2E_KEEP_REGISTRY_LOG=1` to keep the logs of passing tests too — the path is then printed by `go test -v` for every test that started a registry. That log is usually what explains a publish or pull that failed for a non-obvious reason.
 *   **Example packages.** `TestCargoshipCreateExample` writes where `src/test/e2e/cargoship-config.yaml` points it, `src/test/e2e/`. Those `.tar.zst` files are gitignored, and they are large — delete them when done.
-*   **Per-call temp dirs** are removed when each `e2e.Cargoship` call returns, including on failure, so nothing the binary wrote under `--tmpdir` survives for inspection. To keep it, reproduce the command by hand as described below.
+*   **Per-call temp dirs** are removed when each `e2e.Cargoship` call returns, including on failure, so nothing the binary wrote under `DISTRO_TMP_DIR` survives for inspection. To keep it, reproduce the command by hand as described below.
 
 ## Debugging a failure
 

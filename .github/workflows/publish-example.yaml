@@ -29,12 +29,10 @@ on:
       flavor:
         description: Example flavor to publish
         type: choice
-        default: rke2-cilium
+        default: rke2-multi-cni-cilium
         options:
-          - rke2-cilium
-          - rke2-cilium-vsphere
-          - rke2-cilium-wireguard
           - rke2-multi-cni-cilium
+          - rke2-cilium-vsphere
           - rke2-canal
           - rke2-multi-cni-canal
           - k3s-flannel
@@ -61,7 +59,7 @@ permissions:
 # against a release publishing the same flavor.
 concurrency:
   group: >-
-    publish-example-${{ inputs.flavor || 'rke2-cilium' }}-${{
+    publish-example-${{ inputs.flavor || 'rke2-multi-cni-cilium' }}-${{
     github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: false
 
@@ -128,7 +126,7 @@ jobs:
       - name: Resolve the latest example
         id: example
         env:
-          FLAVOR: ${{ inputs.flavor || 'rke2-cilium' }}
+          FLAVOR: ${{ inputs.flavor || 'rke2-multi-cni-cilium' }}
         run: |
           set -euo pipefail
           root="example/$FLAVOR"

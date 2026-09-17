@@ -184,6 +184,7 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "HostUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "FirewallUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "LabelNodes"), false)
+	v.SetDefault(configPath("DistroOpts", "AllowUnmanagedNodes"), false)
 	v.SetDefault(configPath("DistroOpts", "UpdateKubeConfig"), true)
 
 	// The keys below have no real default value beyond the Go zero value -- they're
@@ -208,6 +209,14 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuerRegexp"), "")
 	v.SetDefault(configPath("DistroOpts", "TrustedRoot"), "")
 	v.SetDefault(configPath("DistroOpts", "PublicKey"), "")
+
+	// Registered for the same reason as the keys above: without a default, Unmarshal never learns
+	// the key exists and the `.age` section resolves to nothing when it is set only in the
+	// environment. Empty slices rather than nil so that a command reading them before any config
+	// file has been found gets the same shape either way.
+	v.SetDefault(configPath("AgeOpts", "IdentityFiles"), []string{})
+	v.SetDefault(configPath("AgeOpts", "Recipients"), []string{})
+	v.SetDefault(configPath("AgeOpts", "RecipientsFiles"), []string{})
 }
 
 // GetStringSlice returns a string slice from viper

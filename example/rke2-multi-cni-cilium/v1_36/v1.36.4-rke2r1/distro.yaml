@@ -27,6 +27,20 @@ metadata:
 spec:
   type: rke2
   version: 1.36.4-rke2r1
+  # The values a cluster may override in its inventory file, under spec.config.values,
+  # or on the command line with --values. Every flavor exposes the bundled charts rke2
+  # installs; the cilium flavors also expose the chart's own settings, so the same
+  # package installs with or without encryption, hubble ui, and the rest, without being
+  # rebuilt.
+  values:
+    files:
+      - values.yaml
+    schema: values.schema.json
+    mappings:
+      # A mapping copies the value as it stands, list included, so the charts a cluster
+      # names under addons.disabled become the engine's own disable list.
+      - source: .addons.disabled
+        target: .config.disable
   actions:
     onCreate:
       before:
@@ -51,8 +65,8 @@ spec:
           - cilium
         disable-cloud-controller: true
         disable-kube-proxy: true
-        disable:
-          - rke2-ingress-nginx
+        # There is no disable list here: .addons.disabled supplies it, and this package's
+        # own values.yaml carries the entry that used to be written in this file.
         embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB
@@ -109,14 +123,20 @@ spec:
                   - rook-ceph
                   - zarf
       manifest:
-        rke2-cilium:
+        # This flavor drives the chart from .Values rather than from mappings. The block
+        # is a string, so cargoship renders it whole at install time and a value can
+        # decide whether an entire subtree is written -- which one mapping per leaf
+        # cannot express. The chart values themselves are unchanged. The addons list
+        # above stays a mapping regardless: a package may use both mechanisms, and each
+        # value is spent on whichever one says what it means.
+        rke2-cilium: |-
           kubeProxyReplacement: true
           k8sServiceHost: "localhost"
           k8sServicePort: 6443
           l2announcements:
-            enabled: true
+            enabled: {{ .Values.cilium.l2announcements.enabled }}
           encryption:
-            enabled: false
+            enabled: {{ .Values.cilium.encryption.enabled }}
             type: wireguard
           tolerations:
             - operator: Exists
@@ -137,6 +157,7 @@ spec:
           hostFirewall:
             enabled: false
           enablePolicy: default
+          {{- if .Values.cilium.hubble.ui.enabled }}
           hubble:
             enabled: true
             relay:
@@ -148,10 +169,23 @@ spec:
               frontend:
                 server:
                   ipv6:
-                    enabled: false
+                    enabled: {{ .Values.cilium.hubble.ui.ipv6 }}
               tolerations:
                 - operator: Exists
+          {{- else }}
+          # Hubble's relay and web interface are what the observability images are for,
+          # so a cluster that does not want the interface does not run either.
+          hubble:
+            enabled: false
+          {{- end }}
     os:
+      env:
+        CRI_CONFIG_FILE: |-
+          /var/lib/rancher/rke2/agent/etc/crictl.yaml
+        KUBECONFIG: |-
+          /etc/rancher/rke2/rke2.yaml
+        RKE2_CONFIG_FILE: |-
+          /etc/rancher/rke2/config.yaml
       sysctl:
         # Istio related sysctl overrides
         "fs.inotify.max_user_watches": 11048576

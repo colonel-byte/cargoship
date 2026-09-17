@@ -6,7 +6,7 @@ This document explains how Cargoship uses [Mage](https://magefile.org/) to orche
 
 Cargoship uses `mage` as its primary task runner and automation tool instead of a traditional `Makefile`. The implementation resides in the `magefiles/` directory, which acts as the central repository for:
 
-*   Building binaries (both containerized with Dagger and natively on the host).
+*   Building binaries for the host and for the release target platforms.
 *   Running end-to-end (e2e) tests.
 *   Generating documentation from the codebase.
 *   Generating and publishing JSON schemas from Go types.
@@ -17,38 +17,23 @@ The entry point of the automation layer is `magefiles/core/core.go`, which boots
 
 Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as `mage <namespace>:<target>`, and target names are case-insensitive, so `mage generate:engineconfig` and `mage generate:engineConfig` are the same command. Run `mage -l` for the authoritative list on your checkout.
 
-### `Dagger` Namespace
+### `Build` Namespace
 
-The `Dagger` namespace is the default target and the primary build path. It manages containerized and reproducible builds of the Cargoship binary:
+The `Build` namespace is the default target and the build path for the Cargoship binary. It compiles natively with the host's Go toolchain:
 
-*   `Toolchain` — Configures the local Dagger toolchain.
 *   `Binary` — Compiles the binary for the host's platform.
 *   `Linuxamd64` / `Linuxarm64` — Compiles Linux binaries.
 *   `Macamd64` / `Macarm64` — Compiles macOS binaries.
-*   `All` — Compiles and exports all release binaries to `build/` concurrently.
+*   `All` — Compiles all release binaries into `build/`.
 
 ```sh
-mage dagger:toolchain     # update the dagger build environment (run once, or after a dagger upgrade)
-mage dagger:binary        # build for this host's OS/arch
-mage dagger:linuxamd64    # build build/cargoship_linux_amd64
-mage dagger:linuxarm64    # build build/cargoship_linux_arm64
-mage dagger:macamd64      # build build/cargoship_darwin_amd64
-mage dagger:macarm64      # build build/cargoship_darwin_arm64
-mage dagger:all           # build every release binary into build/
-mage                      # same as `mage dagger:all` -- it is the default target
-```
-
-### `Build` Namespace
-
-The `Build` namespace mirrors the compilation targets of the `Dagger` namespace but bypasses containerization, executing compilation natively on the host's Go toolchain. This path is intended for quick, local development, and it is the one to use when Docker or Dagger is not available.
-
-```sh
-mage build:binary         # build for this host's OS/arch, no container
-mage build:linuxamd64
-mage build:linuxarm64
-mage build:macamd64
-mage build:macarm64
+mage build:binary         # build for this host's OS/arch
+mage build:linuxamd64     # build build/cargoship_linux_amd64
+mage build:linuxarm64     # build build/cargoship_linux_arm64
+mage build:macamd64       # build build/cargoship_darwin_amd64
+mage build:macarm64       # build build/cargoship_darwin_arm64
 mage build:all            # build every release binary into build/
+mage                      # same as `mage build:all` -- it is the default target
 ```
 
 ### `Dev` Namespace
@@ -71,10 +56,10 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 
 The `Test` namespace hosts the integration and validation suites:
 
-*   `EndToEnd` — Builds Cargoship for the host via Dagger, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.
+*   `EndToEnd` — Builds Cargoship for the host, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.
 
 ```sh
-mage test:endToEnd        # build via dagger, then run the e2e suite
+mage test:endToEnd        # build the binary, then run the e2e suite
 ```
 
 ### `Generate` Namespace
@@ -86,9 +71,13 @@ The `Generate` namespace handles code-generation and repository asset updates:
 *   `PullEngineSource` — Fetches raw k3s/RKE2 source at the tags pinned in `thirdparty-src/pins.json` into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). Touches the network.
 *   `LatestTag <distro> <vMAJOR.MINOR>` — Resolves the newest non-RC upstream tag for that minor line, pins it in `thirdparty-src/pins.json`, and re-pulls that version's source if the pin moved. Touches the network.
 *   `UpdatePins` — Runs `LatestTag` over every minor line already pinned in `thirdparty-src/pins.json`, refreshing each to its newest patch release. Touches the network.
-*   `Examples` — Renders `magefiles/templates/<distro>-distro.yaml.tmpl` into `example/<distro>-<cni>/<minor>/v<version>/distro.yaml`, one flavor per CNI (`example/rke2-cilium/`, `example/rke2-canal/`, `example/k3s-flannel/`) plus a multi-architecture flavor per CNI (`example/rke2-multi-cni-canal/`, `example/rke2-multi-cni-cilium/`, `example/k3s-multi/`) and single-purpose flavors that vary one setting (`example/rke2-cilium-wireguard/`, `example/rke2-cilium-vsphere/`), grouped by minor line (`v1_35/`, matching `thirdparty-src/<distro>/` and `src/pkg/engineconfig/gen/<distro>/`) and creating those directories as needed. Per flavor it renders once per tag of that distro pinned in `thirdparty-src/pins.json` and once per example directory that flavor already has on disk, so a template edit reaches the older examples instead of leaving them to drift. Everything that varies between versions is derived from the tag, except `imageConfig.images` and the digests, which come from that release's published assets. Touches the network.
+*   `Examples` — Renders `magefiles/templates/<distro>-distro.yaml.tmpl` into `example/<distro>-<cni>/<minor>/v<version>/distro.yaml`, one flavor per CNI (`example/rke2-canal/`, `example/k3s-flannel/`) plus a multi-architecture flavor per CNI (`example/rke2-multi-cni-canal/`, `example/rke2-multi-cni-cilium/`, `example/k3s-multi/`) and single-purpose flavors that vary one setting (`example/rke2-cilium-vsphere/`), grouped by minor line (`v1_35/`, matching `thirdparty-src/<distro>/` and `src/pkg/engineconfig/gen/<distro>/`) and creating those directories as needed. Per flavor it renders once per tag of that distro pinned in `thirdparty-src/pins.json` and once per example directory that flavor already has on disk, so a template edit reaches the older examples instead of leaving them to drift. Everything that varies between versions is derived from the tag, except `imageConfig.images` and the digests, which come from that release's published assets. Touches the network the first time it renders a version: each release's text assets are cached under `<zarf_cache>/examples/`, one flat file per asset URL named the way phase 50 names an image tarball from an image reference, so re-rendering a version already on disk fetches nothing. An entry is only used while the URL it was fetched from still matches, and `CARGOSHIP_EXAMPLES_NO_CACHE=1` refetches everything for a run — needed when Rancher re-cuts a release's assets in place, since the URL does not change when it does.
 
     Distros and their flavors are declared together in `exampleDistros` in `magefiles/examples.go`. Flavors differ by more than their image list: cilium replaces kube-proxy (`disable-kube-proxy: true`) and is configured through an `rke2-cilium` HelmChartConfig manifest, while canal and flannel run alongside kube-proxy and carry no manifest of their own. Adding a CNI means adding a flavor entry there, and a `{{ if }}` in that distro's template for anything specific to it.
+
+    A flavor also names values templates, which are rendered next to `distro.yaml` under the same name minus `.tmpl`. They are grouped per distro rather than per flavor -- `magefiles/templates/rke2/` and `magefiles/templates/k3s/` -- because a package carries a single schema, so everything its flavors expose has to be described in one document. The templates are rendered against the same `exampleVersion` the definition is, so a `{{ if eq .CNI "cilium" }}` in them covers what only the cilium flavors expose. Those values are what let one example stand in for several: which bundled charts the engine installs, and for cilium encryption, L2 announcements, and the Hubble UI, are chosen at install time through the cluster's `spec.config.values` rather than baked into a separate flavor at render time.
+
+    The rendered schema suggests `addons.disabled` values from `exampleVersion.Addons`, which is that distro/minor's packaged-component vocabulary as `EngineConfig` extracted it -- so a v1.37 example offers `rke2-gateway-api-crd` and a v1.34 one does not. They are `examples` rather than an `enum`: the vocabulary comes from the engine's `--disable` help text, which does not name every chart the build bundles, so restricting to it would reject charts the engine would have honored. A version whose source has never been pulled has no vocabulary, and rendering its values files fails rather than writing a values file an editor can offer nothing for. Pull that minor line (`Generate.PullEngineSource`) and re-run `EngineConfig` first.
 
     A flavor also decides which architectures its examples target and which releases it covers. `arches` lists the architectures, defaulting to amd64 alone; `minors` limits the flavor to named minor lines, defaulting to every line the distro renders; and `name` is what follows the distro in `metadata.name` when the CNI is not the point. The multi-architecture flavors use all three: they target amd64 and arm64, cover only `v1_36`, and are named `multi`, because they exist to show what a package covering several architectures looks like rather than to cover every release. Everything a distro publishes once per architecture -- RKE2's versioned RPMs and release tarball, the k3s binary and its digest -- hangs off `Arches` on the rendered version rather than off the version itself, so the templates range over architectures whether there is one or several, and a single-architecture example renders exactly as it did before, without an `arch` selector on anything.
 
@@ -100,8 +89,8 @@ The `Generate` namespace handles code-generation and repository asset updates:
 
     Before rendering, each build's `rke2-common` RPM is checked (a `HEAD`, and only for URLs the cache has never seen). Rancher supersedes an `rke2rN` with the next revision and removes the old RPMs, while the git tag and image manifests stay up — so a build can look renderable and still install nothing. Those are skipped, and any example already on disk for one is deleted, along with its minor line directory if that empties it. As of August 2026 that covers `v1.35.0+rke2r2` and `v1.35.3+rke2r2`, replaced by `rke2r3`, and `v1.34.3+rke2r2` and `v1.34.6+rke2r2` — use the `rke2r3` release of those patches. Nothing is remembered about a skip, so a build that comes back is rendered again on the next run; a build that goes away is only noticed while it is still pinned or still on disk. The `shasum` on an individual file is still allowed to be missing — that path now only covers the odd file a still-published build lost.
 
-*   `ExampleLine <distro> <vMAJOR.MINOR>` — Renders an example for *every* non-RC release on one minor line of that distro, rather than only the pinned one, so `rke2 v1.36` backfills `v1.36.0+rke2r1` through the newest `v1.36` release into `example/rke2-cilium/v1_36/`, `example/rke2-canal/v1_36/`, and `example/rke2-multi-cni-canal/v1_36/`. A flavor that names minor lines is only rendered for the lines it names, so asking for a line a multi-architecture flavor does not cover renders the other flavors alone. The leading `v` is optional. Once written, `Examples` keeps those files current, since it re-renders every example directory on disk. Touches the network.
-*   `EngineConfig` — Statically parses raw engine source under `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)) to generate typed `config.yaml` structs per distro/version in `src/pkg/engineconfig/gen/`.
+*   `ExampleLine <distro> <vMAJOR.MINOR>` — Renders an example for *every* non-RC release on one minor line of that distro, rather than only the pinned one, so `rke2 v1.36` backfills `v1.36.0+rke2r1` through the newest `v1.36` release into `example/rke2-canal/v1_36/`, `example/rke2-cilium-vsphere/v1_36/`, and `example/rke2-multi-cni-canal/v1_36/`. A flavor that names minor lines is only rendered for the lines it names, so asking for a line a multi-architecture flavor does not cover renders the other flavors alone. The leading `v` is optional. Once written, `Examples` keeps those files current, since it re-renders every example directory on disk. Touches the network, through the same release-asset cache `Examples` uses.
+*   `EngineConfig` — Statically parses raw engine source under `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)) to generate typed `config.yaml` structs per distro/version in `src/pkg/engineconfig/gen/`, plus each version's packaged-component vocabulary (the valid `disable:`, `cni:`, and `ingress-controller:` values) in a `zz_addons.go` alongside them.
 
 ```sh
 mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
@@ -133,7 +122,6 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 ## File-by-File Reference
 
 *   **`core/core.go`:** Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in `magefiles/`) so it does not collide with the `func main()` that the `mage` CLI generates on the fly — see [Running Mage Directly](#running-mage-directly-without-the-cli) below.
-*   **`dagger.go`:** Houses user-facing targets for containerized compilation via Dagger.
 *   **`build.go`:** Defines compilation tasks utilizing the local host Go toolchain.
 *   **`dev.go`:** Defines convenience tasks under the `Dev` and `Test` namespaces.
 *   **`gen-docs.go`:** Performs Cobra command extraction and phase parser generation to update everything inside the `docs/` tree.
@@ -146,9 +134,10 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`gen-example-line.go`:** Holds `Generate.ExampleLine`.
 *   **`examples.go`:** Shared, target-free layer behind both example targets: what an example is rendered from (the tag-derived fields and the fetched image manifests) and how one is written.
 *   **`example-shasums.go`:** The `example/shasums.json` cache, and the `sha256` function the example template hashes its remote files with.
+*   **`example-release-lines.go`:** The cache behind `fetchReleaseLines`: where it lives, how an asset URL is flattened into one file name, how an entry is trusted, and the atomic write that keeps a half-written entry from being read back as a whole asset.
 *   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the four `gen-engine-*.go` targets.
 *   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl` and `k3s-distro.yaml.tmpl`, one per distro that has examples.
-*   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
+*   **`utils.go`:** Implements low-level helper functions for file cleanup, host compilation, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
 *   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
 
 ---
@@ -159,7 +148,7 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 
 | Output Directory / File | Description | Target |
 | :--- | :--- | :--- |
-| `build/cargoship_*` | Compiled release binaries | `Dagger.All` / `Build.All` |
+| `build/cargoship_*` | Compiled release binaries | `Build.All` |
 | `docs/commands/*` | Auto-generated CLI documentation | `Generate.Document` |
 | `docs/phases/*` | Auto-generated cluster phase descriptors | `Generate.Document` |
 | `docs/SUMMARY.md` | Compiled table of contents for mdBook | `Generate.Document` |
@@ -169,12 +158,13 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `thirdparty-src/pins.json` | Pinned upstream tags | `Generate.LatestTag` / `Generate.UpdatePins` |
 | `example/<distro>-<cni>/<minor>/*/distro.yaml` | Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line | `Generate.Examples` |
 | `example/shasums.json` | Cached sha256 of every remote file the examples hash | `Generate.Examples` / `Generate.ExampleLine` |
+| `<zarf_cache>/examples/*` | Cached release text assets (image lists), not committed | `Generate.Examples` / `Generate.ExampleLine` |
 
 ---
 
 ## Running Mage Directly (Without the CLI)
 
-Normally you invoke tasks through the installed `mage` binary, e.g. `mage dagger:binary`. The `mage` CLI works by scanning `magefiles/` for exported functions and namespaces, then generating its own `func main()` (written to a gitignored `mage_output_file.go`) that wires those functions up to CLI subcommands before compiling and running the result.
+Normally you invoke tasks through the installed `mage` binary, e.g. `mage build:binary`. The `mage` CLI works by scanning `magefiles/` for exported functions and namespaces, then generating its own `func main()` (written to a gitignored `mage_output_file.go`) that wires those functions up to CLI subcommands before compiling and running the result.
 
 Because that generated file declares `package main` with its own `func main()`, it cannot coexist with a second, hand-written `func main()` in the same package — hence `core/core.go` (which does exactly that, via `mage.Main()`) is split out into its own `magefiles/core` subpackage rather than sitting alongside the task files in `magefiles/`.
 
@@ -192,7 +182,7 @@ This builds and runs the same `mage.Main()` entry point that the `mage` CLI woul
 Task selection still works the same way — pass the namespace:target as an argument, e.g.:
 
 ```sh
-go run ./magefiles/core dagger:binary
+go run ./magefiles/core build:binary
 ```
 
 Note that `magefiles/` itself remains its own `package main` for the `mage` CLI's benefit; `core/core.go` is a separate package and binary, not part of that compiled unit.

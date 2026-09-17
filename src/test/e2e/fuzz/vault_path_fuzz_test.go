@@ -92,10 +92,10 @@ func FuzzDecryptAtPathRoundTrip(f *testing.F) {
 	f.Add("\xff\xfe not valid utf-8")
 
 	f.Fuzz(func(t *testing.T, value string) {
-		encrypted, err := clustercfg.EncryptValue(value, fuzzPassword)
+		encrypted, err := clustercfg.EncryptValue(value, fuzzKeyring)
 		require.NoError(t, err)
 
-		decrypted, err := clustercfg.DecryptAtPath(docWithCiphertext(encrypted), passPath, fuzzPassword)
+		decrypted, err := clustercfg.DecryptAtPath(docWithCiphertext(encrypted), passPath, fuzzKeyring)
 		if !utf8.ValidString(value) {
 			// A YAML scalar holds text, so a value that is not UTF-8 is refused rather than
 			// written back as something that no longer decodes to what went in.
@@ -114,9 +114,9 @@ func FuzzDecryptAtPathRoundTrip(f *testing.F) {
 		if cluster.IsVaultEncrypted(value) {
 			return
 		}
-		reencrypted, err := clustercfg.EncryptAtPath(decrypted, passPath, fuzzPassword, false)
+		reencrypted, err := clustercfg.EncryptAtPath(decrypted, passPath, fuzzKeyring, false)
 		require.NoError(t, err, "a document written by DecryptAtPath cannot be encrypted again")
-		again, err := clustercfg.DecryptAtPath(reencrypted, passPath, fuzzPassword)
+		again, err := clustercfg.DecryptAtPath(reencrypted, passPath, fuzzKeyring)
 		require.NoError(t, err)
 		require.Equal(t, value, credentialIn(t, again), "value changed on the second round trip")
 		requireNeighboursIntact(t, again)
@@ -131,6 +131,7 @@ func FuzzDecryptAtPathRoundTrip(f *testing.F) {
 // rather than a case in the one above.
 func FuzzRekeyAtPathPreservesValue(f *testing.F) {
 	const newPassword = "a different vault password"
+	newKeyring := clustercfg.NewVaultKeyring(newPassword)
 
 	f.Add("hunter2")
 	f.Add("")
@@ -139,10 +140,10 @@ func FuzzRekeyAtPathPreservesValue(f *testing.F) {
 	f.Add("control\x01character")
 
 	f.Fuzz(func(t *testing.T, value string) {
-		encrypted, err := clustercfg.EncryptValue(value, fuzzPassword)
+		encrypted, err := clustercfg.EncryptValue(value, fuzzKeyring)
 		require.NoError(t, err)
 
-		rekeyed, err := clustercfg.RekeyAtPath(docWithCiphertext(encrypted), passPath, fuzzPassword, newPassword)
+		rekeyed, err := clustercfg.RekeyAtPath(docWithCiphertext(encrypted), passPath, fuzzKeyring, newKeyring)
 		if cluster.IsVaultEncrypted(value) {
 			// A value whose plaintext is itself ciphertext cannot be rekeyed: the outer layer would
 			// move to the new password and the inner one would not, leaving a value no single
@@ -154,10 +155,10 @@ func FuzzRekeyAtPathPreservesValue(f *testing.F) {
 		requireNeighboursIntact(t, rekeyed)
 
 		ciphertext := credentialIn(t, rekeyed)
-		_, err = clustercfg.DecryptValue(ciphertext, fuzzPassword)
+		_, err = clustercfg.DecryptValue(ciphertext, fuzzKeyring)
 		require.Error(t, err, "the old password still reads the rekeyed value")
 
-		plain, err := clustercfg.DecryptValue(ciphertext, newPassword)
+		plain, err := clustercfg.DecryptValue(ciphertext, newKeyring)
 		require.NoError(t, err)
 		require.Equal(t, value, plain, "rekeying changed the plaintext")
 	})
