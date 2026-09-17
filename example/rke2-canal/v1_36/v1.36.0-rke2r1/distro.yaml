@@ -104,6 +104,13 @@ spec:
                   - rook-ceph
                   - zarf
     os:
+      env:
+        CRI_CONFIG_FILE: |-
+          /var/lib/rancher/rke2/agent/etc/crictl.yaml
+        KUBECONFIG: |-
+          /etc/rancher/rke2/rke2.yaml
+        RKE2_CONFIG_FILE: |-
+          /etc/rancher/rke2/config.yaml
       sysctl:
         # Istio related sysctl overrides
         "fs.inotify.max_user_watches": 11048576
