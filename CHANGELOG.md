@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.24.0](https://github.com/colonel-byte/cargoship/compare/v0.23.0...v0.24.0) (2026-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** add validate command ([#417](https://github.com/colonel-byte/cargoship/issues/417))
+* **schema:** generate schema file ([#416](https://github.com/colonel-byte/cargoship/issues/416))
+
+### Features
+
+* **assemble:** resolve values before the build runs ([#403](https://github.com/colonel-byte/cargoship/issues/403)) ([8c62cb5](https://github.com/colonel-byte/cargoship/commit/8c62cb5aa36318f4bac81e0cc8dce8d259fba8df))
+* **cli:** add validate command ([#417](https://github.com/colonel-byte/cargoship/issues/417)) ([d0ca618](https://github.com/colonel-byte/cargoship/commit/d0ca61866d5b121935f46b38add40d7e978e3f78))
+* **engine-config-sync:** report the files written in place ([#405](https://github.com/colonel-byte/cargoship/issues/405)) ([c52caef](https://github.com/colonel-byte/cargoship/commit/c52caeffc081bd3b811f08ca7b2229ea1c0eadfb))
+* **engineconfig:** validate disable values against generated addon lists ([#409](https://github.com/colonel-byte/cargoship/issues/409)) ([9947469](https://github.com/colonel-byte/cargoship/commit/994746920f1c50c8fb8fc85cfeff9fd661e3c91f))
+* **examples:** give the example packages values files and schemas ([#401](https://github.com/colonel-byte/cargoship/issues/401)) ([a6ec737](https://github.com/colonel-byte/cargoship/commit/a6ec7373db841096424cdda5c5c3198cbfa52a4b))
+* **examples:** show values templating, and document it ([#406](https://github.com/colonel-byte/cargoship/issues/406)) ([129b4ef](https://github.com/colonel-byte/cargoship/commit/129b4ef63d3911d93810f2e21fc4ad313e99dfc8))
+* **helmvalues:** add Helm-style value templating and values plumbing ([#400](https://github.com/colonel-byte/cargoship/issues/400)) ([a74a2af](https://github.com/colonel-byte/cargoship/commit/a74a2af721a322943d43acdee14dc50d8e2edf2d))
+* **helmvalues:** add the Helm serialization functions sprig lacks ([#402](https://github.com/colonel-byte/cargoship/issues/402)) ([adafd63](https://github.com/colonel-byte/cargoship/commit/adafd63aafc3155c66a6e1891d5d5e0172b4f969))
+* refine schema more ([#415](https://github.com/colonel-byte/cargoship/issues/415)) ([459ba17](https://github.com/colonel-byte/cargoship/commit/459ba17e03389279b85d25a45ca2b89484e77631))
+* **schema:** generate schema file ([#416](https://github.com/colonel-byte/cargoship/issues/416)) ([b20df28](https://github.com/colonel-byte/cargoship/commit/b20df28fe486db5a9ba7b3fe15a9b28272c92e6e))
+* **values:** disable bundled engine addons from the inventory ([#408](https://github.com/colonel-byte/cargoship/issues/408)) ([92c9ba5](https://github.com/colonel-byte/cargoship/commit/92c9ba5f6a33c190cf7575f89c7e333d59dd7b5e))
+* **values:** render the engine configuration and templated files at … ([#404](https://github.com/colonel-byte/cargoship/issues/404)) ([0545780](https://github.com/colonel-byte/cargoship/commit/05457801ced792e2f30a4d0faf027da08f1008cb))
+
+
+### CI/CD
+
+* **example:** add schema support in-editor ([#414](https://github.com/colonel-byte/cargoship/issues/414)) ([47443df](https://github.com/colonel-byte/cargoship/commit/47443dff9f75fc028ce9f6816173a4de5bad2754))
+* **example:** expand packages ([#413](https://github.com/colonel-byte/cargoship/issues/413)) ([4bcb523](https://github.com/colonel-byte/cargoship/commit/4bcb52331d56d6f1425a31712eb74b9bde440202))
+* **example:** generate all examples ([#412](https://github.com/colonel-byte/cargoship/issues/412)) ([4326533](https://github.com/colonel-byte/cargoship/commit/4326533f3922c4a9bfd4132e9edd7290f6ec57b1))
+
+
+### Build
+
+* **deps:** bump chainguard/cgr.dev/chainguard/static from `fa805e7` to `90b7f22` ([#411](https://github.com/colonel-byte/cargoship/issues/411)) ([902711a](https://github.com/colonel-byte/cargoship/commit/902711ac30eddeac653cc184db532c7adfaa77d1))
+
 ## [0.23.0](https://github.com/colonel-byte/cargoship/compare/v0.22.1...v0.23.0) (2026-09-16)
 
 
