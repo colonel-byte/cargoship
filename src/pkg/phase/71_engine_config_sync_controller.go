@@ -50,8 +50,8 @@ func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.Zar
 	candidates := p.manager.Config.Spec.Hosts.Controllers()
 	var mu sync.Mutex
 	var matched cluster.ZarfHosts
-	if err := p.parallelDo(ctx, candidates, func(_ context.Context, h *cluster.ZarfHost) error {
-		if p.needsUpdate(h) {
+	if err := p.parallelDo(ctx, candidates, func(ctx context.Context, h *cluster.ZarfHost) error {
+		if p.needsUpdate(ctx, h) {
 			mu.Lock()
 			matched = append(matched, h)
 			mu.Unlock()
