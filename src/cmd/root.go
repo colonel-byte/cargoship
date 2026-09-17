@@ -170,6 +170,7 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
 	rootCmd.AddCommand(newSchemaCommand())
+	rootCmd.AddCommand(newValidateCommand())
 	rootCmd.AddCommand(newVaultCommand())
 	rootCmd.AddCommand(newDeprecatedVaultEncryptCommand())
 

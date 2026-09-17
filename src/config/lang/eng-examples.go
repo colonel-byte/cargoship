@@ -311,6 +311,21 @@ $ cargoship schema inventory --package ./example/rke2-cilium-vsphere/v1_37/v1.37
 $ cargoship schema package -o ./distro.schema.json
 $ cargoship schema config -o ./cargoship.schema.json`
 
+	// CmdValidateExample validate example
+	CmdValidateExample = `
+# Check a cluster inventory against the inventory schema:
+$ cargoship validate ./inventory.yaml
+
+# Check every inventory in a directory, reporting all of them in one pass:
+$ cargoship validate ./inventories/*.yaml
+
+# Check a cargoship config file, which declares no kind of its own:
+$ cargoship validate --kind config ./cargoship-config.yaml
+
+# Check an inventory's spec.config.values against the package it will be installed with:
+$ cargoship validate ./inventory.yaml --package ./package.tar.zst
+`
+
 	// CmdVersionExample version example
 	CmdVersionExample = `# Print the version of the running binary
 $ cargoship version

@@ -73,6 +73,12 @@ cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.jso
 
 `--package` accepts a package source directory as well as a built one, so a package author can point an editor at a definition that has not been built yet. The composed schema describes the override subtree on its own, while cargoship validates the overrides merged with the values the package ships, so `required` is dropped from it -- a key the package's own `values.yaml` supplies is not required of the operator. It catches an unknown key, a wrong type, and a name outside an `enum` or `pattern`; it does not claim to reproduce install-time validation. See the [inventory guide](setup-inv.md) for wiring it into an editor.
 
+`cargoship validate` runs that same composed schema without an editor, which is the form that fits CI:
+
+```sh
+cargoship validate ./inventory.yaml --package ./package.tar.zst
+```
+
 ## Mappings
 
 A mapping projects one value onto one place in the engine configuration:

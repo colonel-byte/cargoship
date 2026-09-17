@@ -57,6 +57,38 @@ cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.jso
 
 `--package` takes anything `cargoship apply` takes -- a tarball, an `oci://` or `https://` reference -- or a package source directory, so it works before the package is built. The composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships: it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation. See the [package values guide](package-values.md) for what a package may expose and how the merge works.
 
+## Checking an Inventory
+
+An editor is not the only place this check belongs. Cargoship unmarshals an inventory without strict key checking, so a misspelled key is dropped rather than reported: a file that says `loadbalancr:` parses cleanly and installs a cluster with no load balancer address. `cargoship validate` runs the same schema over a file with no editor and no network:
+
+```sh
+cargoship validate ./inventory.yaml
+```
+
+It reports every problem rather than the first, so one pass is enough to fix a file:
+
+```
+inventory.yaml does not match the inventory schema:
+  spec.config: Additional property loadbalancr is not allowed
+  spec.config: loadbalancer is required
+  spec.hosts.0.role: must be one of the following: "controller", "worker"
+```
+
+The schema is chosen from the document's own `kind`, so a directory of inventories and package definitions can be checked in one run. A cargoship config file declares no kind and has to be named:
+
+```sh
+cargoship validate ./inventories/*.yaml
+cargoship validate --kind config ./cargoship-config.yaml
+```
+
+`--package` works here too, and checks `.spec.config.values` against the package's own schema with the same caveat as above:
+
+```sh
+cargoship validate ./inventory.yaml --package ./package.tar.zst
+```
+
+This is a check you run, not one cargoship runs for you. `apply` does not validate the inventory against the schema before installing; it reads the file the way it always has. Put `cargoship validate` in CI, or in front of an install, where a typo is cheap to fix.
+
 ## Global Configuration
 
 The `.spec.config` section configures cluster-wide settings, such as load balancer endpoints:

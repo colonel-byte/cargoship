@@ -31,6 +31,7 @@ cargoship COMMAND [flags]
 * [cargoship schema](./cargoship_schema.md)	 - Writes out a JSON Schema for one of cargoship's own file formats
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
+* [cargoship validate](./cargoship_validate.md)	 - Checks a cluster inventory, package definition, or config file against its schema
 * [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

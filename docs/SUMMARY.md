@@ -34,6 +34,7 @@
   - [schema](commands/cargoship_schema.md)
   - [sha256sum](commands/cargoship_sha256sum.md)
   - [sign](commands/cargoship_sign.md)
+  - [validate](commands/cargoship_validate.md)
   - [vault](commands/cargoship_vault.md)
     - [decrypt-file](commands/cargoship_vault_decrypt-file.md)
     - [decrypt-path](commands/cargoship_vault_decrypt-path.md)
