@@ -182,6 +182,15 @@ const (
 	CmdPackageFlagVerify = "Verify the Cargoship package signature"
 	// CmdPackageCreateFlagReproducible create flag reproducible
 	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package."
+	// CmdSchemaShort schema short
+	CmdSchemaShort = "Writes out a JSON Schema for one of cargoship's own file formats"
+	// CmdSchemaLong schema long
+	CmdSchemaLong = "Writes out the JSON Schema for KIND -- 'inventory' for a cluster file, 'package' for a distro.yaml, 'config' for a cargoship config file -- so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to --output. Point an editor at a written file with a '# yaml-language-server: $schema=<path>' comment on the first line. With --package, the package's own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship -- so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation."
+	// CmdSchemaFlagOutput flag description
+	CmdSchemaFlagOutput = "Path to write the schema to. Omit it to write to stdout."
+	// CmdSchemaFlagPackage flag description
+	CmdSchemaFlagPackage = "Graft a package's own values schema onto spec.config.values. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
+
 	// CmdDistroSignShort sign short
 	CmdDistroSignShort = "Signs an existing Cargoship distro package"
 	// CmdDistroSignLong sign long

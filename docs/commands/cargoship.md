@@ -28,6 +28,7 @@ cargoship COMMAND [flags]
 * [cargoship publish](./cargoship_publish.md)	 - Publish the Cargoship Package to an OCI registry
 * [cargoship pull](./cargoship_pull.md)	 - Pulls a Cargoship package from a remote registry and save to the local file system
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for a engine
+* [cargoship schema](./cargoship_schema.md)	 - Writes out a JSON Schema for one of cargoship's own file formats
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
 * [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age

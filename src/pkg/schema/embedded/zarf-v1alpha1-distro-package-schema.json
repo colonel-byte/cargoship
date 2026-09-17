@@ -1,0 +1,826 @@
+{
+  "$defs": {
+    "Arches": {
+      "items": {
+        "enum": [
+          "amd64",
+          "arm64",
+          "riscv64"
+        ],
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "BinarySelector": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "arch": {
+          "$ref": "#/$defs/Arches"
+        },
+        "package": {
+          "enum": [
+            "rpm",
+            "apt",
+            "binary"
+          ],
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "worker",
+            "controller"
+          ],
+          "type": "string"
+        },
+        "roles": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "Mapping": {
+      "type": "object"
+    },
+    "SetValue": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "type": "object"
+    },
+    "Shell": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "darwin": {
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ],
+          "type": "string"
+        },
+        "linux": {
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ],
+          "type": "string"
+        },
+        "windows": {
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Variable": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "autoIndent": {
+          "type": "boolean"
+        },
+        "name": {
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "sensitive": {
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfComponentAction": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cmd": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "dir": {
+          "type": "string"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxRetries": {
+          "type": "integer"
+        },
+        "maxTotalSeconds": {
+          "type": "integer"
+        },
+        "mute": {
+          "type": "boolean"
+        },
+        "setValues": {
+          "items": {
+            "$ref": "#/$defs/SetValue"
+          },
+          "type": "array"
+        },
+        "setVariable": {
+          "deprecated": true,
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "setVariables": {
+          "items": {
+            "$ref": "#/$defs/Variable"
+          },
+          "type": "array"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell"
+        },
+        "template": {
+          "type": "boolean"
+        },
+        "wait": {
+          "$ref": "#/$defs/ZarfComponentActionWait"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionDefaults": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "dir": {
+          "type": "string"
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxRetries": {
+          "type": "integer"
+        },
+        "maxTotalSeconds": {
+          "type": "integer"
+        },
+        "mute": {
+          "type": "boolean"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionSet": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "after": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "before": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "defaults": {
+          "$ref": "#/$defs/ZarfComponentActionDefaults"
+        },
+        "onFailure": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "onSuccess": {
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionWait": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cluster": {
+          "$ref": "#/$defs/ZarfComponentActionWaitCluster"
+        },
+        "network": {
+          "$ref": "#/$defs/ZarfComponentActionWaitNetwork"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionWaitCluster": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "condition": {
+          "examples": [
+            "Ready",
+            "Available"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "examples": [
+            "Pod",
+            "Deployment"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "examples": [
+            "podinfo",
+            "app=podinfo"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfComponentActionWaitNetwork": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "examples": [
+            "localhost:8080",
+            "1.1.1.1"
+          ],
+          "type": "string"
+        },
+        "code": {
+          "examples": [
+            200,
+            404
+          ],
+          "type": "integer"
+        },
+        "protocol": {
+          "enum": [
+            "tcp",
+            "http",
+            "https"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "address"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroActions": {
+      "additionalProperties": false,
+      "description": "defines the actions cargoship runs during specific phases of building the distro package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "onCreate": {
+          "$ref": "#/$defs/ZarfComponentActionSet",
+          "description": "lists the actions cargoship runs when it creates the package."
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroBuildData": {
+      "additionalProperties": false,
+      "description": "holds information recorded when the package was built.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "description": "is the CPU architecture used to build the package. Populated only when the package targets a single architecture.",
+          "enum": [
+            "amd64",
+            "arm64",
+            "riscv64"
+          ],
+          "type": "string"
+        },
+        "architectures": {
+          "$ref": "#/$defs/Arches",
+          "description": "lists the CPU architectures used to build the package."
+        },
+        "provenanceFiles": {
+          "description": "lists files in the package that checksums.txt does not cover.\nThese are files added after cargoship generates checksums, for example signature files.\nThe signed distro.yaml authenticates this list.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "registryOverrides": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps each original registry to the registry actually used to build the package.",
+          "type": "object"
+        },
+        "reproducible": {
+          "description": "indicates Build.Timestamp was pinned to a fixed value\n(config.Timestamp) instead of the actual build time, so identical\npackage inputs produce byte-identical output.",
+          "type": "boolean"
+        },
+        "signed": {
+          "description": "indicates whether the package was signed. A nil value means the signing status was not recorded.",
+          "type": "boolean"
+        },
+        "timestamp": {
+          "description": "is the time the package was created.",
+          "type": "string"
+        },
+        "version": {
+          "description": "records the distro version used to build the package.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroConfig": {
+      "additionalProperties": false,
+      "description": "holds the configuration for the distro engine.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "engine": {
+          "description": "holds configuration passed through to the distro engine.",
+          "patternProperties": {
+            "^x-": {}
+          },
+          "properties": {
+            "manifest": {
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object"
+                  }
+                ]
+              },
+              "description": "maps a chart name to the Helm values cargoship writes to that chart's HelmChartConfig. A value is either a YAML string or a mapping.",
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "files": {
+          "$ref": "#/$defs/ZarfFiles",
+          "description": "lists files that cargoship writes to every host, no matter which install method it uses."
+        },
+        "imageConfig": {
+          "$ref": "#/$defs/ZarfDistroImageConfig",
+          "description": "holds settings for the images bundled with the package."
+        },
+        "os": {
+          "$ref": "#/$defs/ZarfDistroOS",
+          "description": "holds settings applied to the host operating system."
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroImageConfig": {
+      "additionalProperties": false,
+      "description": "holds settings for the images cargoship writes to a host.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "compression": {
+          "default": "none",
+          "description": "sets the compression format for the image tarballs.",
+          "enum": [
+            "none",
+            "gz",
+            "zstd"
+          ],
+          "type": "string"
+        },
+        "images": {
+          "description": "lists the offline images required by the package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "path": {
+          "description": "is the upload destination for the image tarballs.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroMetadata": {
+      "additionalProperties": false,
+      "description": "holds identifying information for a distro package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "aggregateChecksum": {
+          "description": "is the checksum of the checksums.txt file, which lists the checksum for every layer in the package.",
+          "type": "string"
+        },
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "holds key-value pairs added to the OCI manifest.",
+          "type": "object"
+        },
+        "architecture": {
+          "default": "amd64",
+          "description": "is the CPU architecture this distro package targets. Use Architectures to target more than one.",
+          "enum": [
+            "amd64",
+            "arm64",
+            "riscv64"
+          ],
+          "type": "string"
+        },
+        "architectures": {
+          "$ref": "#/$defs/Arches",
+          "description": "lists the CPU architectures this distro package targets. It supersedes Architecture, which stays valid for a package targeting a single architecture."
+        },
+        "athors": {
+          "description": "sets the OCI annotation for the contact details of the people or organization responsible for the image.",
+          "type": "string"
+        },
+        "description": {
+          "description": "explains what this distro package does.",
+          "type": "string"
+        },
+        "documentation": {
+          "description": "sets the OCI annotation for the URL to the image documentation.",
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the distro package.",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "source": {
+          "description": "sets the OCI annotation for the URL to the image source code.",
+          "type": "string"
+        },
+        "uncompressed": {
+          "description": "disables compression for this package when true.",
+          "type": "boolean"
+        },
+        "url": {
+          "description": "sets the OCI annotation for more information about the image.",
+          "type": "string"
+        },
+        "vendor": {
+          "description": "sets the OCI annotation for the name of the organization or individual that distributes the image.",
+          "type": "string"
+        },
+        "version": {
+          "description": "is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroOS": {
+      "additionalProperties": false,
+      "description": "holds settings applied to a host.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps environment variables cargoship sets on the host.",
+          "type": "object"
+        },
+        "fapolicyd": {
+          "description": "holds the fapolicyd config file contents cargoship writes to a host.",
+          "type": "string"
+        },
+        "files": {
+          "$ref": "#/$defs/ZarfFiles",
+          "description": "lists files cargoship uploads to a host."
+        },
+        "kernel": {
+          "description": "lists the kernel modules cargoship enables on the host.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sysctl": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "description": "maps sysctl keys to the values cargoship applies to a host.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroSpec": {
+      "additionalProperties": false,
+      "description": "holds the configuration for a distro package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "actions": {
+          "$ref": "#/$defs/ZarfDistroActions",
+          "description": "defines the actions cargoship runs while building the package."
+        },
+        "config": {
+          "$ref": "#/$defs/ZarfDistroConfig",
+          "description": "holds the distro engine configuration."
+        },
+        "type": {
+          "description": "selects the distro engine: rke2 or k3s.",
+          "enum": [
+            "rke2",
+            "k3s"
+          ],
+          "type": "string"
+        },
+        "values": {
+          "$ref": "#/$defs/ZarfDistroValues",
+          "description": "holds the default values the package is built with, and the schema they must satisfy."
+        },
+        "version": {
+          "description": "is the version of the distro engine.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "version",
+        "config"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroValueMapping": {
+      "additionalProperties": false,
+      "description": "projects one value onto one place in the engine configuration.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "source": {
+          "description": "is the dotted path to read from the resolved values, e.g. .cilium.encryption.enabled",
+          "examples": [
+            ".cilium.encryption.enabled"
+          ],
+          "type": "string"
+        },
+        "target": {
+          "description": "is the dotted path to write, relative to spec.config.engine,\ne.g. .manifest.rke2-cilium.encryption.enabled",
+          "examples": [
+            ".manifest.rke2-cilium.encryption.enabled"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroValues": {
+      "additionalProperties": false,
+      "description": "declares the values a package ships with.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "files": {
+          "description": "lists the YAML values files cargoship merges, in order, to build the package's default values. Each entry is a path relative to the package definition, an absolute path, or a URL. A later file overrides an earlier one, key by key.",
+          "items": {
+            "examples": [
+              "values.yaml",
+              "overrides/prod.yaml",
+              "https://example.com/values.yaml"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mappings": {
+          "description": "project values onto the engine configuration, so that one value a\ncluster sets reaches wherever the distro needs it. Each mapping reads the\nsource path out of the resolved values and writes it to the target path,\nwhich is relative to spec.config.engine. A source the values do not define\nis left alone, so the package's own engine configuration stands as the\ndefault.",
+          "items": {
+            "$ref": "#/$defs/ZarfDistroValueMapping"
+          },
+          "type": "array"
+        },
+        "schema": {
+          "description": "is the JSON Schema document the merged values must satisfy. Cargoship checks the values against it when it builds the package, and refuses to build when they do not match. The schema must not use $ref.",
+          "examples": [
+            "values.schema.json"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfFile": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "executable": {
+          "type": "boolean"
+        },
+        "extractPath": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "isDirectory": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "perm": true,
+        "selector": {
+          "$ref": "#/$defs/BinarySelector"
+        },
+        "shasum": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "symlinks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target": {
+          "type": "string"
+        },
+        "template": {
+          "type": "boolean"
+        },
+        "user": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ZarfFiles": {
+      "items": {
+        "$ref": "#/$defs/ZarfFile"
+      },
+      "type": "array"
+    }
+  },
+  "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro/zarf-distro",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "is the root object of a distro package configuration document.",
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "apiVersion": {
+      "description": "identifies the API group and version of this configuration document.",
+      "enum": [
+        "zarf.dev/v1alpha1"
+      ],
+      "type": "string"
+    },
+    "build": {
+      "$ref": "#/$defs/ZarfDistroBuildData",
+      "description": "holds information recorded when the package was built."
+    },
+    "kind": {
+      "description": "identifies the document type. The value must be ZarfDistro.",
+      "enum": [
+        "ZarfDistro"
+      ],
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ZarfDistroMetadata",
+      "description": "holds identifying information for the distro package."
+    },
+    "spec": {
+      "$ref": "#/$defs/ZarfDistroSpec",
+      "description": "holds the configuration for the distro package."
+    }
+  },
+  "required": [
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "type": "object"
+}

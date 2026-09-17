@@ -65,6 +65,14 @@ Merging is per key, not per document. An override that sets `cilium.encryption.e
 
 The merged values are checked against the package's schema again at install time, so an inventory that sets a key the package does not accept fails before anything is written to a host.
 
+That check happens when the package is installed, which is late to learn that a key is misspelled. `cargoship schema inventory --package <package>` composes the package's values schema into the inventory schema, so an editor completes and checks `spec.config.values` while the inventory is being written:
+
+```sh
+cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json
+```
+
+`--package` accepts a package source directory as well as a built one, so a package author can point an editor at a definition that has not been built yet. The composed schema describes the override subtree on its own, while cargoship validates the overrides merged with the values the package ships, so `required` is dropped from it -- a key the package's own `values.yaml` supplies is not required of the operator. It catches an unknown key, a wrong type, and a name outside an `enum` or `pattern`; it does not claim to reproduce install-time validation. See the [inventory guide](setup-inv.md) for wiring it into an editor.
+
 ## Mappings
 
 A mapping projects one value onto one place in the engine configuration:

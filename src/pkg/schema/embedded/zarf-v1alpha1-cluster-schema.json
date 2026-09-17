@@ -1,0 +1,866 @@
+{
+  "$defs": {
+    "Localhost": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enabled": {
+          "description": "Enabled must be true for the connection to be valid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "OpenSSH": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "Address of the remote host",
+          "type": "string"
+        },
+        "configPath": {
+          "description": "Path to SSH config file",
+          "type": "string"
+        },
+        "disableMultiplexing": {
+          "default": false,
+          "description": "Disable SSH connection multiplexing",
+          "type": "boolean"
+        },
+        "keyPath": {
+          "description": "Path to SSH private key",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/OpenSSHOptions",
+          "description": "Additional SSH options as key-value pairs (e.g. StrictHostKeyChecking: false)"
+        },
+        "port": {
+          "description": "Optional SSH port",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "user": {
+          "description": "Optional SSH user",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "type": "object"
+    },
+    "OpenSSHOptions": {
+      "type": "object"
+    },
+    "SSH": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "Address of the remote host (IP or hostname)",
+          "type": "string"
+        },
+        "bastion": {
+          "$ref": "#/$defs/SSH",
+          "description": "Optional bastion host"
+        },
+        "hostKey": {
+          "description": "Optional known host key fingerprint",
+          "type": "string"
+        },
+        "keyPath": {
+          "description": "Optional path to private key",
+          "type": "string"
+        },
+        "port": {
+          "default": 22,
+          "description": "SSH port (default 22)",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "user": {
+          "default": "root",
+          "description": "User to log in as",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "type": "object"
+    },
+    "WinRM": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "Address of the remote host",
+          "type": "string"
+        },
+        "bastion": {
+          "$ref": "#/$defs/SSH",
+          "description": "Optional SSH bastion"
+        },
+        "caCertPath": {
+          "description": "Path to CA certificate",
+          "type": "string"
+        },
+        "certPath": {
+          "description": "Path to client certificate",
+          "type": "string"
+        },
+        "insecure": {
+          "default": false,
+          "description": "Accept invalid TLS certificates",
+          "type": "boolean"
+        },
+        "keyPath": {
+          "description": "Path to client key",
+          "type": "string"
+        },
+        "password": {
+          "description": "Password for WinRM authentication",
+          "type": "string"
+        },
+        "port": {
+          "default": 5985,
+          "description": "WinRM port",
+          "maximum": 65535,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "tlsServerName": {
+          "description": "TLS server name override",
+          "type": "string"
+        },
+        "useHttps": {
+          "default": false,
+          "description": "Use HTTPS for WinRM",
+          "type": "boolean"
+        },
+        "useNtlm": {
+          "default": false,
+          "description": "Use NTLM authentication",
+          "type": "boolean"
+        },
+        "user": {
+          "default": "Administrator",
+          "description": "User to authenticate as",
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "type": "object"
+    },
+    "ZarfClusterConfig": {
+      "additionalProperties": false,
+      "description": "holds cluster-wide configuration.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "loadbalancer": {
+          "description": "is the hostname clients use to reach the cluster control plane.",
+          "format": "hostname",
+          "type": "string"
+        },
+        "profiles": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ZarfClusterProfiles"
+          },
+          "description": "maps a profile name to host and engine overrides that a host can select.",
+          "type": "object"
+        },
+        "registries": {
+          "description": "lists the container registries the cluster uses.",
+          "items": {
+            "$ref": "#/$defs/ZarfClusterRegistries"
+          },
+          "type": "array"
+        },
+        "values": {
+          "description": "overrides the values the distro package was built with. It is the same\nnested structure the package ships, addressed by the same dotted paths, and it\nmust still satisfy the package's values schema. Keys the package does not\ndefine are kept, so a cluster can carry values a later package version reads.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "loadbalancer"
+      ],
+      "type": "object"
+    },
+    "ZarfClusterFiles": {
+      "additionalProperties": false,
+      "description": "defines a file to write to a host.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "data": {
+          "description": "holds inline content for the file, as an alternative to Source.",
+          "type": "string"
+        },
+        "dst": {
+          "description": "is the path on the host where cargoship writes the file.",
+          "type": "string"
+        },
+        "dstDir": {
+          "description": "is the directory on the host where cargoship writes the file.",
+          "type": "string"
+        },
+        "group": {
+          "description": "identifies the file group on the host.",
+          "examples": [
+            "root"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the file in the cluster configuration.",
+          "type": "string"
+        },
+        "perm": {
+          "description": "sets the file mode cargoship applies on the host.",
+          "type": "string"
+        },
+        "src": {
+          "description": "is the local path or URL cargoship reads the file from.",
+          "type": "string"
+        },
+        "user": {
+          "description": "identifies the file owner on the host.",
+          "examples": [
+            "root"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfClusterMetadata": {
+      "additionalProperties": false,
+      "description": "holds identifying information for a cluster.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "sets the cluster name. If you allow cargoship to update the kubeconfig, cargoship uses this name there.",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfClusterProfiles": {
+      "additionalProperties": false,
+      "description": "holds the host and engine overrides for one profile.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "concurrency": {
+          "description": "limits how many hosts using this profile cargoship processes at once, e.g.\ndraining, upgrading, initializing, or uninstalling. It accepts a fixed count (\"1\") or a\npercentage of the hosts sharing this profile (\"25%\"). Empty falls back to the phase's\ndefault concurrency.",
+          "examples": [
+            "1",
+            "5",
+            "25%",
+            "100%"
+          ],
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "engine": {
+          "$ref": "#/$defs/ZarfHostEngine",
+          "description": "holds the node label and taint overrides applied to a host that selects this profile."
+        },
+        "host": {
+          "$ref": "#/$defs/ZarfHostConfig",
+          "description": "holds the configuration overrides applied to a host that selects this profile."
+        }
+      },
+      "type": "object"
+    },
+    "ZarfClusterRegistries": {
+      "additionalProperties": false,
+      "description": "holds the credentials and pull proxy for one container registry.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "auth": {
+          "$ref": "#/$defs/ZarfClusterRegistryAuth",
+          "description": "holds the credentials for the registry."
+        },
+        "name": {
+          "description": "identifies the registry. With a proxy it is the registry pulls are redirected away\nfrom; without one it is the registry the credentials authenticate to.",
+          "examples": [
+            "docker.io",
+            "ghcr.io",
+            "quay.io",
+            "gcr.io",
+            "registry.k8s.io",
+            "public.ecr.aws"
+          ],
+          "type": "string"
+        },
+        "proxy": {
+          "$ref": "#/$defs/ZarfClusterRegistryProxy",
+          "description": "holds the pull redirect settings for the registry. Omit it to configure credentials\nor TLS for the registry without redirecting pulls away from it."
+        },
+        "tls": {
+          "$ref": "#/$defs/ZarfClusterRegistryTLS",
+          "description": "configures TLS verification and certificates for the registry endpoint."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfClusterRegistryAuth": {
+      "additionalProperties": false,
+      "description": "holds the credentials for a container registry.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "pass": {
+          "description": "is the login secret for the remote registry.",
+          "examples": [
+            "hunter2",
+            "$ANSIBLE_VAULT;1.1;AES256...",
+            "-----BEGIN AGE ENCRYPTED FILE-----..."
+          ],
+          "type": "string"
+        },
+        "token": {
+          "description": "authenticates to the remote registry instead of a username and password.",
+          "examples": [
+            "abc123",
+            "$ANSIBLE_VAULT;1.1;AES256...",
+            "-----BEGIN AGE ENCRYPTED FILE-----..."
+          ],
+          "type": "string"
+        },
+        "user": {
+          "description": "is the login name for the remote registry.",
+          "examples": [
+            "myuser",
+            "$ANSIBLE_VAULT;1.1;AES256...",
+            "-----BEGIN AGE ENCRYPTED FILE-----..."
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfClusterRegistryProxy": {
+      "additionalProperties": false,
+      "description": "redirects pulls for a registry to a different URL.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "rewrite": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps a regex pattern to a replacement, transforming the image name (not the tag)\nbefore it is pulled from this mirror. See https://docs.rke2.io/install/private_registry#rewrites",
+          "type": "object"
+        },
+        "url": {
+          "description": "is the registry address the engine pulls from instead of the original registry.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "ZarfClusterRegistryTLS": {
+      "additionalProperties": false,
+      "description": "holds the TLS connection settings for a container registry.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "ca": {
+          "description": "is the PEM-encoded CA certificate used to verify the registry certificate. Cargoship\nwrites it to a file on each host and points the engine at that path, so the certificate\ntravels with the cluster configuration instead of having to be distributed separately.\nUse CAFile instead when the certificate is already on the hosts. It may also be given as\nan Ansible Vault-encrypted string, which cargoship decrypts at apply time.",
+          "type": "string"
+        },
+        "caFile": {
+          "description": "is the path on the host to the CA bundle used to verify the registry certificate.",
+          "type": "string"
+        },
+        "certFile": {
+          "description": "is the path on the host to the client certificate used to authenticate to the registry.",
+          "type": "string"
+        },
+        "insecureSkipVerify": {
+          "description": "disables TLS certificate verification.",
+          "type": "boolean"
+        },
+        "keyFile": {
+          "description": "is the path on the host to the client private key used to authenticate to the registry.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfClusterSpec": {
+      "additionalProperties": false,
+      "description": "holds the configuration and hosts for a cluster.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/ZarfClusterConfig",
+          "description": "holds the cluster-wide configuration."
+        },
+        "hosts": {
+          "$ref": "#/$defs/ZarfHosts",
+          "description": "lists the hosts that make up the cluster."
+        }
+      },
+      "required": [
+        "config",
+        "hosts"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallConfig": {
+      "additionalProperties": false,
+      "description": "is the backend-neutral firewall configuration for a node.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "rules": {
+          "description": "lists the firewall rules cargoship applies to the node.",
+          "items": {
+            "$ref": "#/$defs/ZarfFirewallRule"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfFirewallPolicyConfig": {
+      "additionalProperties": false,
+      "description": "configures a firewalld policy that opens ports from one zone to another.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "egress": {
+          "$ref": "#/$defs/ZarfFirewallZone",
+          "description": "is the zone the policy allows traffic to."
+        },
+        "ingress": {
+          "$ref": "#/$defs/ZarfFirewallZone",
+          "description": "is the zone the policy allows traffic from."
+        },
+        "ports": {
+          "description": "lists the ports this policy allows.",
+          "items": {
+            "$ref": "#/$defs/ZarfFirewallPort"
+          },
+          "type": "array"
+        },
+        "target": {
+          "description": "is the action taken on traffic that matches the policy.",
+          "enum": [
+            "CONTINUE",
+            "ACCEPT",
+            "REJECT",
+            "DROP"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "ingress",
+        "egress"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallPort": {
+      "additionalProperties": false,
+      "description": "defines a port allowed through the firewalld policy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "port": {
+          "description": "is the port number, or port range, cargoship opens.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of allowed traffic.",
+          "enum": [
+            "tcp",
+            "udp",
+            "sctp",
+            "dccp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "port"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallRule": {
+      "additionalProperties": false,
+      "description": "is a single backend-neutral firewall rule.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "action": {
+          "description": "is what cargoship does with traffic that matches the rule.",
+          "enum": [
+            "allow",
+            "deny",
+            "reject"
+          ],
+          "type": "string"
+        },
+        "destination": {
+          "description": "is the address or CIDR the traffic goes to.",
+          "examples": [
+            "10.42.0.0/16"
+          ],
+          "type": "string"
+        },
+        "direction": {
+          "default": "in",
+          "description": "selects which traffic the rule matches. It defaults to in.",
+          "enum": [
+            "in",
+            "out",
+            "forward"
+          ],
+          "type": "string"
+        },
+        "egress": {
+          "description": "names where forward traffic leaves. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "trusted"
+          ],
+          "type": "string"
+        },
+        "ingress": {
+          "description": "names where forward traffic enters. It is a zone on firewalld hosts and an\ninterface on ufw hosts. It applies to forward rules only.",
+          "examples": [
+            "public"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the rule. Cargoship uses it to name the artifacts it writes on the\nnode, so it must be unique within a host. Cargoship generates one when it is empty.",
+          "examples": [
+            "allow-metrics"
+          ],
+          "type": "string"
+        },
+        "port": {
+          "description": "is the port number, or inclusive port range, the rule matches.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of traffic the rule matches.",
+          "enum": [
+            "tcp",
+            "udp",
+            "sctp",
+            "dccp"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "description": "is the address or CIDR the traffic comes from.",
+          "examples": [
+            "10.0.0.0/8"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "type": "object"
+    },
+    "ZarfFirewallZone": {
+      "additionalProperties": false,
+      "description": "is the name of either the ingress or egress zone for a policy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "identifies the firewalld zone.",
+          "examples": [
+            "trusted",
+            "public"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfHost": {
+      "additionalProperties": false,
+      "description": "is a remote connection to a node",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/ZarfHostEngine",
+          "description": "holds the node label and taint overrides for this node."
+        },
+        "environment": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps environment variables cargoship sets on the host.",
+          "type": "object"
+        },
+        "files": {
+          "description": "lists files cargoship uploads to the host.",
+          "items": {
+            "$ref": "#/$defs/ZarfClusterFiles"
+          },
+          "type": "array"
+        },
+        "host": {
+          "$ref": "#/$defs/ZarfHostConfig",
+          "description": "holds the host-level configuration overrides for this node."
+        },
+        "hostname": {
+          "description": "overrides the discovered name of the node.",
+          "type": "string"
+        },
+        "localhost": {
+          "$ref": "#/$defs/Localhost"
+        },
+        "openSSH": {
+          "$ref": "#/$defs/OpenSSH"
+        },
+        "privateAddress": {
+          "description": "overrides the discovered private address of the node.",
+          "type": "string"
+        },
+        "privateInterface": {
+          "description": "overrides the discovered private interface of the node.",
+          "type": "string"
+        },
+        "profile": {
+          "description": "selects a profile by name from the cluster config's Profiles map.",
+          "type": "string"
+        },
+        "role": {
+          "description": "sets the node role when cargoship adds this host to the cluster. It must be controller or worker.",
+          "enum": [
+            "controller",
+            "worker"
+          ],
+          "type": "string"
+        },
+        "ssh": {
+          "$ref": "#/$defs/SSH"
+        },
+        "winRm": {
+          "$ref": "#/$defs/WinRM"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "type": "object"
+    },
+    "ZarfHostConfig": {
+      "additionalProperties": false,
+      "description": "defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "firewall": {
+          "$ref": "#/$defs/ZarfFirewallConfig",
+          "description": "holds the backend-neutral firewall rules cargoship renders onto whichever\nfirewall the node runs, firewalld, ufw, or nftables."
+        },
+        "policy": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ZarfFirewallPolicyConfig"
+          },
+          "description": "maps a policy name to a firewalld policy that allows traffic from one interface to another.\nIt is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.",
+          "type": "object"
+        },
+        "ports": {
+          "description": "lists the ports and protocols cargoship opens on the node.",
+          "items": {
+            "$ref": "#/$defs/ZarfHostPort"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfHostEngine": {
+      "additionalProperties": false,
+      "description": "defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps Kubernetes node label keys to their values.",
+          "type": "object"
+        },
+        "taints": {
+          "description": "lists the Kubernetes node taints cargoship applies to the node.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfHostPort": {
+      "additionalProperties": false,
+      "description": "is a port cargoship opens on the public side of the firewall.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "port": {
+          "description": "is the port number, or port range, cargoship opens.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        },
+        "protocol": {
+          "description": "is the type of allowed traffic.",
+          "enum": [
+            "tcp",
+            "udp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "port"
+      ],
+      "type": "object"
+    },
+    "ZarfHosts": {
+      "description": "is an ordered list of hosts that cargoship manages together.",
+      "items": {
+        "$ref": "#/$defs/ZarfHost"
+      },
+      "type": "array"
+    }
+  },
+  "$id": "https://github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster/zarf-cluster",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "is the root object of a cluster configuration document.",
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "apiVersion": {
+      "description": "identifies the API group and version of this configuration document.",
+      "enum": [
+        "zarf.dev/v1alpha1"
+      ],
+      "type": "string"
+    },
+    "kind": {
+      "description": "identifies the document type. The value must be ZarfCluster.",
+      "enum": [
+        "ZarfCluster"
+      ],
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ZarfClusterMetadata",
+      "description": "holds identifying information for the cluster."
+    },
+    "spec": {
+      "$ref": "#/$defs/ZarfClusterSpec",
+      "description": "holds the configuration and hosts for the cluster."
+    }
+  },
+  "required": [
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "type": "object"
+}

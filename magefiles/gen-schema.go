@@ -35,6 +35,16 @@ const (
 	yamlExtensionRegex   = "^x-"
 )
 
+// schemaDir is the canonical location every published distro.yaml and the inventory guide
+// reference by raw.githubusercontent.com URL. It cannot move.
+var schemaDir = "schema"
+
+// schemaEmbedDir holds the copy `cargoship schema` serves out of the binary. go:embed cannot
+// reach outside its own package directory, so the copy lives next to the Go file that embeds
+// it rather than being read from schemaDir. Both are written by the same target, and
+// pre-commit runs that target, so the two cannot drift.
+var schemaEmbedDir = filepath.Join("src", "pkg", "schema", "embedded")
+
 type schema struct {
 	schemaStruct any
 	schemaPath   string
@@ -82,18 +92,23 @@ func (Generate) Schema() error {
 		}
 
 		if err != nil {
-			fmt.Println("Error generating schema: ", err)
-			return nil
+			return fmt.Errorf("unable to generate %s: %w", s.schemaPath, err)
 		}
 
 		// Add trailing newline to match linter expectations
 		schema = append(schema, '\n')
 
-		if err := os.WriteFile("schema/"+s.schemaPath, schema, 0644); err != nil {
-			fmt.Println("Error writing schema file: ", err)
-		} else {
-			fmt.Println("Successfully generated " + s.schemaPath)
+		for _, dir := range []string{schemaDir, schemaEmbedDir} {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("unable to create %s: %w", dir, err)
+			}
+			// A silently failed write here would ship a stale schema inside the binary,
+			// so this reports rather than continuing.
+			if err := os.WriteFile(filepath.Join(dir, s.schemaPath), schema, 0644); err != nil {
+				return fmt.Errorf("unable to write %s: %w", filepath.Join(dir, s.schemaPath), err)
+			}
 		}
+		fmt.Println("Successfully generated " + s.schemaPath)
 	}
 	return nil
 }
