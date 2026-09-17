@@ -70,6 +70,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 	addAgeFlags(cmd, &o.keyFlags)
 
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
