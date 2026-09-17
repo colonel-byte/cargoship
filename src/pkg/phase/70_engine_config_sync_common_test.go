@@ -80,10 +80,10 @@ func (c *fileConfigurer) Stat(_ rigos.Host, path string, _ ...exec.Option) (*rig
 type managedDirsDistro struct {
 	distrocfg.Distro
 
-	dirs []string
+	dirs []distrocfg.ManagedDir
 }
 
-func (d *managedDirsDistro) ManagedDirs() []string { return d.dirs }
+func (d *managedDirsDistro) ManagedDirs() []distrocfg.ManagedDir { return d.dirs }
 
 func newSyncPhase(cfg *fileConfigurer, desired map[string]distrocfg.DesiredFile) (*EngineConfigSyncHosts, *cluster.ZarfHost) {
 	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
@@ -189,4 +189,26 @@ func TestNeedsUpdateNoRestartWriteFailureKeepsHost(t *testing.T) {
 
 	require.True(t, p.needsUpdate(h))
 	require.NotContains(t, fc.files, distrocfg.DistroReleaseFile)
+}
+
+// A controller is checked against the files only it carries; an agent is not, so a chart
+// configuration that belongs on a controller is never reported missing from an agent.
+func TestFilesForByRole(t *testing.T) {
+	const chartConfig = "/var/lib/rancher/rke2/server/manifests/rke2-cilium-config.yaml"
+
+	p := &EngineConfigSyncHosts{
+		Distro:  &managedDirsDistro{},
+		desired: map[string]distrocfg.DesiredFile{registriesPath: {Content: []byte("---\n")}},
+		controllerDesired: map[string]distrocfg.DesiredFile{
+			registriesPath: {Content: []byte("---\n")},
+			chartConfig:    {Content: []byte("---\n"), NoRestart: true},
+		},
+	}
+
+	controller := &cluster.ZarfHost{Role: cluster.RoleController}
+	require.Contains(t, p.filesFor(controller), chartConfig)
+
+	worker := &cluster.ZarfHost{Role: cluster.RoleWorker}
+	require.NotContains(t, p.filesFor(worker), chartConfig)
+	require.Contains(t, p.filesFor(worker), registriesPath)
 }

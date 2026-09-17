@@ -35,7 +35,7 @@ $ go test -mod=vendor -count=1 -v -timeout=30m ./src/test/e2e/noncluster/...
 ```
 
 *   `-count=1` disables the test result cache. Without it, a green run is cached and a rebuilt binary will not re-trigger it, since the binary is not one of the inputs `go test` hashes.
-*   `-short` skips `TestCargoshipCreateExample`, which builds `example/rke2-cilium` for real and downloads roughly 1.5GB of engine artifacts and images. Everything else uses `testdata/minimal`, an image-free distro that builds into a 386-byte package in milliseconds.
+*   `-short` skips `TestCargoshipCreateExample`, which builds `example/rke2-multi-cni-cilium` for real and downloads the engine artifacts and images for both of the architectures that example covers. Everything else uses `testdata/minimal`, an image-free distro that builds into a 386-byte package in milliseconds.
 *   `-timeout` defaults to 10 minutes, which is ample for a `-short` run and not necessarily enough for a full one on a cold cache.
 
 ### One test, or one subtest

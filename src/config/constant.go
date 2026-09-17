@@ -32,6 +32,10 @@ const (
 	SelectorRPM = "rpm"
 	// TarBallDir string key
 	TarBallDir = "tar"
+	// ValuesDir is the directory inside a package that holds its values files and their schema.
+	ValuesDir = "values"
+	// ValuesSchema is the name the values schema is stored under inside ValuesDir.
+	ValuesSchema = "values.schema.json"
 )
 
 const (

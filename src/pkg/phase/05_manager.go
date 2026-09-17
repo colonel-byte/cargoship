@@ -188,9 +188,14 @@ type withAfter interface {
 
 // Manager executes phases to construct the cluster
 type Manager struct {
-	phases            Phases
-	Config            *cluster.ZarfCluster
-	Distro            *distro.ZarfDistro
+	phases Phases
+	Config *cluster.ZarfCluster
+	Distro *distro.ZarfDistro
+	// Values is the configuration the package ships with, merged with the
+	// overrides in the cluster inventory and checked against the package's
+	// values schema. Phases read it instead of re-reading either source, so
+	// every phase sees the same values.
+	Values            map[string]any
 	DistroID          string
 	Concurrency       int
 	ConcurrentUploads int

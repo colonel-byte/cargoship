@@ -1,0 +1,349 @@
+// Copyright 2026 colonel-byte
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package layout
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/pkg/helmvalues"
+	"github.com/k0sproject/dig"
+)
+
+func TestIsContainedPath(t *testing.T) {
+	contained := []string{
+		"values/0-values.yaml",
+		"values.yaml",
+		"a/b/../c.yaml",
+		"./values.yaml",
+	}
+	for _, p := range contained {
+		if !isContainedPath(p) {
+			t.Errorf("isContainedPath(%q) = false, want true", p)
+		}
+	}
+
+	escapes := []string{
+		"",
+		"..",
+		"../values.yaml",
+		"values/../../values.yaml",
+		"/etc/values.yaml",
+		`C:\values.yaml`,
+		"https://example.com/values.yaml",
+		"oci://example.com/values.yaml",
+	}
+	for _, p := range escapes {
+		if isContainedPath(p) {
+			t.Errorf("isContainedPath(%q) = true, want false", p)
+		}
+	}
+}
+
+// valuesPathDistro builds the minimum distro validateDistroPaths accepts, so a
+// failure can only come from the values paths under test.
+func valuesPathDistro(files []string, schema string) distro.ZarfDistro {
+	d := distro.ZarfDistro{}
+	d.Metadata.Name = "test"
+	d.Metadata.Version = "1.0.0"
+	d.Spec.Values = distro.ZarfDistroValues{Files: files, Schema: schema}
+	return d
+}
+
+func TestValidateDistroPathsRejectsEscapingValues(t *testing.T) {
+	tests := []struct {
+		name   string
+		files  []string
+		schema string
+		want   string
+	}{
+		{"traversing file", []string{"../../secrets.yaml"}, "", "values file"},
+		{"absolute file", []string{"/etc/values.yaml"}, "", "values file"},
+		{"remote file", []string{"https://example.com/values.yaml"}, "", "values file"},
+		{"traversing schema", nil, "../schema.json", "values schema"},
+		{"remote schema", nil, "https://example.com/schema.json", "values schema"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDistroPaths(valuesPathDistro(tt.files, tt.schema))
+			if err == nil {
+				t.Fatalf("validateDistroPaths accepted %v %q", tt.files, tt.schema)
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v, want it to mention %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateDistroPathsAcceptsPackagedValues(t *testing.T) {
+	d := valuesPathDistro([]string{"values/0-values.yaml"}, "values/values.schema.json")
+	if err := validateDistroPaths(d); err != nil {
+		t.Fatalf("validateDistroPaths rejected packaged values: %v", err)
+	}
+}
+
+func TestLoadValues(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "values"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name string, content string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, "values", name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("0-values.yaml", "replicas: 1\n")
+	write("1-values.yaml", "replicas: 4\n")
+	write("values.schema.json", `{"type":"object","properties":{"replicas":{"type":"integer","maximum":3}}}`)
+
+	vals := distro.ZarfDistroValues{Files: []string{"values/0-values.yaml", "values/1-values.yaml"}}
+	merged, err := LoadValues(context.Background(), dir, vals)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if merged["replicas"] != 4 {
+		t.Fatalf("replicas = %v, want the later file to win with 4", merged["replicas"])
+	}
+
+	vals.Schema = "values/values.schema.json"
+	if _, err := LoadValues(context.Background(), dir, vals); err == nil {
+		t.Fatal("LoadValues accepted values that violate the schema")
+	}
+}
+
+func TestLoadValuesOverrides(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "values"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name string, content string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, "values", name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("0-values.yaml", "cilium:\n  enabled: false\n  ipam:\n    mode: cluster-pool\n")
+	write("values.schema.json", `{
+		"type": "object",
+		"properties": {
+			"cilium": {
+				"type": "object",
+				"properties": {"enabled": {"type": "boolean"}}
+			}
+		}
+	}`)
+	vals := distro.ZarfDistroValues{
+		Files:  []string{"values/0-values.yaml"},
+		Schema: "values/values.schema.json",
+	}
+
+	// An override replaces only the keys it names; the rest of the package
+	// defaults survive underneath it.
+	override := map[string]any{"cilium": map[string]any{"enabled": true}}
+	merged, err := LoadValues(context.Background(), dir, vals, override)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cilium, ok := merged["cilium"].(map[string]any)
+	if !ok {
+		t.Fatalf("cilium = %#v, want a map", merged["cilium"])
+	}
+	if cilium["enabled"] != true {
+		t.Fatalf("cilium.enabled = %v, want the override to win with true", cilium["enabled"])
+	}
+	ipam, ok := cilium["ipam"].(map[string]any)
+	if !ok || ipam["mode"] != "cluster-pool" {
+		t.Fatalf("cilium.ipam = %#v, want the package default to survive", cilium["ipam"])
+	}
+
+	// An override that breaks the schema has to fail like a bad values file.
+	bad := map[string]any{"cilium": map[string]any{"enabled": "yes"}}
+	if _, err := LoadValues(context.Background(), dir, vals, bad); err == nil {
+		t.Fatal("LoadValues accepted an override that violates the schema")
+	}
+}
+
+// ciliumLayout builds a layout whose engine configuration carries the cilium
+// manifest values a mapping moves.
+func ciliumLayout(mappings []distro.ZarfDistroValueMapping) *DistroLayout {
+	d := distro.ZarfDistro{}
+	d.Spec.Values.Mappings = mappings
+	d.Spec.Config.Engine = dig.Mapping{
+		"manifest": dig.Mapping{
+			"rke2-cilium": dig.Mapping{
+				"encryption": dig.Mapping{"enabled": false, "type": "wireguard"},
+			},
+		},
+	}
+	return &DistroLayout{Distro: d}
+}
+
+func cilium(t *testing.T, l *DistroLayout) map[string]any {
+	t.Helper()
+	got, ok, err := helmvalues.GetValuePath(l.Distro.Spec.Config.Engine, ".manifest.rke2-cilium.encryption")
+	if err != nil || !ok {
+		t.Fatalf("encryption block missing: ok=%v err=%v", ok, err)
+	}
+	// An untouched branch is still the dig.Mapping the package was decoded into;
+	// one a mapping wrote through comes back as map[string]any over the same
+	// data. Both are maps for the purpose of reading a key.
+	switch m := got.(type) {
+	case map[string]any:
+		return m
+	case dig.Mapping:
+		return m
+	}
+	t.Fatalf("encryption = %#v, want a map", got)
+	return nil
+}
+
+func TestApplyValues(t *testing.T) {
+	mappings := []distro.ZarfDistroValueMapping{
+		{Source: ".cilium.encryption.enabled", Target: ".manifest.rke2-cilium.encryption.enabled"},
+	}
+
+	t.Run("a value the cluster sets is projected", func(t *testing.T) {
+		l := ciliumLayout(mappings)
+		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		enc := cilium(t, l)
+		if enc["enabled"] != true {
+			t.Fatalf("encryption.enabled = %v, want true", enc["enabled"])
+		}
+		// The mapping names one key, so the rest of the block is left as the
+		// package shipped it.
+		if enc["type"] != "wireguard" {
+			t.Fatalf("encryption.type = %v, want wireguard", enc["type"])
+		}
+	})
+
+	t.Run("a value no one sets keeps the package default", func(t *testing.T) {
+		l := ciliumLayout(mappings)
+		if err := l.ApplyValues(map[string]any{}); err != nil {
+			t.Fatal(err)
+		}
+		if enc := cilium(t, l); enc["enabled"] != false {
+			t.Fatalf("encryption.enabled = %v, want the package default false", enc["enabled"])
+		}
+	})
+
+	t.Run("no mappings is a no-op", func(t *testing.T) {
+		l := ciliumLayout(nil)
+		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		if enc := cilium(t, l); enc["enabled"] != false {
+			t.Fatalf("encryption.enabled = %v, want it untouched", enc["enabled"])
+		}
+	})
+
+	t.Run("a bad target path is an error", func(t *testing.T) {
+		l := ciliumLayout([]distro.ZarfDistroValueMapping{
+			{Source: ".cilium.encryption.enabled", Target: "manifest.rke2-cilium"},
+		})
+		values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
+		if err := l.ApplyValues(values); err == nil {
+			t.Fatal("ApplyValues accepted a target path without a leading dot")
+		}
+	})
+}
+
+// vsphereCPI is a chart entry written the other way the manifest section allows:
+// a YAML string rather than a mapping. The vsphere examples mix the two, since
+// the cloud provider values are carried verbatim while cilium's are structured.
+const vsphereCPI = `vCenter:
+  host: ""
+  port: 443
+`
+
+// mixedLayout builds a layout whose manifest section holds both kinds of chart
+// entry, so a mapping that writes into the structured one has string siblings.
+func mixedLayout(mappings []distro.ZarfDistroValueMapping) *DistroLayout {
+	d := distro.ZarfDistro{}
+	d.Spec.Values.Mappings = mappings
+	d.Spec.Config.Engine = dig.Mapping{
+		"manifest": dig.Mapping{
+			"rke2-cilium": dig.Mapping{
+				"encryption": dig.Mapping{"enabled": false, "type": "wireguard"},
+			},
+			"rancher-vsphere-cpi": vsphereCPI,
+		},
+	}
+	return &DistroLayout{Distro: d}
+}
+
+func TestApplyValuesMixedManifest(t *testing.T) {
+	mappings := []distro.ZarfDistroValueMapping{
+		{Source: ".cilium.encryption.enabled", Target: ".manifest.rke2-cilium.encryption.enabled"},
+	}
+	values := map[string]any{"cilium": map[string]any{"encryption": map[string]any{"enabled": true}}}
+
+	t.Run("a string sibling is left alone", func(t *testing.T) {
+		l := mixedLayout(mappings)
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		if enc := cilium(t, l); enc["enabled"] != true {
+			t.Fatalf("encryption.enabled = %v, want true", enc["enabled"])
+		}
+		got, ok, err := helmvalues.GetValuePath(l.Distro.Spec.Config.Engine, `.manifest.rancher-vsphere-cpi`)
+		if err != nil || !ok {
+			t.Fatalf("vsphere entry missing: ok=%v err=%v", ok, err)
+		}
+		if got != vsphereCPI {
+			t.Fatalf("vsphere entry = %#v, want the string the package shipped", got)
+		}
+	})
+
+	// dig replaces a value that is not a Mapping with an empty one, so a branch
+	// left as a plain map by a write reads back empty. Every chart has to still
+	// be there for the caller that renders the HelmChartConfig files.
+	t.Run("the manifest section still digs", func(t *testing.T) {
+		l := mixedLayout(mappings)
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		engine := l.Distro.Spec.Config.Engine
+		manifest := engine.DigMapping("manifest")
+		if len(manifest) != 2 {
+			t.Fatalf("manifest holds %d charts, want 2: %#v", len(manifest), manifest)
+		}
+		if _, ok := manifest["rancher-vsphere-cpi"].(string); !ok {
+			t.Fatalf("vsphere entry = %#v, want a string", manifest["rancher-vsphere-cpi"])
+		}
+		enabled := engine.Dig("manifest", "rke2-cilium", "encryption", "enabled")
+		if enabled != true {
+			t.Fatalf("encryption.enabled = %v, want true", enabled)
+		}
+	})
+
+	t.Run("a target inside a string entry is an error", func(t *testing.T) {
+		l := mixedLayout([]distro.ZarfDistroValueMapping{
+			{Source: ".cilium.encryption.enabled", Target: `.manifest.rancher-vsphere-cpi.vCenter.host`},
+		})
+		if err := l.ApplyValues(values); err == nil {
+			t.Fatal("ApplyValues wrote through a chart entry that is a string")
+		}
+	})
+}

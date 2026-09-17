@@ -25,6 +25,23 @@ metadata:
 spec:
   type: rke2
   version: 1.34.11-rke2r1
+  # The values a cluster may override in its inventory file, under spec.config.values.
+  # Each mapping below moves one of them into the cilium HelmChartConfig this package
+  # writes, so the same package installs with or without encryption, hubble ui, and the
+  # rest, without being rebuilt.
+  values:
+    files:
+      - values.yaml
+    schema: values.schema.json
+    mappings:
+      - source: .cilium.encryption.enabled
+        target: .manifest.rke2-cilium.encryption.enabled
+      - source: .cilium.l2announcements.enabled
+        target: .manifest.rke2-cilium.l2announcements.enabled
+      - source: .cilium.hubble.ui.enabled
+        target: .manifest.rke2-cilium.hubble.ui.enabled
+      - source: .cilium.hubble.ui.ipv6
+        target: .manifest.rke2-cilium.hubble.ui.frontend.server.ipv6.enabled
   actions:
     onCreate:
       before:

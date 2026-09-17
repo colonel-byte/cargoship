@@ -65,7 +65,7 @@ type exampleFlavor struct {
 	dir               string   // example/rke2-cilium -- where its examples are written
 	imageLists        []string // rke2-images-cilium.linux-amd64.txt -- the airgap manifests it adds to the core one
 	replacesKubeProxy bool     // whether the CNI takes over from kube-proxy
-	encryption        bool     // whether the CNI encrypts pod-to-pod traffic
+	values            []string // the values templates written next to distro.yaml; none when empty
 	cloudProvider     string   // rancher-vsphere -- the bundled cloud provider it selects; none when empty
 	arches            []string // the architectures its examples target; amd64 alone when empty
 	minors            []string // v1_36 -- the minor lines it renders, all of them when empty
@@ -144,6 +144,13 @@ type exampleDistroSpec struct {
 	fetch func(v *exampleVersion, repoURL string) error
 }
 
+// exampleCiliumValues are the values files every cilium flavor ships: the knobs a cluster
+// turns without rebuilding the package, and the schema they are checked against.
+var exampleCiliumValues = []string{
+	"magefiles/templates/cilium/values.yaml.tmpl",
+	"magefiles/templates/cilium/values.schema.json.tmpl",
+}
+
 // exampleDistros is every distro the example targets render.
 var exampleDistros = []exampleDistroSpec{
 	{
@@ -153,18 +160,13 @@ var exampleDistros = []exampleDistroSpec{
 		flavors: []exampleFlavor{
 			{
 				cni:               "cilium",
-				dir:               "example/rke2-cilium",
-				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
-				replacesKubeProxy: true,
-			},
-			{
-				cni:               "cilium",
 				name:              "multi-cni-cilium",
 				dir:               "example/rke2-multi-cni-cilium",
 				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
 				arches:            exampleMultiArches,
 				minors:            exampleMultiMinors,
 				replacesKubeProxy: true,
+				values:            exampleCiliumValues,
 			},
 			{
 				cni:               "cilium",
@@ -173,15 +175,7 @@ var exampleDistros = []exampleDistroSpec{
 				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt", "rke2-images-vsphere.linux-amd64.txt"},
 				replacesKubeProxy: true,
 				cloudProvider:     "rancher-vsphere",
-			},
-			{
-				cni:               "cilium",
-				name:              "cilium-wireguard",
-				dir:               "example/rke2-cilium-wireguard",
-				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
-				minors:            exampleMultiMinors,
-				replacesKubeProxy: true,
-				encryption:        true,
+				values:            exampleCiliumValues,
 			},
 			{
 				cni:        "canal",
@@ -255,7 +249,6 @@ type exampleVersion struct {
 	CNI               string   // cilium
 	Name              string   // flannel -- what the example's metadata.name ends in
 	ReplacesKubeProxy bool     // whether to set disable-kube-proxy
-	Encryption        bool     // whether to turn on the CNI's transparent encryption
 	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
 	CoreImages        []string // the release's own image manifest
 	CNIImages         []string // the flavor's own manifests, concatenated, when it has any
@@ -480,7 +473,36 @@ func writeExample(tmpl *template.Template, repoURL, tag string, spec exampleDist
 	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
 		return "", err
 	}
+
+	if err := writeExampleValues(dir, f, v); err != nil {
+		return "", err
+	}
 	return path, nil
+}
+
+// writeExampleValues renders a flavor's values templates next to its distro.yaml, under the
+// name the distro.yaml refers to them by -- the template's own name without the .tmpl.
+//
+// The values a package ships are files beside its definition rather than part of it, so a
+// flavor that exposes any has more than one file to render. They are rendered from the same
+// data as the definition, so a value that has to agree with the definition can be written
+// once and used in both.
+func writeExampleValues(dir string, f exampleFlavor, v exampleVersion) error {
+	for _, path := range f.values {
+		tmpl, err := template.New(filepath.Base(path)).ParseFiles(path)
+		if err != nil {
+			return fmt.Errorf("parsing %s: %w", path, err)
+		}
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, v); err != nil {
+			return fmt.Errorf("rendering %s: %w", path, err)
+		}
+		name := strings.TrimSuffix(filepath.Base(path), ".tmpl")
+		if err := os.WriteFile(filepath.Join(dir, name), buf.Bytes(), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // newExampleVersion derives every version-varying field of an example from one tag and the
@@ -502,7 +524,6 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 		CNI:               f.cni,
 		Name:              f.flavorName(),
 		ReplacesKubeProxy: f.replacesKubeProxy,
-		Encryption:        f.encryption,
 		CloudProvider:     f.cloudProvider,
 	}
 	for _, arch := range f.architectures() {
