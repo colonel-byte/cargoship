@@ -6,7 +6,7 @@ This document explains how Cargoship uses [Mage](https://magefile.org/) to orche
 
 Cargoship uses `mage` as its primary task runner and automation tool instead of a traditional `Makefile`. The implementation resides in the `magefiles/` directory, which acts as the central repository for:
 
-*   Building binaries (both containerized with Dagger and natively on the host).
+*   Building binaries for the host and for the release target platforms.
 *   Running end-to-end (e2e) tests.
 *   Generating documentation from the codebase.
 *   Generating and publishing JSON schemas from Go types.
@@ -17,38 +17,23 @@ The entry point of the automation layer is `magefiles/core/core.go`, which boots
 
 Mage targets are organized into logical Go namespaces to group related operations together. Every target is invoked as `mage <namespace>:<target>`, and target names are case-insensitive, so `mage generate:engineconfig` and `mage generate:engineConfig` are the same command. Run `mage -l` for the authoritative list on your checkout.
 
-### `Dagger` Namespace
+### `Build` Namespace
 
-The `Dagger` namespace is the default target and the primary build path. It manages containerized and reproducible builds of the Cargoship binary:
+The `Build` namespace is the default target and the build path for the Cargoship binary. It compiles natively with the host's Go toolchain:
 
-*   `Toolchain` — Configures the local Dagger toolchain.
 *   `Binary` — Compiles the binary for the host's platform.
 *   `Linuxamd64` / `Linuxarm64` — Compiles Linux binaries.
 *   `Macamd64` / `Macarm64` — Compiles macOS binaries.
-*   `All` — Compiles and exports all release binaries to `build/` concurrently.
+*   `All` — Compiles all release binaries into `build/`.
 
 ```sh
-mage dagger:toolchain     # update the dagger build environment (run once, or after a dagger upgrade)
-mage dagger:binary        # build for this host's OS/arch
-mage dagger:linuxamd64    # build build/cargoship_linux_amd64
-mage dagger:linuxarm64    # build build/cargoship_linux_arm64
-mage dagger:macamd64      # build build/cargoship_darwin_amd64
-mage dagger:macarm64      # build build/cargoship_darwin_arm64
-mage dagger:all           # build every release binary into build/
-mage                      # same as `mage dagger:all` -- it is the default target
-```
-
-### `Build` Namespace
-
-The `Build` namespace mirrors the compilation targets of the `Dagger` namespace but bypasses containerization, executing compilation natively on the host's Go toolchain. This path is intended for quick, local development, and it is the one to use when Docker or Dagger is not available.
-
-```sh
-mage build:binary         # build for this host's OS/arch, no container
-mage build:linuxamd64
-mage build:linuxarm64
-mage build:macamd64
-mage build:macarm64
+mage build:binary         # build for this host's OS/arch
+mage build:linuxamd64     # build build/cargoship_linux_amd64
+mage build:linuxarm64     # build build/cargoship_linux_arm64
+mage build:macamd64       # build build/cargoship_darwin_amd64
+mage build:macarm64       # build build/cargoship_darwin_arm64
 mage build:all            # build every release binary into build/
+mage                      # same as `mage build:all` -- it is the default target
 ```
 
 ### `Dev` Namespace
@@ -71,10 +56,10 @@ mage dev:digest           # print the alpine:latest digest, to check registry au
 
 The `Test` namespace hosts the integration and validation suites:
 
-*   `EndToEnd` — Builds Cargoship for the host via Dagger, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.
+*   `EndToEnd` — Builds Cargoship for the host, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.
 
 ```sh
-mage test:endToEnd        # build via dagger, then run the e2e suite
+mage test:endToEnd        # build the binary, then run the e2e suite
 ```
 
 ### `Generate` Namespace
@@ -137,7 +122,6 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 ## File-by-File Reference
 
 *   **`core/core.go`:** Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in `magefiles/`) so it does not collide with the `func main()` that the `mage` CLI generates on the fly — see [Running Mage Directly](#running-mage-directly-without-the-cli) below.
-*   **`dagger.go`:** Houses user-facing targets for containerized compilation via Dagger.
 *   **`build.go`:** Defines compilation tasks utilizing the local host Go toolchain.
 *   **`dev.go`:** Defines convenience tasks under the `Dev` and `Test` namespaces.
 *   **`gen-docs.go`:** Performs Cobra command extraction and phase parser generation to update everything inside the `docs/` tree.
@@ -153,7 +137,7 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`example-release-lines.go`:** The cache behind `fetchReleaseLines`: where it lives, how an asset URL is flattened into one file name, how an entry is trusted, and the atomic write that keeps a half-written entry from being read back as a whole asset.
 *   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the four `gen-engine-*.go` targets.
 *   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl` and `k3s-distro.yaml.tmpl`, one per distro that has examples.
-*   **`utils.go`:** Implements low-level helper functions for file cleanup, Dagger CLI execution, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
+*   **`utils.go`:** Implements low-level helper functions for file cleanup, host compilation, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
 *   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
 
 ---
@@ -164,7 +148,7 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 
 | Output Directory / File | Description | Target |
 | :--- | :--- | :--- |
-| `build/cargoship_*` | Compiled release binaries | `Dagger.All` / `Build.All` |
+| `build/cargoship_*` | Compiled release binaries | `Build.All` |
 | `docs/commands/*` | Auto-generated CLI documentation | `Generate.Document` |
 | `docs/phases/*` | Auto-generated cluster phase descriptors | `Generate.Document` |
 | `docs/SUMMARY.md` | Compiled table of contents for mdBook | `Generate.Document` |
@@ -180,7 +164,7 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 
 ## Running Mage Directly (Without the CLI)
 
-Normally you invoke tasks through the installed `mage` binary, e.g. `mage dagger:binary`. The `mage` CLI works by scanning `magefiles/` for exported functions and namespaces, then generating its own `func main()` (written to a gitignored `mage_output_file.go`) that wires those functions up to CLI subcommands before compiling and running the result.
+Normally you invoke tasks through the installed `mage` binary, e.g. `mage build:binary`. The `mage` CLI works by scanning `magefiles/` for exported functions and namespaces, then generating its own `func main()` (written to a gitignored `mage_output_file.go`) that wires those functions up to CLI subcommands before compiling and running the result.
 
 Because that generated file declares `package main` with its own `func main()`, it cannot coexist with a second, hand-written `func main()` in the same package — hence `core/core.go` (which does exactly that, via `mage.Main()`) is split out into its own `magefiles/core` subpackage rather than sitting alongside the task files in `magefiles/`.
 
@@ -198,7 +182,7 @@ This builds and runs the same `mage.Main()` entry point that the `mage` CLI woul
 Task selection still works the same way — pass the namespace:target as an argument, e.g.:
 
 ```sh
-go run ./magefiles/core dagger:binary
+go run ./magefiles/core build:binary
 ```
 
 Note that `magefiles/` itself remains its own `package main` for the `mage` CLI's benefit; `core/core.go` is a separate package and binary, not part of that compiled unit.

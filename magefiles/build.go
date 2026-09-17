@@ -24,6 +24,12 @@ import (
 	"github.com/magefile/mage/mg"
 )
 
+const (
+	buildDir = "build"
+)
+
+var Default = Build.All
+
 type (
 	Build  mg.Namespace
 	Binary mg.Namespace

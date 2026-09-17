@@ -2,7 +2,7 @@
 
 This document describes how Cargoship turns a pushed tag into published artifacts: archives, Linux packages, container images, and signatures. The pipeline is defined by `.goreleaser.yaml` at the repository root and driven by `.github/workflows/release.yaml`.
 
-This is the *release* path. It is distinct from the [Dagger](dagger.md) and [Mage](mage.md) pipelines, which build binaries for local development and CI checks.
+This is the *release* path. It is distinct from the [Mage](mage.md) pipeline, which builds binaries for local development and CI checks.
 
 ## Trigger
 

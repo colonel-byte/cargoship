@@ -34,7 +34,7 @@ type (
 // suites that shell out to the CLI; a suite that calls the packages directly wants
 // runE2ENoBuild instead.
 func runE2E(timeout string, pkg string, extra ...string) error {
-	if err := daggerBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
+	if err := hostBuildLocal(runtime.GOOS, runtime.GOARCH); err != nil {
 		return err
 	}
 	return runE2ENoBuild(timeout, pkg, extra...)
