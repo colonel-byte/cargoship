@@ -11,6 +11,30 @@
     "url": "https://rpm.rancher.io/rke2/latest/1.32/centos/9/x86_64/rke2-agent-1.32.13~rke2r1-0.el9.x86_64.rpm",
     "sha256": "5c9d8f2b3fbfb3cca9376ad67f594380eb1bd53aed32ee265ac57606c171e5d2"
   },
+  "rke2-agent-1.33.0~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.0~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "5c61b1cb55e5ffdd982f7c0502f9d5f9f050d5c7179eafba1736d7c3f300ee92"
+  },
+  "rke2-agent-1.33.10~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.10~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "dd562b3c870ad47ac8690ff67b7b139a76cd43596a5f6fbd6e139f48cedbc6a9"
+  },
+  "rke2-agent-1.33.10~rke2r3-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.10~rke2r3-0.el9.x86_64.rpm",
+    "sha256": "a19061e6805d0829cfa5072e193dfa1a1f3c46bc077f339a6516f5ac5ac83991"
+  },
+  "rke2-agent-1.33.11~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.11~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "41ab04f8e6fcb3b30cb7abf5ce9e2771e7f0926de40c7ee9b4c2f6ec593ee37a"
+  },
+  "rke2-agent-1.33.12~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.12~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "7c9f01b0969b383d224ae5e4b4b6443db070fb1003c48df607714c29d5cff651"
+  },
+  "rke2-agent-1.33.12~rke2r2-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.12~rke2r2-0.el9.x86_64.rpm",
+    "sha256": "6f775de3fd5a04fe7232e04164c0849f52eac723c14eb2cce955621c9f45a0b9"
+  },
   "rke2-agent-1.33.13~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.13~rke2r1-0.el9.x86_64.rpm",
     "sha256": "60e89d9b5560663f6fe98e0fc85abd4d8078539006914929909d96f54fc73d39"
@@ -18,6 +42,46 @@
   "rke2-agent-1.33.13~rke2r2-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.13~rke2r2-0.el9.x86_64.rpm",
     "sha256": "d0494a9a21773027ed4dd7e445c6b746412424864a3ddda01498d1be2b2c7516"
+  },
+  "rke2-agent-1.33.1~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.1~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "bd390897e5340e156781c83bc8de0fdd0c6fde465545f34971814b3d6e3eef2b"
+  },
+  "rke2-agent-1.33.2~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.2~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "cc564b0afa5f1d32c301f8eeff6a8579884afcb99a9c36a29483db77cd90c859"
+  },
+  "rke2-agent-1.33.3~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.3~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "d9705e16c0554e01216361e460783ae17564a2f3ef74da86b829e8af2c0ab8bc"
+  },
+  "rke2-agent-1.33.4~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.4~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "d507e53a384602556cf29c7e5fa71b0a23e0f80bc9c56c4f224f4c22f2e55464"
+  },
+  "rke2-agent-1.33.5~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.5~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "05d8956557663cdd52b4c57f7de30262ea149a7983d8311307bae6431a525802"
+  },
+  "rke2-agent-1.33.6~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.6~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "072d0b1f77a8c92e11cb9a8c9fedcc3d683dec1a952ba55209bf4a7b6d4ea739"
+  },
+  "rke2-agent-1.33.7~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.7~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "6a89a7d5ef5f9bb8da30b14d6f772ccdf7b0ee1faf9c8a5f0e906fed04920ffb"
+  },
+  "rke2-agent-1.33.7~rke2r3-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.7~rke2r3-0.el9.x86_64.rpm",
+    "sha256": "25e476c358ba8bb1d9bedcc05cf1cd1f88ff6cbdffeb2cd81a24b6db17e76d02"
+  },
+  "rke2-agent-1.33.8~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.8~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "017adc099adcba430147f7f05e9304d5ec023aa9147dca1a33ca784595528deb"
+  },
+  "rke2-agent-1.33.9~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-agent-1.33.9~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "680857229cc2ee86b64ec55d5a2ca3d7c1a018db2590a8e739691eaa1ce2cf48"
   },
   "rke2-agent-1.34.10~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.34/centos/9/x86_64/rke2-agent-1.34.10~rke2r1-0.el9.x86_64.rpm",
@@ -183,6 +247,30 @@
     "url": "https://rpm.rancher.io/rke2/latest/1.32/centos/9/x86_64/rke2-common-1.32.13~rke2r1-0.el9.x86_64.rpm",
     "sha256": "82f82e7dc78da09b78d489da53bc591e6e09d910acda07878e57562ef68ec9be"
   },
+  "rke2-common-1.33.0~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.0~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "73f49947c1b27d0e2bfbe506e5bac3a62a520d981f17e8523816cac7d7e9f913"
+  },
+  "rke2-common-1.33.10~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.10~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "a0f27061b2cd3cb7b5fcb71f95e4b618ed626441702b0d3a6bdb78fd15b99ce0"
+  },
+  "rke2-common-1.33.10~rke2r3-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.10~rke2r3-0.el9.x86_64.rpm",
+    "sha256": "6280325f7f01cf254d541f99e83808d9f7c1e95d90f0e5bc6f6825ffd90ac527"
+  },
+  "rke2-common-1.33.11~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.11~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "d52e9a22c42fe451bd09aad057e70377d84bde964716ae03fabfba6eae25ab05"
+  },
+  "rke2-common-1.33.12~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.12~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "61db7cb7bd3648c0401cee2ed898bb9b0e5f70048b6b2746da350736aed10c1b"
+  },
+  "rke2-common-1.33.12~rke2r2-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.12~rke2r2-0.el9.x86_64.rpm",
+    "sha256": "ddc7aaf953b6f2d4b8eda73626b2aad68841c70ebc59d948ed582609b177f68a"
+  },
   "rke2-common-1.33.13~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.13~rke2r1-0.el9.x86_64.rpm",
     "sha256": "409dd5d8226d38d4ad2ffedd2bec98d35f4ec47b939e071749d5d6b0a04e18fd"
@@ -190,6 +278,46 @@
   "rke2-common-1.33.13~rke2r2-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.13~rke2r2-0.el9.x86_64.rpm",
     "sha256": "b2f2690d8bf4e8032f27e96581ab3d8edbaecef933d12b064247f3047fc4741d"
+  },
+  "rke2-common-1.33.1~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.1~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "88756fb93f03b7faf6092f726a43d298f2fc623fa88ac7e4e120094d9f3fca50"
+  },
+  "rke2-common-1.33.2~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.2~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "bf85e84ae36925cbd2a514db1d25778075a6d48cc788a4a39fcbcab167f60bb9"
+  },
+  "rke2-common-1.33.3~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.3~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "cf8103d685864817a8389554d6cbc44a26fb5d3425a09f7551da37b6d43d9a23"
+  },
+  "rke2-common-1.33.4~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.4~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "1129921cb02c48e6e8a25b9eb54e310123031a11714d4076b9c6afb9f7aa0f8d"
+  },
+  "rke2-common-1.33.5~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.5~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "738db871f13d612e54e1ad5570ac5116cc12bef6f2aee8045e369889589e10be"
+  },
+  "rke2-common-1.33.6~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.6~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "dc8af517af35aedacc5c811990183992bda47af9a0d9e4454ee1d477495b70e4"
+  },
+  "rke2-common-1.33.7~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.7~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "7679e6da4065273d1d6a1e0eb778cf25f467d87672b4424f51283e46b740329f"
+  },
+  "rke2-common-1.33.7~rke2r3-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.7~rke2r3-0.el9.x86_64.rpm",
+    "sha256": "7c996e14b2e29af7fdbc693bb93c25d8accc1b1e39d14a2709c289233453e51f"
+  },
+  "rke2-common-1.33.8~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.8~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "85d746b22e3f4cc5260b8675351559e987cfb51525caf892e96ee31f371320b5"
+  },
+  "rke2-common-1.33.9~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-common-1.33.9~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "f6827966f857ef12fc0fefa1c0abfb2cddc1d8c6c7933ade56901b0e3ccdd0f9"
   },
   "rke2-common-1.34.10~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.34/centos/9/x86_64/rke2-common-1.34.10~rke2r1-0.el9.x86_64.rpm",
@@ -359,6 +487,30 @@
     "url": "https://rpm.rancher.io/rke2/latest/1.32/centos/9/x86_64/rke2-server-1.32.13~rke2r1-0.el9.x86_64.rpm",
     "sha256": "55ade5a97965dc519c50881faa8a868c900e9f0f25fa9d6c42143aa4dfb6f77e"
   },
+  "rke2-server-1.33.0~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.0~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "09619892fa5f5662c050c7af253d482147169d8b615ad6c1d487967d393e0ff2"
+  },
+  "rke2-server-1.33.10~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.10~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "a2daef40b5797fdf6452ef53dc7ae5c9dc51ac0ef9945f0159b9cd6bf862e03d"
+  },
+  "rke2-server-1.33.10~rke2r3-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.10~rke2r3-0.el9.x86_64.rpm",
+    "sha256": "f4d724fd8621dbf53d12d99afc82a6580e6062ada26bcc26bb6442b23a15c07c"
+  },
+  "rke2-server-1.33.11~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.11~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "f71c8de21ee653903bdc6528da4d06c7347fe4c6b5292eb6110c468439a39f9f"
+  },
+  "rke2-server-1.33.12~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.12~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "fd33652a7956161beb3d37cc314c4b51843ce61007395734b396f1178888862c"
+  },
+  "rke2-server-1.33.12~rke2r2-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.12~rke2r2-0.el9.x86_64.rpm",
+    "sha256": "18177d592367c2f9401b28fa45ebb4326066d9410c143f532b0cc02cfd2543b9"
+  },
   "rke2-server-1.33.13~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.13~rke2r1-0.el9.x86_64.rpm",
     "sha256": "7ab1d00e69bd6551fb72aa503931d66d38ab3eeb9c6a4d1be3422c4626ad7675"
@@ -366,6 +518,46 @@
   "rke2-server-1.33.13~rke2r2-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.13~rke2r2-0.el9.x86_64.rpm",
     "sha256": "e80e1aab017dd715c09a76449ba8801586508c2ff3ff24458b37982eb38c949a"
+  },
+  "rke2-server-1.33.1~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.1~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "d7d05a302cb617306d445292d6510d070a3c7e25d0fe1f3dc31f915b42e621b1"
+  },
+  "rke2-server-1.33.2~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.2~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "322eaccdf1f65587fb00699195d388afaa744c0815a09113d08ffc79be94c776"
+  },
+  "rke2-server-1.33.3~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.3~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "e33eba831a4f362d8d30b97746a57fb5d5f3a3a4f569a89b4990f696f2b557a8"
+  },
+  "rke2-server-1.33.4~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.4~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "d4131ada57d322562b60ca829277be659ffe025245e5c5c2af8f71f4a2ae4ff5"
+  },
+  "rke2-server-1.33.5~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.5~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "dca24e464615ed7dda953737d73bee2b9862b9f86278a92098c123fe66aa482b"
+  },
+  "rke2-server-1.33.6~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.6~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "4416f5f04339fc1edd1ccced2b4c88788dc9deaf1e4e70c38a21f92183244020"
+  },
+  "rke2-server-1.33.7~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.7~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "2401a08779808d9d8b1ba4f44a76a1f11c0fecdbbfe3c666822ed0ff1aed35be"
+  },
+  "rke2-server-1.33.7~rke2r3-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.7~rke2r3-0.el9.x86_64.rpm",
+    "sha256": "409857a7259a8d1c2086d62c1369ba7dc3e7ff0f0ba44494522698849fac5619"
+  },
+  "rke2-server-1.33.8~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.8~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "0f84b12f48c44efcf23931c61ce9edbebc4991ebf1978ea1b9711062681de8f3"
+  },
+  "rke2-server-1.33.9~rke2r1-0.el9.x86_64.rpm": {
+    "url": "https://rpm.rancher.io/rke2/latest/1.33/centos/9/x86_64/rke2-server-1.33.9~rke2r1-0.el9.x86_64.rpm",
+    "sha256": "6fb55505caf037806ab180b16d28665064863313a56a8baf5136a1aefabead8e"
   },
   "rke2-server-1.34.10~rke2r1-0.el9.x86_64.rpm": {
     "url": "https://rpm.rancher.io/rke2/latest/1.34/centos/9/x86_64/rke2-server-1.34.10~rke2r1-0.el9.x86_64.rpm",
