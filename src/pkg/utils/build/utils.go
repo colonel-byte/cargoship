@@ -17,7 +17,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package build is logic shared across dagger and mage
+// Package build is the build flag logic shared across mage and the CLI
 package build
 
 import (

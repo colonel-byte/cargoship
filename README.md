@@ -116,7 +116,7 @@ An inventory authoring guide is available in [docs/guides/setup-inv.md](./docs/g
 
 ## Development and Build Workflows
 
-Task automation is built using **Mage**, with **Dagger** acting as the containerized execution engine.
+Task automation is built using **Mage**, which drives builds, tests and code generation with the host Go toolchain.
 
 ### Mage Automation
 
@@ -127,10 +127,6 @@ Mage handles tasks including local compilation, e2e test execution, schema updat
 *   `docs/phases/*` (Orchestration phase explanations)
 *   `docs/SUMMARY.md` (mdBook layout manifest)
 *   `schema/*.json` (YAML validations)
-
-### Dagger Builds
-
-Dagger coordinates hermetic, multi-platform compilation inside containerized Go environments. It ensures that compiled binaries are reproducible and decoupled from the developer's local compiler version.
 
 ### Continuous Integration (CI) and Releases
 

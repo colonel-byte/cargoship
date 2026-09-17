@@ -65,7 +65,6 @@
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [build-flags](dev/build-flags.md)
-- [dagger](dev/dagger.md)
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
 - [goreleaser](dev/goreleaser.md)

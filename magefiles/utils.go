@@ -25,39 +25,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/utils/build"
 	"github.com/magefile/mage/sh"
-	"golang.org/x/term"
 )
-
-// daggerProgressFlag picks a tty progress bar when stdout is an actual terminal, falling
-// back to dagger's plain log output otherwise (e.g. CI, or any other non-interactive shell)
-// where a tty renderer would just error out with "no tty available".
-func daggerProgressFlag() string {
-	if term.IsTerminal(int(os.Stdout.Fd())) {
-		return "--progress=tty"
-	}
-	return "--progress=plain"
-}
-
-func daggerBuildLocal(oper string, arch string) error {
-	bin := fmt.Sprintf("build/cargoship_%s_%s", oper, arch)
-	fmt.Println("building: " + bin)
-
-	if err := os.Remove(bin); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
-	}
-
-	return sh.RunV(
-		"dagger",
-		"call",
-		daggerProgressFlag(),
-		"--interactive=false",
-		"build-local",
-		"--os="+oper,
-		"--arch="+arch,
-		"export",
-		fmt.Sprintf("--path=%s", bin),
-	)
-}
 
 func hostBuildLocal(oper string, arch string) error {
 	bin := fmt.Sprintf("build/cargoship_%s_%s", oper, arch)
