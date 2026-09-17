@@ -26,7 +26,13 @@ mage generate:exampleLine rke2 v1.37
 
 Once a line is on disk, `mage generate:examples` keeps it current — it renders every pinned tag plus every example directory that already exists.
 
-A flavor that names minor lines (the multi-architecture ones) is rendered only for the lines it names, so asking for a line it does not cover renders the other flavors alone.
+A flavor that names minor lines is rendered only for the lines it names, so asking for a line it does not cover renders the other flavors alone. That covers the multi-architecture flavors — `example/rke2-multi-cni-canal`, `example/rke2-multi-cni-cilium`, `example/k3s-multi` — which are gated to the lines in `exampleMultiMinors` in [`magefiles/examples.go`](../magefiles/examples.go). Add a new line there before rendering it, or those flavors stay empty for it:
+
+```go
+exampleMultiMinors = []string{"v1_35", "v1_36"}
+```
+
+The list is shared by both distros, so adding a line covers the rke2 and the k3s multi-architecture flavors together. Each line added costs the shasum cache another set of arm64 artifacts, which is why the list holds the current lines rather than every line the distros render.
 
 ## Order of operations
 

@@ -42,11 +42,18 @@ const (
 )
 
 // The multi-architecture flavors exist to show what a package covering more than one
-// architecture looks like, not to cover every release: one current minor line is enough to
-// read, and keeps the arm64 artifacts the shasum cache has to hold down to a handful.
+// architecture looks like, not to cover every release: the current minor lines are enough to
+// read, and keep the arm64 artifacts the shasum cache has to hold down to a handful.
 var (
 	exampleMultiArches = []string{"amd64", "arm64"}
-	exampleMultiMinors = []string{"v1_36"}
+	exampleMultiMinors = []string{
+		"v1_32",
+		"v1_33",
+		"v1_34",
+		"v1_35",
+		"v1_36",
+		"v1_37",
+	}
 )
 
 // exampleRPMArches maps a Go architecture to the name rpm.rancher.io publishes it under.
@@ -187,12 +194,6 @@ var exampleDistros = []exampleDistroSpec{
 				replacesKubeProxy: true,
 				cloudProvider:     "rancher-vsphere",
 				values:            exampleRKE2Values,
-			},
-			{
-				cni:        "canal",
-				dir:        "example/rke2-canal",
-				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
-				values:     exampleRKE2Values,
 			},
 			{
 				cni:        "canal",
