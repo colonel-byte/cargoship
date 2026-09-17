@@ -40,7 +40,7 @@ RUN mkdir -p \
 # with SSL_CERT_FILE pointing at it, and a 1777 /tmp, so none of that is repeated
 # here -- the skeleton above only adds the subdirectories the CLI expects, at the
 # same ownership and mode the base already uses.
-FROM registry1.dso.mil/chainguard/cgr.dev/chainguard/static@sha256:fa805e7de94d389ef192ffe48a27a03f066fda8f02bddb76096742eed49fa9e8
+FROM registry1.dso.mil/chainguard/cgr.dev/chainguard/static@sha256:90b7f22bcf781377e97cea715ef8e6d6f334eb23f3f8a83053b6155f5e33e66f
 
 # The whole skeleton tree is copied at its root on purpose. A COPY whose
 # destination directory does not yet exist creates that directory root-owned and
