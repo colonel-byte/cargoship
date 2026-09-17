@@ -762,6 +762,9 @@
         "target": {
           "type": "string"
         },
+        "template": {
+          "type": "boolean"
+        },
         "user": {
           "type": "string"
         }

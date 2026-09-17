@@ -87,6 +87,8 @@ const (
 	InstallKubeConfigPath = "kubeconfig"
 	// InstallVaultPasswordFile flag
 	InstallVaultPasswordFile = "vault-password-file"
+	// InstallValues flag
+	InstallValues = "values"
 )
 
 const (

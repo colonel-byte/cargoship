@@ -18,10 +18,13 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/helmvalues"
 	"github.com/k0sproject/dig"
 )
@@ -346,4 +349,183 @@ func TestApplyValuesMixedManifest(t *testing.T) {
 			t.Fatal("ApplyValues wrote through a chart entry that is a string")
 		}
 	})
+}
+
+// templatedLayout builds a layout whose engine configuration is written with
+// templates rather than mappings: one scalar that stands for a whole value, and
+// one chart entry written as a string so a conditional can decide what it holds.
+func templatedLayout() *DistroLayout {
+	d := distro.ZarfDistro{}
+	d.Spec.Config.Engine = dig.Mapping{
+		"manifest": dig.Mapping{
+			"rke2-cilium": dig.Mapping{
+				"encryption": dig.Mapping{
+					"enabled": "{{ .Values.cilium.encryption.enabled }}",
+					"type":    "wireguard",
+				},
+			},
+			"rke2-coredns": "replicas: {{ .Values.coredns.replicas }}\n" +
+				"{{- if .Values.coredns.autoscale }}\nautoscaler:\n  enabled: true\n{{- end }}",
+		},
+	}
+	return &DistroLayout{Distro: d}
+}
+
+func templateValues(encryption bool, autoscale bool) map[string]any {
+	return map[string]any{
+		"cilium":  map[string]any{"encryption": map[string]any{"enabled": encryption}},
+		"coredns": map[string]any{"replicas": 2, "autoscale": autoscale},
+	}
+}
+
+func TestApplyValuesRendersTemplates(t *testing.T) {
+	// A scalar that is nothing but one template action comes back as the type the
+	// value has, not as the text of it, so the engine reads a YAML boolean.
+	t.Run("a templated scalar keeps its type", func(t *testing.T) {
+		l := templatedLayout()
+		if err := l.ApplyValues(templateValues(true, false)); err != nil {
+			t.Fatal(err)
+		}
+		if enc := cilium(t, l); enc["enabled"] != true {
+			t.Fatalf("encryption.enabled = %#v, want the boolean true", enc["enabled"])
+		}
+	})
+
+	// The thing a mapping cannot do: decide whether a block is written at all.
+	t.Run("a conditional decides what a chart entry holds", func(t *testing.T) {
+		for _, tt := range []struct {
+			autoscale bool
+			want      string
+		}{
+			{true, "autoscaler"},
+			{false, "replicas: 2"},
+		} {
+			l := templatedLayout()
+			if err := l.ApplyValues(templateValues(false, tt.autoscale)); err != nil {
+				t.Fatal(err)
+			}
+			got, ok := l.Distro.Spec.Config.Engine.Dig("manifest", "rke2-coredns").(string)
+			if !ok {
+				t.Fatalf("coredns entry is %#v, want a string", l.Distro.Spec.Config.Engine.Dig("manifest", "rke2-coredns"))
+			}
+			if !strings.Contains(got, tt.want) {
+				t.Fatalf("coredns entry = %q, want it to contain %q", got, tt.want)
+			}
+			if strings.Contains(got, "autoscaler") != tt.autoscale {
+				t.Fatalf("coredns entry = %q, want the autoscaler block only when the value is set", got)
+			}
+		}
+	})
+
+	// Rendering runs before the mappings, so only what the package author wrote is
+	// executed. A cluster that sets a value holding {{ gets it written through as
+	// the text it is.
+	t.Run("a value that looks like a template is not executed", func(t *testing.T) {
+		l := templatedLayout()
+		l.Distro.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+			{Source: ".cilium.encryption.type", Target: ".manifest.rke2-cilium.encryption.type"},
+		}
+		values := templateValues(false, false)
+		ciliumValues, ok := values["cilium"].(map[string]any)
+		if !ok {
+			t.Fatalf("cilium = %#v, want a map", values["cilium"])
+		}
+		encryption, ok := ciliumValues["encryption"].(map[string]any)
+		if !ok {
+			t.Fatalf("cilium.encryption = %#v, want a map", ciliumValues["encryption"])
+		}
+		encryption["type"] = "{{ .Values.cilium.encryption.enabled }}"
+
+		if err := l.ApplyValues(values); err != nil {
+			t.Fatal(err)
+		}
+		if got := cilium(t, l)["type"]; got != "{{ .Values.cilium.encryption.enabled }}" {
+			t.Fatalf("encryption.type = %#v, want the literal text the cluster set", got)
+		}
+	})
+
+	t.Run("a template naming a value no one defines is an error", func(t *testing.T) {
+		l := templatedLayout()
+		if err := l.ApplyValues(map[string]any{}); err == nil {
+			t.Fatal("ApplyValues rendered a template whose values are missing")
+		}
+	})
+}
+
+// stageFile writes a file where the packager stages it, under the index of its
+// entry in the spec, which is the coupling the upload phases read it back by.
+func stageFile(t *testing.T, root, dir string, idx int, name, content string) string {
+	t.Helper()
+	path := filepath.Join(root, dir, strconv.Itoa(idx), name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestRenderFiles(t *testing.T) {
+	root := t.TempDir()
+	tmpl := "address: {{ .Values.registry.address }}\n"
+
+	rendered := stageFile(t, root, string(config.FilesDir), 0, "registries.yaml", tmpl)
+	verbatim := stageFile(t, root, string(config.FilesDir), 1, "untouched.yaml", tmpl)
+	osFile := stageFile(t, root, string(config.OSDir), 0, "motd", "welcome to {{ .Values.registry.address }}\n")
+
+	yes := true
+	d := distro.ZarfDistro{}
+	d.Spec.Config.Files = v1alpha1.ZarfFiles{
+		{Target: "/etc/rancher/rke2/registries.yaml", Template: &yes},
+		{Target: "/etc/untouched.yaml"},
+	}
+	d.Spec.Config.OS.Files = v1alpha1.ZarfFiles{{Target: "/etc/motd", Template: &yes}}
+	l := &DistroLayout{Distro: d, dirPath: root}
+
+	values := map[string]any{"registry": map[string]any{"address": "127.0.0.1:31999"}}
+	if err := l.RenderFiles(context.Background(), values); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		path string
+		want string
+	}{
+		{rendered, "address: 127.0.0.1:31999\n"},
+		{verbatim, tmpl},
+		{osFile, "welcome to 127.0.0.1:31999\n"},
+	} {
+		got, err := os.ReadFile(tt.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != tt.want {
+			t.Fatalf("%s = %q, want %q", tt.path, got, tt.want)
+		}
+	}
+
+	// A staged file keeps the mode it was staged with: some of these carry
+	// registry credentials, and a rewrite is not a reason to widen them.
+	info, err := os.Stat(rendered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o640 {
+		t.Fatalf("mode = %v, want the mode the file was staged with", info.Mode().Perm())
+	}
+}
+
+func TestRenderFilesReportsAMissingValue(t *testing.T) {
+	root := t.TempDir()
+	stageFile(t, root, string(config.FilesDir), 0, "registries.yaml", "address: {{ .Values.registry.address }}\n")
+
+	yes := true
+	d := distro.ZarfDistro{}
+	d.Spec.Config.Files = v1alpha1.ZarfFiles{{Target: "/etc/rancher/rke2/registries.yaml", Template: &yes}}
+	l := &DistroLayout{Distro: d, dirPath: root}
+
+	if err := l.RenderFiles(context.Background(), map[string]any{}); err == nil {
+		t.Fatal("RenderFiles rendered a file whose values are missing")
+	}
 }
