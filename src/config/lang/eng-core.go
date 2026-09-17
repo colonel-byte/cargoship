@@ -191,6 +191,22 @@ const (
 	// CmdSchemaFlagPackage flag description
 	CmdSchemaFlagPackage = "Graft a package's own values schema onto spec.config.values. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
 
+	// CmdValidateShort validate short
+	CmdValidateShort = "Checks a cluster inventory, package definition, or config file against its schema"
+	// CmdValidateLong validate long
+	CmdValidateLong = "Checks one or more files against the JSON Schema cargoship generates for that file format, " +
+		"reporting every problem rather than the first. Cargoship parses these files without strict key checking, " +
+		"so a misspelled key is dropped rather than reported; this catches that, along with a wrong type and a value " +
+		"outside an enumerated list. The schema is read from the binary, so no network access is needed.\n\n" +
+		"The schema is chosen from the document's own 'kind' field. A cargoship config file declares no kind and has " +
+		"to be named with --kind.\n\n" +
+		"spec.config.values is untyped in the inventory schema, because its shape belongs to whichever package is " +
+		"being installed. Pass --package to check it as well."
+	// CmdValidateFlagKind flag description
+	CmdValidateFlagKind = "Name the schema to check against instead of reading the document's 'kind' field. Required for a cargoship config file, which declares no kind."
+	// CmdValidateFlagPackage flag description
+	CmdValidateFlagPackage = "Check spec.config.values against a package's own values schema. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
+
 	// CmdDistroSignShort sign short
 	CmdDistroSignShort = "Signs an existing Cargoship distro package"
 	// CmdDistroSignLong sign long
