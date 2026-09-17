@@ -15,7 +15,9 @@
 package assemble
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -25,6 +27,8 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/layout"
+	"github.com/k0sproject/dig"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 func writeValuesFile(t *testing.T, dir string, name string, content string) {
@@ -51,7 +55,7 @@ func TestPackageValuesCopiesAndRewritesPaths(t *testing.T) {
 	writeValuesFile(t, src, "values.yaml", "replicas: 1\nname: base\n")
 	writeValuesFile(t, src, "overrides/values.yaml", "replicas: 3\n")
 
-	d, err := packageValues(context.Background(),
+	d, _, err := packageValues(context.Background(),
 		valuesDistro([]string{"values.yaml", "overrides/values.yaml"}, ""), src, build)
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +89,7 @@ func TestPackageValuesNoValuesIsNoOp(t *testing.T) {
 	src := t.TempDir()
 	build := t.TempDir()
 
-	d, err := packageValues(context.Background(), valuesDistro(nil, ""), src, build)
+	d, _, err := packageValues(context.Background(), valuesDistro(nil, ""), src, build)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +112,7 @@ func TestPackageValuesSchemaIsPackagedAndEnforced(t *testing.T) {
 		"required": ["replicas"]
 	}`)
 
-	d, err := packageValues(context.Background(),
+	d, _, err := packageValues(context.Background(),
 		valuesDistro([]string{"values.yaml"}, "values.schema.json"), src, build)
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +134,7 @@ func TestPackageValuesSchemaMismatchFailsTheBuild(t *testing.T) {
 		"properties": {"replicas": {"type": "integer", "minimum": 1}}
 	}`)
 
-	_, err := packageValues(context.Background(),
+	_, _, err := packageValues(context.Background(),
 		valuesDistro([]string{"values.yaml"}, "values.schema.json"), src, build)
 	if err == nil {
 		t.Fatal("packageValues succeeded with values that violate the schema")
@@ -144,8 +148,64 @@ func TestPackageValuesMissingFile(t *testing.T) {
 	src := t.TempDir()
 	build := t.TempDir()
 
-	_, err := packageValues(context.Background(), valuesDistro([]string{"absent.yaml"}, ""), src, build)
+	_, _, err := packageValues(context.Background(), valuesDistro([]string{"absent.yaml"}, ""), src, build)
 	if err == nil {
 		t.Fatal("packageValues succeeded with a values file that does not exist")
+	}
+}
+
+// A mapping is only applied at install time, so a package whose mapping cannot
+// land is built and shipped before anyone finds out. Create time checks them
+// against the engine configuration the package carries and warns, which is as far
+// as it goes while the feature is new: a package that installs today keeps
+// building today.
+func TestPackageValuesWarnsOnAMappingItCannotApply(t *testing.T) {
+	src := t.TempDir()
+	build := t.TempDir()
+	writeValuesFile(t, src, "values.yaml", "replicas: 2\n")
+
+	d := valuesDistro([]string{"values.yaml"}, "")
+	d.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+		// No leading dot, so the path is not a value path at all.
+		{Source: ".replicas", Target: "manifest.rke2-cilium.replicas"},
+	}
+
+	var buf bytes.Buffer
+	ctx := logger.WithContext(context.Background(), slog.New(slog.NewTextHandler(&buf, nil)))
+
+	if _, values, err := packageValues(ctx, d, src, build); err != nil {
+		t.Fatalf("a mapping that cannot be applied failed the build: %v", err)
+	} else if values["replicas"] != 2 {
+		t.Fatalf("values = %#v, want the merged values back", values)
+	}
+	if !strings.Contains(buf.String(), "values mapping cannot be applied") {
+		t.Fatalf("nothing was logged about the mapping: %q", buf.String())
+	}
+}
+
+func TestPackageValuesAcceptsAMappingItCanApply(t *testing.T) {
+	src := t.TempDir()
+	build := t.TempDir()
+	writeValuesFile(t, src, "values.yaml", "replicas: 2\n")
+
+	d := valuesDistro([]string{"values.yaml"}, "")
+	d.Spec.Config.Engine = dig.Mapping{"manifest": dig.Mapping{"rke2-cilium": dig.Mapping{}}}
+	d.Spec.Values.Mappings = []distro.ZarfDistroValueMapping{
+		{Source: ".replicas", Target: ".manifest.rke2-cilium.replicas"},
+	}
+
+	var buf bytes.Buffer
+	ctx := logger.WithContext(context.Background(), slog.New(slog.NewTextHandler(&buf, nil)))
+
+	if _, _, err := packageValues(ctx, d, src, build); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(buf.String(), "values mapping cannot be applied") {
+		t.Fatalf("a mapping that applies cleanly was warned about: %q", buf.String())
+	}
+	// The check runs against a copy, so the package ships the engine configuration
+	// its author wrote and the mapping is applied again at install time.
+	if l := len(d.Spec.Config.Engine.DigMapping("manifest", "rke2-cilium")); l != 0 {
+		t.Fatalf("the check wrote into the package: %#v", d.Spec.Config.Engine)
 	}
 }
