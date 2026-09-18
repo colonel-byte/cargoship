@@ -293,6 +293,18 @@ $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.p
 $ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
 $ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt`
 
+	// CmdInventoryFromAnsibleExample inventory from-ansible example
+	CmdInventoryFromAnsibleExample = `# Translate a resolved Ansible inventory, and check the result against the schema
+$ cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
+$ cargoship validate ./inventory.yaml
+
+# Read from stdin and write to stdout, so it composes with whatever produced the projection
+$ cargoship inventory from-ansible < ./resolved.json | tee ./inventory.yaml
+
+# Translate one projection of a fleet for a second cluster without rewriting it
+$ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer staging-kc.test.com
+`
+
 	// CmdSchemaExample schema example
 	CmdSchemaExample = `# Write the inventory schema next to an inventory file, for an editor to read
 $ cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
