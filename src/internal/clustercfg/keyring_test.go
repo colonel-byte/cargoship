@@ -18,6 +18,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -400,5 +401,153 @@ func TestKeyringCanDecrypt(t *testing.T) {
 func TestEncryptValueErrorsWithoutKeyMaterial(t *testing.T) {
 	if _, err := EncryptValue("hunter2", &Keyring{}); !errors.Is(err, ErrNoKeyMaterial) {
 		t.Errorf("EncryptValue() error = %v, want ErrNoKeyMaterial", err)
+	}
+}
+
+// TestKeyringRecipientStringsRoundTrip covers the one thing the record needs that the keyring did
+// not already have: the text of each recipient.
+//
+// A parsed age.Recipient cannot be turned back into a string -- the agessh types carry no text
+// encoding -- so if the text is not kept as it is read, it is gone, and the document has nothing to
+// record. Every source a recipient can arrive from therefore has to keep it.
+func TestKeyringRecipientStringsRoundTrip(t *testing.T) {
+	first, second := newAgeIdentity(t), newAgeIdentity(t)
+	ssh := newEd25519SSHKey(t)
+	commented := ssh.authorized + " alice@laptop"
+
+	tests := []struct {
+		name string
+		// options and env are the two ways recipients reach a keyring.
+		options KeyOptions
+		env     string
+		// want is what the document records; wantParsed is how many keys the values are actually
+		// encrypted to. They differ only where the same key was named twice.
+		want       []string
+		wantParsed int
+	}{
+		{
+			name:       "flags in the order given",
+			options:    KeyOptions{AgeRecipients: []string{second.Recipient().String(), first.Recipient().String()}},
+			want:       []string{second.Recipient().String(), first.Recipient().String()},
+			wantParsed: 2,
+		},
+		{
+			// The comment is the part that says whose key it is, so it is the part most worth
+			// recording. Nothing downstream parses it back out.
+			name:       "an SSH key keeps its comment",
+			options:    KeyOptions{AgeRecipients: []string{commented}},
+			want:       []string{commented},
+			wantParsed: 1,
+		},
+		{
+			name: "a recipients file, minus its comments and blank lines",
+			options: KeyOptions{AgeRecipientFiles: []string{writeFile(t, "recipients.txt",
+				"# platform team\n"+first.Recipient().String()+"\n\n# ci\n"+commented+"\n")}},
+			want:       []string{first.Recipient().String(), commented},
+			wantParsed: 2,
+		},
+		{
+			// Naming one key on a flag and again in a file encrypts to it twice, which is harmless
+			// and is not this change's to fix. The record is a list of who can read the file, and
+			// saying one of them twice would read as two operators.
+			name: "a flag and a file, with the duplicate recorded once",
+			options: KeyOptions{
+				AgeRecipients:     []string{first.Recipient().String()},
+				AgeRecipientFiles: []string{writeFile(t, "dupe.txt", first.Recipient().String()+"\n"+second.Recipient().String()+"\n")},
+			},
+			want:       []string{first.Recipient().String(), second.Recipient().String()},
+			wantParsed: 3,
+		},
+		{
+			name:       "the environment, when no flag named any",
+			env:        first.Recipient().String() + " " + second.Recipient().String(),
+			want:       []string{first.Recipient().String(), second.Recipient().String()},
+			wantParsed: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clearKeyEnv(t)
+			if tt.env != "" {
+				t.Setenv(AgeRecipientsEnvVar, tt.env)
+			}
+
+			k, err := ResolveKeyring(tt.options)
+			if err != nil {
+				t.Fatalf("ResolveKeyring() error = %v", err)
+			}
+			if got := k.RecipientStrings(); !slices.Equal(got, tt.want) {
+				t.Errorf("RecipientStrings() = %q, want %q", got, tt.want)
+			}
+			if len(k.recipients) != tt.wantParsed {
+				t.Errorf("len(recipients) = %d, want %d", len(k.recipients), tt.wantParsed)
+			}
+		})
+	}
+}
+
+// TestResolveKeyringRejectsAWhitespacePaddedRecipient holds the reason the recorded text is trimmed
+// and the parsed text is not.
+//
+// parseRecipient dispatches on the "age1" and private-key prefixes by matching the raw string, so
+// trimming before it would change which inputs are accepted -- a padded key is refused today, and
+// silently accepting one to make the record tidier is not a trade worth making.
+func TestResolveKeyringRejectsAWhitespacePaddedRecipient(t *testing.T) {
+	clearKeyEnv(t)
+	id := newAgeIdentity(t)
+
+	_, err := ResolveKeyring(KeyOptions{AgeRecipients: []string{id.Recipient().String() + "  "}})
+	if err == nil {
+		t.Fatal("ResolveKeyring() error = nil, want the padded key refused rather than trimmed")
+	}
+	if !strings.Contains(err.Error(), "parsing age recipient") {
+		t.Errorf("ResolveKeyring() error = %q, want it to name the recipient it could not parse", err)
+	}
+}
+
+// TestKeyringRecipientStringsAreACopy keeps the accessor from handing out the keyring's own slice.
+// What it returns is written into a document and compared against one, and neither of those should
+// be able to reach back into the key material's provenance.
+func TestKeyringRecipientStringsAreACopy(t *testing.T) {
+	clearKeyEnv(t)
+	id := newAgeIdentity(t)
+
+	k, err := ResolveKeyring(KeyOptions{AgeRecipients: []string{id.Recipient().String()}})
+	if err != nil {
+		t.Fatalf("ResolveKeyring() error = %v", err)
+	}
+
+	got := k.RecipientStrings()
+	got[0] = "age1tampered"
+	if again := k.RecipientStrings(); again[0] != id.Recipient().String() {
+		t.Errorf("RecipientStrings() = %q after the caller wrote to an earlier result", again[0])
+	}
+
+	// A keyring with no recipients has nothing to record, and nil rather than an empty slice is
+	// what says so.
+	if strings := (&Keyring{}).RecipientStrings(); strings != nil {
+		t.Errorf("RecipientStrings() = %q on an empty keyring, want nil", strings)
+	}
+}
+
+// TestRekeyTargetCarriesRecipientStrings holds the seam rekey writes its record through. The target
+// keyring is built fresh from the recipients, so anything not copied onto it is lost -- and a rekey
+// that wrote no record would leave the file claiming the keys it used to be encrypted to.
+func TestRekeyTargetCarriesRecipientStrings(t *testing.T) {
+	clearKeyEnv(t)
+	id := newAgeIdentity(t)
+
+	from, err := ResolveKeyring(KeyOptions{AgeRecipients: []string{id.Recipient().String()}})
+	if err != nil {
+		t.Fatalf("ResolveKeyring() error = %v", err)
+	}
+
+	to, _, err := from.RekeyTarget("")
+	if err != nil {
+		t.Fatalf("RekeyTarget() error = %v", err)
+	}
+	if got := to.RecipientStrings(); !slices.Equal(got, from.RecipientStrings()) {
+		t.Errorf("RecipientStrings() = %q on the target, want %q", got, from.RecipientStrings())
 	}
 }

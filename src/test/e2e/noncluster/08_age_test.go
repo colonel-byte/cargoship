@@ -33,6 +33,10 @@ import (
 // that the test asserts on what an operator sees in the file.
 const ageHeader = "-----BEGIN AGE ENCRYPTED FILE-----"
 
+// flowMetadataInventory is an inventory whose metadata mapping is written in flow style, which is
+// the one legal shape the age recipient record cannot be spliced into.
+const flowMetadataInventory = "src/test/e2e/noncluster/testdata/inventory-flow-metadata.yaml"
+
 // ageKey is one age key pair and the files a command is pointed at to use it.
 type ageKey struct {
 	identity      *age.X25519Identity
@@ -546,5 +550,165 @@ func TestCargoshipAgeEncryptFile(t *testing.T) {
 		got, err = os.ReadFile(config)
 		require.NoError(t, err)
 		require.Equal(t, string(original), string(got))
+	})
+
+	// An age header names no recipient, so a file encrypted to two keys and a file encrypted to
+	// somebody else's look the same. The record is the file saying which it was -- documentation an
+	// operator reads, never key material anything acts on.
+	t.Run("records the recipients it encrypted to", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+		other := newAgeKey(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config,
+			"--age-recipient", key.recipient, "--age-recipient", other.recipient)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "  encryption:")
+		require.Contains(t, string(got), "- "+key.recipient)
+		require.Contains(t, string(got), "- "+other.recipient)
+		require.Contains(t, string(got), "lastModified:")
+		// Beside the name it was already carrying, not in place of it.
+		require.Contains(t, string(got), "name: test")
+
+		// The document still loads, and the file is still readable with either key on its list.
+		_, _, err = e2e.Cargoship(t, "validate", config)
+		require.NoError(t, err)
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--age-identity-file", other.identityFile)
+		require.NoError(t, err)
+		got, err = os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(original), string(got))
+	})
+
+	// What the record buys over the skip warning alone. The skip says cargoship cannot tell what
+	// these values are encrypted to; this says what the file claims they are encrypted to, and that
+	// it is not what was just asked for.
+	t.Run("warns when the recipients named differ from the ones recorded", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+		other := newAgeKey(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+
+		before, err := os.ReadFile(config)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", other.recipient)
+		require.NoError(t, err)
+		require.Contains(t, stderr, "not the ones this file records")
+		require.Contains(t, stderr, key.recipient, "the warning should name what the file records")
+		require.Contains(t, stderr, other.recipient, "the warning should name what was asked for")
+		require.Contains(t, stderr, "rekey")
+
+		after, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(before), string(after), "a run that re-encrypted nothing should write nothing")
+	})
+
+	// Naming the same recipient again is the ordinary case, and it has nothing to report.
+	t.Run("says nothing when the recipients named are the ones recorded", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+		require.NotContains(t, stderr, "not the ones this file records")
+	})
+
+	// A list of public keys above a document full of plaintext reads as a file that is still
+	// protected, which is the one thing it must not say.
+	t.Run("decrypt-file removes the record", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--age-identity-file", key.identityFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.NotContains(t, string(got), "encryption:")
+		require.NotContains(t, string(got), key.recipient)
+		// Removing it restores the file byte for byte, comments and all.
+		require.Equal(t, string(original), string(got))
+	})
+
+	// Rotation is the case the record is most worth having and most dangerous to get wrong: a stale
+	// list names the keys that used to open the file, which is worse than no list at all.
+	t.Run("rekey onto a new recipient set updates the record", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+		other := newAgeKey(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+
+		_, _, err = e2e.Cargoship(t, "vault", "rekey", config,
+			"--age-identity-file", key.identityFile, "--age-recipient", other.recipient)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "- "+other.recipient)
+		require.NotContains(t, string(got), key.recipient, "the key the file is no longer encrypted to should be gone from the record")
+
+		// One record, not a second one beside the first.
+		require.Equal(t, 1, strings.Count(string(got), "encryption:"))
+		_, _, err = e2e.Cargoship(t, "validate", config)
+		require.NoError(t, err)
+	})
+
+	// The other direction. A rekey onto Ansible Vault leaves no age ciphertext behind, so a list of
+	// age recipients would name keys that open nothing in the file.
+	t.Run("rekey onto Ansible Vault removes the record", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := writeDoc(t)
+
+		_, _, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+
+		_, _, err = e2e.Cargoship(t, "vault", "rekey", config,
+			"--age-identity-file", key.identityFile, "--vault-password-file", passwordFile)
+		require.NoError(t, err)
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), "$ANSIBLE_VAULT")
+		require.NotContains(t, string(got), "encryption:")
+		require.NotContains(t, string(got), key.recipient)
+	})
+
+	// The one document shape the record cannot be written into. Refusing to record a fact about a
+	// file beats leaving one that no longer parses with the credentials already encrypted into it.
+	t.Run("a flow-style metadata mapping is encrypted but not recorded", func(t *testing.T) {
+		clearKeyEnv(t)
+		config := filepath.Join(t.TempDir(), "cluster.yaml")
+		flow, err := os.ReadFile(flowMetadataInventory)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(config, flow, 0o600))
+
+		_, stderr, err := e2e.Cargoship(t, "vault", "encrypt-file", config, "--age-recipient", key.recipient)
+		require.NoError(t, err)
+		require.Contains(t, stderr, "could not record the age recipients in this file")
+
+		got, err := os.ReadFile(config)
+		require.NoError(t, err)
+		require.Contains(t, string(got), ageHeader, "the credentials should still have been encrypted")
+		require.NotContains(t, string(got), "encryption:")
+		require.NotContains(t, string(got), key.recipient)
+		// And the file is still a document cargoship can read back.
+		_, _, err = e2e.Cargoship(t, "vault", "decrypt-file", config, "--age-identity-file", key.identityFile)
+		require.NoError(t, err)
+		got, err = os.ReadFile(config)
+		require.NoError(t, err)
+		require.Equal(t, string(flow), string(got))
 	})
 }

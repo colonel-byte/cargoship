@@ -53,6 +53,32 @@ type ZarfCluster struct {
 type ZarfClusterMetadata struct {
 	// Name sets the cluster name. If you allow cargoship to update the kubeconfig, cargoship uses this name there.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	// Encryption records how the credentials in this document were encrypted. Cargoship writes it and never reads it back as key material, because an age header names no recipient: this records what was done, not a fact anything can check against the ciphertext beside it.
+	Encryption *ZarfClusterEncryption `json:"encryption,omitempty"`
+}
+
+// ZarfClusterEncryption records how the credentials in a document were encrypted.
+//
+// There is a section per format rather than one flat list, so that a document holding both
+// Ansible Vault and age credentials has somewhere to say so later. Only age needs a record today:
+// a vaulted value is read with the one password the operator already has to supply by name.
+type ZarfClusterEncryption struct {
+	// Age records the age recipients this document's credentials were encrypted to. Nothing verifies this list and nothing can: an age header carries no recipient identifier, so editing it changes what the file claims and not a byte of what it holds.
+	Age *ZarfClusterAgeEncryption `json:"age,omitempty"`
+}
+
+// ZarfClusterAgeEncryption records the age recipients a document's credentials were encrypted to.
+//
+// It is advisory. Nothing verifies it, and nothing can: an age header carries no recipient
+// identifier, which is the property that keeps ciphertext from revealing who can read it. Editing
+// this list therefore changes what the file claims and not a byte of what it holds -- cargoship
+// compares it against the recipients you name and says so when the two differ, and never encrypts
+// to a key that came out of it.
+type ZarfClusterAgeEncryption struct {
+	// Recipients lists the age public keys cargoship encrypted to, in the order they were given. An SSH key keeps its authorized_keys comment, since that is the part that says whose key it is.
+	Recipients []string `json:"recipients,omitempty"`
+	// LastModified is when cargoship last rewrote the credentials in this document, in RFC 3339.
+	LastModified string `json:"lastModified,omitempty" jsonschema:"format=date-time"`
 }
 
 // ZarfRuntimeMeta stores data gathered while the phases run.

@@ -27,7 +27,7 @@ The same four fields per registry, in either format:
 
 Cargoship tells the formats apart by the value's own header. Ansible Vault ciphertext starts with `$ANSIBLE_VAULT`; age ciphertext is armored, so it starts with `-----BEGIN AGE ENCRYPTED FILE-----` and ends with `-----END AGE ENCRYPTED FILE-----`. A value carrying neither is plaintext and is passed through untouched.
 
-Nothing records the format in the schema, and no flag selects it for reading. That is what lets one document mix the two.
+Nothing records the format in the schema, and no flag selects it for reading. That is what lets one document mix the two. A document encrypted with age does carry a note of the age recipients it was encrypted to, but that is a record of what was done rather than a field anything reads a value's format from -- see [What the File Records](#what-the-file-records).
 
 ## Keys
 
@@ -342,6 +342,10 @@ Reading needs an identity that is still in the file; writing uses the new, small
 
 Treat the credential itself as compromised anyway if the person had it. Re-encryption removes their access to the *file*; it does not un-tell them a password they have already read. The registry credential should be rotated at the registry too.
 
+Afterwards, `metadata.encryption.age.recipients` lists the set you rekeyed to, so the removal is visible in the diff rather than only in the re-randomized ciphertext. That list is a note rather than a check -- see [What the File Records](#what-the-file-records) -- but it is the reason a second operator can tell, from the file alone, whether the revocation has happened yet.
+
+If you are not sure whether a configuration has already been rekeyed, running `encrypt-file` with the recipient set you want is a safe way to ask: it re-encrypts nothing, and it warns if what the file records is not what you named.
+
 Naming the recipient set the file already uses re-encrypts every value to those same recipients:
 
 ```
@@ -386,10 +390,75 @@ An age header written to a native `age1...` recipient does not say who the value
 
 Either way, two things follow, because Cargoship reads no stanza at all -- age keeps that parser internal, so nothing here can see even the recipient hash:
 
-* Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted. This is why `encrypt-file` skips an encrypted value rather than checking it, why it warns about every value it skipped rather than staying quiet, and why changing recipients is `rekey`'s job.
+* Cargoship cannot tell you whether a value is already encrypted to the recipients you have in hand. It can only tell you that it is encrypted, and -- since it writes down the recipients it used -- what the file *says* it was encrypted to. Those are different claims, and the second one is a note, not a check; see [What the File Records](#what-the-file-records). This is why `encrypt-file` skips an encrypted value rather than checking it, why it warns about every value it skipped rather than staying quiet, and why changing recipients is `rekey`'s job.
 * An error about a value you cannot read can never name the key you are missing. `none of the configured age identities can decrypt this value` is the whole of what is knowable.
 
 `docs/agent/choice-age-encryption.md` records the reasoning in full.
+
+## What the File Records
+
+Because the ciphertext cannot say who it was encrypted to, the document says it instead. After an age encryption, `metadata` carries the recipient set the run used:
+
+```yaml
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: e72
+  encryption:
+    age:
+      recipients:
+        - age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... alice@laptop
+      lastModified: "2026-09-16T10:30:00Z"
+spec:
+  config:
+    registries: ...
+```
+
+An SSH recipient keeps its `authorized_keys` comment, because that is the part that says whose key it is. Keys appear in the order you named them, and a key named twice -- on a flag and again in a recipients file -- appears once. `lastModified` is when Cargoship last rewrote the credentials in the document.
+
+### It Is a Note, Not a Guarantee
+
+This is the one place in a Cargoship configuration where the file makes a claim about itself that nothing can verify, and it is worth being precise about what that means.
+
+**Cargoship writes this block and never reads it back as key material.** Not on `encrypt-file`, not on `rekey`, not on an apply. `rekey` with an identity and no recipients still fails with `no age recipients configured`, exactly as it did before this block existed -- it will not quietly encrypt to whatever the file happens to list.
+
+That restriction is the whole safety argument. If any command encrypted to the keys named in the file, a one-line edit in a pull request would silently redirect every credential in it to the author's key, and the resulting ciphertext would be indistinguishable from a correct one. So the block is inert: Cargoship writes it, compares against it, and acts on neither.
+
+What that buys you, concretely:
+
+* Reading the file tells you which keys it was encrypted to, which is otherwise unknowable without trying every private key you have.
+* A code review can see a recipient set change, in the diff, as a line of YAML rather than as a wall of re-randomized ciphertext.
+* `encrypt-file` can tell you that the recipients you just named are not the ones the file claims -- which is a much more useful thing to hear than "skipped, and I cannot tell you why".
+
+And what it does not buy you: an edited list is a lie the file tells, and nothing in Cargoship will catch it. Treat the block the way you would treat a comment -- accurate because the tooling wrote it and the diff is reviewed, not because anything enforces it.
+
+### When It Is Written and Removed
+
+* **`encrypt-file` writes it** when it encrypted at least one credential to age. A run that encrypted nothing changes nothing, including the timestamp, so running the command twice still leaves the file byte for byte identical.
+* **`rekey` rewrites it** with the recipients it wrote to, and **removes it** when the target is Ansible Vault -- a list of age keys that open nothing in the file is worse than no list at all.
+* **`decrypt-file` removes it**, unless age ciphertext remains somewhere in the document. A recipient list above a file full of plaintext reads as a file that is still protected.
+* **A `metadata` mapping written in flow style** -- `metadata: {name: e72}` -- has nowhere to put the block. Cargoship encrypts the credentials as usual and warns that it could not record them; writing a nested block into a flow mapping would leave a document that no longer parses, with the credentials already encrypted into it.
+
+Nothing else in Cargoship touches the block. An apply ignores it, and a document without one works exactly as it did before.
+
+### When the Recipients Disagree
+
+Running `encrypt-file` against a file that is already encrypted skips every credential, as it always has. When the file records a different recipient set from the one you named, the skip warnings are joined by one that says so:
+
+```
+WRN the credentials this run left as they were are recorded as encrypted to age recipients
+    other than the ones you named  file=./cluster.yaml
+    recorded="age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
+    named="age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh"
+    hint="run 'cargoship vault rekey' with an age identity and these recipients to re-encrypt it to them"
+```
+
+The comparison is on the keys themselves, so an `authorized_keys` comment added or removed, and a recipients file reordered, are not drift. The skip warnings beside it still say what they always did -- that the value is age ciphertext and Cargoship cannot tell what it opens with. Both are true, and they answer different questions: one is about the ciphertext, this one is about what the document claims.
+
+### Older Binaries
+
+The `metadata` block is new, and `cargoship validate` rejects fields it does not know about. A configuration carrying the block therefore fails `validate` on a Cargoship built before it existed. An apply is unaffected -- it ignores unknown fields -- and so is decryption, since the block has nothing to do with reading a value.
 
 ## Interoperability with age
 

@@ -2,7 +2,7 @@
 
 Cargoship encrypts four registry credential fields per registry -- `auth.user`, `auth.pass`, `auth.token`, `tls.ca` -- and decrypts them at apply time, when the engine's registry configuration is written. That was Ansible Vault only, built on a single shared passphrase (`src/internal/clustercfg/vault.go`). It now also supports [age](https://github.com/FiloSottile/age), and the two coexist permanently.
 
-The operator-facing guide is [age-encryption](../guides/age-encryption.md). This document records the decisions behind it, and in particular the one thing a future change is most likely to get wrong: **the probe in `EncryptConfig` cannot be re-added for age.**
+The operator-facing guide is [age-encryption](../guides/age-encryption.md). This document records the decisions behind it, and in particular the two things a future change is most likely to get wrong: **the probe in `EncryptConfig` cannot be re-added for age**, and **the recipient record in `metadata` must never be read back as key material.**
 
 ## Coexistence rather than migration
 
@@ -10,7 +10,7 @@ Both formats carry a self-identifying header: `$ANSIBLE_VAULT` and, because age 
 
 That makes coexistence nearly free, so it was chosen over a migration:
 
-- No schema field naming the format, so no field that can disagree with the value beside it.
+- No schema field naming the format, so no field that can disagree with the value beside it. The recipient record added later is the one exception, and it is kept inert for exactly this reason -- see [The recipient record, and why it is inert](#the-recipient-record-and-why-it-is-inert).
 - No mode flag, so no command whose meaning depends on an invocation the reader of the file cannot see.
 - No migration deadline, so a legacy vaulted credential can stay as it is indefinitely.
 
@@ -45,6 +45,54 @@ The one real cost is rotation-by-mistake: running `encrypt-file` with a new reci
 The placement of the warnings matters as much as their text. `finishVaultFile` emits them **before** both its `--dry-run` branch and its `len(changed) == 0` early return, since a run that changed nothing is exactly the run the reporting exists for; emitting them after either would leave the loudest failure as the quietest output. They go to stderr through the logger, so a dry run piped to a file still yields a clean document.
 
 Changing which keys a document is encrypted to is `rekey`'s job, and always was. `rekey` reads with one key and writes with another, so cross-format migration falls straight out of the shape it already had: `rekey --vault-password-file old.txt --age-recipient age1...` is the whole vault-to-age path, with no new command and no window in which plaintext touches the disk.
+
+## The recipient record, and why it is inert
+
+A document encrypted with age carries `metadata.encryption.age.recipients` and `lastModified`, written by `src/internal/clustercfg/vaultmeta.go`. It is the answer to issue #392, and it is in direct tension with a bullet three sections above: *no schema field naming the format, so no field that can disagree with the value beside it.* This is exactly such a field. It can disagree with the ciphertext beside it, nothing can detect that it has, and for the reasons in the probe section nothing ever will be able to.
+
+It was accepted anyway, under one restriction that the entire justification rests on:
+
+**Cargoship writes this block and never reads it back as key material.** It is read for exactly one purpose -- comparing what the document claims against what the operator just named on the command line -- and the result of that comparison is a warning and nothing else. No command encrypts to a key that came out of the file being edited.
+
+That restriction is not a matter of taste. If `rekey` defaulted its recipients to the recorded list when none were given, a one-line edit in a pull request would silently redirect every credential in the file to the author's key, and the resulting ciphertext would be indistinguishable from a correct rekey -- same armor, same length distribution, same absence of any recipient identifier. The reviewer's only signal would be the YAML line the attacker wrote. So `rekey` with an identity and no recipients still fails with `no age recipients configured`, exactly as it did before the block existed, and that failure is a feature. Any future change that proposes "rekey could just use the recipients already in the file" is proposing this attack; the convenience it buys is real and is not worth it.
+
+What the field does buy, given that restriction, is the thing the probe section says is the one real cost: an operator can read the file and see which keys it was encrypted to, and a reviewer can see a recipient set change as a line of YAML rather than as a wall of re-randomized ciphertext. Those are documentation wins, and documentation is a thing a file is allowed to be wrong about in a way ciphertext is not.
+
+### Placement, and the shape of the block
+
+It sits in `metadata`, beside `name`, rather than in `spec`. `spec` is the desired state an apply acts on, and this is a record of something that already happened to the file; putting it there would invite exactly the reading -- "this is configuration, so something must consume it" -- that the restriction above forbids. The types are in `src/api/zarf.dev/v1alpha1/cluster/spec.go` as plain strings, keeping that package crypto-free the same way `AgeHeader` does.
+
+There is a section per format (`encryption.age`) rather than one flat list, so a document holding both Ansible Vault and age credentials has somewhere to say so later if that ever becomes worth saying. Only age needs a record today: a vaulted value is read with the one password the operator already supplies by name, so there is nothing about it a file could usefully record.
+
+`lastModified` is included despite being churn, because "when was this last re-encrypted" is the question that follows "which keys is it encrypted to" often enough to be worth the line. It is RFC 3339 and always double-quoted, since a bare timestamp is a shape YAML is free to read as something other than a string. The clock is `var now = time.Now` in `vaultmeta.go` rather than four signature changes; a test concern is not worth reshaping three exported functions.
+
+An SSH recipient keeps its `authorized_keys` comment, because that is the part that says whose key it is, and whose key it is was the point. Comparison, though, is on the key itself -- `recipientKey` strips options and comments via `ssh.ParseAuthorizedKey` -- so re-labelling a key or reordering a recipients file does not read as drift. The question the comparison answers is *who can read this file*, and neither of those changes the answer.
+
+### When it is written, and why a no-op writes nothing
+
+`EncryptConfig` writes the record only when it is writing age **and** `len(changed) > 0`. A run that encrypted nothing touches nothing, including the timestamp.
+
+That condition is load-bearing in two directions. It keeps `encrypt-file` byte-for-byte idempotent, which `TestEncryptConfigAgeIsIdempotent` and `TestEncryptConfigLeavesTheRecordAloneWhenNothingChanged` both hold. And it keeps `finishVaultFile`'s `len(changed) == 0` early return honest: without it, a run that reported "nothing to encrypt" would nonetheless have a modified document to write, and the command would either lie or write behind its own report.
+
+`RekeyConfig` rewrites the record when the target writes age and strips it when the target writes vault. `DecryptConfig` strips it unless age ciphertext remains somewhere in the document -- checked with `bytes.Contains(doc, []byte(cluster.AgeHeader))` rather than assumed, since `encrypt-path` can leave age values outside the credentials the whole-file commands walk. A list of age recipients above a file that holds no age ciphertext is worse than no list: it reads as a file that is still protected.
+
+A `metadata` mapping written in flow style -- `metadata: {name: e72}` -- is refused rather than recorded. Flow style has no block collection, so splicing a nested block into one produces a document that no longer parses, with the credentials already encrypted into it. `errNoMetadataBlock` carries that out, `recordRecipients` swallows it, and `reportRecipientRecord` in `src/cmd/misc_vault_encrypt_file.go` turns it into a warning. Declining to record a fact about a file is much the smaller loss, and it is the same reasoning `inFlowCollection` already encodes for the value splice.
+
+Everything in `vaultmeta.go` is a byte-level splice for the reason `spliceScalar` is: go-yaml re-indents multi-line literals and truncates ciphertext nested in sequences, so nothing here re-renders the document.
+
+### Why `skipReason`'s wording stays
+
+The age-to-age skip still says the value is encrypted to age recipients already and that cargoship cannot tell whether they are the ones you named. That remains exactly true -- it is a statement about the ciphertext, and no record changes what the ciphertext says about itself.
+
+The new warning is a different claim about a different thing: what the *document* says it was encrypted to. They are emitted together and they are both worth having. A future change that "fixes" the skip message to mention the record would be merging a cryptographic fact with a piece of documentation, which is the confusion this whole section exists to prevent.
+
+`reportRecipientRecord` lives in `src/cmd` rather than in `clustercfg`, because `clustercfg` does no terminal I/O and the warning is about the document as a whole rather than about one credential path -- so it does not fit `Skip{Path, Reason}`. It is in `encrypt-file` specifically, not in `finishVaultFile`: `decrypt-file` removes the record and `rekey` rewrites it, and in both cases that is the operator getting precisely what they asked for. It is called before `finishVaultFile` for the same reason the skip warnings are emitted where they are -- a run that changed nothing is the run it exists for.
+
+It reads the prior claim from the document as it was read, not as it will be written, since a run that encrypted something has already replaced the record. And it fires only when something was skipped: with no skips, every credential in the file is on the keys just named and the record agrees with itself.
+
+### Compatibility
+
+`ZarfClusterMetadata` carries `additionalProperties: false`, so a document holding this block fails `cargoship validate` on a binary built before it existed. An apply is unaffected -- `clustercfg.Parse` is a non-strict unmarshal, and the generated schema is used only by `cargoship validate` (`src/cmd/misc_validate.go`). Both copies of the schema have to be regenerated together with `mage generate:schema`, since CI does not run the generator.
 
 ## Why encryption picks a format but decryption never does
 
