@@ -230,12 +230,61 @@ func TestPathIsDecryptable(t *testing.T) {
 		{".spec.config.registries[0].name", false},
 		{".spec.config.loadbalancer", false},
 		{".spec.config.registries[", false},
+		// An index that is opened, given digits and never closed used to run go-yaml off the end of
+		// the path and panic, which reached an operator as a stack trace rather than as the typo it
+		// is. The empty "[" above takes a different route through go-yaml and always errored.
+		{".spec.config.registries[0", false},
+		{"a[1", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
 			if got := PathIsDecryptable(tt.path); got != tt.want {
 				t.Errorf("PathIsDecryptable(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestCanonicalYAMLPath checks that the canonical spelling of a path is one the parser reads back
+// as the same path, because that spelling is what the rest of the run uses.
+func TestCanonicalYAMLPath(t *testing.T) {
+	tests := []struct {
+		path string
+		want string // empty means the path has to be rejected
+	}{
+		{"$.spec.config.registries[0].auth.pass", "$.spec.config.registries[0].auth.pass"},
+		{".spec.config.registries[0].auth.pass", "$.spec.config.registries[0].auth.pass"},
+		{"spec.config.registries[0].auth.pass", "$.spec.config.registries[0].auth.pass"},
+		{"$", "$"},
+		{"", ""},
+		// go-yaml accepts a quoted key and then prints it without its quotes, so this one
+		// canonicalises to "$.$", which does not parse. Rejecting it keeps the failure on the path
+		// the operator typed rather than on a spelling this package invented.
+		{"'$'", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(strconv.Quote(tt.path), func(t *testing.T) {
+			got, err := CanonicalYAMLPath(tt.path)
+			if tt.want == "" {
+				if err == nil {
+					t.Fatalf("CanonicalYAMLPath(%q) = %q, want an error", tt.path, got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("CanonicalYAMLPath(%q) error = %v", tt.path, err)
+			}
+			if got != tt.want {
+				t.Fatalf("CanonicalYAMLPath(%q) = %q, want %q", tt.path, got, tt.want)
+			}
+			again, err := CanonicalYAMLPath(got)
+			if err != nil {
+				t.Fatalf("CanonicalYAMLPath(%q) error = %v on its own output", got, err)
+			}
+			if again != got {
+				t.Errorf("canonicalising %q again = %q, want %q", got, again, got)
 			}
 		})
 	}
@@ -362,10 +411,15 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 		"tab\tseparated",
 		"carriage\r\nreturn",
 		"control\x1bcharacter",
+		"control\x01character",
+		"control\x7fcharacter",
 		"line1\nline2",
 		"line1\nline2\n",
 		"line1\ntrailing space  \nline3",
 		"  leading space\nsecond line",
+		"\n",
+		"\n\n",
+		"\n\n\n",
 		"blank\n\n\nlines",
 		"trailing\nblank lines\n\n\n",
 		"\nleading blank line",
@@ -376,29 +430,7 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 	const path = ".spec.config.registries[0].auth.pass"
 	for _, want := range values {
 		t.Run(strconv.Quote(want), func(t *testing.T) {
-			ciphertext, err := EncryptValue(want, testKeyring)
-			if err != nil {
-				t.Fatalf("EncryptValue() error = %v", err)
-			}
-			// Put the ciphertext in the document the way encrypt-path would, so the decrypt runs
-			// against a real block scalar rather than a hand-built one.
-			doc, err := EncryptAtPath(readPathsInventoryFixture(t), path, testKeyring, false)
-			if err != nil {
-				t.Fatalf("EncryptAtPath() error = %v", err)
-			}
-			node, err := mustPath(t, path).FilterFile(mustParse(t, doc))
-			if err != nil {
-				t.Fatalf("FilterFile() error = %v", err)
-			}
-			doc, err = spliceScalar(doc, node, "|-", strings.Split(strings.TrimRight(ciphertext, "\n"), "\n"))
-			if err != nil {
-				t.Fatalf("spliceScalar() error = %v", err)
-			}
-
-			got, err := DecryptAtPath(doc, path, testKeyring)
-			if err != nil {
-				t.Fatalf("DecryptAtPath() error = %v", err)
-			}
+			got := decryptedDocHolding(t, path, want)
 			if value := readPath(t, got, path); value != want {
 				t.Errorf("value at %s = %q, want %q\ndocument:\n%s", path, value, want, got)
 			}
@@ -408,6 +440,82 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestEncryptAtPathReadsBackWhatDecryptWrote checks that a document this package wrote is one it
+// can rewrite again, for values whose scalar style is the awkward one.
+//
+// Choosing a style that parses is not enough: encrypting a value means finding its span in the
+// source text and replacing those bytes, so the style has to be one the splice can measure. A
+// double-quoted scalar holding a control character is where the two halves disagreed -- it is
+// written as a "\xNN" escape, and go-yaml leaves the escape's payload out of the token's origin
+// text, so the span came back three bytes short of the four in the document and the rewrite was
+// refused. That left a value decrypt-path would write and encrypt-path could not read back.
+func TestEncryptAtPathReadsBackWhatDecryptWrote(t *testing.T) {
+	values := []string{
+		"control\x01character",
+		"control\x7fcharacter",
+		"control\x1bcharacter",
+		"has #a hash",
+		"trailing space  ",
+		"quote \" and 'apostrophe'",
+		"backslash \\ and \\x41 that is not an escape",
+	}
+
+	const path = ".spec.config.registries[0].auth.pass"
+	for _, want := range values {
+		t.Run(strconv.Quote(want), func(t *testing.T) {
+			doc := decryptedDocHolding(t, path, want)
+
+			encrypted, err := EncryptAtPath(doc, path, testKeyring, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v\ndocument:\n%s", err, doc)
+			}
+			got, err := DecryptAtPath(encrypted, path, testKeyring)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			if value := readPath(t, got, path); value != want {
+				t.Errorf("value at %s = %q, want %q\ndocument:\n%s", path, value, want, got)
+			}
+			if value := readPath(t, got, ".spec.config.registries[0].auth.token"); value != "tok #1" {
+				t.Errorf("neighbouring token = %q, want %q\ndocument:\n%s", value, "tok #1", got)
+			}
+		})
+	}
+}
+
+// decryptedDocHolding returns the paths inventory fixture with value written at path by DecryptAtPath, which is the
+// only way to get an arbitrary plaintext into a document in the style this package writes.
+//
+// It goes the long way around -- encrypt the value, put the ciphertext where encrypt-path would put
+// it, then decrypt -- so the plaintext is written by the code under test rather than by the test.
+func decryptedDocHolding(t *testing.T, path, value string) []byte {
+	t.Helper()
+
+	ciphertext, err := EncryptValue(value, testKeyring)
+	if err != nil {
+		t.Fatalf("EncryptValue() error = %v", err)
+	}
+	doc, err := EncryptAtPath(readPathsInventoryFixture(t), path, testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	node, err := mustPath(t, path).FilterFile(mustParse(t, doc))
+	if err != nil {
+		t.Fatalf("FilterFile() error = %v", err)
+	}
+	doc, err = spliceScalar(doc, node, "|-", strings.Split(strings.TrimRight(ciphertext, "\n"), "\n"))
+	if err != nil {
+		t.Fatalf("spliceScalar() error = %v", err)
+	}
+
+	decrypted, err := DecryptAtPath(doc, path, testKeyring)
+	if err != nil {
+		t.Fatalf("DecryptAtPath() error = %v", err)
+	}
+
+	return decrypted
 }
 
 func TestDecryptAtPathRejectsPlaintext(t *testing.T) {

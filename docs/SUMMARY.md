@@ -67,6 +67,7 @@
 - [build-flags](dev/build-flags.md)
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
+- [fuzz-tests](dev/fuzz-tests.md)
 - [goreleaser](dev/goreleaser.md)
 - [mage](dev/mage.md)
 - [shell-completion](dev/shell-completion.md)
