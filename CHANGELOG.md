@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.25.0](https://github.com/colonel-byte/cargoship/compare/v0.24.0...v0.25.0) (2026-09-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **dagger:** remove dagger config ([#419](https://github.com/colonel-byte/cargoship/issues/419))
+
+### Features
+
+* **vault:** add age receipts ([#424](https://github.com/colonel-byte/cargoship/issues/424)) ([1d814ee](https://github.com/colonel-byte/cargoship/commit/1d814ee6033ec80947042b33c11c64a7e5a51e43))
+
+
+### Bug Fixes
+
+* **clustercfg:** stop corrupting flow mappings and CRLF documents ([#422](https://github.com/colonel-byte/cargoship/issues/422)) ([687baea](https://github.com/colonel-byte/cargoship/commit/687baea02af045c653b33a84bbe4a512ade40650))
+
+
+### Documentation
+
+* **github:** add AGENTS.md for pull request descriptions ([#423](https://github.com/colonel-byte/cargoship/issues/423)) ([083794e](https://github.com/colonel-byte/cargoship/commit/083794e2b6487cc1afb5a6cc29b43db67c6bc9b0))
+
+
+### CI/CD
+
+* **dagger:** remove dagger config ([#419](https://github.com/colonel-byte/cargoship/issues/419)) ([fb5be40](https://github.com/colonel-byte/cargoship/commit/fb5be4031933b1fe19e360c63f264ec241f5dabb))
+* **fuzzing:** testing ([#421](https://github.com/colonel-byte/cargoship/issues/421)) ([8d8eeff](https://github.com/colonel-byte/cargoship/commit/8d8eeffaf5e0ea39c425ae82bf3766384d3f4218))
+
 ## [0.24.0](https://github.com/colonel-byte/cargoship/compare/v0.23.0...v0.24.0) (2026-09-17)
 
 
