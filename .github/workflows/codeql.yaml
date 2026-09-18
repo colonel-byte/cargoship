@@ -1,0 +1,88 @@
+---
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  schedule:
+    # Weekly, off the hour: scheduled scans keep the security tab current for
+    # advisories published after a commit landed.
+    - cron: "37 5 * * 1"
+
+permissions:
+  contents: read
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Go is built rather than scanned buildless, so the build step below
+          # is what decides which packages get extracted.
+          - language: go
+            build-mode: manual
+          - language: actions
+            build-mode: none
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        if: matrix.build-mode == 'manual'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@d8073367669608af8fbcc5f63dd0a0d52bb90cff # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # The package patterns are spelled out instead of ./... for two reasons,
+      # and CodeQL's `paths-ignore` can fix neither -- it does not apply to Go,
+      # which is analyzed by building it, so the exclusions have to live here.
+      #
+      # thirdparty-src/ is a second, deliberately empty module holding verbatim
+      # upstream k3s/RKE2 source that is never meant to compile (see
+      # docs/dev/thirdparty-src.md). Anything that walks the checkout for module
+      # roots -- CodeQL's Go autobuilder included -- tries to resolve imports
+      # this repo does not vendor, runs `go mod tidy -e`, and fetches modules
+      # nobody asked for. Naming the patterns keeps the toolchain inside the
+      # main module so that never starts.
+      #
+      # magefiles/ is package main behind //go:build mage, and mage supplies the
+      # main function at runtime, so `go build` cannot compile it at all -- with
+      # or without -tags mage. Those targets are dev tooling and ship in no
+      # binary, so they are left unanalyzed.
+      - name: Build
+        if: matrix.build-mode == 'manual'
+        run: go build -mod=vendor ./src/... .
+        env:
+          CGO_ENABLED: 0
+          # Everything the build needs is vendored, so make any accidental
+          # network access fail fast. Matches e2e.yaml and magefiles/utils.go.
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@d8073367669608af8fbcc5f63dd0a0d52bb90cff # v4
+        with:
+          category: "/language:${{ matrix.language }}"
