@@ -38,6 +38,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
       --confirm                                 Confirm whether if to proceed with the install
+      --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help                                    help for engine-config-sync
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages

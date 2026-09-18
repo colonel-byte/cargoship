@@ -65,6 +65,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().IntVarP(&o.concurrency, InstallEngineConfigSyncConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallEngineConfigSyncConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().StringVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
@@ -100,7 +101,9 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
+	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
+	// what would happen is what would push someone into running the real thing to find out.
+	if !o.confirm && !o.dryRun {
 		l.Warn("please include the --confirm argument")
 		return errors.New("pass confirm argument")
 	}
