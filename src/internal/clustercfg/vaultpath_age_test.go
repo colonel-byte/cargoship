@@ -25,13 +25,17 @@ import (
 
 // newAgeKeyring returns a keyring that both encrypts to and decrypts with one fresh key pair, which
 // is what an operator working on their own machine has.
+//
+// The recipient's text is carried alongside it, as ResolveKeyring carries it, so that a test
+// encrypting with this keyring produces the recipient record a real run would.
 func newAgeKeyring(t *testing.T) *Keyring {
 	t.Helper()
 	id := newAgeIdentity(t)
 	return &Keyring{
-		identities:  []age.Identity{id},
-		recipients:  []age.Recipient{id.Recipient()},
-		ageExplicit: true,
+		identities:       []age.Identity{id},
+		recipients:       []age.Recipient{id.Recipient()},
+		recipientStrings: []string{id.Recipient().String()},
+		ageExplicit:      true,
 	}
 }
 
