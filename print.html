@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f9cfd907.js";
+            window.path_to_searchindex_js = "searchindex-29ec57d3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-2ee9e962.js"></script>
@@ -4003,6 +4003,7 @@ autoload -U compinit &amp;&amp; compinit
 <h2 id="why-thirdparty-src-has-its-own-gomod"><a class="header" href="#why-thirdparty-src-has-its-own-gomod">Why <code>thirdparty-src/</code> has its own <code>go.mod</code></a></h2>
 <p>Because these files reference packages (<code>github.com/urfave/cli/v2</code>, <code>github.com/k3s-io/k3s/pkg/version</code>, …) that this repository does not vendor, letting the main module’s tooling discover them causes real breakage: <code>go build ./...</code>, <code>go vet</code>, and IDE tooling (gopls) all try to resolve those imports and fail.</p>
 <p><code>thirdparty-src/go.mod</code> declares a separate, empty module so the Go toolchain treats <code>thirdparty-src/</code> as outside the main module boundary. <code>go build ./...</code>/<code>go vet</code> from the repo root no longer descend into it. IDEs still open a second module context for it, which can surface unresolved-import diagnostics on the files themselves; the workspace’s <code>.vscode/settings.json</code> sets <code>gopls.directoryFilters</code> to <code>-thirdparty-src</code> to stop gopls from loading that module at all.</p>
+<p>The module boundary is not honoured by every tool. CodeQL’s Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above — mis-resolving some of them (<code>github.com/k3s-io/k3s</code> to <code>v1.21.9</code>, whose <code>go.mod</code> declares its path as <code>github.com/rancher/k3s</code>), running <code>go mod tidy -e</code>, and downloading modules this repository deliberately does not depend on. CodeQL’s <code>paths-ignore</code> cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. <code>.github/workflows/codeql.yaml</code> therefore uses <code>build-mode: manual</code> and builds <code>./src/... .</code> rather than <code>./...</code>, which keeps the toolchain inside the main module. Anything else added to CI that walks for <code>go.mod</code> files needs the same treatment.</p>
 <h2 id="layout-2"><a class="header" href="#layout-2">Layout</a></h2>
 <pre><code>thirdparty-src/
   &lt;distro&gt;/                  # k3s or rke2
