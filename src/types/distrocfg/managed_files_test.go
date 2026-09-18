@@ -99,7 +99,7 @@ func TestRemoveStaleFilesError(t *testing.T) {
 // The manifest directory is shared with the engine, so only what cargoship names there is its
 // to remove.
 func TestManagedDirs(t *testing.T) {
-	d := &RancherCommon{Data: "/var/lib/rancher/rke2"}
+	d := &RancherCommon{Common: Common{Data: "/var/lib/rancher/rke2"}}
 	require.Equal(t, []ManagedDir{
 		{Path: registryTLSDir},
 		{Path: StateDir},
