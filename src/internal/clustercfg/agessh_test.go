@@ -21,6 +21,7 @@ import (
 	"encoding/pem"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -175,12 +176,19 @@ func TestParseRecipientsMixesNativeAndSSHKeys(t *testing.T) {
 		"\n" +
 		ssh.authorized + "\n"
 
-	recipients, err := parseRecipients(strings.NewReader(file))
+	recipients, lines, err := parseRecipients(strings.NewReader(file))
 	if err != nil {
 		t.Fatalf("parseRecipients() error = %v", err)
 	}
 	if len(recipients) != 2 {
 		t.Fatalf("parseRecipients() returned %d recipients, want 2", len(recipients))
+	}
+
+	// The text comes back beside each recipient, since a parsed one cannot be printed again, and
+	// the comment stays on the SSH line: that is the part saying whose key it is.
+	want := []string{native.Recipient().String(), ssh.authorized}
+	if !slices.Equal(lines, want) {
+		t.Errorf("parseRecipients() lines = %q, want %q", lines, want)
 	}
 
 	// Either key alone has to read a value encrypted to both, which is what makes a mixed
@@ -199,12 +207,16 @@ func TestParseRecipientsReadsAnAuthorizedKeysLine(t *testing.T) {
 	key := newEd25519SSHKey(t)
 	line := `no-agent-forwarding,command="/bin/true" ` + key.authorized + " operator@example.com"
 
-	recipients, err := parseRecipients(strings.NewReader(line + "\n"))
+	recipients, lines, err := parseRecipients(strings.NewReader(line + "\n"))
 	if err != nil {
 		t.Fatalf("parseRecipients() error = %v", err)
 	}
 	if len(recipients) != 1 {
 		t.Fatalf("parseRecipients() returned %d recipients, want 1", len(recipients))
+	}
+	// The whole line is kept, options and all, rather than a normalized rendering of the key.
+	if len(lines) != 1 || lines[0] != line {
+		t.Errorf("parseRecipients() lines = %q, want %q", lines, []string{line})
 	}
 
 	identities, err := parseIdentityFile("id_ed25519", key.private, nil)
@@ -222,7 +234,7 @@ func TestParseRecipientsFailsTheFileOnAnUnusableKey(t *testing.T) {
 	file := key.authorized + "\n" +
 		"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHkYc1Zd0kN2vE7+8TrFWs3PFNDPmYLWbXEtGWd8KgH1Jn9L1fJgWDxBGqaoLrKNBdRHmKzxRGxKxdmFmXlGqBM= operator@example.com\n"
 
-	_, err := parseRecipients(strings.NewReader(file))
+	_, _, err := parseRecipients(strings.NewReader(file))
 	if err == nil {
 		t.Fatal("parseRecipients() error = nil, want one naming the bad line")
 	}

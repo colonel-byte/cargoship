@@ -86,6 +86,11 @@ type Keyring struct {
 	identities []age.Identity
 
 	recipients []age.Recipient
+	// recipientStrings holds the text each recipient was given as, in the order it was given, so
+	// that the record written into a document can name the keys it was encrypted to. A parsed
+	// recipient cannot be printed back -- see parseRecipients -- so this is captured at parse time
+	// or not at all. It is written to documents and compared against; it is never key material.
+	recipientStrings []string
 	// ageExplicit records the same thing as vaultExplicit, for the recipients.
 	ageExplicit bool
 
@@ -184,6 +189,9 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 	}
 
 	for _, key := range keys {
+		// Parsed as given rather than trimmed first: parseRecipient dispatches on the "age1" and
+		// private-key prefixes by matching the raw string, so trimming ahead of it would quietly
+		// change which inputs are accepted. Only the text being recorded is trimmed.
 		parsed, err := parseRecipient(key)
 		if errors.Is(err, errRecipientIsSecret) {
 			// Deliberately without the key: see the note on errRecipientIsSecret.
@@ -193,6 +201,7 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 			return fmt.Errorf("parsing age recipient %q: %w", key, err)
 		}
 		k.recipients = append(k.recipients, parsed)
+		k.recordRecipientString(key)
 	}
 
 	for _, path := range files {
@@ -200,7 +209,7 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 		if err != nil {
 			return fmt.Errorf("reading age recipients file: %w", err)
 		}
-		parsed, err := parseRecipients(bytes.NewReader(contents))
+		parsed, lines, err := parseRecipients(bytes.NewReader(contents))
 		if err != nil {
 			return fmt.Errorf("parsing age recipients file %s: %w", path, err)
 		}
@@ -208,8 +217,48 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 			return fmt.Errorf("age recipients file %s holds no recipients", path)
 		}
 		k.recipients = append(k.recipients, parsed...)
+		for _, line := range lines {
+			k.recordRecipientString(line)
+		}
 	}
 	return nil
+}
+
+// recordRecipientString adds key to the list the document record is written from, trimmed, unless
+// that exact text is already on it.
+//
+// The order is the one the operator gave, not a sorted one: a recipients file is written by a
+// person, and the order they put their team's keys in is worth keeping in the file that names
+// them. Dropping an exact repeat is what keeps a key named both on a flag and in a file from
+// appearing twice; the parsed recipients keep the repeat, which only costs a duplicate stanza and
+// keeps this list's bookkeeping out of what gets encrypted.
+func (k *Keyring) recordRecipientString(key string) {
+	trimmed := strings.TrimSpace(key)
+	if trimmed == "" {
+		return
+	}
+	for _, existing := range k.recipientStrings {
+		if existing == trimmed {
+			return
+		}
+	}
+	k.recipientStrings = append(k.recipientStrings, trimmed)
+}
+
+// RecipientStrings returns the age recipients the keyring encrypts to, as the text they were given
+// as. It is a copy, so a caller writing it into a document cannot reach back into the keyring.
+//
+// Returning strings rather than the recipients themselves is what keeps pkg/action and pkg/phase
+// free of the age module, for the reason the age fields are unexported at all. These are not key
+// material: they are the public half of a key pair, recorded so that a person reading the file can
+// see whose keys it was encrypted to.
+func (k *Keyring) RecipientStrings() []string {
+	if k == nil || len(k.recipientStrings) == 0 {
+		return nil
+	}
+	out := make([]string, len(k.recipientStrings))
+	copy(out, k.recipientStrings)
+	return out
 }
 
 // Empty reports whether the keyring holds no key material at all, which is how a command tells
@@ -251,8 +300,9 @@ func (k *Keyring) RekeyTarget(newVaultPassword string) (*Keyring, bool, error) {
 		return nil, false, errors.New("age recipients and a new vault password were both given; pass one or the other, since each names the key to rekey onto")
 	case len(k.recipients) > 0:
 		// Only the recipients are carried over. A target holding the vault password as well would
-		// be a keyring naming two formats, which EncryptFormat rightly refuses.
-		return &Keyring{recipients: k.recipients, ageExplicit: true}, true, nil
+		// be a keyring naming two formats, which EncryptFormat rightly refuses. The recipient text
+		// travels with them, so the rekeyed document records the keys it was actually written to.
+		return &Keyring{recipients: k.recipients, recipientStrings: k.recipientStrings, ageExplicit: true}, true, nil
 	case newVaultPassword != "":
 		return NewVaultKeyring(newVaultPassword), newVaultPassword != k.vaultPassword, nil
 	default:

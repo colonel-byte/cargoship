@@ -95,8 +95,14 @@ func parseRecipient(key string) (age.Recipient, error) {
 // A line that parses as neither kind fails the file, naming the line. Skipping it would encrypt to
 // fewer recipients than the operator listed, and the person who discovers that is the one who
 // cannot decrypt.
-func parseRecipients(r io.Reader) ([]age.Recipient, error) {
+//
+// Each accepted line comes back beside the recipient it parsed to, because an age.Recipient cannot
+// be turned back into text: agessh's types carry no text encoding, which is the same reason
+// AgeRecipientsIn refuses an SSH private key. The text has to be kept here or not at all, and what
+// keeps it is the record written into the document.
+func parseRecipients(r io.Reader) ([]age.Recipient, []string, error) {
 	var recipients []age.Recipient
+	var lines []string
 
 	limited := &io.LimitedReader{R: r, N: keyFileSizeLimit + 1}
 	scanner := bufio.NewScanner(limited)
@@ -106,21 +112,22 @@ func parseRecipients(r io.Reader) ([]age.Recipient, error) {
 			continue
 		}
 		if !utf8.ValidString(line) {
-			return nil, fmt.Errorf("line %d is not valid UTF-8", n)
+			return nil, nil, fmt.Errorf("line %d is not valid UTF-8", n)
 		}
 		recipient, err := parseRecipient(line)
 		if err != nil {
-			return nil, fmt.Errorf("line %d: %w", n, err)
+			return nil, nil, fmt.Errorf("line %d: %w", n, err)
 		}
 		recipients = append(recipients, recipient)
+		lines = append(lines, line)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if limited.N == 0 {
-		return nil, fmt.Errorf("the file is longer than %d bytes", keyFileSizeLimit)
+		return nil, nil, fmt.Errorf("the file is longer than %d bytes", keyFileSizeLimit)
 	}
-	return recipients, nil
+	return recipients, lines, nil
 }
 
 // parseIdentityFile parses an identity file holding either native age identities, one per line, or

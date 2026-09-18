@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
@@ -70,7 +71,67 @@ func (o *vaultEncryptFileOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	reportRecipientRecord(cmd, file, src, encrypted, keyring, changed, skipped)
+
 	return finishVaultFile(cmd, file, encrypted, changed, skipped, o.dryRun, "encrypted", "nothing to encrypt: every registry credential is encrypted already, or there are none to encrypt")
+}
+
+// reportRecipientRecord says what the file's own record of its age recipients has to say about this
+// run, given the document as it was read and as it will be written.
+//
+// It lives here rather than in finishVaultFile because decrypt-file and rekey have nothing to say
+// about it: one removes the record and the other rewrites it, and each of those is the operator
+// getting exactly what they asked for. It is called before finishVaultFile so that it lands ahead
+// of the dry-run branch and ahead of the "nothing to encrypt" return -- a run that changed nothing
+// is precisely the run this exists for, which is the same reason the skips are reported there.
+//
+// Nothing here checks the ciphertext, and nothing here could. The record is a claim the document
+// makes about itself; an age header names no recipient, so what is compared is what the file says
+// it was encrypted to against what the operator just named. That is worth reporting and is not
+// worth acting on -- see docs/agent/choice-age-encryption.md.
+func reportRecipientRecord(cmd *cobra.Command, file string, src, encrypted []byte, keyring *clustercfg.Keyring, changed []string, skipped []clustercfg.Skip) {
+	l := logger.From(cmd.Context())
+
+	if format, err := keyring.EncryptFormat(); err != nil || format != clustercfg.FormatAge {
+		return
+	}
+
+	// Read from the document as it was, not as it will be written: a run that encrypted something
+	// has already replaced the record with the recipients it was given, so the file as it stands is
+	// the only thing that still says what it held before.
+	recorded, _, ok, err := clustercfg.RecordedRecipients(src)
+	if err != nil {
+		l.Warn("could not read the age recipients this file records; the credentials in it were encrypted regardless",
+			"file", file, "error", err)
+		return
+	}
+
+	if len(changed) > 0 {
+		if _, _, landed, err := clustercfg.RecordedRecipients(encrypted); err != nil || !landed {
+			l.Warn("could not record the age recipients in this file, so it will not say which keys open it; a metadata block written in flow style -- \"{name: x}\" -- has nowhere to put the record",
+				"file", file)
+		}
+	}
+
+	// A skip is a credential this run did not put onto the keys it was given, so skips are what
+	// make the recorded set worth reporting: with none of them, every credential in the file is
+	// encrypted to the recipients just named and the record agrees with itself.
+	named := keyring.RecipientStrings()
+	if !ok || len(skipped) == 0 || clustercfg.SameRecipients(recorded, named) {
+		return
+	}
+
+	// The skip warnings say each credential was left as it was and that cargoship cannot tell what
+	// it is encrypted to. This says what the file claims about that, which is the part they cannot.
+	message := "the credentials this run left as they were are recorded as encrypted to age recipients other than the ones you named"
+	if len(changed) == 0 {
+		message = "the age recipients you named are not the ones this file records, and nothing was re-encrypted"
+	}
+	l.Warn(message,
+		"file", file,
+		"recorded", strings.Join(recorded, ", "),
+		"named", strings.Join(named, ", "),
+		"hint", "run 'cargoship vault rekey' with an age identity and these recipients to re-encrypt it to them")
 }
 
 // finishVaultFile reports what a whole-file rewrite did and writes the result, which encrypt-file,

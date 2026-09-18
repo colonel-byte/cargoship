@@ -652,7 +652,7 @@ func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, []
 		return nil, nil, nil, err
 	}
 
-	return rewriteConfig(src, func(value string) (bool, string, error) {
+	doc, changed, skipped, err := rewriteConfig(src, func(value string) (bool, string, error) {
 		existing, encrypted := FormatOf(value)
 		if reencrypt || !encrypted {
 			return true, "", nil
@@ -669,6 +669,18 @@ func EncryptConfig(src []byte, k *Keyring, reencrypt bool) ([]byte, []string, []
 	}, func(doc []byte, path string) ([]byte, error) {
 		return EncryptAtPath(doc, path, k, true)
 	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Nothing is recorded by a run that encrypted nothing. That keeps this idempotent in the way
+	// the command promises -- running it twice really does leave the file byte for byte as it was,
+	// rather than churning a timestamp -- and it keeps the "nothing to encrypt" report honest,
+	// since a document with no changed paths is not written at all.
+	if writing == FormatAge && len(changed) > 0 {
+		doc = recordRecipients(doc, k)
+	}
+	return doc, changed, skipped, nil
 }
 
 // skipReason explains why EncryptConfig left a value that is already encrypted as it was, for the
@@ -706,13 +718,20 @@ func skipReason(existing, writing Format) string {
 // A document holding both formats decrypts in one pass, provided the keyring carries the key
 // material for both, because each value is read according to its own header.
 func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, []Skip, error) {
-	return rewriteConfig(src, func(value string) (bool, string, error) {
+	doc, changed, skipped, err := rewriteConfig(src, func(value string) (bool, string, error) {
 		// The only value this skips is one that is plaintext already, which is exactly the state
 		// the command was asked to produce, so nothing is reported.
 		return cluster.IsEncrypted(value), "", nil
 	}, func(doc []byte, path string) ([]byte, error) {
 		return DecryptAtPath(doc, path, k)
 	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// The record goes when the last age value does. A list of recipients above a document full of
+	// plaintext reads as a file that is still protected, which is the one thing it must not say.
+	return stripRecordWhenNoAge(doc), changed, skipped, nil
 }
 
 // RekeyConfig re-wraps every encrypted registry credential in src under the "to" keyring and
@@ -737,7 +756,7 @@ func DecryptConfig(src []byte, k *Keyring) ([]byte, []string, []Skip, error) {
 // keyring as both old and new is that property put to use rather than a mistake: every value comes
 // back under fresh randomness, readable with the key the file already carried.
 func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, []Skip, error) {
-	return rewriteConfig(src, func(value string) (bool, string, error) {
+	doc, changed, skipped, err := rewriteConfig(src, func(value string) (bool, string, error) {
 		format, encrypted := FormatOf(value)
 		if !encrypted {
 			// Plaintext is skipped silently, as it always has been: rekeying does not encrypt
@@ -755,6 +774,27 @@ func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, []Skip, error
 	}, func(doc []byte, path string) ([]byte, error) {
 		return RekeyAtPath(doc, path, from, to)
 	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// A rekey is the one command that moves a document between formats, so it is the one that has
+	// to both write the record and take it away. Moving onto age records the new recipients; moving
+	// off it leaves a list naming keys nothing in the file is encrypted to any more, which is worse
+	// than no list at all. The format comes from the target keyring for the same reason the write
+	// side asks it: that keyring is what decided which format was produced.
+	if len(changed) > 0 {
+		format, err := to.EncryptFormat()
+		switch {
+		case err != nil:
+			// A target naming no format encrypted nothing, so there is nothing to say about it.
+		case format == FormatAge:
+			doc = recordRecipients(doc, to)
+		default:
+			doc = stripRecordWhenNoAge(doc)
+		}
+	}
+	return doc, changed, skipped, nil
 }
 
 // rewriteConfig applies rewrite to every registry credential path whose current value satisfies

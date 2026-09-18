@@ -171,6 +171,28 @@
       ],
       "type": "object"
     },
+    "ZarfClusterAgeEncryption": {
+      "additionalProperties": false,
+      "description": "records the age recipients a document's credentials were encrypted to.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "lastModified": {
+          "description": "is when cargoship last rewrote the credentials in this document, in RFC 3339.",
+          "format": "date-time",
+          "type": "string"
+        },
+        "recipients": {
+          "description": "lists the age public keys cargoship encrypted to, in the order they were given. An SSH key keeps its authorized_keys comment, since that is the part that says whose key it is.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "ZarfClusterConfig": {
       "additionalProperties": false,
       "description": "holds cluster-wide configuration.",
@@ -205,6 +227,20 @@
       "required": [
         "loadbalancer"
       ],
+      "type": "object"
+    },
+    "ZarfClusterEncryption": {
+      "additionalProperties": false,
+      "description": "records how the credentials in a document were encrypted.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "age": {
+          "$ref": "#/$defs/ZarfClusterAgeEncryption",
+          "description": "records the age recipients this document's credentials were encrypted to. Nothing verifies this list and nothing can: an age header carries no recipient identifier, so editing it changes what the file claims and not a byte of what it holds."
+        }
+      },
       "type": "object"
     },
     "ZarfClusterFiles": {
@@ -265,6 +301,10 @@
         "^x-": {}
       },
       "properties": {
+        "encryption": {
+          "$ref": "#/$defs/ZarfClusterEncryption",
+          "description": "records how the credentials in this document were encrypted. Cargoship writes it and never reads it back as key material, because an age header names no recipient: this records what was done, not a fact anything can check against the ciphertext beside it."
+        },
         "name": {
           "description": "sets the cluster name. If you allow cargoship to update the kubeconfig, cargoship uses this name there.",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
