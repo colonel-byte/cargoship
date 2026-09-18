@@ -18,6 +18,8 @@ Because these files reference packages (`github.com/urfave/cli/v2`, `github.com/
 
 `thirdparty-src/go.mod` declares a separate, empty module so the Go toolchain treats `thirdparty-src/` as outside the main module boundary. `go build ./...`/`go vet` from the repo root no longer descend into it. IDEs still open a second module context for it, which can surface unresolved-import diagnostics on the files themselves; the workspace's `.vscode/settings.json` sets `gopls.directoryFilters` to `-thirdparty-src` to stop gopls from loading that module at all.
 
+The module boundary is not honoured by every tool. CodeQL's Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above — mis-resolving some of them (`github.com/k3s-io/k3s` to `v1.21.9`, whose `go.mod` declares its path as `github.com/rancher/k3s`), running `go mod tidy -e`, and downloading modules this repository deliberately does not depend on. CodeQL's `paths-ignore` cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. `.github/workflows/codeql.yaml` therefore uses `build-mode: manual` and builds `./src/... .` rather than `./...`, which keeps the toolchain inside the main module. Anything else added to CI that walks for `go.mod` files needs the same treatment.
+
 ## Layout
 
 ```
