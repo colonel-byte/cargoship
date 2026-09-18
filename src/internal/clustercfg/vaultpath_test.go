@@ -1478,3 +1478,120 @@ func TestEncryptAtPathKeepsFlowStyleOnOneLine(t *testing.T) {
 		t.Errorf("flow line = %q, want it to still close the mapping", line)
 	}
 }
+
+// TestEncryptAtPathQuotesIntoAFlowMappingHoldingABareEntry covers the flow mappings the splice used
+// to mistake for block style. An entry written without a value -- the "0" in "{0, pass: hunter2}"
+// -- makes the parser synthesise an implicit null token, and a synthesised token has no previous
+// token, so the walk the flow check used to do along that chain stopped there and never reached the
+// opening brace. The check then reported block style and the splice wrote a literal block scalar
+// into the flow mapping, leaving a document that no longer parsed with the credential already
+// encrypted into it and the plaintext gone.
+func TestEncryptAtPathQuotesIntoAFlowMappingHoldingABareEntry(t *testing.T) {
+	tests := []struct {
+		name  string
+		doc   string
+		value string
+	}{
+		{"a bare entry before the credential", "a:\n  b: {0, pass: hunter2}\n", "hunter2"},
+		{"written without spaces", "a:\n  b: {0,pass:00}\n", "00"},
+		{"several bare entries", "a:\n  b: {q, r, s, pass: hunter2}\n", "hunter2"},
+		{"a bare entry and a nested mapping", "a:\n  b: {0, tls: {q: r}, pass: hunter2}\n", "hunter2"},
+	}
+
+	const path = "$.a.b.pass"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := EncryptAtPath([]byte(tt.doc), path, testKeyring, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v", err)
+			}
+			if strings.Contains(string(got), "|-") {
+				t.Errorf("a block scalar was written into a flow mapping:\n%s", got)
+			}
+			if _, err := parseYAML(got); err != nil {
+				t.Fatalf("the rewritten document does not parse: %v\n%s", err, got)
+			}
+
+			back, err := DecryptAtPath(got, path, testKeyring)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			value, ok, err := scalarAtPath(back, path)
+			if err != nil || !ok {
+				t.Fatalf("reading %s back: ok = %v, error = %v", path, ok, err)
+			}
+			if value != tt.value {
+				t.Errorf("value = %q, want %q", value, tt.value)
+			}
+		})
+	}
+}
+
+// TestPathsKeepCRLFLineEndings covers a document saved with Windows line endings. The splice writes
+// the lines of a block scalar itself, and it used to write them with a bare line feed whatever the
+// rest of the file used, leaving a file with mixed endings -- and, on the way back, a value the
+// splice could no longer match against the document it had parsed.
+func TestPathsKeepCRLFLineEndings(t *testing.T) {
+	crlf := []byte(strings.ReplaceAll(string(readPathsInventoryFixture(t)), "\n", "\r\n"))
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"a single-line credential", ".spec.config.registries[0].auth.pass"},
+		{"a credential written as a literal block", ".spec.config.registries[0].tls.ca"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encrypted, err := EncryptAtPath(crlf, tt.path, testKeyring, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v", err)
+			}
+			if bare := bareLineFeeds(string(encrypted)); bare != 0 {
+				t.Errorf("the encrypted document holds %d bare line feeds, want 0:\n%q", bare, encrypted)
+			}
+
+			got, err := DecryptAtPath(encrypted, tt.path, testKeyring)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			if bare := bareLineFeeds(string(got)); bare != 0 {
+				t.Errorf("the decrypted document holds %d bare line feeds, want 0:\n%q", bare, got)
+			}
+			if string(got) != string(crlf) {
+				t.Errorf("the round trip changed the document:\n%q\nwant:\n%q", got, crlf)
+			}
+		})
+	}
+}
+
+// bareLineFeeds returns the number of line feeds in text that no carriage return precedes.
+func bareLineFeeds(text string) int {
+	return strings.Count(text, "\n") - strings.Count(text, "\r\n")
+}
+
+// TestEncryptAtPathKeepsAMixedDocumentsOwnLineEndings covers the document onLineFeeds leaves alone:
+// one whose lines do not all end the same way, where there is no single ending to convert to and
+// back from. The splice writes the block scalar with the ending the value's own line already has,
+// rather than with a line feed whatever the neighbours use.
+func TestEncryptAtPathKeepsAMixedDocumentsOwnLineEndings(t *testing.T) {
+	const path = "$.spec.config.registries[0].auth.pass"
+	doc := "spec:\n  config:\n    registries:\r\n      - auth:\r\n          pass: hunter2\r\n"
+
+	got, err := EncryptAtPath([]byte(doc), path, testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	if bareLineFeeds(string(got)) != bareLineFeeds(doc) {
+		t.Errorf("the splice changed the line endings around the value:\n%q", got)
+	}
+
+	back, err := DecryptAtPath(got, path, testKeyring)
+	if err != nil {
+		t.Fatalf("DecryptAtPath() error = %v", err)
+	}
+	if string(back) != doc {
+		t.Errorf("the round trip changed the document:\n%q\nwant:\n%q", back, doc)
+	}
+}

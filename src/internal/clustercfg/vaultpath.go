@@ -15,6 +15,7 @@
 package clustercfg
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"regexp"
@@ -24,6 +25,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/token"
 )
 
@@ -107,6 +109,12 @@ func PathIsDecryptable(yamlPath string) bool {
 //
 // If the value is ciphertext already, it returns ErrAlreadyEncrypted unless reencrypt is set.
 func EncryptAtPath(src []byte, yamlPath string, k *Keyring, reencrypt bool) ([]byte, error) {
+	return onLineFeeds(src, func(src []byte) ([]byte, error) {
+		return encryptAtPath(src, yamlPath, k, reencrypt)
+	})
+}
+
+func encryptAtPath(src []byte, yamlPath string, k *Keyring, reencrypt bool) ([]byte, error) {
 	node, plain, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
@@ -148,6 +156,44 @@ func scalarNodeAtPath(src []byte, yamlPath string) (ast.Node, string, string, er
 	return node, value, path.String(), nil
 }
 
+// onLineFeeds runs rewrite over src, with a document written entirely in CRLF converted to line
+// feeds first and converted back afterwards, so that what comes out has the line endings that went
+// in.
+//
+// Converting is what it takes to rewrite such a document at all. go-yaml reports the wrong line for
+// a value in a CRLF document: it counts the carriage return ending a comment as a line break of its
+// own, so every comment above a value shifts that value's reported line down by one, and the splice
+// then measures a line the value is not on. The token's byte offset is no better -- it is right in
+// a document as parsed from disk and drifts once a block scalar has been spliced into one. Neither
+// number can be corrected from the other, so the document is put into the shape both are right
+// about instead.
+//
+// The conversion is exactly reversed, so a file that came in CRLF goes back out CRLF byte for byte
+// apart from the value that was rewritten: nothing this package writes holds a carriage return of
+// its own, since renderScalar quotes any value carrying one and both ciphertext formats are printable
+// ASCII.
+//
+// A document with mixed endings is left as it is. There is no single ending to put back, and
+// rewriting the ones it already has would change lines the caller did not ask about.
+func onLineFeeds(src []byte, rewrite func([]byte) ([]byte, error)) ([]byte, error) {
+	if !isCRLFDocument(src) {
+		return rewrite(src)
+	}
+
+	rewritten, err := rewrite(bytes.ReplaceAll(src, []byte("\r\n"), []byte("\n")))
+	if err != nil {
+		return nil, err
+	}
+	return bytes.ReplaceAll(rewritten, []byte("\n"), []byte("\r\n")), nil
+}
+
+// isCRLFDocument reports whether every line break in src is a carriage return and a line feed
+// together, which is how a file saved by an editor on Windows comes in.
+func isCRLFDocument(src []byte) bool {
+	feeds := bytes.Count(src, []byte("\n"))
+	return feeds > 0 && feeds == bytes.Count(src, []byte("\r\n"))
+}
+
 // spliceCiphertext writes encrypted over the value node holds, as a literal block scalar.
 //
 // The ciphertext is stripped rather than clipped, so what is stored does not depend on whether the
@@ -160,7 +206,7 @@ func scalarNodeAtPath(src []byte, yamlPath string) (ast.Node, string, string, er
 // operator's file does not have.
 func spliceCiphertext(src []byte, node ast.Node, encrypted string) ([]byte, error) {
 	stripped := strings.TrimRight(encrypted, "\n")
-	if inFlowCollection(node) {
+	if inFlowCollection(src, node) {
 		return spliceScalar(src, node, quoteScalar(stripped), nil)
 	}
 	return spliceScalar(src, node, "|-", strings.Split(stripped, "\n"))
@@ -174,9 +220,21 @@ func spliceCiphertext(src []byte, node ast.Node, encrypted string) ([]byte, erro
 // Counting tokens rather than bytes is what makes this right about the cases that look like flow
 // and are not: a brace inside a quoted scalar or a comment is part of that token, and never a
 // delimiter of its own.
-func inFlowCollection(node ast.Node) bool {
+//
+// The tokens come from lexing src again rather than from walking back along the node's own token
+// chain. The parser splices tokens it synthesises into that chain -- the implicit null it gives an
+// entry written without a value, as in "{0, pass: hunter2}" -- and such a token has no Prev, so the
+// walk stops there and never reaches the brace that opened the collection. Reading a flow mapping
+// as a block one that way is how a literal block scalar came to be written into "{...}", leaving a
+// document that no longer parses with the credential already encrypted into it and the plaintext
+// gone.
+func inFlowCollection(src []byte, node ast.Node) bool {
+	offset := node.GetToken().Position.Offset
 	depth := 0
-	for t := node.GetToken().Prev; t != nil; t = t.Prev {
+	for _, t := range lexer.Tokenize(string(src)) {
+		if t.Position.Offset >= offset {
+			break
+		}
 		switch t.Type {
 		case token.MappingStartType, token.SequenceStartType:
 			depth++
@@ -196,6 +254,12 @@ func inFlowCollection(node ast.Node) bool {
 // anything the other two would change on the way back in. If the value is plaintext already, it
 // returns ErrNotEncrypted.
 func DecryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
+	return onLineFeeds(src, func(src []byte) ([]byte, error) {
+		return decryptAtPath(src, yamlPath, k)
+	})
+}
+
+func decryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
 	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
@@ -209,7 +273,7 @@ func DecryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
 		return nil, err
 	}
 
-	head, tail, err := renderScalar(plain, inFlowCollection(node))
+	head, tail, err := renderScalar(plain, inFlowCollection(src, node))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
@@ -233,6 +297,12 @@ func DecryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
 // A value that is plaintext returns ErrNotEncrypted, and one wrapped more than once
 // ErrWrappedTwice.
 func RekeyAtPath(src []byte, yamlPath string, from, to *Keyring) ([]byte, error) {
+	return onLineFeeds(src, func(src []byte) ([]byte, error) {
+		return rekeyAtPath(src, yamlPath, from, to)
+	})
+}
+
+func rekeyAtPath(src []byte, yamlPath string, from, to *Keyring) ([]byte, error) {
 	node, encrypted, path, err := scalarNodeAtPath(src, yamlPath)
 	if err != nil {
 		return nil, err
@@ -441,12 +511,14 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 		indent = keyColumn + 1
 	}
 
+	eol := lineEndingAt(text, lines, line)
+
 	var b strings.Builder
 	b.WriteString(text[:start])
 	b.WriteString(head)
 	b.WriteString(rest)
 	for _, tailLine := range tail {
-		b.WriteString("\n")
+		b.WriteString(eol)
 		// An empty line stays empty rather than becoming a run of spaces, so that a document
 		// written here survives an editor or a linter that trims trailing whitespace.
 		if tailLine != "" {
@@ -469,14 +541,38 @@ func lineOffsets(text string) []int {
 	return offsets
 }
 
-// lineEndOffset returns the offset of the newline ending the 1-based line, or the end of text for
-// a final line that has none.
+// lineEndOffset returns the offset at which the 1-based line's content ends: the offset of the
+// newline ending it, of the carriage return before that newline, or the end of text for a final
+// line that has none.
+//
+// Stopping before the carriage return is what lets the splice keep one. Every span it replaces ends
+// here and the terminator is written back from text itself, so a span ending between the two bytes
+// would drop a bare line feed into a line that had both. A document written entirely in CRLF never
+// reaches here with one -- onLineFeeds converts it first -- but one with mixed endings does, and its
+// carriage returns are as much a part of it as any other byte.
 func lineEndOffset(text string, lines []int, line int) int {
-	if line < len(lines) {
-		// The next line starts just past this one's newline.
-		return lines[line] - 1
+	if line >= len(lines) {
+		return len(text)
 	}
-	return len(text)
+	// The next line starts just past this one's newline.
+	end := lines[line] - 1
+	if end > 0 && text[end-1] == '\r' {
+		end--
+	}
+	return end
+}
+
+// lineEndingAt returns the line ending of the 1-based line, which is what the splice writes between
+// the lines it adds. It is read from the line the value sits on rather than from the document as a
+// whole, because the documents that reach here with a carriage return at all are the ones with
+// mixed endings, and what such a file should keep around a rewritten value is the ending its
+// neighbours already have.
+func lineEndingAt(text string, lines []int, line int) string {
+	end := lineEndOffset(text, lines, line)
+	if end < len(text) && text[end] == '\r' {
+		return "\r\n"
+	}
+	return "\n"
 }
 
 // blockEndOffset returns the offset at which the block scalar introduced on the 1-based
@@ -676,6 +772,14 @@ func RekeyConfig(src []byte, from, to *Keyring) ([]byte, []string, []Skip, error
 // order is enough, and a configuration holds few enough of them for the reparsing to be beside the
 // point.
 func rewriteConfig(src []byte, wanted func(string) (bool, string, error), rewrite func([]byte, string) ([]byte, error)) ([]byte, []string, []Skip, error) {
+	// Converted once for the whole walk rather than once per value, so that the paths, the skips
+	// and the dedupe of shared values are all worked out on the shape go-yaml reports correctly.
+	// See onLineFeeds.
+	crlf := isCRLFDocument(src)
+	if crlf {
+		src = bytes.ReplaceAll(src, []byte("\r\n"), []byte("\n"))
+	}
+
 	paths, err := credentialPaths(src)
 	if err != nil {
 		return nil, nil, nil, err
@@ -711,6 +815,9 @@ func rewriteConfig(src []byte, wanted func(string) (bool, string, error), rewrit
 			return nil, nil, nil, err
 		}
 		changed = append(changed, path)
+	}
+	if crlf {
+		doc = bytes.ReplaceAll(doc, []byte("\n"), []byte("\r\n"))
 	}
 	return doc, changed, skipped, nil
 }
