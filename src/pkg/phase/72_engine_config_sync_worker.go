@@ -71,6 +71,10 @@ func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfClu
 
 // Run the phase
 func (p *EngineConfigSyncWorker) Run(ctx context.Context) error {
+	// ShouldRun only lets this phase reach Run when Prepare found hosts to sync, and the
+	// first thing done to each of them is a drain. Marking here rather than after a
+	// success is deliberate: a run that fails halfway has still changed the fleet.
+	p.markChanged()
 	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"syncing worker config",
