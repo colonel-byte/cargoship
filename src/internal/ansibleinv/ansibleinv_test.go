@@ -181,6 +181,23 @@ func TestTranslateRoleErrors(t *testing.T) {
 			},
 			wants: []string{"with no groups"},
 		},
+		{
+			// Found by FuzzAnsibleRequest. An empty host name became the address, the hostname
+			// and the key into hostvars, and the schema took all three because each is a string.
+			name: "group lists a host with an empty name",
+			in: Input{
+				Groups: map[string][]string{"controller": {""}},
+			},
+			wants: []string{`group "controller"`, "empty name"},
+		},
+		{
+			name: "mapping names a group with an empty name",
+			in: Input{
+				Groups:     map[string][]string{"controller": {"kc01"}},
+				RoleGroups: map[string][]string{cluster.RoleController: {""}},
+			},
+			wants: []string{"role controller", "empty name"},
+		},
 	}
 
 	for _, tt := range tests {
