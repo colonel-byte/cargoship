@@ -22,6 +22,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )
 
@@ -125,8 +126,15 @@ func FuzzEncryptAtPathArbitraryDocument(f *testing.F) {
 		if err != nil {
 			return
 		}
-		require.True(t, cluster.IsEncrypted(rawCredentialIn(t, encrypted)),
-			"the rewritten value carries no ciphertext header\ndocument:\n%s", encrypted)
+		if _, readable := rawValueAtPath(src); readable {
+			// Only where a plain decode could see the value before the rewrite. Where it could not,
+			// the document is one its own YAML keeps from being read -- an alias naming no anchor,
+			// say -- and no rewrite of it reads either, which says nothing about the rewrite.
+			value, ok := rawValueAtPath(encrypted)
+			require.True(t, ok, "the value EncryptAtPath rewrote can no longer be read at %s\ndocument:\n%s", passPath, encrypted)
+			require.True(t, cluster.IsEncrypted(value),
+				"the rewritten value carries no ciphertext header\ndocument:\n%s", encrypted)
+		}
 
 		once, err := clustercfg.DecryptAtPath(encrypted, passPath, vaultKeyring)
 		require.NoError(t, err, "a document written by EncryptAtPath cannot be decrypted\ndocument:\n%s", encrypted)
@@ -307,10 +315,54 @@ func docWithPlaintext(value string) []byte {
 	return documentShape{indent: 2}.documentHolding(value)
 }
 
-// rawCredentialIn returns the credential at passPath without asserting anything about it, for the
-// targets that need to look at a value the document may hold in either state.
-func rawCredentialIn(t *testing.T, doc []byte) string {
-	t.Helper()
+// rawValueAtPath returns the value at passPath as a plain decode of the whole document sees it, and
+// reports whether a plain decode sees one there at all.
+//
+// The configuration type is not the route here, although it is everywhere the document under test
+// is a configuration. A fuzzed document is whatever YAML it happens to be, and a mapping holding a
+// key the configuration has no field for takes the rest of that mapping down with it: an auth
+// written "{0, pass: hunter2}" decodes to an empty ZarfClusterRegistryAuth, credential and all. A
+// decode into the configuration therefore cannot say what EncryptAtPath wrote, which is the one
+// thing the caller needs to know.
+//
+// Neither of the two obvious readers works either. go-yaml's path filter walks the parsed file, and
+// walks neither an alias nor a merge key -- both of which this package resolves before it reads --
+// so a document sharing one credential between two registries would read as holding nothing. Handing
+// the filter a decoded document instead renders that document back to YAML first, and a fuzzed one
+// need not survive the trip: a mapping whose key is a line break comes back as a block scalar where
+// a key belongs, and the filter reports a parse error rather than the value. So the tree is walked
+// here, by the steps that spell passPath.
+//
+// Nothing is asserted, because "no value here" is an answer about the document rather than a
+// failure. A document holding an alias with no anchor does not decode at all, and go-yaml's parser
+// accepts several more that its decoder refuses; the caller states what the rewrite did to a value
+// this reader could see before it, and stays quiet about the rest.
+func rawValueAtPath(doc []byte) (string, bool) {
+	var tree any
+	if err := goyaml.Unmarshal(doc, &tree); err != nil {
+		return "", false
+	}
 
-	return decode(t, doc).Spec.Config.Registries[0].Authentication.Password
+	// The steps of passPath, "$.spec.config.registries[0].auth.pass".
+	for _, step := range []any{"spec", "config", "registries", 0, "auth", "pass"} {
+		switch step := step.(type) {
+		case string:
+			mapping, ok := tree.(map[string]any)
+			if !ok {
+				return "", false
+			}
+			if tree, ok = mapping[step]; !ok {
+				return "", false
+			}
+		case int:
+			sequence, ok := tree.([]any)
+			if !ok || len(sequence) <= step {
+				return "", false
+			}
+			tree = sequence[step]
+		}
+	}
+
+	value, ok := tree.(string)
+	return value, ok
 }

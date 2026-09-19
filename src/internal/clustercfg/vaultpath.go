@@ -127,7 +127,7 @@ func encryptAtPath(src []byte, yamlPath string, k *Keyring, reencrypt bool) ([]b
 	if err != nil {
 		return nil, err
 	}
-	return spliceCiphertext(src, node, encrypted)
+	return spliceVerifiedCiphertext(src, node, path, encrypted)
 }
 
 // scalarNodeAtPath locates the scalar at yamlPath in src and returns the node, its value, and the
@@ -212,6 +212,41 @@ func spliceCiphertext(src []byte, node ast.Node, encrypted string) ([]byte, erro
 	return spliceScalar(src, node, "|-", strings.Split(stripped, "\n"))
 }
 
+// spliceVerifiedCiphertext writes encrypted over the value node holds and checks the document that
+// comes back still holds it at path, which is what every caller here wants: a file with a credential
+// encrypted into it and nothing able to read the credential back is worse than a file left alone.
+func spliceVerifiedCiphertext(src []byte, node ast.Node, path, encrypted string) ([]byte, error) {
+	rewritten, err := spliceCiphertext(src, node, encrypted)
+	if err != nil {
+		return nil, err
+	}
+	return verifiedRewrite(rewritten, path, strings.TrimRight(encrypted, "\n"))
+}
+
+// verifiedRewrite returns rewritten if the value at path reads back as want, and an error naming the
+// path otherwise.
+//
+// The splice is byte arithmetic over whatever YAML a hand-written file happens to be, and go-yaml
+// accepts documents no other parser does: a value sitting at its key's own column, a block header
+// carrying indicators it silently drops, a bare ":" line at the root that only parses while the
+// block above it is empty. Such a document can take a correct splice and come back parsing as
+// something else, or not parsing at all -- and the file on disk is the operator's, with the
+// plaintext already gone from it.
+//
+// Reading the value back is what makes that an error instead. It costs one more parse of a document
+// this package has just parsed twice, which is nothing beside handing back a configuration whose
+// credential cannot be found.
+func verifiedRewrite(rewritten []byte, path, want string) ([]byte, error) {
+	_, got, _, err := scalarNodeAtPath(rewritten, path)
+	if err != nil {
+		return nil, fmt.Errorf("the document this rewrite of %s produced cannot be read back: %w", path, err)
+	}
+	if got != want {
+		return nil, fmt.Errorf("the value written at %s does not read back as it was written", path)
+	}
+	return rewritten, nil
+}
+
 // inFlowCollection reports whether the value node holds sits inside a "{a: b}" or "[a, b]", by
 // counting the flow delimiters the lexer produced before it. A delimiter that closes a collection
 // the value is not in cancels the one that opened it, so what is left over is the collections still
@@ -277,7 +312,11 @@ func decryptAtPath(src []byte, yamlPath string, k *Keyring) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	return spliceScalar(src, node, head, tail)
+	rewritten, err := spliceScalar(src, node, head, tail)
+	if err != nil {
+		return nil, err
+	}
+	return verifiedRewrite(rewritten, path, plain)
 }
 
 // RekeyAtPath returns src with the ciphertext at yamlPath re-wrapped under the "to" keyring,
@@ -323,7 +362,7 @@ func rekeyAtPath(src []byte, yamlPath string, from, to *Keyring) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	return spliceCiphertext(src, node, rekeyed)
+	return spliceVerifiedCiphertext(src, node, path, rekeyed)
 }
 
 // renderScalar returns the YAML text for value, split into the part that replaces the value on its
@@ -355,6 +394,9 @@ func renderScalar(value string, flow bool) (string, []string, error) {
 			return "", nil, fmt.Errorf("rendering the decrypted value as YAML: %w", err)
 		}
 		scalar = strings.TrimSuffix(string(encoded), "\n")
+		if !scalarReadsBack(scalar, value) {
+			scalar = quoteScalar(value)
+		}
 	} else {
 		scalar = quoteScalar(value)
 	}
@@ -367,6 +409,24 @@ func renderScalar(value string, flow bool) (string, []string, error) {
 		tail = append(tail, strings.TrimPrefix(line, "  "))
 	}
 	return lines[0], tail, nil
+}
+
+// scalarReadsBack reports whether scalar, written as the value of a mapping key, reads back as value.
+//
+// The encoder is the right thing to ask which style a value takes, because it holds YAML's quoting
+// rules, but its answer is checked rather than trusted: it writes "? 00" as a plain scalar, where the
+// "? " that opens it is the indicator for an explicit mapping key and no parser reads the result as
+// the string that went in. Asking the parser settles which of the two is right.
+//
+// The scalar is checked at the indentation the encoder wrote it at rather than the one the splice
+// will use, which is sound because the splice moves every line of it by the same amount and a block
+// scalar's content is read relative to its own first line.
+func scalarReadsBack(scalar, value string) bool {
+	var mapping map[string]string
+	if err := goyaml.Unmarshal([]byte("v: "+scalar+"\n"), &mapping); err != nil {
+		return false
+	}
+	return mapping["v"] == value
 }
 
 // blockSafe reports whether go-yaml can render value in a style that reads back unchanged.
@@ -385,6 +445,21 @@ func blockSafe(value string) bool {
 	}
 	if !strings.Contains(value, "\n") {
 		return true
+	}
+	if strings.HasPrefix(value, "\n") {
+		// A block scalar takes its indentation from its first non-empty line, and go-yaml writes one
+		// at a fixed indentation with no indentation indicator. Where the value's own first line is
+		// empty, that first non-empty line is a line of the value's text, and any space it starts
+		// with is read as part of the block's indentation and lost. Quote it instead.
+		for _, line := range strings.Split(value, "\n") {
+			if line == "" {
+				continue
+			}
+			if strings.HasPrefix(line, " ") {
+				return false
+			}
+			break
+		}
 	}
 	for _, line := range strings.Split(value, "\n") {
 		if line != strings.TrimRight(line, " \t") {
@@ -508,13 +583,35 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 		return nil, fmt.Errorf("value at line %d, column %d is outside the document", line, token.Position.Column)
 	}
 
+	lineEnd := lineEndOffset(text, lines, line)
+
 	// current is the part of the value's own line that is replaced: the block introducer for a
 	// literal, the raw scalar text for anything else. Whatever follows it on that line -- a
 	// trailing comment, most often -- is carried over rather than overwritten.
-	literal, isLiteral := node.(*ast.LiteralNode)
+	_, isLiteral := node.(*ast.LiteralNode)
 	current := strings.Trim(token.Origin, " \t\r\n")
+
+	if !scalarStartsAt(text, start, lineEnd, isLiteral, current) {
+		// go-yaml reports a value's column past where the value starts when that value's line ends in
+		// whitespace before its line break -- by one column per trailing space, so "pass: 08   " is
+		// reported three columns late, and an operator's editor leaves such lines behind routinely.
+		// Measuring from the reported column would take the value from its second character, which is
+		// either a different value or no value at all. Walk back to the nearest column on the line
+		// where the value does start; where none does, the reported column stands and the check below
+		// says so.
+		for at := start - 1; at >= lines[line-1]; at-- {
+			if scalarStartsAt(text, at, lineEnd, isLiteral, current) {
+				start = at
+				break
+			}
+		}
+	}
 	if isLiteral {
-		current = literal.Start.Value
+		header, ok := blockHeaderAt(text[start:lineEnd])
+		if !ok {
+			return nil, fmt.Errorf("the block scalar at line %d, column %d is not one this tool can rewrite", line, token.Position.Column)
+		}
+		current = header
 	}
 	if !strings.HasPrefix(text[start:], current) {
 		// go-yaml drops the payload of a hex escape from a token's origin text, so a quoted scalar
@@ -528,7 +625,6 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 		current = quoted
 	}
 
-	lineEnd := lineEndOffset(text, lines, line)
 	currentEnd := start + len(current)
 	// A scalar written across several lines has nothing after it on its first line to carry over,
 	// and ends where its own text does rather than where that line does.
@@ -541,9 +637,11 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 	}
 
 	// Content is indented two past the key that owns it, which is what the rest of a cluster
-	// configuration uses. Falling back to the value's own column keeps the block more indented
-	// than its parent even when the key is not where it is expected to be.
-	indent := token.Position.Column - 1
+	// configuration uses. Where the value sits on a line of its own, with the key on the line above,
+	// there is no key column to measure from and the fallback is one past the value's own column:
+	// a block scalar's content has to be more indented than the header introducing it, and one
+	// space is what that takes.
+	indent := token.Position.Column
 	if keyColumn, ok := keyColumnOn(text[lines[line-1]:lineEnd], token.Position.Column); ok {
 		indent = keyColumn + 1
 	}
@@ -552,6 +650,14 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 
 	var b strings.Builder
 	b.WriteString(text[:start])
+	if start > 0 && text[start-1] == ':' {
+		// go-yaml reads "pass:hunter2" as a key and a value, where YAML itself requires a space
+		// after the colon and every other parser reads the whole of it as one plain scalar. The
+		// value the rewrite found is real -- this package parses with go-yaml -- but writing the
+		// replacement back against the colon would leave the operator a file whose credential
+		// other tools still cannot see. Write the separator YAML asks for.
+		b.WriteString(" ")
+	}
 	b.WriteString(head)
 	b.WriteString(rest)
 	for _, tailLine := range tail {
@@ -564,7 +670,57 @@ func spliceScalar(src []byte, node ast.Node, head string, tail []string) ([]byte
 		}
 	}
 	b.WriteString(text[end:])
+	if end >= len(text) {
+		// The value was the last thing in a document that ended without a line break, so the rewrite
+		// supplies one. A block scalar reads its content line by line and needs it: a final line with
+		// no break is read one line break short of what was written, so "0\n" comes back as "0".
+		// Every other style is written with it too, because a document has to settle -- a rewrite that
+		// added the break only for a block would add it on whichever later pass first wrote one.
+		b.WriteString(eol)
+	}
 	return []byte(b.String()), nil
+}
+
+// scalarStartsAt reports whether the value being rewritten begins at offset at: the block introducer
+// for a literal, the scalar's own text for anything else. It is how a column go-yaml reported is
+// checked against the document before the rewrite measures anything from it.
+func scalarStartsAt(text string, at, lineEnd int, isLiteral bool, current string) bool {
+	if isLiteral {
+		_, ok := blockHeaderAt(text[at:lineEnd])
+		return ok
+	}
+	return current != "" && strings.HasPrefix(text[at:], current)
+}
+
+// blockHeaderAt returns the block scalar header at the start of line -- the "|" or ">" that
+// introduces it, with whatever chomping and indentation indicators follow -- and reports whether
+// line begins with a header YAML itself allows. Anything may follow it on the line except text: a
+// comment is where a header line legally ends.
+//
+// The header is measured in the source rather than taken from go-yaml's own token, because that
+// token is not always the text it was parsed from. A block with no content lines -- "pass: |2"
+// ending a document -- comes back with its indicators stripped, so replacing the token's text would
+// leave the "2" sitting after the header the splice writes, and "|-2" claims an indentation the
+// ciphertext below it does not have.
+//
+// Refusing what YAML does not allow is the other half of measuring it here. The same empty block
+// lets go-yaml accept a header no other parser does, "pass: |A", and the indicators it dropped could
+// be anything at all -- so there is nothing to measure and no way to tell what the value was meant
+// to be. An error leaves that document alone, which is the only answer that does not write a
+// credential into a block whose header says something the file's author did not.
+func blockHeaderAt(line string) (string, bool) {
+	if line == "" || (line[0] != '|' && line[0] != '>') {
+		return "", false
+	}
+
+	end := 1
+	for end < len(line) && (line[end] == '+' || line[end] == '-' || (line[end] >= '0' && line[end] <= '9')) {
+		end++
+	}
+	if rest := strings.TrimLeft(line[end:], " \t"); rest != "" && !strings.HasPrefix(rest, "#") {
+		return "", false
+	}
+	return line[:end], true
 }
 
 // quotedScalarAt returns the flow scalar at the start of s, quotes included, and reports whether s
@@ -599,11 +755,22 @@ func quotedScalarAt(s string) (string, bool) {
 }
 
 // lineOffsets returns the offset at which each line of text begins.
+//
+// A carriage return standing on its own ends a line as much as a line feed does -- YAML says so, and
+// go-yaml counts one when it numbers the lines it reports -- so a document holding one has to be
+// numbered the same way here. Numbering it any other way makes every line after it disagree with the
+// line the parser named, and the span the splice then measures is not the value's.
 func lineOffsets(text string) []int {
 	offsets := []int{0}
-	for i, r := range text {
-		if r == '\n' {
+	for i := 0; i < len(text); i++ {
+		switch text[i] {
+		case '\n':
 			offsets = append(offsets, i+1)
+		case '\r':
+			// A carriage return that a line feed follows is half of one break, counted at the feed.
+			if i+1 == len(text) || text[i+1] != '\n' {
+				offsets = append(offsets, i+1)
+			}
 		}
 	}
 	return offsets
@@ -622,9 +789,12 @@ func lineEndOffset(text string, lines []int, line int) int {
 	if line >= len(lines) {
 		return len(text)
 	}
-	// The next line starts just past this one's newline.
+	// The next line starts just past the break that ends this one.
 	end := lines[line] - 1
-	if end > 0 && text[end-1] == '\r' {
+	if text[end] == '\n' && end > lines[line-1] && text[end-1] == '\r' {
+		// The break is a carriage return and a line feed, so the line's content stops before the
+		// pair. A line ended by a carriage return alone stops at that carriage return, which is
+		// where end already sits.
 		end--
 	}
 	return end
@@ -638,23 +808,36 @@ func lineEndOffset(text string, lines []int, line int) int {
 func lineEndingAt(text string, lines []int, line int) string {
 	end := lineEndOffset(text, lines, line)
 	if end < len(text) && text[end] == '\r' {
+		if end+1 < len(text) && text[end+1] != '\n' {
+			// A carriage return with no line feed after it is the whole of this line's ending.
+			return "\r"
+		}
 		return "\r\n"
 	}
 	return "\n"
 }
 
 // blockEndOffset returns the offset at which the block scalar introduced on the 1-based
-// headerLine ends. The block runs to the last line indented past the header's own line, with
-// blank lines inside it counted as part of it.
+// headerLine ends. The block runs to the last line before the next line of text at the header's own
+// indentation or less, which is where the node the header opened stops.
+//
+// The blank lines that trail the content belong to the block, not to the document around it: a
+// header that keeps its trailing line breaks -- "|+" -- reads them back as part of the value, which
+// is what makes them the block's own bytes rather than spacing between two keys. They are therefore
+// part of the span a rewrite replaces. Leaving them in place would append them to whatever the
+// rewrite wrote, so a value written with "|+" would grow a line break on every pass.
 func blockEndOffset(text string, lines []int, headerLine int) int {
 	headerIndent := indentOf(text[lines[headerLine-1]:lineEndOffset(text, lines, headerLine)])
 	end := lineEndOffset(text, lines, headerLine)
 	for line := headerLine + 1; line <= len(lines); line++ {
-		content := text[lines[line-1]:lineEndOffset(text, lines, line)]
-		if strings.TrimSpace(content) == "" {
-			continue
+		if lines[line-1] >= len(text) {
+			// The empty stretch after a document's last line break is not a line of the document,
+			// so the block does not reach into it. Counting it would move the end of the block past
+			// that line break and drop it, which rewrites the last line of the file.
+			break
 		}
-		if indentOf(content) <= headerIndent {
+		content := text[lines[line-1]:lineEndOffset(text, lines, line)]
+		if strings.TrimSpace(content) != "" && indentOf(content) <= headerIndent {
 			break
 		}
 		end = lineEndOffset(text, lines, line)

@@ -216,6 +216,216 @@ func TestEncryptAtPathRejectsInvalidYAML(t *testing.T) {
 	}
 }
 
+// TestEncryptAtPathSeparatesTheValueFromItsKey covers a value written against the colon that
+// introduces it, as in "{user: admin, pass:hunter2}".
+//
+// go-yaml reads a key and a value there. YAML asks for a space after the colon, and a parser that
+// holds to it reads the whole of "pass:hunter2" as one plain scalar with no value of its own, so
+// writing the ciphertext back against the colon would leave the operator a file whose credential
+// only this tool can find. The splice writes the separator instead, and what comes out is a flow
+// mapping any parser reads the same way.
+func TestEncryptAtPathSeparatesTheValueFromItsKey(t *testing.T) {
+	doc := []byte("spec:\n  config:\n    registries:\n      - name: harbor\n        auth: {user: admin, pass:hunter2}\n")
+
+	got, err := EncryptAtPath(doc, ".spec.config.registries[0].auth.pass", testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	if !strings.Contains(string(got), "pass: \"$ANSIBLE_VAULT") {
+		t.Errorf("the ciphertext is not separated from its key:\n%s", got)
+	}
+
+	value := readPath(t, got, ".spec.config.registries[0].auth.pass")
+	if !cluster.IsVaultEncrypted(value) {
+		t.Errorf("value at the path = %q, want the ciphertext", value)
+	}
+
+	back, err := DecryptAtPath(got, ".spec.config.registries[0].auth.pass", testKeyring)
+	if err != nil {
+		t.Fatalf("DecryptAtPath() error = %v", err)
+	}
+	if plain := readPath(t, back, ".spec.config.registries[0].auth.pass"); plain != "hunter2" {
+		t.Errorf("value after the round trip = %q, want %q", plain, "hunter2")
+	}
+}
+
+// TestEncryptAtPathRewritesABlockHeaderWithIndicators covers a value written as a block scalar
+// carrying chomping or indentation indicators -- "pass: |2" -- and holding nothing.
+//
+// go-yaml hands back such a header with its indicators stripped, so a splice measuring the value by
+// that token replaces only the "|" and leaves the "2" for the ciphertext to be written in front of.
+// What the document then holds is "|-2", a block claiming an indentation its content does not have,
+// with the credential inside it unreadable.
+func TestEncryptAtPathRewritesABlockHeaderWithIndicators(t *testing.T) {
+	for _, header := range []string{"|", "|-", "|+", "|2", "|-2", "|2-", ">-"} {
+		t.Run(header, func(t *testing.T) {
+			doc := []byte("spec:\n  config:\n    registries:\n      - name: harbor\n        auth:\n          pass: " + header)
+
+			got, err := EncryptAtPath(doc, ".spec.config.registries[0].auth.pass", testKeyring, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v", err)
+			}
+			if !strings.Contains(string(got), "pass: |-\n") {
+				t.Errorf("the block header is not the one the splice writes:\n%s", got)
+			}
+
+			value := readPath(t, got, ".spec.config.registries[0].auth.pass")
+			if !cluster.IsVaultEncrypted(value) {
+				t.Errorf("value at the path = %q, want the ciphertext", value)
+			}
+
+			back, err := DecryptAtPath(got, ".spec.config.registries[0].auth.pass", testKeyring)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			if plain := readPath(t, back, ".spec.config.registries[0].auth.pass"); plain != "" {
+				t.Errorf("value after the round trip = %q, want the empty value that went in", plain)
+			}
+		})
+	}
+}
+
+// TestEncryptAtPathRejectsAnInvalidBlockHeader is the other half of measuring the header in the
+// source: one that is not a header at all has to be reported rather than rewritten.
+//
+// go-yaml accepts "pass: |A" when the block holds nothing, and hands back a header token of "|" with
+// the "A" dropped. No other parser reads that document, and nothing in it says what the value was
+// meant to be, so the only answer that does not invent one is an error.
+func TestEncryptAtPathRejectsAnInvalidBlockHeader(t *testing.T) {
+	doc := []byte("spec:\n  config:\n    registries:\n      - name: harbor\n        auth:\n          pass: |A")
+
+	_, err := EncryptAtPath(doc, ".spec.config.registries[0].auth.pass", testKeyring, false)
+	if err == nil {
+		t.Fatal("EncryptAtPath() error = nil, want one naming the block scalar")
+	}
+	if !strings.Contains(err.Error(), "block scalar") {
+		t.Errorf("EncryptAtPath() error = %v, want one naming the block scalar", err)
+	}
+}
+
+// TestEncryptAtPathIndentsAValueOnItsOwnLine covers a credential written on the line below its key,
+// which is where the splice has no key column on the value's line to measure the block's content
+// from.
+//
+// The fallback has to put that content deeper than the block header it follows, or the ciphertext
+// reads as a sibling of the key rather than as its value and the document no longer parses.
+func TestEncryptAtPathIndentsAValueOnItsOwnLine(t *testing.T) {
+	doc := []byte("spec:\n  config:\n    registries:\n      - name: harbor\n        auth:\n          pass:\n            hunter2\n")
+
+	got, err := EncryptAtPath(doc, ".spec.config.registries[0].auth.pass", testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+
+	value := readPath(t, got, ".spec.config.registries[0].auth.pass")
+	if !cluster.IsVaultEncrypted(value) {
+		t.Errorf("value at the path = %q, want the ciphertext\n%s", value, got)
+	}
+
+	back, err := DecryptAtPath(got, ".spec.config.registries[0].auth.pass", testKeyring)
+	if err != nil {
+		t.Fatalf("DecryptAtPath() error = %v", err)
+	}
+	if plain := readPath(t, back, ".spec.config.registries[0].auth.pass"); plain != "hunter2" {
+		t.Errorf("value after the round trip = %q, want %q", plain, "hunter2")
+	}
+}
+
+// TestEncryptAtPathTerminatesABlockAtTheEndOfTheDocument covers a credential that is the last thing
+// in a file the operator saved without a final line break.
+//
+// A block scalar holds lines, and a line is text followed by a line break, so the value written at
+// the end of such a file has to carry the break the file lacked. Without it go-yaml reads the block
+// one line break short -- "0\n" comes back as "0" -- and the plaintext a later decrypt writes is not
+// the plaintext that was encrypted.
+func TestEncryptAtPathTerminatesABlockAtTheEndOfTheDocument(t *testing.T) {
+	const path = ".spec.config.registries[0].auth.pass"
+	doc := []byte("spec:\n config:\n  registries:\n  - auth:\n     pass: |\n      0\n")
+
+	encrypted, err := EncryptAtPath(doc, path, testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	if !strings.HasSuffix(string(encrypted), "\n") {
+		t.Errorf("the rewritten document does not end with a line break:\n%q", encrypted)
+	}
+
+	back, err := DecryptAtPath(encrypted, path, testKeyring)
+	if err != nil {
+		t.Fatalf("DecryptAtPath() error = %v", err)
+	}
+	if value := readPath(t, back, path); value != "0\n" {
+		t.Errorf("value after the round trip = %q, want %q\ndocument:\n%s", value, "0\n", back)
+	}
+}
+
+// TestEncryptAtPathRewritesAValueOnALineEndingInWhitespace covers the column go-yaml misreports.
+//
+// A line an editor left trailing spaces on is reported one column late per space, so the rewrite is
+// told the credential starts inside itself. "hunter2   " would be measured from the "u", which
+// leaves the "h" in the document in front of the ciphertext and takes a character off the end of the
+// span, and the document that comes out holds neither the old value nor the new one.
+func TestEncryptAtPathRewritesAValueOnALineEndingInWhitespace(t *testing.T) {
+	const path = ".spec.config.registries[0].auth.pass"
+	for _, doc := range []string{
+		"spec:\n config:\n  registries:\n  - auth:\n     pass: hunter2 \n     user: admin\n",
+		"spec:\n config:\n  registries:\n  - auth:\n     pass: hunter2   \n     user: admin\n",
+		"spec:\n config:\n  registries:\n  - auth:\n     pass: hunter2\t\n     user: admin\n",
+	} {
+		t.Run(strconv.Quote(doc), func(t *testing.T) {
+			encrypted, err := EncryptAtPath([]byte(doc), path, testKeyring, false)
+			if err != nil {
+				t.Fatalf("EncryptAtPath() error = %v", err)
+			}
+			if value := readPath(t, encrypted, path); !cluster.IsVaultEncrypted(value) {
+				t.Fatalf("value at the path = %q, want the ciphertext\n%s", value, encrypted)
+			}
+
+			back, err := DecryptAtPath(encrypted, path, testKeyring)
+			if err != nil {
+				t.Fatalf("DecryptAtPath() error = %v", err)
+			}
+			if value := readPath(t, back, path); value != "hunter2" {
+				t.Errorf("value after the round trip = %q, want %q\ndocument:\n%s", value, "hunter2", back)
+			}
+			if value := readPath(t, back, ".spec.config.registries[0].auth.user"); value != "admin" {
+				t.Errorf("neighbouring user = %q, want %q\ndocument:\n%s", value, "admin", back)
+			}
+		})
+	}
+}
+
+// TestEncryptAtPathCountsALoneCarriageReturnAsALineBreak covers a document whose lines do not all
+// end with a line feed.
+//
+// YAML ends a line at a carriage return as readily as at a line feed, and go-yaml reports the value's
+// position in lines counted that way. A rewrite that counted only line feeds would be numbering a
+// different set of lines, so the position it was handed points at some other line's text and the span
+// it measures runs off the end of it.
+func TestEncryptAtPathCountsALoneCarriageReturnAsALineBreak(t *testing.T) {
+	const path = ".spec.config.registries[0].auth.pass"
+	doc := []byte("spec:\n config:\n  registries:\n  - auth:\r     pass: hunter2\n")
+
+	encrypted, err := EncryptAtPath(doc, path, testKeyring, false)
+	if err != nil {
+		t.Fatalf("EncryptAtPath() error = %v", err)
+	}
+	if value := readPath(t, encrypted, path); !cluster.IsVaultEncrypted(value) {
+		t.Fatalf("value at the path = %q, want the ciphertext\n%s", value, encrypted)
+	}
+
+	back, err := DecryptAtPath(encrypted, path, testKeyring)
+	if err != nil {
+		t.Fatalf("DecryptAtPath() error = %v", err)
+	}
+	if value := readPath(t, back, path); value != "hunter2" {
+		t.Errorf("value after the round trip = %q, want %q\ndocument:\n%q", value, "hunter2", back)
+	}
+	if !strings.Contains(string(back), "auth:\r") {
+		t.Errorf("the rewrite changed the line ending it found:\n%q", back)
+	}
+}
+
 func TestPathIsDecryptable(t *testing.T) {
 	tests := []struct {
 		path string
@@ -423,6 +633,11 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 		"blank\n\n\nlines",
 		"trailing\nblank lines\n\n\n",
 		"\nleading blank line",
+		"\n indented line after a blank one",
+		"\n\n  two blank lines then an indented one",
+		"? 00",
+		"? explicit key indicator",
+		"?not an indicator",
 		"-----BEGIN CERTIFICATE-----\naGVsbG8=\n-----END CERTIFICATE-----\n",
 		"émoji 🚀 and ünicode",
 	}
@@ -451,6 +666,11 @@ func TestDecryptAtPathWritesAnyPlaintext(t *testing.T) {
 // written as a "\xNN" escape, and go-yaml leaves the escape's payload out of the token's origin
 // text, so the span came back three bytes short of the four in the document and the rewrite was
 // refused. That left a value decrypt-path would write and encrypt-path could not read back.
+//
+// A value ending in line breaks is the other disagreement. Decrypt-path writes it as a block scalar
+// that keeps them -- "|+" followed by blank lines -- and those blank lines are part of the block, so
+// a rewrite that measured the block as ending at its last line of text would leave them behind and
+// hand the next value a line break it never had.
 func TestEncryptAtPathReadsBackWhatDecryptWrote(t *testing.T) {
 	values := []string{
 		"control\x01character",
@@ -460,6 +680,8 @@ func TestEncryptAtPathReadsBackWhatDecryptWrote(t *testing.T) {
 		"trailing space  ",
 		"quote \" and 'apostrophe'",
 		"backslash \\ and \\x41 that is not an escape",
+		"trailing\nblank lines\n\n",
+		"\n indented line after a blank one",
 	}
 
 	const path = ".spec.config.registries[0].auth.pass"
