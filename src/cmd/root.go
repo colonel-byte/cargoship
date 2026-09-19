@@ -199,7 +199,15 @@ func Execute(ctx context.Context) error {
 		}
 	}()
 
-	_, err := rootCmd.ExecuteContextC(ctx)
+	// A config file that was found and could not be used is fatal, but it is reported here rather
+	// than where it was met. Package initialisation is too early to fail a process from: it runs
+	// before main, so an os.Exit there ends an Ansible module run before the module has written
+	// the one JSON object Ansible reads, and Ansible reports a module failure of its own devising
+	// instead of the reason.
+	err := configLoadError
+	if err == nil {
+		_, err = rootCmd.ExecuteContextC(ctx)
+	}
 	if err == nil {
 		return nil
 	}
@@ -207,6 +215,11 @@ func Execute(ctx context.Context) error {
 	logger.Default().Error(err.Error())
 	return err
 }
+
+// configLoadError is a config file that was found and could not be used. It is met during package
+// initialisation and acted on in Execute, which is the first point in the process that can fail
+// without taking the process with it.
+var configLoadError error //nolint:gochecknoglobals // set once, in init, beside the viper globals
 
 // emitConfigError reports a configuration file that could not be loaded.
 //
@@ -254,11 +267,8 @@ func init() {
 
 	if v.ConfigFileUsed() != "" {
 		if err := loadViperConfig(); err != nil {
-			// Say what was wrong with the file before going. Exiting silently leaves an
-			// operator with a status and nothing else, and leaves a module run looking like
-			// a module that answered nothing.
-			emitConfigError(err)
-			os.Exit(1)
+			configLoadError = fmt.Errorf("unable to load the config file %s: %w", v.ConfigFileUsed(), err)
+			emitConfigError(configLoadError)
 		}
 	}
 }
