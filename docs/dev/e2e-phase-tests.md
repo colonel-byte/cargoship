@@ -52,18 +52,18 @@ Each assertion body lives on `phaseWalk`, the embedded type `ApplyPhaseSuite` is
 
 `phase_harness.go` holds everything shared. The pieces a new test is likely to want:
 
-| | |
-|---|---|
-| `s.harness.hosts()` | every host currently on the manager |
-| `s.harness.controllers()` / `s.harness.workers()` | the role split |
-| `s.harness.engineWorkers()` | the workers that join the cluster, so `workers()` minus the upload-only hosts |
-| `s.harness.uploadOnly()` | the hosts that receive uploads and never join |
-| `s.harness.manager` | the live `phase.Manager`, for `Distro`, `DistroID`, `TempDirectory` |
-| `s.harness.distro` | the distro module, for phases that take a `Distro` field |
-| `s.harness.carriesFilesFor(selector)` | whether the package ships OS files for `config.SelectorRPM` / `SelectorAPT` / `SelectorBIN` |
-| `s.harness.opts` | the apply options the suite runs with (`ModifyHosts`, `ModifyFirewall`, `WorkerConcurrent`, ...) |
-| `readOnHosts(hosts, path)` | reads one path on every host, keyed by host string |
-| `ran(p)` | whether the manager executed the phase or skipped it |
+|                                                   |                                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `s.harness.hosts()`                               | every host currently on the manager                                                              |
+| `s.harness.controllers()` / `s.harness.workers()` | the role split                                                                                   |
+| `s.harness.engineWorkers()`                       | the workers that join the cluster, so `workers()` minus the upload-only hosts                    |
+| `s.harness.uploadOnly()`                          | the hosts that receive uploads and never join                                                    |
+| `s.harness.manager`                               | the live `phase.Manager`, for `Distro`, `DistroID`, `TempDirectory`                              |
+| `s.harness.distro`                                | the distro module, for phases that take a `Distro` field                                         |
+| `s.harness.carriesFilesFor(selector)`             | whether the package ships OS files for `config.SelectorRPM` / `SelectorAPT` / `SelectorBIN`      |
+| `s.harness.opts`                                  | the apply options the suite runs with (`ModifyHosts`, `ModifyFirewall`, `WorkerConcurrent`, ...) |
+| `readOnHosts(hosts, path)`                        | reads one path on every host, keyed by host string                                               |
+| `ran(p)`                                          | whether the manager executed the phase or skipped it                                             |
 
 For anything else, the hosts carry a live `rig` connection: `host.ExecOutput`, `host.ReadFile`, `host.FileExist`, and `host.Configurer` are all available and are how most assertions are written.
 

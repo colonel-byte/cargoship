@@ -10,12 +10,12 @@ An unoptimized `go build` of this repo produces a binary well over 130MB on Linu
 
 Measured impact on a Linux/amd64 build of this repo:
 
-| Configuration | Size | Linking |
-| :--- | :--- | :--- |
-| `go build` with no flags | ~136MB | dynamic (glibc) |
-| `+ CGO_ENABLED=0` | ~98.5MB | static |
-| `+ -trimpath` | ~98.2MB | static |
-| default gcflags instead of `-l -B -C` (for comparison) | ~113MB | static |
+| Configuration                                          | Size    | Linking         |
+| :----------------------------------------------------- | :------ | :-------------- |
+| `go build` with no flags                               | ~136MB  | dynamic (glibc) |
+| `+ CGO_ENABLED=0`                                      | ~98.5MB | static          |
+| `+ -trimpath`                                          | ~98.2MB | static          |
+| default gcflags instead of `-l -B -C` (for comparison) | ~113MB  | static          |
 
 ## Environment variables
 

@@ -18,12 +18,12 @@ Ansible Vault remains the better fit when a single operator or a single shared c
 
 The same four fields per registry, in either format:
 
-| Path | What it holds |
-| --- | --- |
-| `.spec.config.registries[N].auth.user` | Registry username |
-| `.spec.config.registries[N].auth.pass` | Registry password |
-| `.spec.config.registries[N].auth.token` | Registry token |
-| `.spec.config.registries[N].tls.ca` | Inline CA certificate |
+| Path                                    | What it holds         |
+| --------------------------------------- | --------------------- |
+| `.spec.config.registries[N].auth.user`  | Registry username     |
+| `.spec.config.registries[N].auth.pass`  | Registry password     |
+| `.spec.config.registries[N].auth.token` | Registry token        |
+| `.spec.config.registries[N].tls.ca`     | Inline CA certificate |
 
 Cargoship tells the formats apart by the value's own header. Ansible Vault ciphertext starts with `$ANSIBLE_VAULT`; age ciphertext is armored, so it starts with `-----BEGIN AGE ENCRYPTED FILE-----` and ends with `-----END AGE ENCRYPTED FILE-----`. A value carrying neither is plaintext and is passed through untouched.
 
