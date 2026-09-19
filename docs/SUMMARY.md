@@ -7,6 +7,7 @@
 # Guides
 
 - [age-encryption](guides/age-encryption.md)
+- [ansible](guides/ansible.md)
 - [firewall](guides/firewall.md)
 - [multi-architecture](guides/multi-architecture.md)
 - [package-values](guides/package-values.md)
@@ -26,6 +27,8 @@
   - [apply](commands/cargoship_apply.md)
   - [create](commands/cargoship_create.md)
   - [engine-config-sync](commands/cargoship_engine-config-sync.md)
+  - [inventory](commands/cargoship_inventory.md)
+    - [from-ansible](commands/cargoship_inventory_from-ansible.md)
   - [kube-config](commands/cargoship_kube-config.md)
   - [prepare](commands/cargoship_prepare.md)
   - [publish](commands/cargoship_publish.md)
@@ -81,6 +84,7 @@
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [choice-age-encryption](agent/choice-age-encryption.md)
+- [choice-ansible-module](agent/choice-ansible-module.md)
 - [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
 - [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
