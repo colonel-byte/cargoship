@@ -86,6 +86,9 @@ else
 	protection="%no-protection"
 fi
 
+# Twenty years, matching the key in crypto/. A signing key is not rotated on a schedule here: the
+# apk public half is installed by path on every consumer, so a new key is a manual step for each
+# of them, and an expiry reached unnoticed makes every package fail verification at once.
 echo "$0: generating the OpenPGP key for rpm and deb"
 GNUPGHOME=${gnupghome} gpg --batch --quiet --gen-key <<EOF
 Key-Type: RSA
@@ -93,7 +96,7 @@ Key-Length: 4096
 Key-Usage: sign
 Name-Real: Cargoship Release Signing
 Name-Email: ${maintainer}
-Expire-Date: 2y
+Expire-Date: 20y
 ${protection}
 %commit
 EOF

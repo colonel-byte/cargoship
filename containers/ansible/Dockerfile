@@ -26,6 +26,34 @@
 # can still find its platform.
 FROM docker.io/alpine/ansible:2.21.0@sha256:1a8ac3fd28c217210a9530b385f57d4b8afbe13956e5f0043063d98f5bd71bd5
 
+# kubernetes.core ships with the base -- alpine/ansible carries the full ansible distribution, not
+# ansible-core alone -- but the Python library its modules import does not, and without it every
+# k8s task fails at import time rather than at the point it would have made sense. py3-jsonpatch is
+# the same story for k8s_json_patch. They are installed with apk rather than pip because this image
+# has no compiler, Alpine's python is externally managed, and apk is what installs everything else
+# here.
+#
+# helm is the binary the kubernetes.core.helm modules shell out to; the collection cannot run them
+# without it. kubectl is for the operator rather than the collection: this image is where the
+# kubeconfig cargoship fetches ends up, and a management node that can reach a cluster and not look
+# at it is an awkward thing to hand somebody.
+#
+# Roughly 200 MB on top of the base, of which helm and kubectl are three quarters. That is the cost
+# of the image being a management node rather than a module runner, and it is small beside the
+# distro package it converges with.
+#
+# Before the artifact COPY below on purpose: nothing here changes between releases, so the layer
+# survives a rebuild that only carries a new cargoship apk.
+#
+# Checked at build time for the same reason the cargoship install below is: an import that fails
+# only when a play reaches its first k8s task is found by whoever runs the play, not by us.
+# hadolint ignore=DL3018
+RUN apk add --no-cache py3-kubernetes py3-jsonpatch helm kubectl \
+  && python3 -c 'import kubernetes, jsonpatch' \
+  && ansible-doc kubernetes.core.k8s > /dev/null \
+  && helm version --short \
+  && kubectl version --client
+
 ARG TARGETPLATFORM
 
 COPY ${TARGETPLATFORM}/*.apk /tmp/apks/
