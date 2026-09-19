@@ -1,0 +1,44 @@
+---
+- name: Check that the requested action has a module
+  ansible.builtin.assert:
+    that:
+      - cargoship_action in _cargoship_actions
+    fail_msg: >-
+      cargoship_action is "{{ cargoship_action }}", which is not a cargoship module.
+      The actions are: {{ _cargoship_actions | join(', ') }}.
+  run_once: true
+  delegate_to: "{{ cargoship_delegate_to }}"
+
+- name: Check that a package was named
+  ansible.builtin.assert:
+    that:
+      - cargoship_package | length > 0
+    fail_msg: cargoship_package is required by the {{ cargoship_action }} action.
+  when: cargoship_action in _cargoship_package_actions
+  run_once: true
+  delegate_to: "{{ cargoship_delegate_to }}"
+
+# groups and hostvars are deliberately absent. The action plugin fills them in from the play's own
+# task variables, which is the whole reason it exists.
+#
+# The two are kept apart because a task whose whole argument dict is one template is unsafe, and
+# Ansible warns about it every run. Passing them as two parameters keeps the keys of the task
+# literal; the action plugin merges the second one into the arguments before the module sees it.
+- name: Assemble the cargoship module arguments
+  ansible.builtin.set_fact:
+    _cargoship_inventory: >-
+      {{
+        {'cluster': cargoship_cluster}
+        | combine({'roleGroups': cargoship_role_groups} if cargoship_role_groups else {})
+      }}
+    _cargoship_parameters: >-
+      {{
+        {}
+        | combine({'inventory_path': cargoship_inventory_path} if cargoship_inventory_path else {})
+        | combine({'package': cargoship_package} if cargoship_action in _cargoship_package_actions else {})
+        | combine(cargoship_args)
+      }}
+  run_once: true
+
+- name: Run cargoship {{ cargoship_action }}
+  ansible.builtin.include_tasks: "{{ cargoship_action }}.yml"

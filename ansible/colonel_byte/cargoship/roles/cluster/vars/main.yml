@@ -1,0 +1,14 @@
+---
+# The actions this collection has a module for.
+_cargoship_actions:
+  - apply
+  - engine_config_sync
+  - kube_config
+  - prepare
+  - reset
+
+# The actions that install from a package and so require one.
+_cargoship_package_actions:
+  - apply
+  - engine_config_sync
+  - prepare
