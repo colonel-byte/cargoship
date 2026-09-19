@@ -41,13 +41,13 @@ chmod 600 cosign.key
 
 `--signing-key` accepts a local file path or a Cosign key provider URI. A provider URI keeps the private key off the build host.
 
-| Provider | Example |
-| --- | --- |
-| Environment variable | `env://COSIGN_PRIVATE_KEY` |
-| AWS KMS | `awskms:///alias/my-signing-key`, or `awskms://[ENDPOINT]/[ID/ALIAS/ARN]` |
-| GCP KMS | `gcpkms://projects/[PROJECT]/locations/[LOCATION]/keyRings/[RING]/cryptoKeys/[KEY]` |
-| Azure Key Vault | `azurekms://[VAULT_NAME][VAULT_URL]/[KEY_NAME]/[VERSION]` (version optional) |
-| HashiCorp Vault / OpenBao | `hashivault://[KEY]`, `openbao://[KEY]` |
+| Provider                  | Example                                                                             |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| Environment variable      | `env://COSIGN_PRIVATE_KEY`                                                          |
+| AWS KMS                   | `awskms:///alias/my-signing-key`, or `awskms://[ENDPOINT]/[ID/ALIAS/ARN]`           |
+| GCP KMS                   | `gcpkms://projects/[PROJECT]/locations/[LOCATION]/keyRings/[RING]/cryptoKeys/[KEY]` |
+| Azure Key Vault           | `azurekms://[VAULT_NAME][VAULT_URL]/[KEY_NAME]/[VERSION]` (version optional)        |
+| HashiCorp Vault / OpenBao | `hashivault://[KEY]`, `openbao://[KEY]`                                             |
 
 The Cargoship release pipeline uses the environment variable form. GitHub Actions stores the private key as a secret. GoReleaser receives the key as `--key=env://COSIGN_PRIVATE_KEY`, together with `COSIGN_PASSWORD`.
 
@@ -147,11 +147,11 @@ Cargoship warns you when you use neither mechanism. The signature then stops bei
 
 Every command that loads a package accepts `--verify`: `sign`, `publish`, `pull`, `apply`, `prepare`, and `engine-config-sync`. The flag takes one of three modes.
 
-| Mode | Behavior |
-| --- | --- |
-| `never` | Cargoship skips signature verification. |
+| Mode          | Behavior                                                                                                                                                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `never`       | Cargoship skips signature verification.                                                                                                                                                                                                |
 | `if-possible` | Default. Cargoship verifies when the package has a signature and you supply verification material. It tolerates a package with nothing to verify against. Every other failure is fatal, including a tampered signature or a wrong key. |
-| `always` | Cargoship requires a successful verification. It fails when the package is unsigned. It also fails when you supply no verification material. |
+| `always`      | Cargoship requires a successful verification. It fails when the package is unsigned. It also fails when you supply no verification material.                                                                                           |
 
 ### Key-Based Verification
 

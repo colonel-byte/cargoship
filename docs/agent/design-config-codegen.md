@@ -80,13 +80,13 @@ All pure Go, no network:
 
 ## Rough effort estimate
 
-| Piece | Effort |
-|---|---|
-| `go/ast` flag-slice extractor (incl. indirect var refs, `Destination` unpacking) | 3–5 days |
-| JSON manifest → struct templating | ~1 day |
-| Slice/hidden/deprecated-flag edge case handling | ~1 day |
-| Per-version diffing / changelog view | ~half day (mostly free once manifests exist) |
-| Sparse source-pull tooling per version | ~1 day |
+| Piece                                                                            | Effort                                       |
+| -------------------------------------------------------------------------------- | -------------------------------------------- |
+| `go/ast` flag-slice extractor (incl. indirect var refs, `Destination` unpacking) | 3–5 days                                     |
+| JSON manifest → struct templating                                                | ~1 day                                       |
+| Slice/hidden/deprecated-flag edge case handling                                  | ~1 day                                       |
+| Per-version diffing / changelog view                                             | ~half day (mostly free once manifests exist) |
+| Sparse source-pull tooling per version                                           | ~1 day                                       |
 
 ## Consumption: wired into `src/types/distrocfg`
 

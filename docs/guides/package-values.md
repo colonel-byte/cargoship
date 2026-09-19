@@ -230,12 +230,12 @@ Five functions Helm defines and sprig itself lacks are added back: `toToml`, `fr
 
 Four more functions are available to `onCreate` actions, and only there:
 
-| Function | Purpose |
-| --- | --- |
-| `fileExists <path>` | Whether a path exists on the machine building the package. |
-| `cachedFileExists <relative path>` | Whether a file exists under cargoship's cache directory. |
-| `cachedFilePath <relative path>` | The absolute path of a file in cargoship's cache directory. |
-| `downloadToCache <url> <relative path> [sha256]` | Downloads a URL into the cache and returns the local path. |
+| Function                                         | Purpose                                                     |
+| ------------------------------------------------ | ----------------------------------------------------------- |
+| `fileExists <path>`                              | Whether a path exists on the machine building the package.  |
+| `cachedFileExists <relative path>`               | Whether a file exists under cargoship's cache directory.    |
+| `cachedFilePath <relative path>`                 | The absolute path of a file in cargoship's cache directory. |
+| `downloadToCache <url> <relative path> [sha256]` | Downloads a URL into the cache and returns the local path.  |
 
 Pulling a missing artifact into the cache is the whole point of a create action, so these belong there. They are not available to values, manifests, files, or anything that runs at install time: a template that renders chart values should not be able to probe the deploy host or issue HTTP requests. A template that names one outside an action fails at parse time.
 

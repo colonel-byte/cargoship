@@ -10,12 +10,12 @@ A cluster configuration holds registry credentials in plain sight. Encrypting th
 
 Cargoship decrypts exactly four fields per registry, and only these four:
 
-| Path | What it holds |
-| --- | --- |
-| `.spec.config.registries[N].auth.user` | Registry username |
-| `.spec.config.registries[N].auth.pass` | Registry password |
-| `.spec.config.registries[N].auth.token` | Registry token |
-| `.spec.config.registries[N].tls.ca` | Inline CA certificate |
+| Path                                    | What it holds         |
+| --------------------------------------- | --------------------- |
+| `.spec.config.registries[N].auth.user`  | Registry username     |
+| `.spec.config.registries[N].auth.pass`  | Registry password     |
+| `.spec.config.registries[N].auth.token` | Registry token        |
+| `.spec.config.registries[N].tls.ca`     | Inline CA certificate |
 
 Decryption happens during an apply, when Cargoship writes the engine's registry configuration. A field that does not carry the `$ANSIBLE_VAULT` header is passed through untouched, so a configuration can mix encrypted and plaintext values freely.
 
