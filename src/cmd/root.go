@@ -254,6 +254,10 @@ func init() {
 
 	if v.ConfigFileUsed() != "" {
 		if err := loadViperConfig(); err != nil {
+			// Say what was wrong with the file before going. Exiting silently leaves an
+			// operator with a status and nothing else, and leaves a module run looking like
+			// a module that answered nothing.
+			emitConfigError(err)
 			os.Exit(1)
 		}
 	}
