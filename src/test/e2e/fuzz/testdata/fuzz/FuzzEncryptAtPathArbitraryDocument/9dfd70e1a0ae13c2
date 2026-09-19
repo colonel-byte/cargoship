@@ -1,0 +1,2 @@
+go test fuzz v1
+string("spec:\n  config: \n    registries:\n      - auth: \n          pass: |0")
