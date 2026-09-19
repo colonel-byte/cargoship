@@ -39,8 +39,13 @@ const (
 // cargoship has to say beyond those is nested under one key, so it cannot collide with a field
 // Ansible gives a meaning to later.
 type Response struct {
-	Changed   bool    `json:"changed"`
-	Failed    bool    `json:"failed,omitempty"`
+	Changed bool `json:"changed"`
+	Failed  bool `json:"failed,omitempty"`
+	// Skipped is how a module says it did not run at all. It is set when an operator asked for
+	// check mode and the action has no dry run to answer with: Ansible skips a task whose
+	// module has declared it cannot check, and a binary module has nowhere to declare that, so
+	// it says so in its result instead.
+	Skipped   bool    `json:"skipped,omitempty"`
 	Msg       string  `json:"msg,omitempty"`
 	Cargoship *Detail `json:"cargoship,omitempty"`
 }
