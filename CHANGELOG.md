@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.25.1](https://github.com/colonel-byte/cargoship/compare/v0.25.0...v0.25.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **clustercfg:** correct six YAML splice defects ([#438](https://github.com/colonel-byte/cargoship/issues/438)) ([f2f0730](https://github.com/colonel-byte/cargoship/commit/f2f07302fad3c04ac01f0b5f9671a5049b110749))
+
+
+### Documentation
+
+* **agent:** refine pr description ([#440](https://github.com/colonel-byte/cargoship/issues/440)) ([9d5c4d6](https://github.com/colonel-byte/cargoship/commit/9d5c4d6b2d3de698b5b49b4e626952830d16b0d6))
+* **agent:** update docs folder agent ([#441](https://github.com/colonel-byte/cargoship/issues/441)) ([7017588](https://github.com/colonel-byte/cargoship/commit/7017588f1ac944263630a942582e103395124f81))
+
+
+### CI/CD
+
+* **codeql:** add advanced setup for codeql ([#428](https://github.com/colonel-byte/cargoship/issues/428)) ([b9134df](https://github.com/colonel-byte/cargoship/commit/b9134dfca3416119454d4ff9ac0a79162273817d))
+
+
+### Build
+
+* **deps:** bump the core group with 2 updates ([#425](https://github.com/colonel-byte/cargoship/issues/425)) ([d7cfa2f](https://github.com/colonel-byte/cargoship/commit/d7cfa2f89c53909d95b30ce8a71e8bbd334811d0))
+
 ## [0.25.0](https://github.com/colonel-byte/cargoship/compare/v0.24.0...v0.25.0) (2026-09-18)
 
 
