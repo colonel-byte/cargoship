@@ -13,11 +13,11 @@ The workflow runs on any pushed tag. Tags are normally created by release-please
 A single `goreleaser release` run produces:
 
 *   **Archives** — `tar.gz` per OS/arch, named after `uname` conventions (`cargoship_Linux_x86_64.tar.gz`).
-*   **Packages** — `apk`, `deb`, and `rpm`, from the `nfpms` section, GPG-signed when `GPG_KEY_PATH` is set.
-*   **Container images** — two multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary) and `ghcr.io/colonel-byte/cargoship:<tag>-ubi` (Red Hat UBI, installs the rpm).
+*   **Packages** — `apk`, `deb`, and `rpm`, from the `nfpms` section, signed when the signing keys are configured — see [Package Signing](#package-signing).
+*   **Container images** — four multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary), `:<tag>-ubi` (Red Hat UBI, installs the rpm), `:<tag>-deb` (Debian slim, installs the deb), and `:<tag>-ansible` (Alpine with ansible-core, installs the apk). Between them the three package variants install every format `nfpms` produces, so a package that will not install fails the release rather than an operator.
 *   **Ansible collection** — `colonel_byte-cargoship-<version>.tar.gz`, built from `ansible/colonel_byte/cargoship` and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.
 *   **SBOMs** — one per archive, via Syft.
-*   **Signatures** — cosign `sigstore.json` bundles over both the checksums file and every archive, plus registry signatures over both container images.
+*   **Signatures** — cosign `sigstore.json` bundles over the checksums file and every archive, registry signatures over every container image, and the packages' own native signatures.
 
 ## The Ansible Collection
 
@@ -55,7 +55,7 @@ Three consequences are worth internalizing:
 
 ### The Dockerfile Contract
 
-Both Dockerfiles live under `containers/` — `containers/base/Dockerfile` and `containers/ubi/Dockerfile` — and each is named explicitly by its `dockers_v2` entry's `dockerfile:` key. Neither compiles anything: GoReleaser has already built the binaries and packages by the time they run. The static image copies the binary, UBI installs the rpm. Adding a *compiling* stage to either would duplicate that work and break the guarantee described under [Binary Identity](#binary-identity).
+All four Dockerfiles live under `containers/` — `containers/base/Dockerfile`, `containers/ubi/Dockerfile`, `containers/deb/Dockerfile`, and `containers/ansible/Dockerfile` — and each is named explicitly by its `dockers_v2` entry's `dockerfile:` key. None compiles anything: GoReleaser has already built the binaries and packages by the time they run. The static image copies the binary; UBI installs the rpm, the Debian image the deb, the Ansible image the apk. Adding a *compiling* stage to any of them would duplicate that work and break the guarantee described under [Binary Identity](#binary-identity).
 
 The directory name is deliberately generic: `containers/base/` is the plain-binary image whatever base it happens to sit on, so a future base swap does not force another rename. If it is ever renamed anyway, three other files have to move with it in the same commit — the `dockerfile:` key in `.goreleaser.yaml`, the lint matrix in `.github/workflows/scan-lint.yaml`, and the `directories:` list of the `docker` ecosystem in `.github/dependabot.yaml`.
 
@@ -100,7 +100,7 @@ docker buildx imagetools inspect cgr.dev/chainguard/static:latest --format '{{ .
 Two conventions here exist to keep dependabot working, and both look redundant until you know why:
 
 *   **The reference is repeated on every `FROM`** rather than hoisted into an `ARG`. Dependabot's Dockerfile parser reads literal `FROM` lines only — it has no `ARG` resolution, so `FROM ${BASE_IMAGE}` is invisible to it and the pin would never be refreshed. It is also not stage-aware, so aliasing (`FROM alpine@sha256:... AS base` then `FROM base`) is no better: the bare stage reference parses as an image and produces a spurious `base:latest` dependency.
-*   **`org.opencontainers.image.base.name` carries the tag only**, without the digest. Dependabot rewrites `FROM` lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (`3.22` → `3.23`) means updating the label by hand, which is the comment sitting above it in both files.
+*   **`org.opencontainers.image.base.name` carries the tag only**, without the digest. Dependabot rewrites `FROM` lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (`3.22` → `3.23`) means updating the label by hand, which is the comment sitting above it in every one of them.
 
 One base needs more care than the others. **`cgr.dev/chainguard/static` publishes `:latest` and nothing else** on Chainguard's free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date — it eventually stops resolving, and the build fails with `manifest unknown`. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.
 
@@ -111,7 +111,7 @@ One base needs more care than the others. **`cgr.dev/chainguard/static` publishe
 Dockerfiles are linted by [hadolint](https://github.com/hadolint/hadolint) in two places:
 
 *   **`.pre-commit-config.yaml`** — the `hadolint-docker` hook, which runs the linter in a container and so needs a working Docker daemon. It picks up any file pre-commit identifies as a Dockerfile, excluding `vendor/`.
-*   **`.github/workflows/scan-lint.yaml`** — the `containers` job, a matrix over the two Dockerfile paths.
+*   **`.github/workflows/scan-lint.yaml`** — the `containers` job, a matrix over the four Dockerfile paths.
 
 The CI job lists paths explicitly rather than globbing. The action's `recursive` mode searches from the repository root, which would pull in the vendored Dockerfiles under `vendor/` — several of which do not pass. **Add a new path to that matrix when adding an image variant**; the pre-commit hook picks it up on its own.
 
@@ -140,9 +140,50 @@ Details worth knowing before editing it:
 
 The UBI base is substantially larger: roughly 354MB versus 137MB for the static image on amd64.
 
+### Debian Variant
+
+`containers/deb/Dockerfile`, published as the `-deb` tag, is the Debian-family counterpart to the UBI image: `dpkg --install` of the same `nfpms` output, registered in the image's dpkg database.
+
+```sh
+$ docker run --rm --entrypoint dpkg ghcr.io/colonel-byte/cargoship:<tag>-deb -s cargoship
+Package: cargoship
+Status: install ok installed
+```
+
+`dpkg -L cargoship` and `dpkg -V cargoship` work as well, which is usually the point of asking for a Debian build.
+
+Its other job is coverage. The `.deb` is otherwise produced by every release and installed by nothing in the pipeline, and the apk spent a release in exactly that position — see the `file_info.mode` note under [Ansible Variant](#ansible-variant) for what was hiding there. A package format no image installs is a package format whose breakage reaches an operator first.
+
+Details worth knowing before editing it:
+
+*   **The directory is named for the package format, not the base.** `ubi` is named for its base because the Red Hat base *is* the reason that image exists; this one exists to exercise the `.deb`, and swapping Debian for Ubuntu would not change that. The generic-naming reasoning under [The Dockerfile Contract](#the-dockerfile-contract) applies — a rename means moving the `dockerfile:` key, the lint matrix, and the dependabot `directory:` in the same commit.
+*   **`dpkg -i`, not `apt-get install`.** The package declares no dependencies, so nothing needs resolving and the build stays hermetic — no repo access at image build time, the same reasoning as the UBI image. Switch to `apt-get` if `nfpms.*.depends` ever gains an entry.
+*   **The binary lands in `/usr/bin`**, as with the rpm, so the entrypoint matches the UBI image rather than the static one.
+*   **No `NOKEY` equivalent.** `dpkg -i` does not verify signatures at all, so a signed deb installs silently. The `_gpgorigin` member is for the operator's `debsig`/repository tooling, not for this build — see [Package Signing](#package-signing).
+
+### Ansible Variant
+
+A third `dockers_v2` entry builds `containers/ansible/Dockerfile`, published as the `-ansible` tag. It is a management node in a container: `docker.io/alpine/ansible` already carries ansible-core, bash, openssh, sshpass and rsync, and the image adds cargoship by installing the `.apk`, plus the Kubernetes client tooling described below. That is the whole reason it installs a package rather than copying the binary — the apk is what carries the collection tree into `/usr/share/ansible/collections` and creates the module symlinks described in [choice-ansible-module.md](../agent/choice-ansible-module.md). A copied binary would need both reproduced in the Dockerfile.
+
+Nothing about this changes where cargoship runs. The container *is* the management node, and cargoship still opens every SSH connection itself, from inside it, to the fleet outside.
+
+Details worth knowing before editing it:
+
+*   **`ids: [packagers]`**, like the UBI entry. The Dockerfile globs `*.apk` and ignores the `.deb` and `.rpm` that land in the context beside it.
+*   **`apk add --allow-untrusted`.** The apk *is* signed — see [Package Signing](#package-signing) — but verifying it would mean trusting the release key inside the image, and the public key is not reachable anyway: the build context GoReleaser assembles holds artifacts, not repository files, so `crypto/software@conlon.dev.rsa.pub` cannot be `COPY`'d. Provenance here comes from the pipeline that produced the context. An operator installing the same apk on a real host should trust the key and drop the flag.
+*   **`file_info.mode` on the collection's `tree` entry is load-bearing for this image.** Without it nfpm emits the tree's root directory with the `fs.ModeDir` bit still in the mode, which does not fit a tar header's octal field, and `apk add` refuses the package with `v2 package format error`. The comment in `.goreleaser.yaml` has the detail. The rpm and deb are unaffected, which is why this surfaced only once an image installed the apk.
+*   **No `ENTRYPOINT`**, unlike the other two. They exist to run cargoship and name it as their entrypoint; this one exists to run playbooks, and a run legitimately reaches for `ansible-playbook`, `ansible-inventory`, `ansible-galaxy`, or cargoship itself. `CMD` is `ansible-playbook --help`.
+*   **Kubernetes tooling is added by hand.** `kubernetes.core` is already in the base, because `alpine/ansible` carries the full ansible distribution rather than ansible-core alone, but the Python library its modules import is not — so the image adds `py3-kubernetes` and `py3-jsonpatch`, plus `helm`, which the collection's helm modules shell out to, and `kubectl`, which is for whoever holds the kubeconfig cargoship fetched. Installed with apk rather than pip: no compiler in the image, and Alpine's python is externally managed. It costs roughly 200 MB on a 483 MB base, three quarters of that being helm and kubectl, and it sits above the artifact `COPY` so a release rebuild reuses the layer.
+*   **The build verifies one module symlink resolves** (`test -x .../plugins/modules/cargoship_apply`) as well as running `cargoship version`. A missing link is otherwise invisible until a playbook fails to resolve a task.
+
+```sh
+docker run --rm -v "$PWD:/workspace" ghcr.io/colonel-byte/cargoship:<tag>-ansible \
+  ansible-playbook -i inventory.yml site.yml
+```
+
 ### Image Runtime Layout
 
-*   Runs as uid/gid `65532`, which has a real `/etc/passwd` entry named `nonroot` with home `/home/nonroot` in both images, so `os/user` lookups and `$HOME` agree with each other and across variants. The static image inherits that account from its base; the UBI image creates it to match. The `USER` line stays numeric (`65532:65532`) so the image still runs correctly under a `runAsUser` that ignores names.
+*   Runs as uid/gid `65532`, which has a real `/etc/passwd` entry named `nonroot` with home `/home/nonroot` in all four images, so `os/user` lookups and `$HOME` agree with each other and across variants. The static image inherits that account from its base; the package-installing images create it to match. The `USER` line stays numeric (`65532:65532`) so the image still runs correctly under a `runAsUser` that ignores names.
 *   `HOME=/home/nonroot`, which backs viper's `$HOME/.zarf` config search path (`src/cmd/viper.go`) and the default cache path `~/.cargoship-cache` (`src/config/common.go`). Both directories are pre-created and owned by `65532`, as is `~/.ssh` at 0700.
 *   `WORKDIR /workspace`. Since `.` is viper's first config search path, bind-mounting a package directory there picks up `cargoship-config.yaml` with no extra flags:
 
@@ -152,7 +193,65 @@ docker run --rm -v "$PWD:/workspace" ghcr.io/colonel-byte/cargoship:<tag> apply 
 
 ### OCI Labels
 
-Labels are split by whether they change per release. Static ones (title, description, source, licenses, base image) live in each `Dockerfile`; per-release ones (version, revision, created) are set in `.goreleaser.yaml`. See [Base Image Pinning](#base-image-pinning) for why `org.opencontainers.image.base.name` deliberately omits the digest. Keep them separate — a `--label` flag silently overrides a `LABEL` of the same key, so duplicating a key across both files creates two sources of truth.
+Labels are split by whether they change per release. Static ones (title, description, source, licenses, base image) live in each `Dockerfile`; per-release ones (version, revision, created) are set in `.goreleaser.yaml`. See [Base Image Pinning](#base-image-pinning) for why `org.opencontainers.image.base.name` deliberately omits the digest. Keep them separate — a `--label` flag silently overrides a `LABEL` of the same key, so duplicating a key across a Dockerfile and `.goreleaser.yaml` creates two sources of truth.
+
+## Package Signing
+
+The `nfpms` packages carry signatures of their own, independent of cosign. That needs **two key pairs**, because nfpm signs rpm and deb with OpenPGP but signs apk with a bare RSA key:
+
+| Format | Key type | Path variable | Repository secret |
+| --- | --- | --- | --- |
+| rpm, deb | OpenPGP | `GPG_KEY_PATH` | `GPG_PRIVATE_KEY`, and `GPG_PASSPHRASE` if the key is protected |
+| apk | RSA, PEM | `APK_RSA_KEY_PATH` | `APK_RSA_PRIVATE_KEY` |
+
+Handing the OpenPGP key to the apk signer does not degrade quietly — it fails the release with `signing error: no PEM block found`.
+
+The public halves live in `crypto/`, both named after the maintainer address: `crypto/software@conlon.dev.gpg` (`A1D4 DF69 80C8 2444 99C3  D1F9 96F5 5C80 CFB1 EFCB`, expires 2046-09-14) and `crypto/software@conlon.dev.rsa.pub`. The latter's filename is not a convention — it is the name apk itself looks for.
+
+### Generating the Keys
+
+`hack/gen-signing-keys.sh` produces both pairs in the shapes nfpm accepts, building the OpenPGP key in a throwaway `GNUPGHOME` so your own keyring is untouched:
+
+```sh
+hack/gen-signing-keys.sh ~/cargoship-keys
+```
+
+It reads the maintainer address out of `.goreleaser.yaml` and names the apk public key after it, which is not cosmetic — see below. Set `GPG_PASSPHRASE` to protect the OpenPGP key. It refuses to overwrite existing files, because replacing a key already in use invalidates every package signed with it.
+
+Constraints worth knowing before doing any of this by hand:
+
+*   **The apk RSA key cannot be encrypted.** nfpm understands only the legacy DEK-Info PEM encryption, so the PKCS#8 output of `openssl genrsa -aes256` is rejected with `key type "ENCRYPTED PRIVATE KEY" is not supported`, and `NFPM_APK_PASSPHRASE` cannot help. Its protection is the repository secret and nothing else.
+*   **The apk key name is baked into every package.** nfpm defaults it to the maintainer address parsed from `nfpms.maintainer`, records the signature as the tar member `.SIGN.RSA.software@conlon.dev.rsa.pub`, and apk then looks for a file of that name under `/etc/apk/keys`. Changing `nfpms.maintainer`, or setting `apk.signature.key_name`, breaks the path every existing consumer deployed.
+*   **`key_file` is a path, not key material.** Unlike `COSIGN_PRIVATE_KEY`, which cosign reads straight from the environment, these must exist as files. The workflow writes both secrets under `$RUNNER_TEMP` — outside the checkout, so no `.goreleaser.yaml` glob can sweep them up — and removes them in an `if: always()` step.
+
+### Degrading to Unsigned
+
+Both `key_file` values are guarded:
+
+```yaml
+key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
+```
+
+The `index .Env` form is load-bearing. A bare `{{ .Env.GPG_KEY_PATH }}` on an unset variable aborts the run with `map has no entry for key "GPG_KEY_PATH"`; the guard turns an unset variable into an unsigned package instead. That is what a local snapshot wants and what a release does not, so the workflow emits a `::warning::` for each missing secret rather than letting the absence pass unremarked.
+
+### Verifying
+
+```sh
+# rpm
+sudo rpmkeys --import 'crypto/software@conlon.dev.gpg'
+rpm -K cargoship_<version>_linux_amd64.rpm          # digests signatures OK
+
+# apk — the filename is the name the signature records, so this is a plain copy
+cp 'crypto/software@conlon.dev.rsa.pub' /etc/apk/keys/
+apk add ./cargoship_<version>_linux_amd64.apk       # no --allow-untrusted
+
+# deb — the signature covers the three ar members concatenated, in order
+ar x cargoship_<version>_linux_amd64.deb
+cat debian-binary control.tar.gz data.tar.zst > combined
+gpg --verify _gpgorigin combined
+```
+
+`dpkg -i` never checks that signature itself; `_gpgorigin` exists for `debsig-verify` and repository tooling.
 
 ## Image Signing
 
@@ -181,7 +280,7 @@ This pipe only runs on a real publish. A `--snapshot` run pushes nothing, so it 
 
 ## Binary Identity
 
-The binary is byte-identical everywhere it ships: the release archive, the apk/deb/rpm packages, the static image, and the UBI image (where it arrives via `rpm --install`). GoReleaser compiles once per target and reuses that one artifact downstream.
+The binary is byte-identical everywhere it ships: the release archive, the apk/deb/rpm packages, the static image, the UBI image (where it arrives via `rpm --install`), the Debian image (`dpkg --install`), and the Ansible image (`apk add`). GoReleaser compiles once per target and reuses that one artifact downstream.
 
 This means a cosign verification against the released archive transitively covers the binary shipped in the image. Verify it yourself after a snapshot run:
 
@@ -192,7 +291,7 @@ docker cp "$cid:/usr/local/bin/cargoship" /tmp/from-image && docker rm "$cid"
 sha256sum /tmp/from-image
 ```
 
-The property holds only because neither Dockerfile compiles anything.
+The property holds only because no Dockerfile compiles anything.
 
 ## CI Workflow Steps
 
@@ -201,7 +300,8 @@ Each setup step in `.github/workflows/release.yaml` exists for a specific reason
 *   **Syft** — generates the archive SBOMs.
 *   **ansible-core** — supplies `ansible-galaxy`, which builds the collection tarball in the `before` hook. Nothing else in the pipeline needs Ansible.
 *   **cosign** — signs checksums, archives, and the published images; needs `COSIGN_PRIVATE_KEY` and `COSIGN_PASSWORD`.
-*   **QEMU** — registers binfmt handlers for cross-platform builds. Required by the UBI image, whose `rpm --install` unpacks architecture-specific files and so must run on the target platform; its `linux/arm64` half runs under emulation. The static image does not need it — its only `RUN` is pinned to `$BUILDPLATFORM`.
+*   **Setup package signing keys** — materializes `GPG_PRIVATE_KEY` and `APK_RSA_PRIVATE_KEY` as files under `$RUNNER_TEMP` and exports their paths, because nfpm takes a path rather than key material. See [Package Signing](#package-signing). A paired `if: always()` step deletes them.
+*   **QEMU** — registers binfmt handlers for cross-platform builds. Required by every package-installing image: `rpm --install`, `dpkg --install`, and `apk add` all unpack architecture-specific files and so must run on the target platform, and their `linux/arm64` halves run under emulation. The static image does not need it — its only `RUN` is pinned to `$BUILDPLATFORM`.
 *   **Buildx** — required, not optional; provisions the container driver that can emit a multi-platform manifest.
 *   **GHCR login** — required to push. The job's `packages: write` permission is an authorization, not a credential.
 *   **`fetch-depth: 0`** — GoReleaser needs full history to resolve tags and changelog range.
@@ -221,9 +321,10 @@ TMPDIR=/home/$USER/.cache/goreleaser-tmp \
   goreleaser release --snapshot --clean --skip=sign,sbom,announce,validate,before
 ```
 
-Two gotchas:
+Three gotchas:
 
 *   **Set `TMPDIR` to a path on a real disk.** The default `/run/user/<uid>/tmp` is a small tmpfs, and the Go build cache for a full six-target matrix will overrun it. The failure is a flood of `no space left on device` from the compiler.
 *   **Do not add `--skip=publish`** if you want images. Under `dockers_v2` that skips image builds entirely.
+*   **`--skip=sign` also disables package signing**, not just cosign. GoReleaser's nfpm pipe zeroes all three `Signature` structs when that skip is set (`internal/pipe/nfpm/nfpm.go`), so a run that skips signing produces unsigned packages no matter what `GPG_KEY_PATH` and `APK_RSA_KEY_PATH` say. To exercise package signing locally, drop `sign` from the skip list and supply cosign keys too.
 
 Artifacts land in `dist/`, which is gitignored.

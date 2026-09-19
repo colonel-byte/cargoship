@@ -27,7 +27,9 @@ jobs:
       fail-fast: false
       matrix:
         dockerfile:
+          - containers/ansible/Dockerfile
           - containers/base/Dockerfile
+          - containers/deb/Dockerfile
           - containers/ubi/Dockerfile
     steps:
       - name: Checkout

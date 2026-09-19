@@ -7,7 +7,9 @@
 # Guides
 
 - [age-encryption](guides/age-encryption.md)
-- [ansible](guides/ansible.md)
+- [ansible-container](guides/ansible-container.md)
+- [ansible-inv](guides/ansible-inv.md)
+- [ansible-module](guides/ansible-module.md)
 - [firewall](guides/firewall.md)
 - [multi-architecture](guides/multi-architecture.md)
 - [package-values](guides/package-values.md)

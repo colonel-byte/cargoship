@@ -19,8 +19,8 @@ cargoship_role_groups: {}
 # after a run that succeeded.
 cargoship_inventory_path: ""
 
-# Everything else the chosen module takes, passed through verbatim. See docs/guides/ansible.md for
-# the parameters of each module.
+# Everything else the chosen module takes, passed through verbatim. See docs/guides/ansible-module.md
+# for the parameters of each module.
 cargoship_args: {}
 
 # The node cargoship runs on. It is the management node: the one the package and images were
