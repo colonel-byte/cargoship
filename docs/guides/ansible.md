@@ -124,7 +124,7 @@ Variables under the `ansible_` prefix that are not in the table are ignored. The
 
 The same translation runs inside a playbook. The cargoship binary is the Ansible module: it is installed as a set of symlinks named `cargoship_<action>`, and a symlink's name selects the action. There is no separate module package and nothing to install on the managed nodes.
 
-One module ships today, `cargoship_engine_config_sync`. It converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does.
+Five modules ship, one per fleet action: `cargoship_apply`, `cargoship_prepare`, `cargoship_engine_config_sync`, `cargoship_reset`, and `cargoship_kube_config`. Package creation is not among them -- it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run.
 
 ```yaml
 - name: Converge engine configuration
@@ -144,28 +144,107 @@ One module ships today, `cargoship_engine_config_sync`. It converges engine conf
 
 The task runs on the management node -- `connection: local` when the Ansible controller is that node, `delegate_to` when they are separate. Cargoship connects to the fleet itself, from there.
 
-### Parameters
+### Parameters every module takes
 
-`inventory` takes the same document described above, `groups` and `hostvars` included. Everything else maps onto a flag of `cargoship engine-config-sync`.
+`inventory` takes the same document described above, `groups` and `hostvars` included. Everything else maps onto a flag of the command the module runs.
 
 | Parameter | Flag | Notes |
 | --- | --- | --- |
-| `package` | the positional argument | Required. The distro package to synchronise from. |
 | `inventory` | | Required. The resolved Ansible inventory, plus `cluster`. |
 | `inventory_path` | `--config` | Where to write the generated document. A private temporary file when unset. |
-| `concurrency` | `--concurrency` | |
-| `work_concurrency` | `--work-concurrency` | |
-| `label_nodes` | `--label-nodes` | |
-| `update_kubeconfig` | `--update-kubeconfig` | |
-| `kubeconfig` | `--kubeconfig` | |
-| `values` | `--values` | A list of files. |
-| `timeout` | `--timeout` | |
-| `vault_password_file` | `--vault-password-file` | |
-| `age_identity_file` | `--age-identity-file` | A list of files. |
 | `log_level` | `--log-level` | Defaults to `debug` when the play runs with `-v`. |
 | `log_format` | `--log-format` | |
 
 A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why `label_nodes: false` and omitting `label_nodes` are different.
+
+The surfaces differ because the commands do. `cargoship prepare` reads no encrypted value, so it takes no `vault_password_file`; `cargoship reset` installs nothing, so it takes no package and no `values`. A parameter offered to the wrong module is an error naming it, rather than a flag quietly dropped.
+
+### `cargoship_apply`
+
+Installs or converges the whole cluster.
+
+| Parameter | Flag |
+| --- | --- |
+| `package` | the positional argument. Required. |
+| `concurrency` | `--concurrency` |
+| `work_concurrency` | `--work-concurrency` |
+| `hosts` | `--hosts` |
+| `firewall` | `--firewall` |
+| `fapolicyd` | `--fapolicyd` |
+| `label_nodes` | `--label-nodes` |
+| `allow_unmanaged_nodes` | `--allow-unmanaged-nodes` |
+| `update_kubeconfig` | `--update-kubeconfig` |
+| `kubeconfig` | `--kubeconfig` |
+| `values` | `--values`. A list of files. |
+| `timeout` | `--timeout` |
+| `vault_password_file` | `--vault-password-file` |
+| `age_identity_file` | `--age-identity-file`. A list of files. |
+| `public_key` | `--key` |
+| `verify` | `--verify`. `never`, `if-possible`, or `always`. |
+
+### `cargoship_prepare`
+
+Stages a package onto the fleet and readies the hosts. Takes no key material.
+
+| Parameter | Flag |
+| --- | --- |
+| `package` | the positional argument. Required. |
+| `concurrency` | `--concurrency` |
+| `work_concurrency` | `--work-concurrency` |
+| `hosts` | `--hosts` |
+| `firewall` | `--firewall` |
+| `fapolicyd` | `--fapolicyd` |
+| `values` | `--values`. A list of files. |
+| `timeout` | `--timeout` |
+| `public_key` | `--key` |
+| `verify` | `--verify` |
+
+### `cargoship_engine_config_sync`
+
+Converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does. It does not update the hosts themselves, so it takes none of the three host switches.
+
+| Parameter | Flag |
+| --- | --- |
+| `package` | the positional argument. Required. |
+| `concurrency` | `--concurrency` |
+| `work_concurrency` | `--work-concurrency` |
+| `label_nodes` | `--label-nodes` |
+| `update_kubeconfig` | `--update-kubeconfig` |
+| `kubeconfig` | `--kubeconfig` |
+| `values` | `--values`. A list of files. |
+| `timeout` | `--timeout` |
+| `vault_password_file` | `--vault-password-file` |
+| `age_identity_file` | `--age-identity-file`. A list of files. |
+| `public_key` | `--key` |
+| `verify` | `--verify` |
+
+### `cargoship_reset`
+
+Removes the cluster from the fleet. There is no package: the distro to remove is named directly.
+
+| Parameter | Flag |
+| --- | --- |
+| `distro` | `--distro`. `k3s` or `rke2`. |
+| `concurrency` | `--concurrency` |
+| `work_concurrency` | `--work-concurrency` |
+| `hosts` | `--hosts` |
+| `firewall` | `--firewall` |
+| `fapolicyd` | `--fapolicyd` |
+
+### `cargoship_kube_config`
+
+Fetches the cluster kubeconfig onto the management node. It is the one module that changes the node the play runs on rather than the fleet.
+
+| Parameter | Flag |
+| --- | --- |
+| `distro` | `--distro`. `k3s` or `rke2`. |
+| `kubeconfig` | `--kubeconfig` |
+
+### Signature verification
+
+`public_key` and `verify` are the package signature parameters, and they are the key-based ones only. Keyless verification identifies a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have. Verify a keyless-signed package with `cargoship package verify` before the play, where the flags and their exclusions are all available.
+
+### Key material
 
 Key material is always named by a path, never given by value. Ansible writes a module's parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set `no_log: true` on the task regardless: a binary module has no per-parameter `no_log`, so the task-level setting is what suppresses the arguments and the result.
 
@@ -174,6 +253,8 @@ Key material is always named by a path, never given by value. Ansible writes a m
 `--check` runs cargoship's dry run. Phases opt into it one at a time -- a phase that has not said how it behaves under a dry run is reported and not run -- so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.
 
 Under check mode, `changed` means what Ansible means by it there: a real run would change something. It is true when a phase that knows how to tell had work outstanding -- a fleet whose engine configuration has drifted -- and false when every such phase found nothing to do.
+
+`cargoship_kube_config` is the exception. `cargoship kube-config` has no dry run, so under `--check` the module reports `skipped: true` and runs nothing at all. That is what Ansible does with a module that has declared it does not support check mode; a binary module has nowhere to declare it, so it says so in its result instead.
 
 ### What `changed` is worth
 
