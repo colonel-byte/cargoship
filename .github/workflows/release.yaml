@@ -62,6 +62,36 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
+      - name: Setup package signing keys
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          APK_RSA_PRIVATE_KEY: ${{ secrets.APK_RSA_PRIVATE_KEY }}
+        run: |
+          # nfpm's signature.key_file takes a path, not key material, so unlike the cosign
+          # secrets these have to land on disk. RUNNER_TEMP is outside the checkout, so
+          # nothing written here can be swept up by a glob in .goreleaser.yaml.
+          #
+          # Two keys, because nfpm signs rpm and deb with OpenPGP but apk with a bare RSA
+          # key. See the note on apk.signature in .goreleaser.yaml.
+          #
+          # A missing secret leaves its *_KEY_PATH unset, which the
+          # `{{ if ne (index .Env ...) "" }}` guards in .goreleaser.yaml read as "do not
+          # sign". That keeps releases working before the keys exist, at the cost of
+          # signing being absent rather than loud -- hence the warnings.
+          umask 077
+          if [ -n "${GPG_PRIVATE_KEY}" ]; then
+            printf '%s\n' "${GPG_PRIVATE_KEY}" > "${RUNNER_TEMP}/cargoship-signing.asc"
+            echo "GPG_KEY_PATH=${RUNNER_TEMP}/cargoship-signing.asc" >> "${GITHUB_ENV}"
+          else
+            echo "::warning::GPG_PRIVATE_KEY is unset; the rpm and deb will be unsigned"
+          fi
+          if [ -n "${APK_RSA_PRIVATE_KEY}" ]; then
+            printf '%s\n' "${APK_RSA_PRIVATE_KEY}" > "${RUNNER_TEMP}/cargoship-apk.rsa"
+            echo "APK_RSA_KEY_PATH=${RUNNER_TEMP}/cargoship-apk.rsa" >> "${GITHUB_ENV}"
+          else
+            echo "::warning::APK_RSA_PRIVATE_KEY is unset; the apk will be unsigned"
+          fi
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 #v7.2.3
         with:
@@ -71,3 +101,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          # Only consulted when the OpenPGP key is passphrase-protected; nfpm ignores it
+          # for an unprotected key, so leaving the secret unset is fine. There is no apk
+          # equivalent -- that key cannot be encrypted at all.
+          NFPM_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Remove package signing keys
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/cargoship-signing.asc" "${RUNNER_TEMP}/cargoship-apk.rsa"
