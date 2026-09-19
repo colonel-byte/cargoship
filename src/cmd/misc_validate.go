@@ -69,7 +69,7 @@ func newValidateCommand() *cobra.Command {
 	if err := cmd.RegisterFlagCompletionFunc(MiscValidateKind, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return pkgschema.Kinds(), cobra.ShellCompDirectiveNoFileComp
 	}); err != nil {
-		fmt.Printf("failed to register %s flag completion: %v", MiscValidateKind, err)
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", MiscValidateKind, err)
 	}
 
 	// As on `schema`, these matter only when --package names a package that has to be pulled and

@@ -17,6 +17,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/colonel-byte/cargoship/src/cmd/flags"
 	"github.com/colonel-byte/cargoship/src/config"
@@ -94,7 +95,7 @@ func addTempDirFlags(cmd *cobra.Command) {
 func addBuildFlags(cmd *cobra.Command) {
 	cmd.Flags().AddFlagSet(newBuildFlagSet(cmd.Context()))
 	if err := cmd.RegisterFlagCompletionFunc(RootArchitecture, flags.RegisterArchitectureFormat); err != nil {
-		fmt.Printf("failed to register %s flag completion: %v", RootArchitecture, err)
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", RootArchitecture, err)
 	}
 }
 
