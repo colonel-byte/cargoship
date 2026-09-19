@@ -81,6 +81,22 @@ The guard covers everything after `main` begins, which is not everything. `src/c
 
 The actions do not share an option set. `apply` carries roughly a dozen flags -- host file updates, firewall, fapolicyd, node labelling, unmanaged nodes, kubeconfig update and path, worker concurrency, values files, signature verification, age keys. `kube-config` carries three, and it does not even load a package: `installKubeConfigOptions.run` builds a `phase.Manager` directly instead of going through `initManager`, because there is no distro package to resolve values against. Collapsing that into one module with an `action` parameter means a single argument surface where most parameters are invalid for most values of `action`, and without `argument_spec` every one of those relationships is hand-checked. Separate modules keep each argument surface small enough to validate by hand.
 
+## The changed signal comes from the phases, and says how far it reaches
+
+A module that reports `changed: true` on every successful run teaches operators to ignore the field, and a handler wired to it fires forever. Reporting it honestly means the phases saying what they did, which is what `Manager.Run` now collects.
+
+The mechanism is the optional-interface idiom the manager already uses for `readOnly` and `withDryRun`: a phase may implement `changedReporter`, and `Run` asks it afterwards rather than before, so a phase answers from what it did. A run that failed halfway has still changed the fleet and is expected to say so. `Manager.Result` holds the per-phase record, and `RunResult` answers `Changed`, `Outstanding`, `Complete`, and `Undeclared` over it.
+
+Three decisions are worth recording:
+
+- **Silence is not a claim of no change.** A phase that does not implement the interface cannot make `changed` true, and is not counted as having changed nothing either. The overall signal is reported as `partial` and the silent phases are named in `cargoship.changedUndeclared`. Reporting `changed: false` while `KubeConfig` and `LabelNodes` have said nothing would be a claim cargoship cannot support; naming them lets an operator decide. The alternative considered was assuming no change from silence, which is how a correct-looking `changed: false` becomes a missed handler.
+- **Phases filtered out by `ShouldRun` are still asked.** `EngineConfigSyncHosts` writes the files the engine re-reads without a restart while `Prepare` is deciding which hosts have drifted, and then reports no hosts to sync. A run whose only change landed in chart manifests would otherwise read as a run in which nothing happened. `RunResult` therefore records a third disposition, `Skipped`, beside `Ran` and `Planned`.
+- **Under check mode, `changed` reads `Outstanding` rather than `Changed`.** A dry run changes nothing, so the useful question is whether a real run would, and a phase only reaches `Planned` after its own `ShouldRun` found work against the live hosts. That matches what Ansible's check mode means by `changed`.
+
+The result travels back on the context. The module mode runs cargoship by building an argument vector and calling the ordinary command through `src/cmd.ExecuteArgs`, which returns an error and nothing else. Threading a return value back through cobra, the action, and the manager would change five call sites to serve one caller, so `phase.WithResultSink` puts a sink on the context and `Manager.Run` publishes to it when one is there. A run that never reached its phases publishes nothing, which the module reports as `unknown` rather than as no change -- the two are different, and conflating them is what makes a `changed: false` untrustworthy.
+
+Writing the signal turned up one thing worth fixing on its own account: the in-place write in `needsUpdate` runs from `Prepare`, and `Prepare` runs for every phase including the ones a dry run is about to skip. A dry run was therefore writing files to hosts. It no longer does.
+
 ## What is being accepted
 
 - No `ansible-doc` and no `ansible-test sanity`; the module's interface is documented only where we choose to document it.
@@ -90,7 +106,7 @@ The actions do not share an option set. `apply` carries roughly a dozen flags --
 
 ## What this leaves open
 
-**The changed signal needs new plumbing.** `Manager.Run` returns only an `error`. Its `ran` and `planned` slices are local to the call and never surfaced, and `ran` is not a changed signal in any case -- `Connect`, `DetectOS`, `GatherFacts`, and `ValidateHosts` all land in it while changing nothing. Reporting `changed` honestly means phases declaring it, which fits the optional-interface idiom the manager already uses for `readOnly` and `withDryRun`. Under check mode there is a usable coarse answer immediately: the phases a dry run reports as planned have already been filtered by every phase's `Prepare` and `ShouldRun` against the live hosts, so a phase whose work is already done does not appear.
+**Most phases still do not report whether they changed anything.** Only the engine configuration sync phases declare `changedReporter` today, so an ordinary run reports its signal as `partial`. The two undeclared phases that can genuinely change something are `KubeConfig`, which writes the local kubeconfig, and `LabelNodes`, which sets node role labels; both are worth declaring next. The rest -- `Connect`, `DetectOS`, `GatherFacts`, `ValidateHosts`, `Lock`, `Disconnect` -- change nothing a playbook would want a handler for, and declaring them buys only a `complete` signal.
 
 **Start with `engine-config-sync`, not `apply`.** It is the most Ansible-shaped action cargoship has -- converge configuration, report drift, restart services -- and `src/pkg/phase/70_engine_config_sync_common.go` already computes the per-host idempotency signal in `needsUpdate`, `driftedFiles`, and `driftReason`. It is the cheapest place to prove the changed plumbing before taking on `apply`'s argument surface.
 

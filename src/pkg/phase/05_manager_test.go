@@ -404,3 +404,175 @@ func TestClassifyDryRun(t *testing.T) {
 	require.Empty(t, DryRunNote(&dryRunPhase{}), "only read-only phases carry a note")
 	require.Empty(t, DryRunNote(&mutatingPhase{}))
 }
+
+// changingPhase declares whether it changed anything, which most phases in the tree do not. It
+// is configurable so that both answers can be pinned, since "declared, and nothing changed" is a
+// different result from "never said".
+type changingPhase struct {
+	title     string
+	changed   bool
+	shouldRun bool
+	err       error
+}
+
+func (p *changingPhase) Title() string {
+	if p.title == "" {
+		return "changing phase"
+	}
+	return p.title
+}
+
+func (p *changingPhase) Explanation() string {
+	return "test function"
+}
+
+func (p *changingPhase) ShouldRun() bool {
+	return p.shouldRun
+}
+
+func (p *changingPhase) Changed() bool {
+	return p.changed
+}
+
+func (p *changingPhase) Run(_ context.Context) error {
+	return p.err
+}
+
+// TestRunResultRecordsEveryDisposition pins the three places a phase can end up. Skipped is the
+// one worth having a test for: a phase filtered out by ShouldRun runs nothing, but it can have
+// finished its work in Prepare, so leaving it out of the result would lose a real change.
+func TestRunResultRecordsEveryDisposition(t *testing.T) {
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m.AddPhase(
+		&changingPhase{title: "ran", shouldRun: true},
+		&conditionalPhase{},
+		&mutatingPhase{},
+	)
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Equal(t, []string{"ran", "mutating phase"}, Titles(m.Result.Ran))
+	require.Empty(t, Titles(m.Result.Planned))
+	require.Equal(t, []string{"conditional phase"}, Titles(m.Result.Skipped))
+}
+
+// TestRunResultChangedComesOnlyFromDeclaredPhases is the whole point of the interface being
+// opt-in. A phase that says nothing cannot make changed true, and it cannot make it false
+// either: it makes the answer partial, and it is named so an operator knows what was not
+// covered.
+func TestRunResultChangedComesOnlyFromDeclaredPhases(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		phases     Phases
+		changed    bool
+		complete   bool
+		undeclared []string
+	}{
+		{
+			name:     "a declared phase that changed nothing",
+			phases:   Phases{&changingPhase{shouldRun: true}},
+			complete: true,
+		},
+		{
+			name:     "a declared phase that changed something",
+			phases:   Phases{&changingPhase{shouldRun: true, changed: true}},
+			changed:  true,
+			complete: true,
+		},
+		{
+			name:       "a phase that never said",
+			phases:     Phases{&mutatingPhase{}},
+			undeclared: []string{"mutating phase"},
+		},
+		{
+			name:       "a declared phase beside a silent one",
+			phases:     Phases{&changingPhase{shouldRun: true, changed: true}, &mutatingPhase{}},
+			changed:    true,
+			undeclared: []string{"mutating phase"},
+		},
+		{
+			name:     "a phase skipped by ShouldRun still reports what it changed",
+			phases:   Phases{&changingPhase{shouldRun: false, changed: true}},
+			changed:  true,
+			complete: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+			m.SetPhases(tc.phases)
+
+			require.NoError(t, m.Run(context.Background()))
+			require.Equal(t, tc.changed, m.Result.Changed())
+			require.Equal(t, tc.complete, m.Result.Complete())
+			require.Equal(t, tc.undeclared, m.Result.Undeclared())
+		})
+	}
+}
+
+// TestRunResultSurvivesAFailure covers the case the result is read in most: a run that stopped
+// part-way. The phases it got through are the ones that changed the fleet, so they have to be in
+// the result even though Run returned an error.
+func TestRunResultSurvivesAFailure(t *testing.T) {
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m.AddPhase(
+		&changingPhase{title: "first", shouldRun: true, changed: true},
+		&changingPhase{title: "second", shouldRun: true, err: fmt.Errorf("phase failed")},
+		&changingPhase{title: "third", shouldRun: true},
+	)
+
+	require.Error(t, m.Run(context.Background()))
+	require.Equal(t, []string{"first", "second"}, Titles(m.Result.Ran))
+	require.True(t, m.Result.Changed())
+}
+
+// TestDryRunResultReportsOutstandingWork pins the check-mode reading. A dry run changes nothing,
+// so Changed is false and the question worth asking is whether a real run would have: that is
+// Outstanding, and a phase only reaches Planned after its ShouldRun said there was work to do.
+func TestDryRunResultReportsOutstandingWork(t *testing.T) {
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m.AddPhase(&changingPhase{title: "would sync", shouldRun: true})
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Empty(t, Titles(m.Result.Ran))
+	require.Equal(t, []string{"would sync"}, Titles(m.Result.Planned))
+	require.False(t, m.Result.Changed(), "a dry run changes nothing")
+	require.True(t, m.Result.Outstanding(), "the phase had work to do and was reported instead")
+}
+
+// TestDryRunReportsNoOutstandingWorkWhenThereIsNone is the other half: a phase whose ShouldRun
+// found nothing to do is skipped before the dry-run gate, so it is never reported as pending.
+func TestDryRunReportsNoOutstandingWorkWhenThereIsNone(t *testing.T) {
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}, DryRun: true}
+	m.AddPhase(&changingPhase{title: "nothing drifted", shouldRun: false})
+
+	require.NoError(t, m.Run(context.Background()))
+	require.Empty(t, Titles(m.Result.Planned))
+	require.False(t, m.Result.Outstanding())
+}
+
+// TestResultSinkCollectsTheRun covers the path the Ansible module mode reads the result through,
+// since the command it calls returns an error and nothing else.
+func TestResultSinkCollectsTheRun(t *testing.T) {
+	ctx, sink := WithResultSink(context.Background())
+	require.False(t, sink.Observed(), "nothing has run yet")
+
+	m := Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+	m.AddPhase(&changingPhase{title: "ran", shouldRun: true, changed: true})
+	require.NoError(t, m.Run(ctx))
+
+	require.True(t, sink.Observed())
+	require.True(t, sink.Result().Changed())
+	require.Equal(t, []string{"ran"}, Titles(sink.Result().Ran))
+}
+
+// TestResultSinkObservesNothingBeforeThePhases pins the difference between "no phase changed
+// anything" and "no phase ran". A command that failed on its configuration has to read as the
+// second, or a playbook is told nothing happened when nothing was ever attempted.
+func TestResultSinkObservesNothingBeforeThePhases(t *testing.T) {
+	ctx, sink := WithResultSink(context.Background())
+
+	m := Manager{}
+	m.AddPhase(&changingPhase{shouldRun: true, changed: true})
+	require.Error(t, m.Run(ctx))
+
+	require.False(t, sink.Observed())
+}

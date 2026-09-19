@@ -173,7 +173,21 @@ Key material is always named by a path, never given by value. Ansible writes a m
 
 `--check` runs cargoship's dry run. Phases opt into it one at a time -- a phase that has not said how it behaves under a dry run is reported and not run -- so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.
 
-The module reports `changed: true` for every run that succeeds, and says so in `cargoship.changedSignal`, which reads `unknown`. Cargoship's phases do not yet report whether they changed anything. Until they do, a handler notified by this task fires on every run. Gate on the result rather than on `changed` if that matters to you.
+Under check mode, `changed` means what Ansible means by it there: a real run would change something. It is true when a phase that knows how to tell had work outstanding -- a fleet whose engine configuration has drifted -- and false when every such phase found nothing to do.
+
+### What `changed` is worth
+
+`changed` is built from what the phases themselves report, and a phase has to opt in. `cargoship.changedSignal` says how much of the run is covered:
+
+| Signal | Meaning |
+| --- | --- |
+| `complete` | Every phase the run reached said whether it changed anything. |
+| `partial` | Some did not. They are named in `cargoship.changedUndeclared`. |
+| `unknown` | No phase reported at all, so `changed` is a convention rather than an observation, and is reported `true`. |
+
+Today the engine configuration sync phases report and the rest do not, so an ordinary run reads `partial`. That is deliberate: a phase that has said nothing cannot make `changed` true, and it is not treated as having changed nothing either. `KubeConfig` and `LabelNodes` are the two in the undeclared list that can genuinely change something -- the local kubeconfig and the node role labels -- so if a handler of yours depends on either, gate on the result rather than on `changed`.
+
+`cargoship.phasesRan` and `cargoship.phasesPlanned` name the phases the run executed and, under check mode, the ones it reported instead of running. Ansible sees one result for the whole fleet, so these stand in for the per-host detail a task-per-host module would give you.
 
 ### The result
 
@@ -187,7 +201,9 @@ The module reports `changed: true` for every run that succeeds, and says so in `
     "inventoryKept": true,
     "checkMode": false,
     "command": ["cargoship", "engine-config-sync", "..."],
-    "changedSignal": "unknown"
+    "phasesRan": ["Connect", "Detect OS", "Sync Registry Config Controller"],
+    "changedSignal": "partial",
+    "changedUndeclared": ["Connect", "Detect OS"]
   }
 }
 ```

@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/colonel-byte/cargoship/src/internal/ansibleinv"
+	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	goyaml "github.com/goccy/go-yaml"
 )
 
@@ -109,6 +110,10 @@ func runEngineConfigSync(ctx context.Context, exec Exec, args *Args, resp *Respo
 	argv := buildEngineConfigSyncArgs(&p, path, args.Control)
 	resp.Cargoship.Command = append([]string{"cargoship"}, argv...)
 
+	// The command's only return value is an error, so what the phases did comes back on the
+	// context. See phase.ResultSink.
+	ctx, sink := phase.WithResultSink(ctx)
+
 	if runErr := exec(ctx, argv); runErr != nil {
 		// The generated document stays on disk. It is the first thing to look at when a run
 		// fails for a reason that reads like the wrong cluster, and an operator who has to
@@ -123,11 +128,7 @@ func runEngineConfigSync(ctx context.Context, exec Exec, args *Args, resp *Respo
 		resp.Cargoship.InventoryKept = false
 	}
 
-	// Phases do not yet report whether they changed anything, so this is a convention rather
-	// than an observation, and ChangedSignal says so. True is the safe direction: an Ansible
-	// handler that fires when nothing happened is a smaller failure than one that stays silent
-	// when something did.
-	resp.Changed = true
+	reportChanged(resp, sink, args.Control.CheckMode)
 	if args.Control.CheckMode {
 		resp.Msg = "check mode: reported the phases that would run against the fleet"
 		return nil
