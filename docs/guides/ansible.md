@@ -144,6 +144,30 @@ Five modules ship, one per fleet action: `cargoship_apply`, `cargoship_prepare`,
 
 The task runs on the management node -- `connection: local` when the Ansible controller is that node, `delegate_to` when they are separate. Cargoship connects to the fleet itself, from there.
 
+### Installing the collection
+
+The modules live in the `colonel_byte.cargoship` collection. The RPM and deb packages install it to `/usr/share/ansible/collections`, which is on ansible-core's default collections path, so on a management node that installed cargoship from a package there is nothing further to do.
+
+Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built `colonel_byte-cargoship-<version>.tar.gz` and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.
+
+```sh
+cosign verify-blob --key cosign.pub \
+  --bundle colonel_byte-cargoship-0.25.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.25.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
+./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
+```
+
+From a checkout, build the tarball first with `hack/ansible-build-collection.sh ./bin/ansible`, which is the same script the release pipeline runs.
+
+That last step is not optional and has no equivalent in Galaxy's own packaging. Ansible resolves a task name to a module *file*, so each action needs a file named after it; the files are symlinks to the one cargoship binary, which is what the packages create and what the script creates by hand. A collection installed without them fails with the module not being found.
+
+The collection carries one action plugin per module. It runs inside `ansible-playbook`, on the interpreter Ansible is already running on, and does one thing: copy `groups` and `hostvars` into the module's `inventory` parameter so you do not have to. Nothing is installed on the fleet, and running cargoship by hand still needs no Python.
+
+It also accepts a `parameters` dict and merges it into the rest, which is how the role passes a caller-supplied set of parameters without templating the whole of a task's arguments -- something Ansible warns about, and rightly. A parameter given both directly and inside `parameters` is an error naming it.
+
+The plugin forwards the four `ansible_*` connection variables in the table above and every `cargoship_*` variable, and drops the rest. A host's resolved variables routinely carry credentials for things that are not this cluster, and a module's parameters are written to a file on disk.
+
 ### Parameters every module takes
 
 `inventory` takes the same document described above, `groups` and `hostvars` included. Everything else maps onto a flag of the command the module runs.
@@ -247,6 +271,38 @@ Fetches the cluster kubeconfig onto the management node. It is the one module th
 ### Key material
 
 Key material is always named by a path, never given by value. Ansible writes a module's parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set `no_log: true` on the task regardless: a binary module has no per-parameter `no_log`, so the task-level setting is what suppresses the arguments and the result.
+
+### The `cluster` role
+
+The role is the shorter way to write the same task. It picks the module from `cargoship_action`, assembles the `inventory` parameter, and sets `run_once`, `delegate_to`, and `no_log` for you.
+
+```yaml
+- name: Install the cluster
+  ansible.builtin.include_role:
+    name: colonel_byte.cargoship.cluster
+  vars:
+    cargoship_action: apply
+    cargoship_package: /srv/staging/rke2-1.31.tar.zst
+    cargoship_cluster:
+      name: bubbles
+      loadbalancer: bubbles-kc.test.com
+    cargoship_args:
+      vault_password_file: /srv/staging/vault-pass
+      timeout: 45m
+```
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `cargoship_action` | `apply` | Which module to run. One of the five. |
+| `cargoship_package` | unset | The package. Required for `apply`, `prepare`, and `engine_config_sync`. |
+| `cargoship_cluster` | `{}` | The `cluster` block: name, load balancer, profiles, registries, values. |
+| `cargoship_role_groups` | `{}` | The group mapping, when your groups are not named `controller` and `worker`. |
+| `cargoship_inventory_path` | unset | Where to write the generated document. |
+| `cargoship_args` | `{}` | Everything else, passed to the module as-is. |
+| `cargoship_delegate_to` | `localhost` | The management node. |
+| `cargoship_show_result` | `false` | Print `cargoship_result.cargoship` after the run. |
+
+Every task in the role carries `run_once: true`. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It also carries `no_log: true`, which is why `cargoship_show_result` exists: the debug task is the one thing allowed to print, and it prints cargoship's report rather than the parameters.
 
 ### Check mode and changed
 
