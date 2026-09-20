@@ -213,3 +213,65 @@ func TestFilesForByRole(t *testing.T) {
 	require.NotContains(t, p.filesFor(worker), chartConfig)
 	require.Contains(t, p.filesFor(worker), registriesPath)
 }
+
+// TestNeedsUpdateNoRestartMarksThePhaseChanged covers the half of the changed signal that is
+// easy to lose. The host is not reported as needing a sync, so without this the run reads as a
+// run in which nothing happened -- and a values change landing entirely in chart manifests is
+// exactly that shape.
+func TestNeedsUpdateNoRestartMarksThePhaseChanged(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		distrocfg.DistroReleaseFile: {Content: []byte(`{"name":"rke2"}`), Mode: "0600", NoRestart: true},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+	h := &cluster.ZarfHost{Configurer: &fileConfigurer{files: map[string]string{}}}
+
+	require.False(t, p.Changed(), "nothing has been looked at yet")
+	require.False(t, p.needsUpdate(context.Background(), h))
+	require.True(t, p.Changed(), "the file was written in place, which is a change")
+}
+
+// TestNeedsUpdateWritesNothingUnderADryRun pins the one place a dry run could have touched a
+// host. Prepare runs for every phase, including the ones a dry run is about to skip, and the
+// in-place write lives in Prepare.
+func TestNeedsUpdateWritesNothingUnderADryRun(t *testing.T) {
+	desired := map[string]distrocfg.DesiredFile{
+		distrocfg.DistroReleaseFile: {Content: []byte(`{"name":"rke2"}`), Mode: "0600", NoRestart: true},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+	p.manager = &Manager{DryRun: true}
+
+	fc := &fileConfigurer{files: map[string]string{}}
+	h := &cluster.ZarfHost{Configurer: fc}
+
+	require.False(t, p.needsUpdate(context.Background(), h))
+	require.NotContains(t, fc.files, distrocfg.DistroReleaseFile, "a dry run must not write to a host")
+	require.False(t, p.Changed(), "a dry run changes nothing, so it reports nothing")
+}
+
+// TestChangedIsFalseWhenNothingDrifted is the answer that makes the signal worth having: a fleet
+// already in the desired state reports changed false rather than true-by-convention.
+func TestChangedIsFalseWhenNothingDrifted(t *testing.T) {
+	content := `{"name":"rke2"}`
+	desired := map[string]distrocfg.DesiredFile{
+		distrocfg.DistroReleaseFile: {Content: []byte(content), Mode: "0600", NoRestart: true},
+	}
+	p := &EngineConfigSyncHosts{Distro: &managedDirsDistro{}, desired: desired}
+	h := &cluster.ZarfHost{
+		Configurer: &fileConfigurer{
+			files: map[string]string{distrocfg.DistroReleaseFile: content},
+			modes: map[string]fs.FileMode{distrocfg.DistroReleaseFile: 0o600},
+		},
+	}
+
+	require.False(t, p.needsUpdate(context.Background(), h))
+	require.False(t, p.Changed())
+}
+
+// TestSyncPhasesReportChange pins that the two phases an operator actually runs implement the
+// interface. Losing it is silent: the phase keeps working and the run starts reporting no change.
+func TestSyncPhasesReportChange(t *testing.T) {
+	for _, p := range []Phase{&EngineConfigSyncController{}, &EngineConfigSyncWorker{}} {
+		_, ok := p.(changedReporter)
+		require.True(t, ok, "%s must report whether it changed the fleet", p.Title())
+	}
+}
