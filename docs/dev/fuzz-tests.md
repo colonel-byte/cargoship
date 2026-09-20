@@ -1,17 +1,19 @@
 # Running the Fuzz Tests
 
-The `src/test/e2e/fuzz` package holds Go's native fuzz targets. Unlike the other suites under `src/test/e2e`, it does not drive the built binary and starts no containers: the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions -- scalar style, quoting, indentation, byte offsets -- where a wrong answer produces a file that still parses and fails much later. Nothing here needs `build/`, a cluster, or the network.
+The `src/fuzz` package holds Go's native fuzz targets. It is not an e2e suite and does not sit with them: it does not drive the built binary and starts no containers, and the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions -- scalar style, quoting, indentation, byte offsets -- where a wrong answer produces a file that still parses and fails much later. Nothing here needs `build/`, a cluster, or the network.
+
+It also has to stay out of `src/test/`. OpenSSF Scorecard's file walker discards every path beginning `src/test/` before any check reads it -- `isTestdataFile` in [`checks/fileparser/listing.go`](https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go), which carries the Maven `src/test/java` convention -- so for as long as these targets lived at `src/test/e2e/fuzz` the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under `src/test/` would silently take it to 0 again.
 
 ## Layout
 
 ```
-src/test/e2e/fuzz/main_test.go                    package documentation
-src/test/e2e/fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
-src/test/e2e/fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
-src/test/e2e/fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
-src/test/e2e/fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
-src/test/e2e/fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
-src/test/e2e/fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per target
+src/fuzz/main_test.go                    package documentation
+src/fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
+src/fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
+src/fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
+src/fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
+src/fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
+src/fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per target
 ```
 
 ## Both formats, every time
@@ -22,16 +24,17 @@ cargoship writes two ciphertext formats, Ansible Vault and age, and one keyring 
 
 ## Running
 
-A plain `go test` runs the **seed corpus only** -- the `f.Add` values in each target, plus anything committed under `testdata/fuzz/<Target>/`. That is about half a second and is what CI and `go test ./...` do:
+A plain `go test` runs the **seed corpus only** -- the `f.Add` values in each target, plus anything committed under `testdata/fuzz/<Target>/`. That is about half a second and is what `mage test:fuzz` and `go test ./...` do. No CI job runs this package today -- `e2e.yaml` runs the non-cluster group and `e2e-cluster.yaml` the cluster group, and neither glob reaches it:
 
 ```console
-$ go test -mod=vendor -count=1 ./src/test/e2e/fuzz/
+$ mage test:fuzz
+$ go test -mod=vendor -count=1 ./src/fuzz/     # the same thing, spelled out
 ```
 
 Actual fuzzing needs `-fuzz`, which takes **one target at a time** and runs until it finds a failure or the clock runs out:
 
 ```console
-$ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./src/test/e2e/fuzz/
+$ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./src/fuzz/
 ```
 
 *   `-run=XXX` matches no unit test, so the run spends its whole budget on the target rather than on the rest of the package.
@@ -42,8 +45,8 @@ $ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzzti
 Because only one target runs per invocation, a sweep is a loop:
 
 ```console
-$ for t in $(grep -ho '^func \(Fuzz[A-Za-z]*\)' src/test/e2e/fuzz/*_test.go | cut -d' ' -f2); do
-      go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./src/test/e2e/fuzz/ || break
+$ for t in $(grep -ho '^func \(Fuzz[A-Za-z]*\)' src/fuzz/*_test.go | cut -d' ' -f2); do
+      go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./src/fuzz/ || break
   done
 ```
 
@@ -66,7 +69,7 @@ There are two corpora, and only one of them is in the repository.
 
 Inputs the fuzzer generates live in the build cache, under `$(go env GOCACHE)/fuzz/`. They are shared across runs on the same machine, are not portable, and are not meant to be committed; `go clean -fuzzcache` discards them, which is worth doing when a target has been rewritten and its cached corpus is exercising a shape that no longer exists.
 
-Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `src/test/e2e/fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:
+Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `src/fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:
 
 ```
 FuzzDecryptAtPathRoundTrip/89831cc049267b2c              string("\n")  a credential of one line break, written as an empty block scalar, read back as ""

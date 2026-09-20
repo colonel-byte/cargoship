@@ -28,9 +28,9 @@
 //
 // Run one target:
 //
-//	go test -run=Fuzz -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./src/test/e2e/fuzz
+//	go test -run=Fuzz -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./src/fuzz
 //
-// A plain `go test ./src/test/e2e/fuzz` runs the seed corpus only -- the f.Add values in each
+// A plain `go test ./src/fuzz` runs the seed corpus only -- the f.Add values in each
 // target plus anything committed under testdata/fuzz/<target>/ -- which is what turns a crash
 // found by a long fuzz run into a permanent regression test once its file is committed.
 package fuzz

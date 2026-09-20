@@ -7,8 +7,7 @@ on:
       - main
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
@@ -17,6 +16,10 @@ concurrency:
 
 jobs:
   deploy:
+    # actions-gh-pages pushes the built book to the gh-pages branch, which is the only write
+    # this workflow makes. Nothing here touches a pull request.
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

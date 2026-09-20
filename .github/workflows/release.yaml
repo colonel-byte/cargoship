@@ -6,14 +6,20 @@ on:
     tags:
       - "*"
 
+# Read only at the top so that a job has to ask for what it writes. See the job blocks
+# below for what each one needs and why.
 permissions:
-  contents: write
-  packages: write
-  # issues: write
-  id-token: write
+  contents: read
 
 jobs:
   goreleaser:
+    # contents: write creates the release and uploads the archives, packages: write pushes
+    # the images, and id-token: write is the OIDC token cosign signs against.
+    permissions:
+      contents: write
+      packages: write
+      # issues: write
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -68,3 +74,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+  # Publishing an example exercises the release that was just cut, so it has to wait for the
+  # archives: setup-cargoship installs the released CLI, and needs is what guarantees
+  # goreleaser has uploaded it. Version tags only -- goreleaser takes every tag, while
+  # release-please only ever pushes vN.N.N, and a tag with no release behind it has nothing
+  # for setup-cargoship to resolve.
+  #
+  # secrets: inherit passes the Cosign key the publish step signs with. Permissions are not
+  # set here: the called workflow declares the contents: read, packages: write it needs,
+  # which is a narrowing of what this workflow already grants.
+  publish-example:
+    # A caller's grant is the ceiling for the workflow it calls -- permissions can be held
+    # or narrowed down the chain, never widened -- so this has to cover what
+    # publish-example.yaml's own job asks for, and it is written to match it exactly.
+    permissions:
+      contents: read
+      packages: write
+    needs: goreleaser
+    if: startsWith(github.ref_name, 'v')
+    uses: ./.github/workflows/publish-example.yaml
+    secrets: inherit

@@ -7,9 +7,10 @@ on:
       - main
   workflow_dispatch:
 
+# No write anywhere: release-please is handed the app token minted below and does every
+# write with that, so GITHUB_TOKEN is only along for the ride.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   release-please:
