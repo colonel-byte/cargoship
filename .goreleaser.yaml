@@ -176,7 +176,7 @@ dockers_v2:
       - "latest"
     platforms:
       - linux/amd64
-      # - linux/arm64
+      - linux/arm64
     flags:
       - "--pull"
     labels:
@@ -191,18 +191,20 @@ dockers_v2:
       - packagers
     dockerfile: containers/ubi/Dockerfile
     images:
-      - "ghcr.io/colonel-byte/cargoship"
+      - "ghcr.io/colonel-byte/cargoship-ubi"
     tags:
-      - "{{ .Tag }}-ubi"
+      - "{{ .Tag }}"
     platforms:
       - linux/amd64
-      # - linux/arm64
+      - linux/arm64
     flags:
       - "--pull"
     labels:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.created: "{{ .CommitDate }}"
+    extra_files:
+      - crypto/software@conlon.dev.gpg
 
   - id: cargoship-deb
     # Pulls in the nfpms artifacts instead of the raw binary: containers/deb/Dockerfile
@@ -212,18 +214,20 @@ dockers_v2:
       - packagers
     dockerfile: containers/deb/Dockerfile
     images:
-      - "ghcr.io/colonel-byte/cargoship"
+      - "ghcr.io/colonel-byte/cargoship-deb"
     tags:
-      - "{{ .Tag }}-deb"
+      - "{{ .Tag }}"
     platforms:
       - linux/amd64
-      # - linux/arm64
+      - linux/arm64
     flags:
       - "--pull"
     labels:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.created: "{{ .CommitDate }}"
+    # extra_files:
+    #   - crypto/software@conlon.dev.gpg
 
   - id: cargoship-ansible
     # Pulls in the nfpms artifacts instead of the raw binary: containers/ansible/Dockerfile
@@ -232,18 +236,20 @@ dockers_v2:
       - packagers
     dockerfile: containers/ansible/Dockerfile
     images:
-      - "ghcr.io/colonel-byte/cargoship"
+      - "ghcr.io/colonel-byte/cargoship-ansible"
     tags:
-      - "{{ .Tag }}-ansible"
+      - "{{ .Tag }}"
     platforms:
       - linux/amd64
-      # - linux/arm64
+      - linux/arm64
     flags:
       - "--pull"
     labels:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.created: "{{ .CommitDate }}"
+    extra_files:
+      - crypto/software@conlon.dev.rsa.pub
 
 changelog:
   sort: asc

@@ -14,17 +14,16 @@
 
 # syntax=docker/dockerfile:1
 
-# The base image is pinned by digest, and repeated on each FROM rather than
-# hoisted into an ARG: dependabot's Dockerfile parser only reads literal FROM
-# lines and cannot resolve a reference that arrives through a build arg. Keep
-# every FROM in this file on the same digest.
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:984df0a2b8d9011d419b0ad260b25f6b74b7ce69ab0595b75522e30f8849f27f
 
 ARG TARGETPLATFORM
 
 COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
+COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
 
-RUN rpm --install --verbose /tmp/rpms/*.rpm \
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
+  && rpm --checksig /tmp/rpms/*.rpm \
+  && rpm --install --verbose /tmp/rpms/*.rpm \
   && rm -rf /tmp/rpms \
   && cargoship version
 
@@ -40,8 +39,6 @@ RUN groupadd --gid "${GID}" nonroot \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /home/nonroot /workspace
 
-# base.name carries the tag only, not the digest, so that a dependabot digest
-# refresh needs no edit here. Update it by hand when the FROM tag itself moves.
 LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
   org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
