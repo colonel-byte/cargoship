@@ -79,6 +79,14 @@ func deriveRoles(groups map[string][]string, roleGroups map[string][]string) ([]
 	for _, role := range roleOrder {
 		for _, group := range roleGroups[role] {
 			for _, host := range groups[group] {
+				// A group with an empty name in it is a broken inventory, and it is broken in a
+				// way that survives everything downstream: the empty name becomes the address,
+				// the hostname, and the key into hostvars, and the schema takes all three
+				// because a string is what it asks for. Nothing after this point can tell the
+				// host apart from one an operator meant to install.
+				if strings.TrimSpace(host) == "" {
+					return nil, fmt.Errorf("group %q lists a host with an empty name: a host is named by the name Ansible knows it by", group)
+				}
 				next := assignment{Host: host, Role: role, Group: group}
 				previous, seen := claimed[host]
 				if seen {
@@ -114,6 +122,11 @@ func checkRoles(roleGroups map[string][]string) error {
 		}
 		if len(roleGroups[role]) == 0 {
 			return fmt.Errorf("role mapping names role %q with no groups: remove it or name a group", role)
+		}
+		for _, group := range roleGroups[role] {
+			if strings.TrimSpace(group) == "" {
+				return fmt.Errorf("role mapping gives role %s a group with an empty name: name the Ansible group that carries the role", role)
+			}
 		}
 	}
 	return nil
