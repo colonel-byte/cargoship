@@ -50,20 +50,26 @@ const (
 // It is injected rather than imported because src/cmd imports this package to reach ModuleName and
 // Run, and a package cannot import the package that imports it. What the indirection costs is that
 // the flag names below are written out here instead of referenced from src/cmd; what keeps them
-// true is TestEngineConfigSyncModuleArgsParse in src/cmd, which parses a fully populated argument vector
-// against the real command.
+// true is TestModuleArgsParse in src/cmd, which parses each module's widest argument vector against
+// the real command.
 type Exec func(ctx context.Context, argv []string) error
 
 // action runs one module. It reports what happened through resp and returns an error only for a
 // failure Ansible should see as one.
 type action func(ctx context.Context, exec Exec, args *Args, resp *Response) error
 
-// modules is every action this binary answers as. It holds one entry deliberately:
-// engine-config-sync is the most Ansible-shaped action cargoship has -- converge configuration,
-// report drift, restart services -- so it is the cheapest place to prove the contract before
-// taking on apply's argument surface.
+// modules is every action this binary answers as.
+//
+// These are the actions that converge a fleet, which is what a playbook is for. Package creation
+// is deliberately absent: it builds an artifact on one machine from a definition in a repository,
+// which is a build step rather than a convergence, and Ansible has nothing to offer it that a
+// pipeline does not already do better.
 var modules = map[string]action{
+	"apply":              runApply,
 	"engine_config_sync": runEngineConfigSync,
+	"kube_config":        runKubeConfig,
+	"prepare":            runPrepare,
+	"reset":              runReset,
 }
 
 // Modules returns the actions this binary answers as, sorted.

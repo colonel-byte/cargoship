@@ -25,64 +25,148 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fullEngineConfigSyncArgs exercises every parameter the module renders as a flag, so that the
-// vector the parse below is handed is the widest one a playbook can produce.
-const fullEngineConfigSyncArgs = `{
-	"package": "./package.tar.zst",
-	"inventory": {
-		"groups": {"controller": ["kc01"], "worker": ["kw01"]},
-		"cluster": {"name": "bubbles", "loadbalancer": "bubbles-kc.test.com"}
-	},
-	"concurrency": 4,
-	"work_concurrency": "25%",
-	"label_nodes": true,
-	"update_kubeconfig": true,
-	"kubeconfig": "/tmp/kubeconfig",
-	"values": ["/tmp/values.yaml"],
-	"timeout": "45m",
-	"log_level": "debug",
-	"log_format": "json",
-	"vault_password_file": "/tmp/vault-pass",
-	"age_identity_file": ["/tmp/age.key"],
-	"_ansible_check_mode": true
+// moduleArgs holds a fully populated parameter document for each module, so that the vector the
+// parse below is handed is the widest one a playbook can produce.
+var moduleArgs = map[string]string{
+	"engine_config_sync": `{
+		"package": "./package.tar.zst",
+		"inventory": ` + moduleInventory + `,
+		"concurrency": 4,
+		"work_concurrency": "25%",
+		"label_nodes": true,
+		"update_kubeconfig": true,
+		"kubeconfig": "/tmp/kubeconfig",
+		"values": ["/tmp/values.yaml"],
+		"timeout": "45m",
+		"public_key": "/tmp/cosign.pub",
+		"verify": "always",
+		"log_level": "debug",
+		"log_format": "json",
+		"vault_password_file": "/tmp/vault-pass",
+		"age_identity_file": ["/tmp/age.key"],
+		"_ansible_check_mode": true
+	}`,
+	"apply": `{
+		"package": "./package.tar.zst",
+		"inventory": ` + moduleInventory + `,
+		"concurrency": 4,
+		"work_concurrency": "25%",
+		"hosts": true,
+		"firewall": false,
+		"fapolicyd": true,
+		"label_nodes": true,
+		"allow_unmanaged_nodes": true,
+		"update_kubeconfig": true,
+		"kubeconfig": "/tmp/kubeconfig",
+		"values": ["/tmp/values.yaml"],
+		"timeout": "45m",
+		"public_key": "/tmp/cosign.pub",
+		"verify": "always",
+		"log_level": "debug",
+		"log_format": "json",
+		"vault_password_file": "/tmp/vault-pass",
+		"age_identity_file": ["/tmp/age.key"],
+		"_ansible_check_mode": true
+	}`,
+	"prepare": `{
+		"package": "./package.tar.zst",
+		"inventory": ` + moduleInventory + `,
+		"concurrency": 4,
+		"work_concurrency": "25%",
+		"hosts": true,
+		"firewall": false,
+		"fapolicyd": true,
+		"values": ["/tmp/values.yaml"],
+		"timeout": "45m",
+		"public_key": "/tmp/cosign.pub",
+		"verify": "always",
+		"log_level": "debug",
+		"log_format": "json",
+		"_ansible_check_mode": true
+	}`,
+	"reset": `{
+		"inventory": ` + moduleInventory + `,
+		"distro": "rke2",
+		"concurrency": 4,
+		"work_concurrency": "25%",
+		"hosts": true,
+		"firewall": false,
+		"fapolicyd": true,
+		"log_level": "debug",
+		"log_format": "json",
+		"_ansible_check_mode": true
+	}`,
+	"kube_config": `{
+		"inventory": ` + moduleInventory + `,
+		"distro": "rke2",
+		"kubeconfig": "/tmp/kubeconfig",
+		"log_level": "debug",
+		"log_format": "json"
+	}`,
+}
+
+// moduleInventory is the smallest inventory that translates and validates.
+const moduleInventory = `{
+	"groups": {"controller": ["kc01"], "worker": ["kw01"]},
+	"cluster": {"name": "bubbles", "loadbalancer": "bubbles-kc.test.com"}
 }`
 
-// TestEngineConfigSyncModuleArgsParse is what keeps the flag names in src/internal/ansiblemod
-// true.
+// TestModuleArgsParse is what keeps the flag names in src/internal/ansiblemod true.
 //
 // That package cannot import this one -- this one imports it -- so it spells the flags out. A
 // rename here would otherwise be found by an operator, at the point a playbook failed against a
-// live fleet, rather than by CI. Parsing the vector against the real command closes that: a flag
-// that no longer exists, or that changed type, fails here.
-func TestEngineConfigSyncModuleArgsParse(t *testing.T) {
-	argsPath := filepath.Join(t.TempDir(), "args.json")
-	require.NoError(t, os.WriteFile(argsPath, []byte(fullEngineConfigSyncArgs), 0o600))
+// live fleet, rather than by CI. Parsing each module's widest vector against the real command
+// closes that: a flag that no longer exists, or that changed type, fails here.
+func TestModuleArgsParse(t *testing.T) {
+	for _, tt := range []struct {
+		module  string
+		command string
+		// confirm is the command's confirmation flag, empty for a command without one.
+		confirm string
+		// dryRun is whether check mode should have rendered a dry run.
+		dryRun bool
+	}{
+		{module: "engine_config_sync", command: "engine-config-sync", confirm: InstallEngineConfigSyncConfirm, dryRun: true},
+		{module: "apply", command: "apply", confirm: InstallConfirm, dryRun: true},
+		{module: "prepare", command: "prepare", confirm: InstallConfirm, dryRun: true},
+		{module: "reset", command: "reset", confirm: InstallResetConfirm, dryRun: true},
+		{module: "kube_config", command: "kube-config"},
+	} {
+		t.Run(tt.module, func(t *testing.T) {
+			argsPath := filepath.Join(t.TempDir(), "args.json")
+			require.NoError(t, os.WriteFile(argsPath, []byte(moduleArgs[tt.module]), 0o600))
 
-	var argv []string
-	code := withStdout(t, func() int {
-		return ansiblemod.Run(context.Background(), "engine_config_sync",
-			[]string{"cargoship_engine_config_sync", argsPath},
-			func(_ context.Context, got []string) error {
-				argv = got
-				return nil
+			var argv []string
+			code := withStdout(t, func() int {
+				return ansiblemod.Run(context.Background(), tt.module,
+					[]string{ansiblemod.Prefix + tt.module, argsPath},
+					func(_ context.Context, got []string) error {
+						argv = got
+						return nil
+					})
 			})
-	})
-	require.Equal(t, 0, code)
-	require.NotEmpty(t, argv)
+			require.Equal(t, 0, code)
+			require.NotEmpty(t, argv, "the module rendered no command line")
 
-	target, flags, err := NewCargoshipCommand().Find(argv)
-	require.NoError(t, err)
-	require.Equal(t, "engine-config-sync", target.Name())
-	require.NoError(t, target.ParseFlags(flags))
+			target, flags, err := NewCargoshipCommand().Find(argv)
+			require.NoError(t, err)
+			require.Equal(t, tt.command, target.Name())
+			require.NoError(t, target.ParseFlags(flags))
 
-	// Spot-check the two that carry meaning rather than just a value: the dry run check mode
-	// maps onto, and the confirmation a module has no terminal to give.
-	dryRun, err := target.Flags().GetBool(InstallDryRun)
-	require.NoError(t, err)
-	require.True(t, dryRun)
-	confirm, err := target.Flags().GetBool(InstallEngineConfigSyncConfirm)
-	require.NoError(t, err)
-	require.True(t, confirm)
+			// Spot-check the two flags that carry meaning rather than just a value: the dry run
+			// check mode maps onto, and the confirmation a module has no terminal to give.
+			if tt.dryRun {
+				dryRun, err := target.Flags().GetBool(InstallDryRun)
+				require.NoError(t, err)
+				require.True(t, dryRun)
+			}
+			if tt.confirm != "" {
+				confirm, err := target.Flags().GetBool(tt.confirm)
+				require.NoError(t, err)
+				require.True(t, confirm)
+			}
+		})
+	}
 }
 
 func TestAnsibleModuleIgnoresTheOrdinaryCLI(t *testing.T) {

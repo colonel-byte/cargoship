@@ -179,7 +179,7 @@ func TestBuildEngineConfigSyncArgsFull(t *testing.T) {
 		Kubeconfig:        "/tmp/kubeconfig",
 		Values:            []string{"/tmp/a.yaml", "/tmp/b.yaml"},
 		Timeout:           "45m",
-		LogFormat:         "json",
+		common:            common{LogFormat: "json"},
 		VaultPasswordFile: "/tmp/vault-pass",
 		AgeIdentityFiles:  []string{"/tmp/age.key"},
 	}
@@ -201,9 +201,9 @@ func TestBuildEngineConfigSyncArgsFull(t *testing.T) {
 }
 
 func TestLogLevelParameterBeatsVerbosity(t *testing.T) {
-	p := engineConfigSyncParams{LogLevel: "warn"}
-	require.Equal(t, "warn", logLevel(&p, Control{Verbosity: 3}))
-	require.Empty(t, logLevel(&engineConfigSyncParams{}, Control{}))
+	require.Equal(t, "warn", logLevel("warn", Control{Verbosity: 3}))
+	require.Equal(t, "debug", logLevel("", Control{Verbosity: 1}))
+	require.Empty(t, logLevel("", Control{}))
 }
 
 // runModule drives Run with fd 1 pointed at a file, so that the stdout guard is exercised rather
@@ -497,4 +497,130 @@ func TestRunCheckModeReportsOutstandingWork(t *testing.T) {
 			require.Equal(t, tc.planned, resp.Cargoship.PhasesPlanned)
 		})
 	}
+}
+
+func TestBuildApplyArgsFull(t *testing.T) {
+	concurrency := 4
+	yes, no := true, false
+	p := applyParams{
+		Package:             "./package.tar.zst",
+		Concurrency:         &concurrency,
+		WorkConcurrency:     "25%",
+		hostUpdates:         hostUpdates{Hosts: &yes, Firewall: &no, FAPolicyd: &yes},
+		LabelNodes:          &yes,
+		AllowUnmanagedNodes: &yes,
+		UpdateKubeconfig:    &yes,
+		Kubeconfig:          "/tmp/kubeconfig",
+		Values:              []string{"/tmp/a.yaml"},
+		Timeout:             "45m",
+		VaultPasswordFile:   "/tmp/vault-pass",
+		AgeIdentityFiles:    []string{"/tmp/age.key"},
+		verification:        verification{PublicKey: "/tmp/cosign.pub", Verify: "always"},
+	}
+	argv := buildApplyArgs(&p, "/tmp/inventory.yaml", Control{})
+	joined := strings.Join(argv, " ")
+
+	require.Equal(t, "apply", argv[0])
+	require.Equal(t, "./package.tar.zst", argv[1])
+	require.Contains(t, joined, "--config /tmp/inventory.yaml")
+	require.Contains(t, joined, "--confirm")
+	require.Contains(t, joined, "--hosts=true")
+	require.Contains(t, joined, "--firewall=false")
+	require.Contains(t, joined, "--fapolicyd=true")
+	require.Contains(t, joined, "--allow-unmanaged-nodes=true")
+	require.Contains(t, joined, "--key /tmp/cosign.pub")
+	require.Contains(t, joined, "--verify always")
+	require.NotContains(t, joined, "--dry-run")
+}
+
+func TestBuildPrepareArgsDefaults(t *testing.T) {
+	p := prepareParams{Package: "./package.tar.zst"}
+	require.Equal(t, []string{
+		"prepare", "./package.tar.zst",
+		"--config", "/tmp/inventory.yaml",
+		"--confirm",
+		"--no-color",
+	}, buildPrepareArgs(&p, "/tmp/inventory.yaml", Control{}))
+}
+
+// TestPrepareRejectsKeyMaterialParameters pins the parameter surfaces to the commands they render.
+// `cargoship prepare` reads no encrypted value, so a playbook that hands it a vault password has
+// misunderstood something and is told which parameter.
+func TestPrepareRejectsKeyMaterialParameters(t *testing.T) {
+	args, err := ReadArgs(writeArgs(t, `{"package": "p", "vault_password_file": "/tmp/vault-pass"}`))
+	require.NoError(t, err)
+
+	var p prepareParams
+	require.ErrorContains(t, args.Params(&p), "vault_password_file")
+}
+
+func TestBuildResetArgs(t *testing.T) {
+	no := false
+	p := resetParams{Distro: "rke2", hostUpdates: hostUpdates{Firewall: &no}}
+	joined := strings.Join(buildResetArgs(&p, "/tmp/inventory.yaml", Control{CheckMode: true}), " ")
+
+	// Reset takes no package: the positional argument is absent and the distro is named.
+	require.True(t, strings.HasPrefix(joined, "reset --config /tmp/inventory.yaml"))
+	require.Contains(t, joined, "--distro rke2")
+	require.Contains(t, joined, "--firewall=false")
+	require.Contains(t, joined, "--dry-run")
+}
+
+func TestBuildKubeConfigArgs(t *testing.T) {
+	p := kubeConfigParams{Distro: "k3s", Kubeconfig: "/tmp/kubeconfig"}
+	argv := buildKubeConfigArgs(&p, "/tmp/inventory.yaml", Control{})
+	require.Equal(t, []string{
+		"kube-config",
+		"--config", "/tmp/inventory.yaml",
+		"--no-color",
+		"--distro", "k3s",
+		"--kubeconfig", "/tmp/kubeconfig",
+	}, argv)
+}
+
+// TestRunKubeConfigSkipsUnderCheckMode is what an action without a dry run owes an operator who
+// asked for one: the task is reported skipped and nothing is run. Running anyway would change the
+// management node during a run that was asked only to describe itself.
+func TestRunKubeConfigSkipsUnderCheckMode(t *testing.T) {
+	ran := false
+	argv := []string{"cargoship_kube_config", writeArgs(t,
+		`{"_ansible_check_mode": true, "inventory": `+minimalInventory+`}`)}
+
+	code, out := runModule(t, "kube_config", argv, func(context.Context, []string) error {
+		ran = true
+		return nil
+	})
+	require.Equal(t, 0, code)
+	require.False(t, ran)
+
+	resp := decodeOne(t, out)
+	require.True(t, resp.Skipped)
+	require.False(t, resp.Changed)
+	require.False(t, resp.Failed)
+	require.Contains(t, resp.Msg, "no dry run")
+	require.Empty(t, resp.Cargoship.InventoryPath, "a skipped task writes nothing")
+}
+
+func TestRunKubeConfigRunsOutsideCheckMode(t *testing.T) {
+	var got []string
+	argv := []string{"cargoship_kube_config", writeArgs(t,
+		`{"distro": "rke2", "inventory": `+minimalInventory+`}`)}
+
+	code, out := runModule(t, "kube_config", argv, func(_ context.Context, argv []string) error {
+		got = argv
+		return nil
+	})
+	require.Equal(t, 0, code)
+
+	resp := decodeOne(t, out)
+	require.False(t, resp.Skipped)
+	require.False(t, resp.Failed)
+	require.Equal(t, "kube-config", got[0])
+	require.NotContains(t, got, "--confirm")
+}
+
+func TestModulesAreTheFleetActions(t *testing.T) {
+	require.Equal(t,
+		[]string{"apply", "engine_config_sync", "kube_config", "prepare", "reset"},
+		Modules())
 }
