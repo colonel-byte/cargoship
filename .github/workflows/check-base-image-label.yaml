@@ -1,0 +1,88 @@
+---
+name: Check base image label
+
+on:
+  pull_request:
+    paths:
+      - containers/**/Dockerfile
+      - .github/workflows/check-base-image-label.yaml
+      # add to run on release please branch
+      - .release-please-manifest.json
+      - CHANGELOG.md
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-base-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # org.opencontainers.image.base.name is written by hand while the FROM line is bumped
+      # by dependabot, so the two drift apart silently and consumers read a label that names
+      # an image we stopped building on. This compares the final FROM of each Dockerfile
+      # (digest stripped -- the label carries the human-readable tag) against the label.
+      #
+      # A ref pinned only by digest has no tag left once the digest is stripped, so it gets
+      # the :latest that a registry would imply anyway. containers/base is that shape.
+      - name: Compare FROM against base.name
+        id: drift
+        run: |
+          : > drift.md
+          for f in containers/*/Dockerfile; do
+            from=$(grep -E '^FROM[[:space:]]' "$f" | tail -n 1)
+            ref=$(printf '%s' "$from" \
+              | sed -E 's/^FROM[[:space:]]+//; s/--[a-zA-Z-]+=[^[:space:]]+[[:space:]]+//g; s/[[:space:]]+[Aa][Ss][[:space:]]+[^[:space:]]+$//')
+            expected=${ref%%@sha256:*}
+            # No ':' in the final path segment means no tag survived the digest strip.
+            case "${expected##*/}" in
+              *:*) ;;
+              *) expected="$expected:latest" ;;
+            esac
+            actual=$(sed -nE 's/.*org\.opencontainers\.image\.base\.name="([^"]*)".*/\1/p' "$f" | tail -n 1)
+
+            if [ "$expected" != "$actual" ]; then
+              echo "| \`$f\` | \`$expected\` | \`${actual:-<missing>}\` |" >> drift.md
+              echo "::warning file=$f::base.name is '${actual:-<missing>}' but FROM resolves to '$expected'"
+            fi
+          done
+          if [ -s drift.md ]; then echo "drifted=true" >> "$GITHUB_OUTPUT"; fi
+
+      # Kept as a comment rather than a failure: a stale label does not break the build, and
+      # the pull request that bumps the FROM line is exactly where the fix belongs.
+      - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          DRIFTED: ${{ steps.drift.outputs.drifted }}
+        run: |
+          marker='<!-- base-name-drift -->'
+          if [ "$DRIFTED" = "true" ]; then
+            {
+              echo "$marker"
+              echo "### Base image label drift"
+              echo
+              echo "\`org.opencontainers.image.base.name\` no longer matches the final \`FROM\`:"
+              echo
+              echo "| Dockerfile | FROM | base.name |"
+              echo "| --- | --- | --- |"
+              cat drift.md
+              echo
+              echo "Update the label to match the FROM column."
+            } > body.md
+          else
+            printf '%s\n%s\n' "$marker" "Base image labels match their \`FROM\` lines." > body.md
+          fi
+
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq "map(select(.body | startswith(\"$marker\"))) | .[0].id // empty")
+
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$id" -F body=@body.md --silent
+          elif [ "$DRIFTED" = "true" ]; then
+            gh api --method POST "repos/$REPO/issues/$PR/comments" -F body=@body.md --silent
+          fi
