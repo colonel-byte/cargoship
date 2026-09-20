@@ -41,6 +41,7 @@ builds:
     goos:
       - linux
       - darwin
+      # - windows
     goarch:
       - arm64
       - amd64
@@ -98,20 +99,7 @@ nfpms:
       - src: ansible/colonel_byte/cargoship
         dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship
         type: tree
-        # Explicit, and not a tidiness preference. nfpm's apk writer emits a `tree`
-        # entry's root directory with the Go fs.FileMode it stat'd, fs.ModeDir bit
-        # and all (apk/apk.go, `Mode: int64(file.FileInfo.Mode)`, still unmasked as
-        # of nfpm v2.47.0 -- the deb writer goes through tarHeader and is unaffected).
-        # 0o20000000755 does not fit a tar header's octal mode field, so Go falls
-        # back to base-256 encoding and apk-tools rejects the package outright:
-        # `ERROR: cargoship-<version>: v2 package format error`, on apk-tools 2 and 3
-        # alike. Setting the mode here keeps it inside the octal field.
-        #
-        # It applies to the whole tree, so the collection's YAML ships 0755 rather
-        # than 0644. That is cosmetic -- Ansible reads them either way -- and it is
-        # the only lever nfpm offers: a separate `type: dir` entry for the same
-        # destination is refused as a content collision. Drop this when nfpm masks
-        # the mode with .Perm(), and check `apk add` still works when you do.
+        # Explicit, and not a tidiness preference.
         file_info:
           mode: 0755
       # The module files. There is no Python module behind any of them: the binary answers
@@ -137,8 +125,6 @@ nfpms:
       prefixes:
         - /usr/bin
       signature:
-        # The OpenPGP key, shared with deb below. apk needs a different key entirely --
-        # see the note on apk.signature. NFPM_PASSPHRASE unlocks it when it is protected.
         key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
     deb:
       compression: zstd
@@ -146,22 +132,6 @@ nfpms:
         key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
     apk:
       signature:
-        # A different key from rpm and deb, and not an oversight. nfpm signs rpm and deb
-        # with OpenPGP, but apk with a bare RSA key: apk/apk.go hands the digest to
-        # internal/sign.RSASignSHA1Digest, which parses the file as a PEM RSA private
-        # key. Pointing this at the GPG key fails the build outright, with
-        # `signing error: no PEM block found`.
-        #
-        # The key must also be unencrypted. nfpm's rsa.go only understands the legacy
-        # DEK-Info PEM encryption, so the PKCS#8 output of `openssl genrsa -aes256` is
-        # rejected -- `key type "ENCRYPTED PRIVATE KEY" is not supported` -- and
-        # NFPM_APK_PASSPHRASE cannot help. It is protected as a CI secret instead.
-        #
-        # key_name is left at its default, the maintainer address parsed from the
-        # `maintainer` field above. It is baked into the package as the signature member
-        # `.SIGN.RSA.<key_name>.rsa.pub`, and a consumer must install the public key at
-        # /etc/apk/keys/<key_name>.rsa.pub -- so changing it later breaks the path every
-        # existing consumer already deployed. See docs/dev/goreleaser.md.
         key_file: '{{ if ne (index .Env "APK_RSA_KEY_PATH") "" }}{{ .Env.APK_RSA_KEY_PATH }}{{ else }}{{ end }}'
 
 dockers_v2:
@@ -185,8 +155,6 @@ dockers_v2:
       org.opencontainers.image.created: "{{ .CommitDate }}"
 
   - id: cargoship-ubi
-    # Pulls in the nfpms artifacts instead of the raw binary: containers/ubi/Dockerfile
-    # installs the .rpm so the package is registered in the image's rpmdb.
     ids:
       - packagers
     dockerfile: containers/ubi/Dockerfile
@@ -230,8 +198,6 @@ dockers_v2:
     #   - crypto/software@conlon.dev.gpg
 
   - id: cargoship-ansible
-    # Pulls in the nfpms artifacts instead of the raw binary: containers/ansible/Dockerfile
-    # installs the .apk, which is what carries the collection tree and the module symlinks.
     ids:
       - packagers
     dockerfile: containers/ansible/Dockerfile
@@ -249,7 +215,8 @@ dockers_v2:
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.created: "{{ .CommitDate }}"
     extra_files:
-      - crypto/software@conlon.dev.rsa.pub
+      - crypto/software@conlon.dev.gpg
+      - ansible/colonel_byte/cargoship/requirements.yml
 
 changelog:
   sort: asc

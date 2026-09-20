@@ -14,7 +14,7 @@
 
 # syntax=docker/dockerfile:1
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:984df0a2b8d9011d419b0ad260b25f6b74b7ce69ab0595b75522e30f8849f27f
+FROM ghcr.io/almalinux/10-minimal:10.2@sha256:ee053be6b73674fdd32ec1dcee1e0b85dc2fa8b2f75976cbf8e72cfda2f718da
 
 ARG TARGETPLATFORM
 
@@ -29,7 +29,10 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
 
 ARG UID=65532
 ARG GID=65532
-RUN groupadd --gid "${GID}" nonroot \
+# hadolint ignore=DL3040,DL3041
+RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 shadow-utils \
+  && microdnf clean all \
+  && groupadd --gid "${GID}" nonroot \
   && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \
   && mkdir -p \
     /home/nonroot/.cargoship-cache \
@@ -37,13 +40,16 @@ RUN groupadd --gid "${GID}" nonroot \
     /home/nonroot/.ssh \
     /workspace \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
-  && chown -R "${UID}:${GID}" /home/nonroot /workspace
+  && chown -R "${UID}:${GID}" /home/nonroot /workspace \
+  && microdnf remove shadow-utils -y \
+  && microdnf clean all \
+  && rm -rf /var/cache/yum
 
 LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
   org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
   org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="registry.access.redhat.com/ubi9/ubi-minimal:9.8"
+  org.opencontainers.image.base.name="ghcr.io/almalinux/10-minimal:10.2"
 
 ENV HOME=/home/nonroot
 

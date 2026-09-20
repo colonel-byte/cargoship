@@ -14,24 +14,29 @@
 
 # syntax=docker/dockerfile:1
 
-FROM docker.io/alpine/ansible:2.21.0@sha256:1a8ac3fd28c217210a9530b385f57d4b8afbe13956e5f0043063d98f5bd71bd5
+FROM ghcr.io/almalinux/10-base:10.2@sha256:f110fee4d46a239ed55f72f1f927cb89b2dfe1c2a8728208806eba5b73798762
 
 ARG TARGETPLATFORM
 
-COPY ${TARGETPLATFORM}/*.apk /tmp/apks/
-COPY crypto/software@conlon.dev.rsa.pub /etc/apk/keys/software@conlon.dev.rsa.pub
+COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
+COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
+COPY ansible/colonel_byte/cargoship/requirements.yml /etc/cargoship/ansible/requirements.yml
 
-# hadolint ignore=DL3018
-RUN apk verify /tmp/apks/*.apk \
-  && apk add --no-cache /tmp/apks/*.apk \
-  && rm -rf /tmp/apks \
+# hadolint ignore=DL3040,DL3041
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
+  && rpm --checksig /tmp/rpms/*.rpm \
+  && rpm --install --verbose /tmp/rpms/*.rpm \
+  && rm -rf /tmp/rpms \
   && cargoship version \
-  && test -x /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_apply
+  && dnf install -y --nodocs --setopt=install_weak_deps=0 ansible-core \
+  && dnf clean all \
+  && rm -rf /var/cache/yum \
+  && ansible-galaxy collection install --requirements-file /etc/cargoship/ansible/requirements.yml --collections-path /usr/share/ansible/collections/ansible_collections
 
 ARG UID=65532
 ARG GID=65532
-RUN addgroup -g "${GID}" nonroot \
-  && adduser -u "${UID}" -G nonroot -h /home/nonroot -D nonroot \
+RUN groupadd --gid "${GID}" nonroot \
+  && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \
   && mkdir -p \
     /home/nonroot/.cargoship-cache \
     /home/nonroot/.zarf \
@@ -40,11 +45,11 @@ RUN addgroup -g "${GID}" nonroot \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /home/nonroot /workspace
 
-LABEL org.opencontainers.image.title="cargoship-ansible" \
+LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection" \
   org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
   org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="docker.io/alpine/ansible:2.21.0"
+  org.opencontainers.image.base.name="ghcr.io/almalinux/10-base:10.2"
 
 ENV HOME=/home/nonroot
 

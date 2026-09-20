@@ -1,0 +1,35 @@
+---
+name: Check Ansible collection pins
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-ansible-requirements:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Asks galaxy.ansible.com what each pinned version declares in requires_ansible and
+      # fails when that does not cover the controller range in the collection's
+      # meta/runtime.yml. Unlike the other check workflows this one reaches the network, so a
+      # Galaxy outage fails the job -- which is the right trade for pins no dependency bot
+      # can validate. See docs/agent/choice-ansible-collection-pins.md.
+      #
+      # This does not check the pins are the newest available: an upstream release published
+      # this morning must not fail an unrelated pull request. Run
+      # `mage generate:ansibleRequirements` to move the pins forward.
+      - name: Check pins support the declared ansible-core
+        run: go run -mod=vendor ./magefiles/core test:ansibleRequirements
+        env:
+          GOFLAGS: -mod=vendor
