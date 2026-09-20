@@ -58,7 +58,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 # Publishing pushes gigabytes to a registry under a tag derived from the package version,
 # so two runs of the same flavor must not race each other to the same reference. The ref is
@@ -80,6 +79,11 @@ env:
 
 jobs:
   publish-example:
+    # packages: write is the push to GHCR. When release.yaml calls this workflow its caller
+    # job grants the same pair, since a called workflow cannot hold more than its caller.
+    permissions:
+      contents: read
+      packages: write
     # Label gated on pull requests: every run pulls and pushes gigabytes, which is not what
     # an unrelated pull request should spend. Fork pull requests are excluded because they
     # get neither the signing secrets nor a token that can write packages, so the run could
