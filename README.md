@@ -142,5 +142,5 @@ GitHub Actions workflows run lint checks, dependency validation, cross-compilati
 
 Cargoship draws major design and engineering inspiration from:
 
-*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) — For elegant SSH-based multi-node orchestration and configuration patterns.
-*   [colonel-byte/cargoship](https://github.com/colonel-byte/cargoship) — For air-gapped image and file packaging and offline-first design.
+*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) - For elegant SSH-based multi-node orchestration and configuration patterns.
+*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) - For air-gapped image and file packaging and offline-first design.
