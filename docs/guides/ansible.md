@@ -120,6 +120,82 @@ A variable under the `cargoship_` prefix that cargoship does not read is an erro
 
 Variables under the `ansible_` prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible's own connection plugins, and they are not cargoship's to police.
 
+## Running cargoship as an Ansible module
+
+The same translation runs inside a playbook. The cargoship binary is the Ansible module: it is installed as a set of symlinks named `cargoship_<action>`, and a symlink's name selects the action. There is no separate module package and nothing to install on the managed nodes.
+
+One module ships today, `cargoship_engine_config_sync`. It converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does.
+
+```yaml
+- name: Converge engine configuration
+  cargoship_engine_config_sync:
+    package: /srv/staging/rke2-1.31.tar.zst
+    inventory_path: /srv/staging/generated-inventory.yaml
+    inventory:
+      groups: "{{ groups }}"
+      hostvars: "{{ hostvars }}"
+      cluster:
+        name: bubbles
+        loadbalancer: bubbles-kc.test.com
+    vault_password_file: /srv/staging/vault-pass
+  delegate_to: localhost
+  no_log: true
+```
+
+The task runs on the management node -- `connection: local` when the Ansible controller is that node, `delegate_to` when they are separate. Cargoship connects to the fleet itself, from there.
+
+### Parameters
+
+`inventory` takes the same document described above, `groups` and `hostvars` included. Everything else maps onto a flag of `cargoship engine-config-sync`.
+
+| Parameter | Flag | Notes |
+| --- | --- | --- |
+| `package` | the positional argument | Required. The distro package to synchronise from. |
+| `inventory` | | Required. The resolved Ansible inventory, plus `cluster`. |
+| `inventory_path` | `--config` | Where to write the generated document. A private temporary file when unset. |
+| `concurrency` | `--concurrency` | |
+| `work_concurrency` | `--work-concurrency` | |
+| `label_nodes` | `--label-nodes` | |
+| `update_kubeconfig` | `--update-kubeconfig` | |
+| `kubeconfig` | `--kubeconfig` | |
+| `values` | `--values` | A list of files. |
+| `timeout` | `--timeout` | |
+| `vault_password_file` | `--vault-password-file` | |
+| `age_identity_file` | `--age-identity-file` | A list of files. |
+| `log_level` | `--log-level` | Defaults to `debug` when the play runs with `-v`. |
+| `log_format` | `--log-format` | |
+
+A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why `label_nodes: false` and omitting `label_nodes` are different.
+
+Key material is always named by a path, never given by value. Ansible writes a module's parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set `no_log: true` on the task regardless: a binary module has no per-parameter `no_log`, so the task-level setting is what suppresses the arguments and the result.
+
+### Check mode and changed
+
+`--check` runs cargoship's dry run. Phases opt into it one at a time -- a phase that has not said how it behaves under a dry run is reported and not run -- so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.
+
+The module reports `changed: true` for every run that succeeds, and says so in `cargoship.changedSignal`, which reads `unknown`. Cargoship's phases do not yet report whether they changed anything. Until they do, a handler notified by this task fires on every run. Gate on the result rather than on `changed` if that matters to you.
+
+### The result
+
+```json
+{
+  "changed": true,
+  "msg": "synchronised engine configuration across the fleet",
+  "cargoship": {
+    "module": "engine_config_sync",
+    "inventoryPath": "/srv/staging/generated-inventory.yaml",
+    "inventoryKept": true,
+    "checkMode": false,
+    "command": ["cargoship", "engine-config-sync", "..."],
+    "changedSignal": "unknown"
+  }
+}
+```
+
+`command` is the command line the module ran, so a failure can be reproduced by hand on the management node. `inventoryPath` is the generated document. A run that fails leaves it on disk whether or not you named the path, because it is the first thing to look at when a failure reads like the wrong cluster; a run that succeeds removes it unless the path was yours.
+
+Cargoship's own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.
+
 ## Checking the result
 
 The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.
