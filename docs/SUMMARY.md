@@ -96,6 +96,7 @@
 - [choice-removed-hosts](agent/choice-removed-hosts.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
+- [ideas-inventory-sources](agent/ideas-inventory-sources.md)
 
 
 -----------
