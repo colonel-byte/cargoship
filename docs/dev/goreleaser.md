@@ -15,8 +15,23 @@ A single `goreleaser release` run produces:
 *   **Archives** — `tar.gz` per OS/arch, named after `uname` conventions (`cargoship_Linux_x86_64.tar.gz`).
 *   **Packages** — `apk`, `deb`, and `rpm`, from the `nfpms` section, GPG-signed when `GPG_KEY_PATH` is set.
 *   **Container images** — two multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary) and `ghcr.io/colonel-byte/cargoship:<tag>-ubi` (Red Hat UBI, installs the rpm).
+*   **Ansible collection** — `colonel_byte-cargoship-<version>.tar.gz`, built from `ansible/colonel_byte/cargoship` and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.
 *   **SBOMs** — one per archive, via Syft.
 *   **Signatures** — cosign `sigstore.json` bundles over both the checksums file and every archive, plus registry signatures over both container images.
+
+## The Ansible Collection
+
+The collection is not built by a `builds` entry, because nothing about it is compiled. `hack/ansible-build-collection.sh` runs as a `before` hook, calls `ansible-galaxy collection build`, writes the tarball to `bin/ansible`, and signs it when `COSIGN_PRIVATE_KEY` is set. The `release.extra_files` globs then attach the tarball and the bundle.
+
+The script is given the release version and fails when `galaxy.yml` disagrees with it. release-please keeps that version in step through the `extra-files` entry in `release-please-config.json`, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot's version is not in `galaxy.yml` and never will be.
+
+The tarball is signed by the script rather than by the `signs` section, and is absent from `checksums.txt`, because both of those cover artifacts the pipeline itself produced. Verify it with its bundle:
+
+```sh
+cosign verify-blob --key cosign.pub \
+  --bundle colonel_byte-cargoship-<version>.tar.gz.sigstore.json \
+  colonel_byte-cargoship-<version>.tar.gz
+```
 
 ## Build Matrix
 
@@ -186,6 +201,7 @@ The property holds only because neither Dockerfile compiles anything.
 Each setup step in `.github/workflows/release.yaml` exists for a specific reason:
 
 *   **Syft** — generates the archive SBOMs.
+*   **ansible-core** — supplies `ansible-galaxy`, which builds the collection tarball in the `before` hook. Nothing else in the pipeline needs Ansible.
 *   **cosign** — signs checksums, archives, and the published images; needs `COSIGN_PRIVATE_KEY` and `COSIGN_PASSWORD`.
 *   **QEMU** — registers binfmt handlers for cross-platform builds. Required by the UBI image, whose `rpm --install` unpacks architecture-specific files and so must run on the target platform; its `linux/arm64` half runs under emulation. The static image does not need it — its only `RUN` is pinned to `$BUILDPLATFORM`.
 *   **Buildx** — required, not optional; provisions the container driver that can emit a multi-platform manifest.

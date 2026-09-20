@@ -1,0 +1,34 @@
+---
+# The cargoship action to run: apply, prepare, engine_config_sync, reset, or kube_config.
+cargoship_action: apply
+
+# The distro package to install, stage, or synchronise from. Required by every action except
+# reset and kube_config, which install nothing.
+cargoship_package: ""
+
+# The settings that belong to the cluster rather than to any host. name and loadbalancer are
+# required; profiles, registries, and values are optional and take the shape the inventory schema
+# documents. See docs/guides/setup-inv.md.
+cargoship_cluster: {}
+
+# The mapping from a cargoship role onto the Ansible groups that carry it, for an inventory that
+# does not name its groups controller and worker. Left empty, the default mapping applies.
+cargoship_role_groups: {}
+
+# Where to write the generated ZarfCluster document. A private temporary file when empty, removed
+# after a run that succeeded.
+cargoship_inventory_path: ""
+
+# Everything else the chosen module takes, passed through verbatim. See docs/guides/ansible.md for
+# the parameters of each module.
+cargoship_args: {}
+
+# The node cargoship runs on. It is the management node: the one the package and images were
+# staged onto, which reaches the fleet over SSH. Set this to the inventory name of that node when
+# it is not the Ansible controller.
+cargoship_delegate_to: localhost
+
+# Whether to print cargoship's own report on the run. The task itself is always no_log, because a
+# module's arguments name the fleet; the report holds file paths and phase names and no key
+# material.
+cargoship_show_result: false

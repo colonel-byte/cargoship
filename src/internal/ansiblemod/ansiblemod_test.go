@@ -39,7 +39,16 @@ func TestModuleName(t *testing.T) {
 	}{
 		{name: "plain binary", argv0: "/usr/bin/cargoship"},
 		{name: "module symlink", argv0: "/tmp/ansible/cargoship_engine_config_sync", want: "engine_config_sync", ok: true},
-		{name: "bare name", argv0: "cargoship_engine_config_sync", want: "engine_config_sync", ok: true},
+		{name: "bare name", argv0: "cargoship_apply", want: "apply", ok: true},
+		// Ansible runs a copy of the module file, under a name of its own making. This is the
+		// name every real module run arrives under; the symlink name above is only ever seen by
+		// an operator running the module by hand.
+		{
+			name:  "ansible copy",
+			argv0: "/home/op/.ansible/tmp/ansible-tmp-1/AnsiballZ_cargoship_apply",
+			want:  "apply", ok: true,
+		},
+		{name: "ansible copy of something else", argv0: "AnsiballZ_setup"},
 		// A name that is nothing but the prefix selects no action, so it is not module mode.
 		{name: "prefix only", argv0: "cargoship_"},
 		// The prefix is not enough. This is the name the repository builds its own binary under

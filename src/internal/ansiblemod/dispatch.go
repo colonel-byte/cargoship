@@ -40,6 +40,11 @@ import (
 const (
 	// Prefix is the basename prefix that puts the binary into module mode.
 	Prefix = "cargoship_"
+	// AnsiballZ is the prefix Ansible puts on a module file when it copies it to the machine that
+	// runs it. The copy is what actually executes, so the name the process sees is
+	// AnsiballZ_cargoship_apply rather than the cargoship_apply the collection holds, and the
+	// prefix has to come off before the name means anything.
+	AnsiballZ = "AnsiballZ_"
 	// EnvModule selects a module without a symlink. Tests have no reason to create symlinks to
 	// check the contract, and neither does an operator reproducing a module run by hand.
 	EnvModule = "CARGOSHIP_ANSIBLE_MODULE"
@@ -96,7 +101,7 @@ func ModuleName(argv0 string) (string, bool) {
 	if name := os.Getenv(EnvModule); name != "" {
 		return name, true
 	}
-	base := filepath.Base(argv0)
+	base := strings.TrimPrefix(filepath.Base(argv0), AnsiballZ)
 	name, ok := strings.CutPrefix(base, Prefix)
 	if !ok {
 		return "", false
