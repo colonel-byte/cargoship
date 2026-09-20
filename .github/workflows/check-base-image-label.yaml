@@ -6,6 +6,9 @@ on:
     paths:
       - containers/**/Dockerfile
       - .github/workflows/check-base-image-label.yaml
+      # add to run on release please branch
+      - .release-please-manifest.json
+      - CHANGELOG.md
 
 permissions:
   contents: read
