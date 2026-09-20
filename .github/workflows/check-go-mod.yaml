@@ -23,3 +23,14 @@ jobs:
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
+
+      # vendor/ carries four generated osv-scanner.toml files that keep the Scorecard
+      # Vulnerabilities check reporting on cargoship rather than on the JavaScript and Python
+      # tooling its Go dependencies ship in their own repositories. go mod vendor deletes them,
+      # so this fails the pull request that dropped one, and fails on a new dependency that
+      # brings in a lockfile nothing covers yet. See magefiles/vendor-osv.go.
+      #
+      # go run ./magefiles/core rather than mage: same targets, but it builds from vendor/ and
+      # needs no mage binary on the runner. See docs/AGENTS.md.
+      - name: Check vendored osv-scanner overrides
+        run: go run ./magefiles/core dev:verifyVendor
