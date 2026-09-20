@@ -15,9 +15,9 @@
 // Package ansiblemod lets the cargoship binary answer Ansible as a module.
 //
 // There is no second binary and no Python wrapper around this one. The binary presents itself as
-// several module files by looking at the name it was invoked under: a basename carrying the
-// cargoship_ prefix selects an action and enters module mode, and anything else is the ordinary
-// CLI. The module files are symlinks to the binary, so there is nothing extra to sign, publish, or
+// several module files by looking at the name it was invoked under: a basename of cargoship_
+// followed by the name of an action it answers as enters module mode, and anything else is the
+// ordinary CLI. The module files are symlinks to the binary, so there is nothing extra to sign, publish, or
 // carry through an airlock, and the thing answering Ansible is the thing doing the work.
 //
 // A module here does not reimplement a command. It turns the module's JSON parameters into the
@@ -79,13 +79,23 @@ func Modules() []string {
 // ModuleName returns the module this process was invoked as, and whether it was invoked as one at
 // all. The environment variable wins, so a test can drive module mode through the binary it
 // already builds.
+//
+// The name has to be one of the actions above, not merely carry the prefix. The prefix alone is
+// not rare enough to dispatch on: the repository builds its own binary as cargoship_linux_amd64,
+// every e2e suite runs that file, and an operator who keeps two versions side by side names them
+// something similar. Treating those as modules turns an ordinary command into a JSON object
+// nobody asked for. The cost is that a misspelled symlink runs the CLI instead of saying it is
+// not a module, which fails on the next line rather than this one.
 func ModuleName(argv0 string) (string, bool) {
 	if name := os.Getenv(EnvModule); name != "" {
 		return name, true
 	}
 	base := filepath.Base(argv0)
 	name, ok := strings.CutPrefix(base, Prefix)
-	if !ok || name == "" {
+	if !ok {
+		return "", false
+	}
+	if _, answers := modules[name]; !answers {
 		return "", false
 	}
 	return name, true

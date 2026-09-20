@@ -37,9 +37,15 @@ func TestModuleName(t *testing.T) {
 	}{
 		{name: "plain binary", argv0: "/usr/bin/cargoship"},
 		{name: "module symlink", argv0: "/tmp/ansible/cargoship_engine_config_sync", want: "engine_config_sync", ok: true},
-		{name: "bare name", argv0: "cargoship_apply", want: "apply", ok: true},
+		{name: "bare name", argv0: "cargoship_engine_config_sync", want: "engine_config_sync", ok: true},
 		// A name that is nothing but the prefix selects no action, so it is not module mode.
 		{name: "prefix only", argv0: "cargoship_"},
+		// The prefix is not enough. This is the name the repository builds its own binary under
+		// and the name every e2e suite runs, and it is an ordinary CLI invocation.
+		{name: "the build name", argv0: "build/cargoship_linux_amd64"},
+		// A name the binary does not answer as is the CLI too, including a misspelled module
+		// file, which fails where it parses the arguments file as a command.
+		{name: "misspelled module", argv0: "cargoship_engine_confg_sync"},
 		{name: "unrelated", argv0: "kubectl"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
