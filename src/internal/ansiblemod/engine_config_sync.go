@@ -27,7 +27,7 @@ import (
 )
 
 // The flags of `cargoship engine-config-sync` this module renders. They are spelled out rather
-// than referenced from src/cmd for the reason given on Exec, and TestEngineConfigSyncArgsParse in
+// than referenced from src/cmd for the reason given on Exec, and TestEngineConfigSyncModuleArgsParse in
 // src/cmd parses a fully populated argument vector against the real command so that a rename in
 // the CLI fails a test rather than a playbook.
 const (

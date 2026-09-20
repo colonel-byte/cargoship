@@ -50,7 +50,7 @@ const (
 // It is injected rather than imported because src/cmd imports this package to reach ModuleName and
 // Run, and a package cannot import the package that imports it. What the indirection costs is that
 // the flag names below are written out here instead of referenced from src/cmd; what keeps them
-// true is TestEngineConfigSyncArgsParse in src/cmd, which parses a fully populated argument vector
+// true is TestEngineConfigSyncModuleArgsParse in src/cmd, which parses a fully populated argument vector
 // against the real command.
 type Exec func(ctx context.Context, argv []string) error
 
