@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-29ec57d3.js";
+            window.path_to_searchindex_js = "../searchindex-3f7b881f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2ee9e962.js"></script>
@@ -240,6 +240,7 @@
 <li><strong>The reference is repeated on every <code>FROM</code></strong> rather than hoisted into an <code>ARG</code>. Dependabot’s Dockerfile parser reads literal <code>FROM</code> lines only — it has no <code>ARG</code> resolution, so <code>FROM ${BASE_IMAGE}</code> is invisible to it and the pin would never be refreshed. It is also not stage-aware, so aliasing (<code>FROM alpine@sha256:... AS base</code> then <code>FROM base</code>) is no better: the bare stage reference parses as an image and produces a spurious <code>base:latest</code> dependency.</li>
 <li><strong><code>org.opencontainers.image.base.name</code> carries the tag only</strong>, without the digest. Dependabot rewrites <code>FROM</code> lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (<code>3.22</code> → <code>3.23</code>) means updating the label by hand, which is the comment sitting above it in both files.</li>
 </ul>
+<p><code>.github/workflows/check-base-image-label.yaml</code> catches that hand edit when it is forgotten. On any pull request touching a <code>Dockerfile</code> it compares each final <code>FROM</code>, digest stripped, against that file’s <code>base.name</code>, and comments on the pull request rather than failing the job — a stale label does not break the build, and the pull request bumping the <code>FROM</code> is where the fix belongs. The comparison is literal, so the label names the registry the <code>FROM</code> actually pulls from, mirror and all, rather than the upstream image that mirror copies.</p>
 <p>One base needs more care than the others. <strong><code>cgr.dev/chainguard/static</code> publishes <code>:latest</code> and nothing else</strong> on Chainguard’s free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date — it eventually stops resolving, and the build fails with <code>manifest unknown</code>. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.</p>
 <p><code>.github/dependabot.yaml</code> tracks both directories under its <code>docker</code> ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.</p>
 <h3 id="linting"><a class="header" href="#linting">Linting</a></h3>
