@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-03a80ff8.js";
+            window.path_to_searchindex_js = "searchindex-fa199b8f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2ee9e962.js"></script>
+        <script src="toc-99c0c22b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -4312,6 +4312,68 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>The alternative, dumping <code>nft list ruleset</code> into that file, would capture kube-proxy’s and the CNI’s rules along with cargoship’s and replay them at boot as static rules – stale ones, describing services that may no longer exist. Appending an include leaves the operator’s file otherwise intact, keeps cargoship’s contribution in one identifiable place, and stays correct when cargoship’s ruleset is regenerated. A host with neither conf file gets a warning rather than an error: the rules are loaded for this boot, but nothing will reload them at the next one.</p>
 <h2 id="one-inet-table-rather-than-separate-ip-and-ip6-tables"><a class="header" href="#one-inet-table-rather-than-separate-ip-and-ip6-tables">One <code>inet</code> table rather than separate <code>ip</code> and <code>ip6</code> tables</a></h2>
 <p>The <code>inet</code> family covers IPv4 and IPv6 in a single table, so a plan renders one table, one set of chains, and one transaction regardless of what the cluster’s addressing looks like. The cost is that address matches must name their family explicitly – <code>ip saddr</code> versus <code>ip6 saddr</code> – and that trusted addresses split into two sets, <code>cluster_v4</code> and <code>cluster_v6</code>, since a set has one type. Both are handled in rendering (<code>nftAddrFamily</code>, <code>nftSplitFamilies</code>) and are cheaper than maintaining two parallel tables and deciding which of them a dual-stack plan belongs in.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-vendor-carries-four-generated-osv-scannertoml-files"><a class="header" href="#why-vendor-carries-four-generated-osv-scannertoml-files">Why vendor/ carries four generated osv-scanner.toml files</a></h1>
+<p><code>go mod vendor</code> copies four files into <code>vendor/</code> that have nothing to do with Go: a <code>package-lock.json</code> under <code>golang.org/x/telemetry</code>, and a <code>requirements</code> file each under <code>github.com/theupdateframework/go-tuf</code>, <code>github.com/txn2/txeh</code> and <code>go.opentelemetry.io/otel</code>. Next to each of them now sits a generated <code>osv-scanner.toml</code> that tells a scanner to skip that ecosystem. This document records why those four files exist, why they are generated rather than committed by hand, and what they deliberately do not cover.</p>
+<h2 id="what-forced-it-1"><a class="header" href="#what-forced-it-1">What forced it</a></h2>
+<p>The <a href="https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship">OpenSSF Scorecard</a> Vulnerabilities check runs osv-scanner recursively over the whole checkout and scores it in <code>checks/evaluation/vulnerabilities.go</code> as <code>MaxResultScore - numVulnsFound</code>, floored at zero. There is no severity weighting and no reachability analysis: every finding is one point, so ten findings and four hundred score the same. The check read 0 against 42 findings, and <code>vendor/</code> supplied 40 of them.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Manifest</th><th>Ecosystem</th><th>Findings</th><th>What it pins</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vendor/golang.org/x/telemetry/package-lock.json</code></td><td>npm</td><td>34</td><td>The devDependencies of the web UI x/telemetry serves from its repo</td></tr>
+<tr><td><code>vendor/github.com/theupdateframework/go-tuf/requirements-test.txt</code></td><td>PyPI</td><td>5</td><td>The Python harness go-tuf runs its own conformance tests under</td></tr>
+<tr><td><code>vendor/github.com/txn2/txeh/requirements-docs.txt</code></td><td>PyPI</td><td>1</td><td>The MkDocs toolchain that builds txeh’s documentation site</td></tr>
+<tr><td><code>vendor/go.opentelemetry.io/otel/requirements.txt</code></td><td>PyPI</td><td>0</td><td>A <code>codespell</code> pin for otel’s own spelling check</td></tr>
+</tbody>
+</table>
+</div>
+<p>None of it is a cargoship dependency. Nothing in those files is compiled, executed, installed or shipped; they are in the tree because they happen to sit in the directory of a module cargoship imports Go packages from, and <code>go mod vendor</code> copies directories. <code>govulncheck -mode=source ./...</code> – which resolves what the binaries actually call – reports zero.</p>
+<p>So the advisories are true statements about postcss and mkdocs-material, and false statements about cargoship. The check was not measuring this repository.</p>
+<p>The otel row is zero findings today and has an override anyway. A <code>requirements.txt</code> with one package in it is one CVE away from costing a point, and the whole purpose of the arrangement is that a new advisory upstream is not an event here.</p>
+<h2 id="deleting-the-files-does-not-work-and-neither-does-un-vendoring"><a class="header" href="#deleting-the-files-does-not-work-and-neither-does-un-vendoring">Deleting the files does not work, and neither does un-vendoring</a></h2>
+<p><code>rm -rf vendor &amp;&amp; go mod vendor</code> puts all four back; they are part of what the vendoring step produces. Removing them by hand means removing them again after every dependency bump, and a run of <code>go mod vendor</code> between the removal and the Scorecard run silently undoes it.</p>
+<p>Dropping <code>vendor/</code> entirely would have removed the problem at the root and was never a candidate. The tree is vendored so the repository builds on a management node with no route to a module proxy; that constraint is the reason <code>vendor/</code> exists at all, and it is not negotiable for a scorecard point.</p>
+<h2 id="the-config-has-to-sit-beside-the-manifest"><a class="header" href="#the-config-has-to-sit-beside-the-manifest">The config has to sit beside the manifest</a></h2>
+<p>osv-scanner resolves configuration relative to the file it is scanning, not to the root of the scan, and it only consults a single root config when the caller passes <code>ConfigPath</code>. Scorecard’s <code>clients/osv.go</code> builds <code>osvscanner.ScannerActions</code> without one. A single <code>osv-scanner.toml</code> in the repository root therefore changes nothing at all – measured, not assumed:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Arrangement</th><th>Score</th><th>Findings</th></tr>
+</thead>
+<tbody>
+<tr><td>No config</td><td>0</td><td>42</td></tr>
+<tr><td>One <code>osv-scanner.toml</code> at the repository root</td><td>0</td><td>42</td></tr>
+<tr><td>One beside each of the four manifests</td><td>8</td><td>2</td></tr>
+</tbody>
+</table>
+</div>
+<p>That is the entire reason the files are scattered through <code>vendor/</code> instead of sitting in one obvious place at the top of the repository, which is what anyone would try first.</p>
+<h2 id="ecosystem-wide-overrides-not-lists-of-advisory-ids"><a class="header" href="#ecosystem-wide-overrides-not-lists-of-advisory-ids">Ecosystem-wide overrides, not lists of advisory IDs</a></h2>
+<p><code>[[IgnoredVulns]]</code> suppresses named advisories and works – it took the count from 42 to 41 when pointed at the one txeh finding. It was rejected because the claim being made here is not “these particular advisories are harmless”. It is “this ecosystem is not part of the build”, which is a property of the manifest and stays true as the advisory list changes. An ID list would need a commit every time a new CVE landed against a lockfile nobody here reads, and each of those commits would look like a security decision while being pure bookkeeping.</p>
+<p><code>[[PackageOverrides]]</code> with only <code>ecosystem</code> and <code>ignore = true</code> says the intended thing once. Each generated file carries a <code>reason</code> and a comment explaining itself to whoever finds it while reading vendored third-party source.</p>
+<h2 id="generated-by-mage-not-committed-by-hand"><a class="header" href="#generated-by-mage-not-committed-by-hand">Generated by mage, not committed by hand</a></h2>
+<p><code>magefiles/vendor-osv.go</code> holds the four entries and the text they render to; <code>Dev.Vendor</code> writes them immediately after <code>go mod vendor</code> recreates the tree, so the normal way of updating dependencies leaves them in place without anybody remembering. Committing them as ordinary files was the alternative, and it fails the first time somebody runs <code>mage dev:vendor</code> and commits the result.</p>
+<p><code>Dev.VerifyVendor</code> is the guard, wired into <code>check-go-mod.yaml</code>. It fails if a declared override is missing or has drifted from the generator, and – the half that matters more – it fails if <code>vendor/</code> contains a non-Go dependency manifest that no entry covers. Without that second check, a dependency bump that happens to pull in a module carrying a <code>Gemfile.lock</code> would drop the score on some later Scorecard run with nothing in the diff to point at. It fails on the commit that caused it instead.</p>
+<p><code>Dev.VerifyVendor</code> also fails when a manifest an entry names has gone away, which is what turns a stale entry into a build error rather than a file quietly doing nothing.</p>
+<h2 id="what-this-does-not-do-1"><a class="header" href="#what-this-does-not-do-1">What this does not do</a></h2>
+<p>It does not raise the check to 10. What remains is Go, and Go is where an override would be wrong: an advisory against a module that is actually in the binary is the thing this check exists to report.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Advisory</th><th>Module</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td><code>GO-2026-6225</code></td><td><code>docker-credential-acr-env</code></td><td>Genuinely linked, via <code>src/cmd</code> -&gt; zarf signing -&gt; cosign CLI options. Fixed in: N/A</td></tr>
+<tr><td><code>GO-2026-5932</code></td><td><code>golang.org/x/crypto/openpgp</code></td><td>Not in the build: <code>go mod why</code> reports the main module does not need the package. Fixed in: N/A</td></tr>
+<tr><td><code>CVE-2025-8556</code></td><td><code>cloudflare/circl</code></td><td>Already fixed upstream. The advisory carries only a commit range and no version range, and v1.6.5 is 151 commits past the fix, so the match is a defect in the advisory rather than in the dependency</td></tr>
+</tbody>
+</table>
+</div>
+<p>None of the three has a fixed version to move to, so the ceiling is 7. Expect it to move between 7 and 8 without anything here changing: the circl entry is only matched when the OSV snapshot a given Scorecard run downloaded happens to carry it, and it appeared and disappeared between two scans an hour apart while this was being written. A score that oscillates by one for that reason is not a signal, and chasing it with an <code>[[IgnoredVulns]]</code> entry for a Go advisory would be the wrong trade – the honest fix is to get the version range filed against the advisory.</p>
+<p>More broadly, none of this makes anything safer. <code>govulncheck -mode=source ./...</code> reported zero before the overrides existed and reports zero after; what changed is that a check which was describing x/telemetry’s frontend is now describing cargoship. That is worth the four files and the mage target, and it is worth being clear that it is a measurement fix and not a security fix. The maintenance cost is real and lands on whoever next adds a dependency that carries a lockfile – <code>Dev.VerifyVendor</code> exists so that person gets a clear failure rather than a mystery.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time"><a class="header" href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">Why the cluster e2e suite steps through the apply phases one at a time</a></h1>
 <p>The cluster suite (<code>src/test/e2e/cluster</code>) used to be a lifecycle test: provision a bootloose cluster, run <code>cargoship apply</code> once, then check that the cluster came up. It proved that apply works end to end and nothing else. When a phase left the wrong artifact behind but the install still succeeded – a <code>/etc/hosts</code> entry written with the wrong address that DNS happened to cover, a lock file that was never cleaned up, a firewall rule that named the wrong peer – the suite stayed green. When it did fail, the failure was “the cluster is not healthy” and the phase responsible had to be found by reading the log.</p>
