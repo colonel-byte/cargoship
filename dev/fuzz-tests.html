@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3f7b881f.js";
+            window.path_to_searchindex_js = "../searchindex-03a80ff8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2ee9e962.js"></script>
@@ -183,25 +183,27 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="running-the-fuzz-tests"><a class="header" href="#running-the-fuzz-tests">Running the Fuzz Tests</a></h1>
-<p>The <code>src/test/e2e/fuzz</code> package holds Go’s native fuzz targets. Unlike the other suites under <code>src/test/e2e</code>, it does not drive the built binary and starts no containers: the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions – scalar style, quoting, indentation, byte offsets – where a wrong answer produces a file that still parses and fails much later. Nothing here needs <code>build/</code>, a cluster, or the network.</p>
+<p>The <code>src/fuzz</code> package holds Go’s native fuzz targets. It is not an e2e suite and does not sit with them: it does not drive the built binary and starts no containers, and the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions – scalar style, quoting, indentation, byte offsets – where a wrong answer produces a file that still parses and fails much later. Nothing here needs <code>build/</code>, a cluster, or the network.</p>
+<p>It also has to stay out of <code>src/test/</code>. OpenSSF Scorecard’s file walker discards every path beginning <code>src/test/</code> before any check reads it – <code>isTestdataFile</code> in <a href="https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go"><code>checks/fileparser/listing.go</code></a>, which carries the Maven <code>src/test/java</code> convention – so for as long as these targets lived at <code>src/test/e2e/fuzz</code> the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under <code>src/test/</code> would silently take it to 0 again.</p>
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
-<pre><code>src/test/e2e/fuzz/main_test.go                    package documentation
-src/test/e2e/fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
-src/test/e2e/fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
-src/test/e2e/fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
-src/test/e2e/fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
-src/test/e2e/fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
-src/test/e2e/fuzz/testdata/fuzz/&lt;Target&gt;/         committed crashers, one directory per target
+<pre><code>src/fuzz/main_test.go                    package documentation
+src/fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
+src/fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
+src/fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
+src/fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
+src/fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
+src/fuzz/testdata/fuzz/&lt;Target&gt;/         committed crashers, one directory per target
 </code></pre>
 <h2 id="both-formats-every-time"><a class="header" href="#both-formats-every-time">Both formats, every time</a></h2>
 <p>cargoship writes two ciphertext formats, Ansible Vault and age, and one keyring can carry both. Every target that encrypts therefore runs its body once per format rather than picking one: <code>encryptKeyrings()</code> returns the two encrypting keyrings and <code>rekeyPairs()</code> returns the four rekey directions (vault to vault, vault to age, age to age, age to vault). Both are in <code>keyring_test.go</code>, and both are built once in <code>TestMain</code> so that key generation is not paid per execution.</p>
 <p><code>TestMain</code> also unsets <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, <code>CARGOSHIP_AGE_RECIPIENTS</code>, <code>CARGOSHIP_VAULT_PASSWORD</code> and <code>ANSIBLE_VAULT_PASSWORD</code> before it builds anything. A developer who has those set in their shell would otherwise be fuzzing against different key material than CI, which is the kind of difference that makes a reported crasher unreproducible.</p>
 <h2 id="running"><a class="header" href="#running">Running</a></h2>
-<p>A plain <code>go test</code> runs the <strong>seed corpus only</strong> – the <code>f.Add</code> values in each target, plus anything committed under <code>testdata/fuzz/&lt;Target&gt;/</code>. That is about half a second and is what CI and <code>go test ./...</code> do:</p>
-<pre><code class="language-console">$ go test -mod=vendor -count=1 ./src/test/e2e/fuzz/
+<p>A plain <code>go test</code> runs the <strong>seed corpus only</strong> – the <code>f.Add</code> values in each target, plus anything committed under <code>testdata/fuzz/&lt;Target&gt;/</code>. That is about half a second and is what <code>mage test:fuzz</code> and <code>go test ./...</code> do. No CI job runs this package today – <code>e2e.yaml</code> runs the non-cluster group and <code>e2e-cluster.yaml</code> the cluster group, and neither glob reaches it:</p>
+<pre><code class="language-console">$ mage test:fuzz
+$ go test -mod=vendor -count=1 ./src/fuzz/     # the same thing, spelled out
 </code></pre>
 <p>Actual fuzzing needs <code>-fuzz</code>, which takes <strong>one target at a time</strong> and runs until it finds a failure or the clock runs out:</p>
-<pre><code class="language-console">$ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./src/test/e2e/fuzz/
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./src/fuzz/
 </code></pre>
 <ul>
 <li><code>-run=XXX</code> matches no unit test, so the run spends its whole budget on the target rather than on the rest of the package.</li>
@@ -210,8 +212,8 @@ src/test/e2e/fuzz/testdata/fuzz/&lt;Target&gt;/         committed crashers, one 
 <li><code>-count=1</code> disables the test cache, which otherwise makes a re-run of the seed corpus a no-op.</li>
 </ul>
 <p>Because only one target runs per invocation, a sweep is a loop:</p>
-<pre><code class="language-console">$ for t in $(grep -ho '^func \(Fuzz[A-Za-z]*\)' src/test/e2e/fuzz/*_test.go | cut -d' ' -f2); do
-      go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./src/test/e2e/fuzz/ || break
+<pre><code class="language-console">$ for t in $(grep -ho '^func \(Fuzz[A-Za-z]*\)' src/fuzz/*_test.go | cut -d' ' -f2); do
+      go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./src/fuzz/ || break
   done
 </code></pre>
 <p>Expect very different throughput between the two kinds of target. The ones that only push strings through a parser run at tens of thousands of executions per second; the ones that encrypt a value run the Ansible Vault key derivation on every execution and manage a few dozen. The spread across a 30 second budget is roughly three orders of magnitude:</p>
@@ -226,7 +228,7 @@ FuzzRekeyAtPathPreservesValue                  1,498      four rekey directions 
 <h2 id="the-corpus"><a class="header" href="#the-corpus">The corpus</a></h2>
 <p>There are two corpora, and only one of them is in the repository.</p>
 <p>Inputs the fuzzer generates live in the build cache, under <code>$(go env GOCACHE)/fuzz/</code>. They are shared across runs on the same machine, are not portable, and are not meant to be committed; <code>go clean -fuzzcache</code> discards them, which is worth doing when a target has been rewritten and its cached corpus is exercising a shape that no longer exists.</p>
-<p>Failing inputs are the committed corpus. When a target fails, <code>go test</code> writes the input to <code>src/test/e2e/fuzz/testdata/fuzz/&lt;Target&gt;/&lt;hash&gt;</code> and prints the path. <strong>Commit that file.</strong> From then on it is replayed by a plain <code>go test</code>, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:</p>
+<p>Failing inputs are the committed corpus. When a target fails, <code>go test</code> writes the input to <code>src/fuzz/testdata/fuzz/&lt;Target&gt;/&lt;hash&gt;</code> and prints the path. <strong>Commit that file.</strong> From then on it is replayed by a plain <code>go test</code>, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:</p>
 <pre><code>FuzzDecryptAtPathRoundTrip/89831cc049267b2c              string("\n")  a credential of one line break, written as an empty block scalar, read back as ""
 FuzzPathIsDecryptable/477bd66902831e69                   string("0[0") an unclosed index, which panicked inside go-yaml instead of erroring
 FuzzPathIsDecryptable/ebc8a2cafef15425                   string("'$'") a path whose canonical spelling, "$.$", the parser then rejects
