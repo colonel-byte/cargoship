@@ -86,6 +86,7 @@
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)
 - [choice-managed-manifest-glob](agent/choice-managed-manifest-glob.md)
 - [choice-nftables-backend](agent/choice-nftables-backend.md)
+- [choice-osv-vendor-overrides](agent/choice-osv-vendor-overrides.md)
 - [choice-phase-e2e-tests](agent/choice-phase-e2e-tests.md)
 - [choice-preferred-firewall](agent/choice-preferred-firewall.md)
 - [choice-removed-hosts](agent/choice-removed-hosts.md)
