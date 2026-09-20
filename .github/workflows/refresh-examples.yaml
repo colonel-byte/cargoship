@@ -1,0 +1,223 @@
+---
+name: Refresh examples
+
+# Renders what upstream has cut since the last run and opens a pull request with it.
+#
+# Everything under example/ is generated, and nothing generates it on a schedule: the
+# targets are run by hand, which is why example/ has moved in seventeen commits while rke2
+# and k3s have cut releases continuously. This runs the documented order -- updatePins,
+# engineConfig, examples -- once a week and turns whatever moved into a pull request, so
+# being behind upstream is a review rather than something someone has to remember to check.
+#
+# The targets are run through "go run ./magefiles/core", not through an installed mage
+# binary: it is the same mage.Main() entry point and it needs nothing on the runner but the
+# Go toolchain. See docs/dev/mage.md.
+#
+# Publishing is not part of this. A refresh only writes definitions; publish-example.yaml
+# picks them up on the next release, or on demand.
+on:
+  schedule:
+    # Weekly, off the hour, since nothing downstream waits on this. Monday morning UTC puts
+    # the pull request in front of a week rather than a weekend.
+    - cron: 41 6 * * 1
+  workflow_dispatch:
+    inputs:
+      no_cache:
+        description: >-
+          Refetch every release asset instead of using the cache (needed when Rancher
+          re-cuts a release's assets in place, since the URL does not change when it does)
+        type: boolean
+        default: false
+
+# The pull request is pushed with a GitHub App token, not GITHUB_TOKEN, so the workflow's
+# own token needs nothing beyond reading the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-examples
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    # Pin resolution clones engine source per moved line, and rendering hashes the RPMs a new
+    # release publishes -- rke2-common alone is around 29 MB. Both are network bound.
+    timeout-minutes: 60
+    env:
+      BRANCH: chore/refresh-examples
+      # Everything the build needs is vendored, so make any accidental network access fail
+      # fast. Matches magefiles/utils.go. The targets' own fetches use net/http and git, not
+      # the module proxy, so this does not restrict them.
+      GOFLAGS: -mod=vendor
+      GOPROXY: "off"
+      GOSUMDB: "off"
+      GOTOOLCHAIN: local
+    steps:
+      # A pull request opened with GITHUB_TOKEN does not start the pull_request workflows, so
+      # a refresh would land without e2e or pre-commit ever having run on it. The same app
+      # release-please uses opens this one, for the same reason.
+      - name: Get app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_PLEASE_GITHUB_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_GITHUB_APP_SECRET }}
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # The documented order, and it has to stay this order: updatePins writes
+      # thirdparty-src/pins.json and re-pulls the source of any line that moved, engineConfig
+      # reads that source to produce each version's packaged-component vocabulary, and
+      # examples renders values schemas against that vocabulary. A line whose source was
+      # never pulled fails to render rather than writing an empty enumeration.
+      - name: Update pins
+        run: go run ./magefiles/core generate:updatePins
+
+      - name: Regenerate engine config
+        run: go run ./magefiles/core generate:engineConfig
+
+      - name: Render examples
+        env:
+          CARGOSHIP_EXAMPLES_NO_CACHE: ${{ inputs.no_cache && '1' || '' }}
+        run: go run ./magefiles/core generate:examples
+
+      # Only the paths these three targets own are considered. Staging them by name rather
+      # than asking git what changed keeps a build artifact the toolchain happened to leave
+      # behind -- mage compiles through a generated file of its own -- from reading as a
+      # refresh with nothing in it.
+      - name: Stage what moved
+        id: changes
+        run: |
+          set -euo pipefail
+
+          git add -- example thirdparty-src src/pkg/engineconfig/gen
+
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "nothing moved upstream since the last refresh"
+            echo "Nothing moved upstream since the last refresh." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git diff --cached --stat | tail -n 20
+
+          # The pins are the readable part of the diff: they say which line moved and to
+          # what, while the example churn is hundreds of rendered files saying the same
+          # thing. Pull them out for the pull request body. They can legitimately be empty:
+          # a template edit, or a build upstream retired, changes rendered output without
+          # moving a pin.
+          git diff --cached -- thirdparty-src/pins.json > /tmp/pins.diff
+          if [ ! -s /tmp/pins.diff ]; then
+            echo "(no pin moved -- only rendered output changed)" > /tmp/pins.diff
+          fi
+
+      # A pin that moved regenerates Go structs, so the tree can stop compiling or stop
+      # validating without anything upstream being wrong -- a release that renamed a flag,
+      # say. Both checks are cheap next to the rendering above, and their result goes in the
+      # pull request body so a broken refresh is obvious before anyone opens the diff.
+      - name: Check the refresh
+        id: check
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -uo pipefail
+
+          status=pass
+          go build ./... || status=fail
+          go test -count=1 ./src/pkg/schema/... || status=fail
+
+          echo "result=$status" >> "$GITHUB_OUTPUT"
+
+      # Force pushed to one fixed branch so successive weekly runs collapse into a single
+      # open pull request rather than accumulating one per week. A human editing that branch
+      # loses the edit on the next run, which is the intent: the branch is output, and
+      # anything that should survive belongs in a template under magefiles/templates/.
+      - name: Push the branch
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+
+          git config user.name "cargoship-bot"
+          git config user.email "cargoship-bot@users.noreply.github.com"
+
+          git switch --force-create "$BRANCH"
+          git commit --message "chore(examples): refresh generated examples" \
+            --message "Rendered by .github/workflows/refresh-examples.yaml."
+          git push --force origin "$BRANCH"
+
+      - name: Open or update the pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          CHECK: ${{ steps.check.outputs.result }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "Generated by \`.github/workflows/refresh-examples.yaml\`: \`generate:updatePins\`,"
+            echo "\`generate:engineConfig\`, then \`generate:examples\`. Do not edit the rendered files"
+            echo "on this branch -- the next run force-pushes over them. Change the template in"
+            echo "\`magefiles/templates/\` instead."
+            echo
+            if [ "$CHECK" = "pass" ]; then
+              echo "\`go build ./...\` and the schema validation tests pass on this render."
+            else
+              echo "**\`go build ./...\` or the schema validation tests failed on this render.**"
+              echo "Something upstream changed in a way the generators do not handle yet; read the"
+              echo "workflow log before merging."
+            fi
+            echo
+            echo "Pin changes:"
+            echo
+            echo '```diff'
+            cat /tmp/pins.diff
+            echo '```'
+            echo
+            echo "No example is published by this pull request. \`publish-example.yaml\` picks up"
+            echo "whatever is on \`main\` at the next release, or on demand from the Actions tab."
+          } > /tmp/pr-body.md
+
+          # An open pull request for this branch is updated in place: the force push already
+          # moved its head, so only the body needs rewriting to describe the new render.
+          number=$(
+            gh pr list --repo "$REPO" --head "$BRANCH" --state open \
+              --limit 1 --json number --jq '.[].number'
+          )
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --repo "$REPO" --body-file /tmp/pr-body.md
+            echo "updated pull request #$number"
+          else
+            number=$(
+              gh pr create --repo "$REPO" --base main --head "$BRANCH" \
+                --title "chore(examples): refresh generated examples" \
+                --body-file /tmp/pr-body.md
+            )
+            echo "opened $number"
+          fi
+
+          {
+            echo "## Refreshed examples"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Pull request | $number |"
+            echo "| Checks | \`$CHECK\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The refresh itself succeeded -- the pull request exists and says so -- but a render
+      # that does not build is not a green run.
+      - name: Fail on a broken render
+        if: steps.check.outputs.result == 'fail'
+        run: |
+          echo "the refreshed tree does not build or does not validate" >&2
+          exit 1

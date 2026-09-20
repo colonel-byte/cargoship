@@ -118,8 +118,9 @@ jobs:
               # slashes have to be percent encoded.
               encoded=${package//\//%2F}
 
-              # A flavor this pull request never published has no package, which is the normal
-              # case: a run publishes one flavor out of the eight.
+              # A flavor this pull request never published has no package, which is the
+              # normal case: a pull request run publishes one flavor out of the five, since
+              # its job is to exercise the workflow rather than to refresh the reference.
               if ! gh api "/orgs/$OWNER/packages/container/$encoded" >/dev/null 2>&1; then
                 continue
               fi
