@@ -58,7 +58,7 @@ LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
   org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
   org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="cgr.dev/chainguard/static:latest"
+  org.opencontainers.image.base.name="registry1.dso.mil/chainguard/cgr.dev/chainguard/static:latest"
 
 ENV HOME=/home/nonroot
 
