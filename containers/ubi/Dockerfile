@@ -30,7 +30,7 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
 ARG UID=65532
 ARG GID=65532
 # hadolint ignore=DL3040,DL3041
-RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 shadow-utils \
+RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 shadow-utils bash-completion \
   && microdnf clean all \
   && groupadd --gid "${GID}" nonroot \
   && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \

@@ -28,7 +28,7 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
   && rpm --install --verbose /tmp/rpms/*.rpm \
   && rm -rf /tmp/rpms \
   && cargoship version \
-  && dnf install -y --nodocs --setopt=install_weak_deps=0 ansible-core \
+  && dnf install -y --nodocs --setopt=install_weak_deps=0 ansible-core bash-completion \
   && dnf clean all \
   && rm -rf /var/cache/yum \
   && ansible-galaxy collection install --requirements-file /etc/cargoship/ansible/requirements.yml --collections-path /usr/share/ansible/collections/ansible_collections

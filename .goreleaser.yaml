@@ -24,6 +24,7 @@ before:
     # playbooks is inside the airlock, so it installs the collection from this tarball rather than
     # from Galaxy. A snapshot passes no version, because its version is not the one in galaxy.yml.
     - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}{{ else }}{{ .Version }}{{ end }}
+    - hack/shell-completion.sh
 
 builds:
   - id: cargoship
@@ -120,6 +121,19 @@ nfpms:
       - src: /usr/bin/cargoship
         dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_reset
         type: symlink
+      # Shell completion
+      - src: build/tmp/completion/{{ .ProjectName }}.bash
+        dst: /etc/bash_completion.d/{{ .ProjectName }}
+        file_info:
+          mode: 0644
+      - src: build/tmp/completion/{{ .ProjectName }}.fish
+        dst: /usr/share/fish/vendor_completions.d/{{ .ProjectName }}.fish
+        file_info:
+          mode: 0644
+      - src: build/tmp/completion/{{ .ProjectName }}.fish
+        dst: /usr/local/share/zsh/site-functions/_{{ .ProjectName }}
+        file_info:
+          mode: 0644
     rpm:
       compression: gzip
       prefixes:
