@@ -16,15 +16,15 @@ The image carries cargoship and the collection, and nothing for talking to the c
 
 Cargoship runs in the container and connects to the fleet from there, so `package`, `inventory_path`, `vault_password_file` and `ansible_ssh_private_key_file` all name paths the container can see -- not paths on the machine that started it. Mount each one at the same path it has on the host wherever you can. It costs nothing and it means the inventory reads the same whether the run happens in the container or on a management node that installed the package.
 
-| What | Where | Mode |
-| --- | --- | --- |
-| The distro package | wherever the playbook names it, e.g. `/srv/staging` | read-only |
-| Playbooks, roles, the Ansible inventory | `/workspace` | read-only |
-| The SSH private key | wherever `ansible_ssh_private_key_file` names it | read-only, `0600` |
-| The vault password file | wherever `vault_password_file` names it | read-only, `0400` |
-| `known_hosts` | `/home/nonroot/.ssh/known_hosts` | writable, see below |
-| Where a kubeconfig is written | `/home/nonroot/.kube/config`, or wherever `kubeconfig` names it | writable |
-| The cargoship cache | `/home/nonroot/.cargoship-cache` | writable, optional |
+| What                                    | Where                                                           | Mode                |
+| :-------------------------------------- | :-------------------------------------------------------------- | :------------------ |
+| The distro package                      | wherever the playbook names it, e.g. `/srv/staging`             | read-only           |
+| Playbooks, roles, the Ansible inventory | `/workspace`                                                    | read-only           |
+| The SSH private key                     | wherever `ansible_ssh_private_key_file` names it                | read-only, `0600`   |
+| The vault password file                 | wherever `vault_password_file` names it                         | read-only, `0400`   |
+| `known_hosts`                           | `/home/nonroot/.ssh/known_hosts`                                | writable, see below |
+| Where a kubeconfig is written           | `/home/nonroot/.kube/config`, or wherever `kubeconfig` names it | writable            |
+| The cargoship cache                     | `/home/nonroot/.cargoship-cache`                                | writable, optional  |
 
 An apply leaves `update_kubeconfig` on by default, which merges the cluster's admin credentials into `KUBECONFIG` when it is set and `~/.kube/config` otherwise -- inside the container, a file under `/home/nonroot` that goes away with the container. Mount a kubeconfig, name one with the `kubeconfig` parameter, or pass `update_kubeconfig: false` and fetch it deliberately with `cargoship_kube_config`; what you should not do is leave the default and wonder where the credentials went.
 

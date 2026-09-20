@@ -56,12 +56,12 @@ The plugin forwards the four `ansible_*` connection variables listed in [Generat
 
 `inventory` takes the document described in [Generating an Inventory from Ansible](ansible-inv.md), `groups` and `hostvars` included. Everything else maps onto a flag of the command the module runs.
 
-| Parameter | Flag | Notes |
-| --- | --- | --- |
-| `inventory` | | Required. The resolved Ansible inventory, plus `cluster`. |
-| `inventory_path` | `--config` | Where to write the generated document. A private temporary file when unset. |
-| `log_level` | `--log-level` | Defaults to `debug` when the play runs with `-v`. |
-| `log_format` | `--log-format` | |
+| Parameter        | Flag           | Notes                                                                       |
+| ---------------- | -------------- | --------------------------------------------------------------------------- |
+| `inventory`      |                | Required. The resolved Ansible inventory, plus `cluster`.                   |
+| `inventory_path` | `--config`     | Where to write the generated document. A private temporary file when unset. |
+| `log_level`      | `--log-level`  | Defaults to `debug` when the play runs with `-v`.                           |
+| `log_format`     | `--log-format` |                                                                             |
 
 A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why `label_nodes: false` and omitting `label_nodes` are different.
 
@@ -71,82 +71,82 @@ The surfaces differ because the commands do. `cargoship prepare` reads no encryp
 
 Installs or converges the whole cluster.
 
-| Parameter | Flag |
-| --- | --- |
-| `package` | the positional argument. Required. |
-| `concurrency` | `--concurrency` |
-| `work_concurrency` | `--work-concurrency` |
-| `hosts` | `--hosts` |
-| `firewall` | `--firewall` |
-| `fapolicyd` | `--fapolicyd` |
-| `label_nodes` | `--label-nodes` |
-| `allow_unmanaged_nodes` | `--allow-unmanaged-nodes` |
-| `update_kubeconfig` | `--update-kubeconfig` |
-| `kubeconfig` | `--kubeconfig` |
-| `values` | `--values`. A list of files. |
-| `timeout` | `--timeout` |
-| `vault_password_file` | `--vault-password-file` |
-| `age_identity_file` | `--age-identity-file`. A list of files. |
-| `public_key` | `--key` |
-| `verify` | `--verify`. `never`, `if-possible`, or `always`. |
+| Parameter               | Flag                                             |
+| ----------------------- | ------------------------------------------------ |
+| `package`               | the positional argument. Required.               |
+| `concurrency`           | `--concurrency`                                  |
+| `work_concurrency`      | `--work-concurrency`                             |
+| `hosts`                 | `--hosts`                                        |
+| `firewall`              | `--firewall`                                     |
+| `fapolicyd`             | `--fapolicyd`                                    |
+| `label_nodes`           | `--label-nodes`                                  |
+| `allow_unmanaged_nodes` | `--allow-unmanaged-nodes`                        |
+| `update_kubeconfig`     | `--update-kubeconfig`                            |
+| `kubeconfig`            | `--kubeconfig`                                   |
+| `values`                | `--values`. A list of files.                     |
+| `timeout`               | `--timeout`                                      |
+| `vault_password_file`   | `--vault-password-file`                          |
+| `age_identity_file`     | `--age-identity-file`. A list of files.          |
+| `public_key`            | `--key`                                          |
+| `verify`                | `--verify`. `never`, `if-possible`, or `always`. |
 
 ## `cargoship_prepare`
 
 Stages a package onto the fleet and readies the hosts. Takes no key material.
 
 | Parameter | Flag |
-| --- | --- |
-| `package` | the positional argument. Required. |
-| `concurrency` | `--concurrency` |
-| `work_concurrency` | `--work-concurrency` |
-| `hosts` | `--hosts` |
-| `firewall` | `--firewall` |
-| `fapolicyd` | `--fapolicyd` |
-| `values` | `--values`. A list of files. |
-| `timeout` | `--timeout` |
-| `public_key` | `--key` |
-| `verify` | `--verify` |
+| ------------------ | ---------------------------------- |
+| `package`          | the positional argument. Required. |
+| `concurrency`      | `--concurrency`                    |
+| `work_concurrency` | `--work-concurrency`               |
+| `hosts`            | `--hosts`                          |
+| `firewall`         | `--firewall`                       |
+| `fapolicyd`        | `--fapolicyd`                      |
+| `values`           | `--values`. A list of files.       |
+| `timeout`          | `--timeout`                        |
+| `public_key`       | `--key`                            |
+| `verify`           | `--verify`                         |
 
 ## `cargoship_engine_config_sync`
 
 Converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does. It does not update the hosts themselves, so it takes none of the three host switches.
 
 | Parameter | Flag |
-| --- | --- |
-| `package` | the positional argument. Required. |
-| `concurrency` | `--concurrency` |
-| `work_concurrency` | `--work-concurrency` |
-| `label_nodes` | `--label-nodes` |
-| `update_kubeconfig` | `--update-kubeconfig` |
-| `kubeconfig` | `--kubeconfig` |
-| `values` | `--values`. A list of files. |
-| `timeout` | `--timeout` |
-| `vault_password_file` | `--vault-password-file` |
-| `age_identity_file` | `--age-identity-file`. A list of files. |
-| `public_key` | `--key` |
-| `verify` | `--verify` |
+| --------------------- | --------------------------------------- |
+| `package`             | the positional argument. Required.      |
+| `concurrency`         | `--concurrency`                         |
+| `work_concurrency`    | `--work-concurrency`                    |
+| `label_nodes`         | `--label-nodes`                         |
+| `update_kubeconfig`   | `--update-kubeconfig`                   |
+| `kubeconfig`          | `--kubeconfig`                          |
+| `values`              | `--values`. A list of files.            |
+| `timeout`             | `--timeout`                             |
+| `vault_password_file` | `--vault-password-file`                 |
+| `age_identity_file`   | `--age-identity-file`. A list of files. |
+| `public_key`          | `--key`                                 |
+| `verify`              | `--verify`                              |
 
 ## `cargoship_reset`
 
 Removes the cluster from the fleet. There is no package: the distro to remove is named directly.
 
-| Parameter | Flag |
-| --- | --- |
-| `distro` | `--distro`. `k3s` or `rke2`. |
-| `concurrency` | `--concurrency` |
-| `work_concurrency` | `--work-concurrency` |
-| `hosts` | `--hosts` |
-| `firewall` | `--firewall` |
-| `fapolicyd` | `--fapolicyd` |
+| Parameter          | Flag                         |
+| ------------------ | ---------------------------- |
+| `distro`           | `--distro`. `k3s` or `rke2`. |
+| `concurrency`      | `--concurrency`              |
+| `work_concurrency` | `--work-concurrency`         |
+| `hosts`            | `--hosts`                    |
+| `firewall`         | `--firewall`                 |
+| `fapolicyd`        | `--fapolicyd`                |
 
 ## `cargoship_kube_config`
 
 Fetches the cluster kubeconfig onto the management node. It is the one module that changes the node the play runs on rather than the fleet.
 
-| Parameter | Flag |
-| --- | --- |
-| `distro` | `--distro`. `k3s` or `rke2`. |
-| `kubeconfig` | `--kubeconfig` |
+| Parameter    | Flag                         |
+| ------------ | ---------------------------- |
+| `distro`     | `--distro`. `k3s` or `rke2`. |
+| `kubeconfig` | `--kubeconfig`               |
 
 ## Signature verification
 
@@ -175,16 +175,16 @@ The role is the shorter way to write the same task. It picks the module from `ca
       timeout: 45m
 ```
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `cargoship_action` | `apply` | Which module to run. One of the five. |
-| `cargoship_package` | unset | The package. Required for `apply`, `prepare`, and `engine_config_sync`. |
-| `cargoship_cluster` | `{}` | The `cluster` block: name, load balancer, profiles, registries, values. |
-| `cargoship_role_groups` | `{}` | The group mapping, when your groups are not named `controller` and `worker`. |
-| `cargoship_inventory_path` | unset | Where to write the generated document. |
-| `cargoship_args` | `{}` | Everything else, passed to the module as-is. |
-| `cargoship_delegate_to` | `localhost` | The management node. |
-| `cargoship_show_result` | `false` | Print `cargoship_result.cargoship` after the run. |
+| Variable                   | Default     | Meaning                                                                      |
+| -------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| `cargoship_action`         | `apply`     | Which module to run. One of the five.                                        |
+| `cargoship_package`        | unset       | The package. Required for `apply`, `prepare`, and `engine_config_sync`.      |
+| `cargoship_cluster`        | `{}`        | The `cluster` block: name, load balancer, profiles, registries, values.      |
+| `cargoship_role_groups`    | `{}`        | The group mapping, when your groups are not named `controller` and `worker`. |
+| `cargoship_inventory_path` | unset       | Where to write the generated document.                                       |
+| `cargoship_args`           | `{}`        | Everything else, passed to the module as-is.                                 |
+| `cargoship_delegate_to`    | `localhost` | The management node.                                                         |
+| `cargoship_show_result`    | `false`     | Print `cargoship_result.cargoship` after the run.                            |
 
 Every task in the role carries `run_once: true`. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It also carries `no_log: true`, which is why `cargoship_show_result` exists: the debug task is the one thing allowed to print, and it prints cargoship's report rather than the parameters.
 
@@ -200,11 +200,11 @@ Under check mode, `changed` means what Ansible means by it there: a real run wou
 
 `changed` is built from what the phases themselves report, and a phase has to opt in. `cargoship.changedSignal` says how much of the run is covered:
 
-| Signal | Meaning |
-| --- | --- |
-| `complete` | Every phase the run reached said whether it changed anything. |
-| `partial` | Some did not. They are named in `cargoship.changedUndeclared`. |
-| `unknown` | No phase reported at all, so `changed` is a convention rather than an observation, and is reported `true`. |
+| Signal     | Meaning                                                                                                    |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| `complete` | Every phase the run reached said whether it changed anything.                                              |
+| `partial`  | Some did not. They are named in `cargoship.changedUndeclared`.                                             |
+| `unknown`  | No phase reported at all, so `changed` is a convention rather than an observation, and is reported `true`. |
 
 Today the engine configuration sync phases report and the rest do not, so an ordinary run reads `partial`. That is deliberate: a phase that has said nothing cannot make `changed` true, and it is not treated as having changed nothing either. `KubeConfig` and `LabelNodes` are the two in the undeclared list that can genuinely change something -- the local kubeconfig and the node role labels -- so if a handler of yours depends on either, gate on the result rather than on `changed`.
 

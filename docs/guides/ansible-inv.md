@@ -69,23 +69,23 @@ If `roleGroups` names a group the inventory does not define, that is an error --
 
 Connection details come from the Ansible variables you already set. Everything cargoship needs beyond those comes from variables under a `cargoship_` prefix.
 
-| Inventory field | Variable | Default |
-| --- | --- | --- |
-| `ssh.address` | `ansible_host` | the inventory hostname |
-| `ssh.user` | `ansible_user` | `root` |
-| `ssh.port` | `ansible_port` | `22` |
-| `ssh.keyPath` | `ansible_ssh_private_key_file` | unset |
-| `ssh.hostKey` | `cargoship_host_key` | unset |
-| `ssh.bastion` | `cargoship_bastion` | unset |
-| `hostname` | `cargoship_hostname` | the inventory hostname |
-| `profile` | `cargoship_profile` | the host's role |
-| `privateAddress` | `cargoship_private_address` | unset |
-| `privateInterface` | `cargoship_private_interface` | unset |
-| `engine.labels` | `cargoship_node_labels` | unset |
-| `engine.taints` | `cargoship_node_taints` | unset |
-| `host` | `cargoship_host` | unset |
-| `environment` | `cargoship_environment` | unset |
-| `files` | `cargoship_files` | unset |
+| Inventory field    | Variable                       | Default                |
+| ------------------ | ------------------------------ | ---------------------- |
+| `ssh.address`      | `ansible_host`                 | the inventory hostname |
+| `ssh.user`         | `ansible_user`                 | `root`                 |
+| `ssh.port`         | `ansible_port`                 | `22`                   |
+| `ssh.keyPath`      | `ansible_ssh_private_key_file` | unset                  |
+| `ssh.hostKey`      | `cargoship_host_key`           | unset                  |
+| `ssh.bastion`      | `cargoship_bastion`            | unset                  |
+| `hostname`         | `cargoship_hostname`           | the inventory hostname |
+| `profile`          | `cargoship_profile`            | the host's role        |
+| `privateAddress`   | `cargoship_private_address`    | unset                  |
+| `privateInterface` | `cargoship_private_interface`  | unset                  |
+| `engine.labels`    | `cargoship_node_labels`        | unset                  |
+| `engine.taints`    | `cargoship_node_taints`        | unset                  |
+| `host`             | `cargoship_host`               | unset                  |
+| `environment`      | `cargoship_environment`        | unset                  |
+| `files`            | `cargoship_files`              | unset                  |
 
 `ansible_host` and `cargoship_hostname` are different facts and both are kept: the first is where cargoship connects, the second is what the node calls itself. When neither is set, the name the inventory knows the host by serves as both.
 
