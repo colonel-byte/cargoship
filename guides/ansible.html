@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2a745449.js";
+            window.path_to_searchindex_js = "../searchindex-a51bf616.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-af776c16.js"></script>
@@ -328,7 +328,23 @@ cargoship_bastion:
 <p>Key material is always named by a path, never given by value. Ansible writes a module’s parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set <code>no_log: true</code> on the task regardless: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
 <h3 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h3>
 <p><code>--check</code> runs cargoship’s dry run. Phases opt into it one at a time – a phase that has not said how it behaves under a dry run is reported and not run – so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.</p>
-<p>The module reports <code>changed: true</code> for every run that succeeds, and says so in <code>cargoship.changedSignal</code>, which reads <code>unknown</code>. Cargoship’s phases do not yet report whether they changed anything. Until they do, a handler notified by this task fires on every run. Gate on the result rather than on <code>changed</code> if that matters to you.</p>
+<p>Under check mode, <code>changed</code> means what Ansible means by it there: a real run would change something. It is true when a phase that knows how to tell had work outstanding – a fleet whose engine configuration has drifted – and false when every such phase found nothing to do.</p>
+<h3 id="what-changed-is-worth"><a class="header" href="#what-changed-is-worth">What <code>changed</code> is worth</a></h3>
+<p><code>changed</code> is built from what the phases themselves report, and a phase has to opt in. <code>cargoship.changedSignal</code> says how much of the run is covered:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>complete</code></td><td>Every phase the run reached said whether it changed anything.</td></tr>
+<tr><td><code>partial</code></td><td>Some did not. They are named in <code>cargoship.changedUndeclared</code>.</td></tr>
+<tr><td><code>unknown</code></td><td>No phase reported at all, so <code>changed</code> is a convention rather than an observation, and is reported <code>true</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Today the engine configuration sync phases report and the rest do not, so an ordinary run reads <code>partial</code>. That is deliberate: a phase that has said nothing cannot make <code>changed</code> true, and it is not treated as having changed nothing either. <code>KubeConfig</code> and <code>LabelNodes</code> are the two in the undeclared list that can genuinely change something – the local kubeconfig and the node role labels – so if a handler of yours depends on either, gate on the result rather than on <code>changed</code>.</p>
+<p><code>cargoship.phasesRan</code> and <code>cargoship.phasesPlanned</code> name the phases the run executed and, under check mode, the ones it reported instead of running. Ansible sees one result for the whole fleet, so these stand in for the per-host detail a task-per-host module would give you.</p>
 <h3 id="the-result"><a class="header" href="#the-result">The result</a></h3>
 <pre><code class="language-json">{
   "changed": true,
@@ -339,7 +355,9 @@ cargoship_bastion:
     "inventoryKept": true,
     "checkMode": false,
     "command": ["cargoship", "engine-config-sync", "..."],
-    "changedSignal": "unknown"
+    "phasesRan": ["Connect", "Detect OS", "Sync Registry Config Controller"],
+    "changedSignal": "partial",
+    "changedUndeclared": ["Connect", "Detect OS"]
   }
 }
 </code></pre>
