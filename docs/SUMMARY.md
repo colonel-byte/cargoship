@@ -84,6 +84,7 @@
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [choice-age-encryption](agent/choice-age-encryption.md)
+- [choice-ansible-collection-pins](agent/choice-ansible-collection-pins.md)
 - [choice-ansible-module](agent/choice-ansible-module.md)
 - [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
 - [choice-image-index](agent/choice-image-index.md)
