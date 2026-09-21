@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-efcacd10.js";
+            window.path_to_searchindex_js = "searchindex-2a745449.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-af776c16.js"></script>
@@ -702,6 +702,70 @@ cargoship_bastion:
 <h3 id="misspelled-variables-are-errors"><a class="header" href="#misspelled-variables-are-errors">Misspelled variables are errors</a></h3>
 <p>A variable under the <code>cargoship_</code> prefix that cargoship does not read is an error, and so is an unknown key inside one of the structured variables. Ansible has no notion of a variable belonging to anyone, so a misspelled <code>cargoship_profil</code> would otherwise sit in <code>hostvars</code> looking set and doing nothing, and a misspelled key would be dropped on the way in. A misspelled variable and an unset one are indistinguishable at install time, which is too late to find out.</p>
 <p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
+<h2 id="running-cargoship-as-an-ansible-module"><a class="header" href="#running-cargoship-as-an-ansible-module">Running cargoship as an Ansible module</a></h2>
+<p>The same translation runs inside a playbook. The cargoship binary is the Ansible module: it is installed as a set of symlinks named <code>cargoship_&lt;action&gt;</code>, and a symlink’s name selects the action. There is no separate module package and nothing to install on the managed nodes.</p>
+<p>One module ships today, <code>cargoship_engine_config_sync</code>. It converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does.</p>
+<pre><code class="language-yaml">- name: Converge engine configuration
+  cargoship_engine_config_sync:
+    package: /srv/staging/rke2-1.31.tar.zst
+    inventory_path: /srv/staging/generated-inventory.yaml
+    inventory:
+      groups: "{{ groups }}"
+      hostvars: "{{ hostvars }}"
+      cluster:
+        name: bubbles
+        loadbalancer: bubbles-kc.test.com
+    vault_password_file: /srv/staging/vault-pass
+  delegate_to: localhost
+  no_log: true
+</code></pre>
+<p>The task runs on the management node – <code>connection: local</code> when the Ansible controller is that node, <code>delegate_to</code> when they are separate. Cargoship connects to the fleet itself, from there.</p>
+<h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
+<p><code>inventory</code> takes the same document described above, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of <code>cargoship engine-config-sync</code>.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Flag</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr><td><code>package</code></td><td>the positional argument</td><td>Required. The distro package to synchronise from.</td></tr>
+<tr><td><code>inventory</code></td><td></td><td>Required. The resolved Ansible inventory, plus <code>cluster</code>.</td></tr>
+<tr><td><code>inventory_path</code></td><td><code>--config</code></td><td>Where to write the generated document. A private temporary file when unset.</td></tr>
+<tr><td><code>concurrency</code></td><td><code>--concurrency</code></td><td></td></tr>
+<tr><td><code>work_concurrency</code></td><td><code>--work-concurrency</code></td><td></td></tr>
+<tr><td><code>label_nodes</code></td><td><code>--label-nodes</code></td><td></td></tr>
+<tr><td><code>update_kubeconfig</code></td><td><code>--update-kubeconfig</code></td><td></td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>--kubeconfig</code></td><td></td></tr>
+<tr><td><code>values</code></td><td><code>--values</code></td><td>A list of files.</td></tr>
+<tr><td><code>timeout</code></td><td><code>--timeout</code></td><td></td></tr>
+<tr><td><code>vault_password_file</code></td><td><code>--vault-password-file</code></td><td></td></tr>
+<tr><td><code>age_identity_file</code></td><td><code>--age-identity-file</code></td><td>A list of files.</td></tr>
+<tr><td><code>log_level</code></td><td><code>--log-level</code></td><td>Defaults to <code>debug</code> when the play runs with <code>-v</code>.</td></tr>
+<tr><td><code>log_format</code></td><td><code>--log-format</code></td><td></td></tr>
+</tbody>
+</table>
+</div>
+<p>A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why <code>label_nodes: false</code> and omitting <code>label_nodes</code> are different.</p>
+<p>Key material is always named by a path, never given by value. Ansible writes a module’s parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set <code>no_log: true</code> on the task regardless: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
+<h3 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h3>
+<p><code>--check</code> runs cargoship’s dry run. Phases opt into it one at a time – a phase that has not said how it behaves under a dry run is reported and not run – so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.</p>
+<p>The module reports <code>changed: true</code> for every run that succeeds, and says so in <code>cargoship.changedSignal</code>, which reads <code>unknown</code>. Cargoship’s phases do not yet report whether they changed anything. Until they do, a handler notified by this task fires on every run. Gate on the result rather than on <code>changed</code> if that matters to you.</p>
+<h3 id="the-result"><a class="header" href="#the-result">The result</a></h3>
+<pre><code class="language-json">{
+  "changed": true,
+  "msg": "synchronised engine configuration across the fleet",
+  "cargoship": {
+    "module": "engine_config_sync",
+    "inventoryPath": "/srv/staging/generated-inventory.yaml",
+    "inventoryKept": true,
+    "checkMode": false,
+    "command": ["cargoship", "engine-config-sync", "..."],
+    "changedSignal": "unknown"
+  }
+}
+</code></pre>
+<p><code>command</code> is the command line the module ran, so a failure can be reproduced by hand on the management node. <code>inventoryPath</code> is the generated document. A run that fails leaves it on disk whether or not you named the path, because it is the first thing to look at when a failure reads like the wrong cluster; a run that succeeds removes it unless the path was yours.</p>
+<p>Cargoship’s own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.</p>
 <h2 id="checking-the-result"><a class="header" href="#checking-the-result">Checking the result</a></h2>
 <p>The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.</p>
 <pre><code class="language-sh">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
@@ -1998,6 +2062,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
       --confirm                                 Confirm whether if to proceed with the install
+      --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help                                    help for engine-config-sync
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
@@ -4401,12 +4466,16 @@ mage generate:updatePins            # refresh every line already pinned
 <h2 id="one-binary-not-a-second-release-artifact"><a class="header" href="#one-binary-not-a-second-release-artifact">One binary, not a second release artifact</a></h2>
 <p>The module needs a machine-readable way into <code>src/pkg/action</code>: arguments in as JSON, exactly one JSON object out, following the <code>WANT_JSON</code> convention. Two things make this cheap here that are usually expensive.</p>
 <ul>
-<li><strong>Dry run already exists, and check mode maps onto it directly.</strong> <code>src/pkg/phase/05_manager.go</code> carries <code>Manager.DryRun</code> plus a three-way classifier, <code>ClassifyDryRun</code>, that decides per phase whether a dry run skips it, runs it as itself because it only reads (<code>readOnly</code>), or calls its own dry path (<code>withDryRun</code>). A phase that declares neither is skipped, so dry-run safety is a property a phase has to claim rather than one it is assumed to have. <code>_ansible_check_mode</code> becomes an assignment to <code>Manager.DryRun</code>, not a new subsystem.</li>
+<li><strong>Dry run already exists, and check mode maps onto it directly.</strong> <code>src/pkg/phase/05_manager.go</code> carries <code>Manager.DryRun</code> plus a three-way classifier, <code>ClassifyDryRun</code>, that decides per phase whether a dry run skips it, runs it as itself because it only reads (<code>readOnly</code>), or calls its own dry path (<code>withDryRun</code>). A phase that declares neither is skipped, so dry-run safety is a property a phase has to claim rather than one it is assumed to have. <code>_ansible_check_mode</code> becomes <code>--dry-run</code>, not a new subsystem. One gap had to be closed for this: <code>engine-config-sync</code> was the only lifecycle command that never registered the flag, though it embeds the field and passes it to the manager like the others. It registers it now, on the same terms as <code>apply</code> and <code>reset</code> – a dry run needs no <code>--confirm</code>, because requiring confirmation to ask what would happen is what pushes someone into running the real thing to find out.</li>
 <li><strong>stdout is already clean.</strong> A module that prints anything but its one JSON object is a broken module, and in most Go CLIs separating the log stream from the result stream is the bulk of the work. Cargoship’s logging already goes to stderr: the zarf logger’s <code>DestinationDefault</code> is <code>os.Stderr</code>, and rig’s own chatter is bridged into that same logger by <code>src/internal/riglogger</code> rather than being written directly. Nothing on the install path writes to stdout.</li>
 </ul>
 <p>That entrypoint lives in the existing binary rather than a new <code>cmd/</code> target producing its own release artifact. Adding a second build to <code>.goreleaser.yaml</code> is a few lines, which is what makes it tempting, but the lines are not the cost. Every release artifact carries a cosign signature and an SBOM, and the nfpms builds produce GPG-signed rpm, deb, and apk packages. A second binary is a second thing to sign, publish, verify, and carry through an airlock, and it introduces a failure mode that is otherwise impossible: a module binary and a staged <code>cargoship</code> on the same node disagreeing about version. One binary means the thing answering Ansible is the thing doing the work, and a management node keeps both entry paths – through a playbook, or by running cargoship by hand as operators do today.</p>
-<p>The single binary presents itself as several module files by dispatching on the <code>argv[0]</code> basename Ansible invokes it under: a basename carrying a <code>cargoship_</code> prefix enters module mode and selects the action, and anything else is the ordinary CLI. The module files are symlinks to the binary, created by the same <code>nfpms</code> packages that install it, so there is nothing extra to sign, publish, or carry through an airlock. An environment variable provides the same selection for tests, which have no reason to create symlinks to check the contract.</p>
-<p>One correction to the reasoning above belongs here, because it is load-bearing for the module contract. “Nothing on the install path writes to stdout” is true of the install path and false of the init path: <code>src/cmd/viper.go</code> builds a bootstrap logger with <code>Destination: os.Stdout</code> during <code>init()</code>, before any flag is parsed, and there are <code>fmt.Printf</code> calls on the same path. That is a plain bug and is fixed. Relying on the fix alone would be relying on an audit staying true, so module mode also redirects <code>os.Stdout</code> to stderr at entry and writes its one JSON object to a descriptor saved beforehand. The contract then holds against whatever is added later, rather than against what was there when it was written.</p>
+<p>The single binary presents itself as several module files by dispatching on the <code>argv[0]</code> basename Ansible invokes it under: a basename of <code>cargoship_</code> followed by the name of an action the binary answers as enters module mode, and anything else is the ordinary CLI. The name has to be a real action, not merely carry the prefix. The prefix alone is not rare enough to dispatch on, because the repository builds its own binary as <code>cargoship_linux_amd64</code> and the whole end-to-end suite runs that file; dispatching on the prefix turned every one of those invocations into a JSON object nobody asked for. What that costs is a misspelled module file: <code>cargoship_engine_confg_sync</code> now runs the CLI and fails where it parses the arguments file as a command, rather than saying it is not a module. The module files are symlinks to the binary, created by the same <code>nfpms</code> packages that install it, so there is nothing extra to sign, publish, or carry through an airlock. An environment variable, <code>CARGOSHIP_ANSIBLE_MODULE</code>, provides the same selection for tests, which have no reason to create symlinks to check the contract.</p>
+<p>A module does not reimplement the command it stands for. It renders its parameters as the argument vector an operator would have typed and runs that, so package loading, keyring resolution, timeout parsing, and phase construction stay on one path and the two entry points cannot drift apart. What that costs is one indirection: <code>src/cmd</code> imports <code>src/internal/ansiblemod</code> to reach the dispatch, so <code>ansiblemod</code> cannot import <code>src/cmd</code> back, and it spells the flag names out rather than referencing the constants. A test in <code>src/cmd</code> parses a fully populated argument vector against the real command, so a flag renamed in the CLI fails CI instead of failing a playbook against a live fleet.</p>
+<p>The generated <code>ZarfCluster</code> is written before the command runs and is named in the result. A run that fails leaves it there, because a failure that reads like the wrong cluster is one an operator needs the document to diagnose and reproducing the translation afterwards has already lost the run that produced it. A run that succeeds removes it, unless the operator named the path themselves, in which case the file is theirs.</p>
+<p>One correction to the reasoning above belongs here, because it is load-bearing for the module contract. “Nothing on the install path writes to stdout” is true of the install path and false of the init path: <code>src/cmd/viper.go</code> built a bootstrap logger with <code>Destination: os.Stdout</code>, and <code>src/cmd/root.go</code> reported a failed configuration load and two failed flag-completion registrations with <code>fmt.Printf</code>. All of those are plain bugs for any command that emits a document, Ansible or not, and all are fixed to stderr.</p>
+<p>Relying on the fix alone would be relying on an audit staying true, so module mode also duplicates file descriptor 1 at entry, points <code>os.Stdout</code> at stderr, and writes its one JSON object to the duplicate. Anything added later that reaches for <code>os.Stdout</code> reaches stderr instead, which Ansible captures and shows on failure.</p>
+<p>The guard covers everything after <code>main</code> begins, which is not everything. <code>src/cmd</code> builds the root command in a package-level variable, so the writes listed above happen during package initialisation, before <code>main</code> and therefore before any guard could be installed. Those are the audited ones, and they stay audited: the fix to stderr is what holds there, and a test drives the binary in module mode with a broken configuration file so that a regression fails CI rather than a playbook. The init path is also where the binary can exit before answering at all – a configuration file that cannot be parsed calls <code>os.Exit(1)</code> in <code>init()</code> – which Ansible sees as a module failure with the reason on stderr, the same failure the CLI gives for the same file.</p>
 <h2 id="one-module-per-action-not-one-module-with-an-action-parameter"><a class="header" href="#one-module-per-action-not-one-module-with-an-action-parameter">One module per action, not one module with an <code>action</code> parameter</a></h2>
 <p>The actions do not share an option set. <code>apply</code> carries roughly a dozen flags – host file updates, firewall, fapolicyd, node labelling, unmanaged nodes, kubeconfig update and path, worker concurrency, values files, signature verification, age keys. <code>kube-config</code> carries three, and it does not even load a package: <code>installKubeConfigOptions.run</code> builds a <code>phase.Manager</code> directly instead of going through <code>initManager</code>, because there is no distro package to resolve values against. Collapsing that into one module with an <code>action</code> parameter means a single argument surface where most parameters are invalid for most values of <code>action</code>, and without <code>argument_spec</code> every one of those relationships is hand-checked. Separate modules keep each argument surface small enough to validate by hand.</p>
 <h2 id="what-is-being-accepted"><a class="header" href="#what-is-being-accepted">What is being accepted</a></h2>
