@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2b374bc4.js";
+            window.path_to_searchindex_js = "searchindex-4b78d259.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-bc2cf8ad.js"></script>
+        <script src="toc-22142fe1.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -4156,9 +4156,12 @@ mage dev:writeOSVOverrides      # writes every override into vendor/.
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
 <ul>
 <li><code>EndToEnd</code> — Builds Cargoship for the host, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.</li>
+<li><code>AnsibleRequirements</code> — Checks every collection pinned in <code>ansible/colonel_byte/cargoship/requirements.yml</code> can run on the ansible-core declared in that collection’s <code>meta/runtime.yml</code>. Asks Galaxy what each <em>pinned</em> version declares in <code>requires_ansible</code> and fails when that does not cover the whole controller range. Touches the network. <code>.github/workflows/check-ansible-requirements.yaml</code> runs it on every pull request.</li>
 </ul>
-<pre><code class="language-sh">mage test:endToEnd        # build the binary, then run the e2e suite
+<pre><code class="language-sh">mage test:endToEnd            # build the binary, then run the e2e suite
+mage test:ansibleRequirements # check the Galaxy pins run on the declared ansible-core
 </code></pre>
+<p><code>Test.AnsibleRequirements</code> deliberately does not check the pins are the <em>newest</em> available — an upstream collection released that morning must not fail an unrelated pull request. Moving the pins forward is <code>Generate.AnsibleRequirements</code>, run on purpose.</p>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
 <ul>
@@ -4194,6 +4197,11 @@ mage dev:writeOSVOverrides      # writes every override into vendor/.
 <li>
 <p><code>EngineConfig</code> — Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>src/pkg/engineconfig/gen/</code>, plus each version’s packaged-component vocabulary (the valid <code>disable:</code>, <code>cni:</code>, and <code>ingress-controller:</code> values) in a <code>zz_addons.go</code> alongside them.</p>
 </li>
+<li>
+<p><code>AnsibleRequirements</code> — Rewrites <code>ansible/colonel_byte/cargoship/requirements.yml</code>, pinning each Galaxy collection to the newest release whose <code>requires_ansible</code> admits the whole ansible-core range declared in the collection’s <code>meta/runtime.yml</code>. Where a collection has releases the controller cannot run, the newest one is named alongside the pin, so a held-back pin reads as held back rather than current. Touches the network.</p>
+<p>This is a generated file because no dependency bot can produce it. Renovate has an <code>ansible-galaxy</code> manager that reads this exact file, but its <code>galaxy-collection</code> datasource never surfaces <code>requires_ansible</code>, and <code>constraintsFiltering</code> does not cover that datasource — so it would bump the pins blind. The constraint is not theoretical: <code>community.general</code> 13.4.0 needs ansible-core 2.18, while the newest release usable on 2.16 is 11.4.9, two majors behind. See <a href="#why-the-galaxy-collection-pins-are-resolved-by-a-mage-target-and-not-a-dependency-bot">choice-ansible-collection-pins</a>.</p>
+<p>The controller range in <code>meta/runtime.yml</code> is the single input, and it is a range rather than a floor (<code>"&gt;=2.16.0,&lt;2.17.0"</code>) because a floor alone does not say which ansible-core the pins are resolved for. It tracks whatever <code>dnf install ansible-core</code> resolves to on the base image in <code>containers/ansible/Dockerfile</code>; bumping that image means editing the line and re-running this target. A <code>requires_ansible</code> that does not parse as a PEP 440 specifier, or that is unbounded on either side, fails the target rather than being skipped — ansible-core itself swallows that case and downgrades it to a warning in playbook output.</p>
+</li>
 </ul>
 <pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
@@ -4206,6 +4214,8 @@ mage generate:engineConfig              # regenerate src/pkg/engineconfig/gen/ f
 mage generate:examples                  # re-render every example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/*/distro.yaml
 mage generate:exampleLine rke2 v1.36    # render an example for every rke2 release on the 1.36 line
 mage generate:exampleLine k3s 1.36      # same for k3s -- the leading v is optional
+
+mage generate:ansibleRequirements       # bump the Galaxy pins to the newest the controller runs
 </code></pre>
 <p><code>LatestTag</code> is also how a <em>new</em> minor line is added: pass a prefix that <code>thirdparty-src/pins.json</code> does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2’s config is composed against k3s’s flags at the same version:</p>
 <pre><code class="language-sh">mage generate:latestTag k3s v1.37
@@ -4232,6 +4242,9 @@ mage generate:examples
 <li><strong><code>example-shasums.go</code>:</strong> The <code>example/shasums.json</code> cache, and the <code>sha256</code> function the example template hashes its remote files with.</li>
 <li><strong><code>example-release-lines.go</code>:</strong> The cache behind <code>fetchReleaseLines</code>: where it lives, how an asset URL is flattened into one file name, how an entry is trusted, and the atomic write that keeps a half-written entry from being read back as a whole asset.</li>
 <li><strong><code>engine-pins.go</code>:</strong> Shared, target-free layer over <code>thirdparty-src/pins.json</code>: reading, writing, tag parsing, and tag resolution used by the four <code>gen-engine-*.go</code> targets.</li>
+<li><strong><code>gen-ansible-requirements.go</code>:</strong> Holds <code>Generate.AnsibleRequirements</code>.</li>
+<li><strong><code>test-ansible-requirements.go</code>:</strong> Holds <code>Test.AnsibleRequirements</code>.</li>
+<li><strong><code>ansible-requirements.go</code>:</strong> Shared, target-free layer behind both: reading <code>requirements.yml</code> and the controller range out of <code>meta/runtime.yml</code>, paging the Galaxy v3 versions endpoint, reducing a PEP 440 specifier to an interval, and deciding whether a release admits the controller range. Containment rather than overlap — an operator anywhere in the declared range has to be able to run the pin, so a release capped below the range’s own ceiling is rejected too.</li>
 <li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code> and <code>k3s-distro.yaml.tmpl</code>, one per distro that has examples.</li>
 <li><strong><code>utils.go</code>:</strong> Implements low-level helper functions for file cleanup, host compilation, and compiler flag construction. See <a href="#build-flags-and-environment">build-flags</a> for what each flag/env var does and why.</li>
 <li><strong><code>binary.go</code>:</strong> Includes non-exported validation functions to verify binary existences within <code>GOPATH</code>.</li>
@@ -4256,6 +4269,7 @@ mage generate:examples
 <tr><td style="text-align: left"><code>example/&lt;distro&gt;-&lt;cni&gt;/&lt;minor&gt;/*/distro.yaml</code></td><td style="text-align: left">Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line</td><td style="text-align: left"><code>Generate.Examples</code></td></tr>
 <tr><td style="text-align: left"><code>example/shasums.json</code></td><td style="text-align: left">Cached sha256 of every remote file the examples hash</td><td style="text-align: left"><code>Generate.Examples</code> / <code>Generate.ExampleLine</code></td></tr>
 <tr><td style="text-align: left"><code>&lt;zarf_cache&gt;/examples/*</code></td><td style="text-align: left">Cached release text assets (image lists), not committed</td><td style="text-align: left"><code>Generate.Examples</code> / <code>Generate.ExampleLine</code></td></tr>
+<tr><td style="text-align: left"><code>ansible/colonel_byte/cargoship/requirements.yml</code></td><td style="text-align: left">Galaxy collection pins for the Ansible collection</td><td style="text-align: left"><code>Generate.AnsibleRequirements</code></td></tr>
 </tbody>
 </table>
 </div>
@@ -4268,7 +4282,7 @@ mage generate:examples
 </code></pre>
 <p>This builds and runs the same <code>mage.Main()</code> entry point that the <code>mage</code> CLI would otherwise generate for you. It’s useful when:</p>
 <ul>
-<li>The <code>mage</code> binary isn’t installed on the host (e.g. a minimal CI or container image that already has a Go toolchain).</li>
+<li>The <code>mage</code> binary isn’t installed on the host (e.g. a minimal CI or container image that already has a Go toolchain). This is how <code>.github/workflows/check-ansible-requirements.yaml</code> runs its gate — <code>go run -mod=vendor ./magefiles/core test:ansibleRequirements</code> — so the workflow needs nothing beyond <code>setup-go</code> and the vendored tree.</li>
 <li>You want a single, explicit <code>go run</code> invocation instead of depending on a separately-installed tool.</li>
 </ul>
 <p>Task selection still works the same way — pass the namespace:target as an argument, e.g.:</p>
@@ -4613,6 +4627,34 @@ mage generate:updatePins            # refresh every line already pinned
 <li>The age writer must be closed before the armor writer, and both must be closed. The first encrypts and flushes the final chunk; the second writes the footer that terminates the block. Closing only the outer one produces a truncated value that looks fine until something reads it.</li>
 <li>An armored value starts with <code>-----</code>, so passing one as a positional argument to <code>cargoship vault decrypt</code> is parsed as a flag. Nothing can be done about that inside the command, since the flag parser runs first, so stdin is the documented path and <code>--</code> after all flags is the alternative. <code>02_vault_encrypt_test.go</code> and <code>08_age_test.go</code> both exercise the working forms.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-galaxy-collection-pins-are-resolved-by-a-mage-target-and-not-a-dependency-bot"><a class="header" href="#why-the-galaxy-collection-pins-are-resolved-by-a-mage-target-and-not-a-dependency-bot">Why the Galaxy collection pins are resolved by a mage target and not a dependency bot</a></h1>
+<p><code>ansible/colonel_byte/cargoship/requirements.yml</code> pins the Galaxy collections the collection’s role installs. Those pins have a constraint no other dependency in this repository has: every version must run on the ansible-core the controller actually has, which is 2.16.16 – what <code>dnf install ansible-core</code> resolves to on the <code>almalinux/10-base</code> image in <code>containers/ansible/Dockerfile</code>, and what a management node inside an airlock runs.</p>
+<p>Collections move past that regularly. <code>community.general</code> 13.4.0 declares <code>requires_ansible: "&gt;=2.18.0"</code>; the newest release usable on 2.16 is 11.4.9, two majors behind. A bot that bumps to latest would pin a collection that cannot load.</p>
+<h2 id="renovate-cannot-do-it-and-the-reason-is-not-going-to-be-worked-around"><a class="header" href="#renovate-cannot-do-it-and-the-reason-is-not-going-to-be-worked-around">Renovate cannot do it, and the reason is not going to be worked around</a></h2>
+<p>Renovate was the obvious candidate: it has an <code>ansible-galaxy</code> manager that reads this exact file, which Dependabot does not. It still does not work here.</p>
+<ul>
+<li><code>constraintsFiltering: strict</code>, the mechanism for dropping releases whose declared language support does not match the repository’s, covers <code>crate</code>, <code>go</code>, <code>jenkins-plugins</code>, <code>npm</code>, <code>packagist</code>, <code>pub</code>, <code>pypi</code> and <code>rubygems</code>. <code>galaxy-collection</code> is not among them.</li>
+<li>Even where filtering is enabled, it needs the datasource to report a constraint per release. Renovate’s <code>galaxy-collection</code> datasource reads <code>created_at</code> and <code>repository</code> out of the Galaxy v3 response and never maps <code>requires_ansible</code> onto <code>release.constraints</code>. There is nothing to filter on.</li>
+</ul>
+<p>So Renovate’s manager would bump this file blind. Hand-maintained <code>allowedVersions</code> ceilings in <code>packageRules</code> were the alternative – <code>community.general</code> capped at <code>&lt;12</code>, and so on – and were rejected: the ceiling is a second copy of a fact Galaxy already publishes, it goes stale silently when a collection raises its floor inside a major, and being wrong looks exactly like being right until a playbook fails on a node.</p>
+<h2 id="galaxy-publishes-the-data-on-the-endpoint-renovate-already-calls"><a class="header" href="#galaxy-publishes-the-data-on-the-endpoint-renovate-already-calls">Galaxy publishes the data, on the endpoint Renovate already calls</a></h2>
+<pre><code>GET /api/v3/plugin/ansible/content/published/collections/index/{namespace}/{name}/versions/
+-&gt; data[].requires_ansible
+</code></pre>
+<p>Every published version carries its specifier. Resolving the pin correctly is then a filter and a max, which is <code>magefiles/ansible-requirements.go</code>, driven by two targets:</p>
+<ul>
+<li><code>mage generate:ansibleRequirements</code> pins each collection to the newest release whose <code>requires_ansible</code> admits the whole controller range, and names the newest release alongside it when the two differ, so a held-back pin reads as held back rather than current.</li>
+<li><code>mage test:ansibleRequirements</code> checks only the pinned versions and fails when one does not admit that range. <code>.github/workflows/check-ansible-requirements.yaml</code> runs it on every pull request.</li>
+</ul>
+<p>The split is deliberate. A gate that asserted the pins were the <em>newest</em> would fail an unrelated pull request whenever an upstream collection shipped that morning, which trains people to ignore it. The gate asserts the pins are <em>usable</em>; moving them forward is a deliberate run of the generator.</p>
+<p>This is the same shape as <code>Generate.UpdatePins</code> in <code>magefiles/gen-engine-update-pins.go</code>, which resolves upstream k3s and rke2 tags into <code>thirdparty-src/pins.json</code>. Both exist because a version this repository pins has a correctness condition attached that a generic bot has no way to evaluate.</p>
+<h2 id="metaruntimeyml-is-the-one-place-the-controller-range-is-written-down"><a class="header" href="#metaruntimeyml-is-the-one-place-the-controller-range-is-written-down"><code>meta/runtime.yml</code> is the one place the controller range is written down</a></h2>
+<p><code>requires_ansible</code> in the collection’s <code>meta/runtime.yml</code> is both the collection’s declared support and the resolver’s input. It is a range rather than a floor – <code>"&gt;=2.16.0,&lt;2.17.0"</code> – because a floor alone does not say which ansible-core the pins are resolved for, and a second copy of that number somewhere else would be a thing to keep in step.</p>
+<p>It had been <code>"2.16.16"</code>, which is not a PEP 440 specifier at all. <code>SpecifierSet</code> raises on a bare version, and ansible-core catches that raise in <code>plugins/loader.py</code> and downgrades it to <code>Error parsing collection metadata requires_ansible value</code>, so the declared floor enforced nothing and said so only in playbook output nobody reads. <code>controllerRange</code> therefore treats an unparseable or half-bounded <code>requires_ansible</code> as an error rather than a skip, and <code>TestParseSpecifierRejectsABareVersion</code> pins that.</p>
+<p>The upper bound tracks the base image. Bumping <code>containers/ansible/Dockerfile</code> to a release whose <code>ansible-core</code> is newer means editing this line and re-running the generator; the pins will move forward on their own once it does.</p>
+<h2 id="revisit-trigger"><a class="header" href="#revisit-trigger">Revisit trigger</a></h2>
+<p>Renovate adding <code>galaxy-collection</code> to <code>constraintsFiltering</code> and surfacing <code>requires_ansible</code> as a release constraint. At that point the manager plus <code>constraints.ansible</code> would do what these two targets do, with PRs for free, and this can be deleted rather than rediscovered. Nothing else about the setup is worth keeping if that happens.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node"><a class="header" href="#why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node">Why the Ansible module is the cargoship binary, run on the management node</a></h1>
 <p>Cargoship’s cluster lifecycle commands – <code>apply</code>, <code>prepare</code>, <code>reset</code>, <code>engine-config-sync</code>, <code>kube-config</code> – should be drivable from an Ansible playbook, not only from cargoship’s own CLI. Three architectures were considered: the compiled Go binary as the module file itself, run on one node; the same binary copied to every managed node with Ansible sequencing the phases; and a conventional Python <code>AnsibleModule</code> wrapping cargoship as a subprocess. The first was chosen. It preserves how cargoship is operated and shipped today, and the node it runs on is the management node that air-gapped environments already stage onto.</p>
