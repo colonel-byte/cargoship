@@ -46,10 +46,11 @@ The `Dev` namespace aggregates convenience tasks for day-to-day development:
 *   `Digest` — Resolves `docker.io/library/alpine:latest` through the host's Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.
 
 ```sh
-mage dev:clean            # rm the build/ artifacts
-mage dev:tidy             # go mod tidy
-mage dev:vendor           # go mod tidy, then go mod vendor
-mage dev:digest           # print the alpine:latest digest, to check registry auth works
+mage dev:clean                  # rm the build/ artifacts
+mage dev:tidy                   # go mod tidy
+mage dev:vendor                 # go mod tidy, then go mod vendor
+mage dev:digest                 # print the alpine:latest digest, to check registry auth works
+mage dev:writeOSVOverrides      # writes every override into vendor/.
 ```
 
 ### `Test` Namespace
