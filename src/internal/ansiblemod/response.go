@@ -25,9 +25,10 @@ const (
 	// SignalUnknown means no phase reported whether it changed anything, so the changed field
 	// above it is a convention rather than an observation.
 	SignalUnknown = "unknown"
-	// SignalPartial means some phases reported and some did not.
+	// SignalPartial means some phases reported and some did not. The ones that did not are
+	// named in Detail.ChangedUndeclared.
 	SignalPartial = "partial"
-	// SignalComplete means every phase that ran reported whether it changed anything.
+	// SignalComplete means every phase the run reached reported whether it changed anything.
 	SignalComplete = "complete"
 )
 
@@ -62,11 +63,18 @@ type Detail struct {
 	// hand. Parameters carrying secrets are passed as file paths rather than values, so this
 	// holds no key material.
 	Command []string `json:"command,omitempty"`
-	// ChangedSignal says how much the changed field above is worth. Phases do not yet report
-	// whether they changed anything, so it is "unknown" and changed is reported true: an
-	// Ansible handler that fires when nothing happened is a smaller failure than one that
-	// does not fire when something did.
+	// PhasesRan and PhasesPlanned name the phases the run executed and, under check mode, the
+	// phases it reported instead of running. Ansible shows one result for the whole fleet, so
+	// these are what a playbook has in place of per-host detail.
+	PhasesRan     []string `json:"phasesRan,omitempty"`
+	PhasesPlanned []string `json:"phasesPlanned,omitempty"`
+	// ChangedSignal says how much the changed field above is worth: complete when every phase
+	// the run reached said whether it changed anything, partial when some did not, unknown when
+	// no phase reported at all.
 	ChangedSignal string `json:"changedSignal,omitempty"`
+	// ChangedUndeclared names the phases that did not say. It is what makes a partial signal
+	// actionable rather than a warning with nothing behind it.
+	ChangedUndeclared []string `json:"changedUndeclared,omitempty"`
 }
 
 // fail marks the response as a failure carrying err.

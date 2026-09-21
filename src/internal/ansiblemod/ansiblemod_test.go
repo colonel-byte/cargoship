@@ -24,6 +24,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/stretchr/testify/require"
 )
 
@@ -293,6 +295,8 @@ func TestRunTranslatesTheInventoryAndRunsTheCommand(t *testing.T) {
 
 	resp := decodeOne(t, out)
 	require.False(t, resp.Failed)
+	// This Exec runs no phases, so nothing reported and the module falls back to the
+	// convention. The phase-reporting path is covered below.
 	require.True(t, resp.Changed)
 	require.Equal(t, SignalUnknown, resp.Cargoship.ChangedSignal)
 	require.Equal(t, "engine_config_sync", resp.Cargoship.Module)
@@ -384,4 +388,113 @@ func TestResponseEmitsOneObjectPerLine(t *testing.T) {
 	require.Equal(t, 1, strings.Count(out, "\n"))
 	require.True(t, strings.HasSuffix(out, "\n"))
 	require.JSONEq(t, `{"changed":true,"msg":"done"}`, strings.TrimSpace(out))
+}
+
+// syncedPhase stands in for EngineConfigSyncHosts: it is the kind of phase that says whether it
+// changed the fleet.
+type syncedPhase struct {
+	changed bool
+	skip    bool
+}
+
+func (p *syncedPhase) Title() string       { return "Sync Registry Config Controller" }
+func (p *syncedPhase) Explanation() string { return "test phase" }
+func (p *syncedPhase) ShouldRun() bool     { return !p.skip }
+func (p *syncedPhase) Changed() bool       { return p.changed }
+
+func (p *syncedPhase) Run(context.Context) error { return nil }
+
+// silentPhase declares nothing about what it changed, which is what most of the phase tree still
+// does. It is what makes a signal partial.
+type silentPhase struct{}
+
+func (p *silentPhase) Title() string             { return "Connect" }
+func (p *silentPhase) Explanation() string       { return "test phase" }
+func (p *silentPhase) Run(context.Context) error { return nil }
+
+// runPhases is an Exec that runs a real phase manager on the context the module handed it, which
+// is the whole path the changed signal travels. A dry run is selected the way the real command
+// selects one, by the flag the module rendered, so check mode is proved end to end.
+func runPhases(phases ...phase.Phase) Exec {
+	return func(ctx context.Context, argv []string) error {
+		m := phase.Manager{Config: &cluster.ZarfCluster{Spec: cluster.ZarfClusterSpec{}}}
+		for _, a := range argv {
+			if a == "--dry-run" {
+				m.DryRun = true
+			}
+		}
+		m.SetPhases(phases)
+		return m.Run(ctx)
+	}
+}
+
+func TestRunReportsWhatThePhasesChanged(t *testing.T) {
+	argv := []string{"cargoship_engine_config_sync", writeArgs(t,
+		`{"package": "./package.tar.zst", "inventory": `+minimalInventory+`}`)}
+
+	code, out := runModule(t, "engine_config_sync", argv,
+		runPhases(&silentPhase{}, &syncedPhase{changed: true}))
+	require.Equal(t, 0, code)
+
+	resp := decodeOne(t, out)
+	require.False(t, resp.Failed)
+	require.True(t, resp.Changed)
+	require.Equal(t, SignalPartial, resp.Cargoship.ChangedSignal)
+	require.Equal(t, []string{"Connect"}, resp.Cargoship.ChangedUndeclared)
+	require.Equal(t, []string{"Connect", "Sync Registry Config Controller"}, resp.Cargoship.PhasesRan)
+	require.Empty(t, resp.Cargoship.PhasesPlanned)
+}
+
+// TestRunReportsNoChangeWhenTheFleetIsAlreadySynced is the result the whole of step four exists
+// to make possible. It used to be reported as changed regardless, which made an Ansible handler
+// on this task fire on every run.
+func TestRunReportsNoChangeWhenTheFleetIsAlreadySynced(t *testing.T) {
+	argv := []string{"cargoship_engine_config_sync", writeArgs(t,
+		`{"package": "./package.tar.zst", "inventory": `+minimalInventory+`}`)}
+
+	code, out := runModule(t, "engine_config_sync", argv,
+		runPhases(&syncedPhase{skip: true}))
+	require.Equal(t, 0, code)
+
+	resp := decodeOne(t, out)
+	require.False(t, resp.Failed)
+	require.False(t, resp.Changed)
+	require.Equal(t, SignalComplete, resp.Cargoship.ChangedSignal)
+	require.Empty(t, resp.Cargoship.ChangedUndeclared)
+}
+
+// TestRunCheckModeReportsOutstandingWork pins what changed means under check mode: not "this run
+// changed something", which is never true of a dry run, but "a real run would".
+func TestRunCheckModeReportsOutstandingWork(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		phase   *syncedPhase
+		changed bool
+		planned []string
+	}{
+		{
+			name:    "work outstanding",
+			phase:   &syncedPhase{},
+			changed: true,
+			planned: []string{"Sync Registry Config Controller"},
+		},
+		{
+			name:  "nothing to do",
+			phase: &syncedPhase{skip: true},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			argv := []string{"cargoship_engine_config_sync", writeArgs(t,
+				`{"_ansible_check_mode": true, "package": "./package.tar.zst", "inventory": `+minimalInventory+`}`)}
+
+			code, out := runModule(t, "engine_config_sync", argv, runPhases(tc.phase))
+			require.Equal(t, 0, code)
+
+			resp := decodeOne(t, out)
+			require.False(t, resp.Failed)
+			require.True(t, resp.Cargoship.CheckMode)
+			require.Equal(t, tc.changed, resp.Changed)
+			require.Equal(t, tc.planned, resp.Cargoship.PhasesPlanned)
+		})
+	}
 }
