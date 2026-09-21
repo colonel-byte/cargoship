@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c8694d73.js";
+            window.path_to_searchindex_js = "searchindex-116576f5.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-af776c16.js"></script>
@@ -3850,8 +3850,17 @@ src/fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/Decry
 src/fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
 src/fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
 src/fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
+src/fuzz/ansible_inventory_fuzz_test.go  Ansible inventory targets: the projected request, one host variable, the role mapping
 src/fuzz/testdata/fuzz/&lt;Target&gt;/         committed crashers, one directory per target
 </code></pre>
+<h2 id="the-ansible-inventory-targets"><a class="header" href="#the-ansible-inventory-targets">The Ansible inventory targets</a></h2>
+<p><code>ansible_inventory_fuzz_test.go</code> fuzzes <code>src/internal/ansibleinv</code>, which is the translation an Ansible module runs on input it did not write. The vault targets guard what a wrong answer does to a file; these guard what a wrong answer does to a cluster, so their properties are about topology rather than encoding:</p>
+<ul>
+<li><code>FuzzAnsibleRequest</code> takes the JSON an action plugin projects, decodes it, and translates it. The first host in the result has to be a controller, because <code>ConfigureEngine</code> makes the first controller the leader; every host has to reach the document with an address, a user and a non-zero port; and translating the same input twice has to produce the same bytes, since the walk goes over Go maps.</li>
+<li><code>FuzzAnsibleHostVar</code> varies one host variable against an inventory that is otherwise fixed. A variable under the <code>cargoship_</code> prefix that cargoship does not read is refused by name. A variable outside the prefix that cargoship does not read leaves the generated document byte-for-byte unchanged.</li>
+<li><code>FuzzAnsibleRoleGroups</code> varies the role mapping and the group names it points at. No host reaches the document twice, and controllers come before workers.</li>
+</ul>
+<p>They need no key material, but they are not all fast: <code>FuzzAnsibleRequest</code> translates a request and manages tens of thousands of executions per second, while <code>FuzzAnsibleHostVar</code> translates the inventory twice on every execution, with and without the variable, and manages under a thousand. Measured numbers are in the table under <a href="#running-1">Running</a>; a minute each is a real sweep for the first two and a thin one for <code>FuzzAnsibleHostVar</code>.</p>
 <h2 id="both-formats-every-time"><a class="header" href="#both-formats-every-time">Both formats, every time</a></h2>
 <p>cargoship writes two ciphertext formats, Ansible Vault and age, and one keyring can carry both. Every target that encrypts therefore runs its body once per format rather than picking one: <code>encryptKeyrings()</code> returns the two encrypting keyrings and <code>rekeyPairs()</code> returns the four rekey directions (vault to vault, vault to age, age to age, age to vault). Both are in <code>keyring_test.go</code>, and both are built once in <code>TestMain</code> so that key generation is not paid per execution.</p>
 <p><code>TestMain</code> also unsets <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, <code>CARGOSHIP_AGE_RECIPIENTS</code>, <code>CARGOSHIP_VAULT_PASSWORD</code> and <code>ANSIBLE_VAULT_PASSWORD</code> before it builds anything. A developer who has those set in their shell would otherwise be fuzzing against different key material than CI, which is the kind of difference that makes a reported crasher unreproducible.</p>
@@ -3874,10 +3883,13 @@ $ go test -mod=vendor -count=1 ./src/fuzz/     # the same thing, spelled out
       go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./src/fuzz/ || break
   done
 </code></pre>
-<p>Expect very different throughput between the two kinds of target. The ones that only push strings through a parser run at tens of thousands of executions per second; the ones that encrypt a value run the Ansible Vault key derivation on every execution and manage a few dozen. The spread across a 30 second budget is roughly three orders of magnitude:</p>
+<p>Expect very different throughput between targets. The ones that only push strings through a parser run at tens of thousands of executions per second; the ones that encrypt a value run the Ansible Vault key derivation on every execution and manage fewer than two hundred; the inventory targets fall between the two, since generating a document is cheaper than deriving a key and dearer than parsing a path. The spread across a 30 second budget is roughly three orders of magnitude:</p>
 <pre><code>FuzzRekeyTargetPicksOneKey                1,806,844      no encryption, key selection only
 FuzzPathIsDecryptable                      2,033,626      path parsing only
 FuzzDecryptValueRejectsGarbage             2,531,710      almost every input is rejected before any key derivation
+FuzzAnsibleRequest                           401,831      decode, translate, translate again, encode both to compare bytes
+FuzzAnsibleRoleGroups                         93,138      one translation over a varying role mapping
+FuzzAnsibleHostVar                            24,171      two translations per execution, both encoded to YAML on the unchanged path
 FuzzSpliceAcrossDocumentShapes                 3,664      one vault encryption per execution
 FuzzDecryptAtPathRoundTrip                     2,082      encrypt, splice, decrypt, re-encrypt
 FuzzRekeyAtPathPreservesValue                  1,498      four rekey directions per execution
@@ -3891,7 +3903,9 @@ FuzzRekeyAtPathPreservesValue                  1,498      four rekey directions 
 FuzzPathIsDecryptable/477bd66902831e69                   string("0[0") an unclosed index, which panicked inside go-yaml instead of erroring
 FuzzPathIsDecryptable/ebc8a2cafef15425                   string("'$'") a path whose canonical spelling, "$.$", the parser then rejects
 FuzzEncryptAtPathArbitraryDocument/d370f7a72740b34b      a flow mapping holding a bare entry, into which the splice wrote a block scalar
+FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host with an empty name, which became an address, a hostname and a hostvars key
 </code></pre>
+<p>The Ansible one is fixed. A group entry of <code>""</code> produced a host whose address, hostname and <code>hostvars</code> key were all the empty string, and the schema accepted all three because each asks for a string; nothing downstream could tell that host from one an operator meant to install. <code>deriveRoles</code> now refuses an empty host name and an empty group name in the mapping.</p>
 <p>The last of those is open. <code>EncryptAtPath</code> writes a literal block scalar into a flow mapping such as <code>{0, pass: 00}</code>, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. <code>inFlowCollection</code> in <code>src/internal/clustercfg/vaultpath.go</code> is meant to catch exactly this and misses when a bare entry – a key with an implicit null value – precedes the target key. Until it is fixed a plain <code>go test</code> of this package is red, which is the intended state: the corpus entry is the defect report.</p>
 <p>Those same failures are also written up as ordinary table cases next to the code they broke – see <code>TestEncryptAtPathReadsBackWhatDecryptWrote</code> and <code>TestCanonicalYAMLPath</code> in <code>src/internal/clustercfg/vaultpath_test.go</code>. Keep doing both: the corpus file is what stops the target regressing, and the named case with a comment is what explains the defect to the next reader.</p>
 <h2 id="writing-a-target"><a class="header" href="#writing-a-target">Writing a target</a></h2>
