@@ -65,7 +65,7 @@ func (d Dev) Vendor() error {
 		return err
 	}
 
-	return writeOSVOverrides()
+	return d.WriteOSVOverrides()
 }
 
 // Digest simple returns the digest of an image, mostly for testing

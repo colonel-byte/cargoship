@@ -149,9 +149,9 @@ reason = %q
 	)
 }
 
-// writeOSVOverrides writes every override into vendor/. go mod vendor deletes and recreates the
+// WriteOSVOverrides writes every override into vendor/. go mod vendor deletes and recreates the
 // tree, so this runs after it every time rather than relying on the files surviving.
-func writeOSVOverrides() error {
+func (Dev) WriteOSVOverrides() error {
 	for _, o := range osvOverrides {
 		if _, err := os.Stat(filepath.Join(o.dir, o.manifest)); err != nil {
 			return fmt.Errorf("osv override for %s: %w -- the manifest is gone, so drop the entry from magefiles/vendor-osv.go", o.dir, err)
