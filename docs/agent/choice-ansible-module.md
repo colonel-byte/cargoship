@@ -109,6 +109,16 @@ Two things are deliberately left out.
 
 **A check-mode answer for `kube_config`.** `cargoship kube-config` has no `--dry-run`. A module with nothing to answer with has two options: run anyway, or refuse. Running anyway would change the management node during a run that was asked only to describe itself, so the module reports `skipped: true` and runs nothing. That is what Ansible does with a module that has declared it does not support check mode; a binary module has nowhere to declare it, so it says so in its result instead.
 
+## The collection ships the links, and the role hardcodes what must not fail open
+
+Ansible resolves a task name to a module file before any plugin of ours is consulted, so an action plugin alone reaches nothing. Each action therefore needs a file named `cargoship_<action>`, and each of those is a symlink to the binary. The RPM and deb packages create the links through nfpms `contents:` entries, installing the collection tree to `/usr/share/ansible/collections`, which is already on ansible-core's default collections path; a collection installed from Galaxy or from a checkout has no packaging step to hang that on, so `hack/ansible-link-modules.sh` does it by hand. Both were chosen over generating a per-action shim file: a shim is a second thing to sign and a second thing that can disagree with the binary.
+
+The action plugin forwards an allowlist of host variables rather than the whole of `hostvars`. A host's resolved variables routinely hold credentials for things that are not this cluster, and a module's parameters are written to a file on disk, so forwarding everything would write unrelated secrets to disk on every run. The allowlist is the four `ansible_*` connection variables plus every `cargoship_*` key -- all of them, including misspelled ones, because rejecting an unknown parameter by name is `ansibleinv`'s job and it cannot do that without being shown the misspelling. `TestActionPluginVariableAllowlist` reads the Python and fails when it drifts from the Go constants, because the symptom of drift is an unset field rather than an error.
+
+The plugin also merges a `parameters` dict into the arguments. The role has a caller-supplied dict of parameters and no way to know which of them the chosen module takes, and the obvious way to pass it -- making the task's whole argument dict one template -- is warned about by Ansible on every run and is genuinely unsafe. Merging in the plugin keeps the task's keys literal and its values templates, and costs one parameter that the module itself never sees.
+
+The role sets `run_once: true` on every task. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It sets `no_log: true` as a literal rather than from a variable: a template that fails to evaluate leaves `no_log` false, and the failure mode of that is every host's connection detail in the log. The one thing allowed to print is a debug task showing cargoship's own report, which carries no parameters.
+
 ## What is being accepted
 
 - No `ansible-doc` and no `ansible-test sanity`; the module's interface is documented only where we choose to document it.

@@ -20,6 +20,10 @@ version: 2
 before:
   hooks:
     - go generate ./...
+    # The Ansible collection is a release artifact of its own: the management node that runs the
+    # playbooks is inside the airlock, so it installs the collection from this tarball rather than
+    # from Galaxy. A snapshot passes no version, because its version is not the one in galaxy.yml.
+    - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}{{ else }}{{ .Version }}{{ end }}
 
 builds:
   - id: cargoship
@@ -88,6 +92,30 @@ nfpms:
     goamd64:
       - v1
     mtime: "{{ .CommitDate }}"
+    contents:
+      # The Ansible collection. /usr/share/ansible/collections is on ansible-core's default
+      # collections path, so installing the package is all a management node needs.
+      - src: ansible/colonel_byte/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship
+        type: tree
+      # The module files. There is no Python module behind any of them: the binary answers
+      # Ansible when it is invoked under a cargoship_ name. See
+      # docs/agent/choice-ansible-module.md.
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_apply
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_engine_config_sync
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_kube_config
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_prepare
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_reset
+        type: symlink
     rpm:
       compression: gzip
       prefixes:
@@ -185,6 +213,12 @@ release:
     name: cargoship
   name_template: "v{{ .Version }}"
   mode: append
+  # The collection tarball and its signature are built by the before hook above rather than by a
+  # build, so they reach the release this way. They carry their own cosign bundle because the
+  # checksums file covers artifacts the pipeline built itself.
+  extra_files:
+    - glob: bin/ansible/colonel_byte-cargoship-*.tar.gz
+    - glob: bin/ansible/colonel_byte-cargoship-*.tar.gz.sigstore.json
   footer: |-
     ---
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
