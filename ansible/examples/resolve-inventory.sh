@@ -24,7 +24,7 @@
 #   cargoship validate inventory.yaml
 #
 # Usage:
-#   resolve-inventory.sh <inventory> <cluster-name> <loadbalancer>
+#   resolve-inventory.sh <inventory> <cluster-name> <loadbalancer> [role-groups-json]
 #
 # `ansible-inventory --list` writes groups as objects and host variables under _meta; cargoship
 # reads a flat group-to-hosts map and a hostvars map, so the shapes are not the same document. The
@@ -38,9 +38,10 @@ set -euo pipefail
 inventory=${1:-}
 name=${2:-}
 loadbalancer=${3:-}
+role_groups=${4:-}
 
 if [[ -z ${inventory} || -z ${name} || -z ${loadbalancer} ]]; then
-	echo "usage: $0 <inventory> <cluster-name> <loadbalancer>" >&2
+	echo "usage: $0 <inventory> <cluster-name> <loadbalancer> [role-groups-json]" >&2
 	exit 2
 fi
 for tool in ansible-inventory jq; do
@@ -53,6 +54,7 @@ done
 ansible-inventory -i "${inventory}" --list | jq \
 	--arg name "${name}" \
 	--arg loadbalancer "${loadbalancer}" \
+	--arg role_groups "${role_groups}" \
 	'{
 		groups: (
 			to_entries
@@ -77,4 +79,4 @@ ansible-inventory -i "${inventory}" --list | jq \
 			)
 		),
 		cluster: {name: $name, loadbalancer: $loadbalancer}
-	}'
+	} + if $role_groups != "" then {roleGroups: ($role_groups | fromjson)} else {} end'
