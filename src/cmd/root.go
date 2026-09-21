@@ -137,7 +137,9 @@ var rootCmd = NewCargoshipCommand()
 func NewCargoshipCommand() *cobra.Command {
 	err := initViper()
 	if err != nil {
-		fmt.Printf("failed to load config: %v", err)
+		// stderr, not stdout: this runs during package initialisation, so it can land in the
+		// middle of a document a command was asked to write. See emitConfigError.
+		emitConfigError(err)
 	}
 
 	rootCmd := &cobra.Command{
@@ -177,11 +179,11 @@ func NewCargoshipCommand() *cobra.Command {
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {
-		fmt.Printf("failed to register %s flag completion: %v", RootLoggingLevel, err)
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", RootLoggingLevel, err)
 	}
 	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", resolvedConfig.LogFormat, lang.RootCmdFlagLogFormat)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingFormat, flags.RegisterLogFormat); err != nil {
-		fmt.Printf("failed to register %s flag completion: %v", RootLoggingFormat, err)
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", RootLoggingFormat, err)
 	}
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
@@ -206,6 +208,29 @@ func Execute(ctx context.Context) error {
 	return err
 }
 
+// emitConfigError reports a configuration file that could not be loaded.
+//
+// It writes to stderr, and it exists as a function so that both callers stay that way. Both run
+// during package initialisation, before any flag is parsed and so before the real logger exists,
+// which is early enough that the Ansible module mode in src/internal/ansiblemod cannot redirect
+// os.Stdout ahead of them. Commands that emit a document on stdout -- schema, validate, inventory
+// from-ansible -- would have that document corrupted by a warning mixed into it.
+func emitConfigError(err error) {
+	fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
+}
+
+// ExecuteArgs runs the root command against an explicit argument vector instead of os.Args.
+//
+// It exists for the Ansible module mode in src/internal/ansiblemod, which turns a module's JSON
+// parameters into the flags an operator would have typed and then runs the ordinary command.
+// Building an argument vector rather than calling into src/pkg/action directly is the point of the
+// arrangement: keyring resolution, timeout parsing, package loading, and phase construction stay on
+// one path, so what a playbook does and what an operator does cannot drift apart.
+func ExecuteArgs(ctx context.Context, args []string) error {
+	rootCmd.SetArgs(args)
+	return Execute(ctx)
+}
+
 // PrintViperConfigUsed informs users when Zarf has detected a config file.
 func PrintViperConfigUsed(ctx context.Context) error {
 	l := logger.From(ctx)
@@ -224,11 +249,15 @@ func PrintViperConfigUsed(ctx context.Context) error {
 func init() {
 	err := initViper()
 	if err != nil {
-		fmt.Printf("failed to load config: %v", err)
+		emitConfigError(err)
 	}
 
 	if v.ConfigFileUsed() != "" {
 		if err := loadViperConfig(); err != nil {
+			// Say what was wrong with the file before going. Exiting silently leaves an
+			// operator with a status and nothing else, and leaves a module run looking like
+			// a module that answered nothing.
+			emitConfigError(err)
 			os.Exit(1)
 		}
 	}
