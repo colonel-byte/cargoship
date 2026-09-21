@@ -97,6 +97,18 @@ The result travels back on the context. The module mode runs cargoship by buildi
 
 Writing the signal turned up one thing worth fixing on its own account: the in-place write in `needsUpdate` runs from `Prepare`, and `Prepare` runs for every phase including the ones a dry run is about to skip. A dry run was therefore writing files to hosts. It no longer does.
 
+## Five modules, and the parameters they deliberately do not offer
+
+The binary answers as `apply`, `prepare`, `engine_config_sync`, `reset`, and `kube_config`. Those are the actions that converge a fleet, which is what a playbook is for. `package create` stays out for the reason at the end of this document.
+
+Each module's parameters follow its own command's flags, and the surfaces genuinely differ -- `prepare` reads no encrypted value and so takes no `vault_password_file`, `reset` installs nothing and so takes no package and no `values`, `kube_config` touches the management node rather than the fleet. A parameter offered to the wrong module is an error naming it, rather than a flag quietly dropped. What is shared is shared in code: one embedded `common` struct carries `inventory`, `inventory_path`, `log_level`, and `log_format` for every module, so one module cannot spell `inventory_path` differently from its neighbour.
+
+Two things are deliberately left out.
+
+**Keyless signature verification.** The modules expose `public_key` and `verify` and stop there. Keyless verification identifies a signer against a Fulcio root and a transparency log, which wants network access the management node does not have, and its remaining flags -- `certificate-identity`, `certificate-identity-regexp`, `certificate-oidc-issuer`, `certificate-oidc-issuer-regexp`, `trusted-root`, `insecure-ignore-tlog`, `use-signed-timestamps` -- are mutually exclusive with each other in ways cobra enforces and a hand-written module would have to restate. An operator who needs keyless verification runs `cargoship package verify` before the play, where all of it is available. This is the argument-surface-size reasoning from the previous section applied one level down.
+
+**A check-mode answer for `kube_config`.** `cargoship kube-config` has no `--dry-run`. A module with nothing to answer with has two options: run anyway, or refuse. Running anyway would change the management node during a run that was asked only to describe itself, so the module reports `skipped: true` and runs nothing. That is what Ansible does with a module that has declared it does not support check mode; a binary module has nowhere to declare it, so it says so in its result instead.
+
 ## What is being accepted
 
 - No `ansible-doc` and no `ansible-test sanity`; the module's interface is documented only where we choose to document it.
@@ -108,6 +120,6 @@ Writing the signal turned up one thing worth fixing on its own account: the in-p
 
 **Most phases still do not report whether they changed anything.** Only the engine configuration sync phases declare `changedReporter` today, so an ordinary run reports its signal as `partial`. The two undeclared phases that can genuinely change something are `KubeConfig`, which writes the local kubeconfig, and `LabelNodes`, which sets node role labels; both are worth declaring next. The rest -- `Connect`, `DetectOS`, `GatherFacts`, `ValidateHosts`, `Lock`, `Disconnect` -- change nothing a playbook would want a handler for, and declaring them buys only a `complete` signal.
 
-**Start with `engine-config-sync`, not `apply`.** It is the most Ansible-shaped action cargoship has -- converge configuration, report drift, restart services -- and `src/pkg/phase/70_engine_config_sync_common.go` already computes the per-host idempotency signal in `needsUpdate`, `driftedFiles`, and `driftReason`. It is the cheapest place to prove the changed plumbing before taking on `apply`'s argument surface.
+**`engine-config-sync` came first, and the rest followed it.** It is the most Ansible-shaped action cargoship has -- converge configuration, report drift, restart services -- and `src/pkg/phase/70_engine_config_sync_common.go` already computed the per-host idempotency signal in `needsUpdate`, `driftedFiles`, and `driftReason`. Proving the contract and the changed plumbing there first, before taking on `apply`'s argument surface, is what made the shared parameter and argument-vector machinery fall out rather than be designed up front.
 
 Note that `create` is not in scope despite sometimes being listed alongside these commands. `cargoship package create` builds a package; it touches no hosts, runs no phases, and has no dry run. Whatever it needs from Ansible is a different question.
