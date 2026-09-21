@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-116576f5.js";
+            window.path_to_searchindex_js = "searchindex-1a4f2165.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-af776c16.js"></script>
+        <script src="toc-bc2cf8ad.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -5084,6 +5084,60 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <li>Should hidden/deprecated flags be emitted into generated structs at all, or tracked separately as metadata only?</li>
 <li>The current consumer (<code>src/types/distrocfg</code>) drops unrecognized keys (with a warning) for known distro/versions, but doesn’t fail the build. Worth revisiting once there’s confidence false positives (e.g. a flag added in extraction but not yet in a resolvable form) are rare enough to make a hard failure safe instead of a silent drop.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="ideas-other-sources-for-cargoship-inventory-from-"><a class="header" href="#ideas-other-sources-for-cargoship-inventory-from-">Ideas: other sources for <code>cargoship inventory from-*</code></a></h1>
+<p>This is a shortlist, not a decision. <code>cargoship inventory from-ansible</code> established a command group whose members all answer the same question – where does the list of machines come from – and the obvious next question is which other sources belong in it. Nothing here is committed to; the point is to record the criteria and the ranking while the reasoning is fresh, so that the next adapter is argued against a list rather than added because someone asked.</p>
+<h2 id="what-every-adapter-has-to-do-and-nothing-more"><a class="header" href="#what-every-adapter-has-to-do-and-nothing-more">What every adapter has to do, and nothing more</a></h2>
+<p>An adapter builds the <code>ansibleinv.Input</code> shape – <code>groups</code>, <code>hostvars</code>, <code>roleGroups</code> – and hands it to one translator. Role derivation, controllers-first ordering so that the leader is a controller, the refusal of an unknown <code>cargoship_</code> variable, and validation against the embedded inventory schema are written once and are already fuzzed (<code>src/fuzz/ansible_inventory_fuzz_test.go</code>). An adapter is a decoder. When one starts wanting rules of its own – its own notion of a role, its own precedence between two variables that disagree – that is the signal it does not belong in the binary, and should be a script that emits the JSON contract described below.</p>
+<p>One naming consequence, worth settling before a second adapter exists rather than after: the shared translator lives in a package called <code>ansibleinv</code>, and the moment anything but Ansible calls it the name is wrong. Rename it to something like <code>clusterinv</code> when the second caller lands.</p>
+<h2 id="the-four-criteria"><a class="header" href="#the-four-criteria">The four criteria</a></h2>
+<p>A source is worth first-party support when it meets all four.</p>
+<p>It works offline. The management node is inside the airlock and reaches nothing. A source that needs an API call from the management node is a source that needs a script on the outside anyway, and if a script is being written the script may as well emit the contract.</p>
+<p>The owner of the truth resolves it. Cargoship should read a resolved answer, not reproduce someone else’s resolution. This is the same argument <a href="#why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node">choice-ansible-module</a> makes for letting Ansible resolve its own inventory rather than parsing inventory files in Go: reproducing group_vars, <code>children</code> and precedence would reproduce them wrongly, and the symptom is a node installed in the wrong plane with nothing in between to say so.</p>
+<p>The format is documented and stable. A format that changes under us turns a silent misread into an install against the wrong machines.</p>
+<p>Roles are stated, not guessed. A host’s role has to come from something the operator wrote – a group, a column, a tag, a flag. Inferring it from a hostname pattern is guessing, and <code>ZarfHost.Role</code> is read verbatim everywhere else in this repository precisely because it is not inferable.</p>
+<h2 id="the-list-ranked"><a class="header" href="#the-list-ranked">The list, ranked</a></h2>
+<h3 id="1-from-json--the-contract-rather-than-a-source"><a class="header" href="#1-from-json--the-contract-rather-than-a-source">1. <code>from-json</code> – the contract rather than a source</a></h3>
+<p>Publish <code>{groups, hostvars, roleGroups, cluster}</code> as a documented, versioned input shape, read from a file or from stdin. Every other item on this list collapses into “emit this JSON”, which is what keeps the command group at three or four members instead of fifteen. It is also the cheapest thing here: the shape already exists as <code>ansibleinv.Request</code>, and the work is documenting it as an interface other people may target, plus a version field so it can change later without breaking the scripts that targeted it.</p>
+<p>Ship this first, whatever else happens. It is the thing that bounds the size of the rest of the list.</p>
+<h3 id="2-from-csv"><a class="header" href="#2-from-csv">2. <code>from-csv</code></a></h3>
+<p>The rack sheet. Columns for hostname, address, role, user, port and key path, out of the spreadsheet a data center hands over, with a flag to map a header that disagrees (<code>--column role=Function</code>). No network, no dependency, no format drift, and it is the one source that exists in every air-gapped shop regardless of what tooling they otherwise run. It is unglamorous enough to be overlooked and is probably the highest-value first-party adapter on the list.</p>
+<h3 id="3-from-ssh-config"><a class="header" href="#3-from-ssh-config">3. <code>from-ssh-config</code></a></h3>
+<p>An SSH client configuration maps almost exactly onto <code>rig.SSH</code>: <code>HostName</code> onto the address, <code>User</code>, <code>Port</code>, <code>IdentityFile</code> onto the key path, and <code>ProxyJump</code> onto the bastion. An operator who can already reach the fleet by name has, in effect, written most of an inventory.</p>
+<p>Do not parse the file. <code>Include</code>, wildcards and <code>Match</code> make <code>ssh_config</code> a resolver, which is the trap this document keeps naming. Shell out to <code>ssh -G &lt;host&gt;</code> per host and read the resolved answer, which is the owner-resolves-it rule applied. Roles come from a flag or from a list of host patterns per role, never from the name.</p>
+<p><code>IdentityFile</code> stays a path in the generated document. It is recorded, never read: key material in a generated inventory is always named by a path and never given by value.</p>
+<h3 id="4-from-terraform-or-opentofu"><a class="header" href="#4-from-terraform-or-opentofu">4. <code>from-terraform</code> (or OpenTofu)</a></h3>
+<p>Useful, with one decision that determines whether it is cheap or endless.</p>
+<p>Reading <code>resources[]</code> out of state means reading provider-specific attributes – <code>aws_instance.public_ip</code>, <code>proxmox_vm_qemu.default_ipv4_address</code>, <code>libvirt_domain.network_interface[0].addresses[0]</code>, <code>vsphere_virtual_machine.default_ip_address</code> – and grouping by tags, name prefixes, <code>for_each</code> keys or module paths, all per-shop convention. That is a provider mapping table in Go which is never finished.</p>
+<p>Reading outputs is not. The operator writes one <code>output</code> block whose value is the contract from item 1, in HCL, where they already know their own provider’s attribute names:</p>
+<pre><code class="language-hcl">output "cargoship_inventory" {
+  value = {
+    groups = {
+      controller = [for k, v in aws_instance.kc : v.private_ip]
+      worker     = [for k, v in aws_instance.kw : v.private_ip]
+    }
+    hostvars = { for k, v in aws_instance.kc : v.private_ip =&gt; {
+      ansible_user       = "ubuntu"
+      cargoship_hostname = v.tags["Name"]
+    }}
+  }
+}
+</code></pre>
+<p><code>tofu output -json</code> then runs outside the airlock, the JSON crosses it, and the management node reads a file. No backend access, no network, no tofu binary on the inside, and no provider knowledge in cargoship. At that point <code>from-terraform</code> is barely distinct from <code>from-json</code>: unwrap <code>.&lt;name&gt;.value</code> and decode.</p>
+<p>A middle tier exists if writing an output block is too much to ask – read <code>terraform show -json</code>, which is documented and carries a <code>format_version</code>, with the mapping supplied by flags such as <code>--address-attribute private_ip</code> and <code>--controller-filter 'tags.role=controller'</code>. That keeps the provider table out of Go but gives cargoship a small query language of its own, and small query languages grow. Do it on real demand, not in advance.</p>
+<p>HCL itself is out. The hosts are not in it: <code>count</code>, <code>for_each</code>, variables, modules and data sources mean the configuration describes a shape rather than a fleet, and <code>hashicorp/hcl/v2</code> would be a dependency bought in order to get a wrong answer.</p>
+<p>Security, because it is easy to get wrong here specifically: a Terraform state file is secret-bearing. It holds provider credentials and every <code>sensitive</code> value in plaintext. An adapter that reads raw state must not log the file, must not echo attributes into error messages, and must refuse any output marked <code>"sensitive": true</code> rather than copy it into a generated inventory that lands on disk unencrypted. Reading outputs rather than state keeps that blast radius small, which is a second reason to prefer it.</p>
+<h3 id="5-from-kubernetes"><a class="header" href="#5-from-kubernetes">5. <code>from-kubernetes</code></a></h3>
+<p>The reverse direction, for a cluster cargoship did not build. <code>kubectl get nodes -o json</code> gives an InternalIP per node and <code>node-role.kubernetes.io/*</code> labels, which is exactly the controller and worker split, and that is enough to run <code>engine-config-sync</code> or <code>reset</code> against a brownfield cluster.</p>
+<p>What decides its priority is that it yields half an inventory. Addresses and roles, yes; SSH user, port and key, no – those are not in the Kubernetes API and have to arrive by flag. It is a discovery step rather than a source.</p>
+<h3 id="6-from-netbox-from-maas"><a class="header" href="#6-from-netbox-from-maas">6. <code>from-netbox</code>, <code>from-maas</code></a></h3>
+<p>NetBox is the real source of truth in a good number of the environments this tool targets, and its model maps cleanly: devices, device roles, primary IPs, tags. The obstacles are that it needs network from the management node, which the airlock does not give, and an API client in the binary, which is dependency weight for one integration. Better served by a script that emits item 1. Worth reconsidering only if several users ask for the same field mapping.</p>
+<h2 id="explicitly-not"><a class="header" href="#explicitly-not">Explicitly not</a></h2>
+<p><code>from-inventory</code>, reading an Ansible INI or YAML inventory file directly without Ansible installed. Tempting because it would drop the Python dependency the action plugin adds; it reintroduces group_vars, host_vars, <code>children</code> and precedence, which is the thing the module architecture deliberately does not reimplement.</p>
+<p><code>from-vsphere</code>, <code>from-proxmox</code>, and the cloud providers. Provider attribute tables that are never finished, and network from a node that has none.</p>
+<p>Scanning: DHCP leases, ARP tables, a subnet sweep. These guess which machine is a controller, and a wrong guess installs a control plane on someone else’s server.</p>
+<h2 id="suggested-order"><a class="header" href="#suggested-order">Suggested order</a></h2>
+<p><code>from-json</code>, then <code>from-csv</code>, then <code>from-ssh-config</code>, then stop until someone asks. <code>from-terraform</code> slots in wherever demand puts it, built on the outputs path rather than the state path.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
 <h2 id="0250-2026-09-18"><a class="header" href="#0250-2026-09-18"><a href="https://github.com/colonel-byte/cargoship/compare/v0.24.0...v0.25.0">0.25.0</a> (2026-09-18)</a></h2>
