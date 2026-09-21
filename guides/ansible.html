@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-a51bf616.js";
+            window.path_to_searchindex_js = "../searchindex-1b60c6aa.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-af776c16.js"></script>
@@ -283,7 +283,7 @@ cargoship_bastion:
 <p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
 <h2 id="running-cargoship-as-an-ansible-module"><a class="header" href="#running-cargoship-as-an-ansible-module">Running cargoship as an Ansible module</a></h2>
 <p>The same translation runs inside a playbook. The cargoship binary is the Ansible module: it is installed as a set of symlinks named <code>cargoship_&lt;action&gt;</code>, and a symlink’s name selects the action. There is no separate module package and nothing to install on the managed nodes.</p>
-<p>One module ships today, <code>cargoship_engine_config_sync</code>. It converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does.</p>
+<p>Five modules ship, one per fleet action: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_engine_config_sync</code>, <code>cargoship_reset</code>, and <code>cargoship_kube_config</code>. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run.</p>
 <pre><code class="language-yaml">- name: Converge engine configuration
   cargoship_engine_config_sync:
     package: /srv/staging/rke2-1.31.tar.zst
@@ -299,36 +299,132 @@ cargoship_bastion:
   no_log: true
 </code></pre>
 <p>The task runs on the management node – <code>connection: local</code> when the Ansible controller is that node, <code>delegate_to</code> when they are separate. Cargoship connects to the fleet itself, from there.</p>
-<h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
-<p><code>inventory</code> takes the same document described above, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of <code>cargoship engine-config-sync</code>.</p>
+<h3 id="parameters-every-module-takes"><a class="header" href="#parameters-every-module-takes">Parameters every module takes</a></h3>
+<p><code>inventory</code> takes the same document described above, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of the command the module runs.</p>
 <div class="table-wrapper">
 <table>
 <thead>
 <tr><th>Parameter</th><th>Flag</th><th>Notes</th></tr>
 </thead>
 <tbody>
-<tr><td><code>package</code></td><td>the positional argument</td><td>Required. The distro package to synchronise from.</td></tr>
 <tr><td><code>inventory</code></td><td></td><td>Required. The resolved Ansible inventory, plus <code>cluster</code>.</td></tr>
 <tr><td><code>inventory_path</code></td><td><code>--config</code></td><td>Where to write the generated document. A private temporary file when unset.</td></tr>
-<tr><td><code>concurrency</code></td><td><code>--concurrency</code></td><td></td></tr>
-<tr><td><code>work_concurrency</code></td><td><code>--work-concurrency</code></td><td></td></tr>
-<tr><td><code>label_nodes</code></td><td><code>--label-nodes</code></td><td></td></tr>
-<tr><td><code>update_kubeconfig</code></td><td><code>--update-kubeconfig</code></td><td></td></tr>
-<tr><td><code>kubeconfig</code></td><td><code>--kubeconfig</code></td><td></td></tr>
-<tr><td><code>values</code></td><td><code>--values</code></td><td>A list of files.</td></tr>
-<tr><td><code>timeout</code></td><td><code>--timeout</code></td><td></td></tr>
-<tr><td><code>vault_password_file</code></td><td><code>--vault-password-file</code></td><td></td></tr>
-<tr><td><code>age_identity_file</code></td><td><code>--age-identity-file</code></td><td>A list of files.</td></tr>
 <tr><td><code>log_level</code></td><td><code>--log-level</code></td><td>Defaults to <code>debug</code> when the play runs with <code>-v</code>.</td></tr>
 <tr><td><code>log_format</code></td><td><code>--log-format</code></td><td></td></tr>
 </tbody>
 </table>
 </div>
 <p>A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why <code>label_nodes: false</code> and omitting <code>label_nodes</code> are different.</p>
+<p>The surfaces differ because the commands do. <code>cargoship prepare</code> reads no encrypted value, so it takes no <code>vault_password_file</code>; <code>cargoship reset</code> installs nothing, so it takes no package and no <code>values</code>. A parameter offered to the wrong module is an error naming it, rather than a flag quietly dropped.</p>
+<h3 id="cargoship_apply"><a class="header" href="#cargoship_apply"><code>cargoship_apply</code></a></h3>
+<p>Installs or converges the whole cluster.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Flag</th></tr>
+</thead>
+<tbody>
+<tr><td><code>package</code></td><td>the positional argument. Required.</td></tr>
+<tr><td><code>concurrency</code></td><td><code>--concurrency</code></td></tr>
+<tr><td><code>work_concurrency</code></td><td><code>--work-concurrency</code></td></tr>
+<tr><td><code>hosts</code></td><td><code>--hosts</code></td></tr>
+<tr><td><code>firewall</code></td><td><code>--firewall</code></td></tr>
+<tr><td><code>fapolicyd</code></td><td><code>--fapolicyd</code></td></tr>
+<tr><td><code>label_nodes</code></td><td><code>--label-nodes</code></td></tr>
+<tr><td><code>allow_unmanaged_nodes</code></td><td><code>--allow-unmanaged-nodes</code></td></tr>
+<tr><td><code>update_kubeconfig</code></td><td><code>--update-kubeconfig</code></td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>--kubeconfig</code></td></tr>
+<tr><td><code>values</code></td><td><code>--values</code>. A list of files.</td></tr>
+<tr><td><code>timeout</code></td><td><code>--timeout</code></td></tr>
+<tr><td><code>vault_password_file</code></td><td><code>--vault-password-file</code></td></tr>
+<tr><td><code>age_identity_file</code></td><td><code>--age-identity-file</code>. A list of files.</td></tr>
+<tr><td><code>public_key</code></td><td><code>--key</code></td></tr>
+<tr><td><code>verify</code></td><td><code>--verify</code>. <code>never</code>, <code>if-possible</code>, or <code>always</code>.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="cargoship_prepare"><a class="header" href="#cargoship_prepare"><code>cargoship_prepare</code></a></h3>
+<p>Stages a package onto the fleet and readies the hosts. Takes no key material.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Flag</th></tr>
+</thead>
+<tbody>
+<tr><td><code>package</code></td><td>the positional argument. Required.</td></tr>
+<tr><td><code>concurrency</code></td><td><code>--concurrency</code></td></tr>
+<tr><td><code>work_concurrency</code></td><td><code>--work-concurrency</code></td></tr>
+<tr><td><code>hosts</code></td><td><code>--hosts</code></td></tr>
+<tr><td><code>firewall</code></td><td><code>--firewall</code></td></tr>
+<tr><td><code>fapolicyd</code></td><td><code>--fapolicyd</code></td></tr>
+<tr><td><code>values</code></td><td><code>--values</code>. A list of files.</td></tr>
+<tr><td><code>timeout</code></td><td><code>--timeout</code></td></tr>
+<tr><td><code>public_key</code></td><td><code>--key</code></td></tr>
+<tr><td><code>verify</code></td><td><code>--verify</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="cargoship_engine_config_sync"><a class="header" href="#cargoship_engine_config_sync"><code>cargoship_engine_config_sync</code></a></h3>
+<p>Converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does. It does not update the hosts themselves, so it takes none of the three host switches.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Flag</th></tr>
+</thead>
+<tbody>
+<tr><td><code>package</code></td><td>the positional argument. Required.</td></tr>
+<tr><td><code>concurrency</code></td><td><code>--concurrency</code></td></tr>
+<tr><td><code>work_concurrency</code></td><td><code>--work-concurrency</code></td></tr>
+<tr><td><code>label_nodes</code></td><td><code>--label-nodes</code></td></tr>
+<tr><td><code>update_kubeconfig</code></td><td><code>--update-kubeconfig</code></td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>--kubeconfig</code></td></tr>
+<tr><td><code>values</code></td><td><code>--values</code>. A list of files.</td></tr>
+<tr><td><code>timeout</code></td><td><code>--timeout</code></td></tr>
+<tr><td><code>vault_password_file</code></td><td><code>--vault-password-file</code></td></tr>
+<tr><td><code>age_identity_file</code></td><td><code>--age-identity-file</code>. A list of files.</td></tr>
+<tr><td><code>public_key</code></td><td><code>--key</code></td></tr>
+<tr><td><code>verify</code></td><td><code>--verify</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="cargoship_reset"><a class="header" href="#cargoship_reset"><code>cargoship_reset</code></a></h3>
+<p>Removes the cluster from the fleet. There is no package: the distro to remove is named directly.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Flag</th></tr>
+</thead>
+<tbody>
+<tr><td><code>distro</code></td><td><code>--distro</code>. <code>k3s</code> or <code>rke2</code>.</td></tr>
+<tr><td><code>concurrency</code></td><td><code>--concurrency</code></td></tr>
+<tr><td><code>work_concurrency</code></td><td><code>--work-concurrency</code></td></tr>
+<tr><td><code>hosts</code></td><td><code>--hosts</code></td></tr>
+<tr><td><code>firewall</code></td><td><code>--firewall</code></td></tr>
+<tr><td><code>fapolicyd</code></td><td><code>--fapolicyd</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config"><code>cargoship_kube_config</code></a></h3>
+<p>Fetches the cluster kubeconfig onto the management node. It is the one module that changes the node the play runs on rather than the fleet.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Flag</th></tr>
+</thead>
+<tbody>
+<tr><td><code>distro</code></td><td><code>--distro</code>. <code>k3s</code> or <code>rke2</code>.</td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>--kubeconfig</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="signature-verification"><a class="header" href="#signature-verification">Signature verification</a></h3>
+<p><code>public_key</code> and <code>verify</code> are the package signature parameters, and they are the key-based ones only. Keyless verification identifies a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have. Verify a keyless-signed package with <code>cargoship package verify</code> before the play, where the flags and their exclusions are all available.</p>
+<h3 id="key-material"><a class="header" href="#key-material">Key material</a></h3>
 <p>Key material is always named by a path, never given by value. Ansible writes a module’s parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set <code>no_log: true</code> on the task regardless: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
 <h3 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h3>
 <p><code>--check</code> runs cargoship’s dry run. Phases opt into it one at a time – a phase that has not said how it behaves under a dry run is reported and not run – so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.</p>
 <p>Under check mode, <code>changed</code> means what Ansible means by it there: a real run would change something. It is true when a phase that knows how to tell had work outstanding – a fleet whose engine configuration has drifted – and false when every such phase found nothing to do.</p>
+<p><code>cargoship_kube_config</code> is the exception. <code>cargoship kube-config</code> has no dry run, so under <code>--check</code> the module reports <code>skipped: true</code> and runs nothing at all. That is what Ansible does with a module that has declared it does not support check mode; a binary module has nowhere to declare it, so it says so in its result instead.</p>
 <h3 id="what-changed-is-worth"><a class="header" href="#what-changed-is-worth">What <code>changed</code> is worth</a></h3>
 <p><code>changed</code> is built from what the phases themselves report, and a phase has to opt in. <code>cargoship.changedSignal</code> says how much of the run is covered:</p>
 <div class="table-wrapper">
