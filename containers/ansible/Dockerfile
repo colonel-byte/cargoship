@@ -14,25 +14,28 @@
 
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/almalinux/10-minimal:10.2@sha256:ee053be6b73674fdd32ec1dcee1e0b85dc2fa8b2f75976cbf8e72cfda2f718da
+FROM ghcr.io/almalinux/10-base:10.2@sha256:f110fee4d46a239ed55f72f1f927cb89b2dfe1c2a8728208806eba5b73798762
 
 ARG TARGETPLATFORM
 
 COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
 COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
+COPY ansible/colonel_byte/cargoship/requirements.yml /etc/cargoship/ansible/requirements.yml
 
+# hadolint ignore=DL3040,DL3041
 RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
   && rpm --checksig /tmp/rpms/*.rpm \
   && rpm --install --verbose /tmp/rpms/*.rpm \
   && rm -rf /tmp/rpms \
-  && cargoship version
+  && cargoship version \
+  && dnf install -y --nodocs --setopt=install_weak_deps=0 ansible-core bash-completion \
+  && dnf clean all \
+  && rm -rf /var/cache/yum \
+  && ansible-galaxy collection install --requirements-file /etc/cargoship/ansible/requirements.yml --collections-path /usr/share/ansible/collections/ansible_collections
 
 ARG UID=65532
 ARG GID=65532
-# hadolint ignore=DL3040,DL3041
-RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 shadow-utils bash-completion \
-  && microdnf clean all \
-  && groupadd --gid "${GID}" nonroot \
+RUN groupadd --gid "${GID}" nonroot \
   && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \
   && mkdir -p \
     /home/nonroot/.cargoship-cache \
@@ -40,16 +43,13 @@ RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 shadow-utils bash-
     /home/nonroot/.ssh \
     /workspace \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
-  && chown -R "${UID}:${GID}" /home/nonroot /workspace \
-  && microdnf remove shadow-utils -y \
-  && microdnf clean all \
-  && rm -rf /var/cache/yum
+  && chown -R "${UID}:${GID}" /home/nonroot /workspace
 
 LABEL org.opencontainers.image.title="cargoship" \
-  org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
+  org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection" \
   org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
   org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="ghcr.io/almalinux/10-minimal:10.2"
+  org.opencontainers.image.base.name="ghcr.io/almalinux/10-base:10.2"
 
 ENV HOME=/home/nonroot
 
@@ -57,5 +57,4 @@ WORKDIR /workspace
 
 USER 65532:65532
 
-ENTRYPOINT ["/usr/bin/cargoship"]
-CMD ["--help"]
+CMD ["ansible-playbook", "--help"]
