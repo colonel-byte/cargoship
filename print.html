@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1b60c6aa.js";
+            window.path_to_searchindex_js = "searchindex-17d7d0fb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-af776c16.js"></script>
@@ -720,6 +720,20 @@ cargoship_bastion:
   no_log: true
 </code></pre>
 <p>The task runs on the management node – <code>connection: local</code> when the Ansible controller is that node, <code>delegate_to</code> when they are separate. Cargoship connects to the fleet itself, from there.</p>
+<h3 id="installing-the-collection"><a class="header" href="#installing-the-collection">Installing the collection</a></h3>
+<p>The modules live in the <code>colonel_byte.cargoship</code> collection. The RPM and deb packages install it to <code>/usr/share/ansible/collections</code>, which is on ansible-core’s default collections path, so on a management node that installed cargoship from a package there is nothing further to do.</p>
+<p>Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.</p>
+<pre><code class="language-sh">cosign verify-blob --key cosign.pub \
+  --bundle colonel_byte-cargoship-0.25.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.25.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
+./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
+</code></pre>
+<p>From a checkout, build the tarball first with <code>hack/ansible-build-collection.sh ./bin/ansible</code>, which is the same script the release pipeline runs.</p>
+<p>That last step is not optional and has no equivalent in Galaxy’s own packaging. Ansible resolves a task name to a module <em>file</em>, so each action needs a file named after it; the files are symlinks to the one cargoship binary, which is what the packages create and what the script creates by hand. A collection installed without them fails with the module not being found.</p>
+<p>The collection carries one action plugin per module. It runs inside <code>ansible-playbook</code>, on the interpreter Ansible is already running on, and does one thing: copy <code>groups</code> and <code>hostvars</code> into the module’s <code>inventory</code> parameter so you do not have to. Nothing is installed on the fleet, and running cargoship by hand still needs no Python.</p>
+<p>It also accepts a <code>parameters</code> dict and merges it into the rest, which is how the role passes a caller-supplied set of parameters without templating the whole of a task’s arguments – something Ansible warns about, and rightly. A parameter given both directly and inside <code>parameters</code> is an error naming it.</p>
+<p>The plugin forwards the four <code>ansible_*</code> connection variables in the table above and every <code>cargoship_*</code> variable, and drops the rest. A host’s resolved variables routinely carry credentials for things that are not this cluster, and a module’s parameters are written to a file on disk.</p>
 <h3 id="parameters-every-module-takes"><a class="header" href="#parameters-every-module-takes">Parameters every module takes</a></h3>
 <p><code>inventory</code> takes the same document described above, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of the command the module runs.</p>
 <div class="table-wrapper">
@@ -842,6 +856,39 @@ cargoship_bastion:
 <p><code>public_key</code> and <code>verify</code> are the package signature parameters, and they are the key-based ones only. Keyless verification identifies a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have. Verify a keyless-signed package with <code>cargoship package verify</code> before the play, where the flags and their exclusions are all available.</p>
 <h3 id="key-material"><a class="header" href="#key-material">Key material</a></h3>
 <p>Key material is always named by a path, never given by value. Ansible writes a module’s parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set <code>no_log: true</code> on the task regardless: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
+<h3 id="the-cluster-role"><a class="header" href="#the-cluster-role">The <code>cluster</code> role</a></h3>
+<p>The role is the shorter way to write the same task. It picks the module from <code>cargoship_action</code>, assembles the <code>inventory</code> parameter, and sets <code>run_once</code>, <code>delegate_to</code>, and <code>no_log</code> for you.</p>
+<pre><code class="language-yaml">- name: Install the cluster
+  ansible.builtin.include_role:
+    name: colonel_byte.cargoship.cluster
+  vars:
+    cargoship_action: apply
+    cargoship_package: /srv/staging/rke2-1.31.tar.zst
+    cargoship_cluster:
+      name: bubbles
+      loadbalancer: bubbles-kc.test.com
+    cargoship_args:
+      vault_password_file: /srv/staging/vault-pass
+      timeout: 45m
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Default</th><th>Meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>cargoship_action</code></td><td><code>apply</code></td><td>Which module to run. One of the five.</td></tr>
+<tr><td><code>cargoship_package</code></td><td>unset</td><td>The package. Required for <code>apply</code>, <code>prepare</code>, and <code>engine_config_sync</code>.</td></tr>
+<tr><td><code>cargoship_cluster</code></td><td><code>{}</code></td><td>The <code>cluster</code> block: name, load balancer, profiles, registries, values.</td></tr>
+<tr><td><code>cargoship_role_groups</code></td><td><code>{}</code></td><td>The group mapping, when your groups are not named <code>controller</code> and <code>worker</code>.</td></tr>
+<tr><td><code>cargoship_inventory_path</code></td><td>unset</td><td>Where to write the generated document.</td></tr>
+<tr><td><code>cargoship_args</code></td><td><code>{}</code></td><td>Everything else, passed to the module as-is.</td></tr>
+<tr><td><code>cargoship_delegate_to</code></td><td><code>localhost</code></td><td>The management node.</td></tr>
+<tr><td><code>cargoship_show_result</code></td><td><code>false</code></td><td>Print <code>cargoship_result.cargoship</code> after the run.</td></tr>
+</tbody>
+</table>
+</div>
+<p>Every task in the role carries <code>run_once: true</code>. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It also carries <code>no_log: true</code>, which is why <code>cargoship_show_result</code> exists: the debug task is the one thing allowed to print, and it prints cargoship’s report rather than the parameters.</p>
 <h3 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h3>
 <p><code>--check</code> runs cargoship’s dry run. Phases opt into it one at a time – a phase that has not said how it behaves under a dry run is reported and not run – so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.</p>
 <p>Under check mode, <code>changed</code> means what Ansible means by it there: a real run would change something. It is true when a phase that knows how to tell had work outstanding – a fleet whose engine configuration has drifted – and false when every such phase found nothing to do.</p>
@@ -3903,9 +3950,18 @@ FuzzEncryptAtPathArbitraryDocument/d370f7a72740b34b      a flow mapping holding 
 <li><strong>Archives</strong> — <code>tar.gz</code> per OS/arch, named after <code>uname</code> conventions (<code>cargoship_Linux_x86_64.tar.gz</code>).</li>
 <li><strong>Packages</strong> — <code>apk</code>, <code>deb</code>, and <code>rpm</code>, from the <code>nfpms</code> section, GPG-signed when <code>GPG_KEY_PATH</code> is set.</li>
 <li><strong>Container images</strong> — two multi-platform manifests covering <code>linux/amd64</code> and <code>linux/arm64</code>: <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;</code> (Chainguard static, bare binary) and <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;-ubi</code> (Red Hat UBI, installs the rpm).</li>
+<li><strong>Ansible collection</strong> — <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.</li>
 <li><strong>SBOMs</strong> — one per archive, via Syft.</li>
 <li><strong>Signatures</strong> — cosign <code>sigstore.json</code> bundles over both the checksums file and every archive, plus registry signatures over both container images.</li>
 </ul>
+<h2 id="the-ansible-collection"><a class="header" href="#the-ansible-collection">The Ansible Collection</a></h2>
+<p>The collection is not built by a <code>builds</code> entry, because nothing about it is compiled. <code>hack/ansible-build-collection.sh</code> runs as a <code>before</code> hook, calls <code>ansible-galaxy collection build</code>, writes the tarball to <code>bin/ansible</code>, and signs it when <code>COSIGN_PRIVATE_KEY</code> is set. The <code>release.extra_files</code> globs then attach the tarball and the bundle.</p>
+<p>The script is given the release version and fails when <code>galaxy.yml</code> disagrees with it. release-please keeps that version in step through the <code>extra-files</code> entry in <code>release-please-config.json</code>, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot’s version is not in <code>galaxy.yml</code> and never will be.</p>
+<p>The tarball is signed by the script rather than by the <code>signs</code> section, and is absent from <code>checksums.txt</code>, because both of those cover artifacts the pipeline itself produced. Verify it with its bundle:</p>
+<pre><code class="language-sh">cosign verify-blob --key cosign.pub \
+  --bundle colonel_byte-cargoship-&lt;version&gt;.tar.gz.sigstore.json \
+  colonel_byte-cargoship-&lt;version&gt;.tar.gz
+</code></pre>
 <h2 id="build-matrix"><a class="header" href="#build-matrix">Build Matrix</a></h2>
 <p>The <code>builds</code> section compiles <code>linux</code> and <code>darwin</code> against <code>amd64</code>, <code>arm64</code>, and <code>riscv64</code>. Three settings there matter more than they look:</p>
 <ul>
@@ -4017,6 +4073,7 @@ sha256sum /tmp/from-image
 <p>Each setup step in <code>.github/workflows/release.yaml</code> exists for a specific reason:</p>
 <ul>
 <li><strong>Syft</strong> — generates the archive SBOMs.</li>
+<li><strong>ansible-core</strong> — supplies <code>ansible-galaxy</code>, which builds the collection tarball in the <code>before</code> hook. Nothing else in the pipeline needs Ansible.</li>
 <li><strong>cosign</strong> — signs checksums, archives, and the published images; needs <code>COSIGN_PRIVATE_KEY</code> and <code>COSIGN_PASSWORD</code>.</li>
 <li><strong>QEMU</strong> — registers binfmt handlers for cross-platform builds. Required by the UBI image, whose <code>rpm --install</code> unpacks architecture-specific files and so must run on the target platform; its <code>linux/arm64</code> half runs under emulation. The static image does not need it — its only <code>RUN</code> is pinned to <code>$BUILDPLATFORM</code>.</li>
 <li><strong>Buildx</strong> — required, not optional; provisions the container driver that can emit a multi-platform manifest.</li>
@@ -4609,6 +4666,11 @@ mage generate:updatePins            # refresh every line already pinned
 <p>Two things are deliberately left out.</p>
 <p><strong>Keyless signature verification.</strong> The modules expose <code>public_key</code> and <code>verify</code> and stop there. Keyless verification identifies a signer against a Fulcio root and a transparency log, which wants network access the management node does not have, and its remaining flags – <code>certificate-identity</code>, <code>certificate-identity-regexp</code>, <code>certificate-oidc-issuer</code>, <code>certificate-oidc-issuer-regexp</code>, <code>trusted-root</code>, <code>insecure-ignore-tlog</code>, <code>use-signed-timestamps</code> – are mutually exclusive with each other in ways cobra enforces and a hand-written module would have to restate. An operator who needs keyless verification runs <code>cargoship package verify</code> before the play, where all of it is available. This is the argument-surface-size reasoning from the previous section applied one level down.</p>
 <p><strong>A check-mode answer for <code>kube_config</code>.</strong> <code>cargoship kube-config</code> has no <code>--dry-run</code>. A module with nothing to answer with has two options: run anyway, or refuse. Running anyway would change the management node during a run that was asked only to describe itself, so the module reports <code>skipped: true</code> and runs nothing. That is what Ansible does with a module that has declared it does not support check mode; a binary module has nowhere to declare it, so it says so in its result instead.</p>
+<h2 id="the-collection-ships-the-links-and-the-role-hardcodes-what-must-not-fail-open"><a class="header" href="#the-collection-ships-the-links-and-the-role-hardcodes-what-must-not-fail-open">The collection ships the links, and the role hardcodes what must not fail open</a></h2>
+<p>Ansible resolves a task name to a module file before any plugin of ours is consulted, so an action plugin alone reaches nothing. Each action therefore needs a file named <code>cargoship_&lt;action&gt;</code>, and each of those is a symlink to the binary. The RPM and deb packages create the links through nfpms <code>contents:</code> entries, installing the collection tree to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path; a collection installed from Galaxy or from a checkout has no packaging step to hang that on, so <code>hack/ansible-link-modules.sh</code> does it by hand. Both were chosen over generating a per-action shim file: a shim is a second thing to sign and a second thing that can disagree with the binary.</p>
+<p>The action plugin forwards an allowlist of host variables rather than the whole of <code>hostvars</code>. A host’s resolved variables routinely hold credentials for things that are not this cluster, and a module’s parameters are written to a file on disk, so forwarding everything would write unrelated secrets to disk on every run. The allowlist is the four <code>ansible_*</code> connection variables plus every <code>cargoship_*</code> key – all of them, including misspelled ones, because rejecting an unknown parameter by name is <code>ansibleinv</code>’s job and it cannot do that without being shown the misspelling. <code>TestActionPluginVariableAllowlist</code> reads the Python and fails when it drifts from the Go constants, because the symptom of drift is an unset field rather than an error.</p>
+<p>The plugin also merges a <code>parameters</code> dict into the arguments. The role has a caller-supplied dict of parameters and no way to know which of them the chosen module takes, and the obvious way to pass it – making the task’s whole argument dict one template – is warned about by Ansible on every run and is genuinely unsafe. Merging in the plugin keeps the task’s keys literal and its values templates, and costs one parameter that the module itself never sees.</p>
+<p>The role sets <code>run_once: true</code> on every task. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It sets <code>no_log: true</code> as a literal rather than from a variable: a template that fails to evaluate leaves <code>no_log</code> false, and the failure mode of that is every host’s connection detail in the log. The one thing allowed to print is a debug task showing cargoship’s own report, which carries no parameters.</p>
 <h2 id="what-is-being-accepted"><a class="header" href="#what-is-being-accepted">What is being accepted</a></h2>
 <ul>
 <li>No <code>ansible-doc</code> and no <code>ansible-test sanity</code>; the module’s interface is documented only where we choose to document it.</li>

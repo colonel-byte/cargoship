@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1b60c6aa.js";
+            window.path_to_searchindex_js = "../searchindex-17d7d0fb.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-af776c16.js"></script>
@@ -193,9 +193,18 @@
 <li><strong>Archives</strong> — <code>tar.gz</code> per OS/arch, named after <code>uname</code> conventions (<code>cargoship_Linux_x86_64.tar.gz</code>).</li>
 <li><strong>Packages</strong> — <code>apk</code>, <code>deb</code>, and <code>rpm</code>, from the <code>nfpms</code> section, GPG-signed when <code>GPG_KEY_PATH</code> is set.</li>
 <li><strong>Container images</strong> — two multi-platform manifests covering <code>linux/amd64</code> and <code>linux/arm64</code>: <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;</code> (Chainguard static, bare binary) and <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;-ubi</code> (Red Hat UBI, installs the rpm).</li>
+<li><strong>Ansible collection</strong> — <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.</li>
 <li><strong>SBOMs</strong> — one per archive, via Syft.</li>
 <li><strong>Signatures</strong> — cosign <code>sigstore.json</code> bundles over both the checksums file and every archive, plus registry signatures over both container images.</li>
 </ul>
+<h2 id="the-ansible-collection"><a class="header" href="#the-ansible-collection">The Ansible Collection</a></h2>
+<p>The collection is not built by a <code>builds</code> entry, because nothing about it is compiled. <code>hack/ansible-build-collection.sh</code> runs as a <code>before</code> hook, calls <code>ansible-galaxy collection build</code>, writes the tarball to <code>bin/ansible</code>, and signs it when <code>COSIGN_PRIVATE_KEY</code> is set. The <code>release.extra_files</code> globs then attach the tarball and the bundle.</p>
+<p>The script is given the release version and fails when <code>galaxy.yml</code> disagrees with it. release-please keeps that version in step through the <code>extra-files</code> entry in <code>release-please-config.json</code>, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot’s version is not in <code>galaxy.yml</code> and never will be.</p>
+<p>The tarball is signed by the script rather than by the <code>signs</code> section, and is absent from <code>checksums.txt</code>, because both of those cover artifacts the pipeline itself produced. Verify it with its bundle:</p>
+<pre><code class="language-sh">cosign verify-blob --key cosign.pub \
+  --bundle colonel_byte-cargoship-&lt;version&gt;.tar.gz.sigstore.json \
+  colonel_byte-cargoship-&lt;version&gt;.tar.gz
+</code></pre>
 <h2 id="build-matrix"><a class="header" href="#build-matrix">Build Matrix</a></h2>
 <p>The <code>builds</code> section compiles <code>linux</code> and <code>darwin</code> against <code>amd64</code>, <code>arm64</code>, and <code>riscv64</code>. Three settings there matter more than they look:</p>
 <ul>
@@ -307,6 +316,7 @@ sha256sum /tmp/from-image
 <p>Each setup step in <code>.github/workflows/release.yaml</code> exists for a specific reason:</p>
 <ul>
 <li><strong>Syft</strong> — generates the archive SBOMs.</li>
+<li><strong>ansible-core</strong> — supplies <code>ansible-galaxy</code>, which builds the collection tarball in the <code>before</code> hook. Nothing else in the pipeline needs Ansible.</li>
 <li><strong>cosign</strong> — signs checksums, archives, and the published images; needs <code>COSIGN_PRIVATE_KEY</code> and <code>COSIGN_PASSWORD</code>.</li>
 <li><strong>QEMU</strong> — registers binfmt handlers for cross-platform builds. Required by the UBI image, whose <code>rpm --install</code> unpacks architecture-specific files and so must run on the target platform; its <code>linux/arm64</code> half runs under emulation. The static image does not need it — its only <code>RUN</code> is pinned to <code>$BUILDPLATFORM</code>.</li>
 <li><strong>Buildx</strong> — required, not optional; provisions the container driver that can emit a multi-platform manifest.</li>
