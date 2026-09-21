@@ -29,7 +29,17 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
+import json
+import os
+import tempfile
+import threading
+import time
+
 from ansible.plugins.action import ActionBase
+from ansible.utils.display import Display
+from ansible import constants as C
+
+display = Display()
 
 # The Ansible connection variables cargoship reads, mirroring the constants in
 # src/internal/ansibleinv/vars.go. TestActionPluginVariableAllowlist in that package reads this
@@ -118,11 +128,77 @@ class CargoshipActionBase(ActionBase):
 
         args["inventory"] = inventory
 
-        result.update(
-            self._execute_module(
-                module_name=self._task.action,
-                module_args=args,
-                task_vars=task_vars,
+        # Prepare a temporary heartbeat status file so live phase progress can be displayed.
+        status_file = None
+        stop_monitor = threading.Event()
+        monitor_thread = None
+
+        try:
+            status_fd, status_file = tempfile.mkstemp(prefix="cargoship-status-", suffix=".json")
+            os.close(status_fd)
+            # Export via environment for the executed module subprocess.
+            os.environ["CARGOSHIP_STATUS_FILE"] = status_file
+
+            def monitor_status():
+                last_phase = None
+                while not stop_monitor.is_set():
+                    try:
+                        if os.path.exists(status_file) and os.path.getsize(status_file) > 0:
+                            with open(status_file, "r") as f:
+                                st = json.load(f)
+                            phase = st.get("phase")
+                            idx = st.get("index", 0)
+                            total = st.get("total", 0)
+                            status = st.get("status")
+                            key = (phase, status)
+                            if key != last_phase:
+                                last_phase = key
+                                if status == "running":
+                                    display.display(
+                                        "[cargoship] Phase %s/%s: %s [running]"
+                                        % (idx, total, phase),
+                                        color=C.COLOR_VERBOSE,
+                                    )
+                                elif status == "completed":
+                                    display.display(
+                                        "[cargoship] Phase %s/%s: %s [done]"
+                                        % (idx, total, phase),
+                                        color=C.COLOR_OK,
+                                    )
+                                elif status == "failed":
+                                    display.display(
+                                        "[cargoship] Phase %s/%s: %s [failed]"
+                                        % (idx, total, phase),
+                                        color=C.COLOR_ERROR,
+                                    )
+                    except Exception:
+                        pass
+                    stop_monitor.wait(0.5)
+
+            monitor_thread = threading.Thread(target=monitor_status)
+            monitor_thread.daemon = True
+            monitor_thread.start()
+        except Exception:
+            status_file = None
+
+        try:
+            result.update(
+                self._execute_module(
+                    module_name=self._task.action,
+                    module_args=args,
+                    task_vars=task_vars,
+                )
             )
-        )
+        finally:
+            if monitor_thread is not None:
+                stop_monitor.set()
+                monitor_thread.join(timeout=1.0)
+            if status_file is not None:
+                os.environ.pop("CARGOSHIP_STATUS_FILE", None)
+                try:
+                    if os.path.exists(status_file):
+                        os.remove(status_file)
+                except Exception:
+                    pass
+
         return result
