@@ -107,7 +107,7 @@ func (p *Lock) startTicker(ctx context.Context, h *cluster.ZarfHost) error {
 		for {
 			select {
 			case <-ticker.C:
-				if err := h.Configurer.Touch(h, lfp, time.Now()); err != nil {
+				if err := h.Configurer.Touch(h, lfp, time.Now(), exec.HideCommand()); err != nil {
 					logger.From(ctx).Debug("failed to touch lock file", "host", h, "error", err)
 				}
 			case <-ctx.Done():
