@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1a4f2165.js";
+            window.path_to_searchindex_js = "searchindex-2b374bc4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-bc2cf8ad.js"></script>
@@ -4146,10 +4146,11 @@ mage                      # same as `mage build:all` -- it is the default target
 <li><code>Vendor</code> — Runs <code>Tidy</code>, then <code>go mod vendor</code>. Use this rather than a bare <code>go mod vendor</code> after changing dependencies, so <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> are updated in one step.</li>
 <li><code>Digest</code> — Resolves <code>docker.io/library/alpine:latest</code> through the host’s Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.</li>
 </ul>
-<pre><code class="language-sh">mage dev:clean            # rm the build/ artifacts
-mage dev:tidy             # go mod tidy
-mage dev:vendor           # go mod tidy, then go mod vendor
-mage dev:digest           # print the alpine:latest digest, to check registry auth works
+<pre><code class="language-sh">mage dev:clean                  # rm the build/ artifacts
+mage dev:tidy                   # go mod tidy
+mage dev:vendor                 # go mod tidy, then go mod vendor
+mage dev:digest                 # print the alpine:latest digest, to check registry auth works
+mage dev:writeOSVOverrides      # writes every override into vendor/.
 </code></pre>
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
