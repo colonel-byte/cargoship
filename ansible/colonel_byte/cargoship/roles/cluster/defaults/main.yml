@@ -19,6 +19,15 @@ cargoship_role_groups: {}
 # after a run that succeeded.
 cargoship_inventory_path: ""
 
+# Age public keys used to encrypt registry credentials written to disk in the generated inventory document.
+cargoship_age_recipients: []
+
+# Path(s) to age identity files (or SSH private keys) used to decrypt registry credentials at apply time.
+cargoship_age_identity_files: []
+
+# Whether to always write a full-verbosity debug log to a file, regardless of log level.
+cargoship_log_file: false
+
 # Everything else the chosen module takes, passed through verbatim. See docs/guides/ansible-module.md
 # for the parameters of each module.
 cargoship_args: {}
@@ -28,7 +37,11 @@ cargoship_args: {}
 # it is not the Ansible controller.
 cargoship_delegate_to: localhost
 
-# Whether to print cargoship's own report on the run. The task itself is always no_log, because a
-# module's arguments name the fleet; the report holds file paths and phase names and no key
+# Whether to suppress task parameter and result logging. Defaults to true to avoid exposing
+# decrypted credentials and fleet inventories in logs. Set to false when debugging locally.
+cargoship_no_log: true
+
+# Whether to print cargoship's own report on the run. The task itself defaults to no_log: true, because
+# a module's arguments name the fleet; the report holds file paths and phase names and no key
 # material.
 cargoship_show_result: false

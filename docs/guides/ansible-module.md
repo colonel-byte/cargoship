@@ -52,6 +52,8 @@ It also accepts a `parameters` dict and merges it into the rest, which is how th
 
 The plugin forwards the four `ansible_*` connection variables listed in [Generating an Inventory from Ansible](ansible-inv.md) and every `cargoship_*` variable, and drops the rest. A host's resolved variables routinely carry credentials for things that are not this cluster, and a module's parameters are written to a file on disk.
 
+When defining `profiles` inside `cargoship_cluster` in YAML, note type constraints: `concurrency` (e.g. `"1"`, `"50%"`) and port definitions (`ports[].port`, e.g. `"6443"`) are unmarshaled as strings by the underlying schema. Quote numeric strings in YAML to prevent JSON numeric unmarshaling failures.
+
 ## Parameters every module takes
 
 `inventory` takes the document described in [Generating an Inventory from Ansible](ansible-inv.md), `groups` and `hostvars` included. Everything else maps onto a flag of the command the module runs.
@@ -62,6 +64,8 @@ The plugin forwards the four `ansible_*` connection variables listed in [Generat
 | `inventory_path` | `--config`     | Where to write the generated document. A private temporary file when unset. |
 | `log_level`      | `--log-level`  | Defaults to `debug` when the play runs with `-v`.                           |
 | `log_format`     | `--log-format` |                                                                             |
+| `log_file`       | `--log-file`   | Boolean. Always write full-verbosity debug log to a file on the host.       |
+| `age_recipient`  |                | List of public keys to encrypt registry credentials written to disk.        |
 
 A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why `label_nodes: false` and omitting `label_nodes` are different.
 
@@ -175,18 +179,22 @@ The role is the shorter way to write the same task. It picks the module from `ca
       timeout: 45m
 ```
 
-| Variable                   | Default     | Meaning                                                                      |
-| -------------------------- | ----------- | ---------------------------------------------------------------------------- |
-| `cargoship_action`         | `apply`     | Which module to run. One of the five.                                        |
-| `cargoship_package`        | unset       | The package. Required for `apply`, `prepare`, and `engine_config_sync`.      |
-| `cargoship_cluster`        | `{}`        | The `cluster` block: name, load balancer, profiles, registries, values.      |
-| `cargoship_role_groups`    | `{}`        | The group mapping, when your groups are not named `controller` and `worker`. |
-| `cargoship_inventory_path` | unset       | Where to write the generated document.                                       |
-| `cargoship_args`           | `{}`        | Everything else, passed to the module as-is.                                 |
-| `cargoship_delegate_to`    | `localhost` | The management node.                                                         |
-| `cargoship_show_result`    | `false`     | Print `cargoship_result.cargoship` after the run.                            |
+| Variable                       | Default     | Meaning                                                                      |
+| ------------------------------ | ----------- | ---------------------------------------------------------------------------- |
+| `cargoship_action`             | `apply`     | Which module to run. One of the five.                                        |
+| `cargoship_package`            | unset       | The package. Required for `apply`, `prepare`, and `engine_config_sync`.      |
+| `cargoship_cluster`            | `{}`        | The `cluster` block: name, load balancer, profiles, registries, values.      |
+| `cargoship_role_groups`        | `{}`        | The group mapping, when your groups are not named `controller` and `worker`. |
+| `cargoship_inventory_path`     | unset       | Where to write the generated document.                                       |
+| `cargoship_age_recipients`     | `[]`        | Public keys to encrypt registry credentials on disk in generated inventory.  |
+| `cargoship_age_identity_files` | `[]`        | Identity files/SSH private keys to decrypt registry credentials at apply.    |
+| `cargoship_log_file`           | `false`     | Always write full-verbosity debug log to a file on the host (`--log-file`).  |
+| `cargoship_args`               | `{}`        | Everything else, passed to the module as-is.                                 |
+| `cargoship_delegate_to`        | `localhost` | The management node.                                                         |
+| `cargoship_no_log`             | `true`      | Suppress task parameter logging. Set false for local debugging.              |
+| `cargoship_show_result`        | `false`     | Print `cargoship_result.cargoship` after the run.                            |
 
-Every task in the role carries `run_once: true`. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It also carries `no_log: true`, which is why `cargoship_show_result` exists: the debug task is the one thing allowed to print, and it prints cargoship's report rather than the parameters.
+Every task in the role carries `run_once: true`. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It defaults `cargoship_no_log: true` to protect decrypted credentials and fleet inventories from terminal and CI logs, which is why `cargoship_show_result` exists: the debug task prints cargoship's sanitized report without exposing secrets.
 
 ## Check mode and changed
 

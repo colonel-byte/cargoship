@@ -49,10 +49,11 @@ $ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer
 ### Options inherited from parent commands
 
 ```
-      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+      --log-file                     Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string            Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string             Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                     Disable terminal color codes in logging and stdout prints.
+      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 ```
 
 ### SEE ALSO

@@ -88,6 +88,8 @@ The image runs as 65532, and a private key mounted from your home directory is o
 
 Under Docker, or rootful Podman, there is no mapping to arrange: the file has to be readable by UID 65532 on the host. Give the staging directory and the key to that UID (`chown -R 65532:65532 /srv/staging`), which is the usual arrangement for a dedicated staging host. Running the image with `--user "$(id -u):$(id -g)"` instead looks simpler and is not: `/home/nonroot` and its subdirectories are owned by 65532, so the cache, `known_hosts` and Ansible's own temporary directory all become unwritable, and the failures arrive late and read like something else.
 
+When using SSH multiplexing (`ControlMaster`) with Ansible inside the container, configure `ControlPath` (or mount a tmpfs volume) where nonroot has write permissions. If an inventory points to a host home directory (e.g. `/home/<user>/.ssh/sockets`), mount a writable tmpfs with permissive mode (`--tmpfs /home/<user>/.ssh/sockets:rw,mode=0777`) or point `ControlPath` to `/home/nonroot/.ssh/sockets`. Also avoid using `:z` SELinux relabeling flags on the host `~/.ssh` directory when mounting SSH keys, as relabeling host SSH directories can disrupt host sshd services.
+
 ## Host Keys
 
 Cargoship verifies host keys against `~/.ssh/known_hosts` -- `/home/nonroot/.ssh/known_hosts` in the container -- and appends a key it has not seen before, which is trust on first use. A fresh container has no such file, so with nothing mounted every host in the fleet is trusted on the first connection of every run, and the file recording that decision is thrown away with the container. That is weaker than it looks: it is not a first use, it is a first use each time.
@@ -112,6 +114,35 @@ podman run --rm \
 ```
 
 An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.
+
+## Encrypting the Generated Inventory on Disk
+
+When `inventory_path` is set to keep the generated ZarfCluster document across runs, that file normally holds decrypted registry passwords in plaintext with `0600` permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:
+
+```yaml
+- name: Install cluster
+  ansible.builtin.include_role:
+    name: colonel_byte.cargoship.cluster
+  vars:
+    cargoship_action: apply
+    cargoship_package: /srv/staging/rke2.tar.zst
+    cargoship_inventory_path: /srv/staging/cluster-inventory.yaml
+    cargoship_age_recipients:
+      - age1wjqegc62gpyvp4yfdqfk4vclfgdh3awlv03rgthcje398a860p7qpglp6w
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9OkpTcjwWLH2fo8SUTVjb2NYEc6w996Cwr0wL2cRDx operator@example.com
+```
+
+When `cargoship_age_recipients` (or `--age-recipient` on `cargoship inventory from-ansible`) is provided, cargoship encrypts every registry credential (`user`, `pass`, `token`, `tls.ca`) into age ciphertext blocks before writing the document to disk.
+
+To decrypt the credentials at apply time, supply the private key via `cargoship_age_identity_files`:
+
+```yaml
+    cargoship_age_identity_files:
+      - /home/nonroot/.ssh/id_ed25519
+      - /srv/staging/keys/age.key
+```
+
+Mount the identity file into the container (e.g. `-v ~/.ssh/id_ed25519:/home/nonroot/.ssh/id_ed25519:ro`), ensure it has `0600` permissions owned by UID `65532`, or set `age.identity_files` in `cargoship-config.yaml`. Cargoship reads the private key and decrypts the credentials in memory when executing phases.
 
 ## Air-Gapped Runs Need No Network of Their Own
 

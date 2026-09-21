@@ -22,13 +22,18 @@ import (
 // newInventoryCommand groups the commands that produce a cluster inventory rather than consume
 // one. It runs nothing itself.
 func newInventoryCommand() *cobra.Command {
+	f := &keyFlags{}
+
 	cmd := &cobra.Command{
 		Use:   "inventory",
 		Short: lang.CmdInventoryShort,
 		Long:  lang.CmdInventoryLong,
 	}
 
-	cmd.AddCommand(newInventoryFromAnsibleCommand())
+	cmd.PersistentFlags().StringVar(&f.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
+	addAgeFlags(cmd, f)
+
+	cmd.AddCommand(newInventoryFromAnsibleCommand(f))
 
 	return cmd
 }

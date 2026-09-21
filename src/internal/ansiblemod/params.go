@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/colonel-byte/cargoship/src/internal/ansibleinv"
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	goyaml "github.com/goccy/go-yaml"
 )
@@ -53,6 +54,7 @@ const (
 	flagVerify              = "verify"
 	flagLogLevel            = "log-level"
 	flagLogFormat           = "log-format"
+	flagLogFile             = "log-file"
 	flagNoColor             = "no-color"
 )
 
@@ -70,6 +72,11 @@ type common struct {
 
 	LogLevel  string `json:"log_level"`
 	LogFormat string `json:"log_format"`
+	LogFile   *bool  `json:"log_file"`
+
+	// AgeRecipients are optional public keys used to encrypt registry credentials in the generated inventory document on disk.
+	AgeRecipients     []string `json:"age_recipient"`
+	AgeRecipientFiles []string `json:"age_recipients_file"`
 }
 
 // hostUpdates are the three host preparation switches apply, prepare and reset share.
@@ -204,6 +211,7 @@ func begin(action string, positional []string, inventory string, control Control
 func (p *common) finish(c *command, control Control) {
 	c.flag(flagLogLevel, logLevel(p.LogLevel, control))
 	c.flag(flagLogFormat, p.LogFormat)
+	c.boolFlag(flagLogFile, p.LogFile)
 }
 
 // validate reports the parameters every module requires.
@@ -240,6 +248,23 @@ func writeInventory(p *common) (string, string, error) {
 	doc, err := goyaml.Marshal(out)
 	if err != nil {
 		return "", "", fmt.Errorf("unable to serialize the generated inventory: %w", err)
+	}
+
+	if len(p.AgeRecipients) > 0 || len(p.AgeRecipientFiles) > 0 {
+		keyring, err := clustercfg.ResolveKeyring(clustercfg.KeyOptions{
+			AgeRecipients:     p.AgeRecipients,
+			AgeRecipientFiles: p.AgeRecipientFiles,
+		})
+		if err != nil {
+			return "", "", fmt.Errorf("resolving encryption recipients: %w", err)
+		}
+		if !keyring.Empty() {
+			encrypted, _, _, err := clustercfg.EncryptConfig(doc, keyring, false)
+			if err != nil {
+				return "", "", fmt.Errorf("encrypting inventory credentials: %w", err)
+			}
+			doc = encrypted
+		}
 	}
 
 	path := p.InventoryPath

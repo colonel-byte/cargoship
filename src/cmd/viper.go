@@ -181,6 +181,7 @@ func setDefaults() {
 	v.SetDefault(configPath("CachePath"), config.DefaultCachePath)
 	v.SetDefault(configPath("LogFormat"), string(logger.FormatConsole))
 	v.SetDefault(configPath("TempDirectory"), "/tmp")
+	v.SetDefault(configPath("Timeout"), "60m")
 	v.SetDefault(configPath("NoColor"), false)
 	v.SetDefault(configPath("LogFile"), false)
 
