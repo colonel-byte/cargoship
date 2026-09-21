@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fuzz holds the fuzz targets for the vault code. They assert properties that have to hold
+// Package fuzz holds the fuzz targets for the vault code and for the Ansible inventory
+// translation. They assert properties that have to hold
 // for every input rather than for the handful of values a table test names: that a credential
 // survives an encrypt/decrypt round trip unchanged, that rewriting one value in a configuration
 // leaves every other byte alone, and that a path the encryptor accepts is one the apply-time
@@ -24,7 +25,10 @@
 // needs the binary under build/, a cluster, or the network.
 //
 // Everything that encrypts runs against both formats cargoship writes, Ansible Vault and age. The
-// keyrings are built once in TestMain; see keyring_test.go.
+// keyrings are built once in TestMain; see keyring_test.go. The Ansible targets in
+// ansible_inventory_fuzz_test.go need no key material at all: they fuzz the inventory an Ansible
+// module is handed, where a wrong answer is a cluster with the wrong topology rather than a file
+// that fails to parse.
 //
 // Run one target:
 //
