@@ -117,7 +117,7 @@ The action plugin forwards an allowlist of host variables rather than the whole 
 
 The plugin also merges a `parameters` dict into the arguments. The role has a caller-supplied dict of parameters and no way to know which of them the chosen module takes, and the obvious way to pass it -- making the task's whole argument dict one template -- is warned about by Ansible on every run and is genuinely unsafe. Merging in the plugin keeps the task's keys literal and its values templates, and costs one parameter that the module itself never sees.
 
-The role sets `run_once: true` on every task. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It sets `no_log: true` as a literal rather than from a variable: a template that fails to evaluate leaves `no_log` false, and the failure mode of that is every host's connection detail in the log. The one thing allowed to print is a debug task showing cargoship's own report, which carries no parameters.
+The role sets `run_once: true` on every task. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It defaults `no_log: "{{ cargoship_no_log | bool }}"` with `cargoship_no_log: true` by default: a template failure or misconfiguration avoids exposing decrypted credentials and host connection parameters in CI or production logs, while still allowing operators to set `cargoship_no_log: false` for local troubleshooting. The debug task showing cargoship's own report carries no parameters.
 
 ## What is being accepted
 

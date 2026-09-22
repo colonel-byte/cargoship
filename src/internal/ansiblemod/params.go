@@ -53,6 +53,7 @@ const (
 	flagVerify              = "verify"
 	flagLogLevel            = "log-level"
 	flagLogFormat           = "log-format"
+	flagLogFile             = "log-file"
 	flagNoColor             = "no-color"
 )
 
@@ -70,6 +71,7 @@ type common struct {
 
 	LogLevel  string `json:"log_level"`
 	LogFormat string `json:"log_format"`
+	LogFile   *bool  `json:"log_file"`
 }
 
 // hostUpdates are the three host preparation switches apply, prepare and reset share.
@@ -204,6 +206,7 @@ func begin(action string, positional []string, inventory string, control Control
 func (p *common) finish(c *command, control Control) {
 	c.flag(flagLogLevel, logLevel(p.LogLevel, control))
 	c.flag(flagLogFormat, p.LogFormat)
+	c.boolFlag(flagLogFile, p.LogFile)
 }
 
 // validate reports the parameters every module requires.
