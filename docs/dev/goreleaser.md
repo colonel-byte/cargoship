@@ -204,6 +204,65 @@ docker run --rm -v "$PWD:/workspace" ghcr.io/colonel-byte/cargoship:<tag> apply 
 
 Labels are split by whether they change per release. Static ones (title, description, source, licenses, base image) live in each `Dockerfile`; per-release ones (version, revision, created) are set in `.goreleaser.yaml`. See [Base Image Pinning](#base-image-pinning) for why `org.opencontainers.image.base.name` deliberately omits the digest. Keep them separate — a `--label` flag silently overrides a `LABEL` of the same key, so duplicating a key across a Dockerfile and `.goreleaser.yaml` creates two sources of truth.
 
+## Package Signing
+
+The `nfpms` packages carry signatures of their own, independent of cosign. That needs **two key pairs**, because nfpm signs rpm and deb with OpenPGP but signs apk with a bare RSA key:
+
+| Format   | Key type | Path variable      | Repository secret                                               |
+| -------- | -------- | ------------------ | --------------------------------------------------------------- |
+| rpm, deb | OpenPGP  | `GPG_KEY_PATH`     | `GPG_PRIVATE_KEY`, and `GPG_PASSPHRASE` if the key is protected |
+| apk      | RSA, PEM | `APK_RSA_KEY_PATH` | `APK_RSA_PRIVATE_KEY`                                           |
+
+Handing the OpenPGP key to the apk signer does not degrade quietly — it fails the release with `signing error: no PEM block found`.
+
+The public halves live in `crypto/`, both named after the maintainer address: `crypto/software@conlon.dev.gpg` (`A1D4 DF69 80C8 2444 99C3  D1F9 96F5 5C80 CFB1 EFCB`, expires 2046-09-14) and `crypto/software@conlon.dev.rsa.pub`. The latter's filename is not a convention — it is the name apk itself looks for.
+
+### Generating the Keys
+
+`hack/gen-signing-keys.sh` produces both pairs in the shapes nfpm accepts, building the OpenPGP key in a throwaway `GNUPGHOME` so your own keyring is untouched:
+
+```sh
+hack/gen-signing-keys.sh ~/cargoship-keys
+```
+
+It reads the maintainer address out of `.goreleaser.yaml` and names the apk public key after it, which is not cosmetic — see below. Set `GPG_PASSPHRASE` to protect the OpenPGP key. It refuses to overwrite existing files, because replacing a key already in use invalidates every package signed with it.
+
+Constraints worth knowing before doing any of this by hand:
+
+*   **The apk RSA key cannot be encrypted.** nfpm understands only the legacy DEK-Info PEM encryption, so the PKCS#8 output of `openssl genrsa -aes256` is rejected with `key type "ENCRYPTED PRIVATE KEY" is not supported`, and `NFPM_APK_PASSPHRASE` cannot help. Its protection is the repository secret and nothing else.
+*   **The apk key name is baked into every package.** nfpm defaults it to the maintainer address parsed from `nfpms.maintainer`, records the signature as the tar member `.SIGN.RSA.software@conlon.dev.rsa.pub`, and apk then looks for a file of that name under `/etc/apk/keys`. Changing `nfpms.maintainer`, or setting `apk.signature.key_name`, breaks the path every existing consumer deployed.
+*   **`key_file` is a path, not key material.** Unlike `COSIGN_PRIVATE_KEY`, which cosign reads straight from the environment, these must exist as files. The workflow writes both secrets under `$RUNNER_TEMP` — outside the checkout, so no `.goreleaser.yaml` glob can sweep them up — and removes them in an `if: always()` step.
+
+### Degrading to Unsigned
+
+Both `key_file` values are guarded:
+
+```yaml
+key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
+```
+
+The `index .Env` form is load-bearing. A bare `{{ .Env.GPG_KEY_PATH }}` on an unset variable aborts the run with `map has no entry for key "GPG_KEY_PATH"`; the guard turns an unset variable into an unsigned package instead. That is what a local snapshot wants and what a release does not, so the workflow emits a `::warning::` for each missing secret rather than letting the absence pass unremarked.
+
+### Verifying
+
+```sh
+# rpm
+sudo rpmkeys --import 'crypto/software@conlon.dev.gpg'
+rpm -K cargoship_<version>_linux_amd64.rpm          # digests signatures OK
+
+# apk — the filename is the name the signature records, so this is a plain copy
+cp 'crypto/software@conlon.dev.rsa.pub' /etc/apk/keys/
+apk add ./cargoship_<version>_linux_amd64.apk       # no --allow-untrusted
+
+# deb — the signature covers the three ar members concatenated, in order
+ar x cargoship_<version>_linux_amd64.deb
+cat debian-binary control.tar.gz data.tar.zst > combined
+gpg --verify _gpgorigin combined
+```
+
+`dpkg -i` never checks that signature itself; `_gpgorigin` exists for `debsig-verify` and repository tooling.
+
+
 ## Image Signing
 
 `docker_signs` signs the published images with cosign, using the same `COSIGN_PRIVATE_KEY` / `COSIGN_PASSWORD` pair as the archive signatures — no extra workflow configuration is needed.
@@ -251,6 +310,7 @@ Each setup step in `.github/workflows/release.yaml` exists for a specific reason
 *   **Syft** — generates the archive SBOMs.
 *   **ansible-core** — supplies `ansible-galaxy`, which builds the collection tarball in the `before` hook. Nothing else in the pipeline needs Ansible.
 *   **cosign** — signs checksums, archives, and the published images; needs `COSIGN_PRIVATE_KEY` and `COSIGN_PASSWORD`.
+*   **Setup package signing keys** — materializes `GPG_PRIVATE_KEY` and `APK_RSA_PRIVATE_KEY` as files under `$RUNNER_TEMP` and exports their paths, because nfpm takes a path rather than key material. See [Package Signing](#package-signing). A paired `if: always()` step deletes them.
 *   **QEMU** — registers binfmt handlers for cross-platform builds. Required by the package-installing images: `rpm --install` and `dpkg --install` unpack architecture-specific files and must run on the target platform, so their `linux/arm64` builds run under emulation. The static image does not need it — its only `RUN` is pinned to `$BUILDPLATFORM`.
 *   **Buildx** — required, not optional; provisions the container driver that can emit a multi-platform manifest.
 *   **GHCR login** — required to push. The job's `packages: write` permission is an authorization, not a credential.
