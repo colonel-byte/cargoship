@@ -98,6 +98,9 @@ nfpms:
       - src: ansible/colonel_byte/cargoship
         dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship
         type: tree
+        # Explicit, and not a tidiness preference.
+        file_info:
+          mode: 0755
       # The module files. There is no Python module behind any of them: the binary answers
       # Ansible when it is invoked under a cargoship_ name. See
       # docs/agent/choice-ansible-module.md.
@@ -157,9 +160,9 @@ dockers_v2:
       - packagers
     dockerfile: containers/ubi/Dockerfile
     images:
-      - "ghcr.io/colonel-byte/cargoship"
+      - "ghcr.io/colonel-byte/cargoship-ubi"
     tags:
-      - "{{ .Tag }}-ubi"
+      - "{{ .Tag }}"
     platforms:
       - linux/amd64
       - linux/arm64
@@ -169,6 +172,52 @@ dockers_v2:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
       org.opencontainers.image.created: "{{ .CommitDate }}"
+    extra_files:
+      - crypto/software@conlon.dev.gpg
+
+  - id: cargoship-deb
+    # Pulls in the nfpms artifacts instead of the raw binary: containers/deb/Dockerfile
+    # dpkg-installs the .deb so the package is registered in the image's dpkg database.
+    # It is also the only thing in the pipeline that installs the .deb at all.
+    ids:
+      - packagers
+    dockerfile: containers/deb/Dockerfile
+    images:
+      - "ghcr.io/colonel-byte/cargoship-deb"
+    tags:
+      - "{{ .Tag }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    flags:
+      - "--pull"
+    labels:
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .CommitDate }}"
+    extra_files:
+      - crypto/software@conlon.dev.gpg
+
+  - id: cargoship-ansible
+    ids:
+      - packagers
+    dockerfile: containers/ansible/Dockerfile
+    images:
+      - "ghcr.io/colonel-byte/cargoship-ansible"
+    tags:
+      - "{{ .Tag }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    flags:
+      - "--pull"
+    labels:
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .CommitDate }}"
+    extra_files:
+      - crypto/software@conlon.dev.gpg
+      - ansible/colonel_byte/cargoship/requirements.yml
 
 changelog:
   sort: asc
