@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-154efc53.js";
+            window.path_to_searchindex_js = "searchindex-fc228687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d5b95bd.js"></script>
@@ -4172,6 +4172,7 @@ reason to use an RPM-based image.</p>
 <li><strong>The RPM signature is verified at build time.</strong> <code>crypto/software@conlon.dev.gpg</code> is supplied through <code>extra_files</code>, imported into the image keyring, and checked with <code>rpm --checksig</code> before installation.</li>
 <li><strong>The install step must run on the target platform.</strong> RPM unpacks an architecture-specific binary into the target root filesystem, so the install cannot be moved to a <code>$BUILDPLATFORM</code> stage. This is why the <code>linux/arm64</code> build requires QEMU.</li>
 <li><strong>The binary lands in <code>/usr/bin</code></strong> according to <code>nfpms.rpm.prefixes</code>, not <code>/usr/local/bin</code> as in the static image. The entrypoint differs accordingly; the <code>nonroot</code> account, <code>$HOME</code>, and <code>/workspace</code> layout remain compatible.</li>
+<li><strong>Package versions for <code>shadow-utils</code> and <code>bash-completion</code> are pinned</strong> via Dockerfile <code>ARG</code> defaults (<code>SHADOW_UTILS_VERSION</code> and <code>BASH_COMPLETION_VERSION</code>) and explicitly passed in <code>.goreleaser.yaml</code> under <code>build_args</code> to comply with Hadolint <code>DL3041</code> and ensure reproducible image builds. Run <code>mage dev:dnfPins</code> to query the AlmaLinux repodata and refresh the pins when upstream packages roll forward.</li>
 </ul>
 <p>The AlmaLinux base is substantially larger than the static image. Recheck exact image sizes after base-image updates rather than relying on a fixed comparison.</p>
 <h3 id="debian-variant"><a class="header" href="#debian-variant">Debian Variant</a></h3>
@@ -4199,6 +4200,7 @@ Status: install ok installed
 <ul>
 <li><strong><code>ids: [packagers]</code></strong> supplies the generated package artifacts. The Dockerfile selects the target-platform RPM and ignores the <code>.apk</code> and <code>.deb</code> files that share the nfpms output.</li>
 <li><strong>The RPM signature is verified during the build</strong> using <code>crypto/software@conlon.dev.gpg</code>, which is supplied through <code>extra_files</code>, imported into the image keyring, and checked before installation.</li>
+<li><strong>Package versions for <code>ansible-core</code> and <code>bash-completion</code> are pinned</strong> via Dockerfile <code>ARG</code> defaults (<code>ANSIBLE_CORE_VERSION</code> and <code>BASH_COMPLETION_VERSION</code>) and explicitly passed in <code>.goreleaser.yaml</code> under <code>build_args</code> to comply with Hadolint <code>DL3041</code> and ensure reproducible image builds. Run <code>mage dev:dnfPins</code> to query the AlmaLinux repodata and refresh both pins when upstream packages roll forward.</li>
 <li><strong>Ansible dependencies come from <code>requirements.yml</code>.</strong> The Dockerfile runs <code>ansible-galaxy collection install</code> and places the collections in the system collection path.</li>
 <li><strong>There is no <code>ENTRYPOINT</code>.</strong> The image is intended to run  <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code>, or Cargoship as needed. Its default command is <code>ansible-playbook --help</code>.</li>
 <li><strong>The build validates the installed Cargoship package</strong> by running <code>cargoship version</code>.</li>
@@ -4354,12 +4356,14 @@ mage                      # same as `mage build:all` -- it is the default target
 <li><code>Tidy</code> — Runs <code>go mod tidy</code> inside the workspace.</li>
 <li><code>Vendor</code> — Runs <code>Tidy</code>, then <code>go mod vendor</code>. Use this rather than a bare <code>go mod vendor</code> after changing dependencies, so <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> are updated in one step.</li>
 <li><code>Digest</code> — Resolves <code>docker.io/library/alpine:latest</code> through the host’s Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.</li>
+<li><code>DnfPins</code> — Queries the AlmaLinux 10 RPM repository metadata over HTTP to find the newest available versions of packages installed in the container images (<code>ansible-core</code>, <code>bash-completion</code>, and <code>shadow-utils</code>), then updates <code>containers/ansible/Dockerfile</code> and <code>containers/ubi/Dockerfile</code> (via <code>ARG</code> defaults) and <code>.goreleaser.yaml</code> (via <code>build_args</code>).</li>
 </ul>
 <pre><code class="language-sh">mage dev:clean                  # rm the build/ artifacts
 mage dev:tidy                   # go mod tidy
 mage dev:vendor                 # go mod tidy, then go mod vendor
 mage dev:digest                 # print the alpine:latest digest, to check registry auth works
 mage dev:writeOSVOverrides      # writes every override into vendor/.
+mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf package pins
 </code></pre>
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
@@ -4439,6 +4443,7 @@ mage generate:examples
 <li><strong><code>core/core.go</code>:</strong> Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in <code>magefiles/</code>) so it does not collide with the <code>func main()</code> that the <code>mage</code> CLI generates on the fly — see <a href="#running-mage-directly-without-the-cli">Running Mage Directly</a> below.</li>
 <li><strong><code>build.go</code>:</strong> Defines compilation tasks utilizing the local host Go toolchain.</li>
 <li><strong><code>dev.go</code>:</strong> Defines convenience tasks under the <code>Dev</code> and <code>Test</code> namespaces.</li>
+<li><strong><code>dev-dnf-pins.go</code>:</strong> Holds <code>Dev.DnfPins</code> and AlmaLinux 10 repodata HTTP fetching and version comparison logic.</li>
 <li><strong><code>gen-docs.go</code>:</strong> Performs Cobra command extraction and phase parser generation to update everything inside the <code>docs/</code> tree.</li>
 <li><strong><code>gen-schema.go</code>:</strong> Maps Go types to JSON schemas under <code>schema/</code>.</li>
 <li><strong><code>gen-engine-source.go</code>:</strong> Holds <code>Generate.PullEngineSource</code> and the clone-and-copy logic behind it.</li>
@@ -4479,6 +4484,9 @@ mage generate:examples
 <tr><td style="text-align: left"><code>example/shasums.json</code></td><td style="text-align: left">Cached sha256 of every remote file the examples hash</td><td style="text-align: left"><code>Generate.Examples</code> / <code>Generate.ExampleLine</code></td></tr>
 <tr><td style="text-align: left"><code>&lt;zarf_cache&gt;/examples/*</code></td><td style="text-align: left">Cached release text assets (image lists), not committed</td><td style="text-align: left"><code>Generate.Examples</code> / <code>Generate.ExampleLine</code></td></tr>
 <tr><td style="text-align: left"><code>ansible/colonel_byte/cargoship/requirements.yml</code></td><td style="text-align: left">Galaxy collection pins for the Ansible collection</td><td style="text-align: left"><code>Generate.AnsibleRequirements</code></td></tr>
+<tr><td style="text-align: left"><code>containers/ansible/Dockerfile</code></td><td style="text-align: left">Base image package pins for ansible-core and bash-completion</td><td style="text-align: left"><code>Dev.DnfPins</code></td></tr>
+<tr><td style="text-align: left"><code>containers/ubi/Dockerfile</code></td><td style="text-align: left">Base image package pins for shadow-utils and bash-completion</td><td style="text-align: left"><code>Dev.DnfPins</code></td></tr>
+<tr><td style="text-align: left"><code>.goreleaser.yaml</code></td><td style="text-align: left">Build args pinning container package versions</td><td style="text-align: left"><code>Dev.DnfPins</code></td></tr>
 </tbody>
 </table>
 </div>

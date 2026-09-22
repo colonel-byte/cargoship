@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-154efc53.js";
+            window.path_to_searchindex_js = "../searchindex-fc228687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1d5b95bd.js"></script>
@@ -275,6 +275,7 @@ reason to use an RPM-based image.</p>
 <li><strong>The RPM signature is verified at build time.</strong> <code>crypto/software@conlon.dev.gpg</code> is supplied through <code>extra_files</code>, imported into the image keyring, and checked with <code>rpm --checksig</code> before installation.</li>
 <li><strong>The install step must run on the target platform.</strong> RPM unpacks an architecture-specific binary into the target root filesystem, so the install cannot be moved to a <code>$BUILDPLATFORM</code> stage. This is why the <code>linux/arm64</code> build requires QEMU.</li>
 <li><strong>The binary lands in <code>/usr/bin</code></strong> according to <code>nfpms.rpm.prefixes</code>, not <code>/usr/local/bin</code> as in the static image. The entrypoint differs accordingly; the <code>nonroot</code> account, <code>$HOME</code>, and <code>/workspace</code> layout remain compatible.</li>
+<li><strong>Package versions for <code>shadow-utils</code> and <code>bash-completion</code> are pinned</strong> via Dockerfile <code>ARG</code> defaults (<code>SHADOW_UTILS_VERSION</code> and <code>BASH_COMPLETION_VERSION</code>) and explicitly passed in <code>.goreleaser.yaml</code> under <code>build_args</code> to comply with Hadolint <code>DL3041</code> and ensure reproducible image builds. Run <code>mage dev:dnfPins</code> to query the AlmaLinux repodata and refresh the pins when upstream packages roll forward.</li>
 </ul>
 <p>The AlmaLinux base is substantially larger than the static image. Recheck exact image sizes after base-image updates rather than relying on a fixed comparison.</p>
 <h3 id="debian-variant"><a class="header" href="#debian-variant">Debian Variant</a></h3>
@@ -302,6 +303,7 @@ Status: install ok installed
 <ul>
 <li><strong><code>ids: [packagers]</code></strong> supplies the generated package artifacts. The Dockerfile selects the target-platform RPM and ignores the <code>.apk</code> and <code>.deb</code> files that share the nfpms output.</li>
 <li><strong>The RPM signature is verified during the build</strong> using <code>crypto/software@conlon.dev.gpg</code>, which is supplied through <code>extra_files</code>, imported into the image keyring, and checked before installation.</li>
+<li><strong>Package versions for <code>ansible-core</code> and <code>bash-completion</code> are pinned</strong> via Dockerfile <code>ARG</code> defaults (<code>ANSIBLE_CORE_VERSION</code> and <code>BASH_COMPLETION_VERSION</code>) and explicitly passed in <code>.goreleaser.yaml</code> under <code>build_args</code> to comply with Hadolint <code>DL3041</code> and ensure reproducible image builds. Run <code>mage dev:dnfPins</code> to query the AlmaLinux repodata and refresh both pins when upstream packages roll forward.</li>
 <li><strong>Ansible dependencies come from <code>requirements.yml</code>.</strong> The Dockerfile runs <code>ansible-galaxy collection install</code> and places the collections in the system collection path.</li>
 <li><strong>There is no <code>ENTRYPOINT</code>.</strong> The image is intended to run  <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code>, or Cargoship as needed. Its default command is <code>ansible-playbook --help</code>.</li>
 <li><strong>The build validates the installed Cargoship package</strong> by running <code>cargoship version</code>.</li>
