@@ -1,0 +1,44 @@
+---
+# ansible_host and cargoship_hostname are different facts and both are kept: the first is where
+# cargoship connects, the second is what the node calls itself. Set the second when the names your
+# inventory uses are aliases that do not match the nodes.
+cargoship_hostname: distro-kc01
+
+# The address and interface the cluster uses between nodes, when they are not the ones cargoship
+# would discover. A node with two interfaces is the usual reason.
+cargoship_private_address: 10.99.0.3
+cargoship_private_interface: ens224
+
+# Trust on first use is the default: cargoship appends a key it has not seen to ~/.ssh/known_hosts.
+# Pinning the key here states the expected one in the inventory instead, which is the stronger
+# arrangement and the only one that survives a container with no known_hosts mounted.
+cargoship_host_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyReplaceWithYourOwnHostKey01
+
+# The structured variables take exactly the shape the inventory schema documents for the field
+# they configure, so there is one vocabulary rather than two. This is `.spec.hosts[].host`.
+cargoship_host:
+  ports:
+    - port: "6443"
+      protocol: tcp
+  firewall:
+    rules:
+      - name: allow-backup
+        action: allow
+        source: 10.0.0.0/8
+        port: "2049"
+        protocol: tcp
+
+# Environment variables cargoship sets on the host.
+cargoship_environment:
+  HTTPS_PROXY: ""
+  NO_PROXY: 10.0.0.0/8,.test.com
+
+# Files cargoship uploads to the host. src is a path on the management node, dst the path on the
+# node. This one is the internal CA the engine needs to trust the mirror.
+cargoship_files:
+  - name: internal-ca
+    src: /srv/staging/pki/internal-ca.crt
+    dst: /etc/pki/ca-trust/source/anchors/internal-ca.crt
+    perm: "0644"
+    user: root
+    group: root

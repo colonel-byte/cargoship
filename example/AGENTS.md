@@ -4,12 +4,12 @@ Almost everything under `example/` is generated. Regenerate it with mage; do not
 
 ## Generated versus hand-written
 
-| Path | Owner |
-| :--- | :--- |
-| `example/<distro>-<flavor>/<minor>/<version>/distro.yaml` | `Generate.Examples` / `Generate.ExampleLine`, from `magefiles/templates/<distro>-distro.yaml.tmpl` |
-| `example/<distro>-<flavor>/<minor>/<version>/values.yaml`, `values.schema.json` | the same targets, from `magefiles/templates/<distro>/*.tmpl` |
-| `example/shasums.json` | the same targets — a cache of the digests of the files the examples install |
-| `example/upstream/distro.yaml` | hand-written |
+| Path                                                                            | Owner                                                                                              |
+| :------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------- |
+| `example/<distro>-<flavor>/<minor>/<version>/distro.yaml`                       | `Generate.Examples` / `Generate.ExampleLine`, from `magefiles/templates/<distro>-distro.yaml.tmpl` |
+| `example/<distro>-<flavor>/<minor>/<version>/values.yaml`, `values.schema.json` | the same targets, from `magefiles/templates/<distro>/*.tmpl`                                       |
+| `example/shasums.json`                                                          | the same targets — a cache of the digests of the files the examples install                        |
+| `example/upstream/distro.yaml`                                                  | hand-written                                                                                       |
 
 To change a generated example, edit its template in `magefiles/templates/` and re-run `mage generate:examples`, which re-renders every example directory already on disk. An edit made directly to a rendered file is lost on the next run.
 

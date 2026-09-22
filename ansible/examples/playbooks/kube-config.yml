@@ -1,0 +1,56 @@
+---
+# Fetch the cluster kubeconfig onto the management node, then use it.
+#
+#   ansible-playbook -i ../inventories/fleet kube-config.yml
+#
+# This is the one module that changes the node the play runs on rather than the fleet, which is
+# also why it is the one with no dry run: under --check it reports itself skipped and runs
+# nothing.
+#
+# An apply leaves update_kubeconfig on by default and merges the credentials into KUBECONFIG, or
+# ~/.kube/config when that is unset. Fetching deliberately is the better arrangement when the
+# management node is a container, where ~/.kube/config goes away with it -- see
+# docs/guides/ansible-container.md.
+- name: Fetch the kubeconfig and look at the cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    kubeconfig_path: /srv/staging/bubbles.kubeconfig
+
+  tasks:
+    - name: Fetch the kubeconfig
+      ansible.builtin.include_role:
+        name: colonel_byte.cargoship.cluster
+      vars:
+        cargoship_action: kube_config
+        cargoship_cluster:
+          name: bubbles
+          loadbalancer: bubbles-kc.test.com
+        cargoship_args:
+          distro: rke2
+          kubeconfig: "{{ kubeconfig_path }}"
+
+    # kubernetes.core and the Python client its modules import are not cargoship's dependencies,
+    # and neither is installed by the package or carried by the -ansible container image. Install
+    # both on the management node before running this task.
+    - name: Wait for every node to be ready
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubeconfig_path }}"
+        kind: Node
+      register: nodes
+      retries: 30
+      delay: 10
+      until: >-
+        nodes.resources | length > 0 and
+        nodes.resources | map(attribute='status.conditions') | flatten
+        | selectattr('type', 'equalto', 'Ready')
+        | selectattr('status', 'equalto', 'True')
+        | list | length == nodes.resources | length
+      when: not ansible_check_mode
+
+    - name: Report the nodes
+      ansible.builtin.debug:
+        msg: "{{ nodes.resources | map(attribute='metadata.name') | list }}"
+      when: not ansible_check_mode
