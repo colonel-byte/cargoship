@@ -291,4 +291,24 @@ release:
     - glob: bin/ansible/colonel_byte-cargoship-*.tar.gz.sigstore.json
   footer: |-
     ---
-    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+    ### Verify release artifacts with Cosign
+
+    Release archives and container images are signed with [Cosign](https://docs.sigstore.dev/cosign/).
+
+    Verify a binary archive:
+
+    ```console
+    cosign verify-blob \
+      --key cosign.pub \
+      --bundle cargoship_Linux_x86_64.tar.gz.sigstore.json \
+      cargoship_Linux_x86_64.tar.gz
+    ```
+
+    The immutable image digests are listed in [`digest.txt`](./digest.txt). Verify the published image using its digest:
+
+    ```console
+    cosign verify \
+      --key cosign.pub \
+      ghcr.io/colonel-byte/cargoship@sha256:<digest-from-digest.txt>
+    ```
