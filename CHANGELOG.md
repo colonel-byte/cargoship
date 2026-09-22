@@ -1,5 +1,65 @@
 # Changelog
 
+## [0.26.0](https://github.com/colonel-byte/cargoship/compare/v0.25.0...v0.26.0) (2026-09-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* address various unsafe repo settings ([#446](https://github.com/colonel-byte/cargoship/issues/446))
+
+### Features
+
+* **ansible:** add container to goreleaser ([#456](https://github.com/colonel-byte/cargoship/issues/456)) ([25667e2](https://github.com/colonel-byte/cargoship/commit/25667e2ac09563d97620a4b6b633afead9540457))
+* **ansible:** add heartbeat to ansible logs ([#458](https://github.com/colonel-byte/cargoship/issues/458)) ([7998f65](https://github.com/colonel-byte/cargoship/commit/7998f65c0144b0279e1a88a2217d5fdf044b5944))
+* **ansible:** add the apply, prepare, reset and kube-config modules ([#433](https://github.com/colonel-byte/cargoship/issues/433)) ([f611cfb](https://github.com/colonel-byte/cargoship/commit/f611cfbc8abcf891124572815aaf0228a6d4353b))
+* **ansible:** build and publish the collection with the release ([#434](https://github.com/colonel-byte/cargoship/issues/434)) ([ec48f76](https://github.com/colonel-byte/cargoship/commit/ec48f76d5a2eeeecef177f00e802618aea5d18cd))
+* **ansible:** expand flags passed in from ansible ([#459](https://github.com/colonel-byte/cargoship/issues/459)) ([a6fa3f3](https://github.com/colonel-byte/cargoship/commit/a6fa3f31a7511896bd6492bec7c87d483e0b00a2))
+* **ansible:** generate a cluster inventory from an Ansible inventory ([#429](https://github.com/colonel-byte/cargoship/issues/429)) ([46f6de8](https://github.com/colonel-byte/cargoship/commit/46f6de80b89a5c22c8c4cc095054ee645ecae9d3))
+* **ansible:** report changed from what the phases did ([#432](https://github.com/colonel-byte/cargoship/issues/432)) ([732df4e](https://github.com/colonel-byte/cargoship/commit/732df4edef5c379aae87bb7090fba7cb0d36011e))
+* **ansible:** run the cargoship binary as an Ansible module ([#430](https://github.com/colonel-byte/cargoship/issues/430)) ([95763f9](https://github.com/colonel-byte/cargoship/commit/95763f9b906ef160755957cea0f249e242f724bf))
+* **cli:** loosen check on registry mismatch when encrypted ([#460](https://github.com/colonel-byte/cargoship/issues/460)) ([4e59787](https://github.com/colonel-byte/cargoship/commit/4e59787246dd8c582384dbbc71757e8570a49533))
+* **fuzz:** add ansible ([#436](https://github.com/colonel-byte/cargoship/issues/436)) ([cbcf7c5](https://github.com/colonel-byte/cargoship/commit/cbcf7c59e8e9cadbb1475115d3f2f5b869c1ebdc))
+* **release:** add rpm, deb, and apk signing ([#461](https://github.com/colonel-byte/cargoship/issues/461)) ([7c58b2c](https://github.com/colonel-byte/cargoship/commit/7c58b2c7f77a567fe8b3bc56ca9f4d3bc8be40be))
+
+
+### Bug Fixes
+
+* **clustercfg:** correct six YAML splice defects ([#438](https://github.com/colonel-byte/cargoship/issues/438)) ([f2f0730](https://github.com/colonel-byte/cargoship/commit/f2f07302fad3c04ac01f0b5f9671a5049b110749))
+
+
+### Documentation
+
+* add ideas for inventory from-x ([#437](https://github.com/colonel-byte/cargoship/issues/437)) ([0707742](https://github.com/colonel-byte/cargoship/commit/070774254ca08b05288919d84e74e2bb426ef0ab))
+* **agent:** refine pr description ([#440](https://github.com/colonel-byte/cargoship/issues/440)) ([9d5c4d6](https://github.com/colonel-byte/cargoship/commit/9d5c4d6b2d3de698b5b49b4e626952830d16b0d6))
+* **agent:** update docs folder agent ([#441](https://github.com/colonel-byte/cargoship/issues/441)) ([7017588](https://github.com/colonel-byte/cargoship/commit/7017588f1ac944263630a942582e103395124f81))
+* **ansible:** readme's and examples ([#462](https://github.com/colonel-byte/cargoship/issues/462)) ([ec651cb](https://github.com/colonel-byte/cargoship/commit/ec651cb28acad96bb87bfd72ba5b77d8e1bd3d9a))
+* security md ([#444](https://github.com/colonel-byte/cargoship/issues/444)) ([aca4a58](https://github.com/colonel-byte/cargoship/commit/aca4a58794fe67479ea7649c3ac11f18194c27cc))
+
+
+### CI/CD
+
+* add openssf score card run ([#443](https://github.com/colonel-byte/cargoship/issues/443)) ([83f657c](https://github.com/colonel-byte/cargoship/commit/83f657cc62af7a61e5825d127e135a1aa92f6f98))
+* address various unsafe repo settings ([#446](https://github.com/colonel-byte/cargoship/issues/446)) ([d487baa](https://github.com/colonel-byte/cargoship/commit/d487baa462047edffedc5b3aed53fd072f4b88ad))
+* **ansible:** add version checking ([#455](https://github.com/colonel-byte/cargoship/issues/455)) ([d198d4b](https://github.com/colonel-byte/cargoship/commit/d198d4b3e9cc018080ef98ec36f47056ab254870))
+* **codeql:** add advanced setup for codeql ([#428](https://github.com/colonel-byte/cargoship/issues/428)) ([b9134df](https://github.com/colonel-byte/cargoship/commit/b9134dfca3416119454d4ff9ac0a79162273817d))
+* **e2e:** add ansible tests ([#435](https://github.com/colonel-byte/cargoship/issues/435)) ([f2acff9](https://github.com/colonel-byte/cargoship/commit/f2acff9b2f15ceb812517e389f6a829a4d76a96e))
+* **flow:** add check for image drift in docker files ([#442](https://github.com/colonel-byte/cargoship/issues/442)) ([22d8106](https://github.com/colonel-byte/cargoship/commit/22d810658ea7c25c190bf68587981562b94cb6ae))
+* **mage:** expose osv overrides ([#463](https://github.com/colonel-byte/cargoship/issues/463)) ([7838fd9](https://github.com/colonel-byte/cargoship/commit/7838fd9292579da6e1460fbeb62a294d30e293ee))
+* **vendor:** stop scoring vendored JavaScript and Python as cargoship vulns ([#447](https://github.com/colonel-byte/cargoship/issues/447)) ([d757666](https://github.com/colonel-byte/cargoship/commit/d757666d4179529dee89b883f8c9ca969890d842))
+
+
+### Build
+
+* **deps:** bump github.com/docker/cli from 29.8.0 to 29.8.1 ([#451](https://github.com/colonel-byte/cargoship/issues/451)) ([54c34a2](https://github.com/colonel-byte/cargoship/commit/54c34a29ab0fa8915ca4ec0aa440b852f0883b1a))
+* **deps:** bump github.com/zarf-dev/zarf from 0.85.0 to 0.86.0 in the zarf group ([#449](https://github.com/colonel-byte/cargoship/issues/449)) ([ee26849](https://github.com/colonel-byte/cargoship/commit/ee26849a9b715ab4348ad23836d91bb1328eaa76))
+* **deps:** bump library/alpine from `28bd5fe` to `294b683` in /containers/base ([#466](https://github.com/colonel-byte/cargoship/issues/466)) ([17025c5](https://github.com/colonel-byte/cargoship/commit/17025c5d2968f4909dcc90aa831f27899280e3d4))
+* **deps:** bump the core group with 2 updates ([#425](https://github.com/colonel-byte/cargoship/issues/425)) ([d7cfa2f](https://github.com/colonel-byte/cargoship/commit/d7cfa2f89c53909d95b30ce8a71e8bbd334811d0))
+* **deps:** bump the core group with 3 updates ([#452](https://github.com/colonel-byte/cargoship/issues/452)) ([85bcdf8](https://github.com/colonel-byte/cargoship/commit/85bcdf87756b1e99088cded5b672040901497f3f))
+* **deps:** bump the cosign group with 10 updates ([#453](https://github.com/colonel-byte/cargoship/issues/453)) ([03eaa90](https://github.com/colonel-byte/cargoship/commit/03eaa90fc082584a5bbf608cc82b2ec9884eed89))
+* **deps:** bump the golang group with 2 updates ([#450](https://github.com/colonel-byte/cargoship/issues/450)) ([0c68c6a](https://github.com/colonel-byte/cargoship/commit/0c68c6a8f33f298f073a06b36aa7f370f45e0959))
+* **deps:** bump the misc group with 13 updates ([#454](https://github.com/colonel-byte/cargoship/issues/454)) ([8f4b952](https://github.com/colonel-byte/cargoship/commit/8f4b9529bd6e7cd76d20e14022cb6a9ad9eaaafd))
+* **deps:** bump ubi9/ubi-minimal from `7b8e25a` to `984df0a` ([#448](https://github.com/colonel-byte/cargoship/issues/448)) ([fdcd56c](https://github.com/colonel-byte/cargoship/commit/fdcd56c6145cb43a868c1539b92f0eb951a9620d))
+
 ## [0.25.0](https://github.com/colonel-byte/cargoship/compare/v0.24.0...v0.25.0) (2026-09-18)
 
 
