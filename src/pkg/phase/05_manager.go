@@ -31,6 +31,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/src/internal/heartbeat"
 	"github.com/colonel-byte/cargoship/src/pkg/retry"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/creasty/defaults"
@@ -509,11 +510,14 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 	}()
 
-	for _, p := range m.phases {
+	totalPhases := len(m.phases)
+	for i, p := range m.phases {
 		title := p.Title()
+		heartbeat.Update(title, i+1, totalPhases, "running", nil)
 
 		if err := ctx.Err(); err != nil {
 			result = fmt.Errorf("context canceled before entering phase %q: %w", title, err)
+			heartbeat.Update(title, i+1, totalPhases, "failed", result)
 			return result
 		}
 
@@ -612,14 +616,17 @@ func (m *Manager) Run(ctx context.Context) error {
 		}
 
 		if result != nil {
+			heartbeat.Update(title, i+1, totalPhases, "failed", result)
 			return result
 		}
+		heartbeat.Update(title, i+1, totalPhases, "completed", nil)
 	}
 
 	if m.DryRun {
 		m.logDryRunSummary(ctx, ran, planned)
 	}
 
+	heartbeat.Clear()
 	return nil
 }
 
