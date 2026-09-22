@@ -13,17 +13,7 @@
 # limitations under the License.
 
 # syntax=docker/dockerfile:1
-
-# Skeleton stage. The runtime base below ships no shell and no package manager, so
-# the final image cannot mkdir/chown anything for itself; this stage lays out the
-# directory tree the CLI expects and hands it over pre-owned. It only creates empty
-# directories -- nothing architecture-specific -- so it is pinned to $BUILDPLATFORM
-# and never pays for emulation on a cross build.
-#
-# The base image is pinned by digest, written literally rather than hoisted into
-# an ARG: dependabot's Dockerfile parser only reads literal FROM lines and cannot
-# resolve a reference that arrives through a build arg.
-FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS skeleton
+FROM --platform=$BUILDPLATFORM docker.io/library/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS skeleton
 
 ARG UID=65532
 ARG GID=65532
@@ -35,25 +25,13 @@ RUN mkdir -p \
   && chmod 0700 /skeleton/home/nonroot /skeleton/home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /skeleton/home/nonroot /skeleton/workspace
 
-# Same digest-pinning rule as above. chainguard/static already provides the
-# `nonroot` account at uid/gid 65532 along with its 0700 /home/nonroot, a CA bundle
-# with SSL_CERT_FILE pointing at it, and a 1777 /tmp, so none of that is repeated
-# here -- the skeleton above only adds the subdirectories the CLI expects, at the
-# same ownership and mode the base already uses.
 FROM registry1.dso.mil/chainguard/cgr.dev/chainguard/static@sha256:90b7f22bcf781377e97cea715ef8e6d6f334eb23f3f8a83053b6155f5e33e66f
 
-# The whole skeleton tree is copied at its root on purpose. A COPY whose
-# destination directory does not yet exist creates that directory root-owned and
-# only carries ownership on the entries beneath it, which would leave /workspace
-# unwritable by the runtime user; merging the tree into / keeps every directory's
-# own uid/gid/mode.
 COPY --from=skeleton /skeleton/ /
 
 ARG TARGETPLATFORM
 COPY ${TARGETPLATFORM}/cargoship /usr/local/bin/cargoship
 
-# base.name carries the tag only, not the digest, so that a dependabot digest
-# refresh needs no edit here. Update it by hand when the FROM tag itself moves.
 LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
   org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \

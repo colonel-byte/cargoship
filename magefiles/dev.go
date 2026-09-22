@@ -47,7 +47,9 @@ func (Dev) Tidy() error {
 	)
 }
 
-// Vendor just runs the module vendor
+// Vendor runs the module vendor and then writes the osv-scanner overrides back into the tree it
+// just recreated. See magefiles/vendor-osv.go for what those are and why they cannot live
+// anywhere else; Dev.VerifyVendor is the check that they are still there.
 func (d Dev) Vendor() error {
 	if err := d.Tidy(); err != nil {
 		return err
@@ -55,11 +57,15 @@ func (d Dev) Vendor() error {
 
 	fmt.Println("Running vendor")
 
-	return sh.RunV(
+	if err := sh.RunV(
 		"go",
 		"mod",
 		"vendor",
-	)
+	); err != nil {
+		return err
+	}
+
+	return d.WriteOSVOverrides()
 }
 
 // Digest simple returns the digest of an image, mostly for testing

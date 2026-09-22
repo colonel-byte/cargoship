@@ -137,7 +137,9 @@ var rootCmd = NewCargoshipCommand()
 func NewCargoshipCommand() *cobra.Command {
 	err := initViper()
 	if err != nil {
-		fmt.Printf("failed to load config: %v", err)
+		// stderr, not stdout: this runs during package initialisation, so it can land in the
+		// middle of a document a command was asked to write. See emitConfigError.
+		emitConfigError(err)
 	}
 
 	rootCmd := &cobra.Command{
@@ -170,17 +172,18 @@ func NewCargoshipCommand() *cobra.Command {
 	rootCmd.AddCommand(newVersionCommand())
 	rootCmd.AddCommand(newSha256SumCommand())
 	rootCmd.AddCommand(newSchemaCommand())
+	rootCmd.AddCommand(newInventoryCommand())
 	rootCmd.AddCommand(newValidateCommand())
 	rootCmd.AddCommand(newVaultCommand())
 	rootCmd.AddCommand(newDeprecatedVaultEncryptCommand())
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {
-		fmt.Printf("failed to register %s flag completion: %v", RootLoggingLevel, err)
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", RootLoggingLevel, err)
 	}
 	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", resolvedConfig.LogFormat, lang.RootCmdFlagLogFormat)
 	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingFormat, flags.RegisterLogFormat); err != nil {
-		fmt.Printf("failed to register %s flag completion: %v", RootLoggingFormat, err)
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", RootLoggingFormat, err)
 	}
 	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
@@ -196,13 +199,49 @@ func Execute(ctx context.Context) error {
 		}
 	}()
 
-	_, err := rootCmd.ExecuteContextC(ctx)
+	// A config file that was found and could not be used is fatal, but it is reported here rather
+	// than where it was met. Package initialisation is too early to fail a process from: it runs
+	// before main, so an os.Exit there ends an Ansible module run before the module has written
+	// the one JSON object Ansible reads, and Ansible reports a module failure of its own devising
+	// instead of the reason.
+	err := configLoadError
+	if err == nil {
+		_, err = rootCmd.ExecuteContextC(ctx)
+	}
 	if err == nil {
 		return nil
 	}
 	// Use default logger in case there was an error prior to the logger being setup
 	logger.Default().Error(err.Error())
 	return err
+}
+
+// configLoadError is a config file that was found and could not be used. It is met during package
+// initialisation and acted on in Execute, which is the first point in the process that can fail
+// without taking the process with it.
+var configLoadError error //nolint:gochecknoglobals // set once, in init, beside the viper globals
+
+// emitConfigError reports a configuration file that could not be loaded.
+//
+// It writes to stderr, and it exists as a function so that both callers stay that way. Both run
+// during package initialisation, before any flag is parsed and so before the real logger exists,
+// which is early enough that the Ansible module mode in src/internal/ansiblemod cannot redirect
+// os.Stdout ahead of them. Commands that emit a document on stdout -- schema, validate, inventory
+// from-ansible -- would have that document corrupted by a warning mixed into it.
+func emitConfigError(err error) {
+	fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
+}
+
+// ExecuteArgs runs the root command against an explicit argument vector instead of os.Args.
+//
+// It exists for the Ansible module mode in src/internal/ansiblemod, which turns a module's JSON
+// parameters into the flags an operator would have typed and then runs the ordinary command.
+// Building an argument vector rather than calling into src/pkg/action directly is the point of the
+// arrangement: keyring resolution, timeout parsing, package loading, and phase construction stay on
+// one path, so what a playbook does and what an operator does cannot drift apart.
+func ExecuteArgs(ctx context.Context, args []string) error {
+	rootCmd.SetArgs(args)
+	return Execute(ctx)
 }
 
 // PrintViperConfigUsed informs users when Zarf has detected a config file.
@@ -223,12 +262,13 @@ func PrintViperConfigUsed(ctx context.Context) error {
 func init() {
 	err := initViper()
 	if err != nil {
-		fmt.Printf("failed to load config: %v", err)
+		emitConfigError(err)
 	}
 
 	if v.ConfigFileUsed() != "" {
 		if err := loadViperConfig(); err != nil {
-			os.Exit(1)
+			configLoadError = fmt.Errorf("unable to load the config file %s: %w", v.ConfigFileUsed(), err)
+			emitConfigError(configLoadError)
 		}
 	}
 }

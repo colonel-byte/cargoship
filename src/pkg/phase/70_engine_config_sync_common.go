@@ -59,6 +59,30 @@ type EngineConfigSyncHosts struct {
 	// override that is empty on most hosts.
 	driftMu sync.Mutex
 	drift   map[*cluster.ZarfHost][]string
+	// changed records whether this phase altered a host. It shares driftMu because it is
+	// written from the same parallel sweep over the hosts that fills drift.
+	changed bool
+}
+
+// markChanged records that this phase altered a host.
+func (p *EngineConfigSyncHosts) markChanged() {
+	p.driftMu.Lock()
+	defer p.driftMu.Unlock()
+	p.changed = true
+}
+
+// Changed reports whether this phase altered any host, which is what Ansible's changed is built
+// from. See changedReporter in 05_manager.go.
+//
+// There are two ways this phase changes a host and both count. The obvious one is the sync
+// itself. The other is the file a host carries that the engine re-reads without a restart: that
+// is written while Prepare is deciding which hosts have drifted, and the host is then not listed
+// as needing a sync, so a run that changed only those files would otherwise read as a run that
+// did nothing.
+func (p *EngineConfigSyncHosts) Changed() bool {
+	p.driftMu.Lock()
+	defer p.driftMu.Unlock()
+	return p.changed
 }
 
 // ShouldRun is true when there are hosts to sync
@@ -182,6 +206,15 @@ func (p *EngineConfigSyncHosts) needsUpdate(ctx context.Context, h *cluster.Zarf
 	if !restartRequired {
 		// All drift is in NoRestart files -- a HelmChartConfig the engine re-reads on its
 		// own, say, or distro-release.json. Write them in place immediately.
+		//
+		// Except under a dry run. Prepare runs for every phase, including the ones a dry run
+		// is about to skip, which is how a dry run can report what a phase would do. Writing
+		// here would make it the one place a dry run touched a host.
+		if p.manager != nil && p.manager.DryRun {
+			logger.From(ctx).Info("would update files in place, the engine picks these up without a restart",
+				"host", h, "drifted", strings.Join(drifted, ", "))
+			return false
+		}
 		// A write that fails leaves the file as drifted as it was found, so the host is reported
 		// as needing an update and picks the file up on the drain-and-rewrite path rather than
 		// being counted as synced by a write that did not land.
@@ -203,6 +236,7 @@ func (p *EngineConfigSyncHosts) needsUpdate(ctx context.Context, h *cluster.Zarf
 		// this the run reads as though nothing happened -- which is what a values change
 		// that lands entirely in manifests would otherwise look like.
 		sort.Strings(written)
+		p.changed = true
 		// drifted is used rather than driftReason: this function holds driftMu, and
 		// driftReason takes it for itself.
 		logger.From(ctx).Info("updating files in place, the engine picks these up without a restart",

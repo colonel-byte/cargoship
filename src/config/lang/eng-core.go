@@ -69,7 +69,7 @@ const (
 	// CmdInstallAllowUnmanagedNodes install flag allow unmanaged nodes
 	CmdInstallAllowUnmanagedNodes = "Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone."
 	// CmdInstallLabelNodes install flag label nodes
-	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig."
+	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig."
 	// CmdInstallKubeConfigPath install flag kubeconfig path
 	CmdInstallKubeConfigPath = "Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config."
 	// CmdInstallUpdateKubeConfig install flag update kubeconfig
@@ -185,11 +185,31 @@ const (
 	// CmdSchemaShort schema short
 	CmdSchemaShort = "Writes out a JSON Schema for one of cargoship's own file formats"
 	// CmdSchemaLong schema long
-	CmdSchemaLong = "Writes out the JSON Schema for KIND -- 'inventory' for a cluster file, 'package' for a distro.yaml, 'config' for a cargoship config file -- so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to --output. Point an editor at a written file with a '# yaml-language-server: $schema=<path>' comment on the first line. With --package, the package's own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship -- so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation."
+	CmdSchemaLong = "Writes out the JSON Schema for KIND -- 'inventory' for a cluster file, 'package' for a distro.yaml, 'config' for a cargoship config file -- so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to --output. Point an editor at a written file with a '# yaml-language-server: $schema=PATH' comment on the first line. With --package, the package's own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship -- so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation."
 	// CmdSchemaFlagOutput flag description
 	CmdSchemaFlagOutput = "Path to write the schema to. Omit it to write to stdout."
 	// CmdSchemaFlagPackage flag description
 	CmdSchemaFlagPackage = "Graft a package's own values schema onto spec.config.values. Takes anything 'cargoship apply' takes -- a tarball, an oci:// or https:// reference -- or a package source directory or distro.yaml, so it works before the package is built. Only valid for the 'inventory' schema."
+
+	// CmdInventoryShort inventory short
+	CmdInventoryShort = "Generates a cluster inventory from another source of truth"
+	// CmdInventoryLong inventory long
+	CmdInventoryLong = "Generates the cluster inventory cargoship installs from, out of a description of the fleet that already exists somewhere else. These commands install nothing and touch no hosts; they write a file for 'cargoship validate' to check and 'cargoship apply' to read."
+	// CmdInventoryFromAnsibleShort inventory from-ansible short
+	CmdInventoryFromAnsibleShort = "Translates an Ansible inventory into a cluster inventory"
+	// CmdInventoryFromAnsibleLong inventory from-ansible long
+	CmdInventoryFromAnsibleLong = "Translates an inventory Ansible has already resolved into a ZarfCluster document, deriving each host's role from the Ansible groups it belongs to.\n\n" +
+		"This does not read an Ansible inventory file. Ansible resolves the inventory -- group membership, group_vars, host_vars, dynamic inventory plugins, and the precedence rules over all of them -- and this reads the resolved result: a JSON document holding 'groups', 'hostvars', an optional 'roleGroups' mapping, and the cluster-wide settings an Ansible inventory has no way to carry. The cargoship Ansible collection produces that document; write it by hand to reproduce a translation outside a playbook run.\n\n" +
+		"By default the Ansible group named 'controller' supplies the control-plane nodes and the group named 'worker' supplies the rest. Set 'roleGroups' to map cargoship's roles onto the group names the inventory actually uses. A host in none of the mapped groups is left out, so a play's inventory may carry hosts that are not part of the cluster; a host in groups mapped to two different roles is an error.\n\n" +
+		"Host order is not cosmetic. Controllers are written first, and the first controller in the document becomes the cluster leader.\n\n" +
+		"Each host's connection details come from its Ansible variables -- ansible_host, ansible_user, ansible_port, ansible_ssh_private_key_file -- and everything cargoship needs beyond those comes from variables under a 'cargoship_' prefix. A 'cargoship_' variable cargoship does not read is an error rather than a value ignored, because a misspelled variable and an unset one are indistinguishable at install time.\n\n" +
+		"The generated document is checked against the inventory schema before it is written. The output goes to stdout, or to --output. Ansible does not connect to the fleet: cargoship opens every SSH connection itself, from the node it runs on."
+	// CmdInventoryFlagOutput flag description
+	CmdInventoryFlagOutput = "Path to write the generated inventory to. Omit it to write to stdout."
+	// CmdInventoryFlagName flag description
+	CmdInventoryFlagName = "Cluster name, overriding the one in the input. It becomes metadata.name, and the context name in the kubeconfig."
+	// CmdInventoryFlagLoadBalancer flag description
+	CmdInventoryFlagLoadBalancer = "Control-plane address, overriding the one in the input. Cargoship adds it to the API server's TLS subject alternative names."
 
 	// CmdValidateShort validate short
 	CmdValidateShort = "Checks a cluster inventory, package definition, or config file against its schema"

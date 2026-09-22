@@ -1,4 +1,8 @@
 # Cargoship
+[![Latest Release](https://img.shields.io/github/v/release/colonel-byte/cargoship)](https://github.com/colonel-byte/cargoship/releases)
+[![Go version](https://img.shields.io/github/go-mod/go-version/colonel-byte/cargoship?filename=go.mod)](https://go.dev/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/colonel-byte/cargoship/release.yaml)](https://github.com/colonel-byte/cargoship/actions/workflows/release.yaml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/colonel-byte/cargoship/badge)](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship)
 
 Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages. It is designed to simplify two core workflows:
 
@@ -138,5 +142,5 @@ GitHub Actions workflows run lint checks, dependency validation, cross-compilati
 
 Cargoship draws major design and engineering inspiration from:
 
-*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) — For elegant SSH-based multi-node orchestration and configuration patterns.
-*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) — For air-gapped image and file packaging and offline-first design.
+*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) - For elegant SSH-based multi-node orchestration and configuration patterns.
+*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) - For air-gapped image and file packaging and offline-first design.

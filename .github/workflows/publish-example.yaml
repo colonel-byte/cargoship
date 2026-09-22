@@ -28,13 +28,15 @@ name: Publish example package
 # a cache hit -- different images, different artifacts -- so running them at the same time
 # costs nothing and halves the wall clock.
 #
-# It runs on demand from the Actions tab, automatically once the goreleaser workflow succeeds
-# on a version tag, where it takes every changed flavor. The chain is release-please
-# publishes the release and pushes the tag, the tag push starts goreleaser, and goreleaser
-# finishing starts this. Keying off the release event instead does not work, and did not:
-# release-please publishes the release roughly ten minutes before goreleaser has uploaded the
-# archives, so setup-cargoship resolved the brand new version and then failed on an asset
-# that did not exist yet.
+# It runs on demand from the Actions tab, choosing the flavor, and automatically after a
+# release, where it takes every changed flavor by default. The chain is release-please
+# publishes the release and pushes the tag, the tag push starts goreleaser, and release.yaml
+# calls this one as a reusable workflow in a job that needs goreleaser. Keying off the
+# release event instead does not work, and did not: release-please publishes the release
+# roughly ten minutes before goreleaser has uploaded the archives, so setup-cargoship resolved
+# the brand new version and then failed on an asset that did not exist yet. needs is what
+# holds the two apart, and it holds them apart more tightly than watching for the
+# goreleaser run to finish ever did.
 #
 # It also runs on a pull request carrying the "publish-example" label, so the workflow can
 # be exercised on its own branch before it is merged. That run is label gated because each
@@ -58,11 +60,16 @@ on:
           - rke2-multi-cni-canal
           - k3s-flannel
           - k3s-multi
-  workflow_run:
-    workflows:
-      - goreleaser
-    types:
-      - completed
+  # Called by release.yaml once goreleaser has finished. A called workflow runs at the
+  # caller's ref, which is the tag, so nothing here has to name a commit to build. The
+  # flavor cannot be a choice the way the dispatch input is -- workflow_call takes only
+  # boolean, number and string -- so it is a string carrying the same default.
+  workflow_call:
+    inputs:
+      flavor:
+        description: Example flavor to publish
+        type: string
+        default: changed
   pull_request:
     types:
       - opened
@@ -72,15 +79,13 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 # Publishing pushes gigabytes to a registry under a tag derived from the package version, so
 # two runs must not race each other to the same reference. The ref is in the group so that a
 # pull request's test runs queue against themselves rather than against a release publishing
 # the same flavor; the per-flavor group is on the publish job, where the flavor is known.
 concurrency:
-  group: >-
-    publish-example-${{ github.event.workflow_run.head_branch || github.ref }}
+  group: publish-example-${{ inputs.flavor || 'changed' }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -107,22 +112,19 @@ jobs:
   # Decides what to publish before anything is built, because deciding costs two API calls
   # per flavor and building costs gigabytes. A run where nothing has moved ends here.
   select:
-    # A goreleaser run is only worth following when it succeeded, because a failed one
-    # uploaded no archive for setup-cargoship to install, and only on a version tag, since
-    # goreleaser takes every tag while release-please only ever pushes vN.N.N.
-    #
     # Label gated on pull requests: every run pulls and pushes gigabytes, which is not what
     # an unrelated pull request should spend. Fork pull requests are excluded because they
     # get neither the signing secrets nor a token that can write packages, so the run could
     # only fail at the publish step.
+    #
+    # Everything else runs unconditionally. A call from release.yaml reports github.event_name
+    # as the caller's event rather than workflow_call, and that caller does the version tag
+    # gating, so there is nothing left to check on this side; this workflow has no push
+    # trigger of its own, so a push here can only be that call.
     if: >-
-      (github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'v')) ||
-      (github.event_name == 'pull_request' &&
-      contains(github.event.pull_request.labels.*.name, 'publish-example') &&
-      github.event.pull_request.head.repo.full_name == github.repository) ||
-      github.event_name == 'workflow_dispatch'
+      github.event_name != 'pull_request' ||
+      (contains(github.event.pull_request.labels.*.name, 'publish-example') &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -130,15 +132,13 @@ jobs:
       count: ${{ steps.select.outputs.count }}
       flavors: ${{ steps.select.outputs.flavors }}
     steps:
-      # A workflow_run run starts from the default branch whatever ref set it off, so the
-      # tagged commit has to be asked for by name. Without it this would read whatever
-      # example definitions main holds now rather than the ones the release shipped. The
-      # fallback covers the dispatch and pull request triggers, where github.ref is already
-      # what should be built.
+      # No ref: on purpose. Under every trigger this has, github.ref is already the commit
+      # to build -- for a call from release.yaml that is the tag goreleaser released, since
+      # a reusable workflow runs at its caller's ref -- and naming a ref drawn from event
+      # payload is the untrusted checkout pattern Scorecard's dangerous-workflow check
+      # rejects.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Select the flavors to publish
         id: select
@@ -292,18 +292,17 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.select.outputs.matrix) }}
+    permissions:
+      contents: read
+      packages: write
     # Per distro rather than per run: two runs may legitimately publish different distros at
     # once, but never the same reference twice.
     concurrency:
-      group: >-
-        publish-example-${{ matrix.distro }}-${{
-        github.event.workflow_run.head_branch || github.ref }}
+      group: publish-example-${{ matrix.distro }}-${{ github.ref }}
       cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       # Several packages are built here one after another, and each runs to gigabytes: the
       # images are cached under ~/.cargoship-cache for the flavors that follow, and the

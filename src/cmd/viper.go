@@ -75,10 +75,15 @@ func initViper() error {
 	// support for every key not also present in the user's config file.
 	setDefaults()
 
+	// This logger exists to report a config file that was found and could not be used, which
+	// happens before any flag is parsed and so before the real logger exists. It writes to
+	// stderr because it is a log: commands that emit a document -- schema, validate,
+	// inventory from-ansible -- put that document on stdout, and a warning mixed into it
+	// corrupts whatever the output was piped into.
 	log, err := logger.New(logger.Config{
 		Level:       logger.Info,
 		Format:      logger.FormatConsole,
-		Destination: os.Stdout,
+		Destination: os.Stderr,
 		Color:       true,
 	})
 	if err != nil {
@@ -176,6 +181,7 @@ func setDefaults() {
 	v.SetDefault(configPath("CachePath"), config.DefaultCachePath)
 	v.SetDefault(configPath("LogFormat"), string(logger.FormatConsole))
 	v.SetDefault(configPath("TempDirectory"), "/tmp")
+	v.SetDefault(configPath("Timeout"), "60m")
 	v.SetDefault(configPath("NoColor"), false)
 	v.SetDefault(configPath("LogFile"), false)
 

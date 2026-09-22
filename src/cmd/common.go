@@ -43,8 +43,9 @@ type InstallCommon struct {
 	config      string
 	concurrency int
 	confirm     bool
-	// dryRun reaches phase.Manager.DryRun. Only apply and reset register the flag; the other
-	// commands embedding InstallCommon carry the field unset, which is the same as off.
+	// dryRun reaches phase.Manager.DryRun. Only apply, reset, and engine-config-sync register
+	// the flag; the other commands embedding InstallCommon carry the field unset, which is the
+	// same as off.
 	dryRun    bool
 	logLevel  string
 	LogFormat string

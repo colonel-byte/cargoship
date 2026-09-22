@@ -1,0 +1,22 @@
+---
+# run_once because cargoship converges the whole fleet in one run. Without it, a play over the
+# fleet's own inventory would run a full cluster convergence once per host.
+#
+# no_log is not conditional on purpose. A template that fails to evaluate leaves no_log false, and
+# the arguments of this task name every host in the fleet. Set cargoship_show_result to see what
+# happened; that prints cargoship's report, which holds phase names and file paths and no key
+# material.
+- name: Run cargoship prepare
+  colonel_byte.cargoship.cargoship_prepare:
+    inventory: "{{ _cargoship_inventory }}"
+    parameters: "{{ _cargoship_parameters }}"
+  delegate_to: "{{ cargoship_delegate_to }}"
+  run_once: true
+  no_log: "{{ cargoship_no_log | bool }}"
+  register: cargoship_result
+
+- name: Report what cargoship did
+  ansible.builtin.debug:
+    var: cargoship_result.cargoship
+  when: cargoship_show_result | bool
+  run_once: true
