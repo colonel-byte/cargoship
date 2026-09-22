@@ -21,6 +21,7 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/config/lang"
 	"github.com/colonel-byte/cargoship/src/internal/ansibleinv"
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,7 @@ type inventoryFromAnsibleOptions struct {
 	output       string
 	name         string
 	loadBalancer string
+	keyring      *keyFlags
 }
 
 // newInventoryFromAnsibleCommand turns an Ansible inventory into the cluster inventory cargoship
@@ -51,8 +53,8 @@ type inventoryFromAnsibleOptions struct {
 // It does not read an inventory file. Ansible resolves the inventory -- group membership,
 // group_vars, host_vars, dynamic inventory plugins, and the precedence rules over all of them --
 // and this reads the resolved result.
-func newInventoryFromAnsibleCommand() *cobra.Command {
-	o := inventoryFromAnsibleOptions{}
+func newInventoryFromAnsibleCommand(f *keyFlags) *cobra.Command {
+	o := inventoryFromAnsibleOptions{keyring: f}
 
 	cmd := &cobra.Command{
 		Use:     "from-ansible [FILE]",
@@ -100,6 +102,20 @@ func (o *inventoryFromAnsibleOptions) run(cmd *cobra.Command, args []string) err
 	doc, err := goyaml.Marshal(out)
 	if err != nil {
 		return fmt.Errorf("unable to serialize the generated inventory: %w", err)
+	}
+
+	if o.keyring != nil {
+		k, err := o.keyring.resolveKeyring(cmd)
+		if err != nil {
+			return err
+		}
+		if !k.Empty() {
+			encrypted, _, _, err := clustercfg.EncryptConfig(doc, k, false)
+			if err != nil {
+				return fmt.Errorf("encrypting inventory: %w", err)
+			}
+			doc = encrypted
+		}
 	}
 
 	return o.emit(cmd, doc)

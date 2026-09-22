@@ -49,7 +49,10 @@ const resolvedInventory = `{
 func runFromAnsible(t *testing.T, stdin string, args ...string) (stdout string, stderr string, err error) {
 	t.Helper()
 
-	cmd := newInventoryFromAnsibleCommand()
+	f := &keyFlags{}
+	cmd := newInventoryFromAnsibleCommand(f)
+	cmd.Flags().StringVar(&f.vaultPasswordFile, MiscVaultPasswordFile, "", "")
+	addAgeFlags(cmd, f)
 	// The root silences usage on error, and these tests run the subcommand without it. Without
 	// this the usage text lands on stdout and the check that a failed run writes no document
 	// would be testing cobra rather than the command.
@@ -68,6 +71,26 @@ func decodeInventory(t *testing.T, doc string) *cluster.ZarfCluster {
 	var out cluster.ZarfCluster
 	require.NoError(t, goyaml.Unmarshal([]byte(doc), &out))
 	return &out
+}
+
+func TestInventoryFromAnsibleEncryptsWithAge(t *testing.T) {
+	pubKey := "age1wjqegc62gpyvp4yfdqfk4vclfgdh3awlv03rgthcje398a860p7qpglp6w"
+	inv := `{
+		"groups": {"controller": ["kc01"]},
+		"cluster": {
+			"name": "bubbles",
+			"loadbalancer": "bubbles-kc.test.com",
+			"registries": [{
+				"name": "docker.io",
+				"auth": {"user": "alice", "pass": "secret"}
+			}]
+		}
+	}`
+
+	stdout, stderr, err := runFromAnsible(t, inv, "--age-recipient", pubKey)
+	require.NoError(t, err)
+	require.Empty(t, stderr)
+	require.Contains(t, stdout, "-----BEGIN AGE ENCRYPTED FILE-----")
 }
 
 func TestInventoryFromAnsibleWritesToStdout(t *testing.T) {

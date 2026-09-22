@@ -287,7 +287,19 @@ func (r ZarfClusterRegistries) ConfigHost() string {
 // TLS settings, in which case both landing on the same host is harmless rather than a conflict.
 func sameRegistryConfig(a, b ZarfClusterRegistries) bool {
 	if a.Authentication != b.Authentication {
-		return false
+		// When fields are encrypted with age or Ansible Vault, distinct ciphertext blocks encrypt
+		// the same underlying credential due to randomized salts/nonces. If both entries are
+		// encrypted, or if comparing before apply-time decryption, identical ciphertext equality
+		// fails. We treat two entries where both user and pass are encrypted as matching.
+		aEnc := (IsEncrypted(a.Authentication.Username) || a.Authentication.Username == "") &&
+			(IsEncrypted(a.Authentication.Password) || a.Authentication.Password == "") &&
+			(IsEncrypted(a.Authentication.Token) || a.Authentication.Token == "")
+		bEnc := (IsEncrypted(b.Authentication.Username) || b.Authentication.Username == "") &&
+			(IsEncrypted(b.Authentication.Password) || b.Authentication.Password == "") &&
+			(IsEncrypted(b.Authentication.Token) || b.Authentication.Token == "")
+		if !aEnc || !bEnc || a.Authentication.Token != "" || b.Authentication.Token != "" {
+			return false
+		}
 	}
 	switch {
 	case a.TLS == nil && b.TLS == nil:
