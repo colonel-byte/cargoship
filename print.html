@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b78d259.js";
+            window.path_to_searchindex_js = "searchindex-19f26fee.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-22142fe1.js"></script>
@@ -3962,11 +3962,11 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <p>A single <code>goreleaser release</code> run produces:</p>
 <ul>
 <li><strong>Archives</strong> — <code>tar.gz</code> per OS/arch, named after <code>uname</code> conventions (<code>cargoship_Linux_x86_64.tar.gz</code>).</li>
-<li><strong>Packages</strong> — <code>apk</code>, <code>deb</code>, and <code>rpm</code>, from the <code>nfpms</code> section, GPG-signed when <code>GPG_KEY_PATH</code> is set.</li>
-<li><strong>Container images</strong> — two multi-platform manifests covering <code>linux/amd64</code> and <code>linux/arm64</code>: <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;</code> (Chainguard static, bare binary) and <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;-ubi</code> (Red Hat UBI, installs the rpm).</li>
+<li><strong>Packages</strong> — <code>apk</code>, <code>deb</code>, and <code>rpm</code>, from the <code>nfpms</code> section. Packages can be signed when the corresponding signing keys are configured.</li>
+<li><strong>Container images</strong> — four multi-platform manifests covering <code>linux/amd64</code> and <code>linux/arm64</code>: <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;</code> (Chainguard static, bare binary), <code>ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt;</code> (AlmaLinux, installs the RPM), <code>ghcr.io/colonel-byte/cargoship-deb:&lt;tag&gt;</code> (Debian slim, installs the DEB), and <code>ghcr.io/colonel-byte/cargoship-ansible:&lt;tag&gt;</code> (AlmaLinux, installs the RPM and Ansible dependencies).</li>
 <li><strong>Ansible collection</strong> — <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.</li>
 <li><strong>SBOMs</strong> — one per archive, via Syft.</li>
-<li><strong>Signatures</strong> — cosign <code>sigstore.json</code> bundles over both the checksums file and every archive, plus registry signatures over both container images.</li>
+<li><strong>Signatures</strong> — cosign <code>sigstore.json</code> bundles over the checksums file and every archive, plus registry signatures over every container image. Package signatures are configured separately through nfpm.</li>
 </ul>
 <h2 id="the-ansible-collection"><a class="header" href="#the-ansible-collection">The Ansible Collection</a></h2>
 <p>The collection is not built by a <code>builds</code> entry, because nothing about it is compiled. <code>hack/ansible-build-collection.sh</code> runs as a <code>before</code> hook, calls <code>ansible-galaxy collection build</code>, writes the tarball to <code>bin/ansible</code>, and signs it when <code>COSIGN_PRIVATE_KEY</code> is set. The <code>release.extra_files</code> globs then attach the tarball and the bundle.</p>
@@ -3993,7 +3993,7 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 </ol>
 <p><code>dockers_v2</code> is still flagged experimental upstream and prints a warning on every run. It becomes plain <code>dockers</code> in GoReleaser v3.</p>
 <h3 id="the-dockerfile-contract"><a class="header" href="#the-dockerfile-contract">The Dockerfile Contract</a></h3>
-<p>Both Dockerfiles live under <code>containers/</code> — <code>containers/base/Dockerfile</code> and <code>containers/ubi/Dockerfile</code> — and each is named explicitly by its <code>dockers_v2</code> entry’s <code>dockerfile:</code> key. Neither compiles anything: GoReleaser has already built the binaries and packages by the time they run. The static image copies the binary, UBI installs the rpm. Adding a <em>compiling</em> stage to either would duplicate that work and break the guarantee described under <a href="#binary-identity">Binary Identity</a>.</p>
+<p>All four Dockerfiles live under <code>containers/</code> — <code>containers/base/Dockerfile</code>, <code>containers/ubi/Dockerfile</code>, <code>containers/deb/Dockerfile</code>, and <code>containers/ansible/Dockerfile</code> — and each is named explicitly by its <code>dockers_v2</code> entry’s <code>dockerfile:</code> key. None compiles anything: GoReleaser has already built the binaries and packages by the time they run. The static image copies the binary; the UBI and Ansible images install the RPM, while the Debian image installs the DEB. Adding a <em>compiling</em> stage to any of them would duplicate that work and break the guarantee described under <a href="#binary-identity">Binary Identity</a>.</p>
 <p>The directory name is deliberately generic: <code>containers/base/</code> is the plain-binary image whatever base it happens to sit on, so a future base swap does not force another rename. If it is ever renamed anyway, three other files have to move with it in the same commit — the <code>dockerfile:</code> key in <code>.goreleaser.yaml</code>, the lint matrix in <code>.github/workflows/scan-lint.yaml</code>, and the <code>directories:</code> list of the <code>docker</code> ecosystem in <code>.github/dependabot.yaml</code>.</p>
 <p><code>dockers_v2</code> hands the Dockerfile a temporary context laid out one directory per platform, which is why the binary is copied from <code>$TARGETPLATFORM</code> rather than the context root:</p>
 <pre><code>&lt;context&gt;/Dockerfile
@@ -4018,7 +4018,7 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <p>Two conventions here exist to keep dependabot working, and both look redundant until you know why:</p>
 <ul>
 <li><strong>The reference is repeated on every <code>FROM</code></strong> rather than hoisted into an <code>ARG</code>. Dependabot’s Dockerfile parser reads literal <code>FROM</code> lines only — it has no <code>ARG</code> resolution, so <code>FROM ${BASE_IMAGE}</code> is invisible to it and the pin would never be refreshed. It is also not stage-aware, so aliasing (<code>FROM alpine@sha256:... AS base</code> then <code>FROM base</code>) is no better: the bare stage reference parses as an image and produces a spurious <code>base:latest</code> dependency.</li>
-<li><strong><code>org.opencontainers.image.base.name</code> carries the tag only</strong>, without the digest. Dependabot rewrites <code>FROM</code> lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (<code>3.22</code> → <code>3.23</code>) means updating the label by hand, which is the comment sitting above it in both files.</li>
+<li><strong><code>org.opencontainers.image.base.name</code> carries the tag only</strong>, without the digest. Dependabot rewrites <code>FROM</code> lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (<code>3.22</code> → <code>3.23</code>) means updating the label by hand, which is the comment sitting above it in every one of them.</li>
 </ul>
 <p><code>.github/workflows/check-base-image-label.yaml</code> catches that hand edit when it is forgotten. On any pull request touching a <code>Dockerfile</code> it compares each final <code>FROM</code>, digest stripped, against that file’s <code>base.name</code>, and comments on the pull request rather than failing the job — a stale label does not break the build, and the pull request bumping the <code>FROM</code> is where the fix belongs. The comparison is literal, so the label names the registry the <code>FROM</code> actually pulls from, mirror and all, rather than the upstream image that mirror copies.</p>
 <p>One base needs more care than the others. <strong><code>cgr.dev/chainguard/static</code> publishes <code>:latest</code> and nothing else</strong> on Chainguard’s free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date — it eventually stops resolving, and the build fails with <code>manifest unknown</code>. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.</p>
@@ -4027,36 +4027,71 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <p>Dockerfiles are linted by <a href="https://github.com/hadolint/hadolint">hadolint</a> in two places:</p>
 <ul>
 <li><strong><code>.pre-commit-config.yaml</code></strong> — the <code>hadolint-docker</code> hook, which runs the linter in a container and so needs a working Docker daemon. It picks up any file pre-commit identifies as a Dockerfile, excluding <code>vendor/</code>.</li>
-<li><strong><code>.github/workflows/scan-lint.yaml</code></strong> — the <code>containers</code> job, a matrix over the two Dockerfile paths.</li>
+<li><strong><code>.github/workflows/scan-lint.yaml</code></strong> — the <code>containers</code> job, a matrix over the four Dockerfile paths.</li>
 </ul>
 <p>The CI job lists paths explicitly rather than globbing. The action’s <code>recursive</code> mode searches from the repository root, which would pull in the vendored Dockerfiles under <code>vendor/</code> — several of which do not pass. <strong>Add a new path to that matrix when adding an image variant</strong>; the pre-commit hook picks it up on its own.</p>
 <p>Default rules and the default <code>info</code> failure threshold apply; there is no <code>.hadolint.yaml</code>.</p>
-<h3 id="ubi-variant"><a class="header" href="#ubi-variant">UBI Variant</a></h3>
-<p>A second <code>dockers_v2</code> entry builds <code>containers/ubi/Dockerfile</code>, published as the <code>-ubi</code> tag on the same image repository. It exists for environments that want a Red Hat base and an installed, queryable package rather than a loose binary.</p>
-<p>The difference is how the binary arrives. The static image copies it; the UBI image <code>rpm --install</code>s the same package produced by the <code>nfpms</code> section, so it is registered in the image’s rpm database:</p>
-<pre><code class="language-sh">$ docker run --rm --entrypoint rpm ghcr.io/colonel-byte/cargoship:&lt;tag&gt;-ubi -q cargoship
+<h3 id="rpm-variant"><a class="header" href="#rpm-variant">RPM Variant</a></h3>
+<p>A second <code>dockers_v2</code> entry builds <code>containers/ubi/Dockerfile</code> and publishes <code>ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt;</code>. It is based on AlmaLinux and installs the signed Cargoship RPM so the package is registered in the image’s RPM database.</p>
+<p>The static image copies the binary directly; this image installs the same RPM produced by the <code>nfpms</code> section.</p>
+<pre><code class="language-sh">$ docker run --rm --entrypoint rpm \
+  ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt; -q cargoship
 cargoship-0.21.1-1.x86_64
 </code></pre>
-<p><code>rpm -V cargoship</code> and <code>rpm -ql cargoship</code> work as well, which is usually the point of asking for a UBI build in the first place.</p>
+<p><code>rpm -V cargoship</code> and <code>rpm -ql cargoship</code> work as well, which is the main
+reason to use an RPM-based image.</p>
 <p>Details worth knowing before editing it:</p>
 <ul>
-<li><strong><code>ids: [packagers]</code></strong> selects the nfpms artifacts for the build context instead of the raw binary. All three formats share one nfpms id, so the <code>.apk</code> and <code>.deb</code> land in the context too; the Dockerfile globs <code>*.rpm</code> and ignores them.</li>
-<li><strong>The install step must run on the target platform.</strong> <code>rpm</code> unpacks an architecture-specific binary into the target rootfs, so this one could not be hoisted to <code>$BUILDPLATFORM</code> even if it were worth doing. It is the reason <code>setup-qemu-action</code> is a hard dependency, and why the UBI build is the slow one.</li>
-<li><strong><code>rpm -i</code>, not <code>microdnf install</code>.</strong> The package declares no dependencies, so nothing needs resolving and the build stays hermetic — no repo access at image build time. Switch to <code>microdnf</code> if <code>nfpms.*.depends</code> ever gains an entry.</li>
-<li><strong>A signed rpm logs a <code>NOKEY</code> warning</strong> during the build, because the release signing key is not in the image keyring. It is a warning, not a failure.</li>
-<li><strong>The binary lands in <code>/usr/bin</code></strong> (per <code>nfpms.rpm.prefixes</code>), not <code>/usr/local/bin</code> as in the static image. The entrypoints differ accordingly; everything else — the <code>nonroot</code> account at uid <code>65532</code>, <code>$HOME</code>, <code>/workspace</code> — is deliberately identical, so the two variants are drop-in swaps.</li>
+<li><strong><code>ids: [packagers]</code></strong> selects the nfpms artifacts for the build context instead of the raw binary. All three formats share one nfpms id, so the <code>.apk</code> and <code>.deb</code> also land in the context; the Dockerfile selects the target-platform RPM.</li>
+<li><strong>The RPM signature is verified at build time.</strong> <code>crypto/software@conlon.dev.gpg</code> is supplied through <code>extra_files</code>, imported into the image keyring, and checked with <code>rpm --checksig</code> before installation.</li>
+<li><strong>The install step must run on the target platform.</strong> RPM unpacks an architecture-specific binary into the target root filesystem, so the install cannot be moved to a <code>$BUILDPLATFORM</code> stage. This is why the <code>linux/arm64</code> build requires QEMU.</li>
+<li><strong>The binary lands in <code>/usr/bin</code></strong> according to <code>nfpms.rpm.prefixes</code>, not <code>/usr/local/bin</code> as in the static image. The entrypoint differs accordingly; the <code>nonroot</code> account, <code>$HOME</code>, and <code>/workspace</code> layout remain compatible.</li>
 </ul>
-<p>The UBI base is substantially larger: roughly 354MB versus 137MB for the static image on amd64.</p>
+<p>The AlmaLinux base is substantially larger than the static image. Recheck exact image sizes after base-image updates rather than relying on a fixed comparison.</p>
+<h3 id="debian-variant"><a class="header" href="#debian-variant">Debian Variant</a></h3>
+<p><code>containers/deb/Dockerfile</code>, published as <code>ghcr.io/colonel-byte/cargoship-deb:&lt;tag&gt;</code>, is the Debian-family counterpart to the RPM image. It installs the DEB produced by the <code>nfpms</code> section with <code>dpkg</code>, registering Cargoship in the image’s dpkg database.</p>
+<pre><code class="language-sh">$ docker run --rm --entrypoint dpkg \
+  ghcr.io/colonel-byte/cargoship-deb:&lt;tag&gt; -s cargoship
+Package: cargoship
+Status: install ok installed
+</code></pre>
+<p><code>dpkg -L cargoship</code> and <code>dpkg -V cargoship</code> work as well, which is the main reason to use a Debian-based image.</p>
+<p>Its other job is coverage: the <code>.deb</code> is produced by every release, so this image exercises installation of that package format during the image build.</p>
+<p>Details worth knowing before editing it:</p>
+<ul>
+<li><strong>The directory is named for the package format, not the base.</strong> This image exists to exercise the <code>.deb</code>; changing Debian to Ubuntu would not change that purpose.</li>
+<li><strong><code>dpkg -i</code>, not <code>apt-get install</code>.</strong> The package declares no dependencies, so nothing needs resolving and the build remains hermetic.</li>
+<li><strong>The binary lands in <code>/usr/bin</code></strong>, as it does in the RPM-based images.</li>
+<li><strong><code>dpkg -i</code> does not verify package signatures.</strong> The <code>_gpgorigin</code> member is available for <code>debsig-verify</code> and repository tooling, but is not checked by this Dockerfile.</li>
+</ul>
+<h3 id="ansible-variant"><a class="header" href="#ansible-variant">Ansible Variant</a></h3>
+<p>A third <code>dockers_v2</code> entry builds <code>containers/ansible/Dockerfile</code> and publishes <code>ghcr.io/colonel-byte/cargoship-ansible:&lt;tag&gt;</code>. It provides a management-node image based on AlmaLinux.</p>
+<p>The image installs the signed Cargoship RPM, <code>ansible-core</code>, and the collections listed in <code>ansible/colonel_byte/cargoship/requirements.yml</code>. The collection is installed under Ansible’s system collection path:</p>
+<p><code>/usr/share/ansible/collections/ansible_collections</code></p>
+<p>The container is the management node: Ansible and Cargoship run inside it, while Cargoship opens SSH connections from the container to the external fleet.</p>
+<p>Details worth knowing before editing it:</p>
+<ul>
+<li><strong><code>ids: [packagers]</code></strong> supplies the generated package artifacts. The Dockerfile selects the target-platform RPM and ignores the <code>.apk</code> and <code>.deb</code> files that share the nfpms output.</li>
+<li><strong>The RPM signature is verified during the build</strong> using <code>crypto/software@conlon.dev.gpg</code>, which is supplied through <code>extra_files</code>, imported into the image keyring, and checked before installation.</li>
+<li><strong>Ansible dependencies come from <code>requirements.yml</code>.</strong> The Dockerfile runs <code>ansible-galaxy collection install</code> and places the collections in the system collection path.</li>
+<li><strong>There is no <code>ENTRYPOINT</code>.</strong> The image is intended to run  <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code>, or Cargoship as needed. Its default command is <code>ansible-playbook --help</code>.</li>
+<li><strong>The build validates the installed Cargoship package</strong> by running <code>cargoship version</code>.</li>
+</ul>
+<pre><code class="language-sh">docker run --rm \
+  -v "$PWD:/workspace" \
+  ghcr.io/colonel-byte/cargoship-ansible:&lt;tag&gt; \
+  ansible-playbook -i inventory.yml site.yml
+</code></pre>
 <h3 id="image-runtime-layout"><a class="header" href="#image-runtime-layout">Image Runtime Layout</a></h3>
 <ul>
-<li>Runs as uid/gid <code>65532</code>, which has a real <code>/etc/passwd</code> entry named <code>nonroot</code> with home <code>/home/nonroot</code> in both images, so <code>os/user</code> lookups and <code>$HOME</code> agree with each other and across variants. The static image inherits that account from its base; the UBI image creates it to match. The <code>USER</code> line stays numeric (<code>65532:65532</code>) so the image still runs correctly under a <code>runAsUser</code> that ignores names.</li>
+<li>Runs as uid/gid <code>65532</code>, which has a real <code>/etc/passwd</code> entry named <code>nonroot</code> with home <code>/home/nonroot</code> in all four images, so <code>os/user</code> lookups and <code>$HOME</code> agree with each other and across variants. The static image inherits that account from its base; the package-installing images create it to match. The <code>USER</code> line stays numeric (<code>65532:65532</code>) so the image still runs correctly under a <code>runAsUser</code> that ignores names.</li>
 <li><code>HOME=/home/nonroot</code>, which backs viper’s <code>$HOME/.zarf</code> config search path (<code>src/cmd/viper.go</code>) and the default cache path <code>~/.cargoship-cache</code> (<code>src/config/common.go</code>). Both directories are pre-created and owned by <code>65532</code>, as is <code>~/.ssh</code> at 0700.</li>
 <li><code>WORKDIR /workspace</code>. Since <code>.</code> is viper’s first config search path, bind-mounting a package directory there picks up <code>cargoship-config.yaml</code> with no extra flags:</li>
 </ul>
 <pre><code class="language-sh">docker run --rm -v "$PWD:/workspace" ghcr.io/colonel-byte/cargoship:&lt;tag&gt; apply ...
 </code></pre>
 <h3 id="oci-labels"><a class="header" href="#oci-labels">OCI Labels</a></h3>
-<p>Labels are split by whether they change per release. Static ones (title, description, source, licenses, base image) live in each <code>Dockerfile</code>; per-release ones (version, revision, created) are set in <code>.goreleaser.yaml</code>. See <a href="#base-image-pinning">Base Image Pinning</a> for why <code>org.opencontainers.image.base.name</code> deliberately omits the digest. Keep them separate — a <code>--label</code> flag silently overrides a <code>LABEL</code> of the same key, so duplicating a key across both files creates two sources of truth.</p>
+<p>Labels are split by whether they change per release. Static ones (title, description, source, licenses, base image) live in each <code>Dockerfile</code>; per-release ones (version, revision, created) are set in <code>.goreleaser.yaml</code>. See <a href="#base-image-pinning">Base Image Pinning</a> for why <code>org.opencontainers.image.base.name</code> deliberately omits the digest. Keep them separate — a <code>--label</code> flag silently overrides a <code>LABEL</code> of the same key, so duplicating a key across a Dockerfile and <code>.goreleaser.yaml</code> creates two sources of truth.</p>
 <h2 id="image-signing"><a class="header" href="#image-signing">Image Signing</a></h2>
 <p><code>docker_signs</code> signs the published images with cosign, using the same <code>COSIGN_PRIVATE_KEY</code> / <code>COSIGN_PASSWORD</code> pair as the archive signatures — no extra workflow configuration is needed.</p>
 <pre><code class="language-yaml">docker_signs:
@@ -4075,21 +4110,21 @@ cargoship-0.21.1-1.x86_64
 </code></pre>
 <p>This pipe only runs on a real publish. A <code>--snapshot</code> run pushes nothing, so it never exercises signing.</p>
 <h2 id="binary-identity"><a class="header" href="#binary-identity">Binary Identity</a></h2>
-<p>The binary is byte-identical everywhere it ships: the release archive, the apk/deb/rpm packages, the static image, and the UBI image (where it arrives via <code>rpm --install</code>). GoReleaser compiles once per target and reuses that one artifact downstream.</p>
+<p>The binary is byte-identical everywhere it ships: the release archive, the apk/deb/rpm packages, the static image, the UBI image (where it arrives via <code>rpm --install</code>), the Debian image (<code>dpkg --install</code>), and the Ansible image (<code>rpm --install</code>). GoReleaser compiles once per target and reuses that one artifact downstream.</p>
 <p>This means a cosign verification against the released archive transitively covers the binary shipped in the image. Verify it yourself after a snapshot run:</p>
 <pre><code class="language-sh">sha256sum dist/cargoship_linux_amd64_v1/cargoship
 cid=$(docker create ghcr.io/colonel-byte/cargoship:&lt;tag&gt;-amd64)
 docker cp "$cid:/usr/local/bin/cargoship" /tmp/from-image &amp;&amp; docker rm "$cid"
 sha256sum /tmp/from-image
 </code></pre>
-<p>The property holds only because neither Dockerfile compiles anything.</p>
+<p>The property holds only because no Dockerfile compiles anything.</p>
 <h2 id="ci-workflow-steps"><a class="header" href="#ci-workflow-steps">CI Workflow Steps</a></h2>
 <p>Each setup step in <code>.github/workflows/release.yaml</code> exists for a specific reason:</p>
 <ul>
 <li><strong>Syft</strong> — generates the archive SBOMs.</li>
 <li><strong>ansible-core</strong> — supplies <code>ansible-galaxy</code>, which builds the collection tarball in the <code>before</code> hook. Nothing else in the pipeline needs Ansible.</li>
 <li><strong>cosign</strong> — signs checksums, archives, and the published images; needs <code>COSIGN_PRIVATE_KEY</code> and <code>COSIGN_PASSWORD</code>.</li>
-<li><strong>QEMU</strong> — registers binfmt handlers for cross-platform builds. Required by the UBI image, whose <code>rpm --install</code> unpacks architecture-specific files and so must run on the target platform; its <code>linux/arm64</code> half runs under emulation. The static image does not need it — its only <code>RUN</code> is pinned to <code>$BUILDPLATFORM</code>.</li>
+<li><strong>QEMU</strong> — registers binfmt handlers for cross-platform builds. Required by the package-installing images: <code>rpm --install</code> and <code>dpkg --install</code> unpack architecture-specific files and must run on the target platform, so their <code>linux/arm64</code> builds run under emulation. The static image does not need it — its only <code>RUN</code> is pinned to <code>$BUILDPLATFORM</code>.</li>
 <li><strong>Buildx</strong> — required, not optional; provisions the container driver that can emit a multi-platform manifest.</li>
 <li><strong>GHCR login</strong> — required to push. The job’s <code>packages: write</code> permission is an authorization, not a credential.</li>
 <li><strong><code>fetch-depth: 0</code></strong> — GoReleaser needs full history to resolve tags and changelog range.</li>
@@ -4102,10 +4137,11 @@ sha256sum /tmp/from-image
 <pre><code class="language-sh">TMPDIR=/home/$USER/.cache/goreleaser-tmp \
   goreleaser release --snapshot --clean --skip=sign,sbom,announce,validate,before
 </code></pre>
-<p>Two gotchas:</p>
+<p>Three gotchas:</p>
 <ul>
 <li><strong>Set <code>TMPDIR</code> to a path on a real disk.</strong> The default <code>/run/user/&lt;uid&gt;/tmp</code> is a small tmpfs, and the Go build cache for a full six-target matrix will overrun it. The failure is a flood of <code>no space left on device</code> from the compiler.</li>
 <li><strong>Do not add <code>--skip=publish</code></strong> if you want images. Under <code>dockers_v2</code> that skips image builds entirely.</li>
+<li><strong><code>--skip=sign</code> also disables package signing</strong>, not just cosign. GoReleaser’s nfpm pipe zeroes all three <code>Signature</code> structs when that skip is set (<code>internal/pipe/nfpm/nfpm.go</code>), so a run that skips signing produces unsigned packages no matter what <code>GPG_KEY_PATH</code> and <code>APK_RSA_KEY_PATH</code> say. To exercise package signing locally, drop <code>sign</code> from the skip list and supply cosign keys too.</li>
 </ul>
 <p>Artifacts land in <code>dist/</code>, which is gitignored.</p>
 <div style="break-before: page; page-break-before: always;"></div>
