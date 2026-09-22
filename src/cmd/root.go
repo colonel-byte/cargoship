@@ -94,6 +94,8 @@ const (
 const (
 	// PackageOCIConcurrency flag
 	PackageOCIConcurrency = "oci-concurrency"
+	// PackageTag flag
+	PackageTag = "tag"
 )
 
 const (

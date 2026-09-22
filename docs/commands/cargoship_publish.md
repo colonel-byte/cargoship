@@ -42,6 +42,7 @@ $ cargoship publish ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst oci://ghc
       --retries int                             Number of retries to perform for Cargoships operations like package publishes
       --signing-key string                      Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string                 Password to the private key used for publishing packages
+      --tag string                              The tag to be used in the OCI reference for the package in the registry
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
