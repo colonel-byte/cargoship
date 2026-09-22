@@ -181,7 +181,7 @@ dockers_v2:
     flags:
       - "--pull"
     build_args:
-      SHADOW_UTILS_VERSION: 4.15.0-9.el10
+      SHADOW_UTILS_VERSION: 4.15.0-11.el10
       BASH_COMPLETION_VERSION: 2.11-16.el10
     labels:
       org.opencontainers.image.version: "{{ .Version }}"
