@@ -1,13 +1,12 @@
----
 namespace: colonel_byte
 name: cargoship
-# The modules in this collection are symlinks to the cargoship binary, so the collection version
-# is the binary version. Kept in step by release-please.
-version: 0.25.0 # x-release-please-version
+version: 0.26.0
 readme: README.md
 authors:
   - Allen Conlon <software@conlon.dev>
-description: Install and converge air-gapped Kubernetes clusters with cargoship, driven from an Ansible inventory.
+description: >-
+  Install and converge air-gapped Kubernetes clusters with cargoship, driven
+  from an Ansible inventory.
 license:
   - Apache-2.0
 tags:
@@ -17,8 +16,9 @@ tags:
   - airgap
   - cluster
 repository: https://github.com/colonel-byte/cargoship
-documentation: https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible-module.md
+documentation: >-
+  https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible-module.md
 homepage: https://github.com/colonel-byte/cargoship
 issues: https://github.com/colonel-byte/cargoship/issues
 build_ignore:
-  - "*.tar.gz"
+  - '*.tar.gz'
