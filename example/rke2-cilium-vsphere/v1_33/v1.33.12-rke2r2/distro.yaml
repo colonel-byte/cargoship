@@ -39,6 +39,12 @@ spec:
       # names under addons.disabled become the engine's own disable list.
       - source: .addons.disabled
         target: .config.disable
+      - source: .podSecurity.defaults.enforce
+        target: .podSecurity.plugins[0].configuration.defaults.enforce
+      - source: .podSecurity.defaults.audit
+        target: .podSecurity.plugins[0].configuration.defaults.audit
+      - source: .podSecurity.defaults.warn
+        target: .podSecurity.plugins[0].configuration.defaults.warn
       # This flavor spends its cilium values on mappings too: each one moves a single
       # value onto a single key of the engine configuration, with no templating involved.
       # The multi-cni-cilium flavor shows the other way of spending these same values.

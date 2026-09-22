@@ -18,3 +18,8 @@ addons:
   # cargoship warns when it configures a node with one this build does not package.
   disabled:
     - rke2-ingress-nginx
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
