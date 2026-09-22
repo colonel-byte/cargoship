@@ -6,13 +6,13 @@ Ansible supplies the inventory and nothing else. It does not connect to the flee
 
 ## Modules
 
-| Module | Command |
-| --- | --- |
-| `cargoship_apply` | `cargoship apply` |
-| `cargoship_prepare` | `cargoship prepare` |
+| Module                         | Command                        |
+| ------------------------------ | ------------------------------ |
+| `cargoship_apply`              | `cargoship apply`              |
+| `cargoship_prepare`            | `cargoship prepare`            |
 | `cargoship_engine_config_sync` | `cargoship engine-config-sync` |
-| `cargoship_reset` | `cargoship reset` |
-| `cargoship_kube_config` | `cargoship kube-config` |
+| `cargoship_reset`              | `cargoship reset`              |
+| `cargoship_kube_config`        | `cargoship kube-config`        |
 
 Each module takes an `inventory` argument holding Ansible's resolved `groups` and `hostvars`, plus a `cluster` block for the settings no host carries. The action plugin fills `groups` and `hostvars` in from the play, so a playbook writes only `cluster`.
 
@@ -20,7 +20,7 @@ Roles come from group membership: the group named `controller` supplies the cont
 
 ## The role
 
-`colonel_byte.cargoship.cluster` wraps any one of the modules. See `roles/cluster/defaults/main.yml` for its variables and `playbooks/example.yml` for a run.
+`colonel_byte.cargoship.cluster` wraps any one of the modules. See `roles/cluster/defaults/main.yml` for its variables and `playbooks/example.yml` for a run. Fuller examples -- an inventory per shape, a playbook per module -- are in [ansible/examples](../../examples) in the repository.
 
 ```yaml
 - ansible.builtin.include_role:
@@ -41,4 +41,4 @@ For any other installation route, see [plugins/modules/README.md](plugins/module
 
 ## Documentation
 
-The full parameter reference, the host variable mapping, and what `changed` means here are in the cargoship [Ansible guide](https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible.md).
+The full parameter reference and what `changed` means here are in the cargoship [Ansible module guide](https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible-module.md). The host variable mapping and the group-to-role rules are in the [Ansible inventory guide](https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible-inv.md).
