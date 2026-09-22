@@ -44,6 +44,7 @@ The `Dev` namespace aggregates convenience tasks for day-to-day development:
 *   `Tidy` — Runs `go mod tidy` inside the workspace.
 *   `Vendor` — Runs `Tidy`, then `go mod vendor`. Use this rather than a bare `go mod vendor` after changing dependencies, so `go.mod`, `go.sum`, and `vendor/` are updated in one step.
 *   `Digest` — Resolves `docker.io/library/alpine:latest` through the host's Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.
+*   `DnfPins` — Queries the AlmaLinux 10 RPM repository metadata over HTTP to find the newest available versions of packages installed in the container images (`ansible-core`, `bash-completion`, and `shadow-utils`), then updates `containers/ansible/Dockerfile` and `containers/ubi/Dockerfile` (via `ARG` defaults) and `.goreleaser.yaml` (via `build_args`).
 
 ```sh
 mage dev:clean                  # rm the build/ artifacts
@@ -51,6 +52,7 @@ mage dev:tidy                   # go mod tidy
 mage dev:vendor                 # go mod tidy, then go mod vendor
 mage dev:digest                 # print the alpine:latest digest, to check registry auth works
 mage dev:writeOSVOverrides      # writes every override into vendor/.
+mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf package pins
 ```
 
 ### `Test` Namespace
@@ -136,6 +138,7 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`core/core.go`:** Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in `magefiles/`) so it does not collide with the `func main()` that the `mage` CLI generates on the fly — see [Running Mage Directly](#running-mage-directly-without-the-cli) below.
 *   **`build.go`:** Defines compilation tasks utilizing the local host Go toolchain.
 *   **`dev.go`:** Defines convenience tasks under the `Dev` and `Test` namespaces.
+*   **`dev-dnf-pins.go`:** Holds `Dev.DnfPins` and AlmaLinux 10 repodata HTTP fetching and version comparison logic.
 *   **`gen-docs.go`:** Performs Cobra command extraction and phase parser generation to update everything inside the `docs/` tree.
 *   **`gen-schema.go`:** Maps Go types to JSON schemas under `schema/`.
 *   **`gen-engine-source.go`:** Holds `Generate.PullEngineSource` and the clone-and-copy logic behind it.
@@ -175,6 +178,9 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `example/shasums.json`                            | Cached sha256 of every remote file the examples hash                                        | `Generate.Examples` / `Generate.ExampleLine`       |
 | `<zarf_cache>/examples/*`                         | Cached release text assets (image lists), not committed                                     | `Generate.Examples` / `Generate.ExampleLine`       |
 | `ansible/colonel_byte/cargoship/requirements.yml` | Galaxy collection pins for the Ansible collection                                           | `Generate.AnsibleRequirements`                     |
+| `containers/ansible/Dockerfile`                   | Base image package pins for ansible-core and bash-completion                                | `Dev.DnfPins`                                      |
+| `containers/ubi/Dockerfile`                       | Base image package pins for shadow-utils and bash-completion                                | `Dev.DnfPins`                                      |
+| `.goreleaser.yaml`                                | Build args pinning container package versions                                               | `Dev.DnfPins`                                      |
 
 ---
 

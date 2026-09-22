@@ -140,6 +140,7 @@ Details worth knowing before editing it:
 *   **The RPM signature is verified at build time.** `crypto/software@conlon.dev.gpg` is supplied through `extra_files`, imported into the image keyring, and checked with `rpm --checksig` before installation.
 *   **The install step must run on the target platform.** RPM unpacks an architecture-specific binary into the target root filesystem, so the install cannot be moved to a `$BUILDPLATFORM` stage. This is why the `linux/arm64` build requires QEMU.
 *   **The binary lands in `/usr/bin`** according to `nfpms.rpm.prefixes`, not `/usr/local/bin` as in the static image. The entrypoint differs accordingly; the `nonroot` account, `$HOME`, and `/workspace` layout remain compatible.
+*   **Package versions for `shadow-utils` and `bash-completion` are pinned** via Dockerfile `ARG` defaults (`SHADOW_UTILS_VERSION` and `BASH_COMPLETION_VERSION`) and explicitly passed in `.goreleaser.yaml` under `build_args` to comply with Hadolint `DL3041` and ensure reproducible image builds. Run `mage dev:dnfPins` to query the AlmaLinux repodata and refresh the pins when upstream packages roll forward.
 
 The AlmaLinux base is substantially larger than the static image. Recheck exact image sizes after base-image updates rather than relying on a fixed comparison.
 
@@ -179,6 +180,7 @@ Details worth knowing before editing it:
 
 *   **`ids: [packagers]`** supplies the generated package artifacts. The Dockerfile selects the target-platform RPM and ignores the `.apk` and `.deb` files that share the nfpms output.
 *   **The RPM signature is verified during the build** using `crypto/software@conlon.dev.gpg`, which is supplied through `extra_files`, imported into the image keyring, and checked before installation.
+*   **Package versions for `ansible-core` and `bash-completion` are pinned** via Dockerfile `ARG` defaults (`ANSIBLE_CORE_VERSION` and `BASH_COMPLETION_VERSION`) and explicitly passed in `.goreleaser.yaml` under `build_args` to comply with Hadolint `DL3041` and ensure reproducible image builds. Run `mage dev:dnfPins` to query the AlmaLinux repodata and refresh both pins when upstream packages roll forward.
 *   **Ansible dependencies come from `requirements.yml`.** The Dockerfile runs `ansible-galaxy collection install` and places the collections in the system collection path.
 *   **There is no `ENTRYPOINT`.** The image is intended to run  `ansible-playbook`, `ansible-inventory`, `ansible-galaxy`, or Cargoship as needed. Its default command is `ansible-playbook --help`.
 *   **The build validates the installed Cargoship package** by running `cargoship version`.

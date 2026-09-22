@@ -97,3 +97,34 @@ func (Dev) Digest(ctx context.Context) error {
 
 	return nil
 }
+
+// DnfPins queries the AlmaLinux 10 RPM repodata over HTTP and updates the pinned
+// versions of packages installed via dnf/microdnf in containers/ubi/Dockerfile,
+// containers/ansible/Dockerfile, and .goreleaser.yaml.
+func (Dev) DnfPins(ctx context.Context) error {
+	fmt.Println("Querying AlmaLinux 10 repodata for latest package versions...")
+	pins, err := queryLatestAlmaLinuxPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("querying AlmaLinux packages: %w", err)
+	}
+
+	fmt.Printf("Discovered versions:\n  ansible-core:    %s\n  bash-completion: %s\n  shadow-utils:    %s\n",
+		pins.AnsibleCore, pins.BashCompletion, pins.ShadowUtils)
+
+	if err := updateDockerfileAnsiblePins(ansibleDockerfilePath, pins.AnsibleCore, pins.BashCompletion); err != nil {
+		return fmt.Errorf("updating %s: %w", ansibleDockerfilePath, err)
+	}
+	fmt.Printf("Updated %s\n", ansibleDockerfilePath)
+
+	if err := updateDockerfileUbiPins(ubiDockerfilePath, pins.ShadowUtils, pins.BashCompletion); err != nil {
+		return fmt.Errorf("updating %s: %w", ubiDockerfilePath, err)
+	}
+	fmt.Printf("Updated %s\n", ubiDockerfilePath)
+
+	if err := updateGoreleaserDnfPins(goreleaserConfigPath, pins); err != nil {
+		return fmt.Errorf("updating %s: %w", goreleaserConfigPath, err)
+	}
+	fmt.Printf("Updated %s\n", goreleaserConfigPath)
+
+	return nil
+}

@@ -180,6 +180,9 @@ dockers_v2:
       - linux/arm64
     flags:
       - "--pull"
+    build_args:
+      SHADOW_UTILS_VERSION: 4.15.0-9.el10
+      BASH_COMPLETION_VERSION: 2.11-16.el10
     labels:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
@@ -223,6 +226,9 @@ dockers_v2:
       - linux/arm64
     flags:
       - "--pull"
+    build_args:
+      ANSIBLE_CORE_VERSION: 2.16.16-2.el10_2.1
+      BASH_COMPLETION_VERSION: 2.11-16.el10
     labels:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
