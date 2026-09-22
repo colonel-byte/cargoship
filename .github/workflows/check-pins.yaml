@@ -63,8 +63,8 @@ jobs:
             --repo "$REPO" \
             --state open \
             --limit 100 \
-            --json number,body \
-            --jq --arg marker "$marker" '
+            --json number,body |
+            jq -r --arg marker "$marker" '
               map(select(.body != null and (.body | contains($marker)))) |
               .[0].number // empty
             ')
@@ -127,8 +127,8 @@ jobs:
             --repo "$REPO" \
             --state open \
             --limit 100 \
-            --json number,body \
-            --jq --arg marker "$marker" '
+            --json number,body |
+            jq -r --arg marker "$marker" '
               map(select(.body != null and (.body | contains($marker)))) |
               .[0].number // empty
             ')
