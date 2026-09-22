@@ -17,18 +17,22 @@
 FROM ghcr.io/almalinux/10-base:10.2@sha256:f110fee4d46a239ed55f72f1f927cb89b2dfe1c2a8728208806eba5b73798762
 
 ARG TARGETPLATFORM
+ARG ANSIBLE_CORE_VERSION="2.16.16-2.el10_2.1"
+ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
 COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
 COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
 COPY ansible/colonel_byte/cargoship/requirements.yml /etc/cargoship/ansible/requirements.yml
 
-# hadolint ignore=DL3040,DL3041
+# hadolint ignore=DL3040
 RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
   && rpm --checksig /tmp/rpms/*.rpm \
   && rpm --install --verbose /tmp/rpms/*.rpm \
   && rm -rf /tmp/rpms \
   && cargoship version \
-  && dnf install -y --nodocs --setopt=install_weak_deps=0 ansible-core bash-completion \
+  && dnf install -y --nodocs --setopt=install_weak_deps=0 \
+    ansible-core-${ANSIBLE_CORE_VERSION} \
+    bash-completion-${BASH_COMPLETION_VERSION} \
   && dnf clean all \
   && rm -rf /var/cache/yum \
   && ansible-galaxy collection install --requirements-file /etc/cargoship/ansible/requirements.yml --collections-path /usr/share/ansible/collections/ansible_collections

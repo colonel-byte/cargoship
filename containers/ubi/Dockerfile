@@ -17,6 +17,8 @@
 FROM ghcr.io/almalinux/10-minimal:10.2@sha256:ee053be6b73674fdd32ec1dcee1e0b85dc2fa8b2f75976cbf8e72cfda2f718da
 
 ARG TARGETPLATFORM
+ARG SHADOW_UTILS_VERSION="4.15.0-9.el10"
+ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
 COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
 COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
@@ -29,8 +31,10 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
 
 ARG UID=65532
 ARG GID=65532
-# hadolint ignore=DL3040,DL3041
-RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 shadow-utils bash-completion \
+# hadolint ignore=DL3040
+RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 \
+    shadow-utils-${SHADOW_UTILS_VERSION} \
+    bash-completion-${BASH_COMPLETION_VERSION} \
   && microdnf clean all \
   && groupadd --gid "${GID}" nonroot \
   && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \
