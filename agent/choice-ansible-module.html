@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-19f26fee.js";
+            window.path_to_searchindex_js = "../searchindex-7418c890.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-22142fe1.js"></script>
+        <script src="../toc-1d5b95bd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -253,7 +253,7 @@
 <p>Ansible resolves a task name to a module file before any plugin of ours is consulted, so an action plugin alone reaches nothing. Each action therefore needs a file named <code>cargoship_&lt;action&gt;</code>, and each of those is a symlink to the binary. The RPM and deb packages create the links through nfpms <code>contents:</code> entries, installing the collection tree to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path; a collection installed from Galaxy or from a checkout has no packaging step to hang that on, so <code>hack/ansible-link-modules.sh</code> does it by hand. Both were chosen over generating a per-action shim file: a shim is a second thing to sign and a second thing that can disagree with the binary.</p>
 <p>The action plugin forwards an allowlist of host variables rather than the whole of <code>hostvars</code>. A host’s resolved variables routinely hold credentials for things that are not this cluster, and a module’s parameters are written to a file on disk, so forwarding everything would write unrelated secrets to disk on every run. The allowlist is the four <code>ansible_*</code> connection variables plus every <code>cargoship_*</code> key – all of them, including misspelled ones, because rejecting an unknown parameter by name is <code>ansibleinv</code>’s job and it cannot do that without being shown the misspelling. <code>TestActionPluginVariableAllowlist</code> reads the Python and fails when it drifts from the Go constants, because the symptom of drift is an unset field rather than an error.</p>
 <p>The plugin also merges a <code>parameters</code> dict into the arguments. The role has a caller-supplied dict of parameters and no way to know which of them the chosen module takes, and the obvious way to pass it – making the task’s whole argument dict one template – is warned about by Ansible on every run and is genuinely unsafe. Merging in the plugin keeps the task’s keys literal and its values templates, and costs one parameter that the module itself never sees.</p>
-<p>The role sets <code>run_once: true</code> on every task. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It sets <code>no_log: true</code> as a literal rather than from a variable: a template that fails to evaluate leaves <code>no_log</code> false, and the failure mode of that is every host’s connection detail in the log. The one thing allowed to print is a debug task showing cargoship’s own report, which carries no parameters.</p>
+<p>The role sets <code>run_once: true</code> on every task. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It defaults <code>no_log: "{{ cargoship_no_log | bool }}"</code> with <code>cargoship_no_log: true</code> by default: a template failure or misconfiguration avoids exposing decrypted credentials and host connection parameters in CI or production logs, while still allowing operators to set <code>cargoship_no_log: false</code> for local troubleshooting. The debug task showing cargoship’s own report carries no parameters.</p>
 <h2 id="what-is-being-accepted"><a class="header" href="#what-is-being-accepted">What is being accepted</a></h2>
 <ul>
 <li>No <code>ansible-doc</code> and no <code>ansible-test sanity</code>; the module’s interface is documented only where we choose to document it.</li>

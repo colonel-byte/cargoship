@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-19f26fee.js";
+            window.path_to_searchindex_js = "../searchindex-7418c890.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-22142fe1.js"></script>
+        <script src="../toc-1d5b95bd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -213,10 +213,11 @@ $ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer
   -o, --output string         Path to write the generated inventory to. Omit it to write to stdout.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
-<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+<pre><code>      --log-file                     Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string            Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string             Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                     Disable terminal color codes in logging and stdout prints.
+      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
 <h3 id="see-also"><a class="header" href="#see-also">SEE ALSO</a></h3>
 <ul>

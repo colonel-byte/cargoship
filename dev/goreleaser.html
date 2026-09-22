@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-19f26fee.js";
+            window.path_to_searchindex_js = "../searchindex-7418c890.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-22142fe1.js"></script>
+        <script src="../toc-1d5b95bd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -321,6 +321,52 @@ Status: install ok installed
 </code></pre>
 <h3 id="oci-labels"><a class="header" href="#oci-labels">OCI Labels</a></h3>
 <p>Labels are split by whether they change per release. Static ones (title, description, source, licenses, base image) live in each <code>Dockerfile</code>; per-release ones (version, revision, created) are set in <code>.goreleaser.yaml</code>. See <a href="#base-image-pinning">Base Image Pinning</a> for why <code>org.opencontainers.image.base.name</code> deliberately omits the digest. Keep them separate — a <code>--label</code> flag silently overrides a <code>LABEL</code> of the same key, so duplicating a key across a Dockerfile and <code>.goreleaser.yaml</code> creates two sources of truth.</p>
+<h2 id="package-signing"><a class="header" href="#package-signing">Package Signing</a></h2>
+<p>The <code>nfpms</code> packages carry signatures of their own, independent of cosign. That needs <strong>two key pairs</strong>, because nfpm signs rpm and deb with OpenPGP but signs apk with a bare RSA key:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Key type</th><th>Path variable</th><th>Repository secret</th></tr>
+</thead>
+<tbody>
+<tr><td>rpm, deb</td><td>OpenPGP</td><td><code>GPG_KEY_PATH</code></td><td><code>GPG_PRIVATE_KEY</code>, and <code>GPG_PASSPHRASE</code> if the key is protected</td></tr>
+<tr><td>apk</td><td>RSA, PEM</td><td><code>APK_RSA_KEY_PATH</code></td><td><code>APK_RSA_PRIVATE_KEY</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Handing the OpenPGP key to the apk signer does not degrade quietly — it fails the release with <code>signing error: no PEM block found</code>.</p>
+<p>The public halves live in <code>crypto/</code>, both named after the maintainer address: <code>crypto/software@conlon.dev.gpg</code> (<code>A1D4 DF69 80C8 2444 99C3  D1F9 96F5 5C80 CFB1 EFCB</code>, expires 2046-09-14) and <code>crypto/software@conlon.dev.rsa.pub</code>. The latter’s filename is not a convention — it is the name apk itself looks for.</p>
+<h3 id="generating-the-keys"><a class="header" href="#generating-the-keys">Generating the Keys</a></h3>
+<p><code>hack/gen-signing-keys.sh</code> produces both pairs in the shapes nfpm accepts, building the OpenPGP key in a throwaway <code>GNUPGHOME</code> so your own keyring is untouched:</p>
+<pre><code class="language-sh">hack/gen-signing-keys.sh ~/cargoship-keys
+</code></pre>
+<p>It reads the maintainer address out of <code>.goreleaser.yaml</code> and names the apk public key after it, which is not cosmetic — see below. Set <code>GPG_PASSPHRASE</code> to protect the OpenPGP key. It refuses to overwrite existing files, because replacing a key already in use invalidates every package signed with it.</p>
+<p>Constraints worth knowing before doing any of this by hand:</p>
+<ul>
+<li><strong>The apk RSA key cannot be encrypted.</strong> nfpm understands only the legacy DEK-Info PEM encryption, so the PKCS#8 output of <code>openssl genrsa -aes256</code> is rejected with <code>key type "ENCRYPTED PRIVATE KEY" is not supported</code>, and <code>NFPM_APK_PASSPHRASE</code> cannot help. Its protection is the repository secret and nothing else.</li>
+<li><strong>The apk key name is baked into every package.</strong> nfpm defaults it to the maintainer address parsed from <code>nfpms.maintainer</code>, records the signature as the tar member <code>.SIGN.RSA.software@conlon.dev.rsa.pub</code>, and apk then looks for a file of that name under <code>/etc/apk/keys</code>. Changing <code>nfpms.maintainer</code>, or setting <code>apk.signature.key_name</code>, breaks the path every existing consumer deployed.</li>
+<li><strong><code>key_file</code> is a path, not key material.</strong> Unlike <code>COSIGN_PRIVATE_KEY</code>, which cosign reads straight from the environment, these must exist as files. The workflow writes both secrets under <code>$RUNNER_TEMP</code> — outside the checkout, so no <code>.goreleaser.yaml</code> glob can sweep them up — and removes them in an <code>if: always()</code> step.</li>
+</ul>
+<h3 id="degrading-to-unsigned"><a class="header" href="#degrading-to-unsigned">Degrading to Unsigned</a></h3>
+<p>Both <code>key_file</code> values are guarded:</p>
+<pre><code class="language-yaml">key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
+</code></pre>
+<p>The <code>index .Env</code> form is load-bearing. A bare <code>{{ .Env.GPG_KEY_PATH }}</code> on an unset variable aborts the run with <code>map has no entry for key "GPG_KEY_PATH"</code>; the guard turns an unset variable into an unsigned package instead. That is what a local snapshot wants and what a release does not, so the workflow emits a <code>::warning::</code> for each missing secret rather than letting the absence pass unremarked.</p>
+<h3 id="verifying"><a class="header" href="#verifying">Verifying</a></h3>
+<pre><code class="language-sh"># rpm
+sudo rpmkeys --import 'crypto/software@conlon.dev.gpg'
+rpm -K cargoship_&lt;version&gt;_linux_amd64.rpm          # digests signatures OK
+
+# apk — the filename is the name the signature records, so this is a plain copy
+cp 'crypto/software@conlon.dev.rsa.pub' /etc/apk/keys/
+apk add ./cargoship_&lt;version&gt;_linux_amd64.apk       # no --allow-untrusted
+
+# deb — the signature covers the three ar members concatenated, in order
+ar x cargoship_&lt;version&gt;_linux_amd64.deb
+cat debian-binary control.tar.gz data.tar.zst &gt; combined
+gpg --verify _gpgorigin combined
+</code></pre>
+<p><code>dpkg -i</code> never checks that signature itself; <code>_gpgorigin</code> exists for <code>debsig-verify</code> and repository tooling.</p>
 <h2 id="image-signing"><a class="header" href="#image-signing">Image Signing</a></h2>
 <p><code>docker_signs</code> signs the published images with cosign, using the same <code>COSIGN_PRIVATE_KEY</code> / <code>COSIGN_PASSWORD</code> pair as the archive signatures — no extra workflow configuration is needed.</p>
 <pre><code class="language-yaml">docker_signs:
@@ -353,6 +399,7 @@ sha256sum /tmp/from-image
 <li><strong>Syft</strong> — generates the archive SBOMs.</li>
 <li><strong>ansible-core</strong> — supplies <code>ansible-galaxy</code>, which builds the collection tarball in the <code>before</code> hook. Nothing else in the pipeline needs Ansible.</li>
 <li><strong>cosign</strong> — signs checksums, archives, and the published images; needs <code>COSIGN_PRIVATE_KEY</code> and <code>COSIGN_PASSWORD</code>.</li>
+<li><strong>Setup package signing keys</strong> — materializes <code>GPG_PRIVATE_KEY</code> and <code>APK_RSA_PRIVATE_KEY</code> as files under <code>$RUNNER_TEMP</code> and exports their paths, because nfpm takes a path rather than key material. See <a href="#package-signing">Package Signing</a>. A paired <code>if: always()</code> step deletes them.</li>
 <li><strong>QEMU</strong> — registers binfmt handlers for cross-platform builds. Required by the package-installing images: <code>rpm --install</code> and <code>dpkg --install</code> unpack architecture-specific files and must run on the target platform, so their <code>linux/arm64</code> builds run under emulation. The static image does not need it — its only <code>RUN</code> is pinned to <code>$BUILDPLATFORM</code>.</li>
 <li><strong>Buildx</strong> — required, not optional; provisions the container driver that can emit a multi-platform manifest.</li>
 <li><strong>GHCR login</strong> — required to push. The job’s <code>packages: write</code> permission is an authorization, not a credential.</li>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>ansible</title>
+        <title>ansible-module</title>
 
 
         <!-- Custom HTML head -->
@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-19f26fee.js";
+            window.path_to_searchindex_js = "../searchindex-7418c890.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-22142fe1.js"></script>
+        <script src="../toc-1d5b95bd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -148,7 +148,7 @@
                         <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/guides/ansible.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/guides/ansible-module.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -182,108 +182,12 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="generating-an-inventory-from-ansible"><a class="header" href="#generating-an-inventory-from-ansible">Generating an Inventory from Ansible</a></h1>
-<p>Cargoship can build its cluster inventory from an Ansible inventory you already have, deriving each host’s role from the Ansible groups it belongs to. This guide covers that translation: the group mapping, the host variables cargoship reads, and the rules the translation follows.</p>
-<p>Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Cargoship opens every SSH connection itself, from the node it runs on – a management node outside the cluster, which is the node the package and images were staged onto. See <a href="../agent/choice-ansible-module.html">choice-ansible-module</a> for why the work is split that way.</p>
-<h2 id="what-the-translation-reads"><a class="header" href="#what-the-translation-reads">What the translation reads</a></h2>
-<p>Cargoship does not parse an Ansible inventory file. Resolving an inventory means group membership, <code>group_vars</code>, <code>host_vars</code>, dynamic inventory plugins, and the precedence rules over all of them; Ansible does that and hands over the merged result. What cargoship reads is a JSON document holding that result:</p>
-<pre><code class="language-json">{
-  "groups": {
-    "all": ["kc01", "kc02", "kw01", "db01"],
-    "controller": ["kc01", "kc02"],
-    "worker": ["kw01"],
-    "databases": ["db01"]
-  },
-  "hostvars": {
-    "kc01": {"ansible_host": "10.1.2.3", "cargoship_hostname": "distro-kc01"},
-    "kc02": {"ansible_host": "10.1.2.4", "cargoship_hostname": "distro-kc02"},
-    "kw01": {"ansible_host": "10.1.2.5", "cargoship_hostname": "distro-kw01"},
-    "db01": {"ansible_host": "10.1.2.9"}
-  },
-  "cluster": {
-    "name": "bubbles",
-    "loadbalancer": "bubbles-kc.test.com"
-  }
-}
-</code></pre>
-<p><code>groups</code> and <code>hostvars</code> are Ansible’s own, verbatim. <code>cluster</code> holds the settings that belong to the cluster rather than to any host, which an Ansible inventory has no way to carry: the cluster name, the load balancer address, and optionally <code>profiles</code>, <code>registries</code>, and <code>values</code>. Those are the same fields <code>.spec.config</code> takes in a hand-written inventory – see the <a href="setup-inv.html">inventory guide</a>.</p>
-<p>Translate it:</p>
-<pre><code class="language-sh">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
-cargoship validate ./inventory.yaml
-</code></pre>
-<p>The command reads stdin when given no file, and writes to stdout when given no <code>--output</code>, so it composes. <code>--name</code> and <code>--loadbalancer</code> override what the document says, which is how one projection of a fleet becomes more than one cluster without being rewritten.</p>
-<h2 id="roles-come-from-groups"><a class="header" href="#roles-come-from-groups">Roles come from groups</a></h2>
-<p>By default the Ansible group named <code>controller</code> supplies the control-plane nodes, and the group named <code>worker</code> supplies the rest. Those are cargoship’s own role names, so the default guesses at no Ansible convention.</p>
-<p>Set <code>roleGroups</code> to map cargoship’s two roles onto the group names your inventory actually uses:</p>
-<pre><code class="language-json">{
-  "roleGroups": {
-    "controller": ["k8s_masters"],
-    "worker": ["k8s_workers", "k8s_infra"]
-  }
-}
-</code></pre>
-<p>A role may take more than one group. Only <code>controller</code> and <code>worker</code> exist; naming any other role is an error.</p>
-<p>Three rules govern what comes out:</p>
-<ul>
-<li><strong>A host in none of the mapped groups is left out.</strong> The <code>db01</code> host in the example above is not part of the cluster and does not appear in the generated inventory. A play’s inventory legitimately carries hosts that have nothing to do with Kubernetes.</li>
-<li><strong>A host in groups mapped to two different roles is an error</strong>, naming the host and both groups. There is no precedence rule, because there is no defensible one: picking a role silently would install a cluster nobody asked for.</li>
-<li><strong>Controllers are written first, and the first controller becomes the cluster leader.</strong> Within a role, hosts come out in the order the mapping names the groups, and within a group, in the order the inventory lists the hosts. If it matters which node bootstraps the cluster, put it first in the first controller group.</li>
-</ul>
-<p>If <code>roleGroups</code> names a group the inventory does not define, that is an error – a misspelled group name there has no other symptom. The default mapping is not held to that, so a cluster of nothing but control-plane nodes needs no <code>worker</code> group.</p>
-<h2 id="host-variables"><a class="header" href="#host-variables">Host variables</a></h2>
-<p>Connection details come from the Ansible variables you already set. Everything cargoship needs beyond those comes from variables under a <code>cargoship_</code> prefix.</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Inventory field</th><th>Variable</th><th>Default</th></tr>
-</thead>
-<tbody>
-<tr><td><code>ssh.address</code></td><td><code>ansible_host</code></td><td>the inventory hostname</td></tr>
-<tr><td><code>ssh.user</code></td><td><code>ansible_user</code></td><td><code>root</code></td></tr>
-<tr><td><code>ssh.port</code></td><td><code>ansible_port</code></td><td><code>22</code></td></tr>
-<tr><td><code>ssh.keyPath</code></td><td><code>ansible_ssh_private_key_file</code></td><td>unset</td></tr>
-<tr><td><code>ssh.hostKey</code></td><td><code>cargoship_host_key</code></td><td>unset</td></tr>
-<tr><td><code>ssh.bastion</code></td><td><code>cargoship_bastion</code></td><td>unset</td></tr>
-<tr><td><code>hostname</code></td><td><code>cargoship_hostname</code></td><td>the inventory hostname</td></tr>
-<tr><td><code>profile</code></td><td><code>cargoship_profile</code></td><td>the host’s role</td></tr>
-<tr><td><code>privateAddress</code></td><td><code>cargoship_private_address</code></td><td>unset</td></tr>
-<tr><td><code>privateInterface</code></td><td><code>cargoship_private_interface</code></td><td>unset</td></tr>
-<tr><td><code>engine.labels</code></td><td><code>cargoship_node_labels</code></td><td>unset</td></tr>
-<tr><td><code>engine.taints</code></td><td><code>cargoship_node_taints</code></td><td>unset</td></tr>
-<tr><td><code>host</code></td><td><code>cargoship_host</code></td><td>unset</td></tr>
-<tr><td><code>environment</code></td><td><code>cargoship_environment</code></td><td>unset</td></tr>
-<tr><td><code>files</code></td><td><code>cargoship_files</code></td><td>unset</td></tr>
-</tbody>
-</table>
-</div>
-<p><code>ansible_host</code> and <code>cargoship_hostname</code> are different facts and both are kept: the first is where cargoship connects, the second is what the node calls itself. When neither is set, the name the inventory knows the host by serves as both.</p>
-<p>The structured variables – <code>cargoship_host</code>, <code>cargoship_files</code>, <code>cargoship_bastion</code>, <code>cargoship_node_labels</code>, <code>cargoship_node_taints</code>, <code>cargoship_environment</code> – take exactly the shape the inventory schema documents for the field they configure, so there is one vocabulary to learn rather than two:</p>
-<pre><code class="language-yaml">cargoship_profile: control
-cargoship_node_labels:
-  adrp.xyz/purpose-control: "true"
-cargoship_host:
-  ports:
-    - port: "6443"
-      protocol: tcp
-  firewall:
-    rules:
-      - name: allow-metrics
-        action: allow
-        source: 10.0.0.0/8
-        port: "9100"
-        protocol: tcp
-cargoship_bastion:
-  address: 10.0.0.1
-  user: jump
-  port: 22
-</code></pre>
-<p>A bastion is declared as its own variable rather than read out of <code>ansible_ssh_common_args</code>. Cargoship does not parse SSH argument strings, and an inventory that reaches its fleet through a jump host via <code>ansible_ssh_common_args</code> has to say so again here.</p>
-<h3 id="misspelled-variables-are-errors"><a class="header" href="#misspelled-variables-are-errors">Misspelled variables are errors</a></h3>
-<p>A variable under the <code>cargoship_</code> prefix that cargoship does not read is an error, and so is an unknown key inside one of the structured variables. Ansible has no notion of a variable belonging to anyone, so a misspelled <code>cargoship_profil</code> would otherwise sit in <code>hostvars</code> looking set and doing nothing, and a misspelled key would be dropped on the way in. A misspelled variable and an unset one are indistinguishable at install time, which is too late to find out.</p>
-<p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
-<h2 id="running-cargoship-as-an-ansible-module"><a class="header" href="#running-cargoship-as-an-ansible-module">Running cargoship as an Ansible module</a></h2>
-<p>The same translation runs inside a playbook. The cargoship binary is the Ansible module: it is installed as a set of symlinks named <code>cargoship_&lt;action&gt;</code>, and a symlink’s name selects the action. There is no separate module package and nothing to install on the managed nodes.</p>
+                        <h1 id="running-cargoship-as-an-ansible-module"><a class="header" href="#running-cargoship-as-an-ansible-module">Running Cargoship as an Ansible Module</a></h1>
+<p>Cargoship runs inside a playbook as an Ansible module. The cargoship binary <em>is</em> the module: it is installed as a set of symlinks named <code>cargoship_&lt;action&gt;</code>, and a symlink’s name selects the action. There is no separate module package and nothing to install on the managed nodes.</p>
+<p>The inventory a module takes is the one described in <a href="ansible-inv.html">Generating an Inventory from Ansible</a> – Ansible’s resolved <code>groups</code> and <code>hostvars</code>, plus a <code>cluster</code> block – and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, what each module takes, and what its result means.</p>
+<p>Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Every task runs on one management node outside the cluster – the node the package and images were staged onto – and cargoship opens every SSH connection itself from there. See <a href="../agent/choice-ansible-module.html">choice-ansible-module</a> for why the work is split that way.</p>
 <p>Five modules ship, one per fleet action: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_engine_config_sync</code>, <code>cargoship_reset</code>, and <code>cargoship_kube_config</code>. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run.</p>
+<p>Working inventories and a playbook for each of the five are in <a href="https://github.com/colonel-byte/cargoship/tree/main/ansible/examples">ansible/examples</a>, along with a script that translates an inventory without running a play.</p>
 <pre><code class="language-yaml">- name: Converge engine configuration
   cargoship_engine_config_sync:
     package: /srv/staging/rke2-1.31.tar.zst
@@ -299,7 +203,7 @@ cargoship_bastion:
   no_log: true
 </code></pre>
 <p>The task runs on the management node – <code>connection: local</code> when the Ansible controller is that node, <code>delegate_to</code> when they are separate. Cargoship connects to the fleet itself, from there.</p>
-<h3 id="installing-the-collection"><a class="header" href="#installing-the-collection">Installing the collection</a></h3>
+<h2 id="installing-the-collection"><a class="header" href="#installing-the-collection">Installing the collection</a></h2>
 <p>The modules live in the <code>colonel_byte.cargoship</code> collection. The RPM and deb packages install it to <code>/usr/share/ansible/collections</code>, which is on ansible-core’s default collections path, so on a management node that installed cargoship from a package there is nothing further to do.</p>
 <p>Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.</p>
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
@@ -312,9 +216,10 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 <p>That last step is not optional and has no equivalent in Galaxy’s own packaging. Ansible resolves a task name to a module <em>file</em>, so each action needs a file named after it; the files are symlinks to the one cargoship binary, which is what the packages create and what the script creates by hand. A collection installed without them fails with the module not being found.</p>
 <p>The collection carries one action plugin per module. It runs inside <code>ansible-playbook</code>, on the interpreter Ansible is already running on, and does one thing: copy <code>groups</code> and <code>hostvars</code> into the module’s <code>inventory</code> parameter so you do not have to. Nothing is installed on the fleet, and running cargoship by hand still needs no Python.</p>
 <p>It also accepts a <code>parameters</code> dict and merges it into the rest, which is how the role passes a caller-supplied set of parameters without templating the whole of a task’s arguments – something Ansible warns about, and rightly. A parameter given both directly and inside <code>parameters</code> is an error naming it.</p>
-<p>The plugin forwards the four <code>ansible_*</code> connection variables in the table above and every <code>cargoship_*</code> variable, and drops the rest. A host’s resolved variables routinely carry credentials for things that are not this cluster, and a module’s parameters are written to a file on disk.</p>
-<h3 id="parameters-every-module-takes"><a class="header" href="#parameters-every-module-takes">Parameters every module takes</a></h3>
-<p><code>inventory</code> takes the same document described above, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of the command the module runs.</p>
+<p>The plugin forwards the four <code>ansible_*</code> connection variables listed in <a href="ansible-inv.html">Generating an Inventory from Ansible</a> and every <code>cargoship_*</code> variable, and drops the rest. A host’s resolved variables routinely carry credentials for things that are not this cluster, and a module’s parameters are written to a file on disk.</p>
+<p>When defining <code>profiles</code> inside <code>cargoship_cluster</code> in YAML, note type constraints: <code>concurrency</code> (e.g. <code>"1"</code>, <code>"50%"</code>) and port definitions (<code>ports[].port</code>, e.g. <code>"6443"</code>) are unmarshaled as strings by the underlying schema. Quote numeric strings in YAML to prevent JSON numeric unmarshaling failures.</p>
+<h2 id="parameters-every-module-takes"><a class="header" href="#parameters-every-module-takes">Parameters every module takes</a></h2>
+<p><code>inventory</code> takes the document described in <a href="ansible-inv.html">Generating an Inventory from Ansible</a>, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of the command the module runs.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -325,12 +230,14 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 <tr><td><code>inventory_path</code></td><td><code>--config</code></td><td>Where to write the generated document. A private temporary file when unset.</td></tr>
 <tr><td><code>log_level</code></td><td><code>--log-level</code></td><td>Defaults to <code>debug</code> when the play runs with <code>-v</code>.</td></tr>
 <tr><td><code>log_format</code></td><td><code>--log-format</code></td><td></td></tr>
+<tr><td><code>log_file</code></td><td><code>--log-file</code></td><td>Boolean. Always write full-verbosity debug log to a file on the host.</td></tr>
+<tr><td><code>age_recipient</code></td><td></td><td>List of public keys to encrypt registry credentials written to disk.</td></tr>
 </tbody>
 </table>
 </div>
 <p>A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why <code>label_nodes: false</code> and omitting <code>label_nodes</code> are different.</p>
 <p>The surfaces differ because the commands do. <code>cargoship prepare</code> reads no encrypted value, so it takes no <code>vault_password_file</code>; <code>cargoship reset</code> installs nothing, so it takes no package and no <code>values</code>. A parameter offered to the wrong module is an error naming it, rather than a flag quietly dropped.</p>
-<h3 id="cargoship_apply"><a class="header" href="#cargoship_apply"><code>cargoship_apply</code></a></h3>
+<h2 id="cargoship_apply"><a class="header" href="#cargoship_apply"><code>cargoship_apply</code></a></h2>
 <p>Installs or converges the whole cluster.</p>
 <div class="table-wrapper">
 <table>
@@ -357,7 +264,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_prepare"><a class="header" href="#cargoship_prepare"><code>cargoship_prepare</code></a></h3>
+<h2 id="cargoship_prepare"><a class="header" href="#cargoship_prepare"><code>cargoship_prepare</code></a></h2>
 <p>Stages a package onto the fleet and readies the hosts. Takes no key material.</p>
 <div class="table-wrapper">
 <table>
@@ -378,7 +285,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_engine_config_sync"><a class="header" href="#cargoship_engine_config_sync"><code>cargoship_engine_config_sync</code></a></h3>
+<h2 id="cargoship_engine_config_sync"><a class="header" href="#cargoship_engine_config_sync"><code>cargoship_engine_config_sync</code></a></h2>
 <p>Converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does. It does not update the hosts themselves, so it takes none of the three host switches.</p>
 <div class="table-wrapper">
 <table>
@@ -401,7 +308,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_reset"><a class="header" href="#cargoship_reset"><code>cargoship_reset</code></a></h3>
+<h2 id="cargoship_reset"><a class="header" href="#cargoship_reset"><code>cargoship_reset</code></a></h2>
 <p>Removes the cluster from the fleet. There is no package: the distro to remove is named directly.</p>
 <div class="table-wrapper">
 <table>
@@ -418,7 +325,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config"><code>cargoship_kube_config</code></a></h3>
+<h2 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config"><code>cargoship_kube_config</code></a></h2>
 <p>Fetches the cluster kubeconfig onto the management node. It is the one module that changes the node the play runs on rather than the fleet.</p>
 <div class="table-wrapper">
 <table>
@@ -431,11 +338,11 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="signature-verification"><a class="header" href="#signature-verification">Signature verification</a></h3>
+<h2 id="signature-verification"><a class="header" href="#signature-verification">Signature verification</a></h2>
 <p><code>public_key</code> and <code>verify</code> are the package signature parameters, and they are the key-based ones only. Keyless verification identifies a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have. Verify a keyless-signed package with <code>cargoship package verify</code> before the play, where the flags and their exclusions are all available.</p>
-<h3 id="key-material"><a class="header" href="#key-material">Key material</a></h3>
+<h2 id="key-material"><a class="header" href="#key-material">Key material</a></h2>
 <p>Key material is always named by a path, never given by value. Ansible writes a module’s parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set <code>no_log: true</code> on the task regardless: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
-<h3 id="the-cluster-role"><a class="header" href="#the-cluster-role">The <code>cluster</code> role</a></h3>
+<h2 id="the-cluster-role"><a class="header" href="#the-cluster-role">The <code>cluster</code> role</a></h2>
 <p>The role is the shorter way to write the same task. It picks the module from <code>cargoship_action</code>, assembles the <code>inventory</code> parameter, and sets <code>run_once</code>, <code>delegate_to</code>, and <code>no_log</code> for you.</p>
 <pre><code class="language-yaml">- name: Install the cluster
   ansible.builtin.include_role:
@@ -461,18 +368,22 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 <tr><td><code>cargoship_cluster</code></td><td><code>{}</code></td><td>The <code>cluster</code> block: name, load balancer, profiles, registries, values.</td></tr>
 <tr><td><code>cargoship_role_groups</code></td><td><code>{}</code></td><td>The group mapping, when your groups are not named <code>controller</code> and <code>worker</code>.</td></tr>
 <tr><td><code>cargoship_inventory_path</code></td><td>unset</td><td>Where to write the generated document.</td></tr>
+<tr><td><code>cargoship_age_recipients</code></td><td><code>[]</code></td><td>Public keys to encrypt registry credentials on disk in generated inventory.</td></tr>
+<tr><td><code>cargoship_age_identity_files</code></td><td><code>[]</code></td><td>Identity files/SSH private keys to decrypt registry credentials at apply.</td></tr>
+<tr><td><code>cargoship_log_file</code></td><td><code>false</code></td><td>Always write full-verbosity debug log to a file on the host (<code>--log-file</code>).</td></tr>
 <tr><td><code>cargoship_args</code></td><td><code>{}</code></td><td>Everything else, passed to the module as-is.</td></tr>
 <tr><td><code>cargoship_delegate_to</code></td><td><code>localhost</code></td><td>The management node.</td></tr>
+<tr><td><code>cargoship_no_log</code></td><td><code>true</code></td><td>Suppress task parameter logging. Set false for local debugging.</td></tr>
 <tr><td><code>cargoship_show_result</code></td><td><code>false</code></td><td>Print <code>cargoship_result.cargoship</code> after the run.</td></tr>
 </tbody>
 </table>
 </div>
-<p>Every task in the role carries <code>run_once: true</code>. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It also carries <code>no_log: true</code>, which is why <code>cargoship_show_result</code> exists: the debug task is the one thing allowed to print, and it prints cargoship’s report rather than the parameters.</p>
-<h3 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h3>
+<p>Every task in the role carries <code>run_once: true</code>. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It defaults <code>cargoship_no_log: true</code> to protect decrypted credentials and fleet inventories from terminal and CI logs, which is why <code>cargoship_show_result</code> exists: the debug task prints cargoship’s sanitized report without exposing secrets.</p>
+<h2 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h2>
 <p><code>--check</code> runs cargoship’s dry run. Phases opt into it one at a time – a phase that has not said how it behaves under a dry run is reported and not run – so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.</p>
 <p>Under check mode, <code>changed</code> means what Ansible means by it there: a real run would change something. It is true when a phase that knows how to tell had work outstanding – a fleet whose engine configuration has drifted – and false when every such phase found nothing to do.</p>
 <p><code>cargoship_kube_config</code> is the exception. <code>cargoship kube-config</code> has no dry run, so under <code>--check</code> the module reports <code>skipped: true</code> and runs nothing at all. That is what Ansible does with a module that has declared it does not support check mode; a binary module has nowhere to declare it, so it says so in its result instead.</p>
-<h3 id="what-changed-is-worth"><a class="header" href="#what-changed-is-worth">What <code>changed</code> is worth</a></h3>
+<h2 id="what-changed-is-worth"><a class="header" href="#what-changed-is-worth">What <code>changed</code> is worth</a></h2>
 <p><code>changed</code> is built from what the phases themselves report, and a phase has to opt in. <code>cargoship.changedSignal</code> says how much of the run is covered:</p>
 <div class="table-wrapper">
 <table>
@@ -488,7 +399,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </div>
 <p>Today the engine configuration sync phases report and the rest do not, so an ordinary run reads <code>partial</code>. That is deliberate: a phase that has said nothing cannot make <code>changed</code> true, and it is not treated as having changed nothing either. <code>KubeConfig</code> and <code>LabelNodes</code> are the two in the undeclared list that can genuinely change something – the local kubeconfig and the node role labels – so if a handler of yours depends on either, gate on the result rather than on <code>changed</code>.</p>
 <p><code>cargoship.phasesRan</code> and <code>cargoship.phasesPlanned</code> name the phases the run executed and, under check mode, the ones it reported instead of running. Ansible sees one result for the whole fleet, so these stand in for the per-host detail a task-per-host module would give you.</p>
-<h3 id="the-result"><a class="header" href="#the-result">The result</a></h3>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
 <pre><code class="language-json">{
   "changed": true,
   "msg": "synchronised engine configuration across the fleet",
@@ -506,19 +417,12 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </code></pre>
 <p><code>command</code> is the command line the module ran, so a failure can be reproduced by hand on the management node. <code>inventoryPath</code> is the generated document. A run that fails leaves it on disk whether or not you named the path, because it is the first thing to look at when a failure reads like the wrong cluster; a run that succeeds removes it unless the path was yours.</p>
 <p>Cargoship’s own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.</p>
-<h2 id="checking-the-result"><a class="header" href="#checking-the-result">Checking the result</a></h2>
-<p>The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.</p>
-<pre><code class="language-sh">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
-cargoship validate ./inventory.yaml
-cargoship apply ./package.tar.zst --config ./inventory.yaml --confirm
-</code></pre>
-<p>The generated file carries connection details and is written with mode <code>0600</code>.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../guides/age-encryption.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../guides/ansible-inv.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -532,7 +436,7 @@ cargoship apply ./package.tar.zst --config ./inventory.yaml --confirm
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../guides/age-encryption.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../guides/ansible-inv.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

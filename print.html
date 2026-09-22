@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-19f26fee.js";
+            window.path_to_searchindex_js = "searchindex-7418c890.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-22142fe1.js"></script>
+        <script src="toc-1d5b95bd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -603,8 +603,117 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
 <li>Armored age ciphertext is longer than the plaintext it holds by a fixed overhead of a couple of hundred bytes, so a short password becomes a block several lines long. This is normal, and why every command writes it as a YAML block scalar rather than a quoted string.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="running-the-collection-from-the-container"><a class="header" href="#running-the-collection-from-the-container">Running the Collection from the Container</a></h1>
+<p>The <code>-ansible</code> image is a management node in a container: <code>ansible-core</code> from the <code>alpine/ansible</code> base, plus the cargoship apk, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
+<p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="#running-cargoship-as-an-ansible-module">ansible-module</a>, and for the inventory they translate, <a href="#generating-an-inventory-from-ansible">ansible-inv</a>. Nothing about either changes inside the container.</p>
+<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship:0.25.1-ansible
+</code></pre>
+<p>The image has no <code>ENTRYPOINT</code>, because a run legitimately reaches for <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code> or <code>cargoship</code> itself; name the command you want. The collection is installed to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path, so <code>ansible-playbook</code> resolves <code>colonel_byte.cargoship.cargoship_apply</code> with no configuration. <code>HOME</code> is <code>/home/nonroot</code>, the working directory is <code>/workspace</code>, and the process runs as UID and GID 65532.</p>
+<p>The image carries cargoship and the collection, and nothing for talking to the cluster afterwards. <code>kubernetes.core</code> is present because the base carries the full ansible distribution, but the Python client its modules import is not, so a <code>k8s</code> task fails at import time; there is no <code>helm</code> or <code>kubectl</code> either. A play that converges the cluster and then applies manifests to it needs an image of your own, built <code>FROM</code> this one with those added.</p>
+<h2 id="every-path-in-a-playbook-is-a-path-inside-the-container"><a class="header" href="#every-path-in-a-playbook-is-a-path-inside-the-container">Every Path in a Playbook Is a Path Inside the Container</a></h2>
+<p>Cargoship runs in the container and connects to the fleet from there, so <code>package</code>, <code>inventory_path</code>, <code>vault_password_file</code> and <code>ansible_ssh_private_key_file</code> all name paths the container can see – not paths on the machine that started it. Mount each one at the same path it has on the host wherever you can. It costs nothing and it means the inventory reads the same whether the run happens in the container or on a management node that installed the package.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">What</th><th style="text-align: left">Where</th><th style="text-align: left">Mode</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left">The distro package</td><td style="text-align: left">wherever the playbook names it, e.g. <code>/srv/staging</code></td><td style="text-align: left">read-only</td></tr>
+<tr><td style="text-align: left">Playbooks, roles, the Ansible inventory</td><td style="text-align: left"><code>/workspace</code></td><td style="text-align: left">read-only</td></tr>
+<tr><td style="text-align: left">The SSH private key</td><td style="text-align: left">wherever <code>ansible_ssh_private_key_file</code> names it</td><td style="text-align: left">read-only, <code>0600</code></td></tr>
+<tr><td style="text-align: left">The vault password file</td><td style="text-align: left">wherever <code>vault_password_file</code> names it</td><td style="text-align: left">read-only, <code>0400</code></td></tr>
+<tr><td style="text-align: left"><code>known_hosts</code></td><td style="text-align: left"><code>/home/nonroot/.ssh/known_hosts</code></td><td style="text-align: left">writable, see below</td></tr>
+<tr><td style="text-align: left">Where a kubeconfig is written</td><td style="text-align: left"><code>/home/nonroot/.kube/config</code>, or wherever <code>kubeconfig</code> names it</td><td style="text-align: left">writable</td></tr>
+<tr><td style="text-align: left">The cargoship cache</td><td style="text-align: left"><code>/home/nonroot/.cargoship-cache</code></td><td style="text-align: left">writable, optional</td></tr>
+</tbody>
+</table>
+</div>
+<p>An apply leaves <code>update_kubeconfig</code> on by default, which merges the cluster’s admin credentials into <code>KUBECONFIG</code> when it is set and <code>~/.kube/config</code> otherwise – inside the container, a file under <code>/home/nonroot</code> that goes away with the container. Mount a kubeconfig, name one with the <code>kubeconfig</code> parameter, or pass <code>update_kubeconfig: false</code> and fetch it deliberately with <code>cargoship_kube_config</code>; what you should not do is leave the default and wonder where the credentials went.</p>
+<p>Everything under <code>/home/nonroot</code> is already created and owned by 65532 in the image, so a run with none of the optional mounts works – it just starts cold each time and keeps nothing. The cache is the one worth adding first, and it has a section of its own below.</p>
+<h2 id="the-package-mount-is-read-only-because-nothing-writes-to-it"><a class="header" href="#the-package-mount-is-read-only-because-nothing-writes-to-it">The Package Mount Is Read-Only Because Nothing Writes to It</a></h2>
+<p>A distro package is the one input large enough that copying it into an image, or into the container’s writable layer, is a real cost – it carries every image and file the cluster installs. It is also read-only by nature: <code>cargoship apply</code> reads the package and writes to the fleet, never back into the artifact. Mounting it <code>:ro</code> costs nothing and turns a whole class of mistake, a run that mutates the staging directory every other run depends on, into an error at the moment it is attempted.</p>
+<pre><code class="language-sh">podman run --rm \
+  --userns=keep-id:uid=65532,gid=65532 \
+  -v /srv/staging:/srv/staging:ro,z \
+  -v "$PWD":/workspace:ro,z \
+  -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
+  -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
+  -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
+  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ansible-playbook -i inventory.yaml converge.yaml
+</code></pre>
+<p>On a host with SELinux enforcing – Fedora, RHEL, and anything derived from them – a volume needs a label option or the container cannot read it. Use <code>z</code>, the shared label, for anything the host or another container also uses, which is all of the above. <code>Z</code> relabels the content privately to one container, and applying it to a shared staging directory takes that directory away from every other reader on the host, including the next container. Docker takes the same options; it is the label, not the runtime, that decides this.</p>
+<h2 id="mounting-the-cache-read-write"><a class="header" href="#mounting-the-cache-read-write">Mounting the Cache Read-Write</a></h2>
+<p>The cache is where cargoship keeps what it fetches – OCI artifacts it pulls, and the release assets the example generation reads – under <code>~/.cargoship-cache</code>, which is <code>/home/nonroot/.cargoship-cache</code> in the container. It is the only mount in this guide that exists purely to make the <em>next</em> run faster, and the only one that is worthless read-only: a cache that cannot be written to is a cache that is empty on every run, and a read-only mount turns what would be a slow run into a failed write.</p>
+<pre><code class="language-sh">podman run --rm \
+  --userns=keep-id:uid=65532,gid=65532 \
+  -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
+  -v /srv/staging:/srv/staging:ro,z \
+  -v "$PWD":/workspace:ro,z \
+  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ansible-playbook -i inventory.yaml converge.yaml
+</code></pre>
+<p><code>rw</code> is the default for a bind mount and is written out here only to say that it is meant: the package above it is <code>ro</code> on purpose, and the pair reads as a decision rather than an omission. Create the directory on the host first – <code>mkdir -p ~/.cargoship-cache</code> – because a bind mount whose source does not exist is created by the runtime as an empty directory owned by root, which the container cannot then write to.</p>
+<p>The same UID rule as everywhere else decides whether the write succeeds, and there are three ways to satisfy it. <code>--userns=keep-id:uid=65532,gid=65532</code> maps your host UID onto the one the container runs as, which is the right answer when the cache lives in your home directory and you want to look at it afterwards. <code>chown -R 65532:65532 ~/.cargoship-cache</code> is the right answer under Docker or rootful Podman, where there is no mapping to arrange. Podman’s <code>:U</code> option – <code>-v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z,U</code> – recursively chowns the source to the container’s user for you, which is convenient and also permanent, so do not point it at a directory anything else on the host owns.</p>
+<p>A named volume avoids the question entirely, and is the better arrangement on a dedicated staging host where nobody needs to read the cache from outside:</p>
+<pre><code class="language-sh">podman volume create cargoship-cache
+podman run --rm \
+  -v cargoship-cache:/home/nonroot/.cargoship-cache \
+  -v /srv/staging:/srv/staging:ro,z \
+  -v "$PWD":/workspace:ro,z \
+  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ansible-playbook -i inventory.yaml converge.yaml
+</code></pre>
+<p>A new named volume is populated from the image path it is mounted over, ownership included, so it arrives owned by 65532 with no mapping, no <code>chown</code> and no SELinux label option to choose. It survives <code>--rm</code>, and <code>podman volume rm cargoship-cache</code> is how you discard it deliberately.</p>
+<p>To put the cache somewhere other than the default path, set it in the environment as <code>DISTRO_ZARF_CACHE</code>, or as <code>zarf_cache</code> in a cargoship configuration file – the modules take no parameter for it, so a playbook cannot pass it per task. The <code>--zarf-cache</code> flag does the same thing for a <code>cargoship</code> command run directly in the container – it is named for zarf’s cache, which is what it is, and it takes cargoship’s path. The default printed in <code>docs/commands</code> is the one this repository’s own <code>cargoship-config.yaml</code> sets, not the built-in <code>~/.cargoship-cache</code> a container resolves, since viper searches the working directory for a configuration file and a checkout has one.</p>
+<h2 id="the-uid-is-what-actually-breaks-first"><a class="header" href="#the-uid-is-what-actually-breaks-first">The UID Is What Actually Breaks First</a></h2>
+<p>The image runs as 65532, and a private key mounted from your home directory is owned by you and readable only by you. Under rootless Podman your UID maps to root inside the container by default, so the key arrives owned by a user that is not the one reading it, and the run fails on a key it can see and cannot open. <code>--userns=keep-id:uid=65532,gid=65532</code> maps your host UID to 65532 inside, which makes every mount above land with an owner that matches the process.</p>
+<p>Under Docker, or rootful Podman, there is no mapping to arrange: the file has to be readable by UID 65532 on the host. Give the staging directory and the key to that UID (<code>chown -R 65532:65532 /srv/staging</code>), which is the usual arrangement for a dedicated staging host. Running the image with <code>--user "$(id -u):$(id -g)"</code> instead looks simpler and is not: <code>/home/nonroot</code> and its subdirectories are owned by 65532, so the cache, <code>known_hosts</code> and Ansible’s own temporary directory all become unwritable, and the failures arrive late and read like something else.</p>
+<p>When using SSH multiplexing (<code>ControlMaster</code>) with Ansible inside the container, configure <code>ControlPath</code> (or mount a tmpfs volume) where nonroot has write permissions. If an inventory points to a host home directory (e.g. <code>/home/&lt;user&gt;/.ssh/sockets</code>), mount a writable tmpfs with permissive mode (<code>--tmpfs /home/&lt;user&gt;/.ssh/sockets:rw,mode=0777</code>) or point <code>ControlPath</code> to <code>/home/nonroot/.ssh/sockets</code>. Also avoid using <code>:z</code> SELinux relabeling flags on the host <code>~/.ssh</code> directory when mounting SSH keys, as relabeling host SSH directories can disrupt host sshd services.</p>
+<h2 id="host-keys"><a class="header" href="#host-keys">Host Keys</a></h2>
+<p>Cargoship verifies host keys against <code>~/.ssh/known_hosts</code> – <code>/home/nonroot/.ssh/known_hosts</code> in the container – and appends a key it has not seen before, which is trust on first use. A fresh container has no such file, so with nothing mounted every host in the fleet is trusted on the first connection of every run, and the file recording that decision is thrown away with the container. That is weaker than it looks: it is not a first use, it is a first use each time.</p>
+<p>Three ways out, in order of preference. Mount a <code>known_hosts</code> file writable, as above, so the first run records what it saw and every later run verifies against it. Or set <code>cargoship_host_key</code> on each host in the inventory, which states the expected key in the inventory itself and is the strongest of the three, since the answer travels with the host rather than with the container’s filesystem. Or point <code>SSH_KNOWN_HOSTS</code> at a file you seeded beforehand; a read-only mount is fine here, but only because every key is already in it – cargoship still has to be able to append when one is not, and a read-only file fails that write.</p>
+<p>Setting <code>SSH_KNOWN_HOSTS=/dev/null</code> disables host key verification entirely. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.</p>
+<h2 id="ssh-agents-work-with-the-socket-mounted"><a class="header" href="#ssh-agents-work-with-the-socket-mounted">SSH Agents Work, With the Socket Mounted</a></h2>
+<p>Cargoship reads <code>SSH_AUTH_SOCK</code> and offers the agent’s keys, so an agent on the host serves a run in the container once its socket is mounted and the variable points at it.</p>
+<pre><code class="language-sh">podman run --rm \
+  --userns=keep-id:uid=65532,gid=65532 \
+  -v "$SSH_AUTH_SOCK":/run/ssh-agent.sock:z \
+  -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
+  -v /srv/staging:/srv/staging:ro,z \
+  -v "$PWD":/workspace:ro,z \
+  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ansible-playbook -i inventory.yaml converge.yaml
+</code></pre>
+<p>An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.</p>
+<h2 id="encrypting-the-generated-inventory-on-disk"><a class="header" href="#encrypting-the-generated-inventory-on-disk">Encrypting the Generated Inventory on Disk</a></h2>
+<p>When <code>inventory_path</code> is set to keep the generated ZarfCluster document across runs, that file normally holds decrypted registry passwords in plaintext with <code>0600</code> permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:</p>
+<pre><code class="language-yaml">- name: Install cluster
+  ansible.builtin.include_role:
+    name: colonel_byte.cargoship.cluster
+  vars:
+    cargoship_action: apply
+    cargoship_package: /srv/staging/rke2.tar.zst
+    cargoship_inventory_path: /srv/staging/cluster-inventory.yaml
+    cargoship_age_recipients:
+      - age1wjqegc62gpyvp4yfdqfk4vclfgdh3awlv03rgthcje398a860p7qpglp6w
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO9OkpTcjwWLH2fo8SUTVjb2NYEc6w996Cwr0wL2cRDx operator@example.com
+</code></pre>
+<p>When <code>cargoship_age_recipients</code> (or <code>--age-recipient</code> on <code>cargoship inventory from-ansible</code>) is provided, cargoship encrypts every registry credential (<code>user</code>, <code>pass</code>, <code>token</code>, <code>tls.ca</code>) into age ciphertext blocks before writing the document to disk.</p>
+<p>To decrypt the credentials at apply time, supply the private key via <code>cargoship_age_identity_files</code>:</p>
+<pre><code class="language-yaml">    cargoship_age_identity_files:
+      - /home/nonroot/.ssh/id_ed25519
+      - /srv/staging/keys/age.key
+</code></pre>
+<p>Mount the identity file into the container (e.g. <code>-v ~/.ssh/id_ed25519:/home/nonroot/.ssh/id_ed25519:ro</code>), ensure it has <code>0600</code> permissions owned by UID <code>65532</code>, or set <code>age.identity_files</code> in <code>cargoship-config.yaml</code>. Cargoship reads the private key and decrypts the credentials in memory when executing phases.</p>
+<h2 id="air-gapped-runs-need-no-network-of-their-own"><a class="header" href="#air-gapped-runs-need-no-network-of-their-own">Air-Gapped Runs Need No Network of Their Own</a></h2>
+<p>Everything the convergence installs comes out of the package, so the container needs a route to the fleet and to nothing else. It does not need a registry, a proxy, or a route off the management network, and the image pull is the only step in this guide that touches the internet – do it on the machine that has a route, save the image with <code>podman save</code>, and load it where it runs.</p>
+<h2 id="what-not-to-mount"><a class="header" href="#what-not-to-mount">What Not to Mount</a></h2>
+<p>Do not mount the container runtime’s socket, a whole home directory, or <code>/etc</code> from the host. The image needs four kinds of thing – a package, a playbook tree, credentials for the fleet, and somewhere to write – and each of them is better named individually than swept in with a parent directory. A resolved Ansible inventory already carries credentials for hosts that are not this cluster, which is why the collection’s action plugin forwards only the variables cargoship reads; mounting your whole home directory undoes that care at the filesystem level.</p>
+<p>Do not bake credentials into an image of your own with <code>COPY</code>. An image layer keeps what it is given even after a later layer removes it, and this image is published to a registry that the key’s owner does not control.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="generating-an-inventory-from-ansible"><a class="header" href="#generating-an-inventory-from-ansible">Generating an Inventory from Ansible</a></h1>
-<p>Cargoship can build its cluster inventory from an Ansible inventory you already have, deriving each host’s role from the Ansible groups it belongs to. This guide covers that translation: the group mapping, the host variables cargoship reads, and the rules the translation follows.</p>
+<p>Cargoship can build its cluster inventory from an Ansible inventory you already have, deriving each host’s role from the Ansible groups it belongs to. This guide covers that translation: the group mapping, the host variables cargoship reads, and the rules the translation follows. The same translation runs inside a playbook, where cargoship is the Ansible module; the modules, the collection, and the <code>cluster</code> role are covered in <a href="#running-cargoship-as-an-ansible-module">Running Cargoship as an Ansible Module</a>.</p>
 <p>Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Cargoship opens every SSH connection itself, from the node it runs on – a management node outside the cluster, which is the node the package and images were staged onto. See <a href="#why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node">choice-ansible-module</a> for why the work is split that way.</p>
 <h2 id="what-the-translation-reads"><a class="header" href="#what-the-translation-reads">What the translation reads</a></h2>
 <p>Cargoship does not parse an Ansible inventory file. Resolving an inventory means group membership, <code>group_vars</code>, <code>host_vars</code>, dynamic inventory plugins, and the precedence rules over all of them; Ansible does that and hands over the merged result. What cargoship reads is a JSON document holding that result:</p>
@@ -702,9 +811,21 @@ cargoship_bastion:
 <h3 id="misspelled-variables-are-errors"><a class="header" href="#misspelled-variables-are-errors">Misspelled variables are errors</a></h3>
 <p>A variable under the <code>cargoship_</code> prefix that cargoship does not read is an error, and so is an unknown key inside one of the structured variables. Ansible has no notion of a variable belonging to anyone, so a misspelled <code>cargoship_profil</code> would otherwise sit in <code>hostvars</code> looking set and doing nothing, and a misspelled key would be dropped on the way in. A misspelled variable and an unset one are indistinguishable at install time, which is too late to find out.</p>
 <p>Variables under the <code>ansible_</code> prefix that are not in the table are ignored. There are hundreds of them, they belong to Ansible’s own connection plugins, and they are not cargoship’s to police.</p>
-<h2 id="running-cargoship-as-an-ansible-module"><a class="header" href="#running-cargoship-as-an-ansible-module">Running cargoship as an Ansible module</a></h2>
-<p>The same translation runs inside a playbook. The cargoship binary is the Ansible module: it is installed as a set of symlinks named <code>cargoship_&lt;action&gt;</code>, and a symlink’s name selects the action. There is no separate module package and nothing to install on the managed nodes.</p>
+<h2 id="checking-the-result"><a class="header" href="#checking-the-result">Checking the result</a></h2>
+<p>The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.</p>
+<pre><code class="language-sh">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
+cargoship validate ./inventory.yaml
+cargoship apply ./package.tar.zst --config ./inventory.yaml --confirm
+</code></pre>
+<p>The generated file carries connection details and is written with mode <code>0600</code>.</p>
+<p>A playbook does not run these commands itself. The modules write and validate the same document, and the path they write it to is the <code>inventory_path</code> parameter described in <a href="#running-cargoship-as-an-ansible-module">Running Cargoship as an Ansible Module</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="running-cargoship-as-an-ansible-module"><a class="header" href="#running-cargoship-as-an-ansible-module">Running Cargoship as an Ansible Module</a></h1>
+<p>Cargoship runs inside a playbook as an Ansible module. The cargoship binary <em>is</em> the module: it is installed as a set of symlinks named <code>cargoship_&lt;action&gt;</code>, and a symlink’s name selects the action. There is no separate module package and nothing to install on the managed nodes.</p>
+<p>The inventory a module takes is the one described in <a href="#generating-an-inventory-from-ansible">Generating an Inventory from Ansible</a> – Ansible’s resolved <code>groups</code> and <code>hostvars</code>, plus a <code>cluster</code> block – and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, what each module takes, and what its result means.</p>
+<p>Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Every task runs on one management node outside the cluster – the node the package and images were staged onto – and cargoship opens every SSH connection itself from there. See <a href="#why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node">choice-ansible-module</a> for why the work is split that way.</p>
 <p>Five modules ship, one per fleet action: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_engine_config_sync</code>, <code>cargoship_reset</code>, and <code>cargoship_kube_config</code>. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run.</p>
+<p>Working inventories and a playbook for each of the five are in <a href="https://github.com/colonel-byte/cargoship/tree/main/ansible/examples">ansible/examples</a>, along with a script that translates an inventory without running a play.</p>
 <pre><code class="language-yaml">- name: Converge engine configuration
   cargoship_engine_config_sync:
     package: /srv/staging/rke2-1.31.tar.zst
@@ -720,7 +841,7 @@ cargoship_bastion:
   no_log: true
 </code></pre>
 <p>The task runs on the management node – <code>connection: local</code> when the Ansible controller is that node, <code>delegate_to</code> when they are separate. Cargoship connects to the fleet itself, from there.</p>
-<h3 id="installing-the-collection"><a class="header" href="#installing-the-collection">Installing the collection</a></h3>
+<h2 id="installing-the-collection"><a class="header" href="#installing-the-collection">Installing the collection</a></h2>
 <p>The modules live in the <code>colonel_byte.cargoship</code> collection. The RPM and deb packages install it to <code>/usr/share/ansible/collections</code>, which is on ansible-core’s default collections path, so on a management node that installed cargoship from a package there is nothing further to do.</p>
 <p>Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.</p>
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
@@ -733,9 +854,10 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 <p>That last step is not optional and has no equivalent in Galaxy’s own packaging. Ansible resolves a task name to a module <em>file</em>, so each action needs a file named after it; the files are symlinks to the one cargoship binary, which is what the packages create and what the script creates by hand. A collection installed without them fails with the module not being found.</p>
 <p>The collection carries one action plugin per module. It runs inside <code>ansible-playbook</code>, on the interpreter Ansible is already running on, and does one thing: copy <code>groups</code> and <code>hostvars</code> into the module’s <code>inventory</code> parameter so you do not have to. Nothing is installed on the fleet, and running cargoship by hand still needs no Python.</p>
 <p>It also accepts a <code>parameters</code> dict and merges it into the rest, which is how the role passes a caller-supplied set of parameters without templating the whole of a task’s arguments – something Ansible warns about, and rightly. A parameter given both directly and inside <code>parameters</code> is an error naming it.</p>
-<p>The plugin forwards the four <code>ansible_*</code> connection variables in the table above and every <code>cargoship_*</code> variable, and drops the rest. A host’s resolved variables routinely carry credentials for things that are not this cluster, and a module’s parameters are written to a file on disk.</p>
-<h3 id="parameters-every-module-takes"><a class="header" href="#parameters-every-module-takes">Parameters every module takes</a></h3>
-<p><code>inventory</code> takes the same document described above, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of the command the module runs.</p>
+<p>The plugin forwards the four <code>ansible_*</code> connection variables listed in <a href="#generating-an-inventory-from-ansible">Generating an Inventory from Ansible</a> and every <code>cargoship_*</code> variable, and drops the rest. A host’s resolved variables routinely carry credentials for things that are not this cluster, and a module’s parameters are written to a file on disk.</p>
+<p>When defining <code>profiles</code> inside <code>cargoship_cluster</code> in YAML, note type constraints: <code>concurrency</code> (e.g. <code>"1"</code>, <code>"50%"</code>) and port definitions (<code>ports[].port</code>, e.g. <code>"6443"</code>) are unmarshaled as strings by the underlying schema. Quote numeric strings in YAML to prevent JSON numeric unmarshaling failures.</p>
+<h2 id="parameters-every-module-takes"><a class="header" href="#parameters-every-module-takes">Parameters every module takes</a></h2>
+<p><code>inventory</code> takes the document described in <a href="#generating-an-inventory-from-ansible">Generating an Inventory from Ansible</a>, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of the command the module runs.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -746,12 +868,14 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 <tr><td><code>inventory_path</code></td><td><code>--config</code></td><td>Where to write the generated document. A private temporary file when unset.</td></tr>
 <tr><td><code>log_level</code></td><td><code>--log-level</code></td><td>Defaults to <code>debug</code> when the play runs with <code>-v</code>.</td></tr>
 <tr><td><code>log_format</code></td><td><code>--log-format</code></td><td></td></tr>
+<tr><td><code>log_file</code></td><td><code>--log-file</code></td><td>Boolean. Always write full-verbosity debug log to a file on the host.</td></tr>
+<tr><td><code>age_recipient</code></td><td></td><td>List of public keys to encrypt registry credentials written to disk.</td></tr>
 </tbody>
 </table>
 </div>
 <p>A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why <code>label_nodes: false</code> and omitting <code>label_nodes</code> are different.</p>
 <p>The surfaces differ because the commands do. <code>cargoship prepare</code> reads no encrypted value, so it takes no <code>vault_password_file</code>; <code>cargoship reset</code> installs nothing, so it takes no package and no <code>values</code>. A parameter offered to the wrong module is an error naming it, rather than a flag quietly dropped.</p>
-<h3 id="cargoship_apply"><a class="header" href="#cargoship_apply"><code>cargoship_apply</code></a></h3>
+<h2 id="cargoship_apply"><a class="header" href="#cargoship_apply"><code>cargoship_apply</code></a></h2>
 <p>Installs or converges the whole cluster.</p>
 <div class="table-wrapper">
 <table>
@@ -778,7 +902,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_prepare"><a class="header" href="#cargoship_prepare"><code>cargoship_prepare</code></a></h3>
+<h2 id="cargoship_prepare"><a class="header" href="#cargoship_prepare"><code>cargoship_prepare</code></a></h2>
 <p>Stages a package onto the fleet and readies the hosts. Takes no key material.</p>
 <div class="table-wrapper">
 <table>
@@ -799,7 +923,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_engine_config_sync"><a class="header" href="#cargoship_engine_config_sync"><code>cargoship_engine_config_sync</code></a></h3>
+<h2 id="cargoship_engine_config_sync"><a class="header" href="#cargoship_engine_config_sync"><code>cargoship_engine_config_sync</code></a></h2>
 <p>Converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does. It does not update the hosts themselves, so it takes none of the three host switches.</p>
 <div class="table-wrapper">
 <table>
@@ -822,7 +946,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_reset"><a class="header" href="#cargoship_reset"><code>cargoship_reset</code></a></h3>
+<h2 id="cargoship_reset"><a class="header" href="#cargoship_reset"><code>cargoship_reset</code></a></h2>
 <p>Removes the cluster from the fleet. There is no package: the distro to remove is named directly.</p>
 <div class="table-wrapper">
 <table>
@@ -839,7 +963,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config"><code>cargoship_kube_config</code></a></h3>
+<h2 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config"><code>cargoship_kube_config</code></a></h2>
 <p>Fetches the cluster kubeconfig onto the management node. It is the one module that changes the node the play runs on rather than the fleet.</p>
 <div class="table-wrapper">
 <table>
@@ -852,11 +976,11 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </tbody>
 </table>
 </div>
-<h3 id="signature-verification"><a class="header" href="#signature-verification">Signature verification</a></h3>
+<h2 id="signature-verification"><a class="header" href="#signature-verification">Signature verification</a></h2>
 <p><code>public_key</code> and <code>verify</code> are the package signature parameters, and they are the key-based ones only. Keyless verification identifies a signer against a Fulcio root and a transparency log, which needs network access a management node inside an airlock does not have. Verify a keyless-signed package with <code>cargoship package verify</code> before the play, where the flags and their exclusions are all available.</p>
-<h3 id="key-material"><a class="header" href="#key-material">Key material</a></h3>
+<h2 id="key-material"><a class="header" href="#key-material">Key material</a></h2>
 <p>Key material is always named by a path, never given by value. Ansible writes a module’s parameters into a file on the managed node, and a password passed by value would be a password written to a file you did not choose the mode of. Set <code>no_log: true</code> on the task regardless: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
-<h3 id="the-cluster-role"><a class="header" href="#the-cluster-role">The <code>cluster</code> role</a></h3>
+<h2 id="the-cluster-role"><a class="header" href="#the-cluster-role">The <code>cluster</code> role</a></h2>
 <p>The role is the shorter way to write the same task. It picks the module from <code>cargoship_action</code>, assembles the <code>inventory</code> parameter, and sets <code>run_once</code>, <code>delegate_to</code>, and <code>no_log</code> for you.</p>
 <pre><code class="language-yaml">- name: Install the cluster
   ansible.builtin.include_role:
@@ -882,18 +1006,22 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 <tr><td><code>cargoship_cluster</code></td><td><code>{}</code></td><td>The <code>cluster</code> block: name, load balancer, profiles, registries, values.</td></tr>
 <tr><td><code>cargoship_role_groups</code></td><td><code>{}</code></td><td>The group mapping, when your groups are not named <code>controller</code> and <code>worker</code>.</td></tr>
 <tr><td><code>cargoship_inventory_path</code></td><td>unset</td><td>Where to write the generated document.</td></tr>
+<tr><td><code>cargoship_age_recipients</code></td><td><code>[]</code></td><td>Public keys to encrypt registry credentials on disk in generated inventory.</td></tr>
+<tr><td><code>cargoship_age_identity_files</code></td><td><code>[]</code></td><td>Identity files/SSH private keys to decrypt registry credentials at apply.</td></tr>
+<tr><td><code>cargoship_log_file</code></td><td><code>false</code></td><td>Always write full-verbosity debug log to a file on the host (<code>--log-file</code>).</td></tr>
 <tr><td><code>cargoship_args</code></td><td><code>{}</code></td><td>Everything else, passed to the module as-is.</td></tr>
 <tr><td><code>cargoship_delegate_to</code></td><td><code>localhost</code></td><td>The management node.</td></tr>
+<tr><td><code>cargoship_no_log</code></td><td><code>true</code></td><td>Suppress task parameter logging. Set false for local debugging.</td></tr>
 <tr><td><code>cargoship_show_result</code></td><td><code>false</code></td><td>Print <code>cargoship_result.cargoship</code> after the run.</td></tr>
 </tbody>
 </table>
 </div>
-<p>Every task in the role carries <code>run_once: true</code>. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It also carries <code>no_log: true</code>, which is why <code>cargoship_show_result</code> exists: the debug task is the one thing allowed to print, and it prints cargoship’s report rather than the parameters.</p>
-<h3 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h3>
+<p>Every task in the role carries <code>run_once: true</code>. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It defaults <code>cargoship_no_log: true</code> to protect decrypted credentials and fleet inventories from terminal and CI logs, which is why <code>cargoship_show_result</code> exists: the debug task prints cargoship’s sanitized report without exposing secrets.</p>
+<h2 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h2>
 <p><code>--check</code> runs cargoship’s dry run. Phases opt into it one at a time – a phase that has not said how it behaves under a dry run is reported and not run – so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.</p>
 <p>Under check mode, <code>changed</code> means what Ansible means by it there: a real run would change something. It is true when a phase that knows how to tell had work outstanding – a fleet whose engine configuration has drifted – and false when every such phase found nothing to do.</p>
 <p><code>cargoship_kube_config</code> is the exception. <code>cargoship kube-config</code> has no dry run, so under <code>--check</code> the module reports <code>skipped: true</code> and runs nothing at all. That is what Ansible does with a module that has declared it does not support check mode; a binary module has nowhere to declare it, so it says so in its result instead.</p>
-<h3 id="what-changed-is-worth"><a class="header" href="#what-changed-is-worth">What <code>changed</code> is worth</a></h3>
+<h2 id="what-changed-is-worth"><a class="header" href="#what-changed-is-worth">What <code>changed</code> is worth</a></h2>
 <p><code>changed</code> is built from what the phases themselves report, and a phase has to opt in. <code>cargoship.changedSignal</code> says how much of the run is covered:</p>
 <div class="table-wrapper">
 <table>
@@ -909,7 +1037,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </div>
 <p>Today the engine configuration sync phases report and the rest do not, so an ordinary run reads <code>partial</code>. That is deliberate: a phase that has said nothing cannot make <code>changed</code> true, and it is not treated as having changed nothing either. <code>KubeConfig</code> and <code>LabelNodes</code> are the two in the undeclared list that can genuinely change something – the local kubeconfig and the node role labels – so if a handler of yours depends on either, gate on the result rather than on <code>changed</code>.</p>
 <p><code>cargoship.phasesRan</code> and <code>cargoship.phasesPlanned</code> name the phases the run executed and, under check mode, the ones it reported instead of running. Ansible sees one result for the whole fleet, so these stand in for the per-host detail a task-per-host module would give you.</p>
-<h3 id="the-result"><a class="header" href="#the-result">The result</a></h3>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
 <pre><code class="language-json">{
   "changed": true,
   "msg": "synchronised engine configuration across the fleet",
@@ -927,13 +1055,6 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </code></pre>
 <p><code>command</code> is the command line the module ran, so a failure can be reproduced by hand on the management node. <code>inventoryPath</code> is the generated document. A run that fails leaves it on disk whether or not you named the path, because it is the first thing to look at when a failure reads like the wrong cluster; a run that succeeds removes it unless the path was yours.</p>
 <p>Cargoship’s own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.</p>
-<h2 id="checking-the-result"><a class="header" href="#checking-the-result">Checking the result</a></h2>
-<p>The generated document is validated against the inventory schema before it is written, so a translation that produced something invalid fails here rather than ten minutes into an apply. Check it yourself as well, and read it: it is an ordinary cluster inventory, and it is the exact document cargoship installs from.</p>
-<pre><code class="language-sh">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
-cargoship validate ./inventory.yaml
-cargoship apply ./package.tar.zst --config ./inventory.yaml --confirm
-</code></pre>
-<p>The generated file carries connection details and is written with mode <code>0600</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="host-firewall-configuration-guide"><a class="header" href="#host-firewall-configuration-guide">Host Firewall Configuration Guide</a></h1>
 <p>Cargoship configures the firewall on every node that runs one. It picks the firewall per node, from the node’s operating system and from what is running on it, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when <code>cargoship apply</code> is given the <code>--firewall</code> flag.</p>
@@ -2121,8 +2242,8 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
-      --label-nodes                             Whether to check and add the node-role.kubernetes.io/&lt;profile&gt; label on cluster nodes. Requires --update-kubeconfig.
-      --timeout string                          Set the timeout for how long functions will last.
+      --label-nodes                             Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --update-kubeconfig                       Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
@@ -2228,8 +2349,8 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
-      --label-nodes                             Whether to check and add the node-role.kubernetes.io/&lt;profile&gt; label on cluster nodes. Requires --update-kubeconfig.
-      --timeout string                          Set the timeout for how long functions will last.
+      --label-nodes                             Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --update-kubeconfig                       Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
@@ -2258,7 +2379,11 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
 <h3 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h3>
 <p>Generates the cluster inventory cargoship installs from, out of a description of the fleet that already exists somewhere else. These commands install nothing and touch no hosts; they write a file for ‘cargoship validate’ to check and ‘cargoship apply’ to read.</p>
 <h3 id="options-4"><a class="header" href="#options-4">Options</a></h3>
-<pre><code>  -h, --help   help for inventory
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
+  -h, --help                              help for inventory
+      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-3"><a class="header" href="#options-inherited-from-parent-commands-3">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
@@ -2304,10 +2429,11 @@ $ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer
   -o, --output string         Path to write the generated inventory to. Omit it to write to stdout.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands-4"><a class="header" href="#options-inherited-from-parent-commands-4">Options inherited from parent commands</a></h3>
-<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
-  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
-  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
-      --no-color            Disable terminal color codes in logging and stdout prints.
+<pre><code>      --log-file                     Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string            Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string             Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                     Disable terminal color codes in logging and stdout prints.
+      --vault-password-file string   Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
 <h3 id="see-also-5"><a class="header" href="#see-also-5">SEE ALSO</a></h3>
 <ul>
@@ -2382,7 +2508,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
   -H, --hosts                                   Whether to update all the host nodes /etc/hosts file.
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
-      --timeout string                          Set the timeout for how long functions will last.
+      --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
@@ -2554,7 +2680,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 <h2 id="cargoship-schema"><a class="header" href="#cargoship-schema">cargoship schema</a></h2>
 <p>Writes out a JSON Schema for one of cargoship’s own file formats</p>
 <h3 id="synopsis-2"><a class="header" href="#synopsis-2">Synopsis</a></h3>
-<p>Writes out the JSON Schema for KIND – ‘inventory’ for a cluster file, ‘package’ for a distro.yaml, ‘config’ for a cargoship config file – so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to –output. Point an editor at a written file with a ‘# yaml-language-server: $schema=<path>’ comment on the first line. With –package, the package’s own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship – so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation.</path></p>
+<p>Writes out the JSON Schema for KIND – ‘inventory’ for a cluster file, ‘package’ for a distro.yaml, ‘config’ for a cargoship config file – so that an editor can complete and check those files without reaching out to GitHub for a hosted copy. The schema comes out of the binary, so it is the schema this build of cargoship validates against, which a hosted one pinned to the default branch is not, and it is available on a network that has never seen the internet. The output goes to stdout, or to –output. Point an editor at a written file with a ‘# yaml-language-server: $schema=PATH’ comment on the first line. With –package, the package’s own values schema is grafted onto spec.config.values, which is the one block of an inventory whose vocabulary belongs to the package rather than to cargoship – so the addon names, chart settings, and everything else that package accepts complete in the editor too. That composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships; it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation.</p>
 <pre><code>cargoship schema KIND [flags]
 </code></pre>
 <h3 id="examples-9"><a class="header" href="#examples-9">Examples</a></h3>
@@ -4092,6 +4218,52 @@ Status: install ok installed
 </code></pre>
 <h3 id="oci-labels"><a class="header" href="#oci-labels">OCI Labels</a></h3>
 <p>Labels are split by whether they change per release. Static ones (title, description, source, licenses, base image) live in each <code>Dockerfile</code>; per-release ones (version, revision, created) are set in <code>.goreleaser.yaml</code>. See <a href="#base-image-pinning">Base Image Pinning</a> for why <code>org.opencontainers.image.base.name</code> deliberately omits the digest. Keep them separate — a <code>--label</code> flag silently overrides a <code>LABEL</code> of the same key, so duplicating a key across a Dockerfile and <code>.goreleaser.yaml</code> creates two sources of truth.</p>
+<h2 id="package-signing"><a class="header" href="#package-signing">Package Signing</a></h2>
+<p>The <code>nfpms</code> packages carry signatures of their own, independent of cosign. That needs <strong>two key pairs</strong>, because nfpm signs rpm and deb with OpenPGP but signs apk with a bare RSA key:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Format</th><th>Key type</th><th>Path variable</th><th>Repository secret</th></tr>
+</thead>
+<tbody>
+<tr><td>rpm, deb</td><td>OpenPGP</td><td><code>GPG_KEY_PATH</code></td><td><code>GPG_PRIVATE_KEY</code>, and <code>GPG_PASSPHRASE</code> if the key is protected</td></tr>
+<tr><td>apk</td><td>RSA, PEM</td><td><code>APK_RSA_KEY_PATH</code></td><td><code>APK_RSA_PRIVATE_KEY</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Handing the OpenPGP key to the apk signer does not degrade quietly — it fails the release with <code>signing error: no PEM block found</code>.</p>
+<p>The public halves live in <code>crypto/</code>, both named after the maintainer address: <code>crypto/software@conlon.dev.gpg</code> (<code>A1D4 DF69 80C8 2444 99C3  D1F9 96F5 5C80 CFB1 EFCB</code>, expires 2046-09-14) and <code>crypto/software@conlon.dev.rsa.pub</code>. The latter’s filename is not a convention — it is the name apk itself looks for.</p>
+<h3 id="generating-the-keys"><a class="header" href="#generating-the-keys">Generating the Keys</a></h3>
+<p><code>hack/gen-signing-keys.sh</code> produces both pairs in the shapes nfpm accepts, building the OpenPGP key in a throwaway <code>GNUPGHOME</code> so your own keyring is untouched:</p>
+<pre><code class="language-sh">hack/gen-signing-keys.sh ~/cargoship-keys
+</code></pre>
+<p>It reads the maintainer address out of <code>.goreleaser.yaml</code> and names the apk public key after it, which is not cosmetic — see below. Set <code>GPG_PASSPHRASE</code> to protect the OpenPGP key. It refuses to overwrite existing files, because replacing a key already in use invalidates every package signed with it.</p>
+<p>Constraints worth knowing before doing any of this by hand:</p>
+<ul>
+<li><strong>The apk RSA key cannot be encrypted.</strong> nfpm understands only the legacy DEK-Info PEM encryption, so the PKCS#8 output of <code>openssl genrsa -aes256</code> is rejected with <code>key type "ENCRYPTED PRIVATE KEY" is not supported</code>, and <code>NFPM_APK_PASSPHRASE</code> cannot help. Its protection is the repository secret and nothing else.</li>
+<li><strong>The apk key name is baked into every package.</strong> nfpm defaults it to the maintainer address parsed from <code>nfpms.maintainer</code>, records the signature as the tar member <code>.SIGN.RSA.software@conlon.dev.rsa.pub</code>, and apk then looks for a file of that name under <code>/etc/apk/keys</code>. Changing <code>nfpms.maintainer</code>, or setting <code>apk.signature.key_name</code>, breaks the path every existing consumer deployed.</li>
+<li><strong><code>key_file</code> is a path, not key material.</strong> Unlike <code>COSIGN_PRIVATE_KEY</code>, which cosign reads straight from the environment, these must exist as files. The workflow writes both secrets under <code>$RUNNER_TEMP</code> — outside the checkout, so no <code>.goreleaser.yaml</code> glob can sweep them up — and removes them in an <code>if: always()</code> step.</li>
+</ul>
+<h3 id="degrading-to-unsigned"><a class="header" href="#degrading-to-unsigned">Degrading to Unsigned</a></h3>
+<p>Both <code>key_file</code> values are guarded:</p>
+<pre><code class="language-yaml">key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
+</code></pre>
+<p>The <code>index .Env</code> form is load-bearing. A bare <code>{{ .Env.GPG_KEY_PATH }}</code> on an unset variable aborts the run with <code>map has no entry for key "GPG_KEY_PATH"</code>; the guard turns an unset variable into an unsigned package instead. That is what a local snapshot wants and what a release does not, so the workflow emits a <code>::warning::</code> for each missing secret rather than letting the absence pass unremarked.</p>
+<h3 id="verifying"><a class="header" href="#verifying">Verifying</a></h3>
+<pre><code class="language-sh"># rpm
+sudo rpmkeys --import 'crypto/software@conlon.dev.gpg'
+rpm -K cargoship_&lt;version&gt;_linux_amd64.rpm          # digests signatures OK
+
+# apk — the filename is the name the signature records, so this is a plain copy
+cp 'crypto/software@conlon.dev.rsa.pub' /etc/apk/keys/
+apk add ./cargoship_&lt;version&gt;_linux_amd64.apk       # no --allow-untrusted
+
+# deb — the signature covers the three ar members concatenated, in order
+ar x cargoship_&lt;version&gt;_linux_amd64.deb
+cat debian-binary control.tar.gz data.tar.zst &gt; combined
+gpg --verify _gpgorigin combined
+</code></pre>
+<p><code>dpkg -i</code> never checks that signature itself; <code>_gpgorigin</code> exists for <code>debsig-verify</code> and repository tooling.</p>
 <h2 id="image-signing"><a class="header" href="#image-signing">Image Signing</a></h2>
 <p><code>docker_signs</code> signs the published images with cosign, using the same <code>COSIGN_PRIVATE_KEY</code> / <code>COSIGN_PASSWORD</code> pair as the archive signatures — no extra workflow configuration is needed.</p>
 <pre><code class="language-yaml">docker_signs:
@@ -4124,6 +4296,7 @@ sha256sum /tmp/from-image
 <li><strong>Syft</strong> — generates the archive SBOMs.</li>
 <li><strong>ansible-core</strong> — supplies <code>ansible-galaxy</code>, which builds the collection tarball in the <code>before</code> hook. Nothing else in the pipeline needs Ansible.</li>
 <li><strong>cosign</strong> — signs checksums, archives, and the published images; needs <code>COSIGN_PRIVATE_KEY</code> and <code>COSIGN_PASSWORD</code>.</li>
+<li><strong>Setup package signing keys</strong> — materializes <code>GPG_PRIVATE_KEY</code> and <code>APK_RSA_PRIVATE_KEY</code> as files under <code>$RUNNER_TEMP</code> and exports their paths, because nfpm takes a path rather than key material. See <a href="#package-signing">Package Signing</a>. A paired <code>if: always()</code> step deletes them.</li>
 <li><strong>QEMU</strong> — registers binfmt handlers for cross-platform builds. Required by the package-installing images: <code>rpm --install</code> and <code>dpkg --install</code> unpack architecture-specific files and must run on the target platform, so their <code>linux/arm64</code> builds run under emulation. The static image does not need it — its only <code>RUN</code> is pinned to <code>$BUILDPLATFORM</code>.</li>
 <li><strong>Buildx</strong> — required, not optional; provisions the container driver that can emit a multi-platform manifest.</li>
 <li><strong>GHCR login</strong> — required to push. The job’s <code>packages: write</code> permission is an authorization, not a credential.</li>
@@ -4763,7 +4936,7 @@ mage generate:updatePins            # refresh every line already pinned
 <p>Ansible resolves a task name to a module file before any plugin of ours is consulted, so an action plugin alone reaches nothing. Each action therefore needs a file named <code>cargoship_&lt;action&gt;</code>, and each of those is a symlink to the binary. The RPM and deb packages create the links through nfpms <code>contents:</code> entries, installing the collection tree to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path; a collection installed from Galaxy or from a checkout has no packaging step to hang that on, so <code>hack/ansible-link-modules.sh</code> does it by hand. Both were chosen over generating a per-action shim file: a shim is a second thing to sign and a second thing that can disagree with the binary.</p>
 <p>The action plugin forwards an allowlist of host variables rather than the whole of <code>hostvars</code>. A host’s resolved variables routinely hold credentials for things that are not this cluster, and a module’s parameters are written to a file on disk, so forwarding everything would write unrelated secrets to disk on every run. The allowlist is the four <code>ansible_*</code> connection variables plus every <code>cargoship_*</code> key – all of them, including misspelled ones, because rejecting an unknown parameter by name is <code>ansibleinv</code>’s job and it cannot do that without being shown the misspelling. <code>TestActionPluginVariableAllowlist</code> reads the Python and fails when it drifts from the Go constants, because the symptom of drift is an unset field rather than an error.</p>
 <p>The plugin also merges a <code>parameters</code> dict into the arguments. The role has a caller-supplied dict of parameters and no way to know which of them the chosen module takes, and the obvious way to pass it – making the task’s whole argument dict one template – is warned about by Ansible on every run and is genuinely unsafe. Merging in the plugin keeps the task’s keys literal and its values templates, and costs one parameter that the module itself never sees.</p>
-<p>The role sets <code>run_once: true</code> on every task. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It sets <code>no_log: true</code> as a literal rather than from a variable: a template that fails to evaluate leaves <code>no_log</code> false, and the failure mode of that is every host’s connection detail in the log. The one thing allowed to print is a debug task showing cargoship’s own report, which carries no parameters.</p>
+<p>The role sets <code>run_once: true</code> on every task. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It defaults <code>no_log: "{{ cargoship_no_log | bool }}"</code> with <code>cargoship_no_log: true</code> by default: a template failure or misconfiguration avoids exposing decrypted credentials and host connection parameters in CI or production logs, while still allowing operators to set <code>cargoship_no_log: false</code> for local troubleshooting. The debug task showing cargoship’s own report carries no parameters.</p>
 <h2 id="what-is-being-accepted"><a class="header" href="#what-is-being-accepted">What is being accepted</a></h2>
 <ul>
 <li>No <code>ansible-doc</code> and no <code>ansible-test sanity</code>; the module’s interface is documented only where we choose to document it.</li>

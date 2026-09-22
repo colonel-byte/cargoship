@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-19f26fee.js";
+            window.path_to_searchindex_js = "../searchindex-7418c890.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-22142fe1.js"></script>
+        <script src="../toc-1d5b95bd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,7 +188,11 @@
 <h3 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h3>
 <p>Generates the cluster inventory cargoship installs from, out of a description of the fleet that already exists somewhere else. These commands install nothing and touch no hosts; they write a file for ‘cargoship validate’ to check and ‘cargoship apply’ to read.</p>
 <h3 id="options"><a class="header" href="#options">Options</a></h3>
-<pre><code>  -h, --help   help for inventory
+<pre><code>      --age-identity-file stringArray     Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray         A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray   Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. Repeatable; also settable as age.recipients_files in the cargoship config file.
+  -h, --help                              help for inventory
+      --vault-password-file string        Path to a file containing the Ansible Vault password. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
 </code></pre>
 <h3 id="options-inherited-from-parent-commands"><a class="header" href="#options-inherited-from-parent-commands">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
