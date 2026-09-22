@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.26.1](https://github.com/colonel-byte/cargoship/compare/v0.26.0...v0.26.1) (2026-09-22)
+
+
+### Features
+
+* **cli:** add flag for overriding version ([#469](https://github.com/colonel-byte/cargoship/issues/469)) ([472b4b2](https://github.com/colonel-byte/cargoship/commit/472b4b28c64e6e34baa2f0e277ff1cd5723b744b))
+* **example:** allow overriding pod sec ([#470](https://github.com/colonel-byte/cargoship/issues/470)) ([9055c02](https://github.com/colonel-byte/cargoship/commit/9055c02843f68821a5601ac9097a40d0cdab5944))
+* **examples:** update pod sec overrides ([#471](https://github.com/colonel-byte/cargoship/issues/471)) ([42412ec](https://github.com/colonel-byte/cargoship/commit/42412ec53de9a1bf4ca1edb54837d7e0c17fc2f9))
+
+
+### Miscellaneous
+
+* **deps:** update shadow utils 4.15.0-11.el10 ([#476](https://github.com/colonel-byte/cargoship/issues/476)) ([089b468](https://github.com/colonel-byte/cargoship/commit/089b468e4a56afeba7380db518af089fbb001b1b))
+
+
+### CI/CD
+
+* **actions:** fix look up ([#474](https://github.com/colonel-byte/cargoship/issues/474)) ([c02d2db](https://github.com/colonel-byte/cargoship/commit/c02d2db069a6ca84be2c9edfdafcb47a97703deb))
+* **container:** pin dnf packages ([#468](https://github.com/colonel-byte/cargoship/issues/468)) ([259f717](https://github.com/colonel-byte/cargoship/commit/259f717ce3c605cb7fd5408d1bc0a5cdc58d2079))
+* **pin:** update issue search ([#473](https://github.com/colonel-byte/cargoship/issues/473)) ([01e35fd](https://github.com/colonel-byte/cargoship/commit/01e35fd93a8d1c1fcf198ef9af1709f3fb585855))
+
+
+### Build
+
+* **deps:** bump github.com/ulikunitz/xz from 0.5.16 to 0.5.17 in the misc group ([#465](https://github.com/colonel-byte/cargoship/issues/465)) ([b00556d](https://github.com/colonel-byte/cargoship/commit/b00556d59fdb203c3c5c08f7346301487cf3262e))
+* **deps:** bump the cosign group with 2 updates ([#464](https://github.com/colonel-byte/cargoship/issues/464)) ([7963065](https://github.com/colonel-byte/cargoship/commit/79630658b6dd5a9d8d71bd5c67bce861f2792049))
+
 ## [0.26.0](https://github.com/colonel-byte/cargoship/compare/v0.25.0...v0.26.0) (2026-09-22)
 
 
