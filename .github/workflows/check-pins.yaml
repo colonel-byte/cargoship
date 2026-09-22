@@ -58,13 +58,16 @@ jobs:
             echo "Run \`mage dev:dnfPins\` locally and commit the resulting changes to update the pins."
           } > body.md
 
-          # Look for an existing open issue with the marker
+          # Look for an existing open issue with the literal marker in the body.
           issue_number=$(gh issue list \
             --repo "$REPO" \
             --state open \
-            --search "$marker in:body" \
-            --json number \
-            --jq '.[0].number // empty')
+            --limit 100 \
+            --json number,body \
+            --jq --arg marker "$marker" '
+              map(select(.body != null and (.body | contains($marker)))) |
+              .[0].number // empty
+            ')
 
           if [ -n "$issue_number" ]; then
             gh issue edit "$issue_number" --repo "$REPO" --body-file body.md
@@ -119,13 +122,16 @@ jobs:
             echo "Run \`mage generate:updatePins\` locally, followed by \`mage generate:engineConfig\`, and commit the resulting changes."
           } > body.md
 
-          # Look for an existing open issue with the marker
+          # Look for an existing open issue with the literal marker in the body.
           issue_number=$(gh issue list \
             --repo "$REPO" \
             --state open \
-            --search "$marker in:body" \
-            --json number \
-            --jq '.[0].number // empty')
+            --limit 100 \
+            --json number,body \
+            --jq --arg marker "$marker" '
+              map(select(.body != null and (.body | contains($marker)))) |
+              .[0].number // empty
+            ')
 
           if [ -n "$issue_number" ]; then
             gh issue edit "$issue_number" --repo "$REPO" --body-file body.md
