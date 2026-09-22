@@ -36,3 +36,8 @@ cilium:
       # it binds IPv6 on a node that has none.
       ipv6: false
 {{- end }}
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
