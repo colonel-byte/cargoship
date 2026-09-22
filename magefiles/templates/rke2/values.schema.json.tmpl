@@ -71,6 +71,30 @@
         }
       },
       "additionalProperties": false
+    },
+    "podSecurity": {
+      "type": "object",
+      "properties": {
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "enforce": {
+              "type": "string",
+              "enum": ["privileged", "baseline", "restricted"]
+            },
+            "audit": {
+              "type": "string",
+              "enum": ["privileged", "baseline", "restricted"]
+            },
+            "warn": {
+              "type": "string",
+              "enum": ["privileged", "baseline", "restricted"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false
