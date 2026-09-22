@@ -42,6 +42,7 @@ var moduleArgs = map[string]string{
 		"verify": "always",
 		"log_level": "debug",
 		"log_format": "json",
+		"log_file": true,
 		"vault_password_file": "/tmp/vault-pass",
 		"age_identity_file": ["/tmp/age.key"],
 		"_ansible_check_mode": true
@@ -64,6 +65,7 @@ var moduleArgs = map[string]string{
 		"verify": "always",
 		"log_level": "debug",
 		"log_format": "json",
+		"log_file": true,
 		"vault_password_file": "/tmp/vault-pass",
 		"age_identity_file": ["/tmp/age.key"],
 		"_ansible_check_mode": true
@@ -82,6 +84,7 @@ var moduleArgs = map[string]string{
 		"verify": "always",
 		"log_level": "debug",
 		"log_format": "json",
+		"log_file": true,
 		"_ansible_check_mode": true
 	}`,
 	"reset": `{
@@ -94,6 +97,7 @@ var moduleArgs = map[string]string{
 		"fapolicyd": true,
 		"log_level": "debug",
 		"log_format": "json",
+		"log_file": true,
 		"_ansible_check_mode": true
 	}`,
 	"kube_config": `{
@@ -101,7 +105,8 @@ var moduleArgs = map[string]string{
 		"distro": "rke2",
 		"kubeconfig": "/tmp/kubeconfig",
 		"log_level": "debug",
-		"log_format": "json"
+		"log_format": "json",
+		"log_file": true
 	}`,
 }
 
