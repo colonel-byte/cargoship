@@ -50,6 +50,25 @@ func TestCargoshipCreate(t *testing.T) {
 		require.Contains(t, string(distroYAML), "name: e2e-minimal")
 	})
 
+	t.Run("creates a package with overridden tag", func(t *testing.T) {
+		outDir := t.TempDir()
+		_, _, err := e2e.Cargoship(t, "create", minimalDistroDir, "-o", outDir, "--tag", "0.0.1-custom-tag")
+		require.NoError(t, err)
+
+		matches, err := filepath.Glob(filepath.Join(outDir, "*.tar.zst"))
+		require.NoError(t, err)
+		require.Len(t, matches, 1)
+		require.Equal(t, "cargoship-e2e-minimal-"+e2e.Arch+"-0.0.1-custom-tag.tar.zst", filepath.Base(matches[0]))
+
+		extractDir := t.TempDir()
+		require.NoError(t, archive.Decompress(t.Context(), matches[0], extractDir, archive.DecompressOpts{
+			Files: []string{"distro.yaml"},
+		}))
+		distroYAML, err := os.ReadFile(filepath.Join(extractDir, "distro.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, string(distroYAML), "version: 0.0.1-custom-tag")
+	})
+
 	t.Run("reproducible builds are byte-identical", func(t *testing.T) {
 		first := t.TempDir()
 		second := t.TempDir()

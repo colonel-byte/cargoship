@@ -76,6 +76,8 @@ const (
 	CmdInstallUpdateKubeConfig = "Whether to write the admin creds for this cluster to a kubeconfig file at all."
 	// CmdPackageCreateFlagOutput create flag output
 	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
+	// CmdPackageCreateFlagTag create flag tag
+	CmdPackageCreateFlagTag = "The tag or version to override the package metadata version with"
 	// CmdPackageFlagConcurrency deploy flag concurrency
 	CmdPackageFlagConcurrency = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	// CmdPackageFlagRetries publish flag retry

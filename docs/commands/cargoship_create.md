@@ -41,6 +41,7 @@ $ cargoship create ./distro-defs --reproducible
       --reproducible                Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
       --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string     Password to the private key used for signing packages
+      --tag string                  The tag or version to override the package metadata version with
       --tmpdir string               Specify the temporary directory to use for intermediate files (default "/tmp")
       --zarf-cache string           Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```

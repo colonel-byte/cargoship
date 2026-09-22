@@ -51,6 +51,8 @@ type CreateOptions struct {
 	// when set. Empty values are a no-op -- see DistroLayout.SignPackage.
 	SigningKeyPath     string
 	SigningKeyPassword string
+	// Tag overrides the package metadata version.
+	Tag string
 	types.RemoteOptions
 }
 
@@ -64,6 +66,9 @@ func Create(ctx context.Context, distroPath string, output string, opts CreateOp
 	distro, err := load.DistroDefinition(ctx, distroPath, loadOpts)
 	if err != nil {
 		return "", err
+	}
+	if opts.Tag != "" {
+		distro.Metadata.Version = opts.Tag
 	}
 
 	disPath, err := layout.ResolveDistroPath(distroPath)

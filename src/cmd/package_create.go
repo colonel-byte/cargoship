@@ -53,6 +53,7 @@ type packageCreateOptions struct {
 	reproducible       bool
 	signingKeyPath     string
 	signingKeyPassword string
+	tag                string
 }
 
 func newPackageCreateCommand() *cobra.Command {
@@ -87,6 +88,7 @@ func newPackageCreateCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackageCreateFlagSigningKeyPassword)
+	cmd.Flags().StringVar(&o.tag, PackageTag, "", lang.CmdPackageCreateFlagTag)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
@@ -160,6 +162,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		Reproducible:       o.reproducible,
 		SigningKeyPath:     o.signingKeyPath,
 		SigningKeyPassword: o.signingKeyPassword,
+		Tag:                o.tag,
 	}
 
 	disPath, err := distro.Create(ctx, basePath, o.output, opt)
