@@ -34,3 +34,8 @@ cilium:
       # Serve the interface over IPv6. Off because the frontend fails to start when
       # it binds IPv6 on a node that has none.
       ipv6: false
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
