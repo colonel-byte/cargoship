@@ -1,6 +1,6 @@
 namespace: colonel_byte
 name: cargoship
-version: 0.26.1
+version: 0.26.2
 readme: README.md
 authors:
   - Allen Conlon <software@conlon.dev>
@@ -16,10 +16,9 @@ tags:
   - airgap
   - cluster
 repository: https://github.com/colonel-byte/cargoship
-documentation: >-
-  https://colonel-byte.github.io/cargoship/ansible/collection.html
+documentation: https://colonel-byte.github.io/cargoship/ansible/collection.html
 homepage: https://github.com/colonel-byte/cargoship
 issues: https://github.com/colonel-byte/cargoship/issues
 build_ignore:
   - '*.tar.gz'
-  - 'AGENTS.md'
+  - AGENTS.md

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.26.2](https://github.com/colonel-byte/cargoship/compare/v0.26.1...v0.26.2) (2026-09-23)
+
+
+### Documentation
+
+* **ansible:** declare the module and role interfaces in the collection ([#481](https://github.com/colonel-byte/cargoship/issues/481)) ([c4437fe](https://github.com/colonel-byte/cargoship/commit/c4437fe9c8ebb7f1dcb8830253c0367140ee2449))
+* **ansible:** generate the collection reference pages ([#482](https://github.com/colonel-byte/cargoship/issues/482)) ([d53be49](https://github.com/colonel-byte/cargoship/commit/d53be499eef7737ff9ebacc3cb4811182c988866))
+* fix drift for new features ([#479](https://github.com/colonel-byte/cargoship/issues/479)) ([060493c](https://github.com/colonel-byte/cargoship/commit/060493c9572ad1a87db4892f631c93103079a3b2))
+* generate the book's front matter from README.md and SECURITY.md ([#484](https://github.com/colonel-byte/cargoship/issues/484)) ([6e77cef](https://github.com/colonel-byte/cargoship/commit/6e77cef3ba1eb931ea7499c56d2a09d1a82a8787))
+
+
+### CI/CD
+
+* **actions:** address some issues with score-card ([#485](https://github.com/colonel-byte/cargoship/issues/485)) ([c57d82d](https://github.com/colonel-byte/cargoship/commit/c57d82d34b6a6bad8ea949791532c2657a6bf793))
+* **deps:** add workflow for adding back osv-scanned toml ([#480](https://github.com/colonel-byte/cargoship/issues/480)) ([8286777](https://github.com/colonel-byte/cargoship/commit/8286777566c25592539629ba7e13a2cae27cdf20))
+* modify Cosign verification steps in .goreleaser.yaml ([#477](https://github.com/colonel-byte/cargoship/issues/477)) ([efbf83d](https://github.com/colonel-byte/cargoship/commit/efbf83d388c0830b12376092ce57c46b9db12cf1))
+
 ## [0.26.1](https://github.com/colonel-byte/cargoship/compare/v0.26.0...v0.26.1) (2026-09-22)
 
 
