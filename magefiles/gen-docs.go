@@ -194,7 +194,7 @@ func generateSummary() error {
 			// item no number and places it ahead of every numbered chapter, which is where
 			// the front page and the security policy belong.
 			title: "Index",
-			extra: "[readme](index.md)\n\n[security](security.md)",
+			extra: "[readme](index.md)\n[security](security.md)",
 		},
 		{
 			title:  "Guides",
@@ -209,13 +209,13 @@ func generateSummary() error {
 			indent: true,
 		},
 		{
+			title: "Ansible",
+			lines: ansibleSummary,
+		},
+		{
 			title:  "Phases",
 			regex:  `(.+)\.md`,
 			folder: "phases",
-		},
-		{
-			title: "Ansible",
-			lines: ansibleSummary,
 		},
 		{
 			title:  "Development",
