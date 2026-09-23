@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e295fdf.js";
+            window.path_to_searchindex_js = "../searchindex-cd461bb2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1d5b95bd.js"></script>
@@ -216,15 +216,18 @@ mage                      # same as `mage build:all` -- it is the default target
 <ul>
 <li><code>Clean</code> — Deletes local compilation artifacts and cleans the <code>build/</code> directory.</li>
 <li><code>Tidy</code> — Runs <code>go mod tidy</code> inside the workspace.</li>
-<li><code>Vendor</code> — Runs <code>Tidy</code>, then <code>go mod vendor</code>. Use this rather than a bare <code>go mod vendor</code> after changing dependencies, so <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> are updated in one step.</li>
+<li><code>Vendor</code> — Runs <code>Tidy</code>, then <code>go mod vendor</code>, then <code>WriteOSVOverrides</code>. Use this rather than a bare <code>go mod vendor</code> after changing dependencies: <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> are updated in one step, and the generated <code>osv-scanner.toml</code> files that <code>go mod vendor</code> deletes are put back.</li>
+<li><code>WriteOSVOverrides</code> — Writes those generated <code>osv-scanner.toml</code> files into <code>vendor/</code>. <code>Vendor</code> calls it, so run it on its own only to repair a tree that was vendored some other way — usually a Dependabot branch, since Dependabot re-vendors without going through mage.</li>
+<li><code>VerifyVendor</code> — Checks that every declared override is present and still matches the generator, and that <code>vendor/</code> holds no non-Go dependency manifest without an entry covering it. <code>.github/workflows/check-go-mod.yaml</code> runs it on every pull request. <a href="../agent/choice-osv-vendor-overrides.html">Why vendor/ carries four generated osv-scanner.toml files</a> explains what the files are for.</li>
 <li><code>Digest</code> — Resolves <code>docker.io/library/alpine:latest</code> through the host’s Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.</li>
 <li><code>DnfPins</code> — Queries the AlmaLinux 10 RPM repository metadata over HTTP to find the newest available versions of packages installed in the container images (<code>ansible-core</code>, <code>bash-completion</code>, and <code>shadow-utils</code>), then updates <code>containers/ansible/Dockerfile</code> and <code>containers/ubi/Dockerfile</code> (via <code>ARG</code> defaults) and <code>.goreleaser.yaml</code> (via <code>build_args</code>).</li>
 </ul>
 <pre><code class="language-sh">mage dev:clean                  # rm the build/ artifacts
 mage dev:tidy                   # go mod tidy
-mage dev:vendor                 # go mod tidy, then go mod vendor
+mage dev:vendor                 # go mod tidy, go mod vendor, then rewrite the osv overrides
 mage dev:digest                 # print the alpine:latest digest, to check registry auth works
-mage dev:writeOSVOverrides      # writes every override into vendor/.
+mage dev:writeOSVOverrides      # write every osv-scanner.toml override into vendor/
+mage dev:verifyVendor           # check those overrides are present, current, and complete
 mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf package pins
 </code></pre>
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
