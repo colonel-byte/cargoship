@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6035a989.js";
+            window.path_to_searchindex_js = "searchindex-3e295fdf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1d5b95bd.js"></script>
@@ -250,6 +250,18 @@ cargoship create ./distro-defs -o ./build/
 <p>Stop, uninstall, and completely purge the Kubernetes distro and its state from the target hosts:</p>
 <pre><code class="language-bash">cargoship reset --config ./cargoship-config.yaml --distro rke2
 </code></pre>
+<h3 id="6-generate-an-inventory-from-ansible"><a class="header" href="#6-generate-an-inventory-from-ansible">6. Generate an Inventory from Ansible</a></h3>
+<p>Translate an Ansible inventory you already maintain into a cargoship cluster inventory, taking each host’s role from its Ansible groups:</p>
+<pre><code class="language-bash">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
+</code></pre>
+<hr>
+<h2 id="ansible-integration"><a class="header" href="#ansible-integration">Ansible Integration</a></h2>
+<p>Cargoship also ships as an Ansible collection, <code>colonel_byte.cargoship</code>, so the workflows above run as ordinary playbook tasks: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_reset</code>, <code>cargoship_kube_config</code>, and <code>cargoship_engine_config_sync</code>, plus a <code>cluster</code> role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.</p>
+<ul>
+<li><a href="docs/guides/ansible-module.html">Running Cargoship as an Ansible Module</a> — the modules, their parameters, check mode, and what <code>changed</code> means.</li>
+<li><a href="docs/guides/ansible-inv.html">Generating an Inventory from Ansible</a> — the group and host-variable translation, usable with or without the modules.</li>
+<li><a href="docs/guides/ansible-container.html">The Ansible Container Image</a> — <code>ghcr.io/colonel-byte/cargoship-ansible</code>, which carries the binary and the collection together.</li>
+</ul>
 <hr>
 <h2 id="configuration-and-schemas"><a class="header" href="#configuration-and-schemas">Configuration and Schemas</a></h2>
 <p>Cargoship relies on strongly-typed YAML definitions to govern its operations:</p>
@@ -1055,6 +1067,15 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </code></pre>
 <p><code>command</code> is the command line the module ran, so a failure can be reproduced by hand on the management node. <code>inventoryPath</code> is the generated document. A run that fails leaves it on disk whether or not you named the path, because it is the first thing to look at when a failure reads like the wrong cluster; a run that succeeds removes it unless the path was yours.</p>
 <p>Cargoship’s own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.</p>
+<h2 id="live-progress"><a class="header" href="#live-progress">Live progress</a></h2>
+<p>A fleet-wide <code>apply</code> is one Ansible task that runs for several minutes, so the modules report where they are while they run. The action plugin prints one line per phase transition:</p>
+<pre><code>[cargoship] Phase 1/12: Connect to hosts [running]
+[cargoship] Phase 1/12: Connect to hosts [done]
+[cargoship] Phase 2/12: Detect host operating systems [running]
+</code></pre>
+<p>The counter is the phase’s position in the list for that module, so <code>docs/phases/apply.md</code> and its siblings read as the same sequence. A phase that fails is printed <code>[failed]</code>, ahead of the failure Ansible itself reports.</p>
+<p>None of this needs configuring. The action plugin creates a temporary status file, points the module at it, polls it while the module runs, and removes it afterwards whether the run succeeded or not.</p>
+<p>Driving the binary directly gets the same progress through the same mechanism: set <code>CARGOSHIP_STATUS_FILE</code> to a path and cargoship rewrites that file as each phase starts and finishes, holding one JSON object – <code>phase</code>, <code>index</code>, <code>total</code>, <code>status</code> (<code>running</code>, <code>completed</code>, or <code>failed</code>), <code>timestamp</code>, and <code>error</code> on a failure. The file is replaced atomically on every transition, so a reader either sees the previous phase or the current one, never a half-written object. It is removed when the run finishes. Leave the variable unset and cargoship writes nothing.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="host-firewall-configuration-guide"><a class="header" href="#host-firewall-configuration-guide">Host Firewall Configuration Guide</a></h1>
 <p>Cargoship configures the firewall on every node that runs one. It picks the firewall per node, from the node’s operating system and from what is running on it, so a single inventory can target a mix of Enterprise Linux hosts running firewalld, Debian or Ubuntu hosts running ufw, and hosts that manage nftables directly. Firewall management is opt-in: it only runs when <code>cargoship apply</code> is given the <code>--firewall</code> flag.</p>
@@ -1273,6 +1294,7 @@ metadata:
 <p>Narrowing does not invalidate the entries for the architectures left behind. A definition declaring <code>amd64</code> and <code>arm64</code> narrowed to <code>amd64</code> still carries its <code>arm64</code> file entries, and those entries are still checked against the full declared list.</p>
 <h2 id="publishing"><a class="header" href="#publishing">Publishing</a></h2>
 <p>A package is one set of blobs whatever the architecture count, so it publishes as a single manifest. The image index tagged at the package version is what makes it resolvable per architecture: it lists that one manifest digest once for every architecture the package covers.</p>
+<p><code>--tag</code> names the tag instead. On <code>publish</code> it changes the OCI reference alone, leaving the package’s own <code>metadata.version</code> as built, which is what a promotion between registries wants: the same package published under <code>staging</code> and then under a release tag. On <code>create</code> it goes further and overrides <code>metadata.version</code> itself, so the package is built as that version and the index it publishes to is tagged accordingly. Both work per architecture the same way the version does, so an <code>amd64</code> and an <code>arm64</code> package given the same tag resolve under one index.</p>
 <pre><code>cargoship publish cargoship-rancher-k3s-multi-multi-1.36.4-k3s1.tar.zst oci://registry.example.com/distros
 </code></pre>
 <p>Ordinary platform resolution therefore works from either architecture, and every consumer lands on the same blobs. Publishing to a tag that already holds an index leaves the entries for architectures the package does not cover alone, so publishing an <code>amd64</code> package and then an <code>arm64</code> one of the same version leaves both resolvable under the one tag.</p>
@@ -1416,6 +1438,36 @@ spec:
 <li><strong>No <code>HelmChartConfig</code> is written for it.</strong> A package may configure a chart under <code>spec.config.engine.manifest</code> and still have it disabled by an inventory. Cargoship skips the manifest for a disabled chart rather than configuring something that will not be installed, and a file left over from an earlier run is removed the next time the node is synced.</li>
 <li><strong>Agents are unaffected.</strong> <code>disable</code> is a server-only key. It is dropped from an agent’s <code>config.yaml</code> along with every other controller-only key, and only controllers carry chart manifests in the first place.</li>
 </ul>
+<h2 id="pod-security-admission-levels"><a class="header" href="#pod-security-admission-levels">Pod Security Admission levels</a></h2>
+<p>Every example package writes a Pod Security admission configuration, and the level it enforces is a value rather than a packaging decision:</p>
+<pre><code class="language-yaml"># values.yaml, in the package
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
+</code></pre>
+<pre><code class="language-yaml"># distro.yaml, in the package
+spec:
+  values:
+    mappings:
+      - source: .podSecurity.defaults.enforce
+        target: .podSecurity.plugins[0].configuration.defaults.enforce
+      - source: .podSecurity.defaults.audit
+        target: .podSecurity.plugins[0].configuration.defaults.audit
+      - source: .podSecurity.defaults.warn
+        target: .podSecurity.plugins[0].configuration.defaults.warn
+</code></pre>
+<p>Each key takes one of <code>privileged</code>, <code>baseline</code>, or <code>restricted</code>, which the schema enforces, and all three default to <code>restricted</code>. A cluster that has to run a workload the restricted profile rejects can lower one of them without rebuilding:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    values:
+      podSecurity:
+        defaults:
+          enforce: baseline
+</code></pre>
+<p>The three are separate on purpose. <code>enforce</code> is the only one that rejects a pod; <code>audit</code> and <code>warn</code> record it and tell the client about it. Lowering <code>enforce</code> to <code>baseline</code> while leaving <code>audit</code> and <code>warn</code> at <code>restricted</code> runs the workload and still reports every pod that would not have passed, which is the shape to reach for while a workload is being brought up to the profile rather than exempted from it.</p>
+<p>Only the levels are values. The <code>-version</code> keys, the exemptions, and the plugin itself stay with the package: an exemption list is a property of what the package installs – <code>kube-system</code>, <code>rook-ceph</code>, and <code>zarf</code> are exempted because the charts in the package need it – and a cluster that edited it would be deciding for components it did not choose. Anything beyond the three levels is a package edit.</p>
 <h2 id="what-renders"><a class="header" href="#what-renders">What renders</a></h2>
 <p>Templating is deliberately not applied everywhere. Three surfaces render:</p>
 <ul>
@@ -1574,7 +1626,8 @@ cargoship apply &lt;package&gt; --config inventory.yaml --dry-run
 <p>That writes a <code>configs</code> entry keyed by <code>nexus.example.com</code> and no <code>mirrors</code> entry. An entry that carries neither a <code>proxy.url</code>, credentials, nor <code>tls</code> configures nothing, and <code>apply</code> rejects it by name rather than writing an empty entry. So does a <code>proxy</code> block with no <code>url</code> in it, and a registry listed twice, which would otherwise mean the second entry quietly replacing the first.</p>
 <p>The rest of the entry is checked the same way, when the inventory file is read and before <code>apply</code> connects to anything. <code>name</code> is the registry part of an image reference, so it carries no scheme and no repository path: <code>docker.io</code>, not <code>https://docker.io</code> and not <code>docker.io/library</code>. (<code>*</code> is the exception – engines read it as every registry.) <code>proxy.url</code> has to name a host and use <code>http</code> or <code>https</code>, and any credentials in it belong in <code>auth</code> instead. A <code>proxy.rewrite</code> pattern has to compile as a regular expression and rewrite to something, since the engine compiles it on the node, where failing means a failed pull rather than a rejected document. <code>user</code> and <code>pass</code> are a pair; half of one authenticates nothing and reaches you as a 401 from the registry rather than as the missing half it is.</p>
 <p>Several registries may share one mirror – a single Nexus proxying <code>docker.io</code>, <code>ghcr.io</code>, and <code>quay.io</code> under different paths is the usual shape – and cargoship writes one <code>configs</code> entry for the host they have in common. Those entries have to agree: if two registries resolve to the same host but ask for different credentials or different TLS settings, only one of them could survive into the file, so <code>apply</code> reports the conflict by name instead of picking one.</p>
-<p>Writing <code>pass: hunter2</code> in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an Ansible Vault-encrypted value in <code>user</code>, <code>pass</code>, <code>token</code>, or <code>tls.ca</code> – any field starting with <code>$ANSIBLE_VAULT</code> is decrypted automatically when the package is applied.</p>
+<p>Encrypted credentials are the exception. Both age and Ansible Vault salt each encryption, so encrypting one password twice produces two different blocks, and two entries carrying the same credential would read as a mismatch for as long as they are still ciphertext – which is the whole time this check runs, since it runs before anything is decrypted. So when every credential field both entries set is encrypted, and neither sets <code>token</code>, cargoship takes them as agreeing rather than reporting a conflict that exists only in the ciphertext. Everything else is compared as written: plaintext credentials that differ still conflict, differing TLS settings still conflict, and so does a <code>token</code> on either side, encrypted or not. A token is a whole credential by itself, so two of them cannot be assumed to be one credential encrypted twice.</p>
+<p>Writing <code>pass: hunter2</code> in plaintext works, but puts a real credential in the inventory file. Cargoship also accepts an encrypted value in <code>user</code>, <code>pass</code>, <code>token</code>, or <code>tls.ca</code>, in either of two formats: an Ansible Vault block starting with <code>$ANSIBLE_VAULT</code>, or an age block starting with <code>-----BEGIN AGE ENCRYPTED FILE-----</code>. The header tells them apart, so nothing has to be told which format a file uses, and a file part-way through a migration between them applies the same as one that is not. Either is decrypted automatically when the package is applied. The rest of this page uses Ansible Vault; see the <a href="#age-encryption">age guide</a> for the age format and its keys.</p>
 <h3 id="registry-tls"><a class="header" href="#registry-tls">Registry TLS</a></h3>
 <p>A registry serving a certificate the host does not already trust needs a <code>tls</code> block. It takes paths to files already on the host:</p>
 <pre><code class="language-yaml">spec:
@@ -3472,65 +3525,80 @@ $ cargoship version -o json
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="engine-config-sync-1"><a href="#engine-config-sync-1" class="header">engine-config-sync</a></h1>
 <h2 id="engine-config-sync-phases"><a class="header" href="#engine-config-sync-phases">engine-config-sync phases</a></h2>
+<p>With <code>--dry-run</code>, cargoship connects to every host and runs the preflight checks for real, then reports the phases it would have run instead of running them. Each phase below is labelled with what a dry run does with it. A phase is only run when it declares that it is safe to, so a phase added later is reported until someone says otherwise.</p>
+<p>The report is not a static list. Every phase still prepares itself and checks whether it has anything to do, and both only read, so work that is already done is filtered out against the live hosts. A phase that could not be assessed, because it reads state an earlier reported phase would have created, is reported as <code>unassessed</code>.</p>
+<p>A dry run takes no cluster lock, so it does not block a real run, and it can report state that a concurrent run is already changing. It does not need <code>--confirm</code>.</p>
 <ol>
 <li>Connect to hosts
 <ul>
 <li>Connects to a remote host via <code>github.com/k0sproject/rig</code></li>
+<li>Dry run: runs, reads only. Connects opens the SSH session to each host and does nothing else. A dry run needs it, because a preflight that never reached a host would report on a cluster it never looked at.</li>
 </ul>
 </li>
 <li>Detect host operating systems
 <ul>
 <li>Gathers information about the remote host, including: OS and OS version</li>
+<li>Dry run: runs, reads only. Reads <code>/etc/os-release</code> and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.</li>
 </ul>
 </li>
 <li>Acquire exclusive host lock
 <ul>
 <li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Gather host facts
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
+<li>Dry run: runs, reads only. Gather facts about each host by asks for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.</li>
 </ul>
 </li>
 <li>Validate hosts
 <ul>
 <li>Verifying that each node in the cluster has a unique name and private address, that its CPU architecture is one the package carries, and that its firewall rules are usable,</li>
+<li>Dry run: runs, reads only. Validate the hosts is the preflight itself: sudo, unique hostnames and addresses, host architecture, firewall rules and clock skew. A dry run that skipped it would check nothing.</li>
 </ul>
 </li>
 <li>Gathering facts about the distro installed
 <ul>
 <li>Gathers information relating to the specific distro being installed, including: if the distro is installed, and what version it is running</li>
+<li>Dry run: runs, reads only. Gather distro related facts reads the engine version already on each host. That is what tells an upgrade apart from an install, and what catches a downgrade before a real run starts one.</li>
 </ul>
 </li>
 <li>Sync Registry Config Controller
 <ul>
 <li>If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially. Chart values are written in place instead, since the engine reconciles them without a restart</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Sync Registry Config Worker
 <ul>
 <li>If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Updating kubeconfig file with the current cluster
 <ul>
 <li>If enabled, this will update the local kubeconfig with the admin creds for the current distro</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Labeling nodes with their profile group
 <ul>
 <li>If enabled, this checks each node’s <code>node-role.kubernetes.io/&lt;profile&gt;</code> label and adds it, set to “true”, when missing or set to anything else</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Release exclusive host lock
 <ul>
 <li>Deletes the lock file from each node, allowing other <code>cargoships</code> to run</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Disconnect from hosts
 <ul>
 <li>Deletes any lingering temp files and disconnects from the remote node</li>
+<li>Dry run: runs its own dry-run path</li>
 </ul>
 </li>
 </ol>
@@ -4931,7 +4999,7 @@ mage generate:updatePins            # refresh every line already pinned
 <p>Three decisions are worth recording:</p>
 <ul>
 <li><strong>Silence is not a claim of no change.</strong> A phase that does not implement the interface cannot make <code>changed</code> true, and is not counted as having changed nothing either. The overall signal is reported as <code>partial</code> and the silent phases are named in <code>cargoship.changedUndeclared</code>. Reporting <code>changed: false</code> while <code>KubeConfig</code> and <code>LabelNodes</code> have said nothing would be a claim cargoship cannot support; naming them lets an operator decide. The alternative considered was assuming no change from silence, which is how a correct-looking <code>changed: false</code> becomes a missed handler.</li>
-<li><strong>Phases filtered out by <code>ShouldRun</code> are still asked.</strong> <code>EngineConfigSyncHosts</code> writes the files the engine re-reads without a restart while <code>Prepare</code> is deciding which hosts have drifted, and then reports no hosts to sync. A run whose only change landed in chart manifests would otherwise read as a run in which nothing happened. <code>RunResult</code> therefore records a third disposition, <code>Skipped</code>, beside <code>Ran</code> and <code>Planned</code>.</li>
+<li><strong>Phases filtered out by <code>ShouldRun</code> are still asked.</strong> <code>EngineConfigSyncHosts</code> writes the files the engine re-reads without a restart while <code>Prepare</code> is deciding which hosts have drifted (except under a dry run, which reports the write instead – see the last paragraph below), and then reports no hosts to sync. A run whose only change landed in chart manifests would otherwise read as a run in which nothing happened. <code>RunResult</code> therefore records a third disposition, <code>Skipped</code>, beside <code>Ran</code> and <code>Planned</code>.</li>
 <li><strong>Under check mode, <code>changed</code> reads <code>Outstanding</code> rather than <code>Changed</code>.</strong> A dry run changes nothing, so the useful question is whether a real run would, and a phase only reaches <code>Planned</code> after its own <code>ShouldRun</code> found work against the live hosts. That matches what Ansible’s check mode means by <code>changed</code>.</li>
 </ul>
 <p>The result travels back on the context. The module mode runs cargoship by building an argument vector and calling the ordinary command through <code>src/cmd.ExecuteArgs</code>, which returns an error and nothing else. Threading a return value back through cobra, the action, and the manager would change five call sites to serve one caller, so <code>phase.WithResultSink</code> puts a sink on the context and <code>Manager.Run</code> publishes to it when one is there. A run that never reached its phases publishes nothing, which the module reports as <code>unknown</code> rather than as no change – the two are different, and conflating them is what makes a <code>changed: false</code> untrustworthy.</p>

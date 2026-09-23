@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6035a989.js";
+            window.path_to_searchindex_js = "../searchindex-3e295fdf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1d5b95bd.js"></script>
@@ -232,6 +232,7 @@ metadata:
 <p>Narrowing does not invalidate the entries for the architectures left behind. A definition declaring <code>amd64</code> and <code>arm64</code> narrowed to <code>amd64</code> still carries its <code>arm64</code> file entries, and those entries are still checked against the full declared list.</p>
 <h2 id="publishing"><a class="header" href="#publishing">Publishing</a></h2>
 <p>A package is one set of blobs whatever the architecture count, so it publishes as a single manifest. The image index tagged at the package version is what makes it resolvable per architecture: it lists that one manifest digest once for every architecture the package covers.</p>
+<p><code>--tag</code> names the tag instead. On <code>publish</code> it changes the OCI reference alone, leaving the package’s own <code>metadata.version</code> as built, which is what a promotion between registries wants: the same package published under <code>staging</code> and then under a release tag. On <code>create</code> it goes further and overrides <code>metadata.version</code> itself, so the package is built as that version and the index it publishes to is tagged accordingly. Both work per architecture the same way the version does, so an <code>amd64</code> and an <code>arm64</code> package given the same tag resolve under one index.</p>
 <pre><code>cargoship publish cargoship-rancher-k3s-multi-multi-1.36.4-k3s1.tar.zst oci://registry.example.com/distros
 </code></pre>
 <p>Ordinary platform resolution therefore works from either architecture, and every consumer lands on the same blobs. Publishing to a tag that already holds an index leaves the entries for architectures the package does not cover alone, so publishing an <code>amd64</code> package and then an <code>arm64</code> one of the same version leaves both resolvable under the one tag.</p>

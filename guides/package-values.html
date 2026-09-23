@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6035a989.js";
+            window.path_to_searchindex_js = "../searchindex-3e295fdf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1d5b95bd.js"></script>
@@ -313,6 +313,36 @@ spec:
 <li><strong>No <code>HelmChartConfig</code> is written for it.</strong> A package may configure a chart under <code>spec.config.engine.manifest</code> and still have it disabled by an inventory. Cargoship skips the manifest for a disabled chart rather than configuring something that will not be installed, and a file left over from an earlier run is removed the next time the node is synced.</li>
 <li><strong>Agents are unaffected.</strong> <code>disable</code> is a server-only key. It is dropped from an agent’s <code>config.yaml</code> along with every other controller-only key, and only controllers carry chart manifests in the first place.</li>
 </ul>
+<h2 id="pod-security-admission-levels"><a class="header" href="#pod-security-admission-levels">Pod Security Admission levels</a></h2>
+<p>Every example package writes a Pod Security admission configuration, and the level it enforces is a value rather than a packaging decision:</p>
+<pre><code class="language-yaml"># values.yaml, in the package
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
+</code></pre>
+<pre><code class="language-yaml"># distro.yaml, in the package
+spec:
+  values:
+    mappings:
+      - source: .podSecurity.defaults.enforce
+        target: .podSecurity.plugins[0].configuration.defaults.enforce
+      - source: .podSecurity.defaults.audit
+        target: .podSecurity.plugins[0].configuration.defaults.audit
+      - source: .podSecurity.defaults.warn
+        target: .podSecurity.plugins[0].configuration.defaults.warn
+</code></pre>
+<p>Each key takes one of <code>privileged</code>, <code>baseline</code>, or <code>restricted</code>, which the schema enforces, and all three default to <code>restricted</code>. A cluster that has to run a workload the restricted profile rejects can lower one of them without rebuilding:</p>
+<pre><code class="language-yaml">spec:
+  config:
+    values:
+      podSecurity:
+        defaults:
+          enforce: baseline
+</code></pre>
+<p>The three are separate on purpose. <code>enforce</code> is the only one that rejects a pod; <code>audit</code> and <code>warn</code> record it and tell the client about it. Lowering <code>enforce</code> to <code>baseline</code> while leaving <code>audit</code> and <code>warn</code> at <code>restricted</code> runs the workload and still reports every pod that would not have passed, which is the shape to reach for while a workload is being brought up to the profile rather than exempted from it.</p>
+<p>Only the levels are values. The <code>-version</code> keys, the exemptions, and the plugin itself stay with the package: an exemption list is a property of what the package installs – <code>kube-system</code>, <code>rook-ceph</code>, and <code>zarf</code> are exempted because the charts in the package need it – and a cluster that edited it would be deciding for components it did not choose. Anything beyond the three levels is a package edit.</p>
 <h2 id="what-renders"><a class="header" href="#what-renders">What renders</a></h2>
 <p>Templating is deliberately not applied everywhere. Three surfaces render:</p>
 <ul>

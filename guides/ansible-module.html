@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6035a989.js";
+            window.path_to_searchindex_js = "../searchindex-3e295fdf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1d5b95bd.js"></script>
@@ -417,6 +417,15 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 </code></pre>
 <p><code>command</code> is the command line the module ran, so a failure can be reproduced by hand on the management node. <code>inventoryPath</code> is the generated document. A run that fails leaves it on disk whether or not you named the path, because it is the first thing to look at when a failure reads like the wrong cluster; a run that succeeds removes it unless the path was yours.</p>
 <p>Cargoship’s own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.</p>
+<h2 id="live-progress"><a class="header" href="#live-progress">Live progress</a></h2>
+<p>A fleet-wide <code>apply</code> is one Ansible task that runs for several minutes, so the modules report where they are while they run. The action plugin prints one line per phase transition:</p>
+<pre><code>[cargoship] Phase 1/12: Connect to hosts [running]
+[cargoship] Phase 1/12: Connect to hosts [done]
+[cargoship] Phase 2/12: Detect host operating systems [running]
+</code></pre>
+<p>The counter is the phase’s position in the list for that module, so <code>docs/phases/apply.md</code> and its siblings read as the same sequence. A phase that fails is printed <code>[failed]</code>, ahead of the failure Ansible itself reports.</p>
+<p>None of this needs configuring. The action plugin creates a temporary status file, points the module at it, polls it while the module runs, and removes it afterwards whether the run succeeded or not.</p>
+<p>Driving the binary directly gets the same progress through the same mechanism: set <code>CARGOSHIP_STATUS_FILE</code> to a path and cargoship rewrites that file as each phase starts and finishes, holding one JSON object – <code>phase</code>, <code>index</code>, <code>total</code>, <code>status</code> (<code>running</code>, <code>completed</code>, or <code>failed</code>), <code>timestamp</code>, and <code>error</code> on a failure. The file is replaced atomically on every transition, so a reader either sees the previous phase or the current one, never a half-written object. It is removed when the run finishes. Leave the variable unset and cargoship writes nothing.</p>
 
                     </main>
 

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-6035a989.js";
+            window.path_to_searchindex_js = "../searchindex-3e295fdf.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1d5b95bd.js"></script>
@@ -238,7 +238,7 @@
 <p>Three decisions are worth recording:</p>
 <ul>
 <li><strong>Silence is not a claim of no change.</strong> A phase that does not implement the interface cannot make <code>changed</code> true, and is not counted as having changed nothing either. The overall signal is reported as <code>partial</code> and the silent phases are named in <code>cargoship.changedUndeclared</code>. Reporting <code>changed: false</code> while <code>KubeConfig</code> and <code>LabelNodes</code> have said nothing would be a claim cargoship cannot support; naming them lets an operator decide. The alternative considered was assuming no change from silence, which is how a correct-looking <code>changed: false</code> becomes a missed handler.</li>
-<li><strong>Phases filtered out by <code>ShouldRun</code> are still asked.</strong> <code>EngineConfigSyncHosts</code> writes the files the engine re-reads without a restart while <code>Prepare</code> is deciding which hosts have drifted, and then reports no hosts to sync. A run whose only change landed in chart manifests would otherwise read as a run in which nothing happened. <code>RunResult</code> therefore records a third disposition, <code>Skipped</code>, beside <code>Ran</code> and <code>Planned</code>.</li>
+<li><strong>Phases filtered out by <code>ShouldRun</code> are still asked.</strong> <code>EngineConfigSyncHosts</code> writes the files the engine re-reads without a restart while <code>Prepare</code> is deciding which hosts have drifted (except under a dry run, which reports the write instead – see the last paragraph below), and then reports no hosts to sync. A run whose only change landed in chart manifests would otherwise read as a run in which nothing happened. <code>RunResult</code> therefore records a third disposition, <code>Skipped</code>, beside <code>Ran</code> and <code>Planned</code>.</li>
 <li><strong>Under check mode, <code>changed</code> reads <code>Outstanding</code> rather than <code>Changed</code>.</strong> A dry run changes nothing, so the useful question is whether a real run would, and a phase only reaches <code>Planned</code> after its own <code>ShouldRun</code> found work against the live hosts. That matches what Ansible’s check mode means by <code>changed</code>.</li>
 </ul>
 <p>The result travels back on the context. The module mode runs cargoship by building an argument vector and calling the ordinary command through <code>src/cmd.ExecuteArgs</code>, which returns an error and nothing else. Threading a return value back through cobra, the action, and the manager would change five call sites to serve one caller, so <code>phase.WithResultSink</code> puts a sink on the context and <code>Manager.Run</code> publishes to it when one is there. A run that never reached its phases publishes nothing, which the module reports as <code>unknown</code> rather than as no change – the two are different, and conflating them is what makes a <code>changed: false</code> untrustworthy.</p>
