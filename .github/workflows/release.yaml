@@ -111,14 +111,25 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
 
       - name: Attest packages
+        id: attest-packages
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-checksums: ./dist/checksums.txt
 
       - name: Attest images
+        id: attest-images
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-checksums: ./dist/digest.txt
+
+      - name: Publish provenance with the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp "${{ steps.attest-packages.outputs.bundle-path }}" cargoship_packages.intoto.jsonl
+          cp "${{ steps.attest-images.outputs.bundle-path }}" cargoship_images.intoto.jsonl
+
+          gh release upload "${GITHUB_REF_NAME}" cargoship_packages.intoto.jsonl cargoship_images.intoto.jsonl --clobber
 
       - name: Remove package signing keys
         if: always()
