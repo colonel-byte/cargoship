@@ -2,6 +2,8 @@
 
 [readme](index.md)
 
+[security](security.md)
+
 -----------
 
 # Guides
