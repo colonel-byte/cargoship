@@ -1,6 +1,7 @@
 # Index
 
 [readme](index.md)
+[security](security.md)
 
 -----------
 
@@ -54,17 +55,6 @@
 
 -----------
 
-# Phases
-
-- [apply](phases/apply.md)
-- [engine-config-sync](phases/engine-config-sync.md)
-- [kube-config](phases/kube-config.md)
-- [prepare](phases/prepare.md)
-- [reset](phases/reset.md)
-
-
------------
-
 # Ansible
 
 - [collection](ansible/collection.md)
@@ -76,6 +66,17 @@
   - [reset](ansible/module_reset.md)
 - [roles](ansible/roles.md)
   - [cluster](ansible/role_cluster.md)
+
+
+-----------
+
+# Phases
+
+- [apply](phases/apply.md)
+- [engine-config-sync](phases/engine-config-sync.md)
+- [kube-config](phases/kube-config.md)
+- [prepare](phases/prepare.md)
+- [reset](phases/reset.md)
 
 
 -----------
