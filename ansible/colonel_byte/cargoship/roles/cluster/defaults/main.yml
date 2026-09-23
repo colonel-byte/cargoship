@@ -28,8 +28,8 @@ cargoship_age_identity_files: []
 # Whether to always write a full-verbosity debug log to a file, regardless of log level.
 cargoship_log_file: false
 
-# Everything else the chosen module takes, passed through verbatim. See docs/guides/ansible-module.md
-# for the parameters of each module.
+# Everything else the chosen module takes, passed through verbatim. See docs/ansible/modules.md for
+# the parameters of each module.
 cargoship_args: {}
 
 # The node cargoship runs on. It is the management node: the one the package and images were

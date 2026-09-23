@@ -2,7 +2,7 @@
 
 Cargoship runs inside a playbook as an Ansible module. The cargoship binary *is* the module: it is installed as a set of symlinks named `cargoship_<action>`, and a symlink's name selects the action. There is no separate module package and nothing to install on the managed nodes.
 
-The inventory a module takes is the one described in [Generating an Inventory from Ansible](ansible-inv.md) -- Ansible's resolved `groups` and `hostvars`, plus a `cluster` block -- and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, what each module takes, and what its result means.
+The inventory a module takes is the one described in [Generating an Inventory from Ansible](ansible-inv.md) -- Ansible's resolved `groups` and `hostvars`, plus a `cluster` block -- and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, how a task is written, and what its result means. The parameter reference for each module and for the `cluster` role is generated from the collection and lives in [the collection reference](../ansible/collection.md).
 
 Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Every task runs on one management node outside the cluster -- the node the package and images were staged onto -- and cargoship opens every SSH connection itself from there. See [choice-ansible-module](../agent/choice-ansible-module.md) for why the work is split that way.
 
@@ -54,103 +54,15 @@ The plugin forwards the four `ansible_*` connection variables listed in [Generat
 
 When defining `profiles` inside `cargoship_cluster` in YAML, note type constraints: `concurrency` (e.g. `"1"`, `"50%"`) and port definitions (`ports[].port`, e.g. `"6443"`) are unmarshaled as strings by the underlying schema. Quote numeric strings in YAML to prevent JSON numeric unmarshaling failures.
 
-## Parameters every module takes
+## Parameters
 
 `inventory` takes the document described in [Generating an Inventory from Ansible](ansible-inv.md), `groups` and `hostvars` included. Everything else maps onto a flag of the command the module runs.
 
-| Parameter        | Flag           | Notes                                                                       |
-| ---------------- | -------------- | --------------------------------------------------------------------------- |
-| `inventory`      |                | Required. The resolved Ansible inventory, plus `cluster`.                   |
-| `inventory_path` | `--config`     | Where to write the generated document. A private temporary file when unset. |
-| `log_level`      | `--log-level`  | Defaults to `debug` when the play runs with `-v`.                           |
-| `log_format`     | `--log-format` |                                                                             |
-| `log_file`       | `--log-file`   | Boolean. Always write full-verbosity debug log to a file on the host.       |
-| `age_recipient`  |                | List of public keys to encrypt registry credentials written to disk.        |
+The parameter reference lives with the modules rather than here, so that it cannot drift from what the binary accepts: [`cargoship_apply`](../ansible/module_apply.md), [`cargoship_prepare`](../ansible/module_prepare.md), [`cargoship_engine_config_sync`](../ansible/module_engine_config_sync.md), [`cargoship_reset`](../ansible/module_reset.md), and [`cargoship_kube_config`](../ansible/module_kube_config.md). Each page lists every parameter the module takes, its type, and the flag it renders. [Modules](../ansible/modules.md) is the index, and covers why the surfaces differ from one another.
+
+Of the five, `cargoship_engine_config_sync` is the most Ansible-shaped thing cargoship does: it converges configuration across a fleet that is already installed.
 
 A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why `label_nodes: false` and omitting `label_nodes` are different.
-
-The surfaces differ because the commands do. `cargoship prepare` reads no encrypted value, so it takes no `vault_password_file`; `cargoship reset` installs nothing, so it takes no package and no `values`. A parameter offered to the wrong module is an error naming it, rather than a flag quietly dropped.
-
-## `cargoship_apply`
-
-Installs or converges the whole cluster.
-
-| Parameter               | Flag                                             |
-| ----------------------- | ------------------------------------------------ |
-| `package`               | the positional argument. Required.               |
-| `concurrency`           | `--concurrency`                                  |
-| `work_concurrency`      | `--work-concurrency`                             |
-| `hosts`                 | `--hosts`                                        |
-| `firewall`              | `--firewall`                                     |
-| `fapolicyd`             | `--fapolicyd`                                    |
-| `label_nodes`           | `--label-nodes`                                  |
-| `allow_unmanaged_nodes` | `--allow-unmanaged-nodes`                        |
-| `update_kubeconfig`     | `--update-kubeconfig`                            |
-| `kubeconfig`            | `--kubeconfig`                                   |
-| `values`                | `--values`. A list of files.                     |
-| `timeout`               | `--timeout`                                      |
-| `vault_password_file`   | `--vault-password-file`                          |
-| `age_identity_file`     | `--age-identity-file`. A list of files.          |
-| `public_key`            | `--key`                                          |
-| `verify`                | `--verify`. `never`, `if-possible`, or `always`. |
-
-## `cargoship_prepare`
-
-Stages a package onto the fleet and readies the hosts. Takes no key material.
-
-| Parameter | Flag |
-| ------------------ | ---------------------------------- |
-| `package`          | the positional argument. Required. |
-| `concurrency`      | `--concurrency`                    |
-| `work_concurrency` | `--work-concurrency`               |
-| `hosts`            | `--hosts`                          |
-| `firewall`         | `--firewall`                       |
-| `fapolicyd`        | `--fapolicyd`                      |
-| `values`           | `--values`. A list of files.       |
-| `timeout`          | `--timeout`                        |
-| `public_key`       | `--key`                            |
-| `verify`           | `--verify`                         |
-
-## `cargoship_engine_config_sync`
-
-Converges engine configuration across the fleet, which is the most Ansible-shaped thing cargoship does. It does not update the hosts themselves, so it takes none of the three host switches.
-
-| Parameter | Flag |
-| --------------------- | --------------------------------------- |
-| `package`             | the positional argument. Required.      |
-| `concurrency`         | `--concurrency`                         |
-| `work_concurrency`    | `--work-concurrency`                    |
-| `label_nodes`         | `--label-nodes`                         |
-| `update_kubeconfig`   | `--update-kubeconfig`                   |
-| `kubeconfig`          | `--kubeconfig`                          |
-| `values`              | `--values`. A list of files.            |
-| `timeout`             | `--timeout`                             |
-| `vault_password_file` | `--vault-password-file`                 |
-| `age_identity_file`   | `--age-identity-file`. A list of files. |
-| `public_key`          | `--key`                                 |
-| `verify`              | `--verify`                              |
-
-## `cargoship_reset`
-
-Removes the cluster from the fleet. There is no package: the distro to remove is named directly.
-
-| Parameter          | Flag                         |
-| ------------------ | ---------------------------- |
-| `distro`           | `--distro`. `k3s` or `rke2`. |
-| `concurrency`      | `--concurrency`              |
-| `work_concurrency` | `--work-concurrency`         |
-| `hosts`            | `--hosts`                    |
-| `firewall`         | `--firewall`                 |
-| `fapolicyd`        | `--fapolicyd`                |
-
-## `cargoship_kube_config`
-
-Fetches the cluster kubeconfig onto the management node. It is the one module that changes the node the play runs on rather than the fleet.
-
-| Parameter    | Flag                         |
-| ------------ | ---------------------------- |
-| `distro`     | `--distro`. `k3s` or `rke2`. |
-| `kubeconfig` | `--kubeconfig`               |
 
 ## Signature verification
 
@@ -179,20 +91,7 @@ The role is the shorter way to write the same task. It picks the module from `ca
       timeout: 45m
 ```
 
-| Variable                       | Default     | Meaning                                                                      |
-| ------------------------------ | ----------- | ---------------------------------------------------------------------------- |
-| `cargoship_action`             | `apply`     | Which module to run. One of the five.                                        |
-| `cargoship_package`            | unset       | The package. Required for `apply`, `prepare`, and `engine_config_sync`.      |
-| `cargoship_cluster`            | `{}`        | The `cluster` block: name, load balancer, profiles, registries, values.      |
-| `cargoship_role_groups`        | `{}`        | The group mapping, when your groups are not named `controller` and `worker`. |
-| `cargoship_inventory_path`     | unset       | Where to write the generated document.                                       |
-| `cargoship_age_recipients`     | `[]`        | Public keys to encrypt registry credentials on disk in generated inventory.  |
-| `cargoship_age_identity_files` | `[]`        | Identity files/SSH private keys to decrypt registry credentials at apply.    |
-| `cargoship_log_file`           | `false`     | Always write full-verbosity debug log to a file on the host (`--log-file`).  |
-| `cargoship_args`               | `{}`        | Everything else, passed to the module as-is.                                 |
-| `cargoship_delegate_to`        | `localhost` | The management node.                                                         |
-| `cargoship_no_log`             | `true`      | Suppress task parameter logging. Set false for local debugging.              |
-| `cargoship_show_result`        | `false`     | Print `cargoship_result.cargoship` after the run.                            |
+Every variable the role takes, with its default, is on [role_cluster](../ansible/role_cluster.md). Anything the role does not name a variable for goes in `cargoship_args`, which is passed to the chosen module verbatim.
 
 Every task in the role carries `run_once: true`. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It defaults `cargoship_no_log: true` to protect decrypted credentials and fleet inventories from terminal and CI logs, which is why `cargoship_show_result` exists: the debug task prints cargoship's sanitized report without exposing secrets.
 

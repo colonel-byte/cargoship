@@ -74,8 +74,8 @@
           values:
             cluster_domain: bubbles.test.com
 
-        # Everything else the module takes, passed through as-is. See docs/guides/ansible-module.md
-        # for the parameter list of each of the five modules.
+        # Everything else the module takes, passed through as-is. See docs/ansible/module_apply.md
+        # for the parameter list, or docs/ansible/modules.md for the other four.
         cargoship_args:
           vault_password_file: /srv/staging/vault-pass
           timeout: 45m

@@ -17,7 +17,7 @@ tags:
   - cluster
 repository: https://github.com/colonel-byte/cargoship
 documentation: >-
-  https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible-module.md
+  https://colonel-byte.github.io/cargoship/ansible/collection.html
 homepage: https://github.com/colonel-byte/cargoship
 issues: https://github.com/colonel-byte/cargoship/issues
 build_ignore:
