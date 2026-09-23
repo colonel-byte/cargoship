@@ -296,6 +296,8 @@ release:
 
     Release archives and container images are signed with [Cosign](https://docs.sigstore.dev/cosign/).
 
+    Find the public key at [`cosign.pub`](https://raw.githubusercontent.com/colonel-byte/cargoship/refs/tags/{{ .Tag }}/cosign.pub
+
     Verify a binary archive:
 
     ```console
@@ -305,10 +307,9 @@ release:
       cargoship_Linux_x86_64.tar.gz
     ```
 
-    The immutable image digests are listed in [`digest.txt`](./digest.txt). Verify the published image using its digest:
-
+    Verify a image tag:
     ```console
     cosign verify \
       --key cosign.pub \
-      ghcr.io/colonel-byte/cargoship@sha256:<digest-from-digest.txt>
+      ghcr.io/colonel-byte/cargoship:{{ .Tag }}
     ```
