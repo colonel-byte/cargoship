@@ -191,6 +191,47 @@ Two other things follow from disabling a chart:
 - **No `HelmChartConfig` is written for it.** A package may configure a chart under `spec.config.engine.manifest` and still have it disabled by an inventory. Cargoship skips the manifest for a disabled chart rather than configuring something that will not be installed, and a file left over from an earlier run is removed the next time the node is synced.
 - **Agents are unaffected.** `disable` is a server-only key. It is dropped from an agent's `config.yaml` along with every other controller-only key, and only controllers carry chart manifests in the first place.
 
+## Pod Security Admission levels
+
+Every example package writes a Pod Security admission configuration, and the level it enforces is a value rather than a packaging decision:
+
+```yaml
+# values.yaml, in the package
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted
+```
+
+```yaml
+# distro.yaml, in the package
+spec:
+  values:
+    mappings:
+      - source: .podSecurity.defaults.enforce
+        target: .podSecurity.plugins[0].configuration.defaults.enforce
+      - source: .podSecurity.defaults.audit
+        target: .podSecurity.plugins[0].configuration.defaults.audit
+      - source: .podSecurity.defaults.warn
+        target: .podSecurity.plugins[0].configuration.defaults.warn
+```
+
+Each key takes one of `privileged`, `baseline`, or `restricted`, which the schema enforces, and all three default to `restricted`. A cluster that has to run a workload the restricted profile rejects can lower one of them without rebuilding:
+
+```yaml
+spec:
+  config:
+    values:
+      podSecurity:
+        defaults:
+          enforce: baseline
+```
+
+The three are separate on purpose. `enforce` is the only one that rejects a pod; `audit` and `warn` record it and tell the client about it. Lowering `enforce` to `baseline` while leaving `audit` and `warn` at `restricted` runs the workload and still reports every pod that would not have passed, which is the shape to reach for while a workload is being brought up to the profile rather than exempted from it.
+
+Only the levels are values. The `-version` keys, the exemptions, and the plugin itself stay with the package: an exemption list is a property of what the package installs -- `kube-system`, `rook-ceph`, and `zarf` are exempted because the charts in the package need it -- and a cluster that edited it would be deciding for components it did not choose. Anything beyond the three levels is a package edit.
+
 ## What renders
 
 Templating is deliberately not applied everywhere. Three surfaces render:
