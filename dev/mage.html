@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9363f126.js";
+            window.path_to_searchindex_js = "../searchindex-87c36b86.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1d5b95bd.js"></script>
+        <script src="../toc-112dfdd7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -244,7 +244,7 @@ mage test:ansibleRequirements # check the Galaxy pins run on the declared ansibl
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
 <ul>
 <li>
-<p><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</p>
+<p><code>Document</code> — Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, renders the Ansible collection’s module and role reference pages from the action plugins’ <code>DOCUMENTATION</code> blocks and the roles’ <code>meta/argument_specs.yml</code>, and formats the mdBook <code>docs/SUMMARY.md</code> structure.</p>
 </li>
 <li>
 <p><code>Schema</code> — Generates YAML-compatible JSON schemas in <code>schema/</code> from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.</p>
@@ -281,7 +281,7 @@ mage test:ansibleRequirements # check the Galaxy pins run on the declared ansibl
 <p>The controller range in <code>meta/runtime.yml</code> is the single input, and it is a range rather than a floor (<code>"&gt;=2.16.0,&lt;2.17.0"</code>) because a floor alone does not say which ansible-core the pins are resolved for. It tracks whatever <code>dnf install ansible-core</code> resolves to on the base image in <code>containers/ansible/Dockerfile</code>; bumping that image means editing the line and re-running this target. A <code>requires_ansible</code> that does not parse as a PEP 440 specifier, or that is unbounded on either side, fails the target rather than being skipped — ansible-core itself swallows that case and downgrades it to a warning in playbook output.</p>
 </li>
 </ul>
-<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, and docs/SUMMARY.md
+<pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, docs/ansible, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
 
 mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
@@ -340,6 +340,8 @@ mage generate:examples
 <tr><td style="text-align: left"><code>build/cargoship_*</code></td><td style="text-align: left">Compiled release binaries</td><td style="text-align: left"><code>Build.All</code></td></tr>
 <tr><td style="text-align: left"><code>docs/commands/*</code></td><td style="text-align: left">Auto-generated CLI documentation</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/ansible/module_*.md</code></td><td style="text-align: left">Auto-generated Ansible module reference, from the action plugins</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/ansible/role_*.md</code></td><td style="text-align: left">Auto-generated Ansible role reference, from each role’s <code>meta/argument_specs.yml</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>schema/*.json</code></td><td style="text-align: left">JSON schemas for YAML validations</td><td style="text-align: left"><code>Generate.Schema</code></td></tr>
 <tr><td style="text-align: left"><code>src/pkg/engineconfig/gen/*</code></td><td style="text-align: left">Typed engine <code>config.yaml</code> structs per distro/version</td><td style="text-align: left"><code>Generate.EngineConfig</code></td></tr>

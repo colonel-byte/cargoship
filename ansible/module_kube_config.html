@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>choice-ansible-collection-pins</title>
+        <title>kube_config</title>
 
 
         <!-- Custom HTML head -->
@@ -148,7 +148,7 @@
                         <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/agent/choice-ansible-collection-pins.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/ansible/module_kube_config.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -182,43 +182,62 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="why-the-galaxy-collection-pins-are-resolved-by-a-mage-target-and-not-a-dependency-bot"><a class="header" href="#why-the-galaxy-collection-pins-are-resolved-by-a-mage-target-and-not-a-dependency-bot">Why the Galaxy collection pins are resolved by a mage target and not a dependency bot</a></h1>
-<p><code>ansible/colonel_byte/cargoship/requirements.yml</code> pins the Galaxy collections the collection’s role installs. Those pins have a constraint no other dependency in this repository has: every version must run on the ansible-core the controller actually has, which is 2.16.16 – what <code>dnf install ansible-core</code> resolves to on the <code>almalinux/10-base</code> image in <code>containers/ansible/Dockerfile</code>, and what a management node inside an airlock runs.</p>
-<p>Collections move past that regularly. <code>community.general</code> 13.4.0 declares <code>requires_ansible: "&gt;=2.18.0"</code>; the newest release usable on 2.16 is 11.4.9, two majors behind. A bot that bumps to latest would pin a collection that cannot load.</p>
-<h2 id="renovate-cannot-do-it-and-the-reason-is-not-going-to-be-worked-around"><a class="header" href="#renovate-cannot-do-it-and-the-reason-is-not-going-to-be-worked-around">Renovate cannot do it, and the reason is not going to be worked around</a></h2>
-<p>Renovate was the obvious candidate: it has an <code>ansible-galaxy</code> manager that reads this exact file, which Dependabot does not. It still does not work here.</p>
+                        <!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config">cargoship_kube_config</a></h2>
+<p>Fetch the cluster kubeconfig onto the management node.</p>
+<p>Write it as <code>colonel_byte.cargoship.cargoship_kube_config</code>. It runs on the management node; nothing is installed on the fleet.</p>
+<p>Runs <code>cargoship kube-config</code> against the fleet described by an Ansible inventory.</p>
+<p>It is the one module that changes the node the play runs on rather than the fleet.</p>
+<p><code>cargoship kube-config</code> has no dry run, so under <code>--check</code> the module reports <code>skipped: true</code> and runs nothing at all.</p>
+<h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Flag</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>inventory</code></td><td><code>dict</code></td><td>yes</td><td>None</td><td>The resolved Ansible inventory the module translates into a ZarfCluster document: <code>groups</code>, <code>hostvars</code>, and a <code>cluster</code> block. The action plugin fills <code>groups</code> and <code>hostvars</code> in from the play, so a task normally sets only <code>cluster</code>. Renders no flag of its own. The translated document is passed to the command as <code>--config</code>.</td></tr>
+<tr><td><code>parameters</code></td><td><code>dict</code></td><td>no</td><td>None</td><td>Further module parameters, merged into the ones given directly. It is how the <code>cluster</code> role passes a caller-supplied set without templating a whole task’s arguments. A parameter given both directly and inside <code>parameters</code> is an error naming it. The action plugin consumes this key; the module never sees it.</td></tr>
+<tr><td><code>distro</code></td><td><code>str</code></td><td>no</td><td><code>--distro</code></td><td>The distro the cluster runs. One of <code>k3s</code>, <code>rke2</code>.</td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>str</code></td><td>no</td><td><code>--kubeconfig</code></td><td>The kubeconfig to read or write.</td></tr>
+<tr><td><code>inventory_path</code></td><td><code>str</code></td><td>no</td><td><code>--config</code></td><td>Where to write the generated ZarfCluster document. A private temporary file when unset, removed after a run that succeeded. A run that fails leaves the document on disk either way, because it is the first thing to look at when a failure reads like the wrong cluster.</td></tr>
+<tr><td><code>age_recipient</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Age public keys used to encrypt registry credentials written into the generated inventory document. Consumed while that document is written, so it renders no flag.</td></tr>
+<tr><td><code>age_recipients_file</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Files holding age public keys, read for the same purpose as <code>age_recipient</code>.</td></tr>
+<tr><td><code>log_level</code></td><td><code>str</code></td><td>no</td><td><code>--log-level</code></td><td>Cargoship’s log level. Defaults to <code>debug</code> when the play runs with <code>-v</code>.</td></tr>
+<tr><td><code>log_format</code></td><td><code>str</code></td><td>no</td><td><code>--log-format</code></td><td>Cargoship’s log format.</td></tr>
+<tr><td><code>log_file</code></td><td><code>bool</code></td><td>no</td><td><code>--log-file</code></td><td>Whether to always write a full-verbosity debug log to a file on the management node, regardless of log level.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="notes"><a class="header" href="#notes">Notes</a></h3>
 <ul>
-<li><code>constraintsFiltering: strict</code>, the mechanism for dropping releases whose declared language support does not match the repository’s, covers <code>crate</code>, <code>go</code>, <code>jenkins-plugins</code>, <code>npm</code>, <code>packagist</code>, <code>pub</code>, <code>pypi</code> and <code>rubygems</code>. <code>galaxy-collection</code> is not among them.</li>
-<li>Even where filtering is enabled, it needs the datasource to report a constraint per release. Renovate’s <code>galaxy-collection</code> datasource reads <code>created_at</code> and <code>repository</code> out of the Galaxy v3 response and never maps <code>requires_ansible</code> onto <code>release.constraints</code>. There is nothing to filter on.</li>
+<li>Set <code>run_once: true</code> and <code>delegate_to</code> on the task. Cargoship converges the whole fleet in a single run, so a play over the fleet’s own inventory would otherwise converge it once per host.</li>
+<li>Set <code>no_log: true</code> on the task. A binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</li>
+<li>A parameter left unset renders no flag, so whatever the cargoship configuration file sets still applies. That is why <code>label_nodes: false</code> and omitting <code>label_nodes</code> differ.</li>
 </ul>
-<p>So Renovate’s manager would bump this file blind. Hand-maintained <code>allowedVersions</code> ceilings in <code>packageRules</code> were the alternative – <code>community.general</code> capped at <code>&lt;12</code>, and so on – and were rejected: the ceiling is a second copy of a fact Galaxy already publishes, it goes stale silently when a collection raises its floor inside a major, and being wrong looks exactly like being right until a playbook fails on a node.</p>
-<h2 id="galaxy-publishes-the-data-on-the-endpoint-renovate-already-calls"><a class="header" href="#galaxy-publishes-the-data-on-the-endpoint-renovate-already-calls">Galaxy publishes the data, on the endpoint Renovate already calls</a></h2>
-<pre><code>GET /api/v3/plugin/ansible/content/published/collections/index/{namespace}/{name}/versions/
--&gt; data[].requires_ansible
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<pre><code class="language-yaml">- name: Fetch the cluster kubeconfig
+  colonel_byte.cargoship.cargoship_kube_config:
+    distro: rke2
+    kubeconfig: /srv/staging/bubbles.kubeconfig
+    inventory:
+      cluster:
+        name: bubbles
+        loadbalancer: bubbles-kc.test.com
+  delegate_to: localhost
+  run_once: true
+  no_log: true
 </code></pre>
-<p>Every published version carries its specifier. Resolving the pin correctly is then a filter and a max, which is <code>magefiles/ansible-requirements.go</code>, driven by two targets:</p>
-<ul>
-<li><code>mage generate:ansibleRequirements</code> pins each collection to the newest release whose <code>requires_ansible</code> admits the whole controller range, and names the newest release alongside it when the two differ, so a held-back pin reads as held back rather than current.</li>
-<li><code>mage test:ansibleRequirements</code> checks only the pinned versions and fails when one does not admit that range. <code>.github/workflows/check-ansible-requirements.yaml</code> runs it on every pull request.</li>
-</ul>
-<p>The split is deliberate. A gate that asserted the pins were the <em>newest</em> would fail an unrelated pull request whenever an upstream collection shipped that morning, which trains people to ignore it. The gate asserts the pins are <em>usable</em>; moving them forward is a deliberate run of the generator.</p>
-<p>This is the same shape as <code>Generate.UpdatePins</code> in <code>magefiles/gen-engine-update-pins.go</code>, which resolves upstream k3s and rke2 tags into <code>thirdparty-src/pins.json</code>. Both exist because a version this repository pins has a correctness condition attached that a generic bot has no way to evaluate.</p>
-<h2 id="metaruntimeyml-is-the-one-place-the-controller-range-is-written-down"><a class="header" href="#metaruntimeyml-is-the-one-place-the-controller-range-is-written-down"><code>meta/runtime.yml</code> is the one place the controller range is written down</a></h2>
-<p><code>requires_ansible</code> in the collection’s <code>meta/runtime.yml</code> is both the collection’s declared support and the resolver’s input. It is a range rather than a floor – <code>"&gt;=2.16.0,&lt;2.17.0"</code> – because a floor alone does not say which ansible-core the pins are resolved for, and a second copy of that number somewhere else would be a thing to keep in step.</p>
-<p>It had been <code>"2.16.16"</code>, which is not a PEP 440 specifier at all. <code>SpecifierSet</code> raises on a bare version, and ansible-core catches that raise in <code>plugins/loader.py</code> and downgrades it to <code>Error parsing collection metadata requires_ansible value</code>, so the declared floor enforced nothing and said so only in playbook output nobody reads. <code>controllerRange</code> therefore treats an unparseable or half-bounded <code>requires_ansible</code> as an error rather than a skip, and <code>TestParseSpecifierRejectsABareVersion</code> pins that.</p>
-<p>The upper bound tracks the base image. Bumping <code>containers/ansible/Dockerfile</code> to a release whose <code>ansible-core</code> is newer means editing this line and re-running the generator; the pins will move forward on their own once it does.</p>
-<h2 id="revisit-trigger"><a class="header" href="#revisit-trigger">Revisit trigger</a></h2>
-<p>Renovate adding <code>galaxy-collection</code> to <code>constraintsFiltering</code> and surfacing <code>requires_ansible</code> as a release constraint. At that point the manager plus <code>constraints.ansible</code> would do what these two targets do, with PRs for free, and this can be deleted rather than rediscovered. Nothing else about the setup is worth keeping if that happens.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../agent/choice-age-encryption.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../ansible/module_engine_config_sync.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../agent/choice-ansible-module.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../ansible/module_prepare.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -228,11 +247,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../agent/choice-age-encryption.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../ansible/module_engine_config_sync.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../agent/choice-ansible-module.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../ansible/module_prepare.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
