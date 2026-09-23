@@ -119,9 +119,19 @@ The plugin also merges a `parameters` dict into the arguments. The role has a ca
 
 The role sets `run_once: true` on every task. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It defaults `no_log: "{{ cargoship_no_log | bool }}"` with `cargoship_no_log: true` by default: a template failure or misconfiguration avoids exposing decrypted credentials and host connection parameters in CI or production logs, while still allowing operators to set `cargoship_no_log: false` for local troubleshooting. The debug task showing cargoship's own report carries no parameters.
 
+## The interface is documented in the plugins, and nothing validates against it
+
+Each action plugin carries a `DOCUMENTATION` block naming every parameter the module takes, its type, and the flag it renders. `generateModuleDocs` in `magefiles/gen-docs.go` reads those blocks, `generateRoleDocs` reads each role's `meta/argument_specs.yml`, and together they write `docs/ansible/`. The reference pages therefore cannot be edited into disagreement with the modules, and a parameter added to the Go struct without being documented shows up as a missing row rather than as nothing at all.
+
+The blocks are inert. An action plugin's `DOCUMENTATION` exists for `ansible-doc`, which is not run against this collection, so nothing in Ansible reads them and no rule moved into Python: there is still no `argument_spec`, and argument validation is still hand-written in Go. What keeps them honest is `TestActionPluginDocsMatchModuleParams`, which reads the Python and fails when a documented parameter has no Go field, when a Go field is undocumented, or when a documented `cli_flag` is not the flag the argument vector actually renders.
+
+`cli_flag:` is ours rather than a standard Ansible documentation key. Stock `validate-modules` would flag it; it is not run either, and the parser that reads the key is the one in this repository.
+
+This narrows the first bullet below rather than reversing it. The interface is now documented in a structured place and published, which is part of what publishing the collection was going to require of it anyway. Adding an `argument_spec` that Ansible itself validates against would be the reversal, and is still declined for the reasons in "Why the binary, and not a Python wrapper around it" above: what it buys is `ansible-doc` and better-named argument errors, and a plugin that grows a rule has drifted from this decision.
+
 ## What is being accepted
 
-- No `ansible-doc` and no `ansible-test sanity`; the module's interface is documented only where we choose to document it.
+- No `ansible-doc` and no `ansible-test sanity`. The module's interface is documented where we choose to document it -- the `DOCUMENTATION` blocks and the pages generated from them -- and checked by a test of ours rather than by Ansible's own tooling.
 - Argument validation is hand-written, so a mistyped parameter fails less helpfully than `argument_spec` would manage.
 - Secret redaction relies on task-level `no_log` in the playbook rather than per-parameter declarations, which is coarser and has to be documented so operators actually set it.
 - Ansible sees one task per action, not per-host results. Per-host detail stays in cargoship's log stream on stderr.

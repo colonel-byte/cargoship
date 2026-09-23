@@ -1,0 +1,89 @@
+---
+# The role's documented interface. docs/ansible/role_cluster.md is generated from this file and
+# from defaults/main.yml, whose key order sets the row order of the generated table -- so the
+# options below are kept in that same order.
+argument_specs:
+  main:
+    short_description: Run a cargoship cluster action from an Ansible inventory
+    description:
+      - "Runs one cargoship action against the fleet described by the Ansible inventory, on the management node."
+      - "Every task carries C(run_once: true) and delegates to C(cargoship_delegate_to). Cargoship converges the whole fleet in a single run, so a play over the fleet's own inventory would otherwise converge it once per host."
+      - "Ansible supplies the inventory and nothing else. It does not connect to the fleet, and nothing is installed on the managed nodes."
+    options:
+      cargoship_action:
+        type: str
+        default: apply
+        choices:
+          - apply
+          - prepare
+          - engine_config_sync
+          - reset
+          - kube_config
+        description:
+          - "The cargoship action to run. It selects which module the role calls."
+      cargoship_package:
+        type: str
+        default: ""
+        description:
+          - "The distro package to install, stage, or synchronise from."
+          - "Required by every action except C(reset) and C(kube_config), which install nothing."
+      cargoship_cluster:
+        type: dict
+        default: {}
+        description:
+          - "The settings that belong to the cluster rather than to any host."
+          - "C(name) and C(loadbalancer) are required; C(profiles), C(registries), and C(values) are optional and take the shape the inventory schema documents."
+          - "See the inventory guide for the full document."
+      cargoship_role_groups:
+        type: dict
+        default: {}
+        description:
+          - "The mapping from a cargoship role onto the Ansible groups that carry it, for an inventory that does not name its groups C(controller) and C(worker)."
+          - "Left empty, the default mapping applies."
+      cargoship_inventory_path:
+        type: str
+        default: ""
+        description:
+          - "Where to write the generated ZarfCluster document."
+          - "A private temporary file when empty, removed after a run that succeeded."
+      cargoship_age_recipients:
+        type: list
+        elements: str
+        default: []
+        description:
+          - "Age public keys used to encrypt registry credentials written to disk in the generated inventory document."
+      cargoship_age_identity_files:
+        type: list
+        elements: str
+        default: []
+        description:
+          - "Paths to age identity files, or SSH private keys, used to decrypt registry credentials at apply time."
+      cargoship_log_file:
+        type: bool
+        default: false
+        description:
+          - "Whether to always write a full-verbosity debug log to a file, regardless of log level."
+      cargoship_args:
+        type: dict
+        default: {}
+        description:
+          - "Everything else the chosen module takes, passed through verbatim."
+          - "See the generated module pages for the parameters of each module."
+      cargoship_delegate_to:
+        type: str
+        default: localhost
+        description:
+          - "The node cargoship runs on. It is the management node: the one the package and images were staged onto, which reaches the fleet over SSH."
+          - "Set this to the inventory name of that node when it is not the Ansible controller."
+      cargoship_no_log:
+        type: bool
+        default: true
+        description:
+          - "Whether to suppress task parameter and result logging."
+          - "Defaults to C(true) to avoid exposing decrypted credentials and fleet inventories in logs. Set to C(false) when debugging locally."
+      cargoship_show_result:
+        type: bool
+        default: false
+        description:
+          - "Whether to print cargoship's own report on the run."
+          - "The task itself defaults to C(no_log: true), because a module's arguments name the fleet; the report holds file paths and phase names and no key material."
