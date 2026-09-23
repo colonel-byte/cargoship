@@ -223,7 +223,13 @@ func (Dev) VerifyVendor() error {
 	}
 
 	if len(problems) > 0 {
-		return fmt.Errorf("vendored osv-scanner overrides are out of date; run `mage dev:vendor`:\n  %s",
+		// The two kinds of problem want different things. A missing or drifted override is
+		// regenerated; an uncovered manifest cannot be, because nothing here knows which
+		// ecosystem it belongs to or how to describe it. Saying `mage dev:vendor` for both sent
+		// whoever hit the second one off to re-vendor a tree that was already correct.
+		return fmt.Errorf("vendored osv-scanner overrides are out of date:\n  %s\n"+
+			"a missing or mismatched override is rewritten by `mage dev:writeOSVOverrides`; "+
+			"an uncovered manifest needs an entry in osvOverrides in magefiles/vendor-osv.go first",
 			strings.Join(problems, "\n  "))
 	}
 	fmt.Printf("%d osv-scanner overrides present and current\n", len(osvOverrides))

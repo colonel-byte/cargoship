@@ -42,16 +42,19 @@ The `Dev` namespace aggregates convenience tasks for day-to-day development:
 
 *   `Clean` — Deletes local compilation artifacts and cleans the `build/` directory.
 *   `Tidy` — Runs `go mod tidy` inside the workspace.
-*   `Vendor` — Runs `Tidy`, then `go mod vendor`. Use this rather than a bare `go mod vendor` after changing dependencies, so `go.mod`, `go.sum`, and `vendor/` are updated in one step.
+*   `Vendor` — Runs `Tidy`, then `go mod vendor`, then `WriteOSVOverrides`. Use this rather than a bare `go mod vendor` after changing dependencies: `go.mod`, `go.sum`, and `vendor/` are updated in one step, and the generated `osv-scanner.toml` files that `go mod vendor` deletes are put back.
+*   `WriteOSVOverrides` — Writes those generated `osv-scanner.toml` files into `vendor/`. `Vendor` calls it, so run it on its own only to repair a tree that was vendored some other way — usually a Dependabot branch, since Dependabot re-vendors without going through mage.
+*   `VerifyVendor` — Checks that every declared override is present and still matches the generator, and that `vendor/` holds no non-Go dependency manifest without an entry covering it. `.github/workflows/check-go-mod.yaml` runs it on every pull request. [Why vendor/ carries four generated osv-scanner.toml files](../agent/choice-osv-vendor-overrides.md) explains what the files are for.
 *   `Digest` — Resolves `docker.io/library/alpine:latest` through the host's Docker credentials and prints its digest. This is a connectivity and auth smoke test, not part of a build.
 *   `DnfPins` — Queries the AlmaLinux 10 RPM repository metadata over HTTP to find the newest available versions of packages installed in the container images (`ansible-core`, `bash-completion`, and `shadow-utils`), then updates `containers/ansible/Dockerfile` and `containers/ubi/Dockerfile` (via `ARG` defaults) and `.goreleaser.yaml` (via `build_args`).
 
 ```sh
 mage dev:clean                  # rm the build/ artifacts
 mage dev:tidy                   # go mod tidy
-mage dev:vendor                 # go mod tidy, then go mod vendor
+mage dev:vendor                 # go mod tidy, go mod vendor, then rewrite the osv overrides
 mage dev:digest                 # print the alpine:latest digest, to check registry auth works
-mage dev:writeOSVOverrides      # writes every override into vendor/.
+mage dev:writeOSVOverrides      # write every osv-scanner.toml override into vendor/
+mage dev:verifyVendor           # check those overrides are present, current, and complete
 mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf package pins
 ```
 
