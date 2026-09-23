@@ -22,3 +22,4 @@ homepage: https://github.com/colonel-byte/cargoship
 issues: https://github.com/colonel-byte/cargoship/issues
 build_ignore:
   - '*.tar.gz'
+  - 'AGENTS.md'
