@@ -4,6 +4,19 @@ Install and converge air-gapped Kubernetes clusters with [cargoship](https://git
 
 Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Every task in this collection runs on one management node outside the cluster -- the node the distro package and images were staged onto -- and cargoship opens every SSH connection itself from there.
 
+## Invocation Patterns: Role vs Direct Modules
+
+This collection offers two ways to run Cargoship actions: the `cluster` role (recommended) and calling the modules directly.
+
+| Style                                                            | When to use                                                     | Key characteristics                                                                                                                                                                       |
+| ---------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`include_role: colonel_byte.cargoship.cluster`** (Recommended) | Standard playbooks converging clusters from an inventory        | High-level ergonomic wrapper. Automatically handles `run_once: true`, `delegate_to: localhost`, credential protection with `no_log: true`, and automatic inventory assembling/projection. |
+| **`colonel_byte.cargoship.cargoship_<action>`**                  | Custom automation pipelines, scripts, or fine-grained workflows | Low-level execution primitives. You must explicitly set `delegate_to`, `run_once: true`, `no_log: true`, and provide the `inventory` parameter.                                           |
+
+### Why `include_role` is the default choice
+
+Cargoship is designed to converge an entire fleet concurrently in a single execution. In a standard play run against `hosts: all`, calling a module directly without `run_once: true` would trigger a full cluster convergence once per host in the fleet. The `cluster` role applies `run_once: true`, ensures tasks delegate to the management node, masks sensitive parameters in logs, and maps the action dynamically via `cargoship_action`.
+
 ## Modules
 
 | Module                         | Command                        |
@@ -41,4 +54,4 @@ For any other installation route, see [plugins/modules/README.md](plugins/module
 
 ## Documentation
 
-The full parameter reference and what `changed` means here are in the cargoship [Ansible module guide](https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible-module.md). The host variable mapping and the group-to-role rules are in the [Ansible inventory guide](https://github.com/colonel-byte/cargoship/blob/main/docs/guides/ansible-inv.md).
+The full parameter reference is in the [collection reference](https://colonel-byte.github.io/cargoship/ansible/collection.html), which carries a page per module and per role. What `changed` means, and how the collection is installed from a tarball, are in the [Ansible module guide](https://colonel-byte.github.io/cargoship/guides/ansible-module.html). The host variable mapping and the group-to-role rules are in the [Ansible inventory guide](https://colonel-byte.github.io/cargoship/guides/ansible-inv.html).

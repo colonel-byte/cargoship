@@ -65,6 +65,21 @@
 
 -----------
 
+# Ansible
+
+- [collection](ansible/collection.md)
+- [modules](ansible/modules.md)
+  - [apply](ansible/module_apply.md)
+  - [engine_config_sync](ansible/module_engine_config_sync.md)
+  - [kube_config](ansible/module_kube_config.md)
+  - [prepare](ansible/module_prepare.md)
+  - [reset](ansible/module_reset.md)
+- [roles](ansible/roles.md)
+  - [cluster](ansible/role_cluster.md)
+
+
+-----------
+
 # Development
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->

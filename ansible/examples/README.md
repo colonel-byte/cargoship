@@ -4,7 +4,7 @@ Working inventories and playbooks for the `colonel_byte.cargoship` collection. E
 
 These files are outside the collection, so they are not installed with it. Copy what you need. The one playbook that does ship is `playbooks/example.yml` inside the collection itself.
 
-The full reference is in two guides: every module parameter and what `changed` means in the [Ansible module guide](../../docs/guides/ansible-module.md), the host variable mapping and the group-to-role rules in the [Ansible inventory guide](../../docs/guides/ansible-inv.md). This directory is the part that is easier to read as a file than as a table.
+Every module parameter is in the [collection reference](../../docs/ansible/collection.md), a page per module and per role, generated from the collection itself. What `changed` means and how the collection is installed are in the [Ansible module guide](../../docs/guides/ansible-module.md); the host variable mapping and the group-to-role rules are in the [Ansible inventory guide](../../docs/guides/ansible-inv.md). This directory is the part that is easier to read as a file than as a table.
 
 ## Inventories
 

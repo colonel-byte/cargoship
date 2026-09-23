@@ -147,6 +147,7 @@ Mage handles tasks including local compilation, e2e test execution, schema updat
 *   `build/cargoship_*` (Release binaries)
 *   `docs/commands/*` (Cobra command references)
 *   `docs/phases/*` (Orchestration phase explanations)
+*   `docs/ansible/module_*.md` and `docs/ansible/role_*.md` (Ansible collection reference)
 *   `docs/SUMMARY.md` (mdBook layout manifest)
 *   `schema/*.json` (YAML validations)
 
