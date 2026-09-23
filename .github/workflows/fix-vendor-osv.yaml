@@ -1,0 +1,103 @@
+---
+name: Fix vendored osv-scanner overrides
+
+# Dependabot re-runs `go mod vendor` for every gomod update. That deletes and recreates
+# vendor/, which takes the four generated osv-scanner.toml files with it, and check-go-mod's
+# dev:verifyVendor step then fails a pull request nobody can fix without a manual commit. See
+# PRs #464 and #465, where that commit was made by hand. This job makes it instead.
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - vendor/**
+
+# pull_request_target runs against the base branch with a token that can write, so the job
+# below never builds or runs anything out of the pull request. It generates the overrides from
+# the base checkout and copies the results across. Anything else would hand a write token to
+# whatever a freshly bumped dependency happens to ship.
+permissions:
+  contents: read
+
+concurrency:
+  group: fix-vendor-osv-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    # Dependabot branches live in this repository, so the app token can push to them. A fork
+    # cannot be pushed to at all, and no other actor re-vendors on a schedule.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_PLEASE_GITHUB_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_GITHUB_APP_SECRET }}
+
+      - name: Checkout base
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+
+      - name: Checkout pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: head
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: base/go.mod
+
+      # The overrides are rendered from osvOverrides in magefiles/vendor-osv.go, which no
+      # dependency bump touches, so the base branch produces exactly the bytes dev:verifyVendor
+      # wants. This also fixes an override edited by hand, not only a deleted one.
+      - name: Generate overrides
+        working-directory: base
+        run: go run ./magefiles/core dev:writeOSVOverrides
+
+      # A directory missing from the pull request means the bump dropped the module entirely.
+      # Recreating it would leave an override beside no manifest, so skip it and let
+      # dev:verifyVendor fail: that case needs the entry removed from magefiles/vendor-osv.go.
+      - name: Copy overrides into the pull request
+        working-directory: base
+        run: |
+          find vendor -name osv-scanner.toml -print0 |
+            while IFS= read -r -d '' file; do
+              if [ -d "../head/$(dirname "$file")" ]; then
+                install -D -m 0644 "$file" "../head/$file"
+              else
+                echo "skipping $file: $(dirname "$file") is not vendored by this pull request"
+              fi
+            done
+
+      - name: Commit and push
+        working-directory: head
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git add --all vendor
+          if git diff --cached --quiet; then
+            echo "overrides already current, nothing to push"
+            exit 0
+          fi
+
+          # The numeric id is what attributes the commit to the app. Without it the ruleset
+          # counts the change as unattributed and asks for an extra approval.
+          app_id="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${app_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+          git commit -s -m "ci: readd the osv scanner artifacts"
+          git push origin "HEAD:${HEAD_REF}"
