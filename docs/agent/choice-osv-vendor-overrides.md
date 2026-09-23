@@ -51,6 +51,16 @@ That is the entire reason the files are scattered through `vendor/` instead of s
 
 `Dev.VerifyVendor` also fails when a manifest an entry names has gone away, which is what turns a stale entry into a build error rather than a file quietly doing nothing.
 
+## Dependabot deletes them, so a workflow puts them back
+
+Generating the overrides from `Dev.Vendor` assumed the normal way of updating a dependency goes through mage. It does not. Dependabot re-runs `go mod vendor` itself for every gomod update, the recreated tree arrives without the four files, and `Dev.VerifyVendor` fails the pull request. #464 and #465 each needed a hand-written `ci: readd the osv scanner artifacts` commit on the Dependabot branch, and #463 exported `Dev.WriteOSVOverrides` so that commit could be made without a pointless re-vendor.
+
+`.github/workflows/fix-vendor-osv.yaml` makes that commit instead. It is the one workflow here that runs on `pull_request_target`, because it needs a token that can push to the pull request branch and Dependabot's `pull_request` runs are handed a read-only one. That trigger is also why the job never builds or runs anything out of the pull request: it checks the base branch and the pull request out side by side, runs `Dev.WriteOSVOverrides` against the base tree only, and copies the four results across. Running the pull request's own code would hand a write token to whatever a freshly bumped dependency happens to ship, which is the specific failure `pull_request_target` is known for. Generating from base is sound because the file contents come from `osvOverrides` in `magefiles/vendor-osv.go`, and a dependency bump never touches that file.
+
+The push uses the release-please GitHub App rather than `GITHUB_TOKEN`, which is not a preference: a push authenticated with `GITHUB_TOKEN` raises no `pull_request` event, so `validate-go-mod` would stay red on the superseded commit and the pull request would still not be mergeable.
+
+Two cases are deliberately left to fail. A bump that drops a module entirely leaves no directory to copy into, and a bump that pulls in a module carrying an uncovered lockfile trips the second half of `Dev.VerifyVendor`. Both need `osvOverrides` edited by a person, so the workflow skips them and lets the check report.
+
 ## What this does not do
 
 It does not raise the check to 10. What remains is Go, and Go is where an override would be wrong: an advisory against a module that is actually in the binary is the thing this check exists to report.

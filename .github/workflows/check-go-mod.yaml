@@ -30,6 +30,11 @@ jobs:
       # so this fails the pull request that dropped one, and fails on a new dependency that
       # brings in a lockfile nothing covers yet. See magefiles/vendor-osv.go.
       #
+      # Dependabot re-vendors on every gomod update, so it trips the first case every time.
+      # fix-vendor-osv.yaml pushes the regenerated files back onto its branch, which makes this
+      # step pass on the rerun. A dropped module or an uncovered lockfile is left to fail here,
+      # because both need an edit to osvOverrides that no workflow can make.
+      #
       # go run ./magefiles/core rather than mage: same targets, but it builds from vendor/ and
       # needs no mage binary on the runner. See docs/AGENTS.md.
       - name: Check vendored osv-scanner overrides
