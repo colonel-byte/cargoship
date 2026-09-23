@@ -240,3 +240,19 @@ Today the engine configuration sync phases report and the rest do not, so an ord
 `command` is the command line the module ran, so a failure can be reproduced by hand on the management node. `inventoryPath` is the generated document. A run that fails leaves it on disk whether or not you named the path, because it is the first thing to look at when a failure reads like the wrong cluster; a run that succeeds removes it unless the path was yours.
 
 Cargoship's own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.
+
+## Live progress
+
+A fleet-wide `apply` is one Ansible task that runs for several minutes, so the modules report where they are while they run. The action plugin prints one line per phase transition:
+
+```
+[cargoship] Phase 1/12: Connect to hosts [running]
+[cargoship] Phase 1/12: Connect to hosts [done]
+[cargoship] Phase 2/12: Detect host operating systems [running]
+```
+
+The counter is the phase's position in the list for that module, so `docs/phases/apply.md` and its siblings read as the same sequence. A phase that fails is printed `[failed]`, ahead of the failure Ansible itself reports.
+
+None of this needs configuring. The action plugin creates a temporary status file, points the module at it, polls it while the module runs, and removes it afterwards whether the run succeeded or not.
+
+Driving the binary directly gets the same progress through the same mechanism: set `CARGOSHIP_STATUS_FILE` to a path and cargoship rewrites that file as each phase starts and finishes, holding one JSON object -- `phase`, `index`, `total`, `status` (`running`, `completed`, or `failed`), `timestamp`, and `error` on a failure. The file is replaced atomically on every transition, so a reader either sees the previous phase or the current one, never a half-written object. It is removed when the run finishes. Leave the variable unset and cargoship writes nothing.

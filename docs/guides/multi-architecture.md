@@ -75,6 +75,8 @@ Narrowing does not invalidate the entries for the architectures left behind. A d
 
 A package is one set of blobs whatever the architecture count, so it publishes as a single manifest. The image index tagged at the package version is what makes it resolvable per architecture: it lists that one manifest digest once for every architecture the package covers.
 
+`--tag` names the tag instead. On `publish` it changes the OCI reference alone, leaving the package's own `metadata.version` as built, which is what a promotion between registries wants: the same package published under `staging` and then under a release tag. On `create` it goes further and overrides `metadata.version` itself, so the package is built as that version and the index it publishes to is tagged accordingly. Both work per architecture the same way the version does, so an `amd64` and an `arm64` package given the same tag resolve under one index.
+
 ```
 cargoship publish cargoship-rancher-k3s-multi-multi-1.36.4-k3s1.tar.zst oci://registry.example.com/distros
 ```

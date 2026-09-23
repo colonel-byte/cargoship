@@ -108,8 +108,9 @@ var (
 type phaseDoc struct {
 	name   string
 	phases phase.Phases
-	// dryRun adds the dry-run section and per-phase labels to the page. Only apply and reset
-	// register the --dry-run flag, so only their pages describe it.
+	// dryRun adds the dry-run section and per-phase labels to the page. Set it for every
+	// action that registers the --dry-run flag, so a page describes the flag exactly when
+	// the command accepts it.
 	dryRun bool
 }
 
@@ -147,6 +148,7 @@ func phaseDocs() []phaseDoc {
 			phases: action.NewEngineConfigSync(action.EngineConfigSyncOptions{
 				Manager: genDocsManager,
 			}).Phases,
+			dryRun: true,
 		},
 	}
 }

@@ -102,6 +102,24 @@ Stop, uninstall, and completely purge the Kubernetes distro and its state from t
 cargoship reset --config ./cargoship-config.yaml --distro rke2
 ```
 
+### 6. Generate an Inventory from Ansible
+
+Translate an Ansible inventory you already maintain into a cargoship cluster inventory, taking each host's role from its Ansible groups:
+
+```bash
+cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
+```
+
+---
+
+## Ansible Integration
+
+Cargoship also ships as an Ansible collection, `colonel_byte.cargoship`, so the workflows above run as ordinary playbook tasks: `cargoship_apply`, `cargoship_prepare`, `cargoship_reset`, `cargoship_kube_config`, and `cargoship_engine_config_sync`, plus a `cluster` role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.
+
+*   [Running Cargoship as an Ansible Module](./docs/guides/ansible-module.md) — the modules, their parameters, check mode, and what `changed` means.
+*   [Generating an Inventory from Ansible](./docs/guides/ansible-inv.md) — the group and host-variable translation, usable with or without the modules.
+*   [The Ansible Container Image](./docs/guides/ansible-container.md) — `ghcr.io/colonel-byte/cargoship-ansible`, which carries the binary and the collection together.
+
 ---
 
 ## Configuration and Schemas
