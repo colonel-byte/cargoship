@@ -1,6 +1,7 @@
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-11-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nao1215/markdown.svg)](https://pkg.go.dev/github.com/nao1215/markdown)
 [![MultiPlatformUnitTest](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/unit_test.yml)
 [![reviewdog](https://github.com/nao1215/markdown/actions/workflows/reviewdog.yml/badge.svg)](https://github.com/nao1215/markdown/actions/workflows/reviewdog.yml)
@@ -17,7 +18,7 @@ Complex code that increases the complexity of the library, such as generating ne
 
 ## Supported OS and go version
 - OS: Linux, macOS, Windows
-- Go: 1.23 or later
+- Go: 1.26 or later
 
 ## Example
 ### Basic usage
@@ -2366,6 +2367,89 @@ wardley-beta
     evolve Payment service 0.9
 ```
 
+## Write GitHub Actions job summaries
+
+Inside a GitHub Actions step, the file named by `GITHUB_STEP_SUMMARY` is rendered on the run's summary page as GitHub Flavored Markdown, mermaid diagrams included. Hand that file to `NewMarkdown` and a Go tool in CI reports with tables, alerts, and charts instead of log lines:
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+
+	"github.com/nao1215/markdown"
+	"github.com/nao1215/markdown/mermaid/piechart"
+)
+
+func main() {
+	// Inside a step, append to the summary the runner renders; outside one,
+	// write a local file.
+	path := os.Getenv("GITHUB_STEP_SUMMARY")
+	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
+	if path == "" {
+		path = "generated.md"
+		flags = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
+	}
+	f, err := os.OpenFile(path, flags, 0o600)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	coverage := piechart.NewPieChart(
+		io.Discard,
+		piechart.WithTitle("Coverage"),
+		piechart.WithShowData(true),
+	).
+		LabelAndIntValue("covered", 92).
+		LabelAndIntValue("uncovered", 8).
+		String()
+
+	err = markdown.NewMarkdown(f, markdown.WithBlockSpacing()).
+		H2("Test Results").
+		Table(markdown.TableSet{
+			Header: []string{"Package", "Passed", "Failed"},
+			Rows: [][]string{
+				{"api", "120", "0"},
+				{"core", "89", "2"},
+			},
+		}).
+		Warning("2 tests failed in core; see the failed step for logs.").
+		CodeBlocks(markdown.SyntaxHighlightMermaid, coverage).
+		Build()
+
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+Plain text output: [markdown is here](./doc/actions-summary/generated.md)
+````text
+## Test Results
+
+| Package | Passed | Failed |
+|---------|---------|---------|
+| api | 120 | 0 |
+| core | 89 | 2 |
+
+> [!WARNING]  
+> 2 tests failed in core; see the failed step for logs.
+
+```mermaid
+%%{init: {"pie": {"textPosition": 0.75}, "themeVariables": {"pieOuterStrokeWidth": "5px"}} }%%
+pie showData
+    title Coverage
+    "covered" : 92
+    "uncovered" : 8
+```
+````
+
 ## Creating an index for a directory full of markdown files
 The markdown package can create an index for Markdown files within the specified directory. This feature was added to generate indexes for Markdown documents produced by [nao1215/spectest](https://github.com/nao1215/spectest).
   
@@ -2442,16 +2526,18 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://debimate.jp/"><img src="https://avatars.githubusercontent.com/u/22737008?v=4?s=50" width="50px;" alt="CHIKAMATSU Naohiro"/><br /><sub><b>CHIKAMATSU Naohiro</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=nao1215" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/varmakarthik12"><img src="https://avatars.githubusercontent.com/u/17958166?v=4?s=50" width="50px;" alt="Karthik Sundari"/><br /><sub><b>Karthik Sundari</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=varmakarthik12" title="Code">💻</a> <a href="https://github.com/nao1215/markdown/issues?q=author%3Avarmakarthik12" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/varmakarthik12"><img src="https://avatars.githubusercontent.com/u/17958166?v=4?s=50" width="50px;" alt="Karthik Sundari"/><br /><sub><b>Karthik Sundari</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=varmakarthik12" title="Code">💻</a> <a href="#ideas-varmakarthik12" title="Ideas, Planning, & Feedback">🤔</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Avihuc"><img src="https://avatars.githubusercontent.com/u/32455410?v=4?s=50" width="50px;" alt="Avihuc"/><br /><sub><b>Avihuc</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=Avihuc" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://www.claranceliberi.me/"><img src="https://avatars.githubusercontent.com/u/60586899?v=4?s=50" width="50px;" alt="Clarance Liberiste Ntwari"/><br /><sub><b>Clarance Liberiste Ntwari</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=claranceliberi" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/amitaifrey"><img src="https://avatars.githubusercontent.com/u/7527632?v=4?s=50" width="50px;" alt="Amitai Frey"/><br /><sub><b>Amitai Frey</b></sub></a><br /><a href="https://github.com/nao1215/markdown/commits?author=amitaifrey" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/wI2L"><img src="https://avatars.githubusercontent.com/u/6519569?v=4?s=50" width="50px;" alt="William Poussier"/><br /><sub><b>William Poussier</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3AwI2L" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/wI2L"><img src="https://avatars.githubusercontent.com/u/6519569?v=4?s=50" width="50px;" alt="William Poussier"/><br /><sub><b>William Poussier</b></sub></a><br /><a href="#ideas-wI2L" title="Ideas, Planning, & Feedback">🤔</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://hibare.in/"><img src="https://avatars.githubusercontent.com/u/20609766?v=4?s=50" width="50px;" alt="Shubham Hibare"/><br /><sub><b>Shubham Hibare</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3Ahibare" title="Bug reports">🐛</a></td>
     </tr>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://barrymorrison.com/"><img src="https://avatars.githubusercontent.com/u/689591?v=4?s=50" width="50px;" alt="Barry Morrison"/><br /><sub><b>Barry Morrison</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3Aesacteksab" title="Ideas, Planning, & Feedback">🤔</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chaunsin"><img src="https://avatars.githubusercontent.com/u/33649884?v=4?s=50" width="50px;" alt="chaunsin"/><br /><sub><b>chaunsin</b></sub></a><br /><a href="https://github.com/nao1215/markdown/issues?q=author%3Achaunsin" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://barrymorrison.com/"><img src="https://avatars.githubusercontent.com/u/689591?v=4?s=50" width="50px;" alt="Barry Morrison"/><br /><sub><b>Barry Morrison</b></sub></a><br /><a href="#ideas-esacteksab" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chaunsin"><img src="https://avatars.githubusercontent.com/u/33649884?v=4?s=50" width="50px;" alt="chaunsin"/><br /><sub><b>chaunsin</b></sub></a><br /><a href="#ideas-chaunsin" title="Ideas, Planning, & Feedback">🤔</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://evilbitlabs.io"><img src="https://avatars.githubusercontent.com/u/64295955?v=4?s=50" width="50px;" alt="EvilBit Labs LLC"/><br /><sub><b>EvilBit Labs LLC</b></sub></a><br /><a href="#financial-EvilBit-Labs" title="Financial">💵</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://unclesp1d3r.github.io"><img src="https://avatars.githubusercontent.com/u/251112?v=4?s=50" width="50px;" alt="UncleSp1d3r"/><br /><sub><b>UncleSp1d3r</b></sub></a><br /><a href="#financial-unclesp1d3r" title="Financial">💵</a></td>
     </tr>
   </tbody>
   <tfoot>
