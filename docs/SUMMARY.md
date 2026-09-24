@@ -104,6 +104,7 @@
 - [choice-age-encryption](agent/choice-age-encryption.md)
 - [choice-ansible-collection-pins](agent/choice-ansible-collection-pins.md)
 - [choice-ansible-module](agent/choice-ansible-module.md)
+- [choice-binary-artifact-opa-wasm](agent/choice-binary-artifact-opa-wasm.md)
 - [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
 - [choice-image-index](agent/choice-image-index.md)
 - [choice-in-memory-oci-registry](agent/choice-in-memory-oci-registry.md)

@@ -1,0 +1,10 @@
+annotations:
+  - checks:
+      - binary-artifacts
+    reasons:
+      # vendor/github.com/open-policy-agent/opa/internal/compiler/wasm/opa/opa.wasm is
+      # go:embed'd by an OPA package reached from src/cmd -> zarf signing -> cosign verify
+      # -> cosign/pkg/cosign/rego -> opa/v1/rego, so it can't be vendored without it. The
+      # module (and this file with it) is checksum-pinned by go.sum. See
+      # docs/agent/choice-binary-artifact-opa-wasm.md for the full investigation.
+      - reason: remediated
