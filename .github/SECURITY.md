@@ -36,4 +36,4 @@ See [the GoReleaser reference](../docs/dev/goreleaser.md) for the full set of pu
 
 ## Security in CI
 
-Pull requests and `main` are scanned by CodeQL, dependencies are updated by Dependabot, and supply-chain practices are scored weekly by OpenSSF Scorecard. Results appear in the repository's Security tab.
+Pull requests and `main` are scanned by CodeQL, dependencies are updated by Dependabot, and supply-chain practices are scored weekly by OpenSSF Scorecard. Results appear in the repository's Security tab. `vendor/` costs points on a couple of Scorecard checks it can't avoid given the repository's need to build without network access; [choice-osv-vendor-overrides](../docs/agent/choice-osv-vendor-overrides.md) and [choice-binary-artifact-opa-wasm](../docs/agent/choice-binary-artifact-opa-wasm.md) explain why.

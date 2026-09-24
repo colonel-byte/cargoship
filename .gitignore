@@ -35,3 +35,6 @@ book/
 
 # Added for go mod vendor
 !/vendor/
+
+# Added for the commitlint workflow's pinned devDependencies
+.github/commitlint/node_modules/
