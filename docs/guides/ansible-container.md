@@ -1,11 +1,11 @@
 # Running the Collection from the Container
 
-The `-ansible` image is a management node in a container: `ansible-core` from the `alpine/ansible` base, plus the cargoship apk, which carries the binary and the `colonel_byte.cargoship` collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.
+The `cargoship-ansible` image is a management node in a container: `ansible-core` on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the `colonel_byte.cargoship` collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.
 
 For the modules themselves -- their parameters and what `changed` means -- see [ansible-module](ansible-module.md), and for the inventory they translate, [ansible-inv](ansible-inv.md). Nothing about either changes inside the container.
 
 ```sh
-podman pull ghcr.io/colonel-byte/cargoship:0.25.1-ansible
+podman pull ghcr.io/colonel-byte/cargoship-ansible:0.26.2
 ```
 
 The image has no `ENTRYPOINT`, because a run legitimately reaches for `ansible-playbook`, `ansible-inventory`, `ansible-galaxy` or `cargoship` itself; name the command you want. The collection is installed to `/usr/share/ansible/collections`, which is already on ansible-core's default collections path, so `ansible-playbook` resolves `colonel_byte.cargoship.cargoship_apply` with no configuration. `HOME` is `/home/nonroot`, the working directory is `/workspace`, and the process runs as UID and GID 65532.
@@ -42,7 +42,7 @@ podman run --rm \
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 
@@ -58,7 +58,7 @@ podman run --rm \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 
@@ -74,7 +74,7 @@ podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 
@@ -109,7 +109,7 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 

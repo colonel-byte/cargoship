@@ -25,6 +25,7 @@ The `Build` namespace is the default target and the build path for the Cargoship
 *   `Linuxamd64` / `Linuxarm64` — Compiles Linux binaries.
 *   `Macamd64` / `Macarm64` — Compiles macOS binaries.
 *   `All` — Compiles all release binaries into `build/`.
+*   `Examples` — Builds a package from every example definition using the cargoship binary on `PATH` (not a binary built here), exercising the same path a release user would take. Gigabytes per package and hours in total; one failure does not stop the run.
 
 ```sh
 mage build:binary         # build for this host's OS/arch
@@ -33,6 +34,7 @@ mage build:linuxarm64     # build build/cargoship_linux_arm64
 mage build:macamd64       # build build/cargoship_darwin_amd64
 mage build:macarm64       # build build/cargoship_darwin_arm64
 mage build:all            # build every release binary into build/
+mage build:examples       # build every example package with cargoship on PATH
 mage                      # same as `mage build:all` -- it is the default target
 ```
 
@@ -62,12 +64,22 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 
 The `Test` namespace hosts the integration and validation suites:
 
-*   `EndToEnd` — Builds Cargoship for the host, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.
+*   `EndToEnd` — Runs the whole e2e suite: both the cluster and non-cluster groups, including the example packages that pull ~1.5GB of engine artifacts and images. Needs Docker.
+*   `EndToEndNonCluster` — Runs the group that needs no cluster: the misc and package command groups. `-short` additionally skips the example packages, so this finishes in seconds. Mirrors the `e2e-noncluster` CI job.
+*   `EndToEndCluster` — Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.
+*   `EndToEndClusterStage` — Runs the same suite as `EndToEndCluster`, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.
+*   `CleanCluster` — Removes the containers a bootloose cluster left behind. `EndToEndCluster` does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.
+*   `Fuzz` — Replays the fuzz seed corpus (the `f.Add` values in each target plus anything committed under `src/fuzz/testdata/fuzz/<Target>/`). Calls the packages in process; needs no binary, cluster, or network. See [fuzz-tests](fuzz-tests.md).
 *   `AnsibleRequirements` — Checks every collection pinned in `ansible/colonel_byte/cargoship/requirements.yml` can run on the ansible-core declared in that collection's `meta/runtime.yml`. Asks Galaxy what each *pinned* version declares in `requires_ansible` and fails when that does not cover the whole controller range. Touches the network. `.github/workflows/check-ansible-requirements.yaml` runs it on every pull request.
 
 ```sh
-mage test:endToEnd            # build the binary, then run the e2e suite
-mage test:ansibleRequirements # check the Galaxy pins run on the declared ansible-core
+mage test:endToEnd              # build the binary, then run both e2e groups (needs Docker)
+mage test:endToEndNonCluster    # run the misc/package command suites, no cluster needed
+mage test:endToEndCluster       # run the install command suite against a bootloose cluster
+mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
+mage test:cleanCluster          # remove bootloose containers left behind by a killed run
+mage test:fuzz                  # replay the fuzz seed corpus
+mage test:ansibleRequirements   # check the Galaxy pins run on the declared ansible-core
 ```
 
 `Test.AnsibleRequirements` deliberately does not check the pins are the *newest* available — an upstream collection released that morning must not fail an unrelated pull request. Moving the pins forward is `Generate.AnsibleRequirements`, run on purpose.
