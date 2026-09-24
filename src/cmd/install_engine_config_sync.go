@@ -40,10 +40,11 @@ const (
 
 type installEngineConfigSyncOptions struct {
 	InstallCommon
-	workerCon         string
-	labelNodes        bool
-	updateKubeConfig  bool
-	vaultPasswordFile string
+	workerCon        string
+	labelNodes       bool
+	updateKubeConfig bool
+	kubeConfigPath   string
+	keyFlags
 }
 
 func newInstallEngineConfigSyncCommand() *cobra.Command {
@@ -64,10 +65,14 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().IntVarP(&o.concurrency, InstallEngineConfigSyncConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
 	cmd.Flags().StringVar(&o.config, InstallEngineConfigSyncConfig, "", lang.CmdInstallFlagConfig)
 	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().StringVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
+	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
+	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
+	addAgeFlags(cmd, &o.keyFlags)
 
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
@@ -87,13 +92,18 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 
 	cmd.MarkFlagRequired(InstallEngineConfigSyncConfig)
 
+	addBuildFlags(cmd)
+	addTimeoutFlag(cmd)
+
 	return cmd
 }
 
 func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	if !o.confirm {
+	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
+	// what would happen is what would push someone into running the real thing to find out.
+	if !o.confirm && !o.dryRun {
 		l.Warn("please include the --confirm argument")
 		return errors.New("pass confirm argument")
 	}
@@ -116,18 +126,28 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 	}
 	manager.SetTimout(d)
 
-	vaultPassword, err := clustercfg.ResolveVaultPassword(o.vaultPasswordFile)
+	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
+	// and demanding one would break every plaintext configuration that works today.
+	keyring, err := o.resolveKeyring(cmd)
 	if err != nil {
-		l.Warn("failed to resolve vault password", "err", err)
+		l.Warn("failed to resolve encryption keys", "err", err)
+		return err
+	}
+
+	// Nothing decrypts these until the engine configuration is written, which is well after every
+	// host has been connected to. Check them here, while stopping still costs nothing.
+	if err := clustercfg.VerifyRegistryAuth(manager.Config, keyring); err != nil {
+		l.Warn("failed to decrypt registry credentials", "err", err)
 		return err
 	}
 
 	engineConfigSyncOpts := action.EngineConfigSyncOptions{
 		Manager:          manager,
 		WorkerConcurrent: o.workerCon,
-		VaultPassword:    vaultPassword,
+		Keyring:          keyring,
 		LabelNodes:       o.labelNodes,
 		UpdateKubeConfig: o.updateKubeConfig,
+		KubeConfigPath:   o.kubeConfigPath,
 	}
 
 	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)

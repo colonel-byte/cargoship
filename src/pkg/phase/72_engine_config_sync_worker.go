@@ -51,8 +51,8 @@ func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfClu
 	candidates := p.manager.Config.Spec.Hosts.Workers()
 	var mu sync.Mutex
 	var matched cluster.ZarfHosts
-	if err := p.parallelDo(ctx, candidates, func(_ context.Context, h *cluster.ZarfHost) error {
-		if p.needsUpdate(h) {
+	if err := p.parallelDo(ctx, candidates, func(ctx context.Context, h *cluster.ZarfHost) error {
+		if p.needsUpdate(ctx, h) {
 			mu.Lock()
 			matched = append(matched, h)
 			mu.Unlock()
@@ -71,6 +71,10 @@ func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfClu
 
 // Run the phase
 func (p *EngineConfigSyncWorker) Run(ctx context.Context) error {
+	// ShouldRun only lets this phase reach Run when Prepare found hosts to sync, and the
+	// first thing done to each of them is a drain. Marking here rather than after a
+	// success is deliberate: a run that fails halfway has still changed the fleet.
+	p.markChanged()
 	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"syncing worker config",

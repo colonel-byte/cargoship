@@ -51,6 +51,13 @@ func main() {
 		}
 	}()
 
+	// The binary answers Ansible as a module when it is invoked under a name carrying the
+	// cargoship_ prefix. Everything else is the ordinary CLI. See the package documentation of
+	// src/internal/ansiblemod and docs/agent/choice-ansible-module.md.
+	if code, ok := cmd.AnsibleModule(ctx, os.Args); ok {
+		os.Exit(code)
+	}
+
 	if err := cmd.Execute(ctx); err != nil {
 		os.Exit(1)
 	}

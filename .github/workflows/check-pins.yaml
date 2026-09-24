@@ -1,0 +1,140 @@
+---
+name: Check dependency pins
+
+on:
+  schedule:
+    # Run at 06:00 UTC every 2 days
+    - cron: '0 6 */2 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-dnf-pins:
+    permissions:
+      contents: read
+      issues: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Run dev:dnfPins and check for diff
+        id: check
+        run: |
+          go run -mod=vendor ./magefiles/core dev:dnfPins
+          if ! git diff --quiet; then
+            echo "updates_needed=true" >> "$GITHUB_OUTPUT"
+            git diff > diff.patch
+          fi
+        env:
+          GOFLAGS: -mod=vendor
+
+      - name: Open or update issue
+        if: steps.check.outputs.updates_needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          marker='<!-- dnf-package-pins-update -->'
+          title="chore: update DNF package pins in containers and .goreleaser.yaml"
+
+          {
+            echo "$marker"
+            echo "Upstream package updates are available in AlmaLinux 10 repositories for container images."
+            echo
+            echo "### Proposed Changes"
+            echo
+            echo '```diff'
+            cat diff.patch
+            echo '```'
+            echo
+            echo "Run \`mage dev:dnfPins\` locally and commit the resulting changes to update the pins."
+          } > body.md
+
+          # Look for an existing open issue with the literal marker in the body.
+          issue_number=$(gh issue list \
+            --repo "$REPO" \
+            --state open \
+            --limit 100 \
+            --json number,body |
+            jq -r --arg marker "$marker" '
+              map(select(.body != null and (.body | contains($marker)))) |
+              .[0].number // empty
+            ')
+
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --repo "$REPO" --body-file body.md
+          else
+            gh issue create --repo "$REPO" --title "$title" --body-file body.md
+          fi
+
+  check-engine-pins:
+    permissions:
+      contents: read
+      issues: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Run generate:updatePins and check for diff
+        id: check
+        run: |
+          go run -mod=vendor ./magefiles/core generate:updatePins
+          if ! git diff --quiet thirdparty-src/pins.json; then
+            echo "updates_needed=true" >> "$GITHUB_OUTPUT"
+            git diff thirdparty-src/pins.json > diff.patch
+          fi
+        env:
+          GOFLAGS: -mod=vendor
+
+      - name: Open or update issue
+        if: steps.check.outputs.updates_needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          marker='<!-- engine-pins-update -->'
+          title="chore: update RKE2/k3s engine pins in thirdparty-src/pins.json"
+
+          {
+            echo "$marker"
+            echo "New upstream RKE2 / k3s releases are available for pinned minor versions."
+            echo
+            echo "### Proposed Changes"
+            echo
+            echo '```diff'
+            cat diff.patch
+            echo '```'
+            echo
+            echo "Run \`mage generate:updatePins\` locally, followed by \`mage generate:engineConfig\`, and commit the resulting changes."
+          } > body.md
+
+          # Look for an existing open issue with the literal marker in the body.
+          issue_number=$(gh issue list \
+            --repo "$REPO" \
+            --state open \
+            --limit 100 \
+            --json number,body |
+            jq -r --arg marker "$marker" '
+              map(select(.body != null and (.body | contains($marker)))) |
+              .[0].number // empty
+            ')
+
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --repo "$REPO" --body-file body.md
+          else
+            gh issue create --repo "$REPO" --title "$title" --body-file body.md
+          fi

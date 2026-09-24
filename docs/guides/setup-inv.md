@@ -16,6 +16,79 @@ metadata:
 
 The `.metadata.name` field sets the cluster name. Cargoship uses this to configure the context name in the resulting `kubeconfig` (e.g., `bubbles`).
 
+## Editor Support
+
+The `yaml-language-server` comment on the first line is what makes an editor complete and check the file as you write it. The URL above reads the schema from GitHub's default branch, which is convenient and wrong in two situations: an air-gapped machine cannot fetch it at all, and `yaml-language-server` says nothing when a fetch fails, so the file silently stops being checked; and a machine that can fetch it is checking against unreleased `main` rather than the release it is running.
+
+`cargoship schema` writes the schema out of the binary, so it is the schema that build validates against and it needs no network:
+
+```sh
+cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+```
+
+Then point the inventory at the local copy:
+
+```yaml
+---
+# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
+kind: ZarfCluster
+metadata:
+  name: bubbles
+```
+
+## Package Values
+
+The `.spec.config.values` section overrides the values the distro package was built with. It is the one part of an inventory whose vocabulary belongs to the package rather than to cargoship, so the schema above leaves it untyped -- and a hosted schema never could do better:
+
+```yaml
+spec:
+  config:
+    values:
+      addons:
+        disabled:
+          - rke2-ingress-nginx
+```
+
+Pass `--package` to compose the package's own values schema into the inventory schema, and the block completes and checks like the rest of the file:
+
+```sh
+cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json
+```
+
+`--package` takes anything `cargoship apply` takes -- a tarball, an `oci://` or `https://` reference -- or a package source directory, so it works before the package is built. The composed schema describes the overrides on their own, while cargoship validates them merged with the values the package ships: it catches an unknown key, a wrong type, or a name outside an enum, and does not reproduce install-time validation. See the [package values guide](package-values.md) for what a package may expose and how the merge works.
+
+## Checking an Inventory
+
+An editor is not the only place this check belongs. Cargoship unmarshals an inventory without strict key checking, so a misspelled key is dropped rather than reported: a file that says `loadbalancr:` parses cleanly and installs a cluster with no load balancer address. `cargoship validate` runs the same schema over a file with no editor and no network:
+
+```sh
+cargoship validate ./inventory.yaml
+```
+
+It reports every problem rather than the first, so one pass is enough to fix a file:
+
+```
+inventory.yaml does not match the inventory schema:
+  spec.config: Additional property loadbalancr is not allowed
+  spec.config: loadbalancer is required
+  spec.hosts.0.role: must be one of the following: "controller", "worker"
+```
+
+The schema is chosen from the document's own `kind`, so a directory of inventories and package definitions can be checked in one run. A cargoship config file declares no kind and has to be named:
+
+```sh
+cargoship validate ./inventories/*.yaml
+cargoship validate --kind config ./cargoship-config.yaml
+```
+
+`--package` works here too, and checks `.spec.config.values` against the package's own schema with the same caveat as above:
+
+```sh
+cargoship validate ./inventory.yaml --package ./package.tar.zst
+```
+
+This is a check you run, not one cargoship runs for you. `apply` does not validate the inventory against the schema before installing; it reads the file the way it always has. Put `cargoship validate` in CI, or in front of an install, where a typo is cheap to fix.
+
 ## Global Configuration
 
 The `.spec.config` section configures cluster-wide settings, such as load balancer endpoints:

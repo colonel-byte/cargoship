@@ -25,6 +25,19 @@ metadata:
 spec:
   type: k3s
   version: 1.35.1-k3s1
+  # The values a cluster may override in its inventory file, under spec.config.values,
+  # or on the command line with --values. k3s installs traefik, servicelb, and the rest
+  # unless it is told not to, and which of them a cluster wants is a cluster's decision
+  # rather than a packaging one.
+  values:
+    files:
+      - values.yaml
+    schema: values.schema.json
+    mappings:
+      # A mapping copies the value as it stands, list included, so the charts a cluster
+      # names under addons.disabled become the engine's own disable list.
+      - source: .addons.disabled
+        target: .config.disable
   config:
     engine:
       config:

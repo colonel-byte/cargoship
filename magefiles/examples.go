@@ -30,6 +30,8 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+
+	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
 )
 
 const (
@@ -40,11 +42,18 @@ const (
 )
 
 // The multi-architecture flavors exist to show what a package covering more than one
-// architecture looks like, not to cover every release: one current minor line is enough to
-// read, and keeps the arm64 artifacts the shasum cache has to hold down to a handful.
+// architecture looks like, not to cover every release: the current minor lines are enough to
+// read, and keep the arm64 artifacts the shasum cache has to hold down to a handful.
 var (
 	exampleMultiArches = []string{"amd64", "arm64"}
-	exampleMultiMinors = []string{"v1_36"}
+	exampleMultiMinors = []string{
+		"v1_32",
+		"v1_33",
+		"v1_34",
+		"v1_35",
+		"v1_36",
+		"v1_37",
+	}
 )
 
 // exampleRPMArches maps a Go architecture to the name rpm.rancher.io publishes it under.
@@ -63,8 +72,10 @@ type exampleFlavor struct {
 	cni               string   // cilium -- what the template configures
 	name              string   // multi -- what follows the distro in metadata.name; the CNI when empty
 	dir               string   // example/rke2-cilium -- where its examples are written
-	imageList         string   // rke2-images-cilium.linux-amd64.txt -- its CNI's airgap manifest, when it has one of its own
+	imageLists        []string // rke2-images-cilium.linux-amd64.txt -- the airgap manifests it adds to the core one
 	replacesKubeProxy bool     // whether the CNI takes over from kube-proxy
+	values            []string // the values templates written next to distro.yaml; none when empty
+	cloudProvider     string   // rancher-vsphere -- the bundled cloud provider it selects; none when empty
 	arches            []string // the architectures its examples target; amd64 alone when empty
 	minors            []string // v1_36 -- the minor lines it renders, all of them when empty
 }
@@ -142,6 +153,22 @@ type exampleDistroSpec struct {
 	fetch func(v *exampleVersion, repoURL string) error
 }
 
+// exampleRKE2Values and exampleK3sValues are the values files a flavor of each distro ships:
+// the knobs a cluster turns without rebuilding the package, and the schema they are checked
+// against. There is one pair per distro rather than one per flavor because a package carries a
+// single schema, so everything a flavor exposes has to be described in the same document. The
+// templates branch on the flavor for the parts that are not common to all of them.
+var (
+	exampleRKE2Values = []string{
+		"magefiles/templates/rke2/values.yaml.tmpl",
+		"magefiles/templates/rke2/values.schema.json.tmpl",
+	}
+	exampleK3sValues = []string{
+		"magefiles/templates/k3s/values.yaml.tmpl",
+		"magefiles/templates/k3s/values.schema.json.tmpl",
+	}
+)
+
 // exampleDistros is every distro the example targets render.
 var exampleDistros = []exampleDistroSpec{
 	{
@@ -151,22 +178,31 @@ var exampleDistros = []exampleDistroSpec{
 		flavors: []exampleFlavor{
 			{
 				cni:               "cilium",
-				dir:               "example/rke2-cilium",
-				imageList:         "rke2-images-cilium.linux-amd64.txt",
+				name:              "multi-cni-cilium",
+				dir:               "example/rke2-multi-cni-cilium",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt"},
+				arches:            exampleMultiArches,
+				minors:            exampleMultiMinors,
 				replacesKubeProxy: true,
+				values:            exampleRKE2Values,
 			},
 			{
-				cni:       "canal",
-				dir:       "example/rke2-canal",
-				imageList: "rke2-images-canal.linux-amd64.txt",
+				cni:               "cilium",
+				name:              "cilium-vsphere",
+				dir:               "example/rke2-cilium-vsphere",
+				imageLists:        []string{"rke2-images-cilium.linux-amd64.txt", "rke2-images-vsphere.linux-amd64.txt"},
+				replacesKubeProxy: true,
+				cloudProvider:     "rancher-vsphere",
+				values:            exampleRKE2Values,
 			},
 			{
-				cni:       "canal",
-				name:      "multi",
-				dir:       "example/rke2-multi",
-				imageList: "rke2-images-canal.linux-amd64.txt",
-				arches:    exampleMultiArches,
-				minors:    exampleMultiMinors,
+				cni:        "canal",
+				name:       "multi-cni-canal",
+				dir:        "example/rke2-multi-cni-canal",
+				imageLists: []string{"rke2-images-canal.linux-amd64.txt"},
+				arches:     exampleMultiArches,
+				minors:     exampleMultiMinors,
+				values:     exampleRKE2Values,
 			},
 		},
 		derive: func(v *exampleVersion) {
@@ -191,13 +227,14 @@ var exampleDistros = []exampleDistroSpec{
 		// k3s ships its CNI in the binary, so flannel is what a stock k3s runs, and its
 		// images are already in k3s-images.txt.
 		flavors: []exampleFlavor{
-			{cni: "flannel", dir: "example/k3s-flannel"},
+			{cni: "flannel", dir: "example/k3s-flannel", values: exampleK3sValues},
 			{
 				cni:    "flannel",
 				name:   "multi",
 				dir:    "example/k3s-multi",
 				arches: exampleMultiArches,
 				minors: exampleMultiMinors,
+				values: exampleK3sValues,
 			},
 		},
 		derive: func(v *exampleVersion) {
@@ -227,8 +264,18 @@ type exampleVersion struct {
 	CNI               string   // cilium
 	Name              string   // flannel -- what the example's metadata.name ends in
 	ReplacesKubeProxy bool     // whether to set disable-kube-proxy
+	CloudProvider     string   // rancher-vsphere -- what cloud-provider-name selects, when the flavor sets one
 	CoreImages        []string // the release's own image manifest
-	CNIImages         []string // the flavor's CNI manifest, when it has one
+	CNIImages         []string // the flavor's own manifests, concatenated, when it has any
+
+	// Addons is every packaged component this distro/version advertises under `disable:`,
+	// read from the vocabulary mage generate:engineConfig extracts from the engine's own
+	// source. A flavor's values schema offers these as suggestions for addons.disabled, so
+	// what a package proposes is what that build actually packages -- v1.37 of RKE2 knows
+	// rke2-gateway-api-crd and v1.34 does not, and each version's schema says so. The
+	// engine's own help text is not exhaustive (rke2 bundles rke2-runtimeclasses without
+	// listing it), so the schema suggests rather than restricts.
+	Addons []string
 
 	// Arches is every architecture the example targets, and the files each of them installs.
 	// MultiArch says whether there is more than one, which is what decides both how the
@@ -450,7 +497,45 @@ func writeExample(tmpl *template.Template, repoURL, tag string, spec exampleDist
 	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
 		return "", err
 	}
+
+	if err := writeExampleValues(dir, f, v); err != nil {
+		return "", err
+	}
 	return path, nil
+}
+
+// writeExampleValues renders a flavor's values templates next to its distro.yaml, under the
+// name the distro.yaml refers to them by -- the template's own name without the .tmpl.
+//
+// The values a package ships are files beside its definition rather than part of it, so a
+// flavor that exposes any has more than one file to render. They are rendered from the same
+// data as the definition, so a value that has to agree with the definition can be written
+// once and used in both.
+func writeExampleValues(dir string, f exampleFlavor, v exampleVersion) error {
+	// The schema suggests addons.disabled values from the extracted vocabulary, so a flavor
+	// whose version has none would ship a values file an editor can offer nothing for. That
+	// is a version whose source was never pulled rather than a package with no addons, so it
+	// is a failure to report here. Pull that version's source (mage
+	// generate:pullEngineSource) and regenerate.
+	if len(f.values) > 0 && len(v.Addons) == 0 {
+		return fmt.Errorf("no generated addon vocabulary for %s %s: run mage generate:pullEngineSource and mage generate:engineConfig for that minor line", v.Name, v.Version)
+	}
+
+	for _, path := range f.values {
+		tmpl, err := template.New(filepath.Base(path)).ParseFiles(path)
+		if err != nil {
+			return fmt.Errorf("parsing %s: %w", path, err)
+		}
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, v); err != nil {
+			return fmt.Errorf("rendering %s: %w", path, err)
+		}
+		name := strings.TrimSuffix(filepath.Base(path), ".tmpl")
+		if err := os.WriteFile(filepath.Join(dir, name), buf.Bytes(), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // newExampleVersion derives every version-varying field of an example from one tag and the
@@ -472,6 +557,7 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 		CNI:               f.cni,
 		Name:              f.flavorName(),
 		ReplacesKubeProxy: f.replacesKubeProxy,
+		CloudProvider:     f.cloudProvider,
 	}
 	for _, arch := range f.architectures() {
 		rpmArch, ok := exampleRPMArches[arch]
@@ -486,6 +572,12 @@ func newExampleVersion(tag string, spec exampleDistroSpec, f exampleFlavor) (exa
 		spec.derive(&v)
 	}
 
+	// Missing only for a version whose source was never pulled into this build, which
+	// writeExampleValues turns into an error rather than a schema that accepts nothing.
+	if entry, ok := gen.Lookup(spec.name, v.Version); ok {
+		v.Addons = entry.Addons
+	}
+
 	return v, nil
 }
 
@@ -495,11 +587,12 @@ func (v *exampleVersion) fetchImages(repoURL string, spec exampleDistroSpec, f e
 	if v.CoreImages, err = fetchImageList(repoURL, v.TagURL, spec.coreImages); err != nil {
 		return err
 	}
-	if f.imageList == "" {
-		return nil
-	}
-	if v.CNIImages, err = fetchImageList(repoURL, v.TagURL, f.imageList); err != nil {
-		return err
+	for _, asset := range f.imageLists {
+		images, err := fetchImageList(repoURL, v.TagURL, asset)
+		if err != nil {
+			return err
+		}
+		v.CNIImages = append(v.CNIImages, images...)
 	}
 	return nil
 }
@@ -528,10 +621,17 @@ func fetchImageList(repoURL, tagURL, asset string) ([]string, error) {
 	return images, nil
 }
 
-// fetchReleaseLines downloads one of a release's text assets and returns its non-empty
-// lines, in file order.
+// fetchReleaseLines returns one of a release's text assets as its non-empty lines, in file
+// order, reading the cache before it reaches for the network and recording what it fetched.
+// A release's assets do not change under a tag, so the second render of a version is free;
+// CARGOSHIP_EXAMPLES_NO_CACHE covers the case where one did change.
 func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
 	url := fmt.Sprintf("%s/releases/download/%s/%s", strings.TrimSuffix(repoURL, "/"), tagURL, asset)
+
+	cache := releaseLines()
+	if lines, ok := cache.lookup(url); ok {
+		return lines, nil
+	}
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -548,11 +648,7 @@ func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
 		return nil, fmt.Errorf("reading %s: %w", url, err)
 	}
 
-	var lines []string
-	for line := range strings.SplitSeq(string(body), "\n") {
-		if line = strings.TrimSpace(line); line != "" {
-			lines = append(lines, line)
-		}
-	}
+	lines := splitReleaseLines(body)
+	cache.store(url, lines)
 	return lines, nil
 }

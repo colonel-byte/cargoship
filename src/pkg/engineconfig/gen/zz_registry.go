@@ -23,31 +23,35 @@ import (
 	k3s_v1_34 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/k3s/v1_34"
 	k3s_v1_35 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/k3s/v1_35"
 	k3s_v1_36 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/k3s/v1_36"
+	k3s_v1_37 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/k3s/v1_37"
 	rke2_v1_31 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/rke2/v1_31"
 	rke2_v1_32 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/rke2/v1_32"
 	rke2_v1_33 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/rke2/v1_33"
 	rke2_v1_34 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/rke2/v1_34"
 	rke2_v1_35 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/rke2/v1_35"
 	rke2_v1_36 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/rke2/v1_36"
+	rke2_v1_37 "github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/rke2/v1_37"
 )
 
 // Registry maps distro id (e.g. "k3s", "rke2") -> sanitized minor version package
 // name (e.g. "v1_35") -> Entry. See Lookup in lookup.go for the consumer-facing API.
 var Registry = map[string]map[string]Entry{
 	"k3s": {
-		"v1_31": {Server: k3s_v1_31.ServerConfig{}, Agent: k3s_v1_31.AgentConfig{}},
-		"v1_32": {Server: k3s_v1_32.ServerConfig{}, Agent: k3s_v1_32.AgentConfig{}},
-		"v1_33": {Server: k3s_v1_33.ServerConfig{}, Agent: k3s_v1_33.AgentConfig{}},
-		"v1_34": {Server: k3s_v1_34.ServerConfig{}, Agent: k3s_v1_34.AgentConfig{}},
-		"v1_35": {Server: k3s_v1_35.ServerConfig{}, Agent: k3s_v1_35.AgentConfig{}},
-		"v1_36": {Server: k3s_v1_36.ServerConfig{}, Agent: k3s_v1_36.AgentConfig{}},
+		"v1_31": {Server: k3s_v1_31.ServerConfig{}, Agent: k3s_v1_31.AgentConfig{}, Addons: k3s_v1_31.Addons, CNIs: k3s_v1_31.CNIs, IngressControllers: k3s_v1_31.IngressControllers},
+		"v1_32": {Server: k3s_v1_32.ServerConfig{}, Agent: k3s_v1_32.AgentConfig{}, Addons: k3s_v1_32.Addons, CNIs: k3s_v1_32.CNIs, IngressControllers: k3s_v1_32.IngressControllers},
+		"v1_33": {Server: k3s_v1_33.ServerConfig{}, Agent: k3s_v1_33.AgentConfig{}, Addons: k3s_v1_33.Addons, CNIs: k3s_v1_33.CNIs, IngressControllers: k3s_v1_33.IngressControllers},
+		"v1_34": {Server: k3s_v1_34.ServerConfig{}, Agent: k3s_v1_34.AgentConfig{}, Addons: k3s_v1_34.Addons, CNIs: k3s_v1_34.CNIs, IngressControllers: k3s_v1_34.IngressControllers},
+		"v1_35": {Server: k3s_v1_35.ServerConfig{}, Agent: k3s_v1_35.AgentConfig{}, Addons: k3s_v1_35.Addons, CNIs: k3s_v1_35.CNIs, IngressControllers: k3s_v1_35.IngressControllers},
+		"v1_36": {Server: k3s_v1_36.ServerConfig{}, Agent: k3s_v1_36.AgentConfig{}, Addons: k3s_v1_36.Addons, CNIs: k3s_v1_36.CNIs, IngressControllers: k3s_v1_36.IngressControllers},
+		"v1_37": {Server: k3s_v1_37.ServerConfig{}, Agent: k3s_v1_37.AgentConfig{}, Addons: k3s_v1_37.Addons, CNIs: k3s_v1_37.CNIs, IngressControllers: k3s_v1_37.IngressControllers},
 	},
 	"rke2": {
-		"v1_31": {Server: rke2_v1_31.ServerConfig{}, Agent: rke2_v1_31.AgentConfig{}},
-		"v1_32": {Server: rke2_v1_32.ServerConfig{}, Agent: rke2_v1_32.AgentConfig{}},
-		"v1_33": {Server: rke2_v1_33.ServerConfig{}, Agent: rke2_v1_33.AgentConfig{}},
-		"v1_34": {Server: rke2_v1_34.ServerConfig{}, Agent: rke2_v1_34.AgentConfig{}},
-		"v1_35": {Server: rke2_v1_35.ServerConfig{}, Agent: rke2_v1_35.AgentConfig{}},
-		"v1_36": {Server: rke2_v1_36.ServerConfig{}, Agent: rke2_v1_36.AgentConfig{}},
+		"v1_31": {Server: rke2_v1_31.ServerConfig{}, Agent: rke2_v1_31.AgentConfig{}, Addons: rke2_v1_31.Addons, CNIs: rke2_v1_31.CNIs, IngressControllers: rke2_v1_31.IngressControllers},
+		"v1_32": {Server: rke2_v1_32.ServerConfig{}, Agent: rke2_v1_32.AgentConfig{}, Addons: rke2_v1_32.Addons, CNIs: rke2_v1_32.CNIs, IngressControllers: rke2_v1_32.IngressControllers},
+		"v1_33": {Server: rke2_v1_33.ServerConfig{}, Agent: rke2_v1_33.AgentConfig{}, Addons: rke2_v1_33.Addons, CNIs: rke2_v1_33.CNIs, IngressControllers: rke2_v1_33.IngressControllers},
+		"v1_34": {Server: rke2_v1_34.ServerConfig{}, Agent: rke2_v1_34.AgentConfig{}, Addons: rke2_v1_34.Addons, CNIs: rke2_v1_34.CNIs, IngressControllers: rke2_v1_34.IngressControllers},
+		"v1_35": {Server: rke2_v1_35.ServerConfig{}, Agent: rke2_v1_35.AgentConfig{}, Addons: rke2_v1_35.Addons, CNIs: rke2_v1_35.CNIs, IngressControllers: rke2_v1_35.IngressControllers},
+		"v1_36": {Server: rke2_v1_36.ServerConfig{}, Agent: rke2_v1_36.AgentConfig{}, Addons: rke2_v1_36.Addons, CNIs: rke2_v1_36.CNIs, IngressControllers: rke2_v1_36.IngressControllers},
+		"v1_37": {Server: rke2_v1_37.ServerConfig{}, Agent: rke2_v1_37.AgentConfig{}, Addons: rke2_v1_37.Addons, CNIs: rke2_v1_37.CNIs, IngressControllers: rke2_v1_37.IngressControllers},
 	},
 }

@@ -17,11 +17,16 @@ package distrocfg
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/stretchr/testify/require"
 )
+
+// fileReferenceKubeconfigFixture is a kubeconfig that names its credentials by path rather than
+// embedding them, so that reading it means following each path to a second file.
+const fileReferenceKubeconfigFixture = "testdata/kubeconfig-file-references.yaml"
 
 const (
 	testCA  = "-----BEGIN CERTIFICATE-----\nca\n-----END CERTIFICATE-----\n"
@@ -85,27 +90,11 @@ func TestAdminCredentialsRKE2ReadsItsOwnKubeconfig(t *testing.T) {
 }
 
 func TestAdminCredentialsFollowsFileReferences(t *testing.T) {
-	kubeconfig := `apiVersion: v1
-kind: Config
-clusters:
-- name: kubernetes
-  cluster:
-    server: https://127.0.0.1:6443
-    certificate-authority: /etc/kubernetes/pki/ca.crt
-users:
-- name: admin
-  user:
-    client-certificate: /etc/kubernetes/pki/admin.crt
-    client-key: /etc/kubernetes/pki/admin.key
-contexts:
-- name: admin@kubernetes
-  context:
-    cluster: kubernetes
-    user: admin
-current-context: admin@kubernetes
-`
+	kubeconfig, err := os.ReadFile(fileReferenceKubeconfigFixture)
+	require.NoError(t, err)
+
 	cfg := &fakeHost{files: map[string]string{
-		"/etc/rancher/k3s/k3s.yaml":     kubeconfig,
+		"/etc/rancher/k3s/k3s.yaml":     string(kubeconfig),
 		"/etc/kubernetes/pki/ca.crt":    testCA,
 		"/etc/kubernetes/pki/admin.crt": testCrt,
 		"/etc/kubernetes/pki/admin.key": testKey,

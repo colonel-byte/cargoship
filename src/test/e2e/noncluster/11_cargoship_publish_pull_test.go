@@ -67,6 +67,32 @@ func TestCargoshipPublishPullRoundTrip(t *testing.T) {
 	require.Equal(t, wantBytes, gotBytes, "pulled package must be byte-identical to the published one")
 }
 
+func TestCargoshipPublishPullTagOverride(t *testing.T) {
+	pkgPath := minimalPackage(t)
+
+	addr := test.SetupInMemoryRegistry(t)
+	dst := fmt.Sprintf("oci://%s/e2e-test", addr)
+	customTag := "0.0.1-override"
+	src := fmt.Sprintf("%s/%s:%s", dst, minimalPackageName, customTag)
+
+	_, _, err := e2e.Cargoship(t, "publish", pkgPath, dst, "--tag", customTag, "--plain-http", "--confirm")
+	require.NoError(t, err)
+
+	pullDir := t.TempDir()
+	_, _, err = e2e.Cargoship(t, "pull", src, "--plain-http", "-o", pullDir)
+	require.NoError(t, err)
+
+	pulled, err := filepath.Glob(filepath.Join(pullDir, "*.tar.zst"))
+	require.NoError(t, err)
+	require.Len(t, pulled, 1, "expected exactly one package pulled back")
+
+	wantBytes, err := os.ReadFile(pkgPath)
+	require.NoError(t, err)
+	gotBytes, err := os.ReadFile(pulled[0])
+	require.NoError(t, err)
+	require.Equal(t, wantBytes, gotBytes)
+}
+
 // TestCargoshipPublish covers publish's argument validation.
 func TestCargoshipPublish(t *testing.T) {
 	t.Run("destination without an oci:// prefix errors", func(t *testing.T) {
@@ -169,8 +195,8 @@ func TestCargoshipVerifyFlagParsing(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// Run directly rather than through e2e.Cargoship: that helper appends --no-color and
-	// --tmpdir, and a trailing --verify would consume the first of them as its value.
+	// Run directly rather than through e2e.Cargoship: that helper appends --no-color, and a
+	// trailing --verify would consume it as its value.
 	t.Run("without a value errors", func(t *testing.T) {
 		cmd := exec.CommandContext(t.Context(), e2e.CargoBinPath,
 			"pull", "oci://example.invalid/nope:0.0.1", "-o", t.TempDir(), "--no-color", "--verify")

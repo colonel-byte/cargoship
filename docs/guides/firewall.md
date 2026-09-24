@@ -6,11 +6,11 @@ Every node cargoship manages gets three things: the private address of every oth
 
 ## Backends
 
-| Backend | Used when | Notes |
-| --- | --- | --- |
-| `firewalld` | the `firewalld` service is running | Cluster trust is applied with ipsets in the `trusted` zone; ports become a `distro-exposed-ports` service on the `public` zone |
-| `ufw` | `ufw` is installed and `ufw status` reports `active` | Cluster trust and rules are applied with `ufw` commands; ports become a `cargoship-ports` application profile in `/etc/ufw/applications.d/cargoship` |
-| `nftables` | `nft` is installed and either the `nftables` service is running or the host has an `/etc/nftables.conf` or `/etc/sysconfig/nftables.conf` | Everything cargoship writes lives in one table, `inet cargoship`, rendered to `/etc/cargoship/nftables.nft` and loaded in a single transaction |
+| Backend     | Used when                                                                                                                                 | Notes                                                                                                                                                |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `firewalld` | the `firewalld` service is running                                                                                                        | Cluster trust is applied with ipsets in the `trusted` zone; ports become a `distro-exposed-ports` service on the `public` zone                       |
+| `ufw`       | `ufw` is installed and `ufw status` reports `active`                                                                                      | Cluster trust and rules are applied with `ufw` commands; ports become a `cargoship-ports` application profile in `/etc/ufw/applications.d/cargoship` |
+| `nftables`  | `nft` is installed and either the `nftables` service is running or the host has an `/etc/nftables.conf` or `/etc/sysconfig/nftables.conf` | Everything cargoship writes lives in one table, `inet cargoship`, rendered to `/etc/cargoship/nftables.nft` and loaded in a single transaction       |
 
 Cargoship never runs `ufw enable`. A node whose ufw is inactive is left alone, because bringing up a default-deny firewall from a remote phase would cut the SSH connection cargoship is running over. Enable ufw yourself, with a rule that keeps SSH reachable, before pointing cargoship at the node.
 
@@ -20,12 +20,12 @@ A node whose only nftables content comes from kube-proxy or the CNI is deliberat
 
 The node's operating system decides first. Each OS module names the firewall front end its distribution ships: firewalld on Enterprise Linux and SUSE, ufw on Debian and Ubuntu. Distributions that ship no front end -- Alpine, Arch, CoreOS, Flatcar, Slackware -- name none.
 
-| The node's OS ships | And that front end is | Cargoship configures |
-| --- | --- | --- |
-| firewalld or ufw | running | that front end |
-| firewalld or ufw | installed, but stopped or inactive | nothing on the node |
-| firewalld or ufw | not installed | whichever backend matches, in the order above |
-| no front end | -- | whichever backend matches, in the order above |
+| The node's OS ships | And that front end is              | Cargoship configures                          |
+| ------------------- | ---------------------------------- | --------------------------------------------- |
+| firewalld or ufw    | running                            | that front end                                |
+| firewalld or ufw    | installed, but stopped or inactive | nothing on the node                           |
+| firewalld or ufw    | not installed                      | whichever backend matches, in the order above |
+| no front end        | --                                 | whichever backend matches, in the order above |
 
 The second row is the deliberate part. An operator who installed a front end and left it down has made a decision about the node's firewall posture, and cargoship does not take that decision away: it neither starts the service nor reaches past the stopped front end to write rules into the nftables underneath it, where the front end would overwrite them the moment it came up. Cargoship logs the node it skipped, and the apply continues.
 
@@ -54,17 +54,17 @@ spec:
 
 The `.host.firewall.rules` list is the backend-neutral rule model. Each rule needs an `action`; every other field is a match, and an omitted match means "any".
 
-| Field | Meaning |
-| --- | --- |
-| `name` | Names the rule. It must be unique within a host, and cargoship uses it to name the files and rule comments it writes on the node. Cargoship derives one from the match fields when it is omitted |
-| `action` | `allow`, `deny`, or `reject` |
-| `direction` | `in` (the default), `out`, or `forward` |
-| `source` | The address or CIDR traffic comes from |
-| `destination` | The address or CIDR traffic goes to |
-| `ingress` | Where forward traffic enters. Forward rules only |
-| `egress` | Where forward traffic leaves. Forward rules only |
-| `port` | A port, or an inclusive `low-high` range. A port match also needs a `protocol` |
-| `protocol` | `tcp`, `udp`, `sctp`, or `dccp` |
+| Field         | Meaning                                                                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`        | Names the rule. It must be unique within a host, and cargoship uses it to name the files and rule comments it writes on the node. Cargoship derives one from the match fields when it is omitted |
+| `action`      | `allow`, `deny`, or `reject`                                                                                                                                                                     |
+| `direction`   | `in` (the default), `out`, or `forward`                                                                                                                                                          |
+| `source`      | The address or CIDR traffic comes from                                                                                                                                                           |
+| `destination` | The address or CIDR traffic goes to                                                                                                                                                              |
+| `ingress`     | Where forward traffic enters. Forward rules only                                                                                                                                                 |
+| `egress`      | Where forward traffic leaves. Forward rules only                                                                                                                                                 |
+| `port`        | A port, or an inclusive `low-high` range. A port match also needs a `protocol`                                                                                                                   |
+| `protocol`    | `tcp`, `udp`, `sctp`, or `dccp`                                                                                                                                                                  |
 
 ```yaml
 spec:
@@ -132,11 +132,11 @@ The rest of `.host` still replaces rather than unions: a host that lists any `po
 
 The backends express the same rule differently, and two fields mean something slightly different on each.
 
-| Rule | firewalld | ufw | nftables |
-| --- | --- | --- | --- |
-| `direction: in` or `out` with an address match | A rich rule on the `public` zone | `ufw allow in ...` / `ufw allow out ...` | A rule in the `input` or `output` chain, matching on `ip saddr` or `ip6 saddr` |
-| `direction: in` with only a port match | `firewall-cmd --add-port` on the `public` zone. Only `action: allow` is expressible this way | `ufw allow in from any to any port ...` | A `tcp dport` or `udp dport` rule in the `input` chain |
-| `direction: forward` | A policy file in `/etc/firewalld/policies`, where `ingress` and `egress` name **zones** | `ufw route allow ...`, where `ingress` and `egress` name **interfaces** | A rule in the `forward` chain, where `ingress` and `egress` name **interfaces** matched with `iifname` and `oifname` |
+| Rule                                           | firewalld                                                                                    | ufw                                                                     | nftables                                                                                                             |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `direction: in` or `out` with an address match | A rich rule on the `public` zone                                                             | `ufw allow in ...` / `ufw allow out ...`                                | A rule in the `input` or `output` chain, matching on `ip saddr` or `ip6 saddr`                                       |
+| `direction: in` with only a port match         | `firewall-cmd --add-port` on the `public` zone. Only `action: allow` is expressible this way | `ufw allow in from any to any port ...`                                 | A `tcp dport` or `udp dport` rule in the `input` chain                                                               |
+| `direction: forward`                           | A policy file in `/etc/firewalld/policies`, where `ingress` and `egress` name **zones**      | `ufw route allow ...`, where `ingress` and `egress` name **interfaces** | A rule in the `forward` chain, where `ingress` and `egress` name **interfaces** matched with `iifname` and `oifname` |
 
 Because `ingress` and `egress` name zones on firewalld and interfaces on the other two, a forward rule is the one part of the model that is not portable across a mixed-OS cluster. Set forward rules on a profile that only matches hosts of one OS family.
 

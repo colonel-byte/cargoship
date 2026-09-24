@@ -93,6 +93,50 @@ type ZarfHost struct {
 	Metadata ZarfHostMetadata `json:"-"`
 }
 
+// UnmarshalYAML decodes a host document into both ZarfHost's own fields and the embedded rig
+// client's connection configuration.
+//
+// rig.ClientWithConfig implements UnmarshalYAML itself, and since it is embedded anonymously that
+// method is promoted onto *ZarfHost. Left alone, goccy/go-yaml would treat *ZarfHost as an
+// InterfaceUnmarshaler and call the promoted method for the whole host document -- which decodes
+// only ClientWithConfig's own fields and silently leaves every field ZarfHost declares (Hostname,
+// Role, Profile, ...) zeroed. Decoding into a shadow type with no embedded ClientWithConfig avoids
+// triggering that promoted method, and a second explicit decode through ClientWithConfig's own
+// UnmarshalYAML fills in the connection config the same way it always did.
+func (h *ZarfHost) UnmarshalYAML(unmarshal func(any) error) error {
+	type hostFields struct {
+		Environment      map[string]string  `json:"environment,omitempty"`
+		Files            []ZarfClusterFiles `json:"files,omitempty"`
+		Hostname         string             `json:"hostname,omitempty"`
+		PrivateAddress   string             `json:"privateAddress,omitempty"`
+		PrivateInterface string             `json:"privateInterface,omitempty"`
+		Profile          string             `json:"profile,omitempty"`
+		Role             string             `json:"role"`
+		Host             ZarfHostConfig     `json:"host,omitempty"`
+		Engine           ZarfHostEngine     `json:"engine,omitempty"`
+	}
+
+	var fields hostFields
+	if err := unmarshal(&fields); err != nil {
+		return err
+	}
+
+	if err := h.ClientWithConfig.UnmarshalYAML(unmarshal); err != nil {
+		return err
+	}
+
+	h.Environment = fields.Environment
+	h.Files = fields.Files
+	h.Hostname = fields.Hostname
+	h.PrivateAddress = fields.PrivateAddress
+	h.PrivateInterface = fields.PrivateInterface
+	h.Profile = fields.Profile
+	h.Role = fields.Role
+	h.Host = fields.Host
+	h.Engine = fields.Engine
+	return nil
+}
+
 // ZarfHostConfig defines the configuration for a specific host, including
 // firewall policies and the ports cargoship opens on the node.
 type ZarfHostConfig struct {
@@ -476,6 +520,20 @@ func (h *ZarfHost) IsController() bool {
 	return h.Role == RoleController || h.Role == RoleControllerWorker || h.Role == RoleSingle
 }
 
+// Address returns the address rig is connected to for this host, or the empty string for a host
+// that has not gone through Setup or Connect yet.
+//
+// The promoted rig.Client.Address panics on a host in that state: ClientWithConfig defers creating
+// its embedded *Client until Setup or Connect runs, so a host built directly (as tests do, or as a
+// host removed from the config and never dialed this run) has a nil Client, and Address
+// dereferences it unconditionally.
+func (h *ZarfHost) Address() string {
+	if h.Client == nil {
+		return ""
+	}
+	return h.Client.Address()
+}
+
 // ServiceName returns the name of the distro service that runs on this host.
 func (h *ZarfHost) ServiceName() string {
 	switch h.Role {
@@ -574,6 +632,12 @@ func (h *ZarfHost) ReadFile(path string) (string, error) {
 		return "", err
 	}
 	return string(data), nil
+}
+
+// Stat returns file information for path on the host. Always runs with privilege escalation,
+// matching the rest of this host's file operations.
+func (h *ZarfHost) Stat(path string) (fs.FileInfo, error) {
+	return h.sudoFS().Stat(path)
 }
 
 // FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the

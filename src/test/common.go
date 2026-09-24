@@ -44,23 +44,27 @@ func (e2e *CargoE2ETest) Cargoship(t *testing.T, args ...string) (_ string, _ st
 }
 
 // CargoInDir executes a Cargoship command in specific directory.
+//
+// The staging directory is handed over as DISTRO_TMP_DIR rather than --tmpdir: only the
+// commands that stage package content register that flag, so passing it to every command
+// fails argument parsing on the ones that do not (version, vault, ...). The environment
+// variable is read by viper for all of them, and is ignored where nothing stages.
 func (e2e *CargoE2ETest) CargoInDir(t *testing.T, dir string, args ...string) (_ string, _ string, err error) {
 	if !slices.Contains(args, "--no-color") {
 		args = append(args, "--no-color")
 	}
-	if !slices.Contains(args, "--tmpdir") {
-		tmpdir, err := os.MkdirTemp(os.Getenv("CARGOSHIP_E2E_TMPDIR"), utils.TmpPathPrefix)
-		if err != nil {
-			return "", "", err
-		}
-		defer func(path string) {
-			errRemove := os.RemoveAll(path)
-			err = errors.Join(err, errRemove)
-		}(tmpdir)
-		args = append(args, "--tmpdir", tmpdir)
-	}
 	cfg := exec.PrintCfg()
 	cfg.Dir = dir
+	if !slices.Contains(args, "--tmpdir") {
+		tmpdir, mkErr := os.MkdirTemp(os.Getenv("CARGOSHIP_E2E_TMPDIR"), utils.TmpPathPrefix)
+		if mkErr != nil {
+			return "", "", mkErr
+		}
+		defer func(path string) {
+			err = errors.Join(err, os.RemoveAll(path))
+		}(tmpdir)
+		cfg.Env = append(cfg.Env, "DISTRO_TMP_DIR="+tmpdir)
+	}
 	return exec.CmdWithTesting(t, cfg, e2e.CargoBinPath, args...)
 }
 

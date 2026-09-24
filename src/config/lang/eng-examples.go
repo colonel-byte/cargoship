@@ -35,7 +35,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm -H -F -f
 
 # Add the node-role label to each node, and leave the local kubeconfig untouched
-$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --kubeconfig=false`
+$ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --label-nodes --update-kubeconfig=false`
 
 	// CmdDistroPrepareExample prepare example
 	CmdDistroPrepareExample = `# Prepare every node in the config for an install
@@ -84,7 +84,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
 $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --work-concurrency 25%
 
 # Sync without touching the local kubeconfig
-$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --kubeconfig=false`
+$ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm --update-kubeconfig=false`
 
 	// CmdDistroCreateExample create example
 	CmdDistroCreateExample = `# Build a package from the definition in the current directory
@@ -160,18 +160,183 @@ $ cargoship sha256sum ./artifact.tar.gz --extract-path ./bin/tool
 # Same thing, using the shorter alias
 $ cargoship sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst`
 
-	// CmdVaultEncryptExample vault-encrypt example
+	// CmdVaultEncryptExample vault encrypt example
 	CmdVaultEncryptExample = `# Encrypt a registry password for a config file's user/pass/token field
-$ cargoship vault-encrypt my-registry-password --vault-password-file ./vault-pass.txt
+$ cargoship vault encrypt my-registry-password --vault-password-file ./vault-pass.txt
 
 # Omit the value to be prompted for it, with the input hidden
-$ cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+$ cargoship vault encrypt --vault-password-file ./vault-pass.txt
 
 # Encrypt a value piped in on stdin
-$ printf my-registry-password | cargoship vault-encrypt --vault-password-file ./vault-pass.txt
+$ printf my-registry-password | cargoship vault encrypt --vault-password-file ./vault-pass.txt
 
 # Encrypt the contents of a file
-$ cargoship vault-encrypt --vault-password-file ./vault-pass.txt < ./registry-token.txt`
+$ cargoship vault encrypt --vault-password-file ./vault-pass.txt < ./registry-token.txt
+
+# Encrypt to age public keys instead, so no shared password has to be handed around
+$ cargoship vault encrypt my-registry-password --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+
+# Encrypt to every key a team keeps in one file, each of whom can decrypt on their own
+$ cargoship vault encrypt my-registry-password --age-recipients-file ./recipients.txt`
+
+	// CmdVaultEncryptPathExample vault encrypt-path example
+	CmdVaultEncryptPathExample = `# Encrypt the password a config already holds for its first registry
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Encrypt several values in one pass; the file is written once, after all of them have encrypted
+$ cargoship vault encrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
+
+# Encrypt a registry's inline CA certificate, however many lines of PEM it runs to
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].tls.ca' --vault-password-file ./vault-pass.txt
+
+# See what the file would become without writing it
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.token' --vault-password-file ./vault-pass.txt --dry-run
+
+# Encrypt to an age recipient instead of a vault password
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p`
+
+	// CmdVaultEncryptFileExample vault encrypt-file example
+	CmdVaultEncryptFileExample = `# Encrypt every registry credential in a cluster configuration
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
+
+# See what the file would become without writing it
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt --dry-run
+
+# Vault a configuration before committing it
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt && git add ./cluster.yaml
+
+# Encrypt to the age recipients a team keeps in its config file, with no keys on the command line
+$ cargoship vault encrypt-file ./cluster.yaml
+
+# Encrypt to the SSH keys a team already distributes, using its authorized_keys file as it is
+$ cargoship vault encrypt-file ./cluster.yaml --age-recipients-file ./authorized_keys`
+
+	// CmdVaultDecryptFileExample vault decrypt-file example
+	CmdVaultDecryptFileExample = `# Decrypt every registry credential in a cluster configuration
+$ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt
+
+# Check that every encrypted credential decrypts, without writing plaintext to disk
+$ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./vault-pass.txt --dry-run > /dev/null
+
+# Decrypt a configuration encrypted to an age recipient
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ./key.txt
+
+# Decrypt one encrypted to an SSH public key, using the private key it pairs with
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.ssh/id_ed25519
+
+# Rotate the password a whole configuration is vaulted with
+$ cargoship vault decrypt-file ./cluster.yaml --vault-password-file ./old-pass.txt
+$ cargoship vault encrypt-file ./cluster.yaml --vault-password-file ./new-pass.txt`
+	// CmdVaultRekeyExample vault rekey example
+	CmdVaultRekeyExample = `# Move every encrypted registry credential in a cluster configuration to a new vault password
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt
+
+# Re-salt every encrypted registry credential, keeping the password the file already uses
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt
+
+# Check what a rotation would produce without writing it back
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./old-pass.txt --new-vault-password-file ./new-pass.txt --dry-run
+
+# Move a vaulted configuration onto age, reading with the old password and writing to the recipients
+$ cargoship vault rekey ./cluster.yaml --vault-password-file ./vault-pass.txt --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+
+# Re-encrypt to a smaller recipient set, which is how access is revoked
+$ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recipients-file ./recipients.txt
+`
+
+	// CmdVaultKeygenExample vault keygen example
+	CmdVaultKeygenExample = `# Generate a key pair, writing the private key to a file and printing the public key
+$ cargoship vault keygen --output ~/.age/cargoship.key
+
+# The same, redirecting instead, which leaves the file mode up to your shell
+$ cargoship vault keygen > ~/.age/cargoship.key
+
+# Recover the public key from an identity file you still hold
+$ cargoship vault keygen --public-key ~/.age/cargoship.key
+
+# Encrypt a configuration to the key that was just generated, and read it back
+$ cargoship vault encrypt-file ./cluster.yaml --age-recipient age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+$ cargoship vault decrypt-file ./cluster.yaml --age-identity-file ~/.age/cargoship.key
+`
+
+	// CmdVaultDecryptExample vault decrypt example
+	CmdVaultDecryptExample = `# Decrypt a value copied out of a config file
+$ cargoship vault decrypt '$ANSIBLE_VAULT;1.1;AES256
+3862...' --vault-password-file ./vault-pass.txt
+
+# Decrypt a value held in a file
+$ cargoship vault decrypt --vault-password-file ./vault-pass.txt < ./encrypted-token.txt
+
+# Write a decrypted CA certificate straight out to a PEM file
+$ cargoship vault decrypt --vault-password-file ./vault-pass.txt < ./encrypted-ca.txt > ./ca.pem
+
+# Check a value round-trips under the password a config will be applied with
+$ cargoship vault encrypt hunter2 --vault-password-file ./vault-pass.txt | cargoship vault decrypt --vault-password-file ./vault-pass.txt
+
+# Decrypt an age value; pipe it in, since an age value begins with dashes and reads as a flag
+$ cargoship vault decrypt --age-identity-file ./key.txt < ./encrypted-token.txt
+
+# The same value as an argument, with "--" after the flags to end flag parsing
+$ cargoship vault decrypt --age-identity-file ./key.txt -- "$(cat ./encrypted-token.txt)"`
+
+	// CmdVaultDecryptPathExample vault decrypt-path example
+	CmdVaultDecryptPathExample = `# Put the plaintext password back into a config, in place of the ciphertext
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Decrypt several values in one pass
+$ cargoship vault decrypt-path ./cluster.yaml '.x-tra.test.user' '.x-tra.test.pass' --vault-password-file ./vault-pass.txt
+
+# Check that a vaulted value decrypts, without writing the plaintext to disk
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt --dry-run
+
+# Rotate the password a config is vaulted with
+$ cargoship vault decrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./old-pass.txt
+$ cargoship vault encrypt-path ./cluster.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./new-pass.txt`
+
+	// CmdInventoryFromAnsibleExample inventory from-ansible example
+	CmdInventoryFromAnsibleExample = `# Translate a resolved Ansible inventory, and check the result against the schema
+$ cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
+$ cargoship validate ./inventory.yaml
+
+# Read from stdin and write to stdout, so it composes with whatever produced the projection
+$ cargoship inventory from-ansible < ./resolved.json | tee ./inventory.yaml
+
+# Translate one projection of a fleet for a second cluster without rewriting it
+$ cargoship inventory from-ansible ./resolved.json --name staging --loadbalancer staging-kc.test.com
+`
+
+	// CmdSchemaExample schema example
+	CmdSchemaExample = `# Write the inventory schema next to an inventory file, for an editor to read
+$ cargoship schema inventory -o ./zarf-v1alpha1-cluster-schema.json
+
+# Then point the inventory at it, as its first line
+$ head -1 ./inventory.yaml
+# yaml-language-server: $schema=./zarf-v1alpha1-cluster-schema.json
+
+# Compose in a package's own values, so spec.config.values completes too
+$ cargoship schema inventory --package ./package.tar.zst -o ./inventory.schema.json
+
+# The same, straight from a package source directory, before it is built
+$ cargoship schema inventory --package ./example/rke2-cilium-vsphere/v1_37/v1.37.0-rke2r1
+
+# The schema for a distro.yaml, and for a cargoship config file
+$ cargoship schema package -o ./distro.schema.json
+$ cargoship schema config -o ./cargoship.schema.json`
+
+	// CmdValidateExample validate example
+	CmdValidateExample = `
+# Check a cluster inventory against the inventory schema:
+$ cargoship validate ./inventory.yaml
+
+# Check every inventory in a directory, reporting all of them in one pass:
+$ cargoship validate ./inventories/*.yaml
+
+# Check a cargoship config file, which declares no kind of its own:
+$ cargoship validate --kind config ./cargoship-config.yaml
+
+# Check an inventory's spec.config.values against the package it will be installed with:
+$ cargoship validate ./inventory.yaml --package ./package.tar.zst
+`
 
 	// CmdVersionExample version example
 	CmdVersionExample = `# Print the version of the running binary

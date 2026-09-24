@@ -1,4 +1,8 @@
 # Cargoship
+[![Latest Release](https://img.shields.io/github/v/release/colonel-byte/cargoship)](https://github.com/colonel-byte/cargoship/releases)
+[![Go version](https://img.shields.io/github/go-mod/go-version/colonel-byte/cargoship?filename=go.mod)](https://go.dev/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/colonel-byte/cargoship/release.yaml)](https://github.com/colonel-byte/cargoship/actions/workflows/release.yaml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/colonel-byte/cargoship/badge)](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship)
 
 Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages. It is designed to simplify two core workflows:
 
@@ -98,6 +102,24 @@ Stop, uninstall, and completely purge the Kubernetes distro and its state from t
 cargoship reset --config ./cargoship-config.yaml --distro rke2
 ```
 
+### 6. Generate an Inventory from Ansible
+
+Translate an Ansible inventory you already maintain into a cargoship cluster inventory, taking each host's role from its Ansible groups:
+
+```bash
+cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
+```
+
+---
+
+## Ansible Integration
+
+Cargoship also ships as an Ansible collection, `colonel_byte.cargoship`, so the workflows above run as ordinary playbook tasks: `cargoship_apply`, `cargoship_prepare`, `cargoship_reset`, `cargoship_kube_config`, and `cargoship_engine_config_sync`, plus a `cluster` role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.
+
+*   [Running Cargoship as an Ansible Module](./docs/guides/ansible-module.md) — the modules, their parameters, check mode, and what `changed` means.
+*   [Generating an Inventory from Ansible](./docs/guides/ansible-inv.md) — the group and host-variable translation, usable with or without the modules.
+*   [The Ansible Container Image](./docs/guides/ansible-container.md) — `ghcr.io/colonel-byte/cargoship-ansible`, which carries the binary and the collection together.
+
 ---
 
 ## Configuration and Schemas
@@ -110,13 +132,13 @@ Cargoship relies on strongly-typed YAML definitions to govern its operations:
 
 The corresponding JSON schemas are automatically generated from Go structs into `schema/`. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion.
 
-An inventory authoring guide is available in [docs/guides/setup-inv.md](./docs/guides/setup-inv.md).
+An inventory authoring guide is available in [Setting up an inventory](./docs/guides/setup-inv.md).
 
 ---
 
 ## Development and Build Workflows
 
-Task automation is built using **Mage**, with **Dagger** acting as the containerized execution engine.
+Task automation is built using **Mage**, which drives builds, tests and code generation with the host Go toolchain.
 
 ### Mage Automation
 
@@ -125,12 +147,10 @@ Mage handles tasks including local compilation, e2e test execution, schema updat
 *   `build/cargoship_*` (Release binaries)
 *   `docs/commands/*` (Cobra command references)
 *   `docs/phases/*` (Orchestration phase explanations)
+*   `docs/ansible/module_*.md` and `docs/ansible/role_*.md` (Ansible collection reference)
+*   `docs/index.md` and `docs/security.md` (this file and `.github/SECURITY.md`, with their links rewritten for the book)
 *   `docs/SUMMARY.md` (mdBook layout manifest)
 *   `schema/*.json` (YAML validations)
-
-### Dagger Builds
-
-Dagger coordinates hermetic, multi-platform compilation inside containerized Go environments. It ensures that compiled binaries are reproducible and decoupled from the developer's local compiler version.
 
 ### Continuous Integration (CI) and Releases
 
@@ -142,5 +162,5 @@ GitHub Actions workflows run lint checks, dependency validation, cross-compilati
 
 Cargoship draws major design and engineering inspiration from:
 
-*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) — For elegant SSH-based multi-node orchestration and configuration patterns.
-*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) — For air-gapped image and file packaging and offline-first design.
+*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) - For elegant SSH-based multi-node orchestration and configuration patterns.
+*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) - For air-gapped image and file packaging and offline-first design.

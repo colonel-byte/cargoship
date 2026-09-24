@@ -1,0 +1,5 @@
+---
+addons:
+  disabled:
+    - rke2-ingress-nginx
+replicas: 3

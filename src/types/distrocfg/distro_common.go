@@ -17,16 +17,57 @@ package distrocfg
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"gopkg.in/yaml.v3"
 )
+
+// StateDir is where cargoship records state files describing the applied distro package.
+const StateDir = "/etc/cargoship"
+
+// DistroReleaseFile is the metadata file tracking the installed distro package on the host.
+const DistroReleaseFile = "/etc/cargoship/distro-release.json"
+
+// DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.
+func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error) {
+	if dis.Metadata.Name == "" && dis.Spec.Version == "" {
+		return "", DesiredFile{}, false, nil
+	}
+
+	managedList := make([]string, 0, len(managedFiles))
+	for p := range managedFiles {
+		if p != DistroReleaseFile {
+			managedList = append(managedList, p)
+		}
+	}
+	slices.Sort(managedList)
+
+	relData := map[string]any{
+		"name":              dis.Metadata.Name,
+		"version":           dis.Metadata.Version,
+		"distroType":        dis.Spec.Type,
+		"distroVersion":     dis.Spec.Version,
+		"description":       dis.Metadata.Description,
+		"architecture":      dis.Metadata.Architecture,
+		"aggregateChecksum": dis.Metadata.AggregateChecksum,
+		"build":             dis.Build,
+		"images":            dis.Spec.Config.ImagesConfig.Images,
+		"managedFiles":      managedList,
+	}
+	b, err := json.MarshalIndent(relData, "", "  ")
+	if err != nil {
+		return "", DesiredFile{}, false, fmt.Errorf("marshalling distro release metadata: %w", err)
+	}
+	return DistroReleaseFile, DesiredFile{Content: append(b, '\n'), Mode: "0600", NoRestart: true}, true, nil
+}
 
 var (
 	// ErrVersionNotDetected if a version is not detected
@@ -137,6 +178,84 @@ func removablePaths(paths ...string) []string {
 		out = append(out, clean)
 	}
 	return out
+}
+
+// marshalRegistriesYAML renders registries.yaml with the registry names under mirrors, the
+// mirror hosts under configs, and the rewrite patterns inside each mirror all double quoted.
+// The parser does not need the quotes -- a bare registry.example.com:5000 round-trips -- but a
+// key that looks like a number, a boolean, or the "*" wildcard does need them, and both
+// engines' documentation writes these keys quoted. Quoting all of them keeps one rule rather
+// than a rule plus exceptions.
+func marshalRegistriesYAML(config dig.Mapping) ([]byte, error) {
+	raw, err := yaml.Marshal(config)
+	if err != nil {
+		return nil, err
+	}
+
+	var doc yaml.Node
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return nil, err
+	}
+	quoteRegistryKeys(&doc)
+
+	buf := bytes.Buffer{}
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+
+	if err := enc.Encode(&doc); err != nil {
+		return nil, err
+	}
+
+	return []byte("---\n" + buf.String()), nil
+}
+
+// quoteRegistryKeys double quotes the keys of the mirrors and configs mappings, and of any
+// rewrite mapping inside a mirror. Values are left as they are.
+func quoteRegistryKeys(doc *yaml.Node) {
+	root := doc
+	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
+		root = root.Content[0]
+	}
+	if root.Kind != yaml.MappingNode {
+		return
+	}
+
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		section, entries := root.Content[i].Value, root.Content[i+1]
+		if entries.Kind != yaml.MappingNode {
+			continue
+		}
+		if section != keyMirrors && section != keyConfigs {
+			continue
+		}
+
+		quoteKeys(entries)
+		if section != keyMirrors {
+			continue
+		}
+		for j := 1; j < len(entries.Content); j += 2 {
+			quoteRewriteKeys(entries.Content[j])
+		}
+	}
+}
+
+// quoteRewriteKeys double quotes the patterns of one mirror's rewrite mapping.
+func quoteRewriteKeys(mirror *yaml.Node) {
+	if mirror.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(mirror.Content); i += 2 {
+		if mirror.Content[i].Value == keyRewrite && mirror.Content[i+1].Kind == yaml.MappingNode {
+			quoteKeys(mirror.Content[i+1])
+		}
+	}
+}
+
+// quoteKeys sets the double quoted style on every key of a mapping node.
+func quoteKeys(mapping *yaml.Node) {
+	for i := 0; i < len(mapping.Content); i += 2 {
+		mapping.Content[i].Style = yaml.DoubleQuotedStyle
+	}
 }
 
 func marshalYAML(config dig.Mapping) ([]byte, error) {

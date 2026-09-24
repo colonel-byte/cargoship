@@ -1,0 +1,86 @@
+---
+# Install or converge the whole cluster.
+#
+#   ansible-playbook -i ../inventories/fleet apply.yml
+#
+# The play runs on the management node and nowhere else. `hosts: localhost` with `connection:
+# local` is what says so: Ansible connects to nothing in the fleet, and cargoship opens every SSH
+# connection itself from here. The fleet comes from the inventory passed with -i, which the role
+# hands to the module as Ansible's own resolved `groups` and `hostvars`.
+#
+# Add --check to have cargoship run its dry run instead. Phases opt into check mode one at a time,
+# so a phase that has not said how it behaves is reported rather than run.
+- name: Install the cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    # Credentials come from somewhere that is not this file. A vault-encrypted group_vars file is
+    # the usual arrangement on a management node; the environment is the shorter answer for a
+    # one-off. Neither has a default, so a run that supplies neither fails on the undefined
+    # variable rather than installing a cluster that cannot reach its mirror.
+    mirror_user: "{{ lookup('ansible.builtin.env', 'MIRROR_USER') }}"
+    mirror_password: "{{ lookup('ansible.builtin.env', 'MIRROR_PASSWORD') }}"
+
+  tasks:
+    - name: Converge the fleet
+      ansible.builtin.include_role:
+        name: colonel_byte.cargoship.cluster
+      vars:
+        cargoship_action: apply
+        cargoship_package: /srv/staging/rke2-1.31.tar.zst
+
+        # Where to write the document cargoship installs from. Left unset, it goes to a private
+        # temporary file and is removed after a run that succeeded. Naming it keeps it, which is
+        # what you want the first few times: it is an ordinary cluster inventory, and it is
+        # exactly what the fleet gets.
+        cargoship_inventory_path: /srv/staging/generated-inventory.yaml
+
+        # Everything an Ansible inventory has no way to carry. These are the same fields
+        # `.spec.config` takes in a hand-written inventory; see docs/guides/setup-inv.md.
+        cargoship_cluster:
+          name: bubbles
+          loadbalancer: bubbles-kc.test.com
+
+          # A host selects a profile by name with cargoship_profile. The inventory in
+          # ../inventories/fleet selects control, worker, and infra, so all three are here.
+          profiles:
+            control:
+              host:
+                ports:
+                  - port: "6443"
+                    protocol: tcp
+              engine:
+                labels:
+                  adrp.xyz/purpose-control: "true"
+            worker: {}
+            infra:
+              engine:
+                taints:
+                  - adrp.xyz/infra=true:NoSchedule
+
+          # The mirror the engine pulls from, and the credentials for it. `name` is the registry
+          # the images were originally referenced from. See docs/guides/registry-override.md.
+          registries:
+            - name: docker.io
+              proxy:
+                url: https://mirror.test.com:5000
+              auth:
+                user: "{{ mirror_user }}"
+                pass: "{{ mirror_password }}"
+
+          # Overrides for the values the package was built with.
+          values:
+            cluster_domain: bubbles.test.com
+
+        # Everything else the module takes, passed through as-is. See docs/ansible/module_apply.md
+        # for the parameter list, or docs/ansible/modules.md for the other four.
+        cargoship_args:
+          vault_password_file: /srv/staging/vault-pass
+          timeout: 45m
+          label_nodes: true
+
+        # The role sets no_log on every task, because a module's arguments name the fleet. This
+        # prints cargoship's own report instead: phase names and file paths, no key material.
+        cargoship_show_result: true

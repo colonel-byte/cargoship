@@ -22,11 +22,13 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"regexp"
 
 	"github.com/colonel-byte/cargoship/src/config"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
+	"github.com/colonel-byte/cargoship/src/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
@@ -41,11 +43,16 @@ type InstallCommon struct {
 	config      string
 	concurrency int
 	confirm     bool
-	// dryRun reaches phase.Manager.DryRun. Only apply and reset register the flag; the other
-	// commands embedding InstallCommon carry the field unset, which is the same as off.
+	// dryRun reaches phase.Manager.DryRun. Only apply, reset, and engine-config-sync register
+	// the flag; the other commands embedding InstallCommon carry the field unset, which is the
+	// same as off.
 	dryRun    bool
 	logLevel  string
 	LogFormat string
+	// values holds the --values files. They are merged after the cluster config's own
+	// spec.config.values, so the command line wins over the file. Commands that do not
+	// load a package never register the flag and carry the field empty.
+	values []string
 	// packageVerifyFlags carries the signature verification flags for the install
 	// commands that load a package through initManager. Commands that do not load a
 	// package (reset, kube-config) embed InstallCommon but never register these flags.
@@ -124,9 +131,36 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 
 	logger.From(ctx).Debug("distro information", "temp", distroLayout.DirPath(), "build", distroLayout.Distro.Build.Timestamp)
 
+	// The cluster file overrides the values the package was built with, --values
+	// overrides both, and the result is checked against the package's schema here,
+	// before any phase runs.
+	overrides := []map[string]any{cluster.Spec.Config.Values}
+	if len(opt.values) > 0 {
+		fromFlags, err := helmvalues.LoadFiles(ctx, "", "", opt.values)
+		if err != nil {
+			return nil, fmt.Errorf("unable to read the values files given with --%s: %w", InstallValues, err)
+		}
+		overrides = append(overrides, fromFlags)
+	}
+
+	values, err := distroLayout.Values(ctx, overrides...)
+	if err != nil {
+		return nil, err
+	}
+	// Both of these resolve the package against the values before any phase runs: the
+	// first renders and maps the engine configuration, the second renders the contents of
+	// the files the package marked as templates, in place in the extracted package.
+	if err := distroLayout.ApplyValues(values); err != nil {
+		return nil, err
+	}
+	if err := distroLayout.RenderFiles(ctx, values); err != nil {
+		return nil, err
+	}
+
 	return &phase.Manager{
 		Config:            &cluster,
 		Distro:            &distroLayout.Distro,
+		Values:            values,
 		DistroID:          distroLayout.Distro.Spec.Type,
 		TempDirectory:     distroLayout.DirPath(),
 		Concurrency:       opt.concurrency,

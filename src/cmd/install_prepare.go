@@ -64,6 +64,7 @@ func newInstallPrepareCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&o.firewall, InstallUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
 	cmd.Flags().BoolVarP(&o.fapolicy, InstallUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
@@ -82,6 +83,9 @@ func newInstallPrepareCommand() *cobra.Command {
 	o.LogFormat = val
 
 	cmd.MarkFlagRequired(InstallConfig)
+
+	addBuildFlags(cmd)
+	addTimeoutFlag(cmd)
 
 	return cmd
 }

@@ -45,6 +45,7 @@ type packagePublishOptions struct {
 	signingKeyPath     string
 	signingKeyPassword string
 	confirm            bool
+	tag                string
 	packageVerifyFlags
 }
 
@@ -67,11 +68,15 @@ func newPackagePublishCommand() *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", resolvedConfig.DistroOpts.Retry, lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", resolvedConfig.DistroOpts.PublishOpts.SigningKey, zlang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", resolvedConfig.DistroOpts.PublishOpts.SigningKeyPassword, zlang.CmdPackagePublishFlagSigningKeyPassword)
+	cmd.Flags().StringVar(&o.tag, PackageTag, "", zlang.CmdPackagePublishFlagTag)
 	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	if err := registerFlagOCIConcurrency(cmd, &o.ociConcurrency); err != nil {
 		logger.From(cmd.Context()).Debug("error when trying add shell completion", "error", err)
 	}
+
+	addBuildFlags(cmd)
+	addRegistryFlags(cmd)
 
 	return cmd
 }
@@ -128,6 +133,7 @@ func (o *packagePublishOptions) run(ctx context.Context, cmd *cobra.Command, arg
 		RemoteOptions:   defaultRemoteOptions(),
 		Registry:        &dstRef,
 		SignBlobOptions: signOpts,
+		Tag:             o.tag,
 	}
 
 	disPath, err := distro.Publish(ctx, distroLayout, dstRef, opt)

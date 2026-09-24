@@ -23,6 +23,7 @@ package load
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -63,6 +64,9 @@ func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions)
 	return cluster, nil
 }
 
-func validateCluster(_ context.Context, _ v1alpha1.ZarfCluster, _ string) error {
+func validateCluster(_ context.Context, c v1alpha1.ZarfCluster, path string) error {
+	if err := v1alpha1.ValidateRegistries(c.Spec.Config.Registries); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	return nil
 }

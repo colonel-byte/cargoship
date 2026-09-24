@@ -16,6 +16,8 @@
 package distro
 
 import (
+	"fmt"
+
 	"github.com/colonel-byte/cargoship/src/api"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/invopop/jsonschema"
@@ -101,6 +103,34 @@ type ZarfDistroSpec struct {
 	Actions ZarfDistroActions `json:"actions,omitempty"`
 	// Config holds the distro engine configuration.
 	Config ZarfDistroConfig `json:"config"`
+	// Values holds the default values the package is built with, and the schema they must satisfy.
+	Values ZarfDistroValues `json:"values,omitempty"`
+}
+
+// ZarfDistroValues declares the values a package ships with. Values are the
+// Helm-style configuration described by ZEP-0021: a nested structure addressed
+// by dotted paths, which templates in the package read as .Values.
+type ZarfDistroValues struct {
+	// Files lists the YAML values files cargoship merges, in order, to build the package's default values. Each entry is a path relative to the package definition, an absolute path, or a URL. A later file overrides an earlier one, key by key.
+	Files []string `json:"files,omitempty" jsonschema:"example=values.yaml,example=overrides/prod.yaml,example=https://example.com/values.yaml"`
+	// Schema is the JSON Schema document the merged values must satisfy. Cargoship checks the values against it when it builds the package, and refuses to build when they do not match. The schema must not use $ref.
+	Schema string `json:"schema,omitempty" jsonschema:"example=values.schema.json"`
+	// Mappings project values onto the engine configuration, so that one value a
+	// cluster sets reaches wherever the distro needs it. Each mapping reads the
+	// source path out of the resolved values and writes it to the target path,
+	// which is relative to spec.config.engine. A source the values do not define
+	// is left alone, so the package's own engine configuration stands as the
+	// default.
+	Mappings []ZarfDistroValueMapping `json:"mappings,omitempty"`
+}
+
+// ZarfDistroValueMapping projects one value onto one place in the engine configuration.
+type ZarfDistroValueMapping struct {
+	// Source is the dotted path to read from the resolved values, e.g. .cilium.encryption.enabled
+	Source string `json:"source" jsonschema:"example=.cilium.encryption.enabled"`
+	// Target is the dotted path to write, relative to spec.config.engine,
+	// e.g. .manifest.rke2-cilium.encryption.enabled
+	Target string `json:"target" jsonschema:"example=.manifest.rke2-cilium.encryption.enabled"`
 }
 
 // ZarfDistroActions defines the actions cargoship runs during specific phases of building the distro package.
@@ -121,6 +151,44 @@ type ZarfDistroConfig struct {
 	Engine dig.Mapping `json:"engine,omitempty"`
 }
 
+// JSONSchemaExtend pins down the shape of the engine's manifest section, whose values are Helm
+// values written into a HelmChartConfig: either a YAML string or a mapping cargoship serializes
+// to YAML for the chart. Engine is otherwise a free-form mapping handed to the distro engine, so
+// the section list stays open and every other section keeps validating as it did.
+func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema) {
+	engine, ok := s.Properties.Get("engine")
+	if !ok {
+		return
+	}
+	manifest := &jsonschema.Schema{
+		Type:        "object",
+		Description: "maps a chart name to the Helm values cargoship writes to that chart's HelmChartConfig. A value is either a YAML string or a mapping.",
+		AdditionalProperties: &jsonschema.Schema{
+			OneOf: []*jsonschema.Schema{
+				{Type: "string"},
+				{Type: "object"},
+			},
+		},
+	}
+
+	// Replacing the $ref with an inline object is what lets a property be described at all:
+	// the Mapping definition is shared by every free-form mapping in the schema.
+	engine.Ref = ""
+	engine.Type = "object"
+	engine.Properties = jsonschema.NewProperties()
+	engine.Properties.Set("manifest", manifest)
+}
+
+// Compression formats accepted by ZarfDistroImageConfig.Compression.
+const (
+	// CompressionNone writes the image tarballs uncompressed. This is the default.
+	CompressionNone = "none"
+	// CompressionGzip writes the image tarballs with gzip compression.
+	CompressionGzip = "gz"
+	// CompressionZstd writes the image tarballs with zstd compression.
+	CompressionZstd = "zstd"
+)
+
 // ZarfDistroImageConfig holds settings for the images cargoship writes to a host.
 type ZarfDistroImageConfig struct {
 	// Compression sets the compression format for the image tarballs.
@@ -129,6 +197,23 @@ type ZarfDistroImageConfig struct {
 	Path string `json:"path,omitempty"`
 	// Images lists the offline images required by the package.
 	Images []string `json:"images,omitempty" jsonschema:"uniqueItems=true"`
+}
+
+// TarballSuffix returns the file suffix image tarballs get for the configured
+// compression format. The suffixes match the archive extensions a host imports,
+// so a compressed tarball is still picked up. An unset format means no
+// compression. It returns an error for a format cargoship cannot write.
+func (c ZarfDistroImageConfig) TarballSuffix() (string, error) {
+	switch c.Compression {
+	case "", CompressionNone:
+		return ".tar", nil
+	case CompressionGzip:
+		return ".tar.gz", nil
+	case CompressionZstd:
+		return ".tar.zst", nil
+	default:
+		return "", fmt.Errorf("unsupported image compression %q, expected one of %q, %q, %q", c.Compression, CompressionNone, CompressionGzip, CompressionZstd)
+	}
 }
 
 // ZarfDistroOS holds settings applied to a host.

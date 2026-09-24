@@ -21,6 +21,12 @@ dist
 cluster-key
 cluster-key.pub
 
+# Package signing keys. hack/gen-signing-keys.sh writes to a directory you name, so the
+# private halves have no business here -- these patterns are the backstop for naming that
+# directory badly. The public halves are published deliberately, under crypto/.
+cargoship-signing.asc
+*.rsa
+
 # Added for goreleaser:
 dist/
 

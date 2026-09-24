@@ -1,0 +1,25 @@
+---
+# run_once because cargoship converges the whole fleet in one run. Without it, a play over the
+# fleet's own inventory would run a full cluster convergence once per host.
+#
+# no_log follows cargoship_no_log, which defaults to true. The arguments of this task name every
+# host in the fleet and may name a path to key material, so turn it off only to debug locally. The
+# default lives in defaults/main.yml rather than being relied on from an undefined variable,
+# because a template that failed to evaluate would leave no_log false.
+#
+# Set cargoship_show_result instead where you can: it prints cargoship's own report, which holds
+# phase names and file paths and no key material.
+- name: Run cargoship reset
+  colonel_byte.cargoship.cargoship_reset:
+    inventory: "{{ _cargoship_inventory }}"
+    parameters: "{{ _cargoship_parameters }}"
+  delegate_to: "{{ cargoship_delegate_to }}"
+  run_once: true
+  no_log: "{{ cargoship_no_log | bool }}"
+  register: cargoship_result
+
+- name: Report what cargoship did
+  ansible.builtin.debug:
+    var: cargoship_result.cargoship
+  when: cargoship_show_result | bool
+  run_once: true

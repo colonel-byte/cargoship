@@ -31,14 +31,14 @@ import (
 const MiscVaultPasswordFile = "vault-password-file"
 
 type vaultEncryptOptions struct {
-	vaultPasswordFile string
+	keyFlags
 }
 
 func newVaultEncryptCommand() *cobra.Command {
 	o := vaultEncryptOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "vault-encrypt [VALUE]",
+		Use:     "encrypt [VALUE]",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdVaultEncryptShort,
 		Long:    lang.CmdVaultEncryptLong,
@@ -48,19 +48,17 @@ func newVaultEncryptCommand() *cobra.Command {
 
 	// Not marked required: ResolveVaultPassword falls back to CARGOSHIP_VAULT_PASSWORD
 	// and ANSIBLE_VAULT_PASSWORD, which are unreachable if cobra rejects the command
-	// before RunE. run() errors when no password is found by any means.
+	// before RunE. run() errors when no key is found by any means.
 	cmd.Flags().StringVar(&o.vaultPasswordFile, MiscVaultPasswordFile, "", lang.CmdVaultEncryptFlagPasswordFile)
+	addAgeFlags(cmd, &o.keyFlags)
 
 	return cmd
 }
 
 func (o *vaultEncryptOptions) run(cmd *cobra.Command, args []string) error {
-	password, err := clustercfg.ResolveVaultPassword(o.vaultPasswordFile)
+	keyring, err := o.requireKeyring(cmd)
 	if err != nil {
 		return err
-	}
-	if password == "" {
-		return errors.New("no vault password found: set --vault-password-file or the CARGOSHIP_VAULT_PASSWORD/ANSIBLE_VAULT_PASSWORD environment variable")
 	}
 
 	value, err := readValue(cmd, args)
@@ -68,7 +66,7 @@ func (o *vaultEncryptOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	encrypted, err := clustercfg.EncryptValue(value, password)
+	encrypted, err := clustercfg.EncryptValue(value, keyring)
 	if err != nil {
 		return err
 	}

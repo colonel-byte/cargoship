@@ -4,13 +4,6 @@ name: Basic build
 on:
   pull_request:
     paths-ignore:
-      - "**.md"
-      - "**.jpg"
-      - "**.png"
-      - "**.gif"
-      - "**.svg"
-      - "adr/**"
-      - "docs/**"
       - "CODEOWNERS"
 
 permissions:
@@ -45,7 +38,7 @@ jobs:
         env:
           CGO_ENABLED: 0
           # Everything the build needs is vendored, so make any accidental network
-          # access fail fast. Matches .dagger/build-local.go and magefiles/utils.go.
+          # access fail fast. Matches magefiles/utils.go.
           GOFLAGS: -mod=vendor
           GOPROXY: "off"
           GOSUMDB: "off"

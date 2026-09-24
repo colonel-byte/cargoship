@@ -251,6 +251,27 @@ func TestLogUnknownEngineConfigUnknownVersionLogsNoKeys(t *testing.T) {
 	}
 }
 
+func TestLogUnknownEngineConfigLogsOnlyUnknownAddons(t *testing.T) {
+	ctx, buf := engineConfigLogContext()
+
+	// rke2-ingress-nginx is only valid through the CNI/ingress chart union, not rke2's own
+	// DisableItems -- the same thing example/rke2-*/distro.yaml disables.
+	logUnknownEngineConfig(ctx, engineConfigDistro("1.36.4-rke2r1", dig.Mapping{
+		"disable": []any{"rke2-ingress-nginx", "not-a-component"},
+	}))
+
+	out := buf.String()
+	if !strings.Contains(out, "component=not-a-component") {
+		t.Fatalf("logUnknownEngineConfig did not log the unknown component: %s", out)
+	}
+	if strings.Contains(out, "component=rke2-ingress-nginx") {
+		t.Fatalf("logUnknownEngineConfig logged a component rke2 does package: %s", out)
+	}
+	if strings.Contains(out, "level=WARN") {
+		t.Fatalf("logUnknownEngineConfig logged above debug: %s", out)
+	}
+}
+
 func TestLogUnknownEngineConfigEmptyConfigLogsNothing(t *testing.T) {
 	ctx, buf := engineConfigLogContext()
 

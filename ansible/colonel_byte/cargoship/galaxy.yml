@@ -1,0 +1,24 @@
+namespace: colonel_byte
+name: cargoship
+version: 0.27.0
+readme: README.md
+authors:
+  - Allen Conlon <software@conlon.dev>
+description: >-
+  Install and converge air-gapped Kubernetes clusters with cargoship, driven
+  from an Ansible inventory.
+license:
+  - Apache-2.0
+tags:
+  - kubernetes
+  - k3s
+  - rke2
+  - airgap
+  - cluster
+repository: https://github.com/colonel-byte/cargoship
+documentation: https://colonel-byte.github.io/cargoship/ansible/collection.html
+homepage: https://github.com/colonel-byte/cargoship
+issues: https://github.com/colonel-byte/cargoship/issues
+build_ignore:
+  - '*.tar.gz'
+  - AGENTS.md

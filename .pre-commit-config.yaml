@@ -60,8 +60,15 @@ repos:
     rev: v2.13.2
     hooks:
       - id: golangci-lint
+        language_version: "1.27.0"
         exclude: vendor/.*
       - id: golangci-lint-config-verify
+        language_version: "1.27.0"
+        exclude: vendor/.*
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.15.1
+    hooks:
+      - id: hadolint-docker
         exclude: vendor/.*
   - repo: local
     hooks:

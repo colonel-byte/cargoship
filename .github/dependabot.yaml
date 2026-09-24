@@ -1,13 +1,22 @@
 ---
 version: 2
+registries:
+  docker-hub:
+    type: docker-registry
+    url: registry.hub.docker.com
+    username: ${{ secrets.DOCKER_HUB_USER }}
+    password: ${{ secrets.DOCKER_HUB_TOKEN }}
+  registry1:
+    type: docker-registry
+    url: registry1.dso.mil
+    username: ${{ secrets.REGISTRY1_USER }}
+    password: ${{ secrets.REGISTRY1_TOKEN }}
 updates:
   - package-ecosystem: gomod
     directory: "/"
     schedule:
       interval: weekly
       day: monday
-    assignees:
-      - "a1994sc"
     allow:
       - dependency-type: "all"
     ignore:
@@ -48,7 +57,7 @@ updates:
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "a1994sc"
     groups:
@@ -59,9 +68,38 @@ updates:
     directory: "/"
     schedule:
       interval: daily
-    assignees:
-      - "a1994sc"
     groups:
       core:
         patterns:
           - "*"
+  # One entry per directory, ungrouped: Dependabot appends "in the <name> group
+  # across N directories" to PR titles when `directories` and `groups` are set,
+  # pushing the title past commitlint's 100-char header-max-length.
+  - package-ecosystem: docker
+    directory: "/containers/ansible"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1
+  - package-ecosystem: docker
+    directory: "/containers/base"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1
+  - package-ecosystem: docker
+    directory: "/containers/deb"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1
+  - package-ecosystem: docker
+    directory: "/containers/ubi"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1

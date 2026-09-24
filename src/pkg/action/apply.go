@@ -25,6 +25,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
@@ -48,12 +49,18 @@ type ApplyOptions struct {
 	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
 	// count ("5") or a percentage of the batch ("25%")
 	WorkerConcurrent string
-	// UpdateKubeConfig whether to update the local config
+	// UpdateKubeConfig whether to update the config
 	UpdateKubeConfig bool
+	// KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
+	// location when empty
+	KubeConfigPath string
 	// LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool
-	// VaultPassword decrypts Ansible Vault-encrypted registry credentials
-	VaultPassword string
+	// AllowUnmanagedNodes lets an apply continue when the cluster holds a node no host in the
+	// config accounts for, rather than stopping on it
+	AllowUnmanagedNodes bool
+	// Keyring decrypts encrypted registry credentials, in either supported format
+	Keyring *clustercfg.Keyring
 }
 
 // Apply state logic
@@ -88,6 +95,12 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.GatherFactsDistro{
 				Distro: d,
 			},
+			// Before anything is changed: an apply that is about to walk past a node the config
+			// no longer holds should say so while stopping is still free.
+			&phase.DetectRemovedHosts{
+				Distro:         d,
+				AllowUnmanaged: opts.AllowUnmanagedNodes,
+			},
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
 			&phase.PrepareFapolicy{},
@@ -107,8 +120,8 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 
 			&phase.ConfigureEngine{
-				Distro:        d,
-				VaultPassword: opts.VaultPassword,
+				Distro:  d,
+				Keyring: opts.Keyring,
 			},
 			&phase.InitializeControllers{
 				Distro: d,
@@ -130,14 +143,14 @@ func NewApply(opts ApplyOptions) *Apply {
 			},
 			&phase.EngineConfigSyncController{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
-					Distro:        d,
-					VaultPassword: opts.VaultPassword,
+					Distro:  d,
+					Keyring: opts.Keyring,
 				},
 			},
 			&phase.EngineConfigSyncWorker{
 				EngineConfigSyncHosts: phase.EngineConfigSyncHosts{
-					Distro:        d,
-					VaultPassword: opts.VaultPassword,
+					Distro:  d,
+					Keyring: opts.Keyring,
 				},
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
@@ -145,6 +158,8 @@ func NewApply(opts ApplyOptions) *Apply {
 				Distro:    d,
 				ClusterID: opts.Manager.Config.Metadata.Name,
 				Enabled:   opts.UpdateKubeConfig,
+				Write:     true,
+				Path:      opts.KubeConfigPath,
 			},
 			&phase.LabelNodes{
 				Distro:  d,

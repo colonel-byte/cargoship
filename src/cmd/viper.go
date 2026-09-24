@@ -75,10 +75,15 @@ func initViper() error {
 	// support for every key not also present in the user's config file.
 	setDefaults()
 
+	// This logger exists to report a config file that was found and could not be used, which
+	// happens before any flag is parsed and so before the real logger exists. It writes to
+	// stderr because it is a log: commands that emit a document -- schema, validate,
+	// inventory from-ansible -- put that document on stdout, and a warning mixed into it
+	// corrupts whatever the output was piped into.
 	log, err := logger.New(logger.Config{
 		Level:       logger.Info,
 		Format:      logger.FormatConsole,
-		Destination: os.Stdout,
+		Destination: os.Stderr,
 		Color:       true,
 	})
 	if err != nil {
@@ -176,6 +181,7 @@ func setDefaults() {
 	v.SetDefault(configPath("CachePath"), config.DefaultCachePath)
 	v.SetDefault(configPath("LogFormat"), string(logger.FormatConsole))
 	v.SetDefault(configPath("TempDirectory"), "/tmp")
+	v.SetDefault(configPath("Timeout"), "60m")
 	v.SetDefault(configPath("NoColor"), false)
 	v.SetDefault(configPath("LogFile"), false)
 
@@ -184,6 +190,7 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "HostUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "FirewallUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "LabelNodes"), false)
+	v.SetDefault(configPath("DistroOpts", "AllowUnmanagedNodes"), false)
 	v.SetDefault(configPath("DistroOpts", "UpdateKubeConfig"), true)
 
 	// The keys below have no real default value beyond the Go zero value -- they're
@@ -197,6 +204,7 @@ func setDefaults() {
 	v.SetDefault(configPath("Architecture"), "")
 	v.SetDefault(configPath("DistroOpts", "FAPolicyd"), false)
 	v.SetDefault(configPath("DistroOpts", "WorkerConcurrency"), "0")
+	v.SetDefault(configPath("DistroOpts", "KubeConfig"), "")
 	v.SetDefault(configPath("DistroOpts", "Type"), "")
 	v.SetDefault(configPath("DistroOpts", "Retry"), 0)
 	v.SetDefault(configPath("DistroOpts", "PublishOpts", "SigningKey"), "")
@@ -207,6 +215,14 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "CertificateOIDCIssuerRegexp"), "")
 	v.SetDefault(configPath("DistroOpts", "TrustedRoot"), "")
 	v.SetDefault(configPath("DistroOpts", "PublicKey"), "")
+
+	// Registered for the same reason as the keys above: without a default, Unmarshal never learns
+	// the key exists and the `.age` section resolves to nothing when it is set only in the
+	// environment. Empty slices rather than nil so that a command reading them before any config
+	// file has been found gets the same shape either way.
+	v.SetDefault(configPath("AgeOpts", "IdentityFiles"), []string{})
+	v.SetDefault(configPath("AgeOpts", "Recipients"), []string{})
+	v.SetDefault(configPath("AgeOpts", "RecipientsFiles"), []string{})
 }
 
 // GetStringSlice returns a string slice from viper

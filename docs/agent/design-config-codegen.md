@@ -80,13 +80,13 @@ All pure Go, no network:
 
 ## Rough effort estimate
 
-| Piece | Effort |
-|---|---|
-| `go/ast` flag-slice extractor (incl. indirect var refs, `Destination` unpacking) | 3–5 days |
-| JSON manifest → struct templating | ~1 day |
-| Slice/hidden/deprecated-flag edge case handling | ~1 day |
-| Per-version diffing / changelog view | ~half day (mostly free once manifests exist) |
-| Sparse source-pull tooling per version | ~1 day |
+| Piece                                                                            | Effort                                       |
+| -------------------------------------------------------------------------------- | -------------------------------------------- |
+| `go/ast` flag-slice extractor (incl. indirect var refs, `Destination` unpacking) | 3–5 days                                     |
+| JSON manifest → struct templating                                                | ~1 day                                       |
+| Slice/hidden/deprecated-flag edge case handling                                  | ~1 day                                       |
+| Per-version diffing / changelog view                                             | ~half day (mostly free once manifests exist) |
+| Sparse source-pull tooling per version                                           | ~1 day                                       |
 
 ## Consumption: wired into `src/types/distrocfg`
 
@@ -94,9 +94,15 @@ All pure Go, no network:
 
 `gen.Registry` (`src/pkg/engineconfig/gen/zz_registry.go`) is generated alongside the per-version structs by `mage generate:engineConfig` — every distro/version pull gets wired in automatically, with no hand-maintained import list to keep in sync.
 
+### Packaged components: value-level validation for `disable:`
+
+`disable:` is the one key whose *values* also come from a closed, version-specific vocabulary, so it gets checked too. Each generated package carries a `zz_addons.go` with `Addons` (valid `disable:` values), `CNIs`, and `IngressControllers`, extracted from k3s's `pkg/cli/cmds/stage.go` const and RKE2's `pkg/cli/types.go` slices; `Entry` carries all three. See `docs/dev/thirdparty-src.md` for how RKE2's list is composed — it is the union of `DisableItems`, the chart-name pair per CNI and ingress item, and the literal `clx.Set("disable", ...)` calls, because RKE2 accepts far more than it advertises.
+
+Both consumption points use `gen.UnknownAddons`: `RancherCommon.validateEngineConfig` warns on controllers (agents deploy nothing, and the key check has already removed `disable` there), and `assemble.logUnknownEngineConfig` logs at debug when a package is built. **Neither drops the value.** The key check can afford to delete, because a key is either in the extracted flag list or it isn't. The addon list is derived, so a false positive is likelier — and the cost of one is inverted: dropping an unrecognized `disable:` entry would deploy a component the user explicitly asked to be without, which is worse than writing through a name the engine will simply ignore. An empty `Addons` (a version whose component source was never pulled) means the check is skipped entirely.
+
 ## Open questions / follow-ups
 
-- Do we want a validation layer that encodes the known cross-field constraints (disable-apiserver vs datastore-endpoint, etc.), or leave that to whoever consumes the generated config?
+- Do we want a validation layer that encodes the known cross-field constraints (disable-apiserver vs datastore-endpoint, etc.), or leave that to whoever consumes the generated config? (Partly answered for value-level checks: `disable:` values are now validated against the extracted packaged-component list, warn-only. `cni:` and `ingress-controller:` have their vocabularies extracted into `Entry.CNIs`/`Entry.IngressControllers` but nothing checks them yet.)
 - Minor-version granularity only (1.34/1.35/1.36), or also track patch releases when a flag changes mid-minor?
 - Should hidden/deprecated flags be emitted into generated structs at all, or tracked separately as metadata only?
 - The current consumer (`src/types/distrocfg`) drops unrecognized keys (with a warning) for known distro/versions, but doesn't fail the build. Worth revisiting once there's confidence false positives (e.g. a flag added in extraction but not yet in a resolvable form) are rare enough to make a hard failure safe instead of a silent drop.

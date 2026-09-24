@@ -33,12 +33,12 @@ const (
 type ConfigureEngine struct {
 	GenericPhase
 	Distro distrocfg.Distro
-	// VaultPassword decrypts Ansible Vault-encrypted registry credentials.
-	// If empty, registries with vault-encrypted credentials cause Prepare to error.
-	VaultPassword string
-	run           cluster.ZarfRuntimeMeta
-	hosts         cluster.ZarfHosts
-	control       cluster.ZarfHosts
+	// Keyring decrypts encrypted registry credentials, in either supported format. If it holds
+	// nothing that reads a given value, Prepare errors.
+	Keyring *clustercfg.Keyring
+	run     cluster.ZarfRuntimeMeta
+	hosts   cluster.ZarfHosts
+	control cluster.ZarfHosts
 }
 
 // Prepare the phase
@@ -61,7 +61,7 @@ func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d
 	p.run.ControllerTLS = append(p.run.ControllerTLS, c.Spec.Config.LoadBalancer)
 	p.run.LoadBalancer = c.Spec.Config.LoadBalancer
 
-	if err := clustercfg.DecryptRegistryAuth(c, p.VaultPassword); err != nil {
+	if err := clustercfg.DecryptRegistryAuth(c, p.Keyring); err != nil {
 		logger.From(ctx).Warn("failed to decrypt registry auth", "error", err)
 		return err
 	}

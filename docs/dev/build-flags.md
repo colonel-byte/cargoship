@@ -1,11 +1,8 @@
 # Build Flags and Environment
 
-This document explains the compiler flags, linker flags, and environment variables used when compiling the `cargoship` binary, and why each one is set. These are defined in two places that must be kept in sync:
+This document explains the compiler flags, linker flags, and environment variables used when compiling the `cargoship` binary, and why each one is set. They are defined in `src/pkg/utils/build/utils.go`, which the Mage host build path (`magefiles/utils.go`) uses.
 
-*   `src/pkg/utils/build/utils.go` — used by the Mage host build path (`magefiles/utils.go`).
-*   `.dagger/utils/utils.go` — used by the Dagger containerized build path (`.dagger/build-local.go`).
-
-Both expose the same two functions, `LDFlags(version, commit string) string` and `GCFLags() string`, and both build sites additionally set `CGO_ENABLED=0` and pass `-trimpath` directly in their `go build` invocation rather than through these shared helpers.
+That package exposes two functions, `LDFlags(version, commit string) string` and `GCFLags() string`. The build site additionally sets `CGO_ENABLED=0` and passes `-trimpath` directly in its `go build` invocation rather than through these shared helpers.
 
 ## Why this matters
 
@@ -13,12 +10,12 @@ An unoptimized `go build` of this repo produces a binary well over 130MB on Linu
 
 Measured impact on a Linux/amd64 build of this repo:
 
-| Configuration | Size | Linking |
-| :--- | :--- | :--- |
-| `go build` with no flags | ~136MB | dynamic (glibc) |
-| `+ CGO_ENABLED=0` | ~98.5MB | static |
-| `+ -trimpath` | ~98.2MB | static |
-| default gcflags instead of `-l -B -C` (for comparison) | ~113MB | static |
+| Configuration                                          | Size    | Linking         |
+| :----------------------------------------------------- | :------ | :-------------- |
+| `go build` with no flags                               | ~136MB  | dynamic (glibc) |
+| `+ CGO_ENABLED=0`                                      | ~98.5MB | static          |
+| `+ -trimpath`                                          | ~98.2MB | static          |
+| default gcflags instead of `-l -B -C` (for comparison) | ~113MB  | static          |
 
 ## Environment variables
 
@@ -27,7 +24,7 @@ Measured impact on a Linux/amd64 build of this repo:
 Forces a pure-Go, statically-linked binary.
 
 *   **Why:** on a native Linux/amd64 host, Go's default is `CGO_ENABLED=1` whenever a C toolchain is present, which produces a dynamically-linked binary against glibc. This repo doesn't need cgo (no imports rely on it), so leaving it enabled only adds size and a runtime dependency on the host's libc/dynamic linker. Disabling it saved ~28% of binary size in testing and makes binaries fully static and portable across Linux distros/container base images.
-*   **Where set:** `env["CGO_ENABLED"] = "0"` in `magefiles/utils.go`'s `hostBuildLocal`, and `WithEnvVariable("CGO_ENABLED", "0")` in `.dagger/build-local.go`.
+*   **Where set:** `env["CGO_ENABLED"] = "0"` in `magefiles/utils.go`'s `hostBuildLocal`.
 
 ### `GOOS` / `GOARCH`
 
@@ -40,7 +37,7 @@ Standard Go cross-compilation target selection, set per invocation from the `os`
 Strips local filesystem paths (e.g. `/home/user/git/cargoship/...`) from the compiled binary, replacing them with module paths.
 
 *   **Why:** without it, absolute build-machine paths get embedded in the binary (used for panic traces and debug info paths), which leaks local environment details and hurts build reproducibility. It also shaves a small amount of size (a few hundred KB) since fewer/shorter path strings end up in the binary.
-*   **Where set:** directly in the `go build` command string in both `magefiles/utils.go` and `.dagger/build-local.go`.
+*   **Where set:** directly in the `go build` command string in `magefiles/utils.go`.
 
 ### `-a`
 

@@ -1,0 +1,47 @@
+---
+# Stage a package onto the fleet and ready the hosts, without installing the cluster.
+#
+#   ansible-playbook -i ../inventories/fleet prepare.yml
+#
+# This is the half of an apply that takes the longest and changes the least: uploading images and
+# binaries, and applying the host, firewall, and fapolicyd settings. Running it the day before a
+# maintenance window leaves the apply itself short enough to fit in one.
+#
+# It reads no encrypted value, so it takes no vault_password_file. That is not an omission: a
+# parameter offered to a module that has no use for it is an error naming the parameter, rather
+# than a flag quietly dropped.
+- name: Stage the package onto the fleet
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Upload the package and ready the hosts
+      ansible.builtin.include_role:
+        name: colonel_byte.cargoship.cluster
+      vars:
+        cargoship_action: prepare
+        cargoship_package: /srv/staging/rke2-1.31.tar.zst
+        cargoship_cluster:
+          name: bubbles
+          loadbalancer: bubbles-kc.test.com
+        cargoship_args:
+          # The three host switches. Each one is left unset by default, and unset means the module
+          # passes no flag at all, so whatever your cargoship configuration file says still
+          # applies. That is why `firewall: false` and omitting `firewall` are different.
+          hosts: true
+          firewall: true
+          fapolicyd: false
+
+          # Signature verification, key-based. Keyless verification identifies a signer against a
+          # Fulcio root and a transparency log, which needs network a management node inside an
+          # airlock does not have; verify a keyless-signed package with `cargoship package verify`
+          # before the play.
+          public_key: /srv/staging/keys/cosign.pub
+          verify: always
+
+          # Uploads run per host; the package is large and the fleet is not. Raise this before you
+          # raise anything else if staging is the slow part. See docs/guides/profile-concurrency.md.
+          concurrency: 10
+          timeout: 90m
+        cargoship_show_result: true

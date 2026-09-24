@@ -1,0 +1,11 @@
+---
+# Collections are loaded by ansible-core on the controller, and the action plugins here use
+# ansible.builtin plugin APIs that settled in 2.15. There is no managed-node floor to declare:
+# nothing in this collection runs on a managed node.
+#
+# The upper bound is not a compatibility claim -- it is the controller range the collection is
+# tested and pinned against, and mage generate:ansibleRequirements resolves requirements.yml
+# against it. It tracks the ansible-core in containers/ansible/Dockerfile, which is whatever
+# `dnf install ansible-core` resolves to on that base image (2.16.16 on almalinux/10-base:10.2).
+# Bumping that base image means revisiting this line and re-running the target.
+requires_ansible: ">=2.16.0,<2.17.0"
