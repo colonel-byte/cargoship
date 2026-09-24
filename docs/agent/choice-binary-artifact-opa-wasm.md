@@ -1,4 +1,4 @@
-# Why Binary-Artifacts sits at 9/10 and stays there
+# Why Binary-Artifacts and two Pinned-Dependencies findings stay annotated, not fixed
 
 [OpenSSF Scorecard's](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship) Binary-Artifacts check scores 9/10 for one finding:
 
@@ -44,3 +44,22 @@ Scorecard v5 added maintainer annotations: a `scorecard.yml` (or `.scorecard.yml
 ## What this does not do
 
 It does not raise the check to 10. Binary-Artifacts stays at 9/10, same as [choice-osv-vendor-overrides](choice-osv-vendor-overrides.md)'s Vulnerabilities ceiling stays below 10 for its own dependency-chain reasons. The annotation exists so a human reading the Scorecard result sees why the finding is there and that it was investigated, not to move the number.
+
+## Pinned-Dependencies: two more vendored findings, same shape
+
+Pinned-Dependencies scored 9/10 for three findings, not one. Two are the same story as `opa.wasm`:
+
+```
+goCommand not pinned by hash: vendor/github.com/ChrisTrenkamp/goxpath/coverage.sh:3
+goCommand not pinned by hash: vendor/github.com/json-iterator/go/build.sh:10
+```
+
+Both are `go mod vendor` copying a dependency's own repository layout, this time its maintainer-facing shell scripts rather than an embedded asset: `coverage.sh` runs goxpath's coverage report and opens it in Firefox; `build.sh` sets up a `GOPATH`-style tree and runs `dep ensure` for json-iterator's old (`dep`, not modules) vendoring flow. Neither script is on any path cargoship's build or CI invokes — they exist only because vendoring copies whole package directories, non-Go files included. `.github/scorecard.yml` annotates `pinned-dependencies` with `not-applicable` for the same reason `opa.wasm` got `remediated`: nothing here is a candidate for un-vendoring or hand-patching, for the reasons above.
+
+The third finding was different in kind, so it got fixed instead of annotated:
+
+```
+npmCommand not pinned by hash: .github/workflows/commitlint.yaml:35
+```
+
+This one was cargoship's own workflow, not vendored third-party code, so it was addressed directly rather than annotated. `npm install --save-dev @commitlint/{config-conventional,cli}` has no hash-pinned form — npm install never does — but `npm ci` against a committed lockfile counts as pinned (Scorecard's own `isNpmUnpinnedDownload` treats `ci` as verifying all hashes). `.github/commitlint/` now holds a small `package.json` and `package-lock.json` pinning `@commitlint/cli` and `@commitlint/config-conventional`, and the workflow runs `npm ci` there instead of `npm install`. `.commitlintrc.yaml` moved into that same directory (from the repo root) because commitlint resolves an `extends` entry's package relative to the config file's own location, not the working directory it was invoked from — leaving the config at the repository root would have kept failing to resolve `@commitlint/config-conventional` even with `node_modules` installed one directory down. Nothing else in the repository referenced the old root-level path. `.github/dependabot.yaml` gained a matching `npm` ecosystem entry for `/.github/commitlint`, since without one nothing would keep the newly pinned versions current, and this manifest is real (installed and run in CI, unlike the vendored ones above), so it's also a legitimate target for the Vulnerabilities check's osv-scanner pass rather than something to annotate away.

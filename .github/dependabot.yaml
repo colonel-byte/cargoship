@@ -72,6 +72,14 @@ updates:
       core:
         patterns:
           - "*"
+  - package-ecosystem: npm
+    directory: "/.github/commitlint"
+    schedule:
+      interval: weekly
+    groups:
+      commitlint:
+        patterns:
+          - "*"
   # One entry per directory, ungrouped: Dependabot appends "in the <name> group
   # across N directories" to PR titles when `directories` and `groups` are set,
   # pushing the title past commitlint's 100-char header-max-length.
