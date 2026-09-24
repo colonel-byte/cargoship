@@ -42,8 +42,11 @@ builds:
     goos:
       - linux
       - darwin
+      - windows
     goarch:
+      - arm
       - arm64
+      - "386"
       - amd64
       - riscv64
     goamd64:
@@ -176,6 +179,7 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
+      - linux/386
       - linux/amd64
       - linux/arm64
     flags:
@@ -202,7 +206,9 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
+      - linux/386
       - linux/amd64
+      - linux/arm/v7
       - linux/arm64
     flags:
       - "--pull"
@@ -222,6 +228,7 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
+      - linux/386
       - linux/amd64
       - linux/arm64
     flags:
@@ -296,20 +303,15 @@ release:
 
     Release archives and container images are signed with [Cosign](https://docs.sigstore.dev/cosign/).
 
-    Find the public key at [`cosign.pub`](https://raw.githubusercontent.com/colonel-byte/cargoship/refs/tags/{{ .Tag }}/cosign.pub
+    Find the public key at [`cosign.pub`](https://raw.githubusercontent.com/colonel-byte/cargoship/refs/tags/{{ .Tag }}/cosign.pub)
 
     Verify a binary archive:
 
     ```console
-    cosign verify-blob \
-      --key cosign.pub \
-      --bundle cargoship_Linux_x86_64.tar.gz.sigstore.json \
-      cargoship_Linux_x86_64.tar.gz
+    cosign verify-blob --key cosign.pub --bundle cargoship_Linux_x86_64.tar.gz.sigstore.json cargoship_Linux_x86_64.tar.gz
     ```
 
     Verify a image tag:
     ```console
-    cosign verify \
-      --key cosign.pub \
-      ghcr.io/colonel-byte/cargoship:{{ .Tag }}
+    cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:{{ .Tag }}
     ```
