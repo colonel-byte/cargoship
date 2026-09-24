@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-582f246d.js";
+            window.path_to_searchindex_js = "searchindex-86ac4ffc.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-70e386d3.js"></script>
+        <script src="toc-b866c7c9.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -211,7 +211,7 @@ cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:&lt;tag&gt;
 </code></pre>
 <p>See <a href="dev/goreleaser.html">the GoReleaser reference</a> for the full set of published artifacts.</p>
 <h2 id="security-in-ci"><a class="header" href="#security-in-ci">Security in CI</a></h2>
-<p>Pull requests and <code>main</code> are scanned by CodeQL, dependencies are updated by Dependabot, and supply-chain practices are scored weekly by OpenSSF Scorecard. Results appear in the repository’s Security tab.</p>
+<p>Pull requests and <code>main</code> are scanned by CodeQL, dependencies are updated by Dependabot, and supply-chain practices are scored weekly by OpenSSF Scorecard. Results appear in the repository’s Security tab. <code>vendor/</code> costs points on a couple of Scorecard checks it can’t avoid given the repository’s need to build without network access; <a href="agent/choice-osv-vendor-overrides.html">choice-osv-vendor-overrides</a> and <a href="agent/choice-binary-artifact-opa-wasm.html">choice-binary-artifact-opa-wasm</a> explain why.</p>
 
                     </main>
 
