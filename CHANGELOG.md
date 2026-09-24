@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.27.0](https://github.com/colonel-byte/cargoship/compare/v0.26.2...v0.27.0) (2026-09-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **release:** add windows support ([#487](https://github.com/colonel-byte/cargoship/issues/487))
+
+### Documentation
+
+* address some drift ([#486](https://github.com/colonel-byte/cargoship/issues/486)) ([093b943](https://github.com/colonel-byte/cargoship/commit/093b943a18f6f8b0ca5a86548f59501d665a7e8a))
+
+
+### CI/CD
+
+* **release:** add windows support ([#487](https://github.com/colonel-byte/cargoship/issues/487)) ([b80834d](https://github.com/colonel-byte/cargoship/commit/b80834d56607079d2d638fa14f3147021e773839))
+
 ## [0.26.2](https://github.com/colonel-byte/cargoship/compare/v0.26.1...v0.26.2) (2026-09-23)
 
 
