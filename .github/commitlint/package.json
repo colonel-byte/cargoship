@@ -1,0 +1,9 @@
+{
+  "name": "cargoship-commitlint",
+  "private": true,
+  "description": "Pinned devDependencies for the PR Title Check workflow (.github/workflows/commitlint.yaml)",
+  "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3"
+  }
+}
