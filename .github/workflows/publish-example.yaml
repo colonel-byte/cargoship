@@ -175,6 +175,8 @@ jobs:
             echo "| --- | --- | --- |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+          short_sha=$(git rev-parse --short=7 HEAD)
+
           : > /tmp/entries.jsonl
           for flavor in "${flavors[@]}"; do
             root="example/$flavor"
@@ -227,12 +229,17 @@ jobs:
               # registry already holds, which is the harmless way to be wrong here: the
               # alternative is skipping a flavor that genuinely moved and only noticing at
               # the next release.
+              #
+              # We check whether the precise tag for this run has already been published.
+              # This ensures new commits/releases re-publish the example with updated features
+              # while updating the floating version tag and adding the immutable precise tag.
               encoded=${package//\//%2F}
+              precise_probe_tag="${version}-publish-example-${short_sha}"
               if gh api --paginate \
                 "/orgs/$OWNER/packages/container/$encoded/versions?per_page=100" \
-                --jq '.[].metadata.container.tags[]' 2>/dev/null | grep -Fxq "$version"; then
-                echo "$flavor: $name:$version already published, skipping"
-                echo "| \`$flavor\` | \`$name:$version\` | already published |" >> "$GITHUB_STEP_SUMMARY"
+                --jq '.[].metadata.container.tags[]' 2>/dev/null | grep -Fxq "$precise_probe_tag"; then
+                echo "$flavor: $name:$precise_probe_tag already published, skipping"
+                echo "| \`$flavor\` | \`$name:$precise_probe_tag\` | already published |" >> "$GITHUB_STEP_SUMMARY"
                 continue
               fi
             fi
@@ -330,6 +337,9 @@ jobs:
       # the next one is built. The cache is what should survive between flavors, not the
       # packages built out of it.
       #
+      # Each flavor is published under two tags: the regular version tag and a more precise
+      # tag shaped as <version>-<job>-<short git commit> using cargoship's --tag flag.
+      #
       # The key never touches the disk: --signing-key takes a Cosign provider URI, and the
       # env:// form reads the secret straight out of the environment. Same key material the
       # release pipeline signs binaries with. See docs/guides/signing-packages.md. Creating
@@ -340,6 +350,7 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           ENTRIES: ${{ matrix.entries }}
+          JOB_NAME: ${{ github.job }}
         run: |
           set -uo pipefail
 
@@ -350,13 +361,16 @@ jobs:
             echo "| --- | --- | --- |"
           } >> "$GITHUB_STEP_SUMMARY"
 
+          short_sha=$(git rev-parse --short=7 HEAD)
           failed=0
           while read -r entry; do
             flavor=$(jq -r '.flavor' <<< "$entry")
             dir=$(jq -r '.dir' <<< "$entry")
             package=$(jq -r '.package' <<< "$entry")
             version=$(jq -r '.version' <<< "$entry")
+            precise_tag="${version}-${JOB_NAME}-${short_sha}"
             reference="$REGISTRY/$package:$version"
+            precise_ref="$REGISTRY/$package:$precise_tag"
 
             echo "::group::$flavor"
             df -h /
@@ -386,6 +400,7 @@ jobs:
             fi
             pkg=$(find build -maxdepth 1 -name '*.tar.zst')
 
+            # Publish with regular version tag
             if cargoship publish "$pkg" "$REGISTRY" \
               --signing-key env://COSIGN_PRIVATE_KEY \
               --signing-key-pass "$COSIGN_PASSWORD" \
@@ -394,6 +409,19 @@ jobs:
             else
               echo "$flavor: publish failed" >&2
               echo "| \`$flavor\` | \`$reference\` | **publish failed** |" >> "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+
+            # Publish with precise tag (<version>-<job>-<short git commit>)
+            if cargoship publish "$pkg" "$REGISTRY" \
+              --tag "$precise_tag" \
+              --signing-key env://COSIGN_PRIVATE_KEY \
+              --signing-key-pass "$COSIGN_PASSWORD" \
+              --confirm; then
+              echo "| \`$flavor\` | \`$precise_ref\` | published |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "$flavor: publish precise tag failed" >&2
+              echo "| \`$flavor\` | \`$precise_ref\` | **publish failed** |" >> "$GITHUB_STEP_SUMMARY"
               failed=1
             fi
 
