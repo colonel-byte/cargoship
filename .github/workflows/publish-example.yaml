@@ -1,41 +1,62 @@
 ---
 name: Publish example package
 
-# Builds one of the distro definitions under example/ and publishes it to GHCR, using the
-# released cargoship CLI rather than a binary built here: the point is to exercise what a
-# user gets from a release against the definitions this repository ships.
+# Builds the example distro definitions this repository ships and publishes them to GHCR,
+# using the released cargoship CLI rather than a binary built here: the point is to exercise
+# what a user gets from a release against the definitions this repository ships.
 #
-# The version is not an input. Each flavor directory holds every build that is still
-# installable -- magefiles/gen-examples.go removes an example once its upstream artifacts
-# go away -- so "the latest example" is the highest version directory the flavor has, and
-# the workflow resolves it at run time instead of carrying a pin that would go stale.
+# Neither the flavor nor the version is a pin. Each flavor directory holds every build that
+# is still installable -- magefiles/gen-examples.go removes an example once its upstream
+# artifacts go away -- so "the latest example" is the highest version directory the flavor
+# has, and the flavors themselves are the directories under example/ that hold one. Both are
+# resolved at run time, so a flavor added to magefiles/examples.go is published without this
+# workflow being edited.
+#
+# Which flavors get published is decided by asking the registry. Every flavor's newest
+# definition resolves to a package name and tag -- metadata.name and metadata.version, the
+# coordinates cargoship publish derives -- and a flavor whose tag is already in GHCR is
+# skipped. So a release republishes nothing that has not moved, and a flavor that refresh-
+# examples.yaml re-rendered gets published on its own without anyone naming it. The first
+# run after this lands sees an empty registry for most flavors and publishes the backlog.
+#
+# What is published runs one job per distro, each job building its flavors one after the
+# other, rather than one job per flavor. The flavors of a distro at the same version differ
+# by their CNI and little else: they pull the same core image list and, for rke2, the same
+# versioned RPMs. cargoship caches both under ~/.cargoship-cache, which survives between
+# steps of a job and nothing else, so building them together pulls that shared bulk once
+# instead of once per flavor. Distros are the cut because rke2 and k3s share nothing worth
+# a cache hit -- different images, different artifacts -- so running them at the same time
+# costs nothing and halves the wall clock.
 #
 # It runs on demand from the Actions tab, choosing the flavor, and automatically after a
-# release, where it takes the default flavor. The chain is release-please publishes the
-# release and pushes the tag, the tag push starts goreleaser, and release.yaml calls this
-# one as a reusable workflow in a job that needs goreleaser. Keying off the release event
-# instead does not work, and did not: release-please publishes the release roughly ten
-# minutes before goreleaser has uploaded the archives, so setup-cargoship resolved the
-# brand new version and then failed on an asset that did not exist yet. needs is what
+# release, where it takes every changed flavor by default. The chain is release-please
+# publishes the release and pushes the tag, the tag push starts goreleaser, and release.yaml
+# calls this one as a reusable workflow in a job that needs goreleaser. Keying off the
+# release event instead does not work, and did not: release-please publishes the release
+# roughly ten minutes before goreleaser has uploaded the archives, so setup-cargoship resolved
+# the brand new version and then failed on an asset that did not exist yet. needs is what
 # holds the two apart, and it holds them apart more tightly than watching for the
 # goreleaser run to finish ever did.
 #
 # It also runs on a pull request carrying the "publish-example" label, so the workflow can
 # be exercised on its own branch before it is merged. That run is label gated because each
-# run pushes gigabytes, and it publishes under a per-pull-request namespace so a test never
-# writes over the real reference. The trigger lists "labeled" explicitly: without it,
-# adding the label to an open pull request would not start a run until the next push.
+# run pushes gigabytes, it takes one flavor rather than every changed one, and it publishes
+# under a per-pull-request namespace so a test never writes over the real reference. The
+# trigger lists "labeled" explicitly: without it, adding the label to an open pull request
+# would not start a run until the next push.
 on:
   workflow_dispatch:
     inputs:
       flavor:
-        description: Example flavor to publish
+        description: >-
+          Example flavor to publish. "changed" publishes every flavor whose newest example
+          is not in the registry yet; naming one publishes it whether or not it is there.
         type: choice
-        default: rke2-multi-cni-cilium
+        default: changed
         options:
+          - changed
           - rke2-multi-cni-cilium
           - rke2-cilium-vsphere
-          - rke2-canal
           - rke2-multi-cni-canal
           - k3s-flannel
           - k3s-multi
@@ -48,7 +69,7 @@ on:
       flavor:
         description: Example flavor to publish
         type: string
-        default: rke2-multi-cni-cilium
+        default: changed
   pull_request:
     types:
       - opened
@@ -59,31 +80,38 @@ on:
 permissions:
   contents: read
 
-# Publishing pushes gigabytes to a registry under a tag derived from the package version,
-# so two runs of the same flavor must not race each other to the same reference. The ref is
-# in the group so that a pull request's test runs queue against themselves rather than
-# against a release publishing the same flavor.
+# Publishing pushes gigabytes to a registry under a tag derived from the package version, so
+# two runs must not race each other to the same reference. The ref is in the group so that a
+# pull request's test runs queue against themselves rather than against a release publishing
+# the same flavor; the per-flavor group is on the publish job, where the flavor is known.
 concurrency:
-  group: publish-example-${{ inputs.flavor || 'rke2-multi-cni-cilium' }}-${{ github.ref }}
+  group: publish-example-${{ inputs.flavor || 'changed' }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
+  OWNER: colonel-byte
   # A pull request run is a test of the workflow, so it publishes into its own namespace and
   # leaves the reference a release writes alone. prune-example-pr-packages.yaml deletes a
   # pr-N package once nothing has pushed to it for thirty days; delete it by hand before
   # then if the storage is wanted back sooner.
+  #
+  # The namespace and the registry URL are spelled out separately rather than composed,
+  # because one env entry cannot read another: the env context is not available where env
+  # itself is defined. NAMESPACE is what the packages API takes, REGISTRY is what cargoship
+  # publish takes, and they must name the same place.
+  NAMESPACE: >-
+    ${{ github.event_name == 'pull_request'
+    && format('cargoship-examples/pr-{0}', github.event.number)
+    || 'cargoship-examples' }}
   REGISTRY: >-
     ${{ github.event_name == 'pull_request'
     && format('oci://ghcr.io/colonel-byte/cargoship-examples/pr-{0}', github.event.number)
     || 'oci://ghcr.io/colonel-byte/cargoship-examples' }}
 
 jobs:
-  publish-example:
-    # packages: write is the push to GHCR. When release.yaml calls this workflow its caller
-    # job grants the same pair, since a called workflow cannot hold more than its caller.
-    permissions:
-      contents: read
-      packages: write
+  # Decides what to publish before anything is built, because deciding costs two API calls
+  # per flavor and building costs gigabytes. A run where nothing has moved ends here.
+  select:
     # Label gated on pull requests: every run pulls and pushes gigabytes, which is not what
     # an unrelated pull request should spend. Fork pull requests are excluded because they
     # get neither the signing secrets nor a token that can write packages, so the run could
@@ -98,9 +126,11 @@ jobs:
       (contains(github.event.pull_request.labels.*.name, 'publish-example') &&
       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
-    # An example package pulls the distro's whole image list plus its RPMs or binary, and
-    # then uploads all of it. Both halves are network bound and neither is quick.
-    timeout-minutes: 90
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+      count: ${{ steps.select.outputs.count }}
+      flavors: ${{ steps.select.outputs.flavors }}
     steps:
       # No ref: on purpose. Under every trigger this has, github.ref is already the commit
       # to build -- for a call from release.yaml that is the tag goreleaser released, since
@@ -110,8 +140,180 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The package runs to gigabytes and exists twice on disk while it is built: once in
-      # the cache the images are pulled into, once in the tarball. Same removals as
+      - name: Select the flavors to publish
+        id: select
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A pull request run tests the workflow rather than publishing a reference, so it
+          # takes one flavor and publishes it whatever the registry holds. A scheduled or
+          # dispatched run has no such default, hence the fallback chain.
+          SELECTION: >-
+            ${{ github.event_name == 'pull_request'
+            && 'rke2-multi-cni-cilium'
+            || (inputs.flavor || 'changed') }}
+          # Only a "changed" selection asks the registry. Naming a flavor -- or landing here
+          # from a pull request -- is a request to publish it regardless.
+          PROBE: ${{ (inputs.flavor || 'changed') == 'changed' && github.event_name != 'pull_request' }}
+        run: |
+          set -euo pipefail
+
+          if [ "$SELECTION" = "changed" ]; then
+            # Flavors are the directories under example/ that hold a version directory at
+            # the depth examples are rendered to, which leaves out example/upstream and
+            # anything else kept there by hand.
+            mapfile -t flavors < <(
+              find example -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+            )
+          else
+            flavors=("$SELECTION")
+          fi
+
+          {
+            echo "## Example flavors selected"
+            echo
+            echo "| Flavor | Package | Decision |"
+            echo "| --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          short_sha=$(git rev-parse --short=7 HEAD)
+
+          : > /tmp/entries.jsonl
+          for flavor in "${flavors[@]}"; do
+            root="example/$flavor"
+            if [ ! -d "$root" ]; then
+              echo "no such example flavor: $root" >&2
+              exit 1
+            fi
+
+            # Examples live at example/<flavor>/<minor>/<version>/distro.yaml, so the version
+            # directories are exactly the depth-two directories under the flavor. Version sort
+            # over the whole path orders the minor line first and the rke2rN/k3sN revision
+            # last, which is the order magefiles/examples.go treats as newest.
+            dir=$(find "$root" -mindepth 2 -maxdepth 2 -type d | sort -V | tail -n 1)
+            if [ -z "$dir" ] || [ ! -f "$dir/distro.yaml" ]; then
+              # A hand-written directory under example/ is not a flavor and is not an error;
+              # a flavor someone asked for by name that holds nothing is.
+              if [ "$SELECTION" != "changed" ]; then
+                echo "no example with a distro.yaml under $root" >&2
+                exit 1
+              fi
+              continue
+            fi
+
+            # The package coordinates are the definition's own: cargoship publishes to
+            # <registry>/<metadata.name>:<metadata.version>. See src/pkg/coci/utils.go.
+            name=$(yq -r '.metadata.name' "$dir/distro.yaml")
+            version=$(yq -r '.metadata.version' "$dir/distro.yaml")
+            if [ -z "$name" ] || [ "$name" = "null" ] || [ -z "$version" ] || [ "$version" = "null" ]; then
+              echo "no metadata.name or metadata.version in $dir/distro.yaml" >&2
+              exit 1
+            fi
+
+            # spec.type is what decides which flavors share a job, and it is read from the
+            # definition rather than guessed from the directory name: the flavor directories
+            # happen to start with their distro today, and nothing enforces that.
+            distro=$(yq -r '.spec.type' "$dir/distro.yaml")
+            if [ -z "$distro" ] || [ "$distro" = "null" ]; then
+              echo "no spec.type in $dir/distro.yaml" >&2
+              exit 1
+            fi
+
+            if [ "$PROBE" = "true" ]; then
+              package="$NAMESPACE/$name"
+              # The package name is a path and the API takes it as one path segment, so its
+              # slashes have to be percent encoded. A flavor that has never been published
+              # has no package at all, which answers the question the same way.
+              #
+              # An API call that fails for any other reason reads as "not published" and the
+              # flavor is built and pushed again. That costs a republish of content the
+              # registry already holds, which is the harmless way to be wrong here: the
+              # alternative is skipping a flavor that genuinely moved and only noticing at
+              # the next release.
+              #
+              # We check whether the precise tag for this run has already been published.
+              # This ensures new commits/releases re-publish the example with updated features
+              # while updating the floating version tag and adding the immutable precise tag.
+              encoded=${package//\//%2F}
+              precise_probe_tag="${version}-publish-example-${short_sha}"
+              if gh api --paginate \
+                "/orgs/$OWNER/packages/container/$encoded/versions?per_page=100" \
+                --jq '.[].metadata.container.tags[]' 2>/dev/null | grep -Fxq "$precise_probe_tag"; then
+                echo "$flavor: $name:$precise_probe_tag already published, skipping"
+                echo "| \`$flavor\` | \`$name:$precise_probe_tag\` | already published |" >> "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+            fi
+
+            echo "$flavor: publishing $dir as $name:$version"
+            echo "| \`$flavor\` | \`$name:$version\` | publishing |" >> "$GITHUB_STEP_SUMMARY"
+            jq -nc \
+              --arg distro "$distro" \
+              --arg flavor "$flavor" \
+              --arg dir "$dir" \
+              --arg package "$name" \
+              --arg version "$version" \
+              '$ARGS.named' >> /tmp/entries.jsonl
+          done
+
+          # One matrix entry per distro, carrying its flavors as a JSON string. A string
+          # rather than a nested array because a matrix value has to survive being written
+          # into the workflow and read back out; the job parses it with jq.
+          matrix=$(
+            jq -sc '
+              group_by(.distro)
+              | map({
+                  distro: .[0].distro,
+                  flavors: (map(.flavor) | join(", ")),
+                  entries: (map(del(.distro)) | tojson),
+                })
+            ' /tmp/entries.jsonl
+          )
+          count=$(jq -r 'length' <<< "$matrix")
+          flavors=$(jq -r '[.[].entries | fromjson | length] | add // 0' <<< "$matrix")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "flavors=$flavors" >> "$GITHUB_OUTPUT"
+
+          if [ "$count" -eq 0 ]; then
+            echo "| _none_ | | every flavor is already published |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "$flavors flavor(s) in $count job(s), one per distro." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  publish-example:
+    needs: select
+    if: needs.select.outputs.count != '0'
+    runs-on: ubuntu-latest
+    # A job builds every flavor of one distro in sequence, and each one pulls that distro's
+    # whole image list plus its RPMs or binary and then uploads all of it. The cache makes
+    # the flavors after the first much cheaper than the first, but not free, and a backlog
+    # run has five of them to get through. Six hours is the ceiling GitHub allows a hosted
+    # job; this sits under it. A job that does run out has still published whatever it
+    # finished -- each flavor is pushed before the next is built -- and the next run picks
+    # up the rest, since the registry probe skips what landed.
+    timeout-minutes: 330
+    strategy:
+      # One distro failing says nothing about the other, and a run that publishes the rke2
+      # flavors is worth more than one that publishes none.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.select.outputs.matrix) }}
+    permissions:
+      contents: read
+      packages: write
+    # Per distro rather than per run: two runs may legitimately publish different distros at
+    # once, but never the same reference twice.
+    concurrency:
+      group: publish-example-${{ matrix.distro }}-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Several packages are built here one after another, and each runs to gigabytes: the
+      # images are cached under ~/.cargoship-cache for the flavors that follow, and the
+      # tarball exists alongside that cache until it is published. Same removals as
       # e2e-cluster.yaml, and none of what goes is used here.
       - name: Free disk space
         run: |
@@ -123,31 +325,6 @@ jobs:
       - name: Setup cargoship (latest release)
         uses: colonel-byte/setup-cargoship@4da2adc72270551216e4c58daae04ea8e3391948 # v1.0.0
 
-      # Examples live at example/<flavor>/<minor>/<version>/distro.yaml, so the version
-      # directories are exactly the depth-two directories under the flavor. Version sort
-      # over the whole path orders the minor line first and the rke2rN/k3sN revision last,
-      # which is the order magefiles/examples.go treats as newest.
-      - name: Resolve the latest example
-        id: example
-        env:
-          FLAVOR: ${{ inputs.flavor || 'rke2-multi-cni-cilium' }}
-        run: |
-          set -euo pipefail
-          root="example/$FLAVOR"
-          if [ ! -d "$root" ]; then
-            echo "no such example flavor: $root" >&2
-            exit 1
-          fi
-
-          dir=$(find "$root" -mindepth 2 -maxdepth 2 -type d | sort -V | tail -n 1)
-          if [ -z "$dir" ] || [ ! -f "$dir/distro.yaml" ]; then
-            echo "no example with a distro.yaml under $root" >&2
-            exit 1
-          fi
-
-          echo "publishing $dir"
-          echo "dir=$dir" >> "$GITHUB_OUTPUT"
-
       # cargoship pushes through the docker credential store, so a docker login is what
       # authorizes the publish. GITHUB_TOKEN plus packages: write is enough for GHCR under
       # this repository's owner.
@@ -156,45 +333,102 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      # Unsigned here on purpose: publish always re-signs, so signing twice would only
-      # spend the key material in an extra step. --confirm keeps it non-interactive.
-      - name: Build the package
-        run: cargoship create "${{ steps.example.outputs.dir }}" -o build --confirm
-
-      - name: Locate the package
-        id: package
-        run: |
-          set -euo pipefail
-          count=$(find build -maxdepth 1 -name '*.tar.zst' | wc -l)
-          if [ "$count" -ne 1 ]; then
-            echo "expected one package in build/, found $count" >&2
-            find build -maxdepth 1 -name '*.tar.zst' >&2 || true
-            exit 1
-          fi
-          pkg=$(find build -maxdepth 1 -name '*.tar.zst')
-          echo "path=$pkg" >> "$GITHUB_OUTPUT"
-
+      # Build and publish sit in one step, per flavor, so a flavor's tarball is gone before
+      # the next one is built. The cache is what should survive between flavors, not the
+      # packages built out of it.
+      #
+      # Each flavor is published under two tags: the regular version tag and a more precise
+      # tag shaped as <version>-<job>-<short git commit> using cargoship's --tag flag.
+      #
       # The key never touches the disk: --signing-key takes a Cosign provider URI, and the
       # env:// form reads the secret straight out of the environment. Same key material the
-      # release pipeline signs binaries with. See docs/guides/signing-packages.md.
-      - name: Publish the package
+      # release pipeline signs binaries with. See docs/guides/signing-packages.md. Creating
+      # unsigned is deliberate: publish always re-signs, so signing twice would only spend
+      # the key material in an extra step. --confirm keeps both non-interactive.
+      - name: Build and publish each flavor
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: >-
-          cargoship publish "${{ steps.package.outputs.path }}" "$REGISTRY"
-          --signing-key env://COSIGN_PRIVATE_KEY
-          --signing-key-pass "$COSIGN_PASSWORD"
-          --confirm
-
-      - name: Summarize
+          ENTRIES: ${{ matrix.entries }}
+          JOB_NAME: ${{ github.job }}
         run: |
+          set -uo pipefail
+
           {
-            echo "## Published example"
+            echo "## Published ${{ matrix.distro }} examples"
             echo
-            echo "| | |"
-            echo "| --- | --- |"
-            echo "| Definition | \`${{ steps.example.outputs.dir }}\` |"
-            echo "| Package | \`$(basename "${{ steps.package.outputs.path }}")\` |"
-            echo "| Registry | \`$REGISTRY\` |"
+            echo "| Flavor | Reference | Result |"
+            echo "| --- | --- | --- |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+          short_sha=$(git rev-parse --short=7 HEAD)
+          failed=0
+          while read -r entry; do
+            flavor=$(jq -r '.flavor' <<< "$entry")
+            dir=$(jq -r '.dir' <<< "$entry")
+            package=$(jq -r '.package' <<< "$entry")
+            version=$(jq -r '.version' <<< "$entry")
+            precise_tag="${version}-${JOB_NAME}-${short_sha}"
+            reference="$REGISTRY/$package:$version"
+            precise_ref="$REGISTRY/$package:$precise_tag"
+
+            echo "::group::$flavor"
+            df -h /
+
+            # A flavor that fails is recorded and the loop carries on: the rest of the
+            # distro's flavors are independent of it, and their images are already cached.
+            if ! cargoship create "$dir" -o build --confirm; then
+              echo "$flavor: create failed" >&2
+              echo "| \`$flavor\` | \`$reference\` | **create failed** |" >> "$GITHUB_STEP_SUMMARY"
+              failed=1
+              echo "::endgroup::"
+              continue
+            fi
+
+            # Exactly one package is expected because the previous flavor's tarball was
+            # removed below. Two here means a build left something behind, and publishing
+            # the wrong one would write it to this flavor's reference.
+            count=$(find build -maxdepth 1 -name '*.tar.zst' | wc -l)
+            if [ "$count" -ne 1 ]; then
+              echo "expected one package in build/, found $count" >&2
+              find build -maxdepth 1 -name '*.tar.zst' >&2 || true
+              echo "| \`$flavor\` | \`$reference\` | **$count packages in build/** |" >> "$GITHUB_STEP_SUMMARY"
+              failed=1
+              rm -f build/*.tar.zst
+              echo "::endgroup::"
+              continue
+            fi
+            pkg=$(find build -maxdepth 1 -name '*.tar.zst')
+
+            # Publish with regular version tag
+            if cargoship publish "$pkg" "$REGISTRY" \
+              --signing-key env://COSIGN_PRIVATE_KEY \
+              --signing-key-pass "$COSIGN_PASSWORD" \
+              --confirm; then
+              echo "| \`$flavor\` | \`$reference\` | published |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "$flavor: publish failed" >&2
+              echo "| \`$flavor\` | \`$reference\` | **publish failed** |" >> "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+
+            # Publish with precise tag (<version>-<job>-<short git commit>)
+            if cargoship publish "$pkg" "$REGISTRY" \
+              --tag "$precise_tag" \
+              --signing-key env://COSIGN_PRIVATE_KEY \
+              --signing-key-pass "$COSIGN_PASSWORD" \
+              --confirm; then
+              echo "| \`$flavor\` | \`$precise_ref\` | published |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "$flavor: publish precise tag failed" >&2
+              echo "| \`$flavor\` | \`$precise_ref\` | **publish failed** |" >> "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+
+            # The tarball has served its purpose either way, and the flavors that follow
+            # need the disk it is sitting on more than they need it kept.
+            rm -f "$pkg"
+            echo "::endgroup::"
+          done < <(jq -c '.[]' <<< "$ENTRIES")
+
+          exit "$failed"

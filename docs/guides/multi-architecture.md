@@ -83,6 +83,8 @@ cargoship publish cargoship-rancher-k3s-multi-multi-1.36.4-k3s1.tar.zst oci://re
 
 Ordinary platform resolution therefore works from either architecture, and every consumer lands on the same blobs. Publishing to a tag that already holds an index leaves the entries for architectures the package does not cover alone, so publishing an `amd64` package and then an `arm64` one of the same version leaves both resolvable under the one tag.
 
+Because example packages and templates evolve as new features and settings are introduced, packages published under a general release tag may be updated across Cargoship releases. If an environment requires an immutable, consistent image, either build the definition locally using `cargoship create` or pull the package using its precise tag containing the short commit SHA (e.g. `<version>-<job>-<short git commit>`).
+
 ## Pulling
 
 `cargoship pull` resolves the architecture of the machine it runs on, or the one given with `-a`, against the index:
