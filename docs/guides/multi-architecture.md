@@ -75,11 +75,15 @@ Narrowing does not invalidate the entries for the architectures left behind. A d
 
 A package is one set of blobs whatever the architecture count, so it publishes as a single manifest. The image index tagged at the package version is what makes it resolvable per architecture: it lists that one manifest digest once for every architecture the package covers.
 
+`--tag` names the tag instead. On `publish` it changes the OCI reference alone, leaving the package's own `metadata.version` as built, which is what a promotion between registries wants: the same package published under `staging` and then under a release tag. On `create` it goes further and overrides `metadata.version` itself, so the package is built as that version and the index it publishes to is tagged accordingly. Both work per architecture the same way the version does, so an `amd64` and an `arm64` package given the same tag resolve under one index.
+
 ```
 cargoship publish cargoship-rancher-k3s-multi-multi-1.36.4-k3s1.tar.zst oci://registry.example.com/distros
 ```
 
 Ordinary platform resolution therefore works from either architecture, and every consumer lands on the same blobs. Publishing to a tag that already holds an index leaves the entries for architectures the package does not cover alone, so publishing an `amd64` package and then an `arm64` one of the same version leaves both resolvable under the one tag.
+
+Because example packages and templates evolve as new features and settings are introduced, packages published under a general release tag may be updated across Cargoship releases. If an environment requires an immutable, consistent image, either build the definition locally using `cargoship create` or pull the package using its precise tag containing the short commit SHA (e.g. `<version>-<job>-<short git commit>`).
 
 ## Pulling
 
