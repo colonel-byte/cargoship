@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-95bdb807.js";
+            window.path_to_searchindex_js = "searchindex-582f246d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-70e386d3.js"></script>
@@ -1196,6 +1196,7 @@ metadata:
 <pre><code>cargoship publish cargoship-rancher-k3s-multi-multi-1.36.4-k3s1.tar.zst oci://registry.example.com/distros
 </code></pre>
 <p>Ordinary platform resolution therefore works from either architecture, and every consumer lands on the same blobs. Publishing to a tag that already holds an index leaves the entries for architectures the package does not cover alone, so publishing an <code>amd64</code> package and then an <code>arm64</code> one of the same version leaves both resolvable under the one tag.</p>
+<p>Because example packages and templates evolve as new features and settings are introduced, packages published under a general release tag may be updated across Cargoship releases. If an environment requires an immutable, consistent image, either build the definition locally using <code>cargoship create</code> or pull the package using its precise tag containing the short commit SHA (e.g. <code>&lt;version&gt;-&lt;job&gt;-&lt;short git commit&gt;</code>).</p>
 <h2 id="pulling"><a class="header" href="#pulling">Pulling</a></h2>
 <p><code>cargoship pull</code> resolves the architecture of the machine it runs on, or the one given with <code>-a</code>, against the index:</p>
 <pre><code>cargoship pull oci://registry.example.com/distros/rancher-k3s-multi:1.36.4-k3s1 -o .
