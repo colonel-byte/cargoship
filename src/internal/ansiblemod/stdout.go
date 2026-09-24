@@ -14,11 +14,7 @@
 
 package ansiblemod
 
-import (
-	"fmt"
-	"os"
-	"syscall"
-)
+import "os"
 
 // stdoutGuard holds the real standard output of a module run.
 //
@@ -40,24 +36,6 @@ type stdoutGuard struct {
 	// after a module run and never needs it back, but a test does, and a guard that cannot be
 	// undone is a guard that cannot be tested.
 	restore *os.File
-}
-
-// newStdoutGuard takes over standard output. Call it as the first thing a module run does.
-func newStdoutGuard() (*stdoutGuard, error) {
-	fd, err := syscall.Dup(int(os.Stdout.Fd()))
-	if err != nil {
-		return nil, fmt.Errorf("unable to take over standard output: %w", err)
-	}
-	// The descriptor belongs to this process only. Nothing cargoship runs locally should inherit
-	// a second handle on the channel the module answers Ansible over.
-	syscall.CloseOnExec(fd)
-
-	guard := &stdoutGuard{
-		out:     os.NewFile(uintptr(fd), "ansible-module-stdout"),
-		restore: os.Stdout,
-	}
-	os.Stdout = os.Stderr
-	return guard, nil
 }
 
 // Write sends bytes to the standard output the module was started with.
