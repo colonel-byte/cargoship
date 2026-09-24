@@ -55,3 +55,11 @@ Commit `example/shasums.json` with the examples that produced it. Delete an entr
 ## Retired builds
 
 Rancher removes an `rke2rN`'s RPMs once the next revision supersedes it, while the git tag and image manifests stay up. The targets probe each build before rendering it, skip the ones that can no longer be installed, and delete any example already on disk for one, along with its minor line directory if that empties it. A skipped build is not remembered: if upstream republishes it, the next run renders it again.
+
+## Published example packages and version consistency
+
+Example definitions are published to GHCR under `ghcr.io/colonel-byte/cargoship-examples/<package>`. Because example templates and generators evolve across commits and releases to expose new features, settings, and manifests for the same upstream engine version, published packages under the regular `<version>` tag may shift over time as new versions of Cargoship re-render and re-publish them.
+
+To guarantee a consistent package image:
+- Pull using the immutable, precise tag: `<version>-publish-example-<short git commit>` (e.g. `v1.36.4+k3s1-publish-example-35c2a83`), which pins the exact commit the package was generated and published from.
+- Or build the example package locally from source using `cargoship create <example dir>`.
