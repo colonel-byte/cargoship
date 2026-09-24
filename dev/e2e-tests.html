@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8347487a.js";
+            window.path_to_searchindex_js = "../searchindex-2d5a698a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-70e386d3.js"></script>
@@ -222,7 +222,7 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 <li><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> — parent directory for the temp dirs the harness creates, one per <code>e2e.Cargoship</code> call, plus the shared minimal package. Unset means the system temp directory. Point it at <code>build/tmp</code> to keep all test scratch inside the repo, which makes it easy to see what a run left behind: <code>CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...</code>.</li>
 <li><strong><code>TMPDIR</code></strong> — respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.</li>
 <li><strong><code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG</code></strong> — set to any non-empty value to keep the in-memory registry’s request log for passing tests as well as failing ones. See “Artifacts and logs” below.</li>
-<li><strong><code>CARGOSHIP_CONFIG</code></strong> — the config file the binary loads. Only <code>TestCargoshipCreateExample</code> sets it (to <code>src/test/e2e/cargoship-config.yaml</code>); every other test passes flags explicitly so that what is being tested is visible in the test.</li>
+<li><strong><code>CARGOSHIP_CONFIG</code></strong> — the config file the binary loads. <code>TestCargoshipCreateExample</code> sets it (to <code>src/test/e2e/cargoship-config.yaml</code>), and the Ansible module suite’s “reports a broken config file as a module failure” case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.</li>
 </ul>
 <h2 id="seeing-what-the-binary-actually-did"><a class="header" href="#seeing-what-the-binary-actually-did">Seeing what the binary actually did</a></h2>
 <p><code>e2e.Cargoship</code> runs the binary with <code>exec.PrintCfg()</code>, so its stdout and stderr are written through to the test process’s stdout and stderr, not into <code>t.Log</code>. <code>go test</code> buffers that per package and prints it only when the package fails; add <code>-v</code> to see it as it happens.</p>

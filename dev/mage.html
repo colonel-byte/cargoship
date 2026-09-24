@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8347487a.js";
+            window.path_to_searchindex_js = "../searchindex-2d5a698a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-70e386d3.js"></script>
@@ -202,6 +202,7 @@
 <li><code>Linuxamd64</code> / <code>Linuxarm64</code> — Compiles Linux binaries.</li>
 <li><code>Macamd64</code> / <code>Macarm64</code> — Compiles macOS binaries.</li>
 <li><code>All</code> — Compiles all release binaries into <code>build/</code>.</li>
+<li><code>Examples</code> — Builds a package from every example definition using the cargoship binary on <code>PATH</code> (not a binary built here), exercising the same path a release user would take. Gigabytes per package and hours in total; one failure does not stop the run.</li>
 </ul>
 <pre><code class="language-sh">mage build:binary         # build for this host's OS/arch
 mage build:linuxamd64     # build build/cargoship_linux_amd64
@@ -209,6 +210,7 @@ mage build:linuxarm64     # build build/cargoship_linux_arm64
 mage build:macamd64       # build build/cargoship_darwin_amd64
 mage build:macarm64       # build build/cargoship_darwin_arm64
 mage build:all            # build every release binary into build/
+mage build:examples       # build every example package with cargoship on PATH
 mage                      # same as `mage build:all` -- it is the default target
 </code></pre>
 <h3 id="dev-namespace"><a class="header" href="#dev-namespace"><code>Dev</code> Namespace</a></h3>
@@ -233,11 +235,21 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
 <ul>
-<li><code>EndToEnd</code> — Builds Cargoship for the host, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.</li>
+<li><code>EndToEnd</code> — Runs the whole e2e suite: both the cluster and non-cluster groups, including the example packages that pull ~1.5GB of engine artifacts and images. Needs Docker.</li>
+<li><code>EndToEndNonCluster</code> — Runs the group that needs no cluster: the misc and package command groups. <code>-short</code> additionally skips the example packages, so this finishes in seconds. Mirrors the <code>e2e-noncluster</code> CI job.</li>
+<li><code>EndToEndCluster</code> — Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
+<li><code>EndToEndClusterStage</code> — Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.</li>
+<li><code>CleanCluster</code> — Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
+<li><code>Fuzz</code> — Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>src/fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="fuzz-tests.html">fuzz-tests</a>.</li>
 <li><code>AnsibleRequirements</code> — Checks every collection pinned in <code>ansible/colonel_byte/cargoship/requirements.yml</code> can run on the ansible-core declared in that collection’s <code>meta/runtime.yml</code>. Asks Galaxy what each <em>pinned</em> version declares in <code>requires_ansible</code> and fails when that does not cover the whole controller range. Touches the network. <code>.github/workflows/check-ansible-requirements.yaml</code> runs it on every pull request.</li>
 </ul>
-<pre><code class="language-sh">mage test:endToEnd            # build the binary, then run the e2e suite
-mage test:ansibleRequirements # check the Galaxy pins run on the declared ansible-core
+<pre><code class="language-sh">mage test:endToEnd              # build the binary, then run both e2e groups (needs Docker)
+mage test:endToEndNonCluster    # run the misc/package command suites, no cluster needed
+mage test:endToEndCluster       # run the install command suite against a bootloose cluster
+mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
+mage test:cleanCluster          # remove bootloose containers left behind by a killed run
+mage test:fuzz                  # replay the fuzz seed corpus
+mage test:ansibleRequirements   # check the Galaxy pins run on the declared ansible-core
 </code></pre>
 <p><code>Test.AnsibleRequirements</code> deliberately does not check the pins are the <em>newest</em> available — an upstream collection released that morning must not fail an unrelated pull request. Moving the pins forward is <code>Generate.AnsibleRequirements</code>, run on purpose.</p>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>

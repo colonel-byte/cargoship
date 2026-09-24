@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8347487a.js";
+            window.path_to_searchindex_js = "searchindex-2d5a698a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-70e386d3.js"></script>
@@ -649,9 +649,9 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="running-the-collection-from-the-container"><a class="header" href="#running-the-collection-from-the-container">Running the Collection from the Container</a></h1>
-<p>The <code>-ansible</code> image is a management node in a container: <code>ansible-core</code> from the <code>alpine/ansible</code> base, plus the cargoship apk, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
+<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
 <p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="#running-cargoship-as-an-ansible-module">ansible-module</a>, and for the inventory they translate, <a href="#generating-an-inventory-from-ansible">ansible-inv</a>. Nothing about either changes inside the container.</p>
-<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship:0.25.1-ansible
+<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:0.26.2
 </code></pre>
 <p>The image has no <code>ENTRYPOINT</code>, because a run legitimately reaches for <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code> or <code>cargoship</code> itself; name the command you want. The collection is installed to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path, so <code>ansible-playbook</code> resolves <code>colonel_byte.cargoship.cargoship_apply</code> with no configuration. <code>HOME</code> is <code>/home/nonroot</code>, the working directory is <code>/workspace</code>, and the process runs as UID and GID 65532.</p>
 <p>The image carries cargoship and the collection, and nothing for talking to the cluster afterwards. <code>kubernetes.core</code> is present because the base carries the full ansible distribution, but the Python client its modules import is not, so a <code>k8s</code> task fails at import time; there is no <code>helm</code> or <code>kubectl</code> either. A play that converges the cluster and then applies manifests to it needs an image of your own, built <code>FROM</code> this one with those added.</p>
@@ -684,7 +684,7 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p>On a host with SELinux enforcing – Fedora, RHEL, and anything derived from them – a volume needs a label option or the container cannot read it. Use <code>z</code>, the shared label, for anything the host or another container also uses, which is all of the above. <code>Z</code> relabels the content privately to one container, and applying it to a shared staging directory takes that directory away from every other reader on the host, including the next container. Docker takes the same options; it is the label, not the runtime, that decides this.</p>
@@ -695,7 +695,7 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p><code>rw</code> is the default for a bind mount and is written out here only to say that it is meant: the package above it is <code>ro</code> on purpose, and the pair reads as a decision rather than an omission. Create the directory on the host first – <code>mkdir -p ~/.cargoship-cache</code> – because a bind mount whose source does not exist is created by the runtime as an empty directory owned by root, which the container cannot then write to.</p>
@@ -706,7 +706,7 @@ podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p>A new named volume is populated from the image path it is mounted over, ownership included, so it arrives owned by 65532 with no mapping, no <code>chown</code> and no SELinux label option to choose. It survives <code>--rm</code>, and <code>podman volume rm cargoship-cache</code> is how you discard it deliberately.</p>
@@ -727,7 +727,7 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p>An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.</p>
@@ -4290,7 +4290,7 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 <li><strong><code>CARGOSHIP_E2E_TMPDIR</code></strong> — parent directory for the temp dirs the harness creates, one per <code>e2e.Cargoship</code> call, plus the shared minimal package. Unset means the system temp directory. Point it at <code>build/tmp</code> to keep all test scratch inside the repo, which makes it easy to see what a run left behind: <code>CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...</code>.</li>
 <li><strong><code>TMPDIR</code></strong> — respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.</li>
 <li><strong><code>CARGOSHIP_E2E_KEEP_REGISTRY_LOG</code></strong> — set to any non-empty value to keep the in-memory registry’s request log for passing tests as well as failing ones. See “Artifacts and logs” below.</li>
-<li><strong><code>CARGOSHIP_CONFIG</code></strong> — the config file the binary loads. Only <code>TestCargoshipCreateExample</code> sets it (to <code>src/test/e2e/cargoship-config.yaml</code>); every other test passes flags explicitly so that what is being tested is visible in the test.</li>
+<li><strong><code>CARGOSHIP_CONFIG</code></strong> — the config file the binary loads. <code>TestCargoshipCreateExample</code> sets it (to <code>src/test/e2e/cargoship-config.yaml</code>), and the Ansible module suite’s “reports a broken config file as a module failure” case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.</li>
 </ul>
 <h2 id="seeing-what-the-binary-actually-did"><a class="header" href="#seeing-what-the-binary-actually-did">Seeing what the binary actually did</a></h2>
 <p><code>e2e.Cargoship</code> runs the binary with <code>exec.PrintCfg()</code>, so its stdout and stderr are written through to the test process’s stdout and stderr, not into <code>t.Log</code>. <code>go test</code> buffers that per package and prints it only when the package fails; add <code>-v</code> to see it as it happens.</p>
@@ -4690,6 +4690,7 @@ sha256sum /tmp/from-image
 <li><code>Linuxamd64</code> / <code>Linuxarm64</code> — Compiles Linux binaries.</li>
 <li><code>Macamd64</code> / <code>Macarm64</code> — Compiles macOS binaries.</li>
 <li><code>All</code> — Compiles all release binaries into <code>build/</code>.</li>
+<li><code>Examples</code> — Builds a package from every example definition using the cargoship binary on <code>PATH</code> (not a binary built here), exercising the same path a release user would take. Gigabytes per package and hours in total; one failure does not stop the run.</li>
 </ul>
 <pre><code class="language-sh">mage build:binary         # build for this host's OS/arch
 mage build:linuxamd64     # build build/cargoship_linux_amd64
@@ -4697,6 +4698,7 @@ mage build:linuxarm64     # build build/cargoship_linux_arm64
 mage build:macamd64       # build build/cargoship_darwin_amd64
 mage build:macarm64       # build build/cargoship_darwin_arm64
 mage build:all            # build every release binary into build/
+mage build:examples       # build every example package with cargoship on PATH
 mage                      # same as `mage build:all` -- it is the default target
 </code></pre>
 <h3 id="dev-namespace"><a class="header" href="#dev-namespace"><code>Dev</code> Namespace</a></h3>
@@ -4721,11 +4723,21 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <h3 id="test-namespace"><a class="header" href="#test-namespace"><code>Test</code> Namespace</a></h3>
 <p>The <code>Test</code> namespace hosts the integration and validation suites:</p>
 <ul>
-<li><code>EndToEnd</code> — Builds Cargoship for the host, then runs the full Go end-to-end suite in verbose mode. It builds first every time, so there is no separate build step to remember.</li>
+<li><code>EndToEnd</code> — Runs the whole e2e suite: both the cluster and non-cluster groups, including the example packages that pull ~1.5GB of engine artifacts and images. Needs Docker.</li>
+<li><code>EndToEndNonCluster</code> — Runs the group that needs no cluster: the misc and package command groups. <code>-short</code> additionally skips the example packages, so this finishes in seconds. Mirrors the <code>e2e-noncluster</code> CI job.</li>
+<li><code>EndToEndCluster</code> — Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
+<li><code>EndToEndClusterStage</code> — Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.</li>
+<li><code>CleanCluster</code> — Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
+<li><code>Fuzz</code> — Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>src/fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="#running-the-fuzz-tests">fuzz-tests</a>.</li>
 <li><code>AnsibleRequirements</code> — Checks every collection pinned in <code>ansible/colonel_byte/cargoship/requirements.yml</code> can run on the ansible-core declared in that collection’s <code>meta/runtime.yml</code>. Asks Galaxy what each <em>pinned</em> version declares in <code>requires_ansible</code> and fails when that does not cover the whole controller range. Touches the network. <code>.github/workflows/check-ansible-requirements.yaml</code> runs it on every pull request.</li>
 </ul>
-<pre><code class="language-sh">mage test:endToEnd            # build the binary, then run the e2e suite
-mage test:ansibleRequirements # check the Galaxy pins run on the declared ansible-core
+<pre><code class="language-sh">mage test:endToEnd              # build the binary, then run both e2e groups (needs Docker)
+mage test:endToEndNonCluster    # run the misc/package command suites, no cluster needed
+mage test:endToEndCluster       # run the install command suite against a bootloose cluster
+mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
+mage test:cleanCluster          # remove bootloose containers left behind by a killed run
+mage test:fuzz                  # replay the fuzz seed corpus
+mage test:ansibleRequirements   # check the Galaxy pins run on the declared ansible-core
 </code></pre>
 <p><code>Test.AnsibleRequirements</code> deliberately does not check the pins are the <em>newest</em> available — an upstream collection released that morning must not fail an unrelated pull request. Moving the pins forward is <code>Generate.AnsibleRequirements</code>, run on purpose.</p>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8347487a.js";
+            window.path_to_searchindex_js = "../searchindex-2d5a698a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-70e386d3.js"></script>
@@ -183,9 +183,9 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="running-the-collection-from-the-container"><a class="header" href="#running-the-collection-from-the-container">Running the Collection from the Container</a></h1>
-<p>The <code>-ansible</code> image is a management node in a container: <code>ansible-core</code> from the <code>alpine/ansible</code> base, plus the cargoship apk, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
+<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
 <p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="ansible-module.html">ansible-module</a>, and for the inventory they translate, <a href="ansible-inv.html">ansible-inv</a>. Nothing about either changes inside the container.</p>
-<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship:0.25.1-ansible
+<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:0.26.2
 </code></pre>
 <p>The image has no <code>ENTRYPOINT</code>, because a run legitimately reaches for <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code> or <code>cargoship</code> itself; name the command you want. The collection is installed to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path, so <code>ansible-playbook</code> resolves <code>colonel_byte.cargoship.cargoship_apply</code> with no configuration. <code>HOME</code> is <code>/home/nonroot</code>, the working directory is <code>/workspace</code>, and the process runs as UID and GID 65532.</p>
 <p>The image carries cargoship and the collection, and nothing for talking to the cluster afterwards. <code>kubernetes.core</code> is present because the base carries the full ansible distribution, but the Python client its modules import is not, so a <code>k8s</code> task fails at import time; there is no <code>helm</code> or <code>kubectl</code> either. A play that converges the cluster and then applies manifests to it needs an image of your own, built <code>FROM</code> this one with those added.</p>
@@ -218,7 +218,7 @@
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p>On a host with SELinux enforcing – Fedora, RHEL, and anything derived from them – a volume needs a label option or the container cannot read it. Use <code>z</code>, the shared label, for anything the host or another container also uses, which is all of the above. <code>Z</code> relabels the content privately to one container, and applying it to a shared staging directory takes that directory away from every other reader on the host, including the next container. Docker takes the same options; it is the label, not the runtime, that decides this.</p>
@@ -229,7 +229,7 @@
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p><code>rw</code> is the default for a bind mount and is written out here only to say that it is meant: the package above it is <code>ro</code> on purpose, and the pair reads as a decision rather than an omission. Create the directory on the host first – <code>mkdir -p ~/.cargoship-cache</code> – because a bind mount whose source does not exist is created by the runtime as an empty directory owned by root, which the container cannot then write to.</p>
@@ -240,7 +240,7 @@ podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p>A new named volume is populated from the image path it is mounted over, ownership included, so it arrives owned by 65532 with no mapping, no <code>chown</code> and no SELinux label option to choose. It survives <code>--rm</code>, and <code>podman volume rm cargoship-cache</code> is how you discard it deliberately.</p>
@@ -261,7 +261,7 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship:0.25.1-ansible \
+  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <p>An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.</p>
