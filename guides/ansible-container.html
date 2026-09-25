@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8732b9a4.js";
+            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -251,7 +251,7 @@ podman run --rm \
 <p>When using SSH multiplexing (<code>ControlMaster</code>) with Ansible inside the container, configure <code>ControlPath</code> (or mount a tmpfs volume) where nonroot has write permissions. If an inventory points to a host home directory (e.g. <code>/home/&lt;user&gt;/.ssh/sockets</code>), mount a writable tmpfs with permissive mode (<code>--tmpfs /home/&lt;user&gt;/.ssh/sockets:rw,mode=0777</code>) or point <code>ControlPath</code> to <code>/home/nonroot/.ssh/sockets</code>. Also avoid using <code>:z</code> SELinux relabeling flags on the host <code>~/.ssh</code> directory when mounting SSH keys, as relabeling host SSH directories can disrupt host sshd services.</p>
 <h2 id="host-keys"><a class="header" href="#host-keys">Host Keys</a></h2>
 <p>Cargoship verifies host keys against <code>~/.ssh/known_hosts</code> – <code>/home/nonroot/.ssh/known_hosts</code> in the container – and appends a key it has not seen before, which is trust on first use. A fresh container has no such file, so with nothing mounted every host in the fleet is trusted on the first connection of every run, and the file recording that decision is thrown away with the container. That is weaker than it looks: it is not a first use, it is a first use each time.</p>
-<p>Three ways out, in order of preference. Mount a <code>known_hosts</code> file writable, as above, so the first run records what it saw and every later run verifies against it. Or set <code>cargoship_host_key</code> on each host in the inventory, which states the expected key in the inventory itself and is the strongest of the three, since the answer travels with the host rather than with the container’s filesystem. Or point <code>SSH_KNOWN_HOSTS</code> at a file you seeded beforehand; a read-only mount is fine here, but only because every key is already in it – cargoship still has to be able to append when one is not, and a read-only file fails that write.</p>
+<p>Two ways out, in order of preference. Mount a <code>known_hosts</code> file writable, as above, so the first run records what it saw and every later run verifies against it. Or point <code>SSH_KNOWN_HOSTS</code> at a file you seeded beforehand; a read-only mount is fine here, but only because every key is already in it – cargoship still has to be able to append when one is not, and a read-only file fails that write.</p>
 <p>Setting <code>SSH_KNOWN_HOSTS=/dev/null</code> disables host key verification entirely. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.</p>
 <h2 id="ssh-agents-work-with-the-socket-mounted"><a class="header" href="#ssh-agents-work-with-the-socket-mounted">SSH Agents Work, With the Socket Mounted</a></h2>
 <p>Cargoship reads <code>SSH_AUTH_SOCK</code> and offers the agent’s keys, so an agent on the host serves a run in the container once its socket is mounted and the variable points at it.</p>
