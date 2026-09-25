@@ -259,7 +259,7 @@ Merge keys work the same way. A registry that merges a shared block reads whatev
 
 A merge can add keys to a block but never override one the anchor already sets -- YAML forbids the same key twice in a mapping, and the configuration fails to load before cargoship sees it -- so put in a shared block only what every user of it wants, and write what differs beside the merge.
 
-`src/test/e2e/noncluster/testdata/inventory-anchors.yaml` is a complete inventory built this way, kept as a worked example and exercised by the end-to-end suite.
+`test/e2e/noncluster/testdata/inventory-anchors.yaml` is a complete inventory built this way, kept as a worked example and exercised by the end-to-end suite.
 
 ## Rotating the Vault Password
 

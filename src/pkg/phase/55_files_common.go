@@ -112,7 +112,7 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 // scoped to the "engine" category: other upload phases (e.g. images) record into the same
 // per-host UploadedFiles list, and their entries may not exist yet by the time this phase runs.
 func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
-	current := parseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
+	current := ParseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
 	old := filterManifestByCategory(p.priorManifest[h], "engine")
 	current = filterManifestByCategory(current, "engine")
 	p.removeStaleManifestEntries(ctx, h, old, current)

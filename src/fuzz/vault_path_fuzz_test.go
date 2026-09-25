@@ -20,8 +20,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )
@@ -225,6 +225,37 @@ func FuzzPathIsDecryptable(f *testing.F) {
 			"an accepted path points outside the registries list: %q", canonical)
 		require.True(t, clustercfg.PathIsDecryptable(canonical),
 			"a path is accepted as %q but rejected as %q", path, canonical)
+	})
+}
+
+// FuzzCanonicalYAMLPathNoPanic asserts that CanonicalYAMLPath never panics on arbitrary strings,
+// and that a path it accepts is idempotent under a second pass.
+//
+// The other targets in this file feed CanonicalYAMLPath paths shaped like a YAML path an operator
+// might type. This one feeds it arbitrary text, because the recover in parseYAMLPath exists for
+// exactly the input this misses: go-yaml's own parser reads past the end of an unterminated index
+// and panics rather than reporting a syntax error, and nothing about that bug is specific to
+// path-shaped strings.
+func FuzzCanonicalYAMLPathNoPanic(f *testing.F) {
+	f.Add("$.spec.config.registries[0")
+	f.Add("[[[[[[[[[[")
+	f.Add("]]]]]]]]]]")
+	f.Add("$['")
+	f.Add("$.a[")
+	f.Add("$..")
+	f.Add(strings.Repeat("[0]", 200))
+	f.Add("\x00\x01\x02")
+	f.Add("")
+	f.Add("not a path at all, just text")
+
+	f.Fuzz(func(t *testing.T, path string) {
+		canonical, err := clustercfg.CanonicalYAMLPath(path)
+		if err != nil {
+			return
+		}
+		again, err := clustercfg.CanonicalYAMLPath(canonical)
+		require.NoError(t, err, "%q canonicalises to %q, which does not parse", path, canonical)
+		require.Equal(t, canonical, again, "canonicalising %q is not idempotent", path)
 	})
 }
 

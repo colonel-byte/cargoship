@@ -227,7 +227,7 @@ func nftSets(p Plan) string {
 	var b strings.Builder
 
 	trusted := append(slices.Clone(p.NodeAddresses), p.ClusterCIDRs...)
-	v4, v6 := nftSplitFamilies(trusted)
+	v4, v6 := NftSplitFamilies(trusted)
 
 	for _, set := range []struct {
 		name    string
@@ -259,7 +259,7 @@ func nftChainRules(p Plan) (map[string][]string, error) {
 	chains := map[string][]string{}
 
 	trusted := append(slices.Clone(p.NodeAddresses), p.ClusterCIDRs...)
-	v4, v6 := nftSplitFamilies(trusted)
+	v4, v6 := NftSplitFamilies(trusted)
 	if len(v4) > 0 {
 		chains["input"] = append(chains["input"],
 			fmt.Sprintf("ip saddr @%s accept comment %q", nftClusterSetV4, nftComment+":cluster"))
@@ -351,9 +351,9 @@ func nftAddrFamily(addr string) string {
 	return "ip"
 }
 
-// nftSplitFamilies sorts addresses and CIDRs into their families, dropping anything that
+// NftSplitFamilies sorts addresses and CIDRs into their families, dropping anything that
 // parses as neither. Order is preserved so the rendered ruleset is stable across runs.
-func nftSplitFamilies(addrs []string) (v4 []string, v6 []string) {
+func NftSplitFamilies(addrs []string) (v4 []string, v6 []string) {
 	for _, addr := range addrs {
 		if addr == "" {
 			continue

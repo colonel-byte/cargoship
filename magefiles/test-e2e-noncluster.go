@@ -21,5 +21,5 @@ package main
 // groups. -short additionally skips the example packages, so this finishes in seconds.
 // Mirrors the e2e-noncluster CI job.
 func (Test) EndToEndNonCluster() error {
-	return runE2E("30m", "github.com/colonel-byte/cargoship/src/test/e2e/noncluster/...", "-short")
+	return runE2E("30m", "github.com/colonel-byte/cargoship/test/e2e/noncluster/...", "-short")
 }

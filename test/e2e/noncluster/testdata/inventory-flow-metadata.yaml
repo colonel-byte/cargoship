@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# An inventory whose metadata mapping is written in flow style, which is legal YAML and is the one
+# shape the age recipient record cannot be written into: flow style has no block collection, so a
+# nested encryption block spliced in here would leave a document that no longer parses.
+#
+# The credentials are ordinary, and encrypting them works exactly as it does anywhere else. Only the
+# record is declined -- see errNoMetadataBlock.
+#
+# Nothing here is contacted. The tests only read this file and rewrite copies of it.
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata: {name: flow-meta}
+spec:
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: harbor
+        auth:
+          user: admin
+          pass: hunter2
+  hosts:
+    - hostname: node1
+      role: controller

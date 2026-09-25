@@ -17,7 +17,7 @@ package cmd
 import (
 	"context"
 
-	"github.com/colonel-byte/cargoship/src/internal/ansiblemod"
+	"github.com/colonel-byte/cargoship/internal/ansiblemod"
 )
 
 // AnsibleModule runs the binary as an Ansible module when it was invoked as one, and reports

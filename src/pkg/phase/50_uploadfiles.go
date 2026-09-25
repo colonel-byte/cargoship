@@ -297,7 +297,7 @@ func (p *UploadFiles) Run(ctx context.Context) error {
 // recorded their own files into h.Metadata.UploadedFiles yet, so comparing the full manifest
 // here would misread their files as stale and delete a still-in-use engine binary.
 func (p *UploadFiles) cleanStaleUploads(ctx context.Context, h *cluster.ZarfHost) error {
-	current := parseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
+	current := ParseManifest(strings.Join(h.Metadata.UploadedFiles, "\n"))
 	old := filterManifestByCategory(p.priorManifest[h], "image")
 	current = filterManifestByCategory(current, "image")
 	p.removeStaleManifestEntries(ctx, h, old, current)

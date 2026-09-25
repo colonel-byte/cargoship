@@ -25,9 +25,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/node"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"

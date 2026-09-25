@@ -1,6 +1,6 @@
 # Adding an E2E Test for a New Apply Phase
 
-The cluster suite in `src/test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `src/pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
+The cluster suite in `test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `src/pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
 
 One top-level test, `TestClusterPhases`, runs the `apply` walk against the cluster it provisions. It is a subtest rather than a top-level test because later walks against the same cluster -- an upgrade, a reset -- hang off the same parent and have to run in a fixed order after it.
 
@@ -10,7 +10,7 @@ For why the suite is built this way, see [choice-phase-e2e-tests](../agent/choic
 
 A phase is identified by its source file's number, and that number is used twice:
 
-*   **The test file name mirrors the phase's source file.** A test for `src/pkg/phase/25_modify_hosts_file.go` goes in `src/test/e2e/cluster/25_modify_hosts_file_test.go`. Same number, same name, one file each.
+*   **The test file name mirrors the phase's source file.** A test for `src/pkg/phase/25_modify_hosts_file.go` goes in `test/e2e/cluster/25_modify_hosts_file_test.go`. Same number, same name, one file each.
 *   **The method name carries the same number.** That file contains `Test_25_ModifyHosts`.
 
 Testify runs suite methods in lexicographic order of the method name, so the number is also the order the phases run in here. The numbers are zero-padded to two digits, which makes lexicographic order numeric order.
@@ -125,7 +125,7 @@ Do not "fix" a phase that fails on Alpine by skipping the host in the assertion.
 The suite needs Docker and a real distro package. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
 
 ```console
-$ go test -mod=vendor -count=1 -v -timeout=55m ./src/test/e2e/cluster/...
+$ go test -mod=vendor -count=1 -v -timeout=55m ./test/e2e/cluster/...
 ```
 
 Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:

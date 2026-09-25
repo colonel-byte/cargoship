@@ -1,6 +1,6 @@
 # Why age sits beside Ansible Vault rather than replacing it
 
-Cargoship encrypts four registry credential fields per registry -- `auth.user`, `auth.pass`, `auth.token`, `tls.ca` -- and decrypts them at apply time, when the engine's registry configuration is written. That was Ansible Vault only, built on a single shared passphrase (`src/internal/clustercfg/vault.go`). It now also supports [age](https://github.com/FiloSottile/age), and the two coexist permanently.
+Cargoship encrypts four registry credential fields per registry -- `auth.user`, `auth.pass`, `auth.token`, `tls.ca` -- and decrypts them at apply time, when the engine's registry configuration is written. That was Ansible Vault only, built on a single shared passphrase (`internal/clustercfg/vault.go`). It now also supports [age](https://github.com/FiloSottile/age), and the two coexist permanently.
 
 The operator-facing guide is [age-encryption](../guides/age-encryption.md). This document records the decisions behind it, and in particular the two things a future change is most likely to get wrong: **the probe in `EncryptConfig` cannot be re-added for age**, and **the recipient record in `metadata` must never be read back as key material.**
 
@@ -48,7 +48,7 @@ Changing which keys a document is encrypted to is `rekey`'s job, and always was.
 
 ## The recipient record, and why it is inert
 
-A document encrypted with age carries `metadata.encryption.age.recipients` and `lastModified`, written by `src/internal/clustercfg/vaultmeta.go`. It is the answer to issue #392, and it is in direct tension with a bullet three sections above: *no schema field naming the format, so no field that can disagree with the value beside it.* This is exactly such a field. It can disagree with the ciphertext beside it, nothing can detect that it has, and for the reasons in the probe section nothing ever will be able to.
+A document encrypted with age carries `metadata.encryption.age.recipients` and `lastModified`, written by `internal/clustercfg/vaultmeta.go`. It is the answer to issue #392, and it is in direct tension with a bullet three sections above: *no schema field naming the format, so no field that can disagree with the value beside it.* This is exactly such a field. It can disagree with the ciphertext beside it, nothing can detect that it has, and for the reasons in the probe section nothing ever will be able to.
 
 It was accepted anyway, under one restriction that the entire justification rests on:
 

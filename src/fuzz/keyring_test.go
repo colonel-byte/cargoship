@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 )
 
 // fuzzPassword is the vault password every target in this package encrypts under. These targets

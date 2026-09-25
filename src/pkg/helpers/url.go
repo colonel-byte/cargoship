@@ -54,5 +54,8 @@ func ExtractBasePathFromURL(urlStr string) (string, error) {
 	}
 
 	filename := path.Base(parsedURL.Path)
+	if filename == "." || filename == ".." {
+		return "", fmt.Errorf("%s does not contain a filename", urlStr)
+	}
 	return filename, nil
 }

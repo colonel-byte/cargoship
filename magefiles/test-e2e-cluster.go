@@ -32,7 +32,7 @@ func (Test) EndToEndCluster() error {
 	if err := stopBootlooseContainers(); err != nil {
 		return err
 	}
-	return runE2ENoBuild("1h", "github.com/colonel-byte/cargoship/src/test/e2e/cluster/...")
+	return runE2ENoBuild("1h", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
 }
 
 // EndToEndClusterStage runs the same suite as EndToEndCluster, but stops at the boundary
@@ -47,7 +47,7 @@ func (Test) EndToEndClusterStage() error {
 	if err := os.Setenv("CARGOSHIP_E2E_STAGE_ONLY", "1"); err != nil {
 		return err
 	}
-	return runE2ENoBuild("30m", "github.com/colonel-byte/cargoship/src/test/e2e/cluster/...")
+	return runE2ENoBuild("30m", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
 }
 
 // CleanCluster removes the containers a bootloose cluster left behind. EndToEndCluster does
@@ -72,6 +72,6 @@ func stopBootlooseContainers() error {
 	fmt.Println("Removing leftover bootloose containers")
 	// -v takes the anonymous volumes with the containers. Without it a local run leaves one
 	// behind per machine per run, because Docker does not reap them with the container that
-	// declared them -- see engineData in src/test/e2e/cluster/main_test.go.
+	// declared them -- see engineData in test/e2e/cluster/main_test.go.
 	return sh.RunV("docker", append([]string{"rm", "-fv"}, strings.Fields(ids)...)...)
 }

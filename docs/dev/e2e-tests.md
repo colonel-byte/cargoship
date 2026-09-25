@@ -5,11 +5,11 @@ The `noncluster` e2e suite drives the **built `cargoship` binary** as a subproce
 ## Layout
 
 ```
-src/test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
-src/test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), with the apply phases walked one phase at a time
-src/test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
-src/test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
-src/test/registry.go       in-process OCI registry used by the publish/pull/sign tests
+test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
+test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), with the apply phases walked one phase at a time
+test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
+test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
+test/registry.go       in-process OCI registry used by the publish/pull/sign tests
 ```
 
 The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The `noncluster` package starts no containers and makes no network calls: it needs nothing but the binary. The `cluster` package needs Docker and takes tens of minutes, and needs no binary; everything below is about `noncluster`, and [e2e-phase-tests](e2e-phase-tests.md) covers the cluster suite and how to extend it when a phase is added.
@@ -29,9 +29,9 @@ The binary is **not** rebuilt by `go test`. After changing anything under `src/`
 ## Running
 
 ```console
-$ go test -mod=vendor -count=1 ./src/test/e2e/noncluster/...            # the whole group, about 6 seconds
-$ go test -mod=vendor -count=1 -short ./src/test/e2e/noncluster/...     # same, minus the real example package
-$ go test -mod=vendor -count=1 -v -timeout=30m ./src/test/e2e/noncluster/...
+$ go test -mod=vendor -count=1 ./test/e2e/noncluster/...            # the whole group, about 6 seconds
+$ go test -mod=vendor -count=1 -short ./test/e2e/noncluster/...     # same, minus the real example package
+$ go test -mod=vendor -count=1 -v -timeout=30m ./test/e2e/noncluster/...
 ```
 
 *   `-count=1` disables the test result cache. Without it, a green run is cached and a rebuilt binary will not re-trigger it, since the binary is not one of the inputs `go test` hashes.
@@ -43,8 +43,8 @@ $ go test -mod=vendor -count=1 -v -timeout=30m ./src/test/e2e/noncluster/...
 Subtests are named as sentences, and `go test` replaces spaces with underscores in the `-run` pattern:
 
 ```console
-$ go test -mod=vendor -count=1 -v -run TestCargoshipSign ./src/test/e2e/noncluster/...
-$ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_overwrite' ./src/test/e2e/noncluster/...
+$ go test -mod=vendor -count=1 -v -run TestCargoshipSign ./test/e2e/noncluster/...
+$ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_overwrite' ./test/e2e/noncluster/...
 ```
 
 `-run` takes a regular expression matched against each path element, so `-run 'TestCargoship(Publish|Pull)'` selects a couple of suites and `-run 'TestCargoshipSign/.*overwrite.*'` selects by substring when the exact name is a mouthful.
@@ -52,7 +52,7 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 Those patterns are unanchored, which bites here because several suite names are prefixes of others: `-run TestCargoshipSign` also runs `TestCargoshipSignedRoundTrip`, and `-run TestCargoshipPull` also runs `TestCargoshipPullHTTP`. Anchor both elements to isolate exactly one subtest:
 
 ```console
-$ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires_overwrite$' ./src/test/e2e/noncluster/...
+$ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires_overwrite$' ./test/e2e/noncluster/...
 ```
 
 ## Environment variables
@@ -60,7 +60,7 @@ $ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires
 *   **`CARGOSHIP_E2E_TMPDIR`** — parent directory for the temp dirs the harness creates, one per `e2e.Cargoship` call, plus the shared minimal package. Unset means the system temp directory. Point it at `build/tmp` to keep all test scratch inside the repo, which makes it easy to see what a run left behind: `CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...`.
 *   **`TMPDIR`** — respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.
 *   **`CARGOSHIP_E2E_KEEP_REGISTRY_LOG`** — set to any non-empty value to keep the in-memory registry's request log for passing tests as well as failing ones. See "Artifacts and logs" below.
-*   **`CARGOSHIP_CONFIG`** — the config file the binary loads. `TestCargoshipCreateExample` sets it (to `src/test/e2e/cargoship-config.yaml`), and the Ansible module suite's "reports a broken config file as a module failure" case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.
+*   **`CARGOSHIP_CONFIG`** — the config file the binary loads. `TestCargoshipCreateExample` sets it (to `test/e2e/cargoship-config.yaml`), and the Ansible module suite's "reports a broken config file as a module failure" case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.
 
 ## Seeing what the binary actually did
 
@@ -71,7 +71,7 @@ One flag is appended to every invocation automatically: `--no-color`, so asserti
 ## Artifacts and logs
 
 *   **In-memory registry log.** The registry used by the publish, pull and sign tests writes one line per HTTP request to a file under the user cache directory, `~/.cache/cargoship/e2e-logs/registry-<timestamp>.log` (`$XDG_CACHE_HOME/cargoship/e2e-logs` if that is set), named the way the CLI names its own log files in `logs/`, rather than to stderr where it would bury the test output. A passing test deletes its log; a failing one keeps it and prints the path in the failure output. Set `CARGOSHIP_E2E_KEEP_REGISTRY_LOG=1` to keep the logs of passing tests too — the path is then printed by `go test -v` for every test that started a registry. That log is usually what explains a publish or pull that failed for a non-obvious reason.
-*   **Example packages.** `TestCargoshipCreateExample` writes where `src/test/e2e/cargoship-config.yaml` points it, `src/test/e2e/`. Those `.tar.zst` files are gitignored, and they are large — delete them when done.
+*   **Example packages.** `TestCargoshipCreateExample` writes where `test/e2e/cargoship-config.yaml` points it, `test/e2e/`. Those `.tar.zst` files are gitignored, and they are large — delete them when done.
 *   **Per-call temp dirs** are removed when each `e2e.Cargoship` call returns, including on failure, so nothing the binary wrote under `DISTRO_TMP_DIR` survives for inspection. To keep it, reproduce the command by hand as described below.
 
 ## Debugging a failure
@@ -93,5 +93,5 @@ A few things that have cost time before:
 To step through the harness itself (not the binary, which is a separate process), delve works on the test package as usual:
 
 ```console
-$ dlv test ./src/test/e2e/noncluster -- -test.run 'TestCargoshipPull' -test.v
+$ dlv test ./test/e2e/noncluster -- -test.run 'TestCargoshipPull' -test.v
 ```

@@ -1,6 +1,6 @@
 # Why the cluster e2e suite splits into a staging half and an engine half
 
-The cluster suite (`src/test/e2e/cluster`) walks the apply phase list one phase at a time against a bootloose cluster, as [choice-phase-e2e-tests](choice-phase-e2e-tests.md) describes. That suite is now two runs rather than one: with `CARGOSHIP_E2E_STAGE_ONLY` set it provisions five machines instead of ten and stops at the boundary `phase/60_configure_engine.go` draws, and without it nothing changes. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.
+The cluster suite (`test/e2e/cluster`) walks the apply phase list one phase at a time against a bootloose cluster, as [choice-phase-e2e-tests](choice-phase-e2e-tests.md) describes. That suite is now two runs rather than one: with `CARGOSHIP_E2E_STAGE_ONLY` set it provisions five machines instead of ten and stops at the boundary `phase/60_configure_engine.go` draws, and without it nothing changes. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.
 
 ## What forced it
 
