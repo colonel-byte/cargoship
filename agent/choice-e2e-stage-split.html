@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ce525158.js";
+            window.path_to_searchindex_js = "../searchindex-8732b9a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half"><a class="header" href="#why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half">Why the cluster e2e suite splits into a staging half and an engine half</a></h1>
-<p>The cluster suite (<code>src/test/e2e/cluster</code>) walks the apply phase list one phase at a time against a bootloose cluster, as <a href="choice-phase-e2e-tests.html">choice-phase-e2e-tests</a> describes. That suite is now two runs rather than one: with <code>CARGOSHIP_E2E_STAGE_ONLY</code> set it provisions five machines instead of ten and stops at the boundary <code>phase/60_configure_engine.go</code> draws, and without it nothing changes. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.</p>
+<p>The cluster suite (<code>test/e2e/cluster</code>) walks the apply phase list one phase at a time against a bootloose cluster, as <a href="choice-phase-e2e-tests.html">choice-phase-e2e-tests</a> describes. That suite is now two runs rather than one: with <code>CARGOSHIP_E2E_STAGE_ONLY</code> set it provisions five machines instead of ten and stops at the boundary <code>phase/60_configure_engine.go</code> draws, and without it nothing changes. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.</p>
 <h2 id="what-forced-it"><a class="header" href="#what-forced-it">What forced it</a></h2>
 <p>The suite was label-gated into CI on a hosted <code>ubuntu-latest</code> runner, together with the pull requests that extend it past the upload phases, and it did not pass there. Two things were wrong, and only the first was ours.</p>
 <p><code>phase/55_files_common.go</code> marks a host as claimed from the host list rather than from what it actually uploaded. An rke2 package ships no <code>.deb</code>, so the APT phase claims all five Debian hosts, uploads nothing to them, and registers an <code>apt-get install</code> with an empty package list – which succeeds. <code>phase/59_bin_install.go</code>, the catch-all that exists precisely for a distro that ships neither RPMs nor debs, then filters those hosts out as already claimed, and they reach the initialize phases with no engine on them at all. That is a real product bug, and it is fixed in the pull request that adds the phase coverage which caught it. The local run had never caught it because the failure needs a Debian host and a package with no debs to meet.</p>

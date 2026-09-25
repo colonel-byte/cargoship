@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ce525158.js";
+            window.path_to_searchindex_js = "../searchindex-8732b9a4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -183,13 +183,13 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
-<p>The cluster suite in <code>src/test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>src/pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
+<p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>src/pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
 <p>One top-level test, <code>TestClusterPhases</code>, runs the <code>apply</code> walk against the cluster it provisions. It is a subtest rather than a top-level test because later walks against the same cluster – an upgrade, a reset – hang off the same parent and have to run in a fixed order after it.</p>
 <p>For why the suite is built this way, see <a href="../agent/choice-phase-e2e-tests.html">choice-phase-e2e-tests</a>. For running the e2e suites generally, see <a href="e2e-tests.html">e2e-tests</a>.</p>
 <h2 id="one-number-per-phase"><a class="header" href="#one-number-per-phase">One number per phase</a></h2>
 <p>A phase is identified by its source file’s number, and that number is used twice:</p>
 <ul>
-<li><strong>The test file name mirrors the phase’s source file.</strong> A test for <code>src/pkg/phase/25_modify_hosts_file.go</code> goes in <code>src/test/e2e/cluster/25_modify_hosts_file_test.go</code>. Same number, same name, one file each.</li>
+<li><strong>The test file name mirrors the phase’s source file.</strong> A test for <code>src/pkg/phase/25_modify_hosts_file.go</code> goes in <code>test/e2e/cluster/25_modify_hosts_file_test.go</code>. Same number, same name, one file each.</li>
 <li><strong>The method name carries the same number.</strong> That file contains <code>Test_25_ModifyHosts</code>.</li>
 </ul>
 <p>Testify runs suite methods in lexicographic order of the method name, so the number is also the order the phases run in here. The numbers are zero-padded to two digits, which makes lexicographic order numeric order.</p>
@@ -273,7 +273,7 @@ debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 <p><code>s.harness.engineWorkers()</code> is <code>workers()</code> without those hosts, for a test that runs while they are still on the manager but is only meaningful for the hosts that join.</p>
 <h2 id="prerequisites-and-running-it"><a class="header" href="#prerequisites-and-running-it">Prerequisites and running it</a></h2>
 <p>The suite needs Docker and a real distro package. It needs no prebuilt binary – every step calls the cargoship packages directly, so a bare checkout is enough.</p>
-<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=55m ./src/test/e2e/cluster/...
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=55m ./test/e2e/cluster/...
 </code></pre>
 <p>Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:</p>
 <pre><code class="language-console">$ mage test:endToEndCluster
