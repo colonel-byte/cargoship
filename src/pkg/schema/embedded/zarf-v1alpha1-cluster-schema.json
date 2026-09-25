@@ -878,6 +878,10 @@
       "$ref": "#/$defs/ZarfClusterMetadata",
       "description": "holds identifying information for the cluster."
     },
+    "sops": {
+      "description": "carries the metadata sops appends to a file it has encrypted (recipients, MAC, version). Cargoship never writes this and strips it as part of decrypting -- the field exists only so a sops-encrypted document validates as well-formed ZarfCluster YAML.",
+      "type": "object"
+    },
     "spec": {
       "$ref": "#/$defs/ZarfClusterSpec",
       "description": "holds the configuration and hosts for the cluster."

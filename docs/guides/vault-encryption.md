@@ -2,7 +2,9 @@
 
 This guide explains how Cargoship encrypts registry credentials in a cluster configuration with Ansible Vault, and how to read them back out. It covers the four fields Cargoship decrypts, the `cargoship vault` commands, and the password-rotation workflow.
 
-Ansible Vault is one of two formats Cargoship reads. The other is [age](https://github.com/FiloSottile/age), which encrypts to a set of public keys instead of a shared password -- see [age-encryption](age-encryption.md). The same commands write both, one configuration can hold both, and `vault rekey` moves a configuration from one to the other. Everything below describes the Ansible Vault side.
+Ansible Vault is one of two per-field formats Cargoship reads. The other is [age](https://github.com/FiloSottile/age), which encrypts to a set of public keys instead of a shared password -- see [age-encryption](age-encryption.md). The same commands write both, one configuration can hold both, and `vault rekey` moves a configuration from one to the other. Everything below describes the Ansible Vault side.
+
+Cargoship also reads a cluster configuration encrypted as a whole file with [sops](https://getsops.io/) -- see [Reading a sops-Encrypted Configuration](#reading-a-sops-encrypted-configuration) for which of the two to pick.
 
 ## What Cargoship Decrypts
 
@@ -313,6 +315,25 @@ pass: !vault |
 ```
 
 Cargoship writes a plain block scalar with no tag, and its `-path` and `-file` commands reject a tagged value rather than strand the tag on a value that no longer matches it. Drop the `!vault` tag when moving a value across; the ciphertext underneath needs no change.
+
+## Reading a sops-Encrypted Configuration
+
+Cargoship also loads a cluster configuration that [sops](https://getsops.io/) has encrypted as a whole file, rather than field by field. This is read-only: there is no `cargoship sops encrypt`, `sops rekey`, or any other writer. Encrypt and rotate with the `sops` CLI itself, the same way you would for any other file it manages.
+
+**Pick Ansible Vault (or age) when** you want the batteries-included default: one shared password or a short recipient list, nothing else to install, and Cargoship's own `vault`/`vault rekey` commands to manage it end to end. This is right for most teams and is what a new cluster configuration should start with.
+
+**Pick sops when** the team is bigger than a couple of operators and a shared password has become the problem: sops backs onto per-operator age keys or a cloud KMS, so a credential can be revoked from one person without rotating the whole file, and a KMS-backed key gives you an audit trail on who read what. That is the entire trade -- sops buys per-operator revocation and audit at the cost of needing the `sops` CLI and your own key/recipient management outside Cargoship.
+
+A sops-encrypted configuration is detected by its top-level `sops:` metadata block, and decrypted before Cargoship parses anything else in the file -- registry credentials, hosts, everything. Key discovery is entirely sops's own: `SOPS_AGE_KEY_FILE`, or whatever credential chain the KMS backend you encrypted to uses. There is no `--vault-password-file` or `--age-identity-file` equivalent for it, and no new flag to learn.
+
+```
+sops --encrypt --age <recipient> --input-type yaml --output-type yaml cluster.yaml > cluster.enc.yaml
+SOPS_AGE_KEY_FILE=./identity.txt cargoship install apply cluster.enc.yaml --confirm
+```
+
+A file whose key is unavailable fails at load, naming the file, before Cargoship contacts any host -- the same guarantee `VerifyRegistryAuth` gives the per-field formats above, just enforced earlier because the whole document needs the key rather than only the credential fields.
+
+Once decrypted, a sops-encrypted configuration is an ordinary cluster configuration, so the per-field checks above still run against it -- a registry field can even carry `$ANSIBLE_VAULT` or age ciphertext underneath the sops layer, though there is no reason to nest the two in practice.
 
 ## Notes
 

@@ -47,6 +47,8 @@ type ZarfCluster struct {
 	Spec ZarfClusterSpec `json:"spec"`
 	// RuntimeMetadata stores data gathered while the phases run.
 	RuntimeMetadata ZarfRuntimeMeta `json:"-"`
+	// Sops carries the metadata sops appends to a file it has encrypted (recipients, MAC, version). Cargoship never writes this and strips it as part of decrypting -- the field exists only so a sops-encrypted document validates as well-formed ZarfCluster YAML.
+	Sops map[string]any `json:"sops,omitempty"`
 }
 
 // ZarfClusterMetadata holds identifying information for a cluster.
