@@ -227,7 +227,7 @@ var configLoadError error //nolint:gochecknoglobals // set once, in init, beside
 //
 // It writes to stderr, and it exists as a function so that both callers stay that way. Both run
 // during package initialisation, before any flag is parsed and so before the real logger exists,
-// which is early enough that the Ansible module mode in src/internal/ansiblemod cannot redirect
+// which is early enough that the Ansible module mode in internal/ansiblemod cannot redirect
 // os.Stdout ahead of them. Commands that emit a document on stdout -- schema, validate, inventory
 // from-ansible -- would have that document corrupted by a warning mixed into it.
 func emitConfigError(err error) {
@@ -236,7 +236,7 @@ func emitConfigError(err error) {
 
 // ExecuteArgs runs the root command against an explicit argument vector instead of os.Args.
 //
-// It exists for the Ansible module mode in src/internal/ansiblemod, which turns a module's JSON
+// It exists for the Ansible module mode in internal/ansiblemod, which turns a module's JSON
 // parameters into the flags an operator would have typed and then runs the ordinary command.
 // Building an argument vector rather than calling into src/pkg/action directly is the point of the
 // arrangement: keyring resolution, timeout parsing, package loading, and phase construction stay on

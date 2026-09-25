@@ -19,9 +19,9 @@ import (
 	"io"
 	"os"
 
+	"github.com/colonel-byte/cargoship/internal/ansibleinv"
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/config/lang"
-	"github.com/colonel-byte/cargoship/src/internal/ansibleinv"
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 )

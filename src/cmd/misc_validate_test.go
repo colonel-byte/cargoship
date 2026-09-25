@@ -50,7 +50,7 @@ func writeYAML(t *testing.T, name, body string) string {
 
 // valuesSchemaPackageDir is an unbuilt package definition carrying a values schema, read straight
 // off disk so these tests need no build and no network.
-var valuesSchemaPackageDir = filepath.Join("..", "test", "e2e", "noncluster", "testdata", "values-schema")
+var valuesSchemaPackageDir = filepath.Join("..", "..", "test", "e2e", "noncluster", "testdata", "values-schema")
 
 const validInventory = `
 apiVersion: zarf.dev/v1alpha1

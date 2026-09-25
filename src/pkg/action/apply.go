@@ -25,7 +25,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"

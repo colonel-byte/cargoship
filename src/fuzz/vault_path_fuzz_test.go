@@ -20,8 +20,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )

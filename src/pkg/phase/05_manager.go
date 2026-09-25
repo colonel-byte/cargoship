@@ -189,7 +189,7 @@ func DryRunNote(p Phase) string {
 // not from what it expected to do. A phase that failed halfway through still changed the fleet,
 // and is expected to say so.
 //
-// The caller this exists for is Ansible's changed, in src/internal/ansiblemod.
+// The caller this exists for is Ansible's changed, in internal/ansiblemod.
 type changedReporter interface {
 	Changed() bool
 }

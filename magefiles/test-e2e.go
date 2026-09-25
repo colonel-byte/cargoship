@@ -23,5 +23,5 @@ func (Test) EndToEnd() error {
 	if err := stopBootlooseContainers(); err != nil {
 		return err
 	}
-	return runE2E("1h", "github.com/colonel-byte/cargoship/src/test/e2e/...")
+	return runE2E("1h", "github.com/colonel-byte/cargoship/test/e2e/...")
 }

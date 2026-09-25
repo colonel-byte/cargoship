@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/api"
-	"github.com/colonel-byte/cargoship/src/test"
+	"github.com/colonel-byte/cargoship/test"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

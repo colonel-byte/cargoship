@@ -21,7 +21,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/src/internal/ansiblemod"
+	"github.com/colonel-byte/cargoship/internal/ansiblemod"
 	"github.com/stretchr/testify/require"
 )
 
@@ -116,7 +116,7 @@ const moduleInventory = `{
 	"cluster": {"name": "bubbles", "loadbalancer": "bubbles-kc.test.com"}
 }`
 
-// TestModuleArgsParse is what keeps the flag names in src/internal/ansiblemod true.
+// TestModuleArgsParse is what keeps the flag names in internal/ansiblemod true.
 //
 // That package cannot import this one -- this one imports it -- so it spells the flags out. A
 // rename here would otherwise be found by an operator, at the point a playbook failed against a

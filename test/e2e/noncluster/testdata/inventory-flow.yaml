@@ -1,0 +1,29 @@
+---
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# An inventory written in flow style, the "{a: b}" and "[a, b]" spellings YAML allows anywhere a
+# block collection is allowed. A credential inside one cannot be rewritten as a literal block: flow
+# style has no block scalar, so the value is quoted onto a single line instead, and the rest of the
+# collection on that line is carried over untouched.
+#
+# The registries cover the three placements separately: a flow mapping holding the credential, a
+# flow mapping nested in a block one, and a registry written entirely in flow style inside the list.
+#
+# Nothing here is contacted. The tests only read this file and rewrite copies of it.
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: flow
+spec:
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: flow-auth.test.local
+        auth: {user: flow-user, pass: flow-pass}
+      - name: nested.test.local
+        auth:
+          user: nested-user
+        tls: {ca: nested-ca, insecureSkipVerify: false}
+      - {name: whole.test.local, auth: {token: whole-token}}
+  hosts:
+    - hostname: node1
+      role: controller

@@ -2,7 +2,7 @@
 
 The `src/fuzz` package holds Go's native fuzz targets. It is not an e2e suite and does not sit with them: it does not drive the built binary and starts no containers, and the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions -- scalar style, quoting, indentation, byte offsets -- where a wrong answer produces a file that still parses and fails much later. Nothing here needs `build/`, a cluster, or the network.
 
-It also has to stay out of `src/test/`. OpenSSF Scorecard's file walker discards every path beginning `src/test/` before any check reads it -- `isTestdataFile` in [`checks/fileparser/listing.go`](https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go), which carries the Maven `src/test/java` convention -- so for as long as these targets lived at `src/test/e2e/fuzz` the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under `src/test/` would silently take it to 0 again.
+It also has to stay out of `src/test/`. OpenSSF Scorecard's file walker discards every path beginning `src/test/` before any check reads it -- `isTestdataFile` in [`checks/fileparser/listing.go`](https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go), which carries the Maven `src/test/java` convention -- so for as long as these targets lived at `src/test/e2e/fuzz` the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under `src/test/` would silently take it to 0 again. The e2e suites themselves moved out of `src/test/` to `test/` for unrelated reasons, which loses that same exclusion for their tree -- worth knowing if a future Scorecard run starts flagging something in `test/` that it did not before.
 
 ## Layout
 
@@ -19,7 +19,7 @@ src/fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per t
 
 ## The Ansible inventory targets
 
-`ansible_inventory_fuzz_test.go` fuzzes `src/internal/ansibleinv`, which is the translation an Ansible module runs on input it did not write. The vault targets guard what a wrong answer does to a file; these guard what a wrong answer does to a cluster, so their properties are about topology rather than encoding:
+`ansible_inventory_fuzz_test.go` fuzzes `internal/ansibleinv`, which is the translation an Ansible module runs on input it did not write. The vault targets guard what a wrong answer does to a file; these guard what a wrong answer does to a cluster, so their properties are about topology rather than encoding:
 
 *   `FuzzAnsibleRequest` takes the JSON an action plugin projects, decodes it, and translates it. The first host in the result has to be a controller, because `ConfigureEngine` makes the first controller the leader; every host has to reach the document with an address, a user and a non-zero port; and translating the same input twice has to produce the same bytes, since the walk goes over Go maps.
 *   `FuzzAnsibleHostVar` varies one host variable against an inventory that is otherwise fixed. A variable under the `cargoship_` prefix that cargoship does not read is refused by name. A variable outside the prefix that cargoship does not read leaves the generated document byte-for-byte unchanged.
@@ -95,9 +95,9 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 
 The Ansible one is fixed. A group entry of `""` produced a host whose address, hostname and `hostvars` key were all the empty string, and the schema accepted all three because each asks for a string; nothing downstream could tell that host from one an operator meant to install. `deriveRoles` now refuses an empty host name and an empty group name in the mapping.
 
-The last of those is open. `EncryptAtPath` writes a literal block scalar into a flow mapping such as `{0, pass: 00}`, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. `inFlowCollection` in `src/internal/clustercfg/vaultpath.go` is meant to catch exactly this and misses when a bare entry -- a key with an implicit null value -- precedes the target key. Until it is fixed a plain `go test` of this package is red, which is the intended state: the corpus entry is the defect report.
+The last of those is open. `EncryptAtPath` writes a literal block scalar into a flow mapping such as `{0, pass: 00}`, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. `inFlowCollection` in `internal/clustercfg/vaultpath.go` is meant to catch exactly this and misses when a bare entry -- a key with an implicit null value -- precedes the target key. Until it is fixed a plain `go test` of this package is red, which is the intended state: the corpus entry is the defect report.
 
-Those same failures are also written up as ordinary table cases next to the code they broke -- see `TestEncryptAtPathReadsBackWhatDecryptWrote` and `TestCanonicalYAMLPath` in `src/internal/clustercfg/vaultpath_test.go`. Keep doing both: the corpus file is what stops the target regressing, and the named case with a comment is what explains the defect to the next reader.
+Those same failures are also written up as ordinary table cases next to the code they broke -- see `TestEncryptAtPathReadsBackWhatDecryptWrote` and `TestCanonicalYAMLPath` in `internal/clustercfg/vaultpath_test.go`. Keep doing both: the corpus file is what stops the target regressing, and the named case with a comment is what explains the defect to the next reader.
 
 ## Writing a target
 
@@ -127,7 +127,7 @@ Four properties are worth stating, and each of them has already caught a real de
 *   **Two code paths that must agree.** A predicate against the thing it predicts, or a validator against its consumer. `FuzzPathIsDecryptable` states that every path `vault encrypt-path` accepts canonicalises to one the apply-time decryptor visits, because a path that fails that test vaults a credential nothing unwraps.
 *   **No panic on untrusted input.** Anything reached by a hand-edited file or a command-line argument. Caught go-yaml reading past the end of a path whose index is never closed -- `registries[0` -- which reached the operator as a stack trace rather than a usage error.
 
-Seed with the shapes the value actually takes plus the ones most likely to be mishandled: empty, whitespace a trim would eat, a PEM block, a control character, invalid UTF-8, and a real fixture such as `src/test/e2e/noncluster/testdata/inventory-vault.yaml`. Seeds are also the whole of what CI runs, so a seed is the cheapest place to pin a shape that matters.
+Seed with the shapes the value actually takes plus the ones most likely to be mishandled: empty, whitespace a trim would eat, a PEM block, a control character, invalid UTF-8, and a real fixture such as `test/e2e/noncluster/testdata/inventory-vault.yaml`. Seeds are also the whole of what CI runs, so a seed is the cheapest place to pin a shape that matters.
 
 Keep the body fast and self-contained. A target that touches the network or a real file drops from tens of thousands of executions per second to hundreds and finds nothing in the time it is given; use `t.TempDir()` where a file is unavoidable.
 

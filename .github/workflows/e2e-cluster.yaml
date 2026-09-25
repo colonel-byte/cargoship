@@ -1,7 +1,7 @@
 ---
 name: E2E cluster
 
-# The install group, src/test/e2e/cluster, which provisions a bootloose cluster of ten Docker
+# The install group, test/e2e/cluster, which provisions a bootloose cluster of ten Docker
 # machines and walks the apply phase list one phase at a time against it. It needs Docker and
 # takes minutes rather than seconds, so it is not part of every pull request the way e2e.yaml
 # is. It has its own workflow rather than a gated job in e2e.yaml so that its trigger, its
@@ -81,10 +81,10 @@ jobs:
       - name: Test
         run: >-
           go test -mod=vendor -count=1 -v -timeout=25m
-          ./src/test/e2e/cluster/...
+          ./test/e2e/cluster/...
         env:
           # Provision the five-machine inventory and stop before the engine phases. See
-          # stageOnlyEnvVar in src/test/e2e/cluster/main_test.go.
+          # stageOnlyEnvVar in test/e2e/cluster/main_test.go.
           CARGOSHIP_E2E_STAGE_ONLY: "1"
           # Leave the machines standing when the run fails, so the step below can read them.
           # See keepClusterEnvVar in the same file.
@@ -165,10 +165,10 @@ jobs:
       - name: Test
         run: >-
           go test -mod=vendor -count=1 -v -timeout=55m
-          ./src/test/e2e/cluster/...
+          ./test/e2e/cluster/...
         env:
           # Leave the machines standing when the run fails, so the step below can read their
-          # journals. See keepClusterEnvVar in src/test/e2e/cluster/main_test.go.
+          # journals. See keepClusterEnvVar in test/e2e/cluster/main_test.go.
           CARGOSHIP_E2E_KEEP_CLUSTER: "1"
           # Everything the test build needs is vendored, so make any accidental network
           # access fail fast. Matches magefiles/utils.go.

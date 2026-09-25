@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/stretchr/testify/require"
 )
 

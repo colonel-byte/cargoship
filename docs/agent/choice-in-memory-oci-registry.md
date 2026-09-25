@@ -1,6 +1,6 @@
 # Why google/go-containerregistry and not distribution/distribution for the in-memory test registry
 
-Cargoship's e2e suite needs a real OCI registry to publish/pull against without a network dependency or a live registry container. `src/test/registry.go` provides `test.SetupInMemoryRegistry(t)`, which starts one in-process on a random localhost port and tears it down via `t.Cleanup`.
+Cargoship's e2e suite needs a real OCI registry to publish/pull against without a network dependency or a live registry container. `test/registry.go` provides `test.SetupInMemoryRegistry(t)`, which starts one in-process on a random localhost port and tears it down via `t.Cleanup`.
 
 ORAS (`oras.land/oras-go/v2`) isn't a candidate here at all -- it's the *client* library Cargoship already uses in `src/pkg/coci` to talk to registries. It has no server implementation, so it can't be "the registry" in a test; it's what the CLI uses to talk to whichever registry the test stands up.
 

@@ -81,7 +81,7 @@ jobs:
           chmod +x "build/cargoship_$(go env GOOS)_$(go env GOARCH)"
 
       - name: Test
-        run: go test -mod=vendor -timeout 30m -count=1 -v -short ./src/test/e2e/noncluster/...
+        run: go test -mod=vendor -timeout 30m -count=1 -v -short ./test/e2e/noncluster/...
 
   # Compare the PR binary's size against the latest released binary and comment the diff on the PR
   binary-size:
