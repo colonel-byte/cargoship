@@ -267,6 +267,16 @@ type ZarfHostMetadata struct {
 	UploadedFiles []string
 }
 
+func init() {
+	// Work around upstream rig v2 bug where sshconfig.expandToken does not implement
+	// token expansion for %l (or %k). Initializing rig's ssh.ConfigParser with WithNoFinalize()
+	// allows ssh config directives (such as ControlPath containing %l or %C) to be loaded
+	// without failing during finalization.
+	if p, err := sshconfig.NewParser(nil, sshconfig.WithNoFinalize()); err == nil {
+		ssh.ConfigParser = p
+	}
+}
+
 // Connect establishes the connection to the host, injecting cargoship's
 // configured logger so that rig's internal logging is routed through the
 // same logger as the rest of the run. rig v2 has no global logger setter;
