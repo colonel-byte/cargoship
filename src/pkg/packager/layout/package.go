@@ -214,10 +214,10 @@ func validateDistroIntegrity(disLayout *DistroLayout) error {
 // validateDistroPaths checks that package config fields used as filesystem
 // path components do not contain path traversal sequences or separators.
 func validateDistroPaths(dis distro.ZarfDistro) error {
-	if !isCleanPath(dis.Metadata.Name) {
+	if !IsCleanPath(dis.Metadata.Name) {
 		return fmt.Errorf("package metadata name %q would result in an invalid path", dis.Metadata.Name)
 	}
-	if !isCleanPath(dis.Metadata.Version) {
+	if !IsCleanPath(dis.Metadata.Version) {
 		return fmt.Errorf("package metadata version %q would result in an invalid path", dis.Metadata.Version)
 	}
 	// Values paths in a built package name files inside the package. Anything
@@ -225,26 +225,26 @@ func validateDistroPaths(dis distro.ZarfDistro) error {
 	// distro.yaml - would make installing the package read, or fetch, something
 	// outside it.
 	for _, f := range dis.Spec.Values.Files {
-		if !isContainedPath(f) {
+		if !IsContainedPath(f) {
 			return fmt.Errorf("values file %q is not contained in the package", f)
 		}
 	}
-	if dis.Spec.Values.Schema != "" && !isContainedPath(dis.Spec.Values.Schema) {
+	if dis.Spec.Values.Schema != "" && !IsContainedPath(dis.Spec.Values.Schema) {
 		return fmt.Errorf("values schema %q is not contained in the package", dis.Spec.Values.Schema)
 	}
 	return nil
 }
 
-// isCleanPath returns true if s is safe to embed in a file path:
+// IsCleanPath returns true if s is safe to embed in a file path:
 // it must not be ".." and must not contain path separators.
-func isCleanPath(s string) bool {
+func IsCleanPath(s string) bool {
 	return s != ".." && !strings.ContainsAny(s, `/\`)
 }
 
-// isContainedPath returns true if s is a relative path that stays inside the
-// directory it is resolved against. Unlike isCleanPath it allows separators,
+// IsContainedPath returns true if s is a relative path that stays inside the
+// directory it is resolved against. Unlike IsCleanPath it allows separators,
 // since the paths it guards name files in nested package directories.
-func isContainedPath(s string) bool {
+func IsContainedPath(s string) bool {
 	if s == "" || helpers.IsURL(s) || filepath.IsAbs(s) || path.IsAbs(s) {
 		return false
 	}

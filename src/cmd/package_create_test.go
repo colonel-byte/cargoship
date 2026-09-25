@@ -22,7 +22,7 @@ import (
 )
 
 func TestParseRegistryOverridesSortsLongestPrefixFirst(t *testing.T) {
-	got, err := parseRegistryOverrides([]string{
+	got, err := ParseRegistryOverrides([]string{
 		"docker.io=docker.example.com",
 		"docker.io/library=library.example.com",
 	})
@@ -34,17 +34,17 @@ func TestParseRegistryOverridesSortsLongestPrefixFirst(t *testing.T) {
 		{Source: "docker.io", Override: "docker.example.com"},
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("parseRegistryOverrides() = %+v, want %+v", got, want)
+		t.Fatalf("ParseRegistryOverrides() = %+v, want %+v", got, want)
 	}
 }
 
 func TestParseRegistryOverridesEmpty(t *testing.T) {
-	got, err := parseRegistryOverrides(nil)
+	got, err := ParseRegistryOverrides(nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(got) != 0 {
-		t.Fatalf("parseRegistryOverrides(nil) = %+v, want empty", got)
+		t.Fatalf("ParseRegistryOverrides(nil) = %+v, want empty", got)
 	}
 }
 
@@ -60,8 +60,8 @@ func TestParseRegistryOverridesErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := parseRegistryOverrides(tt.input); err == nil {
-				t.Fatalf("parseRegistryOverrides(%v) = nil error, want error", tt.input)
+			if _, err := ParseRegistryOverrides(tt.input); err == nil {
+				t.Fatalf("ParseRegistryOverrides(%v) = nil error, want error", tt.input)
 			}
 		})
 	}

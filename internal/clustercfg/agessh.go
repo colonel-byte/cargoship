@@ -58,9 +58,9 @@ var errRecipientIsSecret = errors.New("that is private key material, not a publi
 // CI instead of hanging on a read that will never be answered.
 type PassphraseFunc func(path string) ([]byte, error)
 
-// parseRecipient parses one public key, which may be a native age recipient or an SSH public key in
+// ParseRecipient parses one public key, which may be a native age recipient or an SSH public key in
 // the authorized_keys form.
-func parseRecipient(key string) (age.Recipient, error) {
+func ParseRecipient(key string) (age.Recipient, error) {
 	if key == "" {
 		return nil, errors.New("an empty string is not a public key")
 	}
@@ -85,7 +85,7 @@ func parseRecipient(key string) (age.Recipient, error) {
 	return agessh.ParseRecipient(key)
 }
 
-// parseRecipients reads a file of public keys, one per line, ignoring blank lines and lines that
+// ParseRecipients reads a file of public keys, one per line, ignoring blank lines and lines that
 // begin with '#'.
 //
 // age.ParseRecipients would do this, except that it fails the whole file on the first line it does
@@ -100,7 +100,7 @@ func parseRecipient(key string) (age.Recipient, error) {
 // be turned back into text: agessh's types carry no text encoding, which is the same reason
 // AgeRecipientsIn refuses an SSH private key. The text has to be kept here or not at all, and what
 // keeps it is the record written into the document.
-func parseRecipients(r io.Reader) ([]age.Recipient, []string, error) {
+func ParseRecipients(r io.Reader) ([]age.Recipient, []string, error) {
 	var recipients []age.Recipient
 	var lines []string
 
@@ -114,7 +114,7 @@ func parseRecipients(r io.Reader) ([]age.Recipient, []string, error) {
 		if !utf8.ValidString(line) {
 			return nil, nil, fmt.Errorf("line %d is not valid UTF-8", n)
 		}
-		recipient, err := parseRecipient(line)
+		recipient, err := ParseRecipient(line)
 		if err != nil {
 			return nil, nil, fmt.Errorf("line %d: %w", n, err)
 		}

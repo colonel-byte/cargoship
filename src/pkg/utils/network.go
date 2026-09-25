@@ -49,7 +49,10 @@ func (d retryAfterDuration) Error() string {
 	return fmt.Sprintf("rate limited (HTTP 429), retry after %s", time.Duration(d))
 }
 
-func parseChecksum(src string) (string, string, error) {
+// ParseChecksum splits an inline checksum off the end of a source string, of the form
+// URL@checksum. A single '@' is left alone when the URL parses with userinfo (user@host), so a
+// credential embedded in the URL is never mistaken for a checksum suffix.
+func ParseChecksum(src string) (string, string, error) {
 	atSymbolCount := strings.Count(src, "@")
 	var checksum string
 	if atSymbolCount > 0 {
@@ -74,7 +77,7 @@ func parseChecksum(src string) (string, string, error) {
 func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
-	src, checksum, err := parseChecksum(src)
+	src, checksum, err := ParseChecksum(src)
 	if err != nil {
 		return err
 	}
@@ -278,7 +281,7 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusTooManyRequests {
-			if d := parseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
+			if d := ParseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
 				const maxRetryAfter = 60 * time.Second
 				if d > maxRetryAfter {
 					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, maxRetryAfter, resp.Status))
@@ -301,9 +304,9 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	return nil
 }
 
-// parseRetryAfter parses the Retry-After header value into a duration.
+// ParseRetryAfter parses the Retry-After header value into a duration.
 // It supports both delay-seconds (integer) and HTTP-date formats.
-func parseRetryAfter(value string) time.Duration {
+func ParseRetryAfter(value string) time.Duration {
 	if value == "" {
 		return 0
 	}

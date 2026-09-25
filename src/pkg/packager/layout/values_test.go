@@ -38,8 +38,8 @@ func TestIsContainedPath(t *testing.T) {
 		"./values.yaml",
 	}
 	for _, p := range contained {
-		if !isContainedPath(p) {
-			t.Errorf("isContainedPath(%q) = false, want true", p)
+		if !IsContainedPath(p) {
+			t.Errorf("IsContainedPath(%q) = false, want true", p)
 		}
 	}
 
@@ -54,8 +54,8 @@ func TestIsContainedPath(t *testing.T) {
 		"oci://example.com/values.yaml",
 	}
 	for _, p := range escapes {
-		if isContainedPath(p) {
-			t.Errorf("isContainedPath(%q) = true, want false", p)
+		if IsContainedPath(p) {
+			t.Errorf("IsContainedPath(%q) = true, want false", p)
 		}
 	}
 }

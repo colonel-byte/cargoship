@@ -134,9 +134,9 @@ func TestSSHEd25519KeyRoundTrips(t *testing.T) {
 	key := newEd25519SSHKey(t)
 	path := writeKey(t, "id_ed25519", key)
 
-	recipient, err := parseRecipient(key.authorized)
+	recipient, err := ParseRecipient(key.authorized)
 	if err != nil {
-		t.Fatalf("parseRecipient() error = %v", err)
+		t.Fatalf("ParseRecipient() error = %v", err)
 	}
 	identities, err := parseIdentityFile(path, key.private, nil)
 	if err != nil {
@@ -150,9 +150,9 @@ func TestSSHRSAKeyRoundTrips(t *testing.T) {
 	key := newRSASSHKey(t)
 	path := writeKey(t, "id_rsa", key)
 
-	recipient, err := parseRecipient(key.authorized)
+	recipient, err := ParseRecipient(key.authorized)
 	if err != nil {
-		t.Fatalf("parseRecipient() error = %v", err)
+		t.Fatalf("ParseRecipient() error = %v", err)
 	}
 	identities, err := parseIdentityFile(path, key.private, nil)
 	if err != nil {
@@ -176,19 +176,19 @@ func TestParseRecipientsMixesNativeAndSSHKeys(t *testing.T) {
 		"\n" +
 		ssh.authorized + "\n"
 
-	recipients, lines, err := parseRecipients(strings.NewReader(file))
+	recipients, lines, err := ParseRecipients(strings.NewReader(file))
 	if err != nil {
-		t.Fatalf("parseRecipients() error = %v", err)
+		t.Fatalf("ParseRecipients() error = %v", err)
 	}
 	if len(recipients) != 2 {
-		t.Fatalf("parseRecipients() returned %d recipients, want 2", len(recipients))
+		t.Fatalf("ParseRecipients() returned %d recipients, want 2", len(recipients))
 	}
 
 	// The text comes back beside each recipient, since a parsed one cannot be printed again, and
 	// the comment stays on the SSH line: that is the part saying whose key it is.
 	want := []string{native.Recipient().String(), ssh.authorized}
 	if !slices.Equal(lines, want) {
-		t.Errorf("parseRecipients() lines = %q, want %q", lines, want)
+		t.Errorf("ParseRecipients() lines = %q, want %q", lines, want)
 	}
 
 	// Either key alone has to read a value encrypted to both, which is what makes a mixed
@@ -207,16 +207,16 @@ func TestParseRecipientsReadsAnAuthorizedKeysLine(t *testing.T) {
 	key := newEd25519SSHKey(t)
 	line := `no-agent-forwarding,command="/bin/true" ` + key.authorized + " operator@example.com"
 
-	recipients, lines, err := parseRecipients(strings.NewReader(line + "\n"))
+	recipients, lines, err := ParseRecipients(strings.NewReader(line + "\n"))
 	if err != nil {
-		t.Fatalf("parseRecipients() error = %v", err)
+		t.Fatalf("ParseRecipients() error = %v", err)
 	}
 	if len(recipients) != 1 {
-		t.Fatalf("parseRecipients() returned %d recipients, want 1", len(recipients))
+		t.Fatalf("ParseRecipients() returned %d recipients, want 1", len(recipients))
 	}
 	// The whole line is kept, options and all, rather than a normalized rendering of the key.
 	if len(lines) != 1 || lines[0] != line {
-		t.Errorf("parseRecipients() lines = %q, want %q", lines, []string{line})
+		t.Errorf("ParseRecipients() lines = %q, want %q", lines, []string{line})
 	}
 
 	identities, err := parseIdentityFile("id_ed25519", key.private, nil)
@@ -234,12 +234,12 @@ func TestParseRecipientsFailsTheFileOnAnUnusableKey(t *testing.T) {
 	file := key.authorized + "\n" +
 		"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHkYc1Zd0kN2vE7+8TrFWs3PFNDPmYLWbXEtGWd8KgH1Jn9L1fJgWDxBGqaoLrKNBdRHmKzxRGxKxdmFmXlGqBM= operator@example.com\n"
 
-	_, _, err := parseRecipients(strings.NewReader(file))
+	_, _, err := ParseRecipients(strings.NewReader(file))
 	if err == nil {
-		t.Fatal("parseRecipients() error = nil, want one naming the bad line")
+		t.Fatal("ParseRecipients() error = nil, want one naming the bad line")
 	}
 	if !strings.Contains(err.Error(), "line 2") {
-		t.Errorf("parseRecipients() error = %q, want it to name line 2", err)
+		t.Errorf("ParseRecipients() error = %q, want it to name line 2", err)
 	}
 }
 
@@ -263,12 +263,12 @@ func TestParseRecipientDoesNotEchoPrivateKeys(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseRecipient(tt.secret)
+			_, err := ParseRecipient(tt.secret)
 			if err == nil {
-				t.Fatal("parseRecipient() error = nil, want one refusing private key material")
+				t.Fatal("ParseRecipient() error = nil, want one refusing private key material")
 			}
 			if strings.Contains(err.Error(), tt.secret) {
-				t.Errorf("parseRecipient() error = %q, want it not to quote the key back", err)
+				t.Errorf("ParseRecipient() error = %q, want it not to quote the key back", err)
 			}
 		})
 	}
@@ -298,9 +298,9 @@ func TestEncryptedSSHIdentityAsksForItsPassphrase(t *testing.T) {
 		t.Errorf("the passphrase was asked for %d times while loading the key, want 0", asked)
 	}
 
-	recipient, err := parseRecipient(key.authorized)
+	recipient, err := ParseRecipient(key.authorized)
 	if err != nil {
-		t.Fatalf("parseRecipient() error = %v", err)
+		t.Fatalf("ParseRecipient() error = %v", err)
 	}
 	roundTrip(t, []age.Recipient{recipient}, identities)
 
@@ -345,9 +345,9 @@ func TestEncryptedSSHIdentityUsesThePubFileBeside(t *testing.T) {
 		t.Fatalf("encryptedSSHIdentity() error = %v", err)
 	}
 
-	recipient, err := parseRecipient(key.authorized)
+	recipient, err := ParseRecipient(key.authorized)
 	if err != nil {
-		t.Fatalf("parseRecipient() error = %v", err)
+		t.Fatalf("ParseRecipient() error = %v", err)
 	}
 	roundTrip(t, []age.Recipient{recipient}, identities)
 }

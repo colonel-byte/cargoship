@@ -29,14 +29,14 @@ func TestEncodeParseManifestRoundTrip(t *testing.T) {
 	content := encodeManifest(entries)
 	require.Equal(t, "engine\t/usr/local/bin/k3s\nimage\t/var/lib/rancher/k3s/agent/images/app_v1.tar\n", content)
 
-	parsed := parseManifest(content)
+	parsed := ParseManifest(content)
 	require.Equal(t, entries, parsed)
 }
 
 func TestParseManifestSkipsMalformedLines(t *testing.T) {
 	content := "engine\t/usr/local/bin/k3s\n\nnoseparatorhere\n  \nimage\t/tmp/app.tar\n"
 
-	parsed := parseManifest(content)
+	parsed := ParseManifest(content)
 
 	require.Equal(t, []ManifestEntry{
 		{Category: "engine", Path: "/usr/local/bin/k3s"},

@@ -51,8 +51,8 @@ func encodeManifest(entries []ManifestEntry) string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
-// parseManifest reads manifest file content back into entries. Malformed lines are skipped.
-func parseManifest(content string) []ManifestEntry {
+// ParseManifest reads manifest file content back into entries. Malformed lines are skipped.
+func ParseManifest(content string) []ManifestEntry {
 	entries := []ManifestEntry{}
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
@@ -127,7 +127,7 @@ func (p *GenericPhase) readManifest(h *cluster.ZarfHost) []ManifestEntry {
 	if err != nil {
 		return nil
 	}
-	return parseManifest(content)
+	return ParseManifest(content)
 }
 
 // recordManifestEntry appends path to h's on-disk manifest and to h's in-memory record of what

@@ -213,7 +213,7 @@ func TestNftRulesetError(t *testing.T) {
 }
 
 func TestNftSplitFamilies(t *testing.T) {
-	v4, v6 := nftSplitFamilies([]string{"10.0.0.5", "fd00::5", "10.42.0.0/16", "fd00::/8", "", "not-an-address"})
+	v4, v6 := NftSplitFamilies([]string{"10.0.0.5", "fd00::5", "10.42.0.0/16", "fd00::/8", "", "not-an-address"})
 
 	require.Equal(t, []string{"10.0.0.5", "10.42.0.0/16"}, v4)
 	require.Equal(t, []string{"fd00::5", "fd00::/8"}, v6)
