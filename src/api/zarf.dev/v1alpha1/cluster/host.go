@@ -34,7 +34,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/colonel-byte/cargoship/src/internal/riglogger"
+	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/types/os"
 	rig "github.com/k0sproject/rig/v2"
 	"github.com/k0sproject/rig/v2/cmd"

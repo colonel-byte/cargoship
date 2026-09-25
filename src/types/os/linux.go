@@ -27,7 +27,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/internal/riglogger"
+	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/k0sproject/rig/v2/sh"
 )
