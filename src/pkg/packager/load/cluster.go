@@ -51,6 +51,12 @@ func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions)
 	if err != nil {
 		return v1alpha1.ZarfCluster{}, err
 	}
+	if clustercfg.IsSopsEncrypted(b) {
+		b, err = clustercfg.DecryptSops(b)
+		if err != nil {
+			return v1alpha1.ZarfCluster{}, fmt.Errorf("%s: %w", conPath.ManifestFile, err)
+		}
+	}
 	cluster, err := clustercfg.Parse(ctx, b)
 	if err != nil {
 		return v1alpha1.ZarfCluster{}, err
