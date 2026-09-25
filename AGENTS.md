@@ -19,7 +19,18 @@ It runs from a management node, not on the hosts it manages: cargoship opens the
 | `schema/`                         | Generated JSON schemas for the YAML configs, from `mage generate:schema`                                                                                                                           |
 | `thirdparty-src/`                 | Pinned upstream k3s/RKE2 source, pulled by `mage generate:pullEngineSource`                                                                                                                        |
 
-Several directories carry their own `AGENTS.md` with rules specific to that directory: [`docs/AGENTS.md`](docs/AGENTS.md) (markdown formatting, generated pages), [`.github/AGENTS.md`](.github/AGENTS.md) (Scorecard-safe workflow changes, PR description format), [`test/e2e/AGENTS.md`](test/e2e/AGENTS.md) (fixtures belong in files, not Go string constants), [`example/AGENTS.md`](example/AGENTS.md) (generated versus hand-written), [`ansible/AGENTS.md`](ansible/AGENTS.md) and [`src/config/lang/AGENTS.md`](src/config/lang/AGENTS.md) (markdown/string formatting rules that feed generated docs). Check the closest one before editing.
+Several directories carry their own `AGENTS.md` with rules specific to that directory. Check the closest one before editing. Keep this table in sync when adding or removing one -- add a row for a new `AGENTS.md`, and remove its row when the file goes away.
+
+| `AGENTS.md`                                                                            | Covers                                                                                                              |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [`docs/AGENTS.md`](docs/AGENTS.md)                                                     | Markdown formatting, generated pages                                                                                |
+| [`.github/AGENTS.md`](.github/AGENTS.md)                                               | Scorecard-safe workflow changes, PR description format                                                              |
+| [`test/e2e/AGENTS.md`](test/e2e/AGENTS.md)                                             | Fixtures belong in files, not Go string constants                                                                   |
+| [`example/AGENTS.md`](example/AGENTS.md)                                               | Generated versus hand-written                                                                                       |
+| [`ansible/AGENTS.md`](ansible/AGENTS.md)                                               | Markdown/string formatting rules that feed generated docs                                                           |
+| [`ansible/colonel_byte/cargoship/AGENTS.md`](ansible/colonel_byte/cargoship/AGENTS.md) | Scope of the Ansible collection: drives cargoship from the management node, does not configure fleet hosts directly |
+| [`src/config/lang/AGENTS.md`](src/config/lang/AGENTS.md)                               | Markdown/string formatting rules that feed generated docs                                                           |
+| [`src/fuzz/AGENTS.md`](src/fuzz/AGENTS.md)                                             | Don't name two `Fuzz*` functions where one is a prefix of the other                                                 |
 
 ## Building and testing
 

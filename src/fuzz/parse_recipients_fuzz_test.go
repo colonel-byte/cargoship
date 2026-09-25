@@ -22,14 +22,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// FuzzParseRecipient asserts that ParseRecipient never panics on a single public-key line,
+// FuzzParseRecipientLine asserts that ParseRecipient never panics on a single public-key line,
 // whatever prefix it starts with, and that success always yields a non-nil recipient.
 //
 // The function dispatches by string prefix -- "age1" to the native parser, a secret-key prefix
 // to an outright refusal, anything else to the SSH authorized_keys parser -- before either parser
 // ever sees the string. That dispatch, not either parser, is what is worth fuzzing: a line
 // crafted to straddle two prefixes is exactly the input that would misroute.
-func FuzzParseRecipient(f *testing.F) {
+func FuzzParseRecipientLine(f *testing.F) {
 	f.Add("age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq")
 	f.Add("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBaJnNgQq6tw5F0aeqhPFYP1sVI7z0F9L+e1EIPHNBhL")
 	f.Add("AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ")
