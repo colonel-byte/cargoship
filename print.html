@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-86ac4ffc.js";
+            window.path_to_searchindex_js = "searchindex-ce525158.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b866c7c9.js"></script>
+        <script src="toc-dcf7addb.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -319,11 +319,13 @@ cargoship create ./distro-defs -o ./build/
 <p>In scope: the <code>cargoship</code> CLI and the packages under <code>src/</code>; package signing and the verification path (<code>--verify</code>, <code>--key</code>); credential handling in <code>clustercfg</code>, including the vault splice and age encryption; SSH orchestration against target hosts; and the release workflow and the artifacts it publishes.</p>
 <p>Out of scope: vulnerabilities in K3s, RKE2, containerd, or any other upstream component Cargoship packages – report those to the project that owns them; anything that requires an attacker to already have root on the management node, which by design holds the cluster’s credentials; resource exhaustion from deliberately malformed or oversized packages supplied by the operator themselves; and misconfiguration of a user’s own cluster.</p>
 <h2 id="verifying-a-release"><a class="header" href="#verifying-a-release">Verifying a release</a></h2>
-<p>Release archives, <code>checksums.txt</code>, and container images are signed with cosign using the key whose public half is <a href="https://github.com/colonel-byte/cargoship/blob/main/cosign.pub"><code>cosign.pub</code></a> in this repository, and archives ship with an SBOM.</p>
+<p>Release archives, <code>checksums.txt</code>, and container images are signed with cosign using the key whose public half is <a href="https://github.com/colonel-byte/cargoship/blob/main/cosign.pub"><code>cosign.pub</code></a> in this repository, archives ship with an SBOM, and every tag also publishes <code>ai-bom.json</code> – the AI-usage disclosure manifest described below – attested and signed the same way.</p>
 <pre><code class="language-console">cosign verify-blob --key cosign.pub --bundle checksums.txt.sigstore.json checksums.txt
 cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:&lt;tag&gt;
 </code></pre>
 <p>See <a href="#goreleaser-release-pipeline">the GoReleaser reference</a> for the full set of published artifacts.</p>
+<h2 id="ai-assisted-development"><a class="header" href="#ai-assisted-development">AI-assisted development</a></h2>
+<p>Cargoship’s code, docs, and design records are written with AI coding agents in the loop. See <a href="#ai-usage-in-cargoships-development">AI usage</a> for what’s used and how it’s reviewed. Each release publishes <code>ai-bom.json</code>, a per-release snapshot of that disclosure – verify it the same way as the other release artifacts, <a href="#verifying-a-release">above</a>.</p>
 <h2 id="security-in-ci"><a class="header" href="#security-in-ci">Security in CI</a></h2>
 <p>Pull requests and <code>main</code> are scanned by CodeQL, dependencies are updated by Dependabot, and supply-chain practices are scored weekly by OpenSSF Scorecard. Results appear in the repository’s Security tab. <code>vendor/</code> costs points on a couple of Scorecard checks it can’t avoid given the repository’s need to build without network access; <a href="#why-vendor-carries-four-generated-osv-scannertoml-files">choice-osv-vendor-overrides</a> and <a href="#why-binary-artifacts-and-two-pinned-dependencies-findings-stay-annotated-not-fixed">choice-binary-artifact-opa-wasm</a> explain why.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -5103,6 +5105,19 @@ mage generate:updatePins            # refresh every line already pinned
 <h2 id="consuming-it"><a class="header" href="#consuming-it">Consuming it</a></h2>
 <p><code>mage generate:engineConfig</code> walks every <code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> directory and writes generated structs to <code>src/pkg/engineconfig/gen/&lt;distro&gt;/&lt;version&gt;/</code>, alongside a <code>zz_addons.go</code> holding that version’s <code>Addons</code> (valid <code>disable:</code> values), <code>CNIs</code>, and <code>IngressControllers</code>. <code>zz_addons.go</code> is written for every version even when nothing was extracted — the generated registry references those vars from every package, so one package without them would not compile. An empty <code>Addons</code> means no component source was pulled for that version, and consumers treat it as “no data to check against” rather than “nothing is valid”. For k3s (and any distro that declares its flags outright) it parses whichever of <code>zz_server.go</code>/<code>zz_agent.go</code> it finds directly; for RKE2 it composes as described above. See <code>docs/dev/mage.md</code> for the broader <code>Generate</code> namespace.</p>
 <p>It also (re)writes <code>src/pkg/engineconfig/gen/zz_registry.go</code>, wiring every distro/version it just generated into <code>gen.Registry</code> so nothing needs hand-maintaining as new versions are pulled. <code>src/types/distrocfg</code> (<code>RancherCommon.ConfigureEngine</code>) uses <code>gen.Lookup</code> to find the struct matching a node’s distro and minor version, and drops (with a warning) any <code>config.yaml</code> key that isn’t a real flag for it – falling back to the previous unvalidated, pass-everything-through behavior with a warning if that distro/version was never pulled/generated. On controllers it also checks each <code>disable:</code> value against <code>Entry.Addons</code> via <code>gen.UnknownAddons</code>; an unrecognized component is warned about but <strong>kept</strong>, since the addon vocabulary is composed rather than read straight off a declaration and dropping the entry would silently deploy something the user asked to be without. See “Consumption: wired into <code>src/types/distrocfg</code>” in <code>docs/agent/design-config-codegen.md</code> for the full picture.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="ai-usage-in-cargoships-development"><a class="header" href="#ai-usage-in-cargoships-development">AI usage in cargoship’s development</a></h1>
+<p>This document discloses how AI coding agents are used to build cargoship. It is not a CycloneDX ML-BOM or SPDX AI profile — those describe AI/ML models and datasets shipped <em>inside</em> a product, and cargoship has none: it’s an Ansible/Kubernetes deployment CLI with no inference or model-serving code of its own. What follows instead is a disclosure of the tools used to <em>write</em> cargoship, in the same spirit as the supply-chain artifacts described in <a href="#security-policy">the security policy</a> — an SBOM discloses what’s in a release; this discloses how the release was produced.</p>
+<h2 id="tools-in-use"><a class="header" href="#tools-in-use">Tools in use</a></h2>
+<p>Claude Code (Anthropic, Claude models) is used across the repository for code changes, documentation, and the design records under this directory. Its operating rules for this repository live in the various <code>AGENTS.md</code> files scattered through the tree — <a href="../AGENTS.html">the repository root’s</a>, and the per-directory ones it points to — which tell an agent how this codebase expects to be worked in, not just what the code does.</p>
+<h2 id="human-review"><a class="header" href="#human-review">Human review</a></h2>
+<p>AI-authored and human-authored changes go through the same gate: a reviewed pull request, and the same CI checks — CodeQL, linting, the test suites, OpenSSF Scorecard — regardless of who or what wrote the diff. Nothing here grants an AI-authored change an exemption from review or from CI.</p>
+<h2 id="where-the-provenance-trail-lives"><a class="header" href="#where-the-provenance-trail-lives">Where the provenance trail lives</a></h2>
+<p>Two records carry this forward:</p>
+<ul>
+<li><a href="agent"><code>choice-*.md</code></a> files in this directory record non-obvious design decisions and the tradeoffs behind them, agent-driven or not — see <a href="../AGENTS.html"><code>AGENTS.md</code></a> for why they’re treated as constraints rather than history.</li>
+<li>Every tagged release publishes <code>ai-bom.json</code> as a release asset, attested the same way as the release’s <a href="#verifying-a-release">SBOM and provenance</a>. It’s a per-release snapshot of this document’s claims — which tools, what they’re used for, and the human-review statement above — rather than a list of what’s in that particular release.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-age-sits-beside-ansible-vault-rather-than-replacing-it"><a class="header" href="#why-age-sits-beside-ansible-vault-rather-than-replacing-it">Why age sits beside Ansible Vault rather than replacing it</a></h1>
 <p>Cargoship encrypts four registry credential fields per registry – <code>auth.user</code>, <code>auth.pass</code>, <code>auth.token</code>, <code>tls.ca</code> – and decrypts them at apply time, when the engine’s registry configuration is written. That was Ansible Vault only, built on a single shared passphrase (<code>src/internal/clustercfg/vault.go</code>). It now also supports <a href="https://github.com/FiloSottile/age">age</a>, and the two coexist permanently.</p>

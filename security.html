@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-86ac4ffc.js";
+            window.path_to_searchindex_js = "searchindex-ce525158.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b866c7c9.js"></script>
+        <script src="toc-dcf7addb.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -205,11 +205,13 @@
 <p>In scope: the <code>cargoship</code> CLI and the packages under <code>src/</code>; package signing and the verification path (<code>--verify</code>, <code>--key</code>); credential handling in <code>clustercfg</code>, including the vault splice and age encryption; SSH orchestration against target hosts; and the release workflow and the artifacts it publishes.</p>
 <p>Out of scope: vulnerabilities in K3s, RKE2, containerd, or any other upstream component Cargoship packages – report those to the project that owns them; anything that requires an attacker to already have root on the management node, which by design holds the cluster’s credentials; resource exhaustion from deliberately malformed or oversized packages supplied by the operator themselves; and misconfiguration of a user’s own cluster.</p>
 <h2 id="verifying-a-release"><a class="header" href="#verifying-a-release">Verifying a release</a></h2>
-<p>Release archives, <code>checksums.txt</code>, and container images are signed with cosign using the key whose public half is <a href="https://github.com/colonel-byte/cargoship/blob/main/cosign.pub"><code>cosign.pub</code></a> in this repository, and archives ship with an SBOM.</p>
+<p>Release archives, <code>checksums.txt</code>, and container images are signed with cosign using the key whose public half is <a href="https://github.com/colonel-byte/cargoship/blob/main/cosign.pub"><code>cosign.pub</code></a> in this repository, archives ship with an SBOM, and every tag also publishes <code>ai-bom.json</code> – the AI-usage disclosure manifest described below – attested and signed the same way.</p>
 <pre><code class="language-console">cosign verify-blob --key cosign.pub --bundle checksums.txt.sigstore.json checksums.txt
 cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:&lt;tag&gt;
 </code></pre>
 <p>See <a href="dev/goreleaser.html">the GoReleaser reference</a> for the full set of published artifacts.</p>
+<h2 id="ai-assisted-development"><a class="header" href="#ai-assisted-development">AI-assisted development</a></h2>
+<p>Cargoship’s code, docs, and design records are written with AI coding agents in the loop. See <a href="agent/ai-usage.html">AI usage</a> for what’s used and how it’s reviewed. Each release publishes <code>ai-bom.json</code>, a per-release snapshot of that disclosure – verify it the same way as the other release artifacts, <a href="#verifying-a-release">above</a>.</p>
 <h2 id="security-in-ci"><a class="header" href="#security-in-ci">Security in CI</a></h2>
 <p>Pull requests and <code>main</code> are scanned by CodeQL, dependencies are updated by Dependabot, and supply-chain practices are scored weekly by OpenSSF Scorecard. Results appear in the repository’s Security tab. <code>vendor/</code> costs points on a couple of Scorecard checks it can’t avoid given the repository’s need to build without network access; <a href="agent/choice-osv-vendor-overrides.html">choice-osv-vendor-overrides</a> and <a href="agent/choice-binary-artifact-opa-wasm.html">choice-binary-artifact-opa-wasm</a> explain why.</p>
 
