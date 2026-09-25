@@ -20,9 +20,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/colonel-byte/cargoship/internal/riglogger"
 	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/internal/riglogger"
 	"github.com/colonel-byte/cargoship/src/pkg/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"

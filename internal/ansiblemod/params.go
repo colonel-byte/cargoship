@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/colonel-byte/cargoship/src/internal/ansibleinv"
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/internal/ansibleinv"
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 	goyaml "github.com/goccy/go-yaml"
 )

@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 # One registry written in every shape a credential comes in, for the commands that take a single
 # YAML path: a bare scalar, a quoted one carrying a character that starts a comment, a scalar with a
 # trailing comment beside it, and a multi-line PEM block. What a path command rewrites is the value

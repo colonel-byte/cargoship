@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 # The smallest inventory that shares a credential: one robot account written under an anchor, and a
 # second registry that reaches the same account through an alias. A shared value is one value
 # however many registries name it, so the file commands encrypt it once and report one count for it

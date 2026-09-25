@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../schema/zarf-config-distro-schema.json
+# yaml-language-server: $schema=../../schema/zarf-config-distro-schema.json
 log_level: debug
 no_color: true
 log_format: console

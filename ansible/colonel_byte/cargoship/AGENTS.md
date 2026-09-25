@@ -81,11 +81,11 @@ When modifying module parameters or adding a new module action plugin:
    - Double-quote every `description:` entry, per the rule above.
    - Maintain the option order in the YAML mapping; the doc generator preserves declaration order for table rows.
 2. Update the `EXAMPLES = r"""..."""` block in `plugins/action/<module>.py` with a realistic playbook snippet.
-3. Update the matching parameter struct in Go (`src/internal/ansiblemod/<action>.go`).
+3. Update the matching parameter struct in Go (`internal/ansiblemod/<action>.go`).
 4. Run the contract tests to ensure Go struct fields and Python docstring options match:
 
 ```sh
-go test -v ./src/internal/ansiblemod -run TestActionPluginDocsMatchModuleParams
+go test -v ./internal/ansiblemod -run TestActionPluginDocsMatchModuleParams
 ```
 
 5. Regenerate the documentation:

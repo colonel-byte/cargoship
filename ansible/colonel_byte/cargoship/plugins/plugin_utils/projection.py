@@ -16,7 +16,7 @@
 
 This is the whole of the Python in this collection, and it is deliberately the whole of it. Every
 translation rule -- which group carries which cargoship role, which host variable maps onto which
-inventory field, what makes a host ambiguous -- lives in Go, in src/internal/ansibleinv, where it
+inventory field, what makes a host ambiguous -- lives in Go, in internal/ansibleinv, where it
 is unit tested without Ansible. What happens here is projection and delegation: read Ansible's
 resolved ``groups`` and ``hostvars`` out of the task variables, put them in the module's
 ``inventory`` argument, and hand the whole thing to the binary.
@@ -42,7 +42,7 @@ from ansible import constants as C
 display = Display()
 
 # The Ansible connection variables cargoship reads, mirroring the constants in
-# src/internal/ansibleinv/vars.go. TestActionPluginVariableAllowlist in that package reads this
+# internal/ansibleinv/vars.go. TestActionPluginVariableAllowlist in that package reads this
 # file and fails when the two drift.
 ANSIBLE_VARS = (
     "ansible_host",

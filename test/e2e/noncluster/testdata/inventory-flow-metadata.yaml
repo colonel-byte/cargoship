@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 # An inventory whose metadata mapping is written in flow style, which is legal YAML and is the one
 # shape the age recipient record cannot be written into: flow style has no block collection, so a
 # nested encryption block spliced in here would leave a document that no longer parses.

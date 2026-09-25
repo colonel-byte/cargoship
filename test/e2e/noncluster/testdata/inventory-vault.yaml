@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 #
 # holds two registries so that the whole-file commands have to walk more than one, and
 # leaves the gaps a real configuration has: a registry with a token instead of a password, one with

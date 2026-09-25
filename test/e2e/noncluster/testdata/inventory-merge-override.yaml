@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 # A block of shared settings merged into two registries, one of which writes its own account beside
 # the merge. YAML allows that and gives the key written in the mapping precedence over the merged
 # one; the decoder cargoship reads with refuses the document instead, reading a merged key and a key

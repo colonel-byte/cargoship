@@ -19,7 +19,7 @@ kind: ZarfCluster
 `
 ```
 
-This applies to the unit tests as well. `src/internal/clustercfg` reads its fixtures from `test/e2e/noncluster/testdata` rather than keeping a second copy of the same inventory, so a change to what an inventory looks like lands in one place and both suites see it.
+This applies to the unit tests as well. `internal/clustercfg` reads its fixtures from `test/e2e/noncluster/testdata` rather than keeping a second copy of the same inventory, so a change to what an inventory looks like lands in one place and both suites see it.
 
 ### Why
 
@@ -34,7 +34,7 @@ Add the document to the `testdata/` directory of the suite that uses it, with a 
 
 ```yaml
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 # What this document covers and why a test needs that shape.
 #
 # Nothing here is contacted. The tests only read this file and rewrite copies of it.
@@ -57,7 +57,7 @@ func readVaultInventoryFixture(t *testing.T) []byte {
 }
 ```
 
-The two suites resolve that path differently, and the difference is not visible from the constant. A unit test runs with its own package directory as the working directory, so it names a fixture relative to the package: `../../../test/e2e/noncluster/testdata/inventory-vault.yaml`. An e2e test runs from the repository root, so the same fixture is `test/e2e/noncluster/testdata/inventory-vault.yaml`. Copying a constant from one suite into the other gives a file that is not there, reported as a failure to read it.
+The two suites resolve that path differently, and the difference is not visible from the constant. A unit test runs with its own package directory as the working directory, so it names a fixture relative to the package: `../../test/e2e/noncluster/testdata/inventory-vault.yaml`. An e2e test runs from the repository root, so the same fixture is `test/e2e/noncluster/testdata/inventory-vault.yaml`. Copying a constant from one suite into the other gives a file that is not there, reported as a failure to read it.
 
 These commands rewrite the file they are given, so a test that runs one copies the fixture into `t.TempDir()` first and leaves the checked-in file alone.
 

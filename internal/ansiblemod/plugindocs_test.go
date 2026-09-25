@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/src/internal/ansibleinv"
+	"github.com/colonel-byte/cargoship/internal/ansibleinv"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )

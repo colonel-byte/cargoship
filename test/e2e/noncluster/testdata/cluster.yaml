@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 # Minimal inventory used only by the install-group verification tests. The hosts are
 # never contacted: every case here fails during package load, before any cluster work.
 kind: ZarfCluster

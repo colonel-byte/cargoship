@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/colonel-byte/cargoship/src/internal/ansiblemod"
+	"github.com/colonel-byte/cargoship/internal/ansiblemod"
 )
 
 // ansibleArgsFixture is the inventory an Ansible action plugin projects into a module's arguments:

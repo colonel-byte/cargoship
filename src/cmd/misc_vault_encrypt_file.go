@@ -19,8 +19,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 	"github.com/colonel-byte/cargoship/src/config/lang"
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )

@@ -25,7 +25,7 @@ import (
 )
 
 // collectionRoot is the Ansible collection that presents these modules to a playbook.
-const collectionRoot = "../../../ansible/colonel_byte/cargoship"
+const collectionRoot = "../../ansible/colonel_byte/cargoship"
 
 // TestCollectionCoversEveryModule is what stops a module shipping that no playbook can reach.
 //
@@ -84,7 +84,7 @@ func roleTasks(t *testing.T) []string {
 
 func packagedModules(t *testing.T) []string {
 	t.Helper()
-	config, err := os.ReadFile("../../../.goreleaser.yaml")
+	config, err := os.ReadFile("../../.goreleaser.yaml")
 	require.NoError(t, err)
 
 	var names []string

@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=../../../../../schema/zarf-v1alpha1-cluster-schema.json
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
 # An inventory shaped the way an operator writes one when values repeat: a robot account two
 # mirrors share, a trust bundle shared by three registries, and a block of SSH defaults every host
 # merges. The vault commands resolve anchors, aliases and merge keys before they walk the document,

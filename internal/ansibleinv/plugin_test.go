@@ -25,7 +25,7 @@ import (
 
 // pluginPath is the one piece of Python in the collection. It projects hostvars down to the
 // variables cargoship reads, which means it holds a copy of the list below.
-const pluginPath = "../../../ansible/colonel_byte/cargoship/plugins/plugin_utils/projection.py"
+const pluginPath = "../../ansible/colonel_byte/cargoship/plugins/plugin_utils/projection.py"
 
 // TestActionPluginVariableAllowlist keeps that copy true.
 //

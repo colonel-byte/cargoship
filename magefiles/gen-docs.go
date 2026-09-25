@@ -419,7 +419,7 @@ var generatedAnsiblePages = []string{"module_*.md", "role_*.md"}
 
 var (
 	// The DOCUMENTATION and EXAMPLES blocks are pulled out of the plugin by pattern rather than by
-	// importing Python, the same way src/internal/ansibleinv/plugin_test.go reads the variable
+	// importing Python, the same way internal/ansibleinv/plugin_test.go reads the variable
 	// allowlist out of the projection plugin.
 	documentationRe = regexp.MustCompile(`(?sm)^DOCUMENTATION = r"""\n(.*?)\n"""$`)
 	examplesRe      = regexp.MustCompile(`(?sm)^EXAMPLES = r"""\n(.*?)\n"""$`)
