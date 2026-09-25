@@ -36,6 +36,16 @@ See [`docs/dev/mage.md`](docs/dev/mage.md) for the full namespace reference (`Bu
 
 Plain Go commands work for anything mage doesn't wrap — `go build ./...`, `go vet ./...`, `go test ./internal/... ./src/...` — but exclude `./magefiles/...` from those, since it fails a bare build for the reason above.
 
+## Commit messages
+
+Keep commit messages to a short title only — no body paragraph explaining the change. End with a `Co-Authored-By` trailer.
+
+```
+test(fuzz): add fuzz targets for cfg, clustercfg, and identify source
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+```
+
 ## Quirks worth knowing
 
 ### `internal/` visibility is scoped to its parent directory, not the whole module
