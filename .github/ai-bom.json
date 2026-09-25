@@ -1,0 +1,19 @@
+{
+  "aiBomVersion": "1",
+  "subject": {
+    "name": "cargoship",
+    "version": "REPLACED_AT_RELEASE",
+    "commit": "REPLACED_AT_RELEASE"
+  },
+  "generatedAt": "REPLACED_AT_RELEASE",
+  "tools": [
+    {
+      "name": "Claude Code",
+      "vendor": "Anthropic",
+      "purpose": ["code", "documentation", "design records"]
+    }
+  ],
+  "humanReview": "Every change lands through a reviewed pull request and the same CI gates (CodeQL, lint, tests, Scorecard) regardless of authorship.",
+  "provenance": "docs/agent/choice-*.md and AGENTS.md files record agent-driven design decisions and operating rules.",
+  "disclosureDoc": "https://colonel-byte.github.io/cargoship/agent/ai-usage.html"
+}

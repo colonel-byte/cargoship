@@ -25,7 +25,7 @@ Out of scope: vulnerabilities in K3s, RKE2, containerd, or any other upstream co
 
 ## Verifying a release
 
-Release archives, `checksums.txt`, and container images are signed with cosign using the key whose public half is [`cosign.pub`](https://github.com/colonel-byte/cargoship/blob/main/cosign.pub) in this repository, and archives ship with an SBOM.
+Release archives, `checksums.txt`, and container images are signed with cosign using the key whose public half is [`cosign.pub`](https://github.com/colonel-byte/cargoship/blob/main/cosign.pub) in this repository, archives ship with an SBOM, and every tag also publishes `ai-bom.json` -- the AI-usage disclosure manifest described below -- attested and signed the same way.
 
 ```console
 cosign verify-blob --key cosign.pub --bundle checksums.txt.sigstore.json checksums.txt
@@ -33,6 +33,10 @@ cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:<tag>
 ```
 
 See [the GoReleaser reference](../docs/dev/goreleaser.md) for the full set of published artifacts.
+
+## AI-assisted development
+
+Cargoship's code, docs, and design records are written with AI coding agents in the loop. See [AI usage](../docs/agent/ai-usage.md) for what's used and how it's reviewed. Each release publishes `ai-bom.json`, a per-release snapshot of that disclosure -- verify it the same way as the other release artifacts, [above](#verifying-a-release).
 
 ## Security in CI
 
