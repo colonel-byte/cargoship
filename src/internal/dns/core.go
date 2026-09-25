@@ -59,6 +59,9 @@ func ParseServiceURL(serviceURL string) (string, string, int, error) {
 	if err != nil {
 		return "", "", 0, err
 	}
+	if remotePort < 1 || remotePort > 65535 {
+		return "", "", 0, fmt.Errorf("service url port %d is out of range", remotePort)
+	}
 	matches := localClusterServiceRegex.FindStringSubmatch(parsedURL.Hostname())
 	if len(matches) != 3 {
 		return "", "", 0, fmt.Errorf("invalid service url %s", serviceURL)
