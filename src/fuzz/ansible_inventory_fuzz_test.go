@@ -104,6 +104,7 @@ func FuzzAnsibleRequest(f *testing.F) {
 // without that variable produces -- there are hundreds of ansible_ variables and they belong to
 // Ansible's connection plugins, not here.
 func FuzzAnsibleHostVar(f *testing.F) {
+	f.Add("cargoship_", `"bare prefix, no suffix"`)
 	f.Add("cargoship_profil", `"controller"`)
 	f.Add("cargoship_hostname", `"distro-kc01"`)
 	f.Add("cargoship_node_labels", `{"disk": "ssd"}`)
@@ -224,7 +225,7 @@ func FuzzAnsibleRoleGroups(f *testing.F) {
 // cargoship reads. It is written against the exported names rather than against a copy of the
 // list, so a variable added to the package is covered here without this file being touched.
 func isUnknownCargoshipVar(name string) bool {
-	return len(name) > len(ansibleinv.Prefix) &&
+	return len(name) >= len(ansibleinv.Prefix) &&
 		name[:len(ansibleinv.Prefix)] == ansibleinv.Prefix &&
 		!isRead(name)
 }
