@@ -55,8 +55,8 @@ func FuzzCfgParseNoPanic(f *testing.F) {
 	f.Add([]byte(minimalDistroDoc + "---\n" + minimalDistroDoc))
 	f.Add([]byte("---\n---\n"))
 
-	f.Fuzz(func(t *testing.T, doc []byte) {
-		_, _ = cfg.Parse(context.Background(), doc)
+	f.Fuzz(func(_ *testing.T, doc []byte) {
+		_, _ = cfg.Parse(context.Background(), doc) //nolint:errcheck // no-panic fuzz test, malformed input is expected to error
 	})
 }
 
@@ -78,7 +78,7 @@ func FuzzCfgParseMultiDocNoPanic(f *testing.F) {
 	f.Add([]byte(strings.Repeat(minimalDistroDoc+"---\n", 5)))
 	f.Add([]byte("not yaml: [unterminated"))
 
-	f.Fuzz(func(t *testing.T, doc []byte) {
-		_, _ = cfg.ParseMultiDoc(context.Background(), doc)
+	f.Fuzz(func(_ *testing.T, doc []byte) {
+		_, _ = cfg.ParseMultiDoc(context.Background(), doc) //nolint:errcheck // no-panic fuzz test, malformed input is expected to error
 	})
 }

@@ -76,7 +76,7 @@ func FuzzParseRetryAfterNoPanic(f *testing.F) {
 	f.Add(strings.Repeat("9", 100))
 	f.Add("9999999999999999999999999999999999999999")
 
-	f.Fuzz(func(t *testing.T, value string) {
+	f.Fuzz(func(_ *testing.T, value string) {
 		_ = utils.ParseRetryAfter(value)
 	})
 }

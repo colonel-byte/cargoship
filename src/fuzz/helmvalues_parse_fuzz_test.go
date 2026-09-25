@@ -110,9 +110,9 @@ func FuzzParseSchemaNoExternalRefs(f *testing.F) {
 
 		// Validating must not panic, whatever the schema and whatever the values, including the
 		// nil values a package with no set values validates against.
-		_ = schema.Validate(nil)
-		_ = schema.Validate(map[string]any{})
-		_ = schema.Validate(map[string]any{"anything": []any{1, "two", nil}})
+		_ = schema.Validate(nil)                                              //nolint:errcheck // no-panic fuzz test, validation failures are expected
+		_ = schema.Validate(map[string]any{})                                 //nolint:errcheck // no-panic fuzz test, validation failures are expected
+		_ = schema.Validate(map[string]any{"anything": []any{1, "two", nil}}) //nolint:errcheck // no-panic fuzz test, validation failures are expected
 	})
 }
 

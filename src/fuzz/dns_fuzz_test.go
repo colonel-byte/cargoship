@@ -15,7 +15,6 @@
 package fuzz
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/internal/dns"
@@ -53,12 +52,12 @@ func FuzzParseServiceURL(f *testing.F) {
 		if err != nil {
 			return
 		}
-		require.Greater(t, port, 0, "accepted a non-positive port from %q", serviceURL)
+		require.Positive(t, port, "accepted a non-positive port from %q", serviceURL)
 		require.NotEmpty(t, namespace, "accepted an empty namespace from %q", serviceURL)
 		require.NotEmpty(t, name, "accepted an empty service name from %q", serviceURL)
 		require.NotContains(t, namespace, ".", "namespace %q is not a single DNS label", namespace)
 		require.NotContains(t, name, ".", "service name %q is not a single DNS label", name)
-		require.True(t, strings.Contains(serviceURL, name+"."+namespace+".svc.cluster.local"),
+		require.Contains(t, serviceURL, name+"."+namespace+".svc.cluster.local",
 			"returned name %q and namespace %q are not present as such in %q", name, namespace, serviceURL)
 	})
 }
@@ -84,7 +83,7 @@ func FuzzIsLocalhostNoPanic(f *testing.F) {
 	f.Add("999.999.999.999")
 	f.Add("10.0.0.1:not-a-port")
 
-	f.Fuzz(func(t *testing.T, url string) {
+	f.Fuzz(func(_ *testing.T, url string) {
 		_ = dns.IsLocalhost(url)
 	})
 }

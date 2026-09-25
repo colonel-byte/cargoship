@@ -36,6 +36,7 @@ func FuzzExtractBasePathFromURL(f *testing.F) {
 	f.Add("https://example.com")
 	f.Add("https://example.com/../../etc/passwd")
 	f.Add("https://example.com/..%2f..%2fetc%2fpasswd")
+	f.Add("https://example.com/..")
 	f.Add("oci://ghcr.io/example/package:v1.0.0")
 	f.Add("not-a-url")
 	f.Add("")
@@ -71,8 +72,8 @@ func FuzzReadByteStrictDistroConfigNoPanic(f *testing.F) {
 	f.Add([]byte("distro:\n  create:\n    registry_override:\n      docker.io: example.com\n"))
 	f.Add([]byte("age: &x\n  identity: *x\n"))
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(_ *testing.T, data []byte) {
 		var cfg types.DistroConfig
-		_ = utils.ReadByteStrict(data, &cfg)
+		_ = utils.ReadByteStrict(data, &cfg) //nolint:errcheck // no-panic fuzz test, malformed input is expected to error
 	})
 }

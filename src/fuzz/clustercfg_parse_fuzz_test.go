@@ -40,7 +40,7 @@ func FuzzClustercfgParseNoPanic(f *testing.F) {
 	f.Add([]byte("spec:\n  config:\n    registries: not-a-list\n"))
 	f.Add([]byte("spec: &x\n  config: *x\n"))
 
-	f.Fuzz(func(t *testing.T, doc []byte) {
-		_, _ = clustercfg.Parse(context.Background(), doc)
+	f.Fuzz(func(_ *testing.T, doc []byte) {
+		_, _ = clustercfg.Parse(context.Background(), doc) //nolint:errcheck // no-panic fuzz test, malformed input is expected to error
 	})
 }

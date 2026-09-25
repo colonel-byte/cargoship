@@ -75,8 +75,8 @@ func FuzzRenderTemplateNoPanic(f *testing.F) {
 	f.Add("plain text, no template at all")
 	f.Add("")
 
-	f.Fuzz(func(t *testing.T, tmpl string) {
-		_, _ = helmvalues.RenderTemplate(tmpl, templateFuzzData())
+	f.Fuzz(func(_ *testing.T, tmpl string) {
+		_, _ = helmvalues.RenderTemplate(tmpl, templateFuzzData()) //nolint:errcheck // no-panic fuzz test, malformed templates are expected to error
 	})
 }
 
@@ -132,6 +132,6 @@ func FuzzEvaluateValuesTemplatesNoPanic(f *testing.F) {
 		if !ok {
 			return
 		}
-		_, _ = helmvalues.EvaluateValuesTemplates(values, templateFuzzData())
+		_, _ = helmvalues.EvaluateValuesTemplates(values, templateFuzzData()) //nolint:errcheck // no-panic fuzz test, malformed values are expected to error
 	})
 }

@@ -97,10 +97,10 @@ func FuzzApplyMappingNoPanic(f *testing.F) {
 	f.Add("", "")
 	f.Add(".a", "")
 
-	f.Fuzz(func(t *testing.T, source, target string) {
+	f.Fuzz(func(_ *testing.T, source, target string) {
 		values := map[string]any{"source": map[string]any{"nested": 1}}
 		dst := map[string]any{}
-		_, _ = helmvalues.ApplyMapping(dst, values, source, target)
+		_, _ = helmvalues.ApplyMapping(dst, values, source, target) //nolint:errcheck // no-panic fuzz test, malformed paths are expected to error
 	})
 }
 
