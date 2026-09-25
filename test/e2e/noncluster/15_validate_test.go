@@ -29,7 +29,7 @@ func TestCargoshipValidate(t *testing.T) {
 		// These are the files the rest of the suite installs from, in every spelling YAML
 		// allows -- anchors, flow style, merge keys. A false positive here would make the
 		// command useless, so they are checked as a group.
-		inventories, err := filepath.Glob(filepath.Join("src", "test", "e2e", "noncluster", "testdata", "inventory*.yaml"))
+		inventories, err := filepath.Glob(filepath.Join("test", "e2e", "noncluster", "testdata", "inventory*.yaml"))
 		require.NoError(t, err)
 		require.NotEmpty(t, inventories)
 
