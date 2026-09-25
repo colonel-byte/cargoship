@@ -19,3 +19,29 @@
 // limitations under the License.
 
 package cluster
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/k0sproject/rig/v2/sshconfig"
+	"github.com/stretchr/testify/require"
+)
+
+func TestSSHConfigParserNoFinalizeTokens(t *testing.T) {
+	// Tests that the WithNoFinalize parser workaround handles directives containing
+	// tokens (%l, %C) without failing on unsupported token expansion during Finalize.
+	configContent := `
+Host example.com
+    ControlPath ~/.ssh/control-%C-%l-%h
+    Port 2222
+`
+	parser, err := sshconfig.NewParser(strings.NewReader(configContent), sshconfig.WithNoFinalize())
+	require.NoError(t, err)
+
+	sshCfg := &sshconfig.Config{}
+	err = parser.Apply(sshCfg, "example.com")
+	require.NoError(t, err)
+	require.Equal(t, 2222, sshCfg.Port)
+	require.Equal(t, "~/.ssh/control-%C-%l-%h", sshCfg.ControlPath)
+}
