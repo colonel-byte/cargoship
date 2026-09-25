@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/src/internal/clustercfg"
+	"github.com/colonel-byte/cargoship/internal/clustercfg"
 )
 
 // FuzzClustercfgParseNoPanic asserts that clustercfg.Parse, the entry point a cluster
