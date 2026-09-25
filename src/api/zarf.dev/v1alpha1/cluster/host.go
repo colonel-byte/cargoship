@@ -39,7 +39,9 @@ import (
 	rig "github.com/k0sproject/rig/v2"
 	"github.com/k0sproject/rig/v2/cmd"
 	rigos "github.com/k0sproject/rig/v2/os"
+	"github.com/k0sproject/rig/v2/protocol/ssh"
 	"github.com/k0sproject/rig/v2/remotefs"
+	"github.com/k0sproject/rig/v2/sshconfig"
 )
 
 const (
