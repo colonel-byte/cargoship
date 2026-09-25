@@ -101,6 +101,7 @@
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
+- [ai-usage](agent/ai-usage.md)
 - [choice-age-encryption](agent/choice-age-encryption.md)
 - [choice-ansible-collection-pins](agent/choice-ansible-collection-pins.md)
 - [choice-ansible-module](agent/choice-ansible-module.md)

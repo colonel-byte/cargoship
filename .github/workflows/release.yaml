@@ -122,14 +122,30 @@ jobs:
         with:
           subject-checksums: ./dist/digest.txt
 
+      - name: Render AI-BOM
+        run: |
+          jq \
+            --arg version "${GITHUB_REF_NAME}" \
+            --arg commit "${GITHUB_SHA}" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '.subject.version = $version | .subject.commit = $commit | .generatedAt = $generatedAt' \
+            .github/ai-bom.json > dist/ai-bom.json
+
+      - name: Attest AI-BOM
+        id: attest-ai-bom
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/ai-bom.json
+
       - name: Publish provenance with the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cp "${{ steps.attest-packages.outputs.bundle-path }}" cargoship_packages.intoto.jsonl
           cp "${{ steps.attest-images.outputs.bundle-path }}" cargoship_images.intoto.jsonl
+          cp "${{ steps.attest-ai-bom.outputs.bundle-path }}" cargoship_ai-bom.intoto.jsonl
 
-          gh release upload "${GITHUB_REF_NAME}" cargoship_packages.intoto.jsonl cargoship_images.intoto.jsonl --clobber
+          gh release upload "${GITHUB_REF_NAME}" cargoship_packages.intoto.jsonl cargoship_images.intoto.jsonl cargoship_ai-bom.intoto.jsonl dist/ai-bom.json --clobber
 
       - name: Remove package signing keys
         if: always()
