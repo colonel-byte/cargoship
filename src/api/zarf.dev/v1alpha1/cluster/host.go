@@ -270,10 +270,14 @@ type ZarfHostMetadata struct {
 }
 
 func init() {
-	// Work around upstream rig v2 bug where sshconfig.expandToken does not implement
-	// token expansion for %l (or %k). Initializing rig's ssh.ConfigParser with WithNoFinalize()
-	// allows ssh config directives (such as ControlPath containing %l or %C) to be loaded
-	// without failing during finalization.
+	// rig v2's sshconfig.expandToken has no case for %l or %k, even though both are declared
+	// valid ControlPath tokens (and %C expands %l internally) -- so any ssh_config with one of
+	// those in ControlPath makes Finalize error out and abort the entire config, not just that
+	// field. WithNoFinalize skips Finalize altogether rather than patching the missing cases,
+	// which also means every field's token/tilde/env expansion is skipped globally for the life
+	// of the process -- e.g. ControlPath ~/.ssh/%r@%h:%p keeps its literal ~ and %r/%h/%p rather
+	// than resolving them. Remove this once upstream implements %l/%k, or replace it with a
+	// scoped patch if losing expansion elsewhere turns out to matter.
 	if p, err := sshconfig.NewParser(nil, sshconfig.WithNoFinalize()); err == nil {
 		ssh.ConfigParser = p
 	}
