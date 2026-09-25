@@ -102,14 +102,14 @@ func newPackageCreateCommand() *cobra.Command {
 	return cmd
 }
 
-// parseRegistryOverrides converts registry overrides to a structured type.
+// ParseRegistryOverrides converts registry overrides to a structured type.
 // The result is sorted in descending order by Source, which guarantees the
 // longest prefix will be sorted toward the beginning -- so that e.g.
 // docker.io/library overrides win over a broader docker.io override.
 //
 // Input is of the following form:
 // []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
-func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, error) {
+func ParseRegistryOverrides(overrides []string) ([]images.RegistryOverride, error) {
 	result := make([]images.RegistryOverride, len(overrides))
 	for i, mapping := range overrides {
 		source, override, found := strings.Cut(mapping, "=")
@@ -146,7 +146,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	registryOverrides, err := parseRegistryOverrides(o.registryOverrides)
+	registryOverrides, err := ParseRegistryOverrides(o.registryOverrides)
 	if err != nil {
 		return fmt.Errorf("error parsing registry override: %w", err)
 	}

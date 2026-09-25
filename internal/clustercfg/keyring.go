@@ -88,7 +88,7 @@ type Keyring struct {
 	recipients []age.Recipient
 	// recipientStrings holds the text each recipient was given as, in the order it was given, so
 	// that the record written into a document can name the keys it was encrypted to. A parsed
-	// recipient cannot be printed back -- see parseRecipients -- so this is captured at parse time
+	// recipient cannot be printed back -- see ParseRecipients -- so this is captured at parse time
 	// or not at all. It is written to documents and compared against; it is never key material.
 	recipientStrings []string
 	// ageExplicit records the same thing as vaultExplicit, for the recipients.
@@ -177,7 +177,7 @@ func (k *Keyring) loadIdentities(files []string) error {
 }
 
 // loadRecipients reads the public keys that encrypt, from the flags given or from the environment
-// when none were. A key may be a native age recipient or an SSH public key; see parseRecipient.
+// when none were. A key may be a native age recipient or an SSH public key; see ParseRecipient.
 //
 // A file that parses to no recipients is an error rather than nothing to do. Carrying on would
 // leave the keyring with a vault password and no recipients, and EncryptFormat would then quietly
@@ -189,10 +189,10 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 	}
 
 	for _, key := range keys {
-		// Parsed as given rather than trimmed first: parseRecipient dispatches on the "age1" and
+		// Parsed as given rather than trimmed first: ParseRecipient dispatches on the "age1" and
 		// private-key prefixes by matching the raw string, so trimming ahead of it would quietly
 		// change which inputs are accepted. Only the text being recorded is trimmed.
-		parsed, err := parseRecipient(key)
+		parsed, err := ParseRecipient(key)
 		if errors.Is(err, errRecipientIsSecret) {
 			// Deliberately without the key: see the note on errRecipientIsSecret.
 			return fmt.Errorf("parsing an age recipient: %w", err)
@@ -209,7 +209,7 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 		if err != nil {
 			return fmt.Errorf("reading age recipients file: %w", err)
 		}
-		parsed, lines, err := parseRecipients(bytes.NewReader(contents))
+		parsed, lines, err := ParseRecipients(bytes.NewReader(contents))
 		if err != nil {
 			return fmt.Errorf("parsing age recipients file %s: %w", path, err)
 		}
