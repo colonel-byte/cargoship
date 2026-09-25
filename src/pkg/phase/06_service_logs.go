@@ -24,7 +24,6 @@ import (
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -44,7 +43,7 @@ func (p *GenericPhase) captureServiceLogsOnFailure(ctx context.Context, h *clust
 
 	// "@<unix-seconds>" is journalctl's locale/timezone-independent form for --since.
 	cmd := fmt.Sprintf("journalctl -u %s --no-pager --since=@%d", service, startedAt.Unix())
-	output, err := h.ExecOutput(cmd, exec.Sudo(h))
+	output, err := h.Sudo().ExecOutput(cmd)
 	if err != nil {
 		l.Warn("failed to collect remote service logs for debugging", "host", h, "service", service, "error", err)
 		return waitErr

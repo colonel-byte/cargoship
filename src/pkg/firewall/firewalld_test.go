@@ -15,6 +15,7 @@
 package firewall
 
 import (
+	"context"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
@@ -139,17 +140,19 @@ func TestBackendsOrder(t *testing.T) {
 }
 
 func TestDetectWithoutAConfigurer(t *testing.T) {
-	require.False(t, (&Firewalld{}).Detect(&cluster.ZarfHost{}))
-	require.False(t, (&UFW{}).Detect(&cluster.ZarfHost{}))
-	require.False(t, (&Nftables{}).Detect(&cluster.ZarfHost{}))
-	require.Nil(t, Select(&cluster.ZarfHost{}).Backend)
-	require.Nil(t, Select(&cluster.ZarfHost{}).Skipped)
+	ctx := context.Background()
+	require.False(t, (&Firewalld{}).Detect(ctx, &cluster.ZarfHost{}))
+	require.False(t, (&UFW{}).Detect(ctx, &cluster.ZarfHost{}))
+	require.False(t, (&Nftables{}).Detect(ctx, &cluster.ZarfHost{}))
+	require.Nil(t, Select(ctx, &cluster.ZarfHost{}).Backend)
+	require.Nil(t, Select(ctx, &cluster.ZarfHost{}).Skipped)
 }
 
 func TestInstalledWithoutAConfigurer(t *testing.T) {
-	require.False(t, (&Firewalld{}).Installed(&cluster.ZarfHost{}))
-	require.False(t, (&UFW{}).Installed(&cluster.ZarfHost{}))
-	require.False(t, (&Nftables{}).Installed(&cluster.ZarfHost{}))
+	ctx := context.Background()
+	require.False(t, (&Firewalld{}).Installed(ctx, &cluster.ZarfHost{}))
+	require.False(t, (&UFW{}).Installed(ctx, &cluster.ZarfHost{}))
+	require.False(t, (&Nftables{}).Installed(ctx, &cluster.ZarfHost{}))
 }
 
 func TestPreferredFirewallWithoutAConfigurer(t *testing.T) {

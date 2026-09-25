@@ -22,14 +22,11 @@ package linux
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/exec"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/linux"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 const (
@@ -39,16 +36,15 @@ const (
 
 // Archlinux provides OS support for Archlinux systems
 type Archlinux struct {
-	linux.Archlinux
 	configurer.Linux
 }
 
 var _ configurer.Configurer = (*Archlinux)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == OSKindArch || os.IDLike == OSKindArch
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == OSKindArch || slices.Contains(r.IDLike, OSKindArch)
 		},
 		func() any {
 			return &Archlinux{}
@@ -56,9 +52,17 @@ func init() {
 	)
 }
 
+// InstallPackage installs packages via pacman
+func (c Archlinux) InstallPackage(h configurer.Host, s ...string) error {
+	if err := h.Sudo().Exec("pacman -S --noconfirm --noprogressbar " + strings.Join(s, " ")); err != nil {
+		return fmt.Errorf("failed to install packages: %w", err)
+	}
+	return nil
+}
+
 // UninstallPackage installs packages via pacman
-func (c Archlinux) UninstallPackage(h os.Host, s ...string) error {
-	if err := h.Execf("pacman -Rns --noconfirm --noprogressbar %s", strings.Join(s, " "), exec.Sudo(h)); err != nil {
+func (c Archlinux) UninstallPackage(h configurer.Host, s ...string) error {
+	if err := h.Sudo().Exec("pacman -Rns --noconfirm --noprogressbar " + strings.Join(s, " ")); err != nil {
 		return fmt.Errorf("failed to uninstall packages: %w", err)
 	}
 	return nil

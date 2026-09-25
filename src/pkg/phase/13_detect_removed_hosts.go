@@ -25,7 +25,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -100,9 +99,9 @@ func (p *DetectRemovedHosts) ReadOnly() string {
 // way the label and delete phases find one. Nothing is running on a first install, so there is no
 // leader, and ShouldRun turns the phase off: a cluster that does not exist yet cannot have had a
 // host removed from it.
-func (p *DetectRemovedHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.IsController() && h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService())
+		return h.IsController() && h.ServiceIsRunning(ctx, p.Distro.GetControllerService())
 	})
 	if len(control) > 0 {
 		p.leader = control[0]
@@ -150,9 +149,8 @@ func (p *DetectRemovedHosts) listNodes() ([]corev1.Node, error) {
 		return nil, ErrNoControllers
 	}
 
-	out, err := p.leader.ExecOutput(
-		p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), listNodes),
-		exec.Sudo(p.leader),
+	out, err := p.leader.SudoExecOutput(
+		p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), listNodes),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %w", err)

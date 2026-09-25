@@ -27,7 +27,7 @@ func (s *phaseWalk) prepareFapolicy() {
 
 	var fapolicyd int
 	for _, host := range s.harness.hosts() {
-		if host.Configurer.ServiceIsRunning(host, phase.FAPOLICYD) {
+		if host.ServiceIsRunning(s.ctx, phase.FAPOLICYD) {
 			fapolicyd++
 		}
 	}
@@ -43,7 +43,7 @@ func (s *phaseWalk) prepareFapolicy() {
 	}
 
 	for _, host := range s.harness.hosts() {
-		if !host.Configurer.ServiceIsRunning(host, phase.FAPOLICYD) {
+		if !host.ServiceIsRunning(s.ctx, phase.FAPOLICYD) {
 			continue
 		}
 		s.Require().Truef(host.FileExist(phase.FAPolicydRuleFile),

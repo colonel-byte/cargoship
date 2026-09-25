@@ -41,7 +41,7 @@ type InitializeControllers struct {
 // Prepare the phase
 func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
 	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UnknownVersion
+		return !h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UnknownVersion
 	})
 
 	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.control))
@@ -99,7 +99,7 @@ func (p *InitializeControllers) startService(ctx context.Context, h *cluster.Zar
 
 	startedAt := time.Now()
 	go func() {
-		err := h.Configurer.StartService(h, service)
+		err := h.StartService(ctx, service)
 		if err != nil {
 			logger.From(ctx).Warn("failed to start", "service", service, "host", h)
 		}
@@ -109,5 +109,5 @@ func (p *InitializeControllers) startService(ctx context.Context, h *cluster.Zar
 		return p.captureServiceLogsOnFailure(ctx, h, service, startedAt, err)
 	}
 
-	return h.Configurer.EnableService(h, service)
+	return h.EnableService(ctx, service)
 }

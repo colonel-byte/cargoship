@@ -23,22 +23,20 @@ package enterpriselinux
 import (
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/colonel-byte/cargoship/src/types/os/linux"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 // OracleLinux provides OS support for Oracle Linux
 type OracleLinux struct {
 	linux.EnterpriseLinux
-	configurer.Linux
 }
 
 var _ configurer.Configurer = (*OracleLinux)(nil)
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == linux.OSKindELOracle
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == linux.OSKindELOracle
 		},
 		func() any {
 			return &OracleLinux{}

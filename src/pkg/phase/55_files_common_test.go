@@ -23,7 +23,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	hostos "github.com/colonel-byte/cargoship/src/types/os"
-	rigos "github.com/k0sproject/rig/os"
 	"github.com/stretchr/testify/require"
 )
 
@@ -159,7 +158,7 @@ type recordingConfigurer struct {
 	installed [][]string
 }
 
-func (c *recordingConfigurer) InstallPackage(_ rigos.Host, pkgs ...string) error {
+func (c *recordingConfigurer) InstallPackage(_ hostos.Host, pkgs ...string) error {
 	c.installed = append(c.installed, pkgs)
 	return nil
 }

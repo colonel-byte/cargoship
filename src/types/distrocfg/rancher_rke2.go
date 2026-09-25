@@ -60,17 +60,17 @@ func init() {
 
 // AdminCredentials returns the cluster CA certificate and the admin client key pair, read
 // out of the admin kubeconfig rke2 writes on a controller host.
-func (d *RKE2) AdminCredentials(host cluster.ZarfHost, dataDir string) (AdminCredentials, error) {
+func (d *RKE2) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error) {
 	return adminCredentials(host, d.KubeconfigPath(host, dataDir))
 }
 
 // KubeconfigPath returns the path to the admin config for a given distro
-func (d *RKE2) KubeconfigPath(_ cluster.ZarfHost, _ string) string {
+func (d *RKE2) KubeconfigPath(_ *cluster.ZarfHost, _ string) string {
 	return filepath.Join(filepath.Dir(d.Config), "rke2.yaml")
 }
 
 // KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
-func (d *RKE2) KubectlCmdf(host cluster.ZarfHost, dataDir string, s string, args ...any) string {
+func (d *RKE2) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string {
 	return fmt.Sprintf(`env "KUBECONFIG=%s" %s/bin/kubectl %s`, d.KubeconfigPath(host, dataDir), d.DataDirPath(), fmt.Sprintf(s, args...))
 }
 

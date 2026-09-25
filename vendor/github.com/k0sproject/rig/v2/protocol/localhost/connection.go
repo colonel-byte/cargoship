@@ -1,0 +1,184 @@
+// Package localhost provides a rig protocol implementation to the local host using the os/exec package.
+package localhost
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"runtime"
+
+	"github.com/k0sproject/rig/v2/protocol"
+	"github.com/k0sproject/rig/v2/sh/shellescape"
+)
+
+// Connection is a direct localhost connection.
+type Connection struct{}
+
+// Connection returns the connection itself. This is because there's no config for localhost connections.
+func (c *Connection) Connection() (protocol.Connection, error) {
+	return c, nil
+}
+
+// NewConnection creates a new Localhost connection. Error is currently always nil.
+func NewConnection() (*Connection, error) {
+	return &Connection{}, nil
+}
+
+// Protocol returns the protocol family, "Local".
+func (c *Connection) Protocol() string {
+	return "Local"
+}
+
+// ProtocolName returns the implementation name, "Local".
+func (c *Connection) ProtocolName() string {
+	return "Local"
+}
+
+// IPAddress returns the connection address.
+func (c *Connection) IPAddress() string {
+	return "127.0.0.1"
+}
+
+// String returns the connection's printable name.
+func (c *Connection) String() string {
+	return "localhost"
+}
+
+// IsWindows is true when running on a windows host.
+func (c *Connection) IsWindows() bool {
+	return runtime.GOOS == "windows"
+}
+
+// IsConnected always returns true for localhost — there is no connection to lose.
+func (c *Connection) IsConnected() bool {
+	return true
+}
+
+// StartProcess executes a command on the remote host and uses the passed in streams for stdin, stdout and stderr. It returns a Waiter with a .Wait() function that
+// blocks until the command finishes and returns an error if the exit code is not zero.
+func (c *Connection) StartProcess(ctx context.Context, cmd string, stdin io.Reader, stdout, stderr io.Writer) (protocol.Waiter, error) {
+	command := c.command(ctx, cmd)
+
+	command.Stdin = stdin
+	command.Stdout = stdout
+	command.Stderr = stderr
+
+	if err := command.Start(); err != nil {
+		return nil, fmt.Errorf("start command: %w", err)
+	}
+
+	return command, nil
+}
+
+func (c *Connection) command(ctx context.Context, cmd string) *exec.Cmd {
+	if c.IsWindows() {
+		return exec.CommandContext(ctx, "cmd.exe", "/c", cmd)
+	}
+
+	return exec.CommandContext(ctx, "sh", "-c", "--", cmd)
+}
+
+// ExecInteractive executes a command on the host and passes stdin/stdout/stderr as-is to the session.
+// The process is killed when ctx is cancelled. Nil streams default to os.Stdin/os.Stdout/os.Stderr.
+func (c *Connection) ExecInteractive(ctx context.Context, cmd string, stdin io.Reader, stdout, stderr io.Writer) error { //nolint:cyclop
+	if stdin == nil {
+		stdin = os.Stdin
+	}
+	if stdout == nil {
+		stdout = os.Stdout
+	}
+	if stderr == nil {
+		stderr = os.Stderr
+	}
+	if cmd == "" {
+		cmd = os.Getenv("SHELL") + " -l"
+	}
+
+	if cmd == " -l" {
+		cmd = "cmd"
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	// try to cast the streams to files, if they are not files, use pipes
+	var stdinR, stdoutW, stderrW *os.File
+	if f, ok := stdin.(*os.File); ok {
+		stdinR = f
+	} else {
+		r, w, err := os.Pipe()
+		if err != nil {
+			return fmt.Errorf("failed to create pipe: %w", err)
+		}
+		go func() {
+			defer w.Close()
+			_, _ = io.Copy(w, stdin)
+		}()
+		stdinR = r
+	}
+	if f, ok := stdout.(*os.File); ok {
+		stdoutW = f
+	} else {
+		r, w, err := os.Pipe()
+		if err != nil {
+			return fmt.Errorf("failed to create pipe: %w", err)
+		}
+		go func() {
+			defer r.Close()
+			_, _ = io.Copy(stdout, r)
+		}()
+		stdoutW = w
+	}
+	if f, ok := stderr.(*os.File); ok {
+		stderrW = f
+	} else {
+		r, w, err := os.Pipe()
+		if err != nil {
+			return fmt.Errorf("failed to create pipe: %w", err)
+		}
+		go func() {
+			defer r.Close()
+			_, _ = io.Copy(stderr, r)
+		}()
+		stderrW = w
+	}
+
+	procAttr := &os.ProcAttr{
+		Files: []*os.File{stdinR, stdoutW, stderrW},
+		Dir:   cwd,
+	}
+
+	parts, err := shellescape.Split(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to parse command: %w", err)
+	}
+
+	proc, err := os.StartProcess(parts[0], parts[1:], procAttr) //nolint:gosec // G702: intentional command execution from parsed arguments
+	if err != nil {
+		return fmt.Errorf("failed to start process: %w", err)
+	}
+
+	// Kill the process when the context is done, but also stop watching when
+	// the function returns normally so that the goroutine does not leak.
+	watchDone := make(chan struct{})
+	defer close(watchDone)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = proc.Kill()
+		case <-watchDone:
+		}
+	}()
+
+	if _, err := proc.Wait(); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err() //nolint:wrapcheck // context error is the real cause
+		}
+		return fmt.Errorf("process wait: %w", err)
+	}
+	return nil
+}

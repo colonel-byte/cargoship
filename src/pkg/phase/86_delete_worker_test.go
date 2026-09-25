@@ -23,7 +23,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
 	hostos "github.com/colonel-byte/cargoship/src/types/os"
-	rigos "github.com/k0sproject/rig/os"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,9 +33,9 @@ type stoppedConfigurer struct {
 	hostos.Configurer
 }
 
-func (c *stoppedConfigurer) ServiceIsRunning(_ rigos.Host, _ string) bool { return false }
+func (c *stoppedConfigurer) ServiceIsRunning(_ hostos.Host, _ string) bool { return false }
 
-func (c *stoppedConfigurer) Hostname(_ rigos.Host) string { return "node1" }
+func (c *stoppedConfigurer) Hostname(_ hostos.Host) string { return "node1" }
 
 // deletePhase is what DeleteWorkers and DeleteControllers have in common here.
 type deletePhase interface {

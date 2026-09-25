@@ -26,7 +26,8 @@ import (
 	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 	blcluster "github.com/k0sproject/bootloose/pkg/cluster"
-	"github.com/k0sproject/rig"
+	rig "github.com/k0sproject/rig/v2"
+	"github.com/k0sproject/rig/v2/protocol/ssh"
 )
 
 const (
@@ -136,12 +137,14 @@ func hostFromMachine(m *blcluster.Machine, role string, keyPath string) (*apiclu
 		// phase observable. It is not mapped to an entry in the cluster's profile config, which
 		// leaves per-profile concurrency on its default.
 		Profile: role,
-		Connection: rig.Connection{
-			SSH: &rig.SSH{
-				Address: "127.0.0.1",
-				User:    sshUser,
-				Port:    port,
-				KeyPath: &keyPath,
+		ClientWithConfig: rig.ClientWithConfig{
+			ConnectionConfig: rig.CompositeConfig{
+				SSH: &ssh.Config{
+					Address: "127.0.0.1",
+					User:    sshUser,
+					Port:    port,
+					KeyPath: &keyPath,
+				},
 			},
 		},
 	}, nil

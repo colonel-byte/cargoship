@@ -20,6 +20,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	iofs "io/fs"
 	"log/slog"
 	"maps"
 	"os"
@@ -35,8 +37,7 @@ import (
 	"github.com/colonel-byte/cargoship/src/config"
 	hostos "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/k0sproject/dig"
-	"github.com/k0sproject/rig/exec"
-	rigos "github.com/k0sproject/rig/os"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"gopkg.in/yaml.v3"
@@ -363,12 +364,10 @@ func TestBuildRegistriesConfigEmpty(t *testing.T) {
 	}
 }
 
-// fakeConfigurer implements hostos.Configurer, overriding only the methods
-// rancher_common.go actually calls. The nil-embedded interface satisfies the
-// rest of the (large) interface without needing a real implementation.
-type fakeConfigurer struct {
-	hostos.Configurer
-
+// fakeHost stands in for a host the distro modules act on: its filesystem, its init system,
+// and the one Configurer method they still reach for. One value backs all three, so a test
+// sets up the files and services it needs in a single place and reads back what was written.
+type fakeHost struct {
 	files     map[string]string
 	fileExist map[string]bool
 	writeErr  map[string]error
@@ -389,56 +388,101 @@ type fakeConfigurer struct {
 	longHostname string
 }
 
-func (f *fakeConfigurer) FileExist(_ rigos.Host, path string) bool {
-	return f.fileExist[path]
+// attach wires h to f and returns it, so a test can set the host fields it cares about in the
+// literal and still get a host whose file and service operations land in f.
+func (f *fakeHost) attach(h *cluster.ZarfHost) *cluster.ZarfHost {
+	h.Configurer = &fakeConfigurer{fake: f}
+	h.SetFS(&fakeFS{fake: f})
+	h.SetServices(&fakeServices{fake: f})
+	return h
 }
 
-func (f *fakeConfigurer) WriteFile(_ rigos.Host, path, data, _ string) error {
-	if err, ok := f.writeErr[path]; ok {
+// fakeFS is the filesystem side of a fakeHost. Only the operations the distro modules make are
+// implemented; the embedded interface is nil, so anything else panics and says so.
+type fakeFS struct {
+	remotefs.FS
+
+	fake *fakeHost
+}
+
+func (f *fakeFS) FileExist(path string) bool {
+	return f.fake.fileExist[path]
+}
+
+func (f *fakeFS) WriteFile(path string, data []byte, _ iofs.FileMode) error {
+	if err, ok := f.fake.writeErr[path]; ok {
 		return err
 	}
-	if f.files == nil {
-		f.files = map[string]string{}
+	if f.fake.files == nil {
+		f.fake.files = map[string]string{}
 	}
-	f.files[path] = data
+	f.fake.files[path] = string(data)
 	return nil
 }
 
-func (f *fakeConfigurer) ReadFile(_ rigos.Host, path string) (string, error) {
-	return f.files[path], nil
+func (f *fakeFS) ReadFile(path string) ([]byte, error) {
+	return []byte(f.fake.files[path]), nil
 }
 
-func (f *fakeConfigurer) ServiceIsRunning(_ rigos.Host, _ string) bool {
-	return f.serviceRunning
-}
-
-func (f *fakeConfigurer) StopService(_ rigos.Host, _ string) error {
-	return f.stopServiceErr
-}
-
-func (f *fakeConfigurer) DeleteFile(_ rigos.Host, path string) error {
-	if f.deleteFileErr != nil {
-		return f.deleteFileErr
+func (f *fakeFS) Remove(path string) error {
+	if f.fake.deleteFileErr != nil {
+		return f.fake.deleteFileErr
 	}
-	delete(f.files, path)
+	delete(f.fake.files, path)
 	return nil
 }
 
-func (f *fakeConfigurer) CommandExist(_ rigos.Host, _ string) bool {
-	return f.commandExist
+func (f *fakeFS) CommandExist(_ string) bool {
+	return f.fake.commandExist
 }
 
-func (f *fakeConfigurer) Touch(_ rigos.Host, path string, _ time.Time, _ ...exec.Option) error {
-	f.touched = append(f.touched, path)
-	return f.touchErr
+func (f *fakeFS) Touch(path string, _ ...time.Time) error {
+	f.fake.touched = append(f.fake.touched, path)
+	return f.fake.touchErr
 }
 
-func (f *fakeConfigurer) LookPath(_ rigos.Host, _ string) (string, error) {
-	return f.lookPathResult, f.lookPathErr
+func (f *fakeFS) LookPath(_ string) (string, error) {
+	return f.fake.lookPathResult, f.fake.lookPathErr
 }
 
-func (f *fakeConfigurer) LongHostname(_ rigos.Host) string {
-	return f.longHostname
+// fakeServices is the init system side of a fakeHost. The distro modules only ask whether a
+// service is running and stop it, so the rest report as unimplemented rather than silently
+// succeeding.
+type fakeServices struct {
+	fake *fakeHost
+}
+
+func (f *fakeServices) ServiceIsRunning(_ context.Context, _ string) bool {
+	return f.fake.serviceRunning
+}
+
+func (f *fakeServices) StopService(_ context.Context, _ string) error {
+	return f.fake.stopServiceErr
+}
+
+func (f *fakeServices) StartService(_ context.Context, name string) error {
+	return fmt.Errorf("fakeServices: unexpected start of %s", name)
+}
+
+func (f *fakeServices) RestartService(_ context.Context, name string) error {
+	return fmt.Errorf("fakeServices: unexpected restart of %s", name)
+}
+
+func (f *fakeServices) EnableService(_ context.Context, name string) error {
+	return fmt.Errorf("fakeServices: unexpected enable of %s", name)
+}
+
+// fakeConfigurer implements hostos.Configurer, overriding only the method the distro modules
+// still call on it. The nil-embedded interface satisfies the type while making any other call
+// panic with the method name.
+type fakeConfigurer struct {
+	hostos.Configurer
+
+	fake *fakeHost
+}
+
+func (c *fakeConfigurer) LongHostname(_ hostos.Host) string {
+	return c.fake.longHostname
 }
 
 func newTestRancher() *RancherCommon {
@@ -475,8 +519,8 @@ func TestConfigureEngineControllerLeaderNoTokenFiles(t *testing.T) {
 		AgentToken:      "atoken",
 		LoadBalancer:    "lb.example.com",
 	}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1"})
 	host.Metadata.IsLeader = true
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
@@ -514,15 +558,15 @@ func TestConfigureEngineControllerFollowerExistingTokenFile(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	run := cluster.ZarfRuntimeMeta{LoadBalancer: "lb.example.com"}
 
-	leaderCfg := &fakeConfigurer{longHostname: "leader.example.com"}
-	leaderHost := cluster.ZarfHost{Configurer: leaderCfg}
-	run.Leader = &leaderHost
+	leaderCfg := &fakeHost{longHostname: "leader.example.com"}
+	leaderHost := leaderCfg.attach(&cluster.ZarfHost{})
+	run.Leader = leaderHost
 
-	cfg := &fakeConfigurer{
+	cfg := &fakeHost{
 		fileExist: map[string]bool{d.JoinTokenPath(): true},
 		files:     map[string]string{d.JoinTokenPath(): "existing-token"},
 	}
-	host := cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node2", Configurer: cfg}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node2"})
 	host.Metadata.IsLeader = false
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
@@ -551,8 +595,8 @@ func TestConfigureEngineWorkerStripsControllerArgs(t *testing.T) {
 		},
 	}
 	run := cluster.ZarfRuntimeMeta{LoadBalancer: "lb.example.com", AgentToken: "atoken"}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node3", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node3"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -585,8 +629,8 @@ func TestConfigureEngineWritesManifests(t *testing.T) {
 		},
 	}
 	run := cluster.ZarfRuntimeMeta{}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1"})
 	host.Metadata.IsLeader = true
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
@@ -618,8 +662,8 @@ func TestConfigureEngineWritesAudit(t *testing.T) {
 		},
 	}
 	run := cluster.ZarfRuntimeMeta{}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -649,8 +693,8 @@ func TestConfigureEngineWritesPSS(t *testing.T) {
 		},
 	}
 	run := cluster.ZarfRuntimeMeta{}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -682,8 +726,8 @@ func TestConfigureEngineWritesRegistries(t *testing.T) {
 			},
 		},
 	}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -709,8 +753,8 @@ func TestConfigureEngineNoRegistriesSkipsFile(t *testing.T) {
 	d := newTestRancher()
 	dis := distro.ZarfDistro{}
 	run := cluster.ZarfRuntimeMeta{}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -758,8 +802,8 @@ func TestConfigureEngineWritesRegistriesGolden(t *testing.T) {
 			},
 		},
 	}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -786,7 +830,7 @@ func TestDesiredFilesEmpty(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	run := cluster.ZarfRuntimeMeta{}
 
-	got, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v", err)
 	}
@@ -818,7 +862,7 @@ func TestDesiredFilesIncludesDistroReleaseMetadata(t *testing.T) {
 	}
 	run := cluster.ZarfRuntimeMeta{}
 
-	got, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
 	require.NoError(t, err)
 
 	metaFile, ok := got[DistroReleaseFile]
@@ -861,7 +905,7 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 		},
 	}
 
-	got, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v", err)
 	}
@@ -952,8 +996,8 @@ func TestDistroCmdf(t *testing.T) {
 
 func TestRunningVersionLookPathError(t *testing.T) {
 	d := newTestRancher()
-	cfg := &fakeConfigurer{lookPathErr: errors.New("not found")}
-	host := cluster.ZarfHost{Configurer: cfg}
+	cfg := &fakeHost{lookPathErr: errors.New("not found")}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	_, err := d.RunningVersion(host)
 
@@ -964,8 +1008,8 @@ func TestRunningVersionLookPathError(t *testing.T) {
 
 func TestRunningVersionExecNotConnected(t *testing.T) {
 	d := newTestRancher()
-	cfg := &fakeConfigurer{lookPathResult: "/usr/local/bin/k3s"}
-	host := cluster.ZarfHost{Configurer: cfg}
+	cfg := &fakeHost{lookPathResult: "/usr/local/bin/k3s"}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	_, err := d.RunningVersion(host)
 
@@ -976,8 +1020,8 @@ func TestRunningVersionExecNotConnected(t *testing.T) {
 
 func TestStopServiceNotRunningNoCacheNoKillall(t *testing.T) {
 	d := newTestRancher()
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := &cluster.ZarfHost{Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	if err := d.stopService(host, "k3s", "k3s-killall.sh"); err != nil {
 		t.Fatalf("stopService() error = %v", err)
@@ -990,8 +1034,8 @@ func TestStopServiceNotRunningNoCacheNoKillall(t *testing.T) {
 func TestStopServiceStopServiceError(t *testing.T) {
 	d := newTestRancher()
 	wantErr := errors.New("stop failed")
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}, serviceRunning: true, stopServiceErr: wantErr}
-	host := &cluster.ZarfHost{Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}, serviceRunning: true, stopServiceErr: wantErr}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	err := d.stopService(host, "k3s", "k3s-killall.sh")
 
@@ -1004,11 +1048,11 @@ func TestStopServiceDeleteFileError(t *testing.T) {
 	d := newTestRancher()
 	wantErr := errors.New("delete failed")
 	cacheFile := d.Data + "/agent/images/.cache.json"
-	cfg := &fakeConfigurer{
+	cfg := &fakeHost{
 		fileExist:     map[string]bool{cacheFile: true},
 		deleteFileErr: wantErr,
 	}
-	host := &cluster.ZarfHost{Configurer: cfg}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	err := d.stopService(host, "k3s", "k3s-killall.sh")
 
@@ -1020,11 +1064,11 @@ func TestStopServiceDeleteFileError(t *testing.T) {
 func TestStopServiceCacheDeletedNoKillallTouches(t *testing.T) {
 	d := newTestRancher()
 	cacheFile := d.Data + "/agent/images/.cache.json"
-	cfg := &fakeConfigurer{
+	cfg := &fakeHost{
 		fileExist: map[string]bool{cacheFile: true},
 		files:     map[string]string{cacheFile: "{}"},
 	}
-	host := &cluster.ZarfHost{Configurer: cfg}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	if err := d.stopService(host, "k3s", "k3s-killall.sh"); err != nil {
 		t.Fatalf("stopService() error = %v", err)
@@ -1036,8 +1080,8 @@ func TestStopServiceCacheDeletedNoKillallTouches(t *testing.T) {
 
 func TestStopServiceKillallExistsPropagatesExecError(t *testing.T) {
 	d := newTestRancher()
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}, commandExist: true}
-	host := &cluster.ZarfHost{Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}, commandExist: true}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	err := d.stopService(host, "k3s", "k3s-killall.sh")
 
@@ -1332,8 +1376,8 @@ func TestConfigureEngineWritesRegistriesTLSGolden(t *testing.T) {
 			},
 		},
 	}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleWorker, Hostname: "node1"})
 
 	if err := d.ConfigureEngine(context.Background(), host, run, dis); err != nil {
 		t.Fatalf("ConfigureEngine() error = %v", err)
@@ -1373,7 +1417,7 @@ func TestDesiredFilesWritesInlineCA(t *testing.T) {
 		},
 	}
 
-	files, err := d.DesiredFiles(cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(&cluster.ZarfHost{}, run, distro.ZarfDistro{})
 	require.NoError(t, err)
 	require.Equal(t, []byte(testCAPEM), files["/etc/cargoship/tls/mirror.example.com.crt"].Content)
 	require.Contains(t, files, filepath.Join(filepath.Dir(d.Config), "registries.yaml"))
@@ -1398,7 +1442,7 @@ func TestDesiredFilesModes(t *testing.T) {
 		},
 	}
 
-	files, err := d.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	files, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
 	require.NoError(t, err)
 
 	dir := filepath.Dir(d.Config)
@@ -1423,8 +1467,8 @@ func TestConfigureEngineWritesManifestsFromMapping(t *testing.T) {
 		},
 	}
 	run := cluster.ZarfRuntimeMeta{}
-	cfg := &fakeConfigurer{fileExist: map[string]bool{}}
-	host := cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1", Configurer: cfg}
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Role: cluster.RoleController, Hostname: "node1"})
 	host.Metadata.IsLeader = true
 
 	require.NoError(t, d.ConfigureEngine(context.Background(), host, run, dis))
@@ -1478,7 +1522,7 @@ func TestDesiredFilesHelmChartConfigs(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	dis.Spec.Config.Engine = manifestEngine()
 
-	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 
 	manifests := filepath.Join(d.Data, "server", "manifests")
@@ -1514,7 +1558,7 @@ func TestDesiredFilesHelmChartConfigsControllerOnly(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	dis.Spec.Config.Engine = manifestEngine()
 
-	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Empty(t, got, "an agent carries no chart configuration")
 }
@@ -1563,7 +1607,7 @@ func TestDesiredFilesHelmChartConfigsSkipsDisabledCharts(t *testing.T) {
 			dis.Spec.Config.Engine = manifestEngine()
 			dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyDisable: tt.disable}
 
-			got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+			got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
 			require.NoError(t, err)
 
 			paths := slices.Collect(maps.Keys(got))
@@ -1583,7 +1627,7 @@ func TestDesiredFilesHelmChartConfigsWithoutDisable(t *testing.T) {
 	dis.Spec.Config.Engine = manifestEngine()
 	dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyNodeLabel: []string{"role=worker"}}
 
-	got, err := d.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 }

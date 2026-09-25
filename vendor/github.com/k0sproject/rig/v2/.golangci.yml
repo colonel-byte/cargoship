@@ -1,0 +1,88 @@
+version: "2"
+run:
+  tests: false
+  allow-parallel-runners: true
+linters:
+  default: all
+  disable:
+    - depguard
+    - dogsled
+    - embeddedstructfieldcheck
+    - exhaustive
+    - exhaustruct
+    - forbidigo
+    - funcorder
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - gocyclo
+    - godox
+    - goheader
+    - gomodguard
+    - ireturn
+    - lll
+    - mnd
+    - nlreturn
+    - noinlineerr
+    - nonamedreturns
+    - paralleltest
+    - tagalign
+    - tagliatelle
+    - tparallel
+    - wsl
+    - wsl_v5
+  settings:
+    cyclop:
+      max-complexity: 12
+    funlen:
+      lines: 100
+      statements: 75
+    varnamelen:
+      max-distance: 10
+      ignore-decls:
+        - w http.ResponseWriter
+        - r *http.Request
+        - r io.Reader
+        - i int
+        - n int
+        - j int
+        - ok bool
+        - p []byte
+        - mu sync.Mutex
+        - wg sync.WaitGroup
+        - h Host
+        - fs FS
+        - fs remotefs.FS
+        - sb strings.Builder
+        - sb *strings.Builder
+        - s string
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errname
+          - revive
+        path: options/options\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

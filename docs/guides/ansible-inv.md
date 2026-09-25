@@ -75,7 +75,6 @@ Connection details come from the Ansible variables you already set. Everything c
 | `ssh.user`         | `ansible_user`                 | `root`                 |
 | `ssh.port`         | `ansible_port`                 | `22`                   |
 | `ssh.keyPath`      | `ansible_ssh_private_key_file` | unset                  |
-| `ssh.hostKey`      | `cargoship_host_key`           | unset                  |
 | `ssh.bastion`      | `cargoship_bastion`            | unset                  |
 | `hostname`         | `cargoship_hostname`           | the inventory hostname |
 | `profile`          | `cargoship_profile`            | the host's role        |

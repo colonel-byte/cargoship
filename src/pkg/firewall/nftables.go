@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -90,12 +89,12 @@ func (n *Nftables) Name() string {
 // A node whose only nftables content comes from kube-proxy and the CNI is deliberately not a
 // match. Every node in a running cluster has a non-empty ruleset, so matching on that would
 // claim hosts whose operator never configured a firewall at all.
-func (n *Nftables) Detect(h *cluster.ZarfHost) bool {
-	if h == nil || h.Configurer == nil || !h.Configurer.CommandExist(h, "nft") {
+func (n *Nftables) Detect(ctx context.Context, h *cluster.ZarfHost) bool {
+	if h == nil || h.Configurer == nil || !h.FS().CommandExist("nft") {
 		return false
 	}
 
-	if h.Configurer.ServiceIsRunning(h, NftablesService) {
+	if h.ServiceIsRunning(ctx, NftablesService) {
 		return true
 	}
 
@@ -103,12 +102,12 @@ func (n *Nftables) Detect(h *cluster.ZarfHost) bool {
 }
 
 // Installed is true when the nft command is present on h.
-func (n *Nftables) Installed(h *cluster.ZarfHost) bool {
+func (n *Nftables) Installed(_ context.Context, h *cluster.ZarfHost) bool {
 	if h == nil || h.Configurer == nil {
 		return false
 	}
 
-	return h.Configurer.CommandExist(h, "nft")
+	return h.FS().CommandExist("nft")
 }
 
 // Apply renders p as a complete ruleset, checks it, and loads it in one transaction. The
@@ -120,7 +119,7 @@ func (n *Nftables) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
 		return err
 	}
 
-	if err := h.Configurer.MkDir(h, nftRulesetDir, exec.Sudo(h)); err != nil {
+	if err := h.Sudo().FS().MkdirAll(nftRulesetDir, 0o755); err != nil {
 		return err
 	}
 	if err := h.WriteFile(nftRulesetPath, ruleset, "0600"); err != nil {
@@ -129,11 +128,11 @@ func (n *Nftables) Apply(ctx context.Context, h *cluster.ZarfHost, p Plan) error
 
 	// -c parses and validates without loading. A rendering bug that would otherwise land a
 	// broken ruleset on a node cargoship can no longer reach is worth one extra round trip.
-	if err := h.Exec("nft -c -f "+nftRulesetPath, exec.Sudo(h)); err != nil {
+	if err := h.Sudo().Exec("nft -c -f " + nftRulesetPath); err != nil {
 		return fmt.Errorf("generated nftables ruleset was rejected by nft: %w", err)
 	}
 
-	if err := h.Exec("nft -f "+nftRulesetPath, exec.Sudo(h)); err != nil {
+	if err := h.Sudo().Exec("nft -f " + nftRulesetPath); err != nil {
 		return err
 	}
 
@@ -153,13 +152,12 @@ func (n *Nftables) persist(ctx context.Context, h *cluster.ZarfHost) error {
 	}
 
 	include := nftInclude()
-	if h.Configurer.FileContains(h, conf, include) {
-		return nil
-	}
-
 	content, err := h.ReadFile(conf)
 	if err != nil {
 		return err
+	}
+	if strings.Contains(content, include) {
+		return nil
 	}
 
 	if !strings.HasSuffix(content, "\n") {

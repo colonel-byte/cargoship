@@ -53,16 +53,14 @@ func TestHostFromVarsConnection(t *testing.T) {
 		"ansible_user":                 "maintainer",
 		"ansible_port":                 2222,
 		"ansible_ssh_private_key_file": "~/.ssh/id_ed25519",
-		VarHostKey:                     "ssh-ed25519 AAAAC3Nz",
 	}))
 	require.NoError(t, err)
 
-	require.Equal(t, "10.1.2.3", host.SSH.Address)
-	require.Equal(t, "maintainer", host.SSH.User)
-	require.Equal(t, 2222, host.SSH.Port)
-	require.NotNil(t, host.SSH.KeyPath)
-	require.Equal(t, "~/.ssh/id_ed25519", *host.SSH.KeyPath)
-	require.Equal(t, "ssh-ed25519 AAAAC3Nz", host.SSH.HostKey)
+	require.Equal(t, "10.1.2.3", host.ConnectionConfig.SSH.Address)
+	require.Equal(t, "maintainer", host.ConnectionConfig.SSH.User)
+	require.Equal(t, 2222, host.ConnectionConfig.SSH.Port)
+	require.NotNil(t, host.ConnectionConfig.SSH.KeyPath)
+	require.Equal(t, "~/.ssh/id_ed25519", *host.ConnectionConfig.SSH.KeyPath)
 }
 
 func TestHostFromVarsPortTypes(t *testing.T) {
@@ -71,7 +69,7 @@ func TestHostFromVarsPortTypes(t *testing.T) {
 	for _, port := range []any{2222, "2222", float64(2222)} {
 		host, err := translateOne(t, map[string]any{VarAnsiblePort: port})
 		require.NoError(t, err)
-		require.Equal(t, 2222, host.SSH.Port)
+		require.Equal(t, 2222, host.ConnectionConfig.SSH.Port)
 	}
 }
 
@@ -128,7 +126,7 @@ func TestHostFromVarsCargoshipBeatsAnsible(t *testing.T) {
 		VarProfile:     "control",
 	})
 	require.NoError(t, err)
-	require.Equal(t, "10.1.2.3", host.SSH.Address)
+	require.Equal(t, "10.1.2.3", host.ConnectionConfig.SSH.Address)
 	require.Equal(t, "distro-kc01", host.Hostname)
 	require.Equal(t, "control", host.Profile)
 }
@@ -138,14 +136,14 @@ func TestHostFromVarsDefaults(t *testing.T) {
 	require.NoError(t, err)
 	// With nothing set, the inventory name is both the address and the hostname, and the role
 	// names the profile.
-	require.Equal(t, "kc01", host.SSH.Address)
+	require.Equal(t, "kc01", host.ConnectionConfig.SSH.Address)
 	require.Equal(t, "kc01", host.Hostname)
 	require.Equal(t, cluster.RoleController, host.Profile)
-	require.Nil(t, host.SSH.KeyPath)
+	require.Nil(t, host.ConnectionConfig.SSH.KeyPath)
 	// rig's own defaults are written out rather than left to rig, because its YAML tags carry
 	// no omitempty and an absent field is emitted as a zero one.
-	require.Equal(t, "root", host.SSH.User)
-	require.Equal(t, 22, host.SSH.Port)
+	require.Equal(t, "root", host.ConnectionConfig.SSH.User)
+	require.Equal(t, 22, host.ConnectionConfig.SSH.Port)
 }
 
 func TestHostFromVarsUnknownCargoshipVariableIsRejected(t *testing.T) {
@@ -164,7 +162,7 @@ func TestHostFromVarsUnknownAnsibleVariableIsIgnored(t *testing.T) {
 		"some_site_variable":         "whatever",
 	})
 	require.NoError(t, err)
-	require.Equal(t, "kc01", host.SSH.Address)
+	require.Equal(t, "kc01", host.ConnectionConfig.SSH.Address)
 }
 
 func TestHostFromVarsStructuredValues(t *testing.T) {
@@ -201,9 +199,9 @@ func TestHostFromVarsStructuredValues(t *testing.T) {
 	require.Equal(t, "registry-ca", host.Files[0].Name)
 	require.Equal(t, "/etc/pki/ca-trust/source/anchors/ca.crt", host.Files[0].Destination)
 
-	require.NotNil(t, host.SSH.Bastion)
-	require.Equal(t, "10.0.0.1", host.SSH.Bastion.Address)
-	require.Equal(t, "jump", host.SSH.Bastion.User)
+	require.NotNil(t, host.ConnectionConfig.SSH.Bastion)
+	require.Equal(t, "10.0.0.1", host.ConnectionConfig.SSH.Bastion.Address)
+	require.Equal(t, "jump", host.ConnectionConfig.SSH.Bastion.User)
 }
 
 func TestHostFromVarsStructuredValuesRejectUnknownKeys(t *testing.T) {
@@ -249,6 +247,6 @@ func TestHostFromVarsNullIsUnset(t *testing.T) {
 		VarHost:        nil,
 	})
 	require.NoError(t, err)
-	require.Equal(t, "kc01", host.SSH.Address)
+	require.Equal(t, "kc01", host.ConnectionConfig.SSH.Address)
 	require.Equal(t, cluster.RoleController, host.Profile)
 }

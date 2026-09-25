@@ -61,10 +61,10 @@ current-context: default
 
 func TestAdminCredentialsK3SReadsItsOwnKubeconfig(t *testing.T) {
 	d := &K3S{RancherCommon{Common{Config: "/etc/rancher/k3s/config.yaml", Data: "/var/lib/rancher/k3s"}}}
-	cfg := &fakeConfigurer{files: map[string]string{
+	cfg := &fakeHost{files: map[string]string{
 		"/etc/rancher/k3s/k3s.yaml": embeddedKubeconfig(testCA, testCrt, testKey),
 	}}
-	host := cluster.ZarfHost{Configurer: cfg}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	creds, err := d.AdminCredentials(host, d.DataDirPath())
 	require.NoError(t, err)
@@ -76,10 +76,10 @@ func TestAdminCredentialsK3SReadsItsOwnKubeconfig(t *testing.T) {
 
 func TestAdminCredentialsRKE2ReadsItsOwnKubeconfig(t *testing.T) {
 	d := &RKE2{RancherCommon{Common{Config: "/etc/rancher/rke2/config.yaml", Data: "/var/lib/rancher/rke2"}}}
-	cfg := &fakeConfigurer{files: map[string]string{
+	cfg := &fakeHost{files: map[string]string{
 		"/etc/rancher/rke2/rke2.yaml": embeddedKubeconfig(testCA, testCrt, testKey),
 	}}
-	host := cluster.ZarfHost{Configurer: cfg}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	creds, err := d.AdminCredentials(host, d.DataDirPath())
 	require.NoError(t, err)
@@ -93,13 +93,13 @@ func TestAdminCredentialsFollowsFileReferences(t *testing.T) {
 	kubeconfig, err := os.ReadFile(fileReferenceKubeconfigFixture)
 	require.NoError(t, err)
 
-	cfg := &fakeConfigurer{files: map[string]string{
+	cfg := &fakeHost{files: map[string]string{
 		"/etc/rancher/k3s/k3s.yaml":     string(kubeconfig),
 		"/etc/kubernetes/pki/ca.crt":    testCA,
 		"/etc/kubernetes/pki/admin.crt": testCrt,
 		"/etc/kubernetes/pki/admin.key": testKey,
 	}}
-	host := cluster.ZarfHost{Configurer: cfg}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	creds, err := adminCredentials(host, "/etc/rancher/k3s/k3s.yaml")
 	require.NoError(t, err)
@@ -125,8 +125,8 @@ current-context: nope
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			cfg := &fakeConfigurer{files: map[string]string{"/etc/rancher/k3s/k3s.yaml": tt.kubeconfig}}
-			host := cluster.ZarfHost{Configurer: cfg}
+			cfg := &fakeHost{files: map[string]string{"/etc/rancher/k3s/k3s.yaml": tt.kubeconfig}}
+			host := cfg.attach(&cluster.ZarfHost{})
 
 			_, err := adminCredentials(host, "/etc/rancher/k3s/k3s.yaml")
 			require.ErrorIs(t, err, ErrNoAdminCredentials)
@@ -135,8 +135,8 @@ current-context: nope
 }
 
 func TestAdminCredentialsErrorsOnUnparsableKubeconfig(t *testing.T) {
-	cfg := &fakeConfigurer{files: map[string]string{"/etc/rancher/k3s/k3s.yaml": "\tnot: [valid"}}
-	host := cluster.ZarfHost{Configurer: cfg}
+	cfg := &fakeHost{files: map[string]string{"/etc/rancher/k3s/k3s.yaml": "\tnot: [valid"}}
+	host := cfg.attach(&cluster.ZarfHost{})
 
 	_, err := adminCredentials(host, "/etc/rancher/k3s/k3s.yaml")
 	require.ErrorContains(t, err, "failed to parse admin kubeconfig")

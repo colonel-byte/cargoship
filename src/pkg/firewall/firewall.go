@@ -62,10 +62,10 @@ type Backend interface {
 	// Detect is true when this backend manages the firewall on h, meaning the firewall is
 	// installed and running. It runs commands on the host, so callers should call it once per
 	// host and reuse the result.
-	Detect(h *cluster.ZarfHost) bool
+	Detect(ctx context.Context, h *cluster.ZarfHost) bool
 	// Installed is true when this firewall is present on h, whether or not it is running. It
 	// separates a host that has the firewall stopped from one that never had it at all.
-	Installed(h *cluster.ZarfHost) bool
+	Installed(ctx context.Context, h *cluster.ZarfHost) bool
 	// Apply makes the node's firewall match p, then reloads the firewall. It is
 	// idempotent: applying the same plan twice leaves the node in the same state, and
 	// rules cargoship applied on an earlier run that p no longer contains are removed.
@@ -103,9 +103,9 @@ type Selection struct {
 // than reaching past the front end to the nftables underneath it. Only a host whose preferred
 // front end is absent, or whose OS ships none, falls through to the ordered Detect match, which
 // is how a host that manages nftables directly is picked up.
-func Select(h *cluster.ZarfHost) Selection {
-	detect := func(b Backend) bool { return b.Detect(h) }
-	installed := func(b Backend) bool { return b.Installed(h) }
+func Select(ctx context.Context, h *cluster.ZarfHost) Selection {
+	detect := func(b Backend) bool { return b.Detect(ctx, h) }
+	installed := func(b Backend) bool { return b.Installed(ctx, h) }
 
 	return selectBackend(backends, preferredFirewall(h), detect, installed)
 }

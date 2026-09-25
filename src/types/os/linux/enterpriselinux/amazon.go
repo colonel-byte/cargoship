@@ -23,21 +23,18 @@ package enterpriselinux
 import (
 	configurer "github.com/colonel-byte/cargoship/src/types/os"
 	"github.com/colonel-byte/cargoship/src/types/os/linux"
-	"github.com/k0sproject/rig"
-	"github.com/k0sproject/rig/os"
-	"github.com/k0sproject/rig/os/registry"
+	rigos "github.com/k0sproject/rig/v2/os"
 )
 
 // AmazonLinux provides OS support for AmazonLinux
 type AmazonLinux struct {
 	linux.EnterpriseLinux
-	configurer.Linux
 }
 
 var _ configurer.Configurer = (*AmazonLinux)(nil)
 
 // Hostname on amazon linux will return the full hostname
-func (l *AmazonLinux) Hostname(h os.Host) string {
+func (l *AmazonLinux) Hostname(h configurer.Host) string {
 	hostname, err := h.ExecOutput("hostname")
 	if err != nil {
 		return ""
@@ -47,9 +44,9 @@ func (l *AmazonLinux) Hostname(h os.Host) string {
 }
 
 func init() {
-	registry.RegisterOSModule(
-		func(os rig.OSVersion) bool {
-			return os.ID == linux.OSKindELAmazon
+	configurer.RegisterOSModule(
+		func(r *rigos.Release) bool {
+			return r.ID == linux.OSKindELAmazon
 		},
 		func() any {
 			return &AmazonLinux{}

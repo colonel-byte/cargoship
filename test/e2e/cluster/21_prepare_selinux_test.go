@@ -15,8 +15,16 @@
 package cluster
 
 import (
+	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/src/pkg/phase"
 )
+
+// selinuxEnabled reports what the host itself says about SELinux, using the same check the
+// phase makes. The phase's own helper is unexported, so the walk asks the host directly
+// rather than reaching into the phase package.
+func selinuxEnabled(h *cluster.ZarfHost) bool {
+	return h.Sudo().Exec("getenforce | grep -iq enforcing") == nil
+}
 
 // prepareSelinux covers phase/21_prepare_selinux.go. The phase only runs on hosts
 // reporting SELinux enabled. Whether any do depends on the container runtime rather than on
@@ -28,7 +36,7 @@ func (s *phaseWalk) prepareSelinux() {
 
 	var selinux int
 	for _, host := range s.harness.hosts() {
-		if host.Configurer.SELinuxEnabled(host) {
+		if selinuxEnabled(host) {
 			selinux++
 		}
 	}
@@ -43,10 +51,10 @@ func (s *phaseWalk) prepareSelinux() {
 	}
 
 	for _, host := range s.harness.hosts() {
-		if !host.Configurer.SELinuxEnabled(host) {
+		if !selinuxEnabled(host) {
 			continue
 		}
-		s.Require().Truef(host.Configurer.CommandExist(host, "semodule"),
+		s.Require().Truef(host.FS().CommandExist("semodule"),
 			"%s: SELinux host did not get the container-selinux tooling", host)
 	}
 }

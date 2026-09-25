@@ -23,7 +23,8 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/k0sproject/rig"
+	rig "github.com/k0sproject/rig/v2"
+	"github.com/k0sproject/rig/v2/protocol/ssh"
 )
 
 // The connection settings rig would apply itself. They are written into the generated document
@@ -45,7 +46,6 @@ const (
 	VarEnvironment      = Prefix + "environment"
 	VarFiles            = Prefix + "files"
 	VarHost             = Prefix + "host"
-	VarHostKey          = Prefix + "host_key"
 	VarHostname         = Prefix + "hostname"
 	VarNodeLabels       = Prefix + "node_labels"
 	VarNodeTaints       = Prefix + "node_taints"
@@ -70,7 +70,6 @@ var known = []string{
 	VarEnvironment,
 	VarFiles,
 	VarHost,
-	VarHostKey,
 	VarHostname,
 	VarNodeLabels,
 	VarNodeTaints,
@@ -95,34 +94,31 @@ func hostFromVars(a assignment, vars map[string]any) (*cluster.ZarfHost, error) 
 		address = a.Host
 	}
 
-	ssh := &rig.SSH{Address: address}
-	if ssh.User, err = stringVar(a.Host, vars, VarAnsibleUser); err != nil {
+	sshCfg := &ssh.Config{Address: address}
+	if sshCfg.User, err = stringVar(a.Host, vars, VarAnsibleUser); err != nil {
 		return nil, err
 	}
-	if ssh.Port, err = portVar(a.Host, vars, VarAnsiblePort); err != nil {
+	if sshCfg.Port, err = portVar(a.Host, vars, VarAnsiblePort); err != nil {
 		return nil, err
 	}
 	// rig declares defaults for these two and applies them when it loads a document, but its
 	// YAML tags carry no omitempty, so an unset field is written out as an empty user and a
 	// port of zero rather than left absent. A document that says port 0 is a document that
 	// fails its own schema, so the defaults are written here, where they are still rig's.
-	if ssh.User == "" {
-		ssh.User = defaultSSHUser
+	if sshCfg.User == "" {
+		sshCfg.User = defaultSSHUser
 	}
-	if ssh.Port == 0 {
-		ssh.Port = defaultSSHPort
-	}
-	if ssh.HostKey, err = stringVar(a.Host, vars, VarHostKey); err != nil {
-		return nil, err
+	if sshCfg.Port == 0 {
+		sshCfg.Port = defaultSSHPort
 	}
 	keyPath, err := stringVar(a.Host, vars, VarAnsibleKeyFile)
 	if err != nil {
 		return nil, err
 	}
 	if keyPath != "" {
-		ssh.KeyPath = &keyPath
+		sshCfg.KeyPath = &keyPath
 	}
-	if err := decodeVar(a.Host, vars, VarBastion, &ssh.Bastion); err != nil {
+	if err := decodeVar(a.Host, vars, VarBastion, &sshCfg.Bastion); err != nil {
 		return nil, err
 	}
 
@@ -141,9 +137,11 @@ func hostFromVars(a assignment, vars map[string]any) (*cluster.ZarfHost, error) 
 	}
 
 	host := &cluster.ZarfHost{
-		Connection: rig.Connection{SSH: ssh},
-		Hostname:   hostname,
-		Role:       a.Role,
+		ClientWithConfig: rig.ClientWithConfig{
+			ConnectionConfig: rig.CompositeConfig{SSH: sshCfg},
+		},
+		Hostname: hostname,
+		Role:     a.Role,
 	}
 
 	if host.Profile, err = stringVar(a.Host, vars, VarProfile); err != nil {

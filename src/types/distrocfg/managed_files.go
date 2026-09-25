@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/k0sproject/rig/exec"
 )
 
 // ManagedDir is a directory cargoship prunes, and how much of it it is allowed to prune.
@@ -97,7 +96,7 @@ func listManagedFiles(h *cluster.ZarfHost, dir string) []string {
 	if dir == "" || !h.FileExist(dir) {
 		return nil
 	}
-	out, err := h.ExecOutput(fmt.Sprintf("find %s -maxdepth 1 -type f", dir), exec.Sudo(h))
+	out, err := h.SudoExecOutput(fmt.Sprintf("find %s -maxdepth 1 -type f", dir))
 	if err != nil {
 		return nil
 	}

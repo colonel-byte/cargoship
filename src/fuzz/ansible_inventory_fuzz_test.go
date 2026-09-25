@@ -78,10 +78,10 @@ func FuzzAnsibleRequest(f *testing.F) {
 			"the first host is the leader, so it has to be a controller")
 
 		for _, host := range out.Spec.Hosts {
-			require.NotNil(t, host.SSH, "host %q has no SSH connection", host.Hostname)
-			require.NotEmpty(t, host.SSH.Address, "host %q has no address", host.Hostname)
-			require.NotZero(t, host.SSH.Port, "host %q has port zero, which no schema accepts", host.Hostname)
-			require.NotEmpty(t, host.SSH.User, "host %q has no user", host.Hostname)
+			require.NotNil(t, host.ConnectionConfig.SSH, "host %q has no SSH connection", host.Hostname)
+			require.NotEmpty(t, host.ConnectionConfig.SSH.Address, "host %q has no address", host.Hostname)
+			require.NotZero(t, host.ConnectionConfig.SSH.Port, "host %q has port zero, which no schema accepts", host.Hostname)
+			require.NotEmpty(t, host.ConnectionConfig.SSH.User, "host %q has no user", host.Hostname)
 			require.NotEmpty(t, host.Role, "a host reached the document with no role")
 		}
 
@@ -152,7 +152,7 @@ func FuzzAnsibleHostVar(f *testing.F) {
 				require.Len(t, got.Spec.Hosts, 1, "one host went in and something else came out")
 				require.Equal(t, cluster.RoleController, got.Spec.Hosts[0].Role,
 					"the one host lost the role its group gave it")
-				require.NotZero(t, got.Spec.Hosts[0].SSH.Port, "port zero, which no schema accepts")
+				require.NotZero(t, got.Spec.Hosts[0].ConnectionConfig.SSH.Port, "port zero, which no schema accepts")
 			}
 		default:
 			require.NoError(t, err, "%q is not cargoship's and was not ignored", name)
@@ -234,7 +234,7 @@ func isUnknownCargoshipVar(name string) bool {
 func isRead(name string) bool {
 	switch name {
 	case ansibleinv.VarBastion, ansibleinv.VarEnvironment, ansibleinv.VarFiles, ansibleinv.VarHost,
-		ansibleinv.VarHostKey, ansibleinv.VarHostname, ansibleinv.VarNodeLabels,
+		ansibleinv.VarHostname, ansibleinv.VarNodeLabels,
 		ansibleinv.VarNodeTaints, ansibleinv.VarPrivateAddress, ansibleinv.VarPrivateInterface,
 		ansibleinv.VarProfile, ansibleinv.VarAnsibleHost, ansibleinv.VarAnsiblePort,
 		ansibleinv.VarAnsibleUser, ansibleinv.VarAnsibleKeyFile:

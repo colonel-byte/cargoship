@@ -46,7 +46,7 @@ func (p *UpgradeController) Explanation() string {
 // Prepare the phase
 func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
+		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) > 0 {
 		p.leader = control[0]

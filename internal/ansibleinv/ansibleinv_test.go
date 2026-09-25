@@ -56,7 +56,7 @@ func TestTranslateDefaultRoleGroups(t *testing.T) {
 	require.Equal(t, cluster.RoleController, out.Spec.Hosts[0].Role)
 	require.Equal(t, cluster.RoleWorker, out.Spec.Hosts[2].Role)
 	// A host with no address of its own is reached at the name the inventory knows it by.
-	require.Equal(t, "kc01", out.Spec.Hosts[0].SSH.Address)
+	require.Equal(t, "kc01", out.Spec.Hosts[0].ConnectionConfig.SSH.Address)
 	// A host with no profile of its own takes one named for its role.
 	require.Equal(t, cluster.RoleController, out.Spec.Hosts[0].Profile)
 }

@@ -70,11 +70,11 @@ func TestRemoveStaleFiles(t *testing.T) {
 		registryTLSDir: {"/etc/cargoship/tls/gone.example.com.crt", "/etc/cargoship/tls/kept.example.com.crt"},
 	})
 
-	fake := &fakeConfigurer{files: map[string]string{
+	fake := &fakeHost{files: map[string]string{
 		"/etc/cargoship/tls/gone.example.com.crt": testCAPEM,
 		"/etc/cargoship/tls/kept.example.com.crt": testCAPEM,
 	}}
-	host := &cluster.ZarfHost{Configurer: fake}
+	host := fake.attach(&cluster.ZarfHost{})
 	desired := map[string]DesiredFile{
 		"/etc/cargoship/tls/kept.example.com.crt": {Content: []byte(testCAPEM), Mode: modeConfigFile},
 	}
@@ -89,7 +89,7 @@ func TestRemoveStaleFiles(t *testing.T) {
 func TestRemoveStaleFilesError(t *testing.T) {
 	withListing(t, map[string][]string{registryTLSDir: {"/etc/cargoship/tls/gone.example.com.crt"}})
 
-	host := &cluster.ZarfHost{Configurer: &fakeConfigurer{deleteFileErr: errors.New("permission denied")}}
+	host := (&fakeHost{deleteFileErr: errors.New("permission denied")}).attach(&cluster.ZarfHost{})
 
 	err := RemoveStaleFiles(host, []ManagedDir{{Path: registryTLSDir}}, nil)
 	require.ErrorContains(t, err, "/etc/cargoship/tls/gone.example.com.crt")

@@ -30,7 +30,6 @@ import (
 	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/src/pkg/node"
 	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/k0sproject/rig/exec"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -90,9 +89,9 @@ func (p *EngineConfigSyncHosts) ShouldRun() bool {
 	return len(p.hosts) > 0
 }
 
-func (p *EngineConfigSyncHosts) prepareLeader() error {
+func (p *EngineConfigSyncHosts) prepareLeader(ctx context.Context) error {
 	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return h.Configurer.ServiceIsRunning(h, p.Distro.GetControllerService()) && h.IsController()
+		return h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController()
 	})
 	if len(control) == 0 {
 		return ErrNoControllers
@@ -107,13 +106,13 @@ func (p *EngineConfigSyncHosts) loadDesiredConfig(c *cluster.ZarfCluster, dis di
 	}
 	run := cluster.ZarfRuntimeMeta{Registries: c.Spec.Config.Registries}
 
-	desired, err := p.Distro.DesiredFiles(cluster.ZarfHost{}, run, dis)
+	desired, err := p.Distro.DesiredFiles(&cluster.ZarfHost{}, run, dis)
 	if err != nil {
 		return err
 	}
 	p.desired = desired
 
-	controllerDesired, err := p.Distro.DesiredFiles(cluster.ZarfHost{Role: cluster.RoleController}, run, dis)
+	controllerDesired, err := p.Distro.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, run, dis)
 	if err != nil {
 		return err
 	}
@@ -271,7 +270,7 @@ func fileModeMatches(h *cluster.ZarfHost, path, want string) bool {
 	if err != nil {
 		return true
 	}
-	info, err := h.Stat(path, exec.Sudo(h))
+	info, err := h.Stat(path)
 	if err != nil || info == nil {
 		return true
 	}
@@ -296,7 +295,7 @@ func (p *EngineConfigSyncHosts) writeFiles(_ context.Context, h *cluster.ZarfHos
 func (p *EngineConfigSyncHosts) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining node to sync engine config", "node", h, "drifted", p.driftReason(h))
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
 	})
 }
 
@@ -305,7 +304,7 @@ func (p *EngineConfigSyncHosts) startService(ctx context.Context, h *cluster.Zar
 
 	startedAt := time.Now()
 	go func() {
-		err := h.Configurer.StartService(h, p.service)
+		err := h.StartService(ctx, p.service)
 		if err != nil {
 			logger.From(ctx).Warn("failed to start", "service", p.service, "host", h)
 		}
@@ -315,14 +314,14 @@ func (p *EngineConfigSyncHosts) startService(ctx context.Context, h *cluster.Zar
 		return p.captureServiceLogsOnFailure(ctx, h, p.service, startedAt, err)
 	}
 
-	return h.Configurer.EnableService(h, p.service)
+	return h.EnableService(ctx, p.service)
 }
 
 func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("waiting for the node to be in a ready state", "host", h)
 
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		out, err := p.leader.ExecOutput(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+		out, err := p.leader.Sudo().ExecOutput(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), readyNode, h.Configurer.Hostname(h)))
 		if err != nil {
 			return err
 		}
@@ -334,5 +333,5 @@ func (p *EngineConfigSyncHosts) waitForNodeReady(ctx context.Context, h *cluster
 }
 
 func (p *EngineConfigSyncHosts) uncordonNode(_ context.Context, h *cluster.ZarfHost) error {
-	return p.leader.Exec(p.Distro.KubectlCmdf(*p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)), exec.Sudo(p.leader))
+	return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), uncordonNode, h.Configurer.Hostname(h)))
 }
