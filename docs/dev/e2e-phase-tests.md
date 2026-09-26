@@ -2,7 +2,7 @@
 
 The cluster suite in `test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
 
-One top-level test, `TestClusterPhases`, runs three walks against the same cluster in the order they work in: `apply` installs the distro, `join` starts one more machine and brings it into the running cluster, and `upgrade` walks the same phases again with a newer package. A new phase needs a test in the apply walk, and usually one in each of the others too -- see [Adding the join half](#adding-the-join-half) and [Adding the upgrade half](#adding-the-upgrade-half).
+One top-level test, `TestClusterPhases`, runs four walks against the same cluster in the order they work in: `apply` installs the distro, `join` starts one more machine and brings it into the running cluster, `upgrade` walks the same phases again with a newer package, and `reset` takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too -- see [Adding the join half](#adding-the-join-half) and [Adding the upgrade half](#adding-the-upgrade-half).
 
 For why the suite is built this way, see [choice-phase-e2e-tests](../agent/choice-phase-e2e-tests.md). For running the e2e suites generally, see [e2e-tests](e2e-tests.md).
 
@@ -17,7 +17,7 @@ Testify runs suite methods in lexicographic order of the method name, so the num
 
 That order matches apply's everywhere except the lock. Apply takes the lock third, right after OS detection, and holds it for the whole run; `phase/91_lock.go`'s number puts it after the install instead, with `phase/92_unlock.go` right behind it. The lock test still asserts what the phase writes on each host. What it no longer does is hold the lock across the phases in between, so a phase that misbehaves while the cluster is locked is not something this suite would see.
 
-Steps that are not phases -- creating the package, `prepare`, the health check -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` onwards sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`. Those steps run whole actions rather than single phases -- `distro.Create`, `action.NewPrepare`, `action.NewApply` -- each with its own manager, and are given `e2e.ClusterConfigPath`, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.
+Steps that are not phases -- creating the package, `prepare`, the health check -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` onwards sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`, alongside `ResetSuite`, which is the whole of the `reset` walk. Those steps run whole actions rather than single phases -- `distro.Create`, `action.NewPrepare`, `action.NewApply`, `action.NewReset`, `action.NewKubeConfig` -- each with its own manager, and are given `e2e.ClusterConfigPath`, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.
 
 ## Adding a phase
 
@@ -194,11 +194,11 @@ The upgrade walk is off unless `CARGOSHIP_E2E_UPGRADE` is set. It installs a sec
 $ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./src/test/e2e/cluster/...
 ```
 
-Without it, `TestClusterPhases/upgrade` skips with a message naming the variable.
+Without it, `TestClusterPhases/upgrade` skips with a message naming the variable, and the reset walk runs against the installed cluster as before.
 
 ## Prerequisites and running it
 
-The suite needs Docker and a real distro package, and it is not fast: it provisions ten containers, installs rke2 onto nine of them, and then starts an eleventh and joins it. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
+The suite needs Docker and a real distro package, and it is not fast: it provisions five containers, installs k3s onto four of them, and then starts a sixth and joins it. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough. Set `CARGOSHIP_E2E_RKE2=1` and `CARGOSHIP_E2E_DISTRO=rke2` to walk the original ten-container, three-controller rke2 topology instead -- see `main_test.go`'s `rke2EnvVar`.
 
 ```console
 $ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
@@ -207,25 +207,27 @@ $ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
 Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:
 
 ```console
-$ mage test:endToEndCluster           # the install and join walks
-$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk after them
+$ mage test:endToEndCluster           # the install, join and reset walks
+$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in between
 ```
 
 `-short` skips the whole suite, and `CARGOSHIP_E2E_UPGRADE` adds the upgrade walk. `TestMain` deletes the bootloose cluster on the way out even when tests fail.
 
 ### In CI
 
-`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions eleven containers and installs rke2 onto ten of them, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `pkg/phase`, `pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
+`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: the default `e2e-cluster` job provisions six containers and installs k3s onto five of them. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `pkg/phase`, `pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
 
-The upgrade walk is a second opt-in on top of that: the `upgrade` input when dispatching by hand, or the `e2e-cluster-upgrade` label on a pull request. Either one implies the install and join walks, sets `CARGOSHIP_E2E_UPGRADE` for the job and raises its budget from 120 to 210 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.
+The upgrade walk is a second opt-in on top of that: the `upgrade` input when dispatching by hand, or the `e2e-cluster-upgrade` label on a pull request. Either one implies the install and join walks, sets `CARGOSHIP_E2E_UPGRADE` for the job and raises its budget from 30 to 120 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.
 
-The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare step calls `action.NewPrepare`. That is what makes the two workflows independent, which is the point of the split.
+A separate `e2e-cluster-rke2` job runs the original eleven-container, three-controller rke2 topology, which is most of a hosted runner. rke2's embedded etcd raft quorum across three controllers was timing out under the CPU contention ten nested nodes create on a hosted runner, so it is workflow_dispatch only and no longer gated by a label -- see `docs/agent/choice-e2e-stage-split.md`.
 
-The job frees disk before it starts, because ten containerd image stores do not fit in what a hosted runner leaves free, and the upgrade walk imports a second set on top of the first. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
+The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare, apply, reset and kube-config steps call the matching `action.New*` entry points. That is what makes the two workflows independent, which is the point of the split.
+
+The `e2e-cluster-rke2` job frees disk before it starts, because ten containerd image stores do not fit in what a hosted runner leaves free, and the upgrade walk imports a second set on top of the first. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
 
 ## Things that will cost you time
 
 *   **You cannot run one phase test on its own.** `-run 'TestClusterPhases/apply/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
 *   **The first failure stops the rest.** `SetupTest` skips every remaining step once one has failed, so the output names one phase rather than twenty-five. If the first failure looks like a symptom, it is the cause -- everything after it was skipped, not passed.
 *   **Constants the phase package keeps unexported.** Where a path is not exported, the test file redeclares it with a comment saying where it came from (`uploadManifestPath` in `50_uploadfiles_test.go`, `sysctlConfPath` in `20_prepare_host_test.go`). Prefer exporting from `phase` when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.
-*   **Eleven containers is a lot of memory.** Ten of them each run an rke2 node, which is the reason this suite is not part of the default `go test ./...` path.
+*   **Even the default topology is a lot of memory.** Every container runs an engine node, which is the reason this suite is not part of the default `go test ./...` path.

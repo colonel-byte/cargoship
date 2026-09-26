@@ -99,8 +99,8 @@ var (
 			Destination: "/var/lib/rancher",
 		},
 	}
-	// mixedOS provisions ten machines, and is what a full walk runs against -- a stage-only
-	// run uses stageOS instead. It is a nine-node cluster of three controllers and six
+	// mixedOS provisions ten machines: the three-controller rke2 inventory, opt-in via
+	// rke2EnvVar. It is a nine-node cluster of three controllers and six
 	// workers with each role split across the Ubuntu and Fedora images, plus one Alpine
 	// machine that receives uploads and never joins. Nine cluster nodes is enough that the
 	// worker concurrency batching in the initialize and upgrade phases runs more than one
@@ -221,13 +221,12 @@ func stageMachine(name, image string) *config.Machine {
 	}
 }
 
-// k3sOS is the inventory a k3s-single-controller run provisions: one controller and four
-// workers split across the Ubuntu and Fedora images, no upload-only Alpine host. It exists to
-// test whether a single-controller k3s cluster -- SQLite datastore, no etcd raft quorum --
-// avoids the etcd-quorum timeouts the ten-node, three-controller rke2 walk hits on a hosted
-// runner (see the e2e-cluster-k3s-single job in the workflow). The Alpine upload-only host is
-// left out because it exercises the BIN-upload fallback path, which is orthogonal to what
-// this topology is checking.
+// k3sOS is the default inventory: one controller and four workers split across the Ubuntu and
+// Fedora images, no upload-only Alpine host. A single-controller k3s cluster -- SQLite
+// datastore, no etcd raft quorum -- avoids the etcd-quorum timeouts the ten-node,
+// three-controller rke2 walk hit on a hosted runner (see rke2EnvVar below and the e2e-cluster
+// job in the workflow). The Alpine upload-only host is left out because it exercises the
+// BIN-upload fallback path, which is orthogonal to what this topology is checking.
 var k3sOS = config.Config{ //nolint:gochecknoglobals
 	Cluster: config.Cluster{
 		Name:       "cargoship-e2e",
@@ -240,26 +239,28 @@ var k3sOS = config.Config{ //nolint:gochecknoglobals
 	},
 }
 
-// k3sSingleEnvVar selects k3sOS instead of the default inventory. See stageOnlyEnvVar for the
-// same pattern; this one is checked first because it is a different distro rather than a
-// smaller run of the same one.
-const k3sSingleEnvVar = "CARGOSHIP_E2E_K3S_SINGLE"
+// rke2EnvVar opts into mixedOS, the three-controller rke2 inventory, instead of the k3s
+// single-controller default. See stageOnlyEnvVar for the same pattern; this one is checked
+// first because it is a different distro rather than a smaller run of the same one. Pair it
+// with distroEnvVar in 05_manager_test.go, which picks the matching package.
+const rke2EnvVar = "CARGOSHIP_E2E_RKE2"
 
-func k3sSingle() bool {
-	on, err := strconv.ParseBool(os.Getenv(k3sSingleEnvVar))
+func rke2Requested() bool {
+	on, err := strconv.ParseBool(os.Getenv(rke2EnvVar))
 	return err == nil && on
 }
 
-// clusterConfig is the inventory this run provisions: the k3s single-controller inventory when
-// asked for it, the smaller staging inventory when asked for that, and the full one otherwise.
+// clusterConfig is the inventory this run provisions: the three-controller rke2 inventory when
+// asked for it, the smaller staging inventory when asked for that, and the k3s
+// single-controller inventory otherwise.
 func clusterConfig() config.Config {
-	if k3sSingle() {
-		return k3sOS
+	if rke2Requested() {
+		return mixedOS
 	}
 	if stageOnly() {
 		return stageOS
 	}
-	return mixedOS
+	return k3sOS
 }
 
 // clusterCounts is how many hosts of each kind a bootloose config produces, split the way the
@@ -352,27 +353,28 @@ var (
 	// fullClusterConfigPath is the inventory holding every machine, including the upload-only
 	// Alpine node. The phase harness is built from it, because the upload phases are meant to
 	// see that node. e2e.ClusterConfigPath points at the cluster-only inventory instead: the
-	// whole-action steps run prepare and apply, which would try to install the engine on a
-	// host that cannot run it.
+	// whole-action steps run prepare, apply and reset, which would try to install the engine
+	// on a host that cannot run it.
 	fullClusterConfigPath string //nolint:gochecknoglobals
 
 	// kubeconfigPath is the file KUBECONFIG points at for the whole run. TestMain owns it
 	// rather than a suite, because the suites hand the cluster to each other: the apply walk
-	// writes it and the upgrade walk rewrites it against the upgraded control plane.
+	// writes it, the upgrade walk rewrites it, and the reset walk asserts it survives a
+	// teardown that can no longer reach a controller.
 	kubeconfigPath string //nolint:gochecknoglobals
 )
 
-// TestClusterPhases runs the three walks in the only order they work in. The apply walk
-// installs the distro on the shared bootloose cluster, the join walk adds a machine to it, and
-// the upgrade walk moves that cluster to a newer package. They share one cluster and one
-// kubeconfig, so they are subtests of one parent rather than three top-level tests whose order
-// would depend on declaration order.
+// TestClusterPhases runs the four walks in the only order they work in. The apply walk
+// installs the distro on the shared bootloose cluster, the join walk adds a machine to it, the
+// upgrade walk moves that cluster to a newer package, and the reset walk takes the distro back
+// off. They share one cluster and one kubeconfig, so they are subtests of one parent rather
+// than four top-level tests whose order would depend on declaration order.
 //
 // The join walk runs before the upgrade rather than after it so that the upgrade has to carry
 // the node that joined late as well as the nodes the install bootstrapped.
 func TestClusterPhases(t *testing.T) {
 	if !t.Run("apply", func(t *testing.T) { suite.Run(t, new(ApplyPhaseSuite)) }) {
-		t.Log("apply failed: the join and upgrade walks both need the cluster it installs")
+		t.Log("apply failed: the join, upgrade and reset walks all need the cluster it installs")
 		return
 	}
 
@@ -381,14 +383,16 @@ func TestClusterPhases(t *testing.T) {
 	// are skipped whole, because reaching them would mean provisioning the extra machine and
 	// walking every phase again to arrive at suites of uniformly skipped tests.
 	if stageOnly() {
-		t.Log("stage-only run: the join and upgrade walks both need a started cluster")
+		t.Log("stage-only run: the join, upgrade and reset walks all need a started cluster")
 		return
 	}
 
-	// The later walks run whatever the walk before them did, and TestMain deletes the
+	// The later walks run whatever the walk before them did. A half-joined or half-upgraded
+	// cluster is still a cluster reset has to be able to tear down, and TestMain deletes the
 	// containers either way.
 	t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
 	t.Run("upgrade", func(t *testing.T) { suite.Run(t, new(UpgradePhaseSuite)) })
+	t.Run("reset", func(t *testing.T) { suite.Run(t, new(ResetSuite)) })
 }
 
 func TestMain(m *testing.M) {
