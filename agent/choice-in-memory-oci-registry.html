@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -184,7 +184,7 @@
                     <main>
                         <h1 id="why-googlego-containerregistry-and-not-distributiondistribution-for-the-in-memory-test-registry"><a class="header" href="#why-googlego-containerregistry-and-not-distributiondistribution-for-the-in-memory-test-registry">Why google/go-containerregistry and not distribution/distribution for the in-memory test registry</a></h1>
 <p>Cargoship’s e2e suite needs a real OCI registry to publish/pull against without a network dependency or a live registry container. <code>test/registry.go</code> provides <code>test.SetupInMemoryRegistry(t)</code>, which starts one in-process on a random localhost port and tears it down via <code>t.Cleanup</code>.</p>
-<p>ORAS (<code>oras.land/oras-go/v2</code>) isn’t a candidate here at all – it’s the <em>client</em> library Cargoship already uses in <code>src/pkg/coci</code> to talk to registries. It has no server implementation, so it can’t be “the registry” in a test; it’s what the CLI uses to talk to whichever registry the test stands up.</p>
+<p>ORAS (<code>oras.land/oras-go/v2</code>) isn’t a candidate here at all – it’s the <em>client</em> library Cargoship already uses in <code>pkg/coci</code> to talk to registries. It has no server implementation, so it can’t be “the registry” in a test; it’s what the CLI uses to talk to whichever registry the test stands up.</p>
 <p>The zarf project’s own <code>src/test/testutil/registry.go</code> (this package is modeled on it) uses <a href="https://github.com/distribution/distribution"><code>github.com/distribution/distribution/v3</code></a> – the reference registry server implementation – with its <code>inmemory</code> storage driver. That was the first thing tried here, and it was rejected:</p>
 <ul>
 <li><strong>Dependency weight.</strong> <code>distribution/distribution/v3</code> wasn’t a dependency of Cargoship at all before this (only present transitively in <code>go.sum</code>, unused). Adding it as a direct import and running <code>go mod tidy</code> pulled in a large new indirect tree: Redis and Prometheus clients, several <code>go.opentelemetry.io/otel/exporters/*</code> packages, logging bridges, etc. – dependencies of the registry’s optional storage/metrics backends that Cargoship will never use for an in-memory test double.</li>

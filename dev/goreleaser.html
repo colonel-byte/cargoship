@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -316,7 +316,7 @@ Status: install ok installed
 <h3 id="image-runtime-layout"><a class="header" href="#image-runtime-layout">Image Runtime Layout</a></h3>
 <ul>
 <li>Runs as uid/gid <code>65532</code>, which has a real <code>/etc/passwd</code> entry named <code>nonroot</code> with home <code>/home/nonroot</code> in all four images, so <code>os/user</code> lookups and <code>$HOME</code> agree with each other and across variants. The static image inherits that account from its base; the package-installing images create it to match. The <code>USER</code> line stays numeric (<code>65532:65532</code>) so the image still runs correctly under a <code>runAsUser</code> that ignores names.</li>
-<li><code>HOME=/home/nonroot</code>, which backs viper’s <code>$HOME/.zarf</code> config search path (<code>src/cmd/viper.go</code>) and the default cache path <code>~/.cargoship-cache</code> (<code>src/config/common.go</code>). Both directories are pre-created and owned by <code>65532</code>, as is <code>~/.ssh</code> at 0700.</li>
+<li><code>HOME=/home/nonroot</code>, which backs viper’s <code>$HOME/.zarf</code> config search path (<code>cmd/viper.go</code>) and the default cache path <code>~/.cargoship-cache</code> (<code>config/common.go</code>). Both directories are pre-created and owned by <code>65532</code>, as is <code>~/.ssh</code> at 0700.</li>
 <li><code>WORKDIR /workspace</code>. Since <code>.</code> is viper’s first config search path, bind-mounting a package directory there picks up <code>cargoship-config.yaml</code> with no extra flags:</li>
 </ul>
 <pre><code class="language-sh">docker run --rm -v "$PWD:/workspace" ghcr.io/colonel-byte/cargoship:&lt;tag&gt; apply ...

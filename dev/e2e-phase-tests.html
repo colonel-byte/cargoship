@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -183,20 +183,20 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
-<p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>src/pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
+<p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
 <p>One top-level test, <code>TestClusterPhases</code>, runs the <code>apply</code> walk against the cluster it provisions. It is a subtest rather than a top-level test because later walks against the same cluster – an upgrade, a reset – hang off the same parent and have to run in a fixed order after it.</p>
 <p>For why the suite is built this way, see <a href="../agent/choice-phase-e2e-tests.html">choice-phase-e2e-tests</a>. For running the e2e suites generally, see <a href="e2e-tests.html">e2e-tests</a>.</p>
 <h2 id="one-number-per-phase"><a class="header" href="#one-number-per-phase">One number per phase</a></h2>
 <p>A phase is identified by its source file’s number, and that number is used twice:</p>
 <ul>
-<li><strong>The test file name mirrors the phase’s source file.</strong> A test for <code>src/pkg/phase/25_modify_hosts_file.go</code> goes in <code>test/e2e/cluster/25_modify_hosts_file_test.go</code>. Same number, same name, one file each.</li>
+<li><strong>The test file name mirrors the phase’s source file.</strong> A test for <code>pkg/phase/25_modify_hosts_file.go</code> goes in <code>test/e2e/cluster/25_modify_hosts_file_test.go</code>. Same number, same name, one file each.</li>
 <li><strong>The method name carries the same number.</strong> That file contains <code>Test_25_ModifyHosts</code>.</li>
 </ul>
 <p>Testify runs suite methods in lexicographic order of the method name, so the number is also the order the phases run in here. The numbers are zero-padded to two digits, which makes lexicographic order numeric order.</p>
 <p>Steps that are not phases – creating the package, <code>prepare</code> – have no phase number to take, so they use the low end of the ordering: <code>Test_00</code> and <code>Test_01</code> sort before every phase. They live in <code>cluster_lifecycle_test.go</code>. Those steps run whole actions rather than single phases – <code>distro.Create</code>, <code>action.NewPrepare</code> – each with its own manager, and are given <code>e2e.ClusterConfigPath</code>, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.</p>
 <h2 id="adding-a-phase"><a class="header" href="#adding-a-phase">Adding a phase</a></h2>
 <p>Take the new phase’s file number for both the test file and the method. Nothing else is renumbered: inserting <code>phase/23_something.go</code> gives you <code>23_something_test.go</code> containing <code>Test_23_Something</code>, and it lands between <code>Test_22_PrepareFapolicy</code> and <code>Test_25_ModifyHosts</code> on its own.</p>
-<p>If a phase is renumbered in <code>src/pkg/phase</code>, rename its test file and its method to match, and check that its new number still puts it after everything it depends on – the number is the ordering, so a phase that moves in the source moves here too.</p>
+<p>If a phase is renumbered in <code>pkg/phase</code>, rename its test file and its method to match, and check that its new number still puts it after everything it depends on – the number is the ordering, so a phase that moves in the source moves here too.</p>
 <h2 id="writing-the-test"><a class="header" href="#writing-the-test">Writing the test</a></h2>
 <p>Start from the phase’s source file and ask what an operator would look at to confirm it did its job. That is the assertion. A phase returning <code>nil</code> is not evidence of anything – read the host back.</p>
 <p>A minimal test:</p>
@@ -280,7 +280,7 @@ debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 </code></pre>
 <p><code>-short</code> skips the whole suite. <code>TestMain</code> deletes the bootloose cluster on the way out even when tests fail.</p>
 <h3 id="in-ci"><a class="header" href="#in-ci">In CI</a></h3>
-<p><code>.github/workflows/e2e-cluster.yaml</code> runs it, on its own trigger and separate from <code>e2e.yaml</code>, which is what runs on every pull request. This one does not: it provisions ten containers, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled <code>e2e-cluster</code>. Add that label to a PR touching <code>src/pkg/phase</code>, <code>src/pkg/action</code> or the inventory handling; the trigger listens for <code>labeled</code>, so labelling an open PR starts a run without needing a push.</p>
+<p><code>.github/workflows/e2e-cluster.yaml</code> runs it, on its own trigger and separate from <code>e2e.yaml</code>, which is what runs on every pull request. This one does not: it provisions ten containers, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled <code>e2e-cluster</code>. Add that label to a PR touching <code>pkg/phase</code>, <code>pkg/action</code> or the inventory handling; the trigger listens for <code>labeled</code>, so labelling an open PR starts a run without needing a push.</p>
 <p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare step calls <code>action.NewPrepare</code>. That is what makes the two workflows independent, which is the point of the split.</p>
 <p>The job frees disk before it starts, because ten containers, the images they unpack and the package staged onto each of them do not fit in what a hosted runner leaves free. If it fails with hosts that never come back, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one.</p>
 <h2 id="things-that-will-cost-you-time"><a class="header" href="#things-that-will-cost-you-time">Things that will cost you time</a></h2>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -183,10 +183,10 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="why-the-engines-manifest-directory-is-pruned-through-a-glob"><a class="header" href="#why-the-engines-manifest-directory-is-pruned-through-a-glob">Why the engine’s manifest directory is pruned through a glob</a></h1>
-<p>Cargoship prunes the directories it owns. <code>StaleFiles</code> (<code>src/types/distrocfg/managed_files.go</code>) lists every file under each of a distro’s <code>ManagedDirs</code> and removes the ones the current configuration no longer asks for, so a registry CA certificate dropped from a cluster inventory does not sit on every node forever. Pruning runs while a node is stopped and about to be restarted, which is the one moment a file can be removed without the engine noticing it go.</p>
+<p>Cargoship prunes the directories it owns. <code>StaleFiles</code> (<code>types/distrocfg/managed_files.go</code>) lists every file under each of a distro’s <code>ManagedDirs</code> and removes the ones the current configuration no longer asks for, so a registry CA certificate dropped from a cluster inventory does not sit on every node forever. Pruning runs while a node is stopped and about to be restarted, which is the one moment a file can be removed without the engine noticing it go.</p>
 <p>That works because a managed directory holds only files cargoship put there. Two of the three qualify outright: <code>/etc/cargoship/tls</code> and the state directory were created by cargoship and are cargoship’s to empty. The third is not cargoship’s at all.</p>
 <h2 id="the-manifest-directory-is-shared"><a class="header" href="#the-manifest-directory-is-shared">The manifest directory is shared</a></h2>
-<p><code>&lt;data&gt;/server/manifests</code> belongs to the engine. RKE2 and K3s ship their own manifests there – the CNI chart, CoreDNS, metrics-server, the ingress controller – and lay them down again on startup. Cargoship writes into the same directory because that is where a <code>HelmChartConfig</code> has to live for the engine’s helm controller to read it: the values a package’s <code>spec.config.engine.manifest</code> subtree produces become one <code>&lt;chart&gt;-config.yaml</code> per chart (<code>src/types/distrocfg/rancher_common.go</code>).</p>
+<p><code>&lt;data&gt;/server/manifests</code> belongs to the engine. RKE2 and K3s ship their own manifests there – the CNI chart, CoreDNS, metrics-server, the ingress controller – and lay them down again on startup. Cargoship writes into the same directory because that is where a <code>HelmChartConfig</code> has to live for the engine’s helm controller to read it: the values a package’s <code>spec.config.engine.manifest</code> subtree produces become one <code>&lt;chart&gt;-config.yaml</code> per chart (<code>types/distrocfg/rancher_common.go</code>).</p>
 <p>Pruning that directory the way the other two are pruned would delete every manifest the engine put there on the first sync, which takes the cluster apart. Not pruning it at all would leave a <code>HelmChartConfig</code> behind for a chart a package no longer configures, and the helm controller would keep reconciling the chart to values nobody asks for any more – the exact failure <code>StaleFiles</code> exists to prevent, on the files where it matters most, since these are the only files cargoship writes that something else then acts on.</p>
 <h2 id="the-glob"><a class="header" href="#the-glob">The glob</a></h2>
 <p><code>ManagedDir</code> therefore carries an optional <code>Glob</code>, and the manifest directory sets it to <code>*-config.yaml</code> – the same suffix cargoship names its own <code>HelmChartConfig</code> files with. An empty glob means the whole directory is cargoship’s, which is what the other two use.</p>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -346,8 +346,8 @@
 </code></pre>
 <p>Prefer a <code>direction: forward</code> rule under <code>.host.firewall.rules</code> for new configuration; it does the same thing on firewalld and also works on ufw and nftables hosts.</p>
 <h2 id="adding-a-backend"><a class="header" href="#adding-a-backend">Adding a backend</a></h2>
-<p>A backend is a <code>firewall.Backend</code> implementation in <code>src/pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, an <code>Installed</code> that reports whether the firewall is present on the node at all, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>src/pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
-<p>A backend that is a distribution’s own front end also needs the OS modules for that distribution to return its <code>Name</code> from <code>PreferredFirewall</code>, in <code>src/types/os/linux</code>. That method is declared on each leaf OS module rather than on a shared base such as <code>EnterpriseLinux</code>, because those modules embed both their base and <code>configurer.Linux</code> at the same depth, which leaves a method promoted from either one ambiguous.</p>
+<p>A backend is a <code>firewall.Backend</code> implementation in <code>pkg/firewall</code>: a <code>Name</code>, a <code>Detect</code> that reports whether the backend manages a given node, an <code>Installed</code> that reports whether the firewall is present on the node at all, and an <code>Apply</code> that makes the node match a <code>firewall.Plan</code>. Register it in the <code>backends</code> list in <code>pkg/firewall/firewall.go</code>, in match order, and the apply phase picks it up with no further wiring.</p>
+<p>A backend that is a distribution’s own front end also needs the OS modules for that distribution to return its <code>Name</code> from <code>PreferredFirewall</code>, in <code>types/os/linux</code>. That method is declared on each leaf OS module rather than on a shared base such as <code>EnterpriseLinux</code>, because those modules embed both their base and <code>configurer.Linux</code> at the same depth, which leaves a method promoted from either one ambiguous.</p>
 
                     </main>
 

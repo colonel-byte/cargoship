@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="why-apply-refuses-a-removed-host-instead-of-reconciling-it"><a class="header" href="#why-apply-refuses-a-removed-host-instead-of-reconciling-it">Why apply refuses a removed host instead of reconciling it</a></h1>
-<p>Deleting a host block from a cargoship config does not remove that machine from the cluster. Apply detects the leftover node and stops (<code>src/pkg/phase/13_detect_removed_hosts.go</code>); it does not drain it, delete it, or uninstall its engine. Reconciling the removal was the obvious alternative, and it is what every other declarative tool in this space does, so the choice needs an argument.</p>
+<p>Deleting a host block from a cargoship config does not remove that machine from the cluster. Apply detects the leftover node and stops (<code>pkg/phase/13_detect_removed_hosts.go</code>); it does not drain it, delete it, or uninstall its engine. Reconciling the removal was the obvious alternative, and it is what every other declarative tool in this space does, so the choice needs an argument.</p>
 <h2 id="apply-cannot-finish-the-job"><a class="header" href="#apply-cannot-finish-the-job">Apply cannot finish the job</a></h2>
 <p>Removing a node is two pieces of work. Deleting the <code>Node</code> object needs the node’s name, which the API server will give us. Uninstalling the engine – stopping the service, removing the packages, deleting the data and config directories – needs an SSH connection, and the address, user and key for that lived in the host block that was just deleted. Apply holds no memory of previous runs, so it has no way to reach a machine the config no longer describes. <code>UninstallEngine</code> is not hard to call here; it is impossible to call, because there is nothing to connect to.</p>
 <p>Doing only the first half is worse than doing nothing. A node deleted from the API but left running keeps its certificates and keeps trying to rejoin, and for a controller <code>kubectl delete node</code> does not remove the etcd member: the cluster looks smaller while quorum is still counted against a machine nobody can reach. The failure mode of stopping is a visible leftover node and a message naming it. The failure mode of doing half is an apply that reports success and a cluster that loses quorum on the next controller restart.</p>

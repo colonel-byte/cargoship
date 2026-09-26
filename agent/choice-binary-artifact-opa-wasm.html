@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -195,7 +195,7 @@
 <p><code>go:embed</code> compiles the file into the Go binary. It isn’t test fixture data or an example asset sitting near source by coincidence — the package does not build without it. There is no <code>go mod vendor</code> flag, build tag, or vendor-pruning step that drops an embedded file out of a package that’s actually imported; vendoring copies whatever the package needs to compile.</p>
 <h2 id="opa-is-a-real-reachable-dependency"><a class="header" href="#opa-is-a-real-reachable-dependency">OPA is a real, reachable dependency</a></h2>
 <p><code>go.mod</code> lists <code>github.com/open-policy-agent/opa v1.20.2 // indirect</code>. <code>go mod why github.com/open-policy-agent/opa/v1/rego</code> traces the chain:</p>
-<pre><code>src/cmd -&gt; zarf/src/pkg/signing -&gt; cosign/cmd/cosign/cli/verify -&gt; cosign/pkg/cosign/rego -&gt; opa/v1/rego
+<pre><code>cmd -&gt; zarf/src/pkg/signing -&gt; cosign/cmd/cosign/cli/verify -&gt; cosign/pkg/cosign/rego -&gt; opa/v1/rego
 </code></pre>
 <p><code>opa/v1/rego</code> is what pulls in <code>opa/internal/compiler/wasm/opa</code>, which embeds the wasm file. This is cargoship’s signature-verification path, not incidental transitive weight — dropping OPA would mean dropping cosign policy verification.</p>
 <h2 id="un-vendoring-was-already-rejected-for-the-same-reason-its-rejected-here"><a class="header" href="#un-vendoring-was-already-rejected-for-the-same-reason-its-rejected-here">Un-vendoring was already rejected, for the same reason it’s rejected here</a></h2>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -183,7 +183,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="build-flags-and-environment"><a class="header" href="#build-flags-and-environment">Build Flags and Environment</a></h1>
-<p>This document explains the compiler flags, linker flags, and environment variables used when compiling the <code>cargoship</code> binary, and why each one is set. They are defined in <code>src/pkg/utils/build/utils.go</code>, which the Mage host build path (<code>magefiles/utils.go</code>) uses.</p>
+<p>This document explains the compiler flags, linker flags, and environment variables used when compiling the <code>cargoship</code> binary, and why each one is set. They are defined in <code>pkg/utils/build/utils.go</code>, which the Mage host build path (<code>magefiles/utils.go</code>) uses.</p>
 <p>That package exposes two functions, <code>LDFlags(version, commit string) string</code> and <code>GCFLags() string</code>. The build site additionally sets <code>CGO_ENABLED=0</code> and passes <code>-trimpath</code> directly in its <code>go build</code> invocation rather than through these shared helpers.</p>
 <h2 id="why-this-matters"><a class="header" href="#why-this-matters">Why this matters</a></h2>
 <p>An unoptimized <code>go build</code> of this repo produces a binary well over 130MB on Linux/amd64, mostly because <code>cargoship</code> pulls in large transitive dependency trees (<code>k8s.io/client-go</code>, <code>zarf</code>’s signing stack, cloud SDKs, etc.) and, without <code>CGO_ENABLED=0</code>, dynamically links against glibc. The flags below were chosen specifically to keep the shipped binary as small and portable as possible without changing behavior.</p>
@@ -231,10 +231,10 @@
 <p><strong><code>-w</code></strong> — omits DWARF debug info. Removes the ability to attach a source-level debugger (<code>dlv</code>) to the binary, but this is a release build, not a debug build. Combined with <code>-s</code>, this is what turns the ~157MB unstripped analysis build in testing into a much smaller shipped binary.</p>
 </li>
 <li>
-<p><strong><code>-X github.com/colonel-byte/cargoship/src/config.CLIVersion=%s</code></strong> — embeds the release version string at link time.</p>
+<p><strong><code>-X github.com/colonel-byte/cargoship/config.CLIVersion=%s</code></strong> — embeds the release version string at link time.</p>
 </li>
 <li>
-<p><strong><code>-X github.com/colonel-byte/cargoship/src/config.CLICommit=%s</code></strong> — embeds the short git commit SHA at link time.</p>
+<p><strong><code>-X github.com/colonel-byte/cargoship/config.CLICommit=%s</code></strong> — embeds the short git commit SHA at link time.</p>
 <p>These two <code>-X</code> flags aren’t size-related; they exist so <code>cargoship version</code> can report accurate build metadata without a separate version file shipped alongside the binary.</p>
 </li>
 </ul>

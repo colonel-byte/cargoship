@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -185,7 +185,7 @@
                         <h1 id="ideas-other-sources-for-cargoship-inventory-from-"><a class="header" href="#ideas-other-sources-for-cargoship-inventory-from-">Ideas: other sources for <code>cargoship inventory from-*</code></a></h1>
 <p>This is a shortlist, not a decision. <code>cargoship inventory from-ansible</code> established a command group whose members all answer the same question – where does the list of machines come from – and the obvious next question is which other sources belong in it. Nothing here is committed to; the point is to record the criteria and the ranking while the reasoning is fresh, so that the next adapter is argued against a list rather than added because someone asked.</p>
 <h2 id="what-every-adapter-has-to-do-and-nothing-more"><a class="header" href="#what-every-adapter-has-to-do-and-nothing-more">What every adapter has to do, and nothing more</a></h2>
-<p>An adapter builds the <code>ansibleinv.Input</code> shape – <code>groups</code>, <code>hostvars</code>, <code>roleGroups</code> – and hands it to one translator. Role derivation, controllers-first ordering so that the leader is a controller, the refusal of an unknown <code>cargoship_</code> variable, and validation against the embedded inventory schema are written once and are already fuzzed (<code>src/fuzz/ansible_inventory_fuzz_test.go</code>). An adapter is a decoder. When one starts wanting rules of its own – its own notion of a role, its own precedence between two variables that disagree – that is the signal it does not belong in the binary, and should be a script that emits the JSON contract described below.</p>
+<p>An adapter builds the <code>ansibleinv.Input</code> shape – <code>groups</code>, <code>hostvars</code>, <code>roleGroups</code> – and hands it to one translator. Role derivation, controllers-first ordering so that the leader is a controller, the refusal of an unknown <code>cargoship_</code> variable, and validation against the embedded inventory schema are written once and are already fuzzed (<code>fuzz/ansible_inventory_fuzz_test.go</code>). An adapter is a decoder. When one starts wanting rules of its own – its own notion of a role, its own precedence between two variables that disagree – that is the signal it does not belong in the binary, and should be a script that emits the JSON contract described below.</p>
 <p>One naming consequence, worth settling before a second adapter exists rather than after: the shared translator lives in a package called <code>ansibleinv</code>, and the moment anything but Ansible calls it the name is wrong. Rename it to something like <code>clusterinv</code> when the second caller lands.</p>
 <h2 id="the-four-criteria"><a class="header" href="#the-four-criteria">The four criteria</a></h2>
 <p>A source is worth first-party support when it meets all four.</p>

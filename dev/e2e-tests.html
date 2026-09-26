@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -197,7 +197,7 @@ test/registry.go       in-process OCI registry used by the publish/pull/sign tes
 <pre><code class="language-console">$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
 </code></pre>
 <p>This is enough for the tests. A build without the release linker flags leaves <code>cargoship version</code> reporting the unset placeholder values, which the tests tolerate — they assert the fields are present and non-empty, not what they contain.</p>
-<p>The binary is <strong>not</strong> rebuilt by <code>go test</code>. After changing anything under <code>src/</code>, rebuild it, or you will be testing the previous binary against the new expectations.</p>
+<p>The binary is <strong>not</strong> rebuilt by <code>go test</code>. After changing anything under <code>api/</code>, <code>cmd/</code>, <code>config/</code>, <code>fuzz/</code>, <code>internal/</code>, <code>pkg/</code>, or <code>types/</code>, rebuild it, or you will be testing the previous binary against the new expectations.</p>
 <h2 id="running"><a class="header" href="#running">Running</a></h2>
 <pre><code class="language-console">$ go test -mod=vendor -count=1 ./test/e2e/noncluster/...            # the whole group, about 6 seconds
 $ go test -mod=vendor -count=1 -short ./test/e2e/noncluster/...     # same, minus the real example package

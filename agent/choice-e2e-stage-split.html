@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c33dee96.js";
+            window.path_to_searchindex_js = "../searchindex-ba16ab6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -214,7 +214,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p><code>e2e-cluster-stage</code> and <code>e2e-cluster</code> are separate jobs with duplicated steps. A matrix over a <code>mode</code> dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagree on into an expression over the matrix value. They disagree on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differ by a factor of two because that difference is the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.</p>
 <p>Both jobs sit behind the same <code>e2e-cluster</code> label for now. The point of the stage job is that it is cheap enough to run unconditionally, and the intent is to drop its <code>if:</code> once a few runs show what it actually costs and how steady it is. Landing it unconditional immediately was rejected for one reason: an unproven job in every pull request’s path, if it turns out to be flaky, teaches people to ignore a red check, and that is expensive to undo. The flip is one line when the data supports it.</p>
 <h2 id="what-this-does-not-do"><a class="header" href="#what-this-does-not-do">What this does not do</a></h2>
-<p>A stage-only run does not tell you that rke2 installs. It covers connection, OS detection, fact gathering, host validation, the prepare phases, SELinux, fapolicyd, <code>/etc/hosts</code>, the firewall and all four upload phases – which is most of what the suite reaches today, and the part a change to <code>src/pkg/phase</code> is most likely to break. It says nothing about whether the cluster comes up, and the full walk remains the only thing that does.</p>
+<p>A stage-only run does not tell you that rke2 installs. It covers connection, OS detection, fact gathering, host validation, the prepare phases, SELinux, fapolicyd, <code>/etc/hosts</code>, the firewall and all four upload phases – which is most of what the suite reaches today, and the part a change to <code>pkg/phase</code> is most likely to break. It says nothing about whether the cluster comes up, and the full walk remains the only thing that does.</p>
 
                     </main>
 
