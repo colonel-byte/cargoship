@@ -89,7 +89,7 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 		ctx,
 		p.control,
 		p.uploadControllerFiles,
-		p.blockOtherInstalls,
+		p.blockOtherInstallsIfUploaded(p.filesControl),
 	)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (p *UploadFilesCommon) Run(ctx context.Context) (err error) {
 		ctx,
 		p.workers,
 		p.uploadWorkerFiles,
-		p.blockOtherInstalls,
+		p.blockOtherInstallsIfUploaded(p.filesWorkers),
 	)
 	if err != nil {
 		return err
@@ -119,10 +119,23 @@ func (p *UploadFilesCommon) cleanStaleUploads(ctx context.Context, h *cluster.Za
 	return nil
 }
 
-func (p *UploadFilesCommon) blockOtherInstalls(ctx context.Context, h *cluster.ZarfHost) error {
-	logger.From(ctx).Debug("disabling host from other installs", "host", h)
-	h.Metadata.EngineUploaded = true
-	return nil
+// blockOtherInstallsIfUploaded marks a host populated only when this phase actually had files for
+// it. A host the package carries no files for (e.g. a Debian host and a package with no deb
+// selector) is left unmarked, so a later catch-all phase like BIN still sees it.
+func (p *UploadFilesCommon) blockOtherInstallsIfUploaded(byArch map[api.Arch][]v1alpha1.ZarfFile) func(context.Context, *cluster.ZarfHost) error {
+	return func(ctx context.Context, h *cluster.ZarfHost) error {
+		files, err := p.filesFor(byArch, h)
+		if err != nil {
+			return err
+		}
+		if len(files) == 0 {
+			logger.From(ctx).Debug("no files uploaded for this host, leaving it open to other install phases", "host", h)
+			return nil
+		}
+		logger.From(ctx).Debug("disabling host from other installs", "host", h)
+		h.Metadata.EngineUploaded = true
+		return nil
+	}
 }
 
 func (p *UploadFilesCommon) uploadControllerFiles(ctx context.Context, h *cluster.ZarfHost) error {
