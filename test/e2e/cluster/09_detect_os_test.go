@@ -82,11 +82,16 @@ func (s *phaseWalk) detectOS() {
 		"the cluster has to run every OS family for the family-routed phases to be tested, it runs %v", families)
 }
 
-// uniqueOSIDs returns the distinct os-release IDs the bootloose config provisions.
+// uniqueOSIDs returns the distinct os-release IDs this run's bootloose config actually
+// provisions. It reads clusterConfig rather than osIDByPrefix directly because not every
+// config uses every replica group -- k3sOS, for one, has no Alpine host -- and a family this
+// run never provisions must not count toward what detectOS requires the cluster to have.
 func uniqueOSIDs() map[string]struct{} {
 	ids := make(map[string]struct{}, len(osIDByPrefix))
-	for _, id := range osIDByPrefix {
-		ids[id] = struct{}{}
+	for _, m := range clusterConfig().Machines {
+		if id, ok := osIDByPrefix[strings.TrimSuffix(m.Spec.Name, "%d")]; ok {
+			ids[id] = struct{}{}
+		}
 	}
 	return ids
 }

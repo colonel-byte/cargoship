@@ -212,9 +212,41 @@ func stageMachine(name, image string) *config.Machine {
 	}
 }
 
-// clusterConfig is the inventory this run provisions: the smaller one when the run was asked for
-// the staging phases only, and the full one otherwise.
+// k3sOS is the inventory a k3s-single-controller run provisions: one controller and four
+// workers split across the Ubuntu and Fedora images, no upload-only Alpine host. It exists to
+// test whether a single-controller k3s cluster -- SQLite datastore, no etcd raft quorum --
+// avoids the etcd-quorum timeouts the ten-node, three-controller rke2 walk hits on a hosted
+// runner (see the e2e-cluster-k3s-single job in the workflow). The Alpine upload-only host is
+// left out because it exercises the BIN-upload fallback path, which is orthogonal to what
+// this topology is checking.
+var k3sOS = config.Config{ //nolint:gochecknoglobals
+	Cluster: config.Cluster{
+		Name:       "cargoship-e2e",
+		PrivateKey: "cluster-key",
+	},
+	Machines: []config.MachineReplicas{
+		{Count: 1, Spec: stageMachine(bootKC, bootUbuntu)},
+		{Count: 2, Spec: stageMachine(bootKW, bootUbuntu)},
+		{Count: 2, Spec: stageMachine(bootKWF, bootFedora)},
+	},
+}
+
+// k3sSingleEnvVar selects k3sOS instead of the default inventory. See stageOnlyEnvVar for the
+// same pattern; this one is checked first because it is a different distro rather than a
+// smaller run of the same one.
+const k3sSingleEnvVar = "CARGOSHIP_E2E_K3S_SINGLE"
+
+func k3sSingle() bool {
+	on, err := strconv.ParseBool(os.Getenv(k3sSingleEnvVar))
+	return err == nil && on
+}
+
+// clusterConfig is the inventory this run provisions: the k3s single-controller inventory when
+// asked for it, the smaller staging inventory when asked for that, and the full one otherwise.
 func clusterConfig() config.Config {
+	if k3sSingle() {
+		return k3sOS
+	}
 	if stageOnly() {
 		return stageOS
 	}

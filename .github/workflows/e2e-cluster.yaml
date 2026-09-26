@@ -132,6 +132,92 @@ jobs:
             docker rm -fv $ids
           fi
 
+  # An experiment, not a committed check: one k3s controller and four workers, no etcd. rke2's
+  # embedded etcd raft quorum across three controllers has been timing out on this hosted
+  # runner (see the e2e-cluster job's history) -- CPU contention from ten nested nodes makes
+  # etcd's heartbeat deadlines slip. k3s defaults to a single-controller SQLite datastore, so
+  # this topology has no raft quorum to time out. This job exists to test that hypothesis, not
+  # to replace e2e-cluster: it only runs on workflow_dispatch, never on a pull request, so it
+  # cannot make any check flaky while the idea is unproven.
+  e2e-cluster-k3s-single:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Five nodes rather than ten, same reasoning as the stage job.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Test
+        run: >-
+          go test -mod=vendor -count=1 -v -timeout=25m
+          ./test/e2e/cluster/...
+        env:
+          # Selects the five-machine, single-controller inventory instead of the ten-machine
+          # rke2 one. See k3sSingleEnvVar in test/e2e/cluster/main_test.go.
+          CARGOSHIP_E2E_K3S_SINGLE: "1"
+          # Selects the k3s example package and expected version instead of rke2's. See
+          # distroEnvVar in test/e2e/cluster/05_manager_test.go.
+          CARGOSHIP_E2E_DISTRO: "k3s"
+          # Leave the machines standing when the run fails, so the step below can read them.
+          CARGOSHIP_E2E_KEEP_CLUSTER: "1"
+          # Everything the test build needs is vendored, so make any accidental network
+          # access fail fast. Matches magefiles/utils.go.
+          CGO_ENABLED: 0
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      # Same reasoning as the full job's diagnostics step below.
+      - name: Collect node diagnostics
+        if: failure()
+        run: |
+          diag="$RUNNER_TEMP/diagnostics"
+          mkdir -p "$diag"
+          df -h / | tee "$diag/df.txt"
+          free -h | tee "$diag/free.txt"
+          docker ps -a | tee "$diag/containers.txt"
+          for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
+            name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
+            docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
+            docker exec "$c" journalctl -u k3s -u k3s-agent --no-pager \
+              > "$diag/$name.journal.log" 2>&1 || true
+            echo "::group::$name"
+            tail -n 200 "$diag/$name.journal.log" || true
+            echo "::endgroup::"
+          done
+          cp -r "$HOME/.cargoship-cache/logs" "$diag/suite-logs" 2>/dev/null || true
+
+      - name: Upload node diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-cluster-k3s-single-diagnostics
+          path: ${{ runner.temp }}/diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Remove leftover bootloose containers
+        if: always()
+        run: |
+          ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
+          if [ -n "$ids" ]; then
+            docker rm -fv $ids
+          fi
+
   # The full walk, over the ten-machine inventory. No build step here either, and for the same
   # reason as the stage job above.
   e2e-cluster:
