@@ -23,10 +23,22 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 )
 
+// distroEnvVar picks which distro the suite installs, instead of the rke2 default. See
+// distroID. Set to "k3s" to walk the suite against a k3s package instead -- see
+// cluster_lifecycle_test.go for what package that selects.
+const distroEnvVar = "CARGOSHIP_E2E_DISTRO"
+
 // distroID is the distro the suite installs, and the value the CLI's --distro flag would
 // carry. The steps that build a manager with no package loaded need it spelled out, because
-// there is no package for them to read it from.
-const distroID = "rke2"
+// there is no package for them to read it from. It is a function rather than a package
+// variable so that it reads the environment when asked rather than at package init, the same
+// reasoning as stageOnly.
+func distroID() string {
+	if id := os.Getenv(distroEnvVar); id != "" {
+		return id
+	}
+	return "rke2"
+}
 
 // Node counts for the generated inventory, see the bootloose config in main_test.go: kc0,
 // kc1, kcf0 are controllers and kw0-2, kwf0-2, kwa0 are workers, with the "f" replicas
@@ -124,8 +136,8 @@ func (s *ApplyPhaseSuite) Test_05_Manager() {
 	s.Require().NoError(err)
 	s.harness = harness
 
-	s.Require().Equal(distroID, s.harness.manager.DistroID)
-	s.Require().Equal(installedVersion, s.harness.manager.Distro.Spec.Version)
+	s.Require().Equal(distroID(), s.harness.manager.DistroID)
+	s.Require().Equal(installedVersion(), s.harness.manager.Distro.Spec.Version)
 	s.Require().Len(s.harness.hosts(), inventoryHostCount)
 	s.Require().Len(s.harness.controllers(), clusterControllers)
 	s.Require().Len(s.harness.engineWorkers(), clusterWorkers)
