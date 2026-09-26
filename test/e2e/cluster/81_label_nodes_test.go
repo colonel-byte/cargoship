@@ -72,6 +72,12 @@ func (s *ApplyPhaseSuite) Test_81_LabelNodes() {
 	s.labelNodes()
 }
 
+// Test_81_LabelNodes re-applies the labels, which is also a check that every node is still
+// registered with the API server after being drained and restarted.
+func (s *UpgradePhaseSuite) Test_81_LabelNodes() {
+	s.labelNodes()
+}
+
 // Test_81_LabelNodes labels the node that just joined, which is also the first assertion that
 // the API server has registered it at all.
 func (s *JoinPhaseSuite) Test_81_LabelNodes() {

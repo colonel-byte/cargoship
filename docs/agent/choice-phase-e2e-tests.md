@@ -94,13 +94,15 @@ It cannot run the engine: rke2 links against glibc and Alpine is musl. Three thi
 
 **There are two generated inventory files.** `generated-cluster-full.yaml` has all ten machines and is what the harness is built from; `generated-cluster.yaml` has the nine that join and is what `e2e.ClusterConfigPath` points at. The whole-action steps -- `Test_01_Prepare` and `Test_ZZ2_ApplyIsIdempotent` -- load that path, because an action has no notion of an upload-only host and would try to install the engine on Alpine. A single file with an annotation the loader ignores was considered and rejected: it would put a test-only concept into the inventory schema.
 
-## Two walks against one cluster, in one parent test
+## Three walks against one cluster, in one parent test
 
-The suite runs two suites rather than one: `ApplyPhaseSuite` installs the distro and `JoinPhaseSuite` adds a machine to what it installed. They share one bootloose cluster and one kubeconfig, and they only work in that order.
+The suite runs three suites rather than one: `ApplyPhaseSuite` installs the distro, `JoinPhaseSuite` adds a machine to what it installed, and `UpgradePhaseSuite` walks the same phases again with a newer package. They share one bootloose cluster and one kubeconfig, and they only work in that order.
 
-Go runs top-level test functions in the order they are declared across the package's files, sorted by file name -- which is an ordering nobody declared and that a renamed file silently changes. So there is one top-level test, `TestClusterPhases` in `main_test.go`, and the walks are `t.Run` subtests of it. The apply subtest's result is checked: if the install failed there is no cluster for the join to walk, and the run returns rather than reporting two failures for one cause.
+Go runs top-level test functions in the order they are declared across the package's files, sorted by file name -- which is an ordering nobody declared and that a renamed file silently changes. So there is one top-level test, `TestClusterPhases` in `main_test.go`, and the three walks are `t.Run` subtests of it. The apply subtest's result is checked: if the install failed there is no cluster for the other two to walk, and the run returns rather than reporting three failures for one cause. The join subtest's result is not checked, because an upgrade that has to carry a half-joined cluster is still an upgrade worth watching.
 
-`kubeconfigPath` moved to `TestMain` for the same reason. Both walks touch the same file, and a suite-owned `t.TempDir()` would have been deleted between them.
+The join walk runs before the upgrade rather than after it, so that the upgrade has to carry the node that joined late as well as the nodes the install bootstrapped.
+
+`kubeconfigPath` moved to `TestMain` for the same reason. All three walks touch the same file: the apply walk writes it and the upgrade walk rewrites it against the upgraded control plane. A suite-owned `t.TempDir()` would have been deleted between them.
 
 ## What the join walk covers that the install cannot
 
@@ -115,6 +117,30 @@ Apply against a cluster that already exists routes differently from apply agains
 **The lock phases are left out**, as they are asserted in the apply walk and holding a lock across a second walk against the same hosts tests the lock file rather than the join.
 
 **The machine is provisioned on first use, not in `TestMain`.** A run that never reaches the join walk starts one fewer container. The new cluster object replaces `testCluster`, because bootloose finds a cluster's machines by walking the config it was built from rather than by asking Docker: the object built from the ten-machine config would leave the eleventh container behind on shutdown.
+
+## Walking the upgrade, and where it starts
+
+On a fresh install `phase/66_upgrade_controller.go` and `phase/67_upgrade_worker.go` claim no hosts, and the config-sync phases find no drift. The apply walk asserts exactly that -- correctly, it is the routing that matters -- but it means the code inside those phases was never executed by any test. Draining a node, stopping the service, running the install hook, waiting for Ready and uncordoning is the most destructive sequence in the phase list and the only one with no coverage at all.
+
+`UpgradePhaseSuite` closes that. It builds a second package from `example/rke2-cilium/v1_35/v1.35.0-rke2r3` and walks the phases against the cluster the walks before it left running.
+
+**The target is the next patch of the same minor version.** `v1.35.0-rke2r1` and `v1.35.0-rke2r3` differ in the engine tarball, three RPM URLs and the container image tags, and in nothing else. The next minor, `v1.35.1-rke2r1`, also moves Cilium from 1.18.4 to 1.19.0, which adds a CNI upgrade and a second set of image pulls to a walk that is testing neither. The upgrade phases route on `VersionLess`, which compares the prerelease identifier, so `r1 < r3` is a real upgrade as far as every phase under test is concerned.
+
+**It starts at `GatherFactsDistro`, not at `Connect`.** Connect, DetectOS, GatherFacts and ValidateHosts do the same work against the same hosts they did during the install, and the apply walk already asserts each of them one phase at a time. Repeating that costs runtime and adds no assertion that could fail differently, so they run as a single `Test_01_Reconnect` step whose only job is to hand the rest of the walk a connected inventory. From `Test_12_GatherFactsDistro` on, every phase gets its own method, because from there on every phase behaves differently than it did on the install.
+
+**The lock phases are left out.** They are asserted in the apply walk, and taking the lock again for a third walk against the same hosts would be testing the lock file, not the upgrade.
+
+**The assertions that differ are the point.** `Test_12` is where the divergence starts: the hosts now report the installed version, and the test asserts it is `VersionLess` than the packaged one *by calling the same comparison the phases' own `Prepare` calls*, so the test cannot disagree with the routing it is asserting. `Test_61` and `Test_62` must claim nothing, which is the inverse of the apply walk's assertion and the check that an initialize phase never re-bootstraps a live node. `Test_66` and `Test_67` are the only place the upgrade phases are asserted to have run, and they check all three outcomes of the sequence: the service came back up, `RunningVersion` is now the packaged version, and the node is not left cordoned. That last one is worth having on its own -- a node left `Unschedulable` looks healthy from the host side, service running and version correct, and only shows up later as a cluster that will not schedule.
+
+`Test_00_UpgradePackage` also requires the host count the join walk left behind rather than the one the install started with. An upgrade that saw only the machines the install saw would leave the node that joined last on the old engine, and nothing else in the walk would notice.
+
+## The upgrade is opt-in
+
+The upgrade walk runs only when `CARGOSHIP_E2E_UPGRADE` is set, and in CI only on a `workflow_dispatch` input or the `e2e-cluster-upgrade` label.
+
+The install walk already sits close to what a hosted `ubuntu-latest` runner can do: ten rke2 nodes on four cores and 16GB, with the workflow deleting several gigabytes of preinstalled toolchains to make the images fit in the ~14GB the runner leaves free. The upgrade imports a second complete set of engine images into every containerd store, so it roughly doubles the disk and adds tens of minutes. Making it unconditional would mean every run of this workflow pays for it, including the runs that only want to know the install still works.
+
+Running it by default and skipping in CI was the alternative. It was rejected because it inverts which environment is the odd one out: the failure mode is a suite that passes locally and cannot run in the place the label was added to make it run. A single environment variable, read in `SetupSuite`, is checked in one place and skips with a message naming the variable.
 
 ## Profiles on the generated inventory
 

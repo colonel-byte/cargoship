@@ -24,13 +24,13 @@ Drawing the line by wall-clock instead -- "skip the phases that take more than a
 
 The gate is `stageOnlyEnvVar`, read through `strconv.ParseBool`, under the `CARGOSHIP_E2E_` prefix the suite already uses for its other knobs. Build tags were the alternative and were rejected twice over: a tagged file is invisible to `go vet` and the linter unless the tag is set, so the gated half rots silently, and the suite would need two `go test` invocations with different tags to cover what one binary covers now. An environment variable is one build, one binary, and the same code compiled either way.
 
-It is a function rather than a package variable so that it reads the environment when asked rather than at package init, which is what lets a caller set it in process -- `mage test:endToEndClusterStage` does exactly that.
+It is a function rather than a package variable so that it reads the environment when asked rather than at package init, which is what lets a caller set it in process -- `mage test:endToEndClusterStage` does exactly that. `CARGOSHIP_E2E_UPGRADE`, the opt-in for the upgrade walk, is read the same way for the same reasons; the two gates are independent, and a stage-only run has nothing to upgrade.
 
 ## Two granularities of skip
 
 `ApplyPhaseSuite` is skipped per method. Each of `Test_61` through `Test_81` begins with `requireEngine()`, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.
 
-The join walk is skipped whole, in `TestClusterPhases`. It starts from the cluster the apply walk installed -- there is nothing to join when nothing was started -- so gating it method by method would produce a suite of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.
+The join and upgrade walks are skipped whole, in `TestClusterPhases`. Each starts from the cluster the apply walk installed -- there is nothing to join or upgrade when nothing was started -- so gating them method by method would produce two suites of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.
 
 ## The phases after the engine still run
 
