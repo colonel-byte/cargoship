@@ -34,14 +34,27 @@ import (
 // binary, so the suite runs from a bare checkout with nothing under build/. Each one builds
 // its own manager and removes its own temp directory, the way a separate CLI process would.
 
-// examplePackage is the distro definition the suite packages and installs, and
-// installedVersion is the engine version it ships. The version is spelled out rather than read
-// back from the package, so that the manager step compares the loaded package against
-// something that did not come from the same file it is testing.
-const (
-	examplePackage   = "example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1"
-	installedVersion = "1.36.4-rke2r1"
-)
+// exampleDefinitions maps distroID to the definition the suite packages and installs, and the
+// engine version it ships. The version is spelled out rather than read back from the package,
+// so that the manager step compares the loaded package against something that did not come
+// from the same file it is testing. Keyed by distroID so distroEnvVar picks both at once.
+var exampleDefinitions = map[string]struct { //nolint:gochecknoglobals
+	path    string
+	version string
+}{
+	"rke2": {path: "example/rke2-multi-cni-cilium/v1_36/v1.36.4-rke2r1", version: "1.36.4-rke2r1"},
+	"k3s":  {path: "example/k3s-flannel/v1_36/v1.36.4-k3s1", version: "1.36.4-k3s1"},
+}
+
+// examplePackage is the distro definition the suite packages and installs.
+func examplePackage() string {
+	return exampleDefinitions[distroID()].path
+}
+
+// installedVersion is the engine version examplePackage ships.
+func installedVersion() string {
+	return exampleDefinitions[distroID()].version
+}
 
 // Test_00_CreatePackage builds the distro package every later step installs. It builds it
 // from a copy of the example definition with the sysctls a container cannot apply removed:
@@ -50,7 +63,7 @@ func (s *ApplyPhaseSuite) Test_00_CreatePackage() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	definition, err := containerSafeDefinition(examplePackage, s.pkgDir)
+	definition, err := containerSafeDefinition(examplePackage(), s.pkgDir)
 	s.Require().NoError(err)
 
 	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
