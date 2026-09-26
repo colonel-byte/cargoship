@@ -71,7 +71,7 @@ It does not raise the check to 10. What remains is Go, and Go is where an overri
 
 | Advisory        | Module                        | Status                                                                                                                                                                                                |
 | --------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GO-2026-6225`  | `docker-credential-acr-env`   | Genuinely linked, via `cmd` -> zarf signing -> cosign CLI options. Fixed in: N/A                                                                                                                  |
+| `GO-2026-6225`  | `docker-credential-acr-env`   | Genuinely linked, via `cmd` -> zarf signing -> cosign CLI options. Fixed in: N/A                                                                                                                      |
 | `GO-2026-5932`  | `golang.org/x/crypto/openpgp` | Not in the build: `go mod why` reports the main module does not need the package. Fixed in: N/A                                                                                                       |
 | `CVE-2025-8556` | `cloudflare/circl`            | Already fixed upstream. The advisory carries only a commit range and no version range, and v1.6.5 is 151 commits past the fix, so the match is a defect in the advisory rather than in the dependency |
 
