@@ -1,0 +1,212 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
+kind: ZarfDistro
+metadata:
+  name: upstream
+  architectures:
+    - amd64
+    - arm64
+spec:
+  version: 1.36.0
+  type: upstream
+  config:
+    os:
+      files:
+        # Every file this package installs is architecture specific, so each one is listed once per
+        # architecture with a selector saying which hosts it belongs to. A host receives only the
+        # entries its own architecture selects, and cargoship refuses a selector naming an
+        # architecture the package does not declare above. Each entry carries the sha256 its
+        # publisher lists for that file, so cargoship verifies what it downloads.
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/cri-tools_1.36.0-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/cri-tools_1.36.0-1.1_amd64.deb
+          shasum: 8cff9279de7767239e11bf9c21016579a4246e04e7da0c500c7a3f8491db986a
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubernetes-cni_1.9.1-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubernetes-cni_1.9.1-1.1_amd64.deb
+          shasum: 4cd72d8cef4499d3dc410874287b40e8b4241e0772938c5820cbee37986c1d93
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.0-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubeadm_1.36.0-1.1_amd64.deb
+          shasum: 43740bc8e01949b119f0a4cff41f0b77b1c92ed4f2fdd9f7ce36bc4a7282f0b8
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.0-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubelet_1.36.0-1.1_amd64.deb
+          shasum: 68842635a925bc34db426cc136a401b5b68b16ceb46174a2e7063701e5e5bbe4
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.0-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubectl_1.36.0-1.1_amd64.deb
+          shasum: 73106542b7b4e6c021d39a8a68bcd6b6acb5d11d8c1c5b8036f4545f1942421e
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.3.6-1~debian.13~trixie_amd64.deb
+          target: /var/lib/kubernetes/deb/containerd.io_2.3.6-1~debian.13~trixie_amd64.deb
+          shasum: fb3c380f22d5e8e918f6ea84a1a80dfc461ab1f88aa1237f25630296e46b1811
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/cri-tools_1.36.0-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/cri-tools_1.36.0-1.1_arm64.deb
+          shasum: ab8ff8eace53b18fb7316d17f3fa29a01f6fd92b885d3014db415ab7b84619cc
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubernetes-cni_1.9.1-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubernetes-cni_1.9.1-1.1_arm64.deb
+          shasum: fbe479bf9b303fc88bd7c61769687235efa36f684e8ec5e97d45d08669dd1d4d
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.0-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubeadm_1.36.0-1.1_arm64.deb
+          shasum: 5e7513cb1d80fb31886ce7c7c97b2931c8663e856e65216d54cf3c1f9b30d577
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.0-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubelet_1.36.0-1.1_arm64.deb
+          shasum: ae08405903a5ad8c0d116d7ae8a25154f298b141efce9018f975ddd1981dc53c
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.0-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubectl_1.36.0-1.1_arm64.deb
+          shasum: d54bda2fe46784e39d9aaa0831b090782520deaaa1ca5993b2e4d126ffbeb04c
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.3.6-1~debian.13~trixie_arm64.deb
+          target: /var/lib/kubernetes/deb/containerd.io_2.3.6-1~debian.13~trixie_arm64.deb
+          shasum: 10c67eebc8e371f3b246fc35ff4a89c3ecf00d28e857c9659519050f47b4fb31
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/cri-tools-1.36.0-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/cri-tools-1.36.0-150500.1.1.x86_64.rpm
+          shasum: e622a370e92664907b660c7bd7af73831d3d8132be5616be8ec11581a7443970
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubernetes-cni-1.9.1-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubernetes-cni-1.9.1-150500.1.1.x86_64.rpm
+          shasum: a228e611f547cf3554873c383078a7ff9abf289e5b7ae315cd38c3811804e2f7
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.0-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubeadm-1.36.0-150500.1.1.x86_64.rpm
+          shasum: 7b998048c3051be06f62c220c0652cae937153e977616e434c619a67f84392a1
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.0-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubelet-1.36.0-150500.1.1.x86_64.rpm
+          shasum: 7ef78d28864d46a2b450b561759d6af3268a343ca567d4bd615c1c738ef21f1e
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.0-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubectl-1.36.0-150500.1.1.x86_64.rpm
+          shasum: c7984d2bfedd51b4d69c789759eb050302b94898e3af0b2bed5d3d40356b9582
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.3.6-1.el9.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/containerd.io-2.3.6-1.el9.x86_64.rpm
+          shasum: 57445951673c94e937aa382ec5acf981f9bf1731545eb22ba620b80181b8877c
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/cri-tools-1.36.0-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/cri-tools-1.36.0-150500.1.1.aarch64.rpm
+          shasum: 98b0f3cfcde85047a22bb03ed1e330a71354a6a725e45b2086fd8a01dca8fce3
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubernetes-cni-1.9.1-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubernetes-cni-1.9.1-150500.1.1.aarch64.rpm
+          shasum: 602a7f8a7b7552f934bc72eca0bef2dad8cd0ce82c263bca62db733d04dc3bfb
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.0-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubeadm-1.36.0-150500.1.1.aarch64.rpm
+          shasum: 234cc68ede05f3a16861cb6e398fd225300dd59d65adb5ae54fb3286d13a7963
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.0-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubelet-1.36.0-150500.1.1.aarch64.rpm
+          shasum: 1467ad04fb04133e037d3a4aa3151599552e2376e4652bc1d091c76f774b2bc5
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.0-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubectl-1.36.0-150500.1.1.aarch64.rpm
+          shasum: 985c8dac674f2a72c015af288c86f0b322cf1fd292607114ac847215f3c56797
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.3.6-1.el9.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/containerd.io-2.3.6-1.el9.aarch64.rpm
+          shasum: 8fdfcfb392c6eba06b55a490be1910588e779f9407dda51f257d8a271349c76e
+          selector:
+            package: rpm
+            arch:
+              - arm64
+    imageConfig:
+      compression: none
+      path: /etc/kubernetes/images
+      images:
+        - registry.k8s.io/kube-apiserver:v1.36.0
+        - registry.k8s.io/kube-controller-manager:v1.36.0
+        - registry.k8s.io/kube-scheduler:v1.36.0
+        - registry.k8s.io/kube-proxy:v1.36.0
+        - registry.k8s.io/coredns/coredns:v1.14.2
+        - registry.k8s.io/pause:3.10.2
+        - registry.k8s.io/etcd:3.6.8-0

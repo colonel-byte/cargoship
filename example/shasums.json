@@ -173,6 +173,66 @@
     ],
     "sha256": "1115a1223b0db998c7977c879f2a3a6f07a0c63240f68f6e3b665a7ae27c38f7"
   },
+  "kubeadm-1.32.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "de9aeb64504f23586baff29fc9db3cd50c4f1352a0134ab089c0ac267ccb6a6d"
+  },
+  "kubeadm-1.32.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "cca9f9f980926a431128e226e935a2f5209f1232be25f8ecf636f34bb4edf32e"
+  },
+  "kubeadm-1.32.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f106b2a34a7d2e1aee22ee5cfdc49312b4c89bbb508f44e7d49c56aded61110a"
+  },
+  "kubeadm-1.32.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "c34bd894d9beacea0e3c7d88f2ff2a6eba004c1eb30b12dcd8efa13c01f9fb46"
+  },
+  "kubeadm-1.32.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "b2f24d30b2ab000f1650a78b37dc87ae7b3c865b231139a3882828ffe73f4e19"
+  },
+  "kubeadm-1.32.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "befa1b4541544d985fe1225073bcd27abcaca94fa5143e458da0d6610a60e5f2"
+  },
+  "kubeadm-1.32.11-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.11-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "10c3d3ff40ee04ad4254761c62c7106ba7645892f196412ee267e36fa37fd047"
+  },
+  "kubeadm-1.32.11-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.11-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "782016d267fe680929d7194dfe71df8d48b299f1fd2a8ab8235fc9748a0b69c2"
+  },
+  "kubeadm-1.32.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "4c98b1c6d0e0bd0607b1e84cbff66b24c4548d91a959f64609ed8e7ec650f365"
+  },
+  "kubeadm-1.32.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "902ef39a77318d64069b2ace0f7ecafac0a32c400593b6e0e1756a524e25c99e"
+  },
   "kubeadm-1.32.13-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.13-150500.1.1.aarch64.rpm"
@@ -184,6 +244,162 @@
       "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.13-150500.1.1.x86_64.rpm"
     ],
     "sha256": "6e8328f4c172765bfa8d5d33718db513cd6ffb7f09dc866d2d443e7c073eed20"
+  },
+  "kubeadm-1.32.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "880e08c1e1790bf26e964a55848b20d1cdb1e2390e7fa2d12c1e5645a7f4ac08"
+  },
+  "kubeadm-1.32.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "8f1c90b03a4ab6dfd3f7946ed2feb09320fcdd1baf536eddcb54eb170bf133e6"
+  },
+  "kubeadm-1.32.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "82e06b7f0b27f0ad5e189e358a97cee4b963282662c40f73f590884fa97c2b49"
+  },
+  "kubeadm-1.32.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "b923974ed9538f8d0894f87950e11cdad6254aa27a011fc640a52fffe0dfaac4"
+  },
+  "kubeadm-1.32.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "106c3bd9b10b673a61c7594b2a8ea3256b45fb3e9a12970de7cc83246a56cbaf"
+  },
+  "kubeadm-1.32.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "e269f73b969ac854e08af2b22d0dfa14a829d1744eedef551a88b3aa36143a90"
+  },
+  "kubeadm-1.32.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "8056d7f8896b7d3cd3fbf5f7743514c810865326e83b57cb9b98db213cc2826a"
+  },
+  "kubeadm-1.32.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "093ed20a06cd83de526e87cb8da9c2baa192f3e4b5a8eb0e20117e9d54f0d314"
+  },
+  "kubeadm-1.32.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "a5963cb3a48c8ead857d3bb87cd44f21c7c7fd6e479abc9cb92b7fcbad27a6cc"
+  },
+  "kubeadm-1.32.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "c94674d02d4e8f4be287c6492730aeee7a38546d29c616961e02525b203a0052"
+  },
+  "kubeadm-1.32.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "e1f709a3b339e077867b58b0922e5230ee1b333d8df157e9129b04907a891fd9"
+  },
+  "kubeadm-1.32.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ab75e3511b64f79abd5fc21ec79f7e6975abbb2627b1a5f7d5f51c07262da7c5"
+  },
+  "kubeadm-1.32.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "bc82e12fc5bdf66a4fce68ee23e78750ff15436a039376d2b241d6c5b5505de0"
+  },
+  "kubeadm-1.32.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "49fe57323992c76dfe427fce7bd151bdb5a8c04764fab13fe5a9c306f62cad55"
+  },
+  "kubeadm-1.32.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubeadm-1.32.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "3d4b0ceaebfc341611d3c42aeab1c2189633528b0ead33ce00b79891590590d8"
+  },
+  "kubeadm-1.32.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubeadm-1.32.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "e23d5302848dcbdcf3bae50c9fdfea3b93d04a9ebb3dc2a71124d0d8a8d5179c"
+  },
+  "kubeadm-1.33.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "4587ccfc04a1e70bce0eca6bfa68dbba50e9d2b0dfb6ce4e704b612fd51de7e8"
+  },
+  "kubeadm-1.33.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "35536588e0fe33648ad25da860f838aaa39c37f79afa0581c7d43ee3730fe459"
+  },
+  "kubeadm-1.33.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f8d960fb57b2d8811e8adc2bdc99c109505c2d3b8f5ab315328af6b6384dff53"
+  },
+  "kubeadm-1.33.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "aefc59211744b2fa50ca7cbac58950f94455729f55f0c9078f886a0d81a33ba6"
+  },
+  "kubeadm-1.33.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "0759116cee5ace690648f18c9ab877c865390bed6464d147a1789a2fa9f8e7c3"
+  },
+  "kubeadm-1.33.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "b222edb2e2aa4504b2746217427181058c32c53929ded9711be3ecbea01d90a9"
+  },
+  "kubeadm-1.33.11-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.11-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "66b3d597d1a636c967e1c8a26cd11c04604a2cb687bac5e010f0fec209bd19d8"
+  },
+  "kubeadm-1.33.11-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.11-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "c9cd7dc44c7b1c5e81b734a2c147f5a7faa7afe057930003a576a425c8654a11"
+  },
+  "kubeadm-1.33.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "55ca66f063b9d742a51ec8e16c28841b068217a87c3f6f87e9c33655da6f3024"
+  },
+  "kubeadm-1.33.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "e180aa98d74182b7ad4e792220b6144d61b6a79104568be8c575f799e7e9548f"
   },
   "kubeadm-1.33.13-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -197,6 +413,138 @@
     ],
     "sha256": "37a1df48e09a9ce7eaf0ccaa9bd46e631910ce2308bcccc35451a15a6f3a71c0"
   },
+  "kubeadm-1.33.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7aeaa2cb4829a6b9d6f6d782f9bf86d658cf11151f3a62af66c013054f7b638a"
+  },
+  "kubeadm-1.33.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "27bf62283ff8214e55338abc923567745b5b7f143c8c7baefe1a11bed936970d"
+  },
+  "kubeadm-1.33.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "e56473ec704e2c170303c0311c8d7f3f0b569f28234b01d5a686d4e35936c21f"
+  },
+  "kubeadm-1.33.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "0447e43d511e716c014e8a3956dae095559a810b00be2e293f563c201be49fc4"
+  },
+  "kubeadm-1.33.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "50da3e41fdd5c6085e63ac536a904e860372eff04b2fd07d19e77215397d9ef6"
+  },
+  "kubeadm-1.33.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "35cc9f10d06793bcf16f3ad091a8ef158d0f2b500ebc8a18adaec83e06f5a6ec"
+  },
+  "kubeadm-1.33.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "b43d6a89be1753945e7332bccce9deb2e28146d218483256104246aa44759999"
+  },
+  "kubeadm-1.33.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "1968eeeeb9cc97e621ab0b2504aff777cebef1badb9e1fa33dacd14dc099311e"
+  },
+  "kubeadm-1.33.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "2b16489d0e410071156611afb09bc81e462b6b1ebe27f4b0b69f92c2aabcbd31"
+  },
+  "kubeadm-1.33.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "1723b6a9e7f48253567319bb2ef5162b1bb22ca9b07685adb53b49778fffe0eb"
+  },
+  "kubeadm-1.33.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "90840e262255086cb9703da5deac7346988ad6cc82d0413be7baaaf79acd9ecd"
+  },
+  "kubeadm-1.33.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "b91d9ed446fca37d7323b58ce896991065feef63aadc2ae581a78ad423bff87e"
+  },
+  "kubeadm-1.33.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f25a7043556c84f5c305227b3f38dbdaee227752cbf6819734a52d692ea728a5"
+  },
+  "kubeadm-1.33.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "02803c30aef98c1a9acef2ecbc545e51f9b15f91ad68c63b81a37fced04e1d7e"
+  },
+  "kubeadm-1.33.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubeadm-1.33.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f5c0c16a98290c9d5855fa1910b10b81fc9072f9177db1067cbbbc858a18e818"
+  },
+  "kubeadm-1.33.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubeadm-1.33.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "1d0b080fb76a1962128a6dc3aece42457d8908f0f8b1fb3f5801984b71cfbe3c"
+  },
+  "kubeadm-1.34.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7eec18569334266037464e07e7c29bd759e63896b8a3f7cac23a0a63ea7381d2"
+  },
+  "kubeadm-1.34.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "9eb3054951a414d9023a4de297e85dae948a28aa59a4c59c9540815a134f2f40"
+  },
+  "kubeadm-1.34.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "4e2f2beab99a4a905640155cbb3f5d5198da73cf15c811e76f59efa9824af10a"
+  },
+  "kubeadm-1.34.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f179e46e15dc60f1999bbf134d6bc38890336a33c7f28c1fe5deb8ee2c790cf8"
+  },
+  "kubeadm-1.34.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "76cae76b5735f603508cf9c11cd78727ea4379e5d6cc1613a879cd1f83786d8d"
+  },
+  "kubeadm-1.34.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "048b3a7b76a76235222a0a42e1addb0da268a947536fea28e4232d15deff513c"
+  },
   "kubeadm-1.34.11-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.11-150500.1.1.aarch64.rpm"
@@ -208,6 +556,210 @@
       "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.11-150500.1.1.x86_64.rpm"
     ],
     "sha256": "1c8cf6c2a5820783e3bbcc3089c1dd29e132ed6c343454aa52951884a4367828"
+  },
+  "kubeadm-1.34.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "04c69ebdda657dffa48425541ede24e544bdcdefbe41f0b82d6ad306a9238f0e"
+  },
+  "kubeadm-1.34.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "abc93facebe1af2f50bb546f667e9741df996da8c58b5bdb10daaff88cee9bb8"
+  },
+  "kubeadm-1.34.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "e2a993490bd2126a68c334bb6e5b7c11a99bf7ddbea831fd5442faa2bcb0ea19"
+  },
+  "kubeadm-1.34.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "30c4d7685bc80b19415d516a230e09b3794c410f3f629dd5ab6ea830e72a1d21"
+  },
+  "kubeadm-1.34.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7792f613e20f2fffecdedd5c7e1c35aebeab77da9d85f9c291e210d3a2a8703d"
+  },
+  "kubeadm-1.34.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ff1a8fe80a5fcff11c962212c1fcc2ad4013a286995188880ddba91a84531fd0"
+  },
+  "kubeadm-1.34.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "c3852a2628aef95bc13b624e7493387932ceadafc3dc4315a2184721efe5769d"
+  },
+  "kubeadm-1.34.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "478086eee687900dd882a6736a9a31fd1cf2e98ec8be002cb47e8f0c057cc313"
+  },
+  "kubeadm-1.34.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "54f119ee8e7da40886db144413c260a4784ee656bd5ba7658abc6e81d59c541e"
+  },
+  "kubeadm-1.34.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "6aab49181e92bbf6b3dbcba05620d8f9da506ad6ca00c7c64e836ba6f51ffa2c"
+  },
+  "kubeadm-1.34.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "b971f5b126e0c77220537f5d30feede22d5be05a893f5bdf0a148830b8f18d5c"
+  },
+  "kubeadm-1.34.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "6ea74d046ce3cfff160fb8b97f5c010f51c76dbb957152c0d935df018d6dfe25"
+  },
+  "kubeadm-1.34.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "5657d8e2eb4da5f122c488d7ebe5b31c5fb50ee07901c3e8c84a20e08c3b7e27"
+  },
+  "kubeadm-1.34.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "1c0d49482aeb75e17960f67683c5d734eec0a30823e36f6aed4560ba54d1b68c"
+  },
+  "kubeadm-1.34.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "e6d8385fbfa1451e4da4ab9a08738a23287f6d4deb7b57989e5f00e578a57f69"
+  },
+  "kubeadm-1.34.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "2f3985a847f82f163e06fe62c76d198b699d35cd570be2e488ecb999fb369334"
+  },
+  "kubeadm-1.34.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubeadm-1.34.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "468ac4d9bd219ef8bd9fcab92c38f3a2fcd8363ff2258890b074955e676966ff"
+  },
+  "kubeadm-1.34.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubeadm-1.34.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "01f4086573e9f166a95a5881f629e3528963c3d33d7aec22535715aaf689c96e"
+  },
+  "kubeadm-1.35.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "d024393e221d411117a93f6909cb185035f7a964ac29ac365887b3b1014869fe"
+  },
+  "kubeadm-1.35.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "0ed472d1f9490caf217f132d4c2c300e545532da1ba04ac6d17324fd329a0298"
+  },
+  "kubeadm-1.35.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "1ab04d8d6333f62fbb24e66b93567f3e3a8c360c007139e683f659cfbb122d76"
+  },
+  "kubeadm-1.35.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f3256691d70a5d2c9000a95bb4d337a29983d0b565cce3d361f185d4e3fec557"
+  },
+  "kubeadm-1.35.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "99e78a14a33bacf0b72743fd9b0f059966ba5fff6a36b368a84af05923702c8d"
+  },
+  "kubeadm-1.35.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f19a4e4dc6a3cbe49ce7938f24ae4df6b10ce9dc2bea0204243f363075b1e0fd"
+  },
+  "kubeadm-1.35.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f17a83363d391ab1936b79467b51d46f24c18ab1d4b09a0758f9c67112446d29"
+  },
+  "kubeadm-1.35.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "e09e0ee17cf977bc36a7dee7b9e29fe4acce43f3fbc36d0ed92e17c0f26608c4"
+  },
+  "kubeadm-1.35.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "46625edd2ece3eaca30f8994a2e54ae67885a7effb6a6a5d9c4389b3d4b7754f"
+  },
+  "kubeadm-1.35.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "cb516e74f342aa5fa1ff5dfbed6f96c9948244987a722da24218213e5df18958"
+  },
+  "kubeadm-1.35.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "03943e7e9719b1f363fec48e815c84cb2c8b51e7dc0e82a6bcc81583029116f6"
+  },
+  "kubeadm-1.35.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "adb189320350b2ef5def73cad836b6bb3fdcc915d6b07a2a550657f6ddfbc167"
+  },
+  "kubeadm-1.35.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "417fdc8197499e6671ba282d5b11abe5855524d024fff8f0d6fbffd8f73281ea"
+  },
+  "kubeadm-1.35.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "6589adcecf0fdf522e71b16510cbeeb2b2cf8d0f68278bff9804c12b8bf0e4f1"
+  },
+  "kubeadm-1.35.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "5309bbadb87c7a9f1f09f13fab4e2ec1ee0fda4002148be6bb99bdbc4458c376"
+  },
+  "kubeadm-1.35.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "65b1f445ef6c59fc69da86d2f940e927fc06b9cba7054b6f023ba2faf2242e18"
   },
   "kubeadm-1.35.8-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -221,6 +773,66 @@
     ],
     "sha256": "1894bcb1f6ea6a7301d58b78a5daa890a29ee1d380e02350e26f33184ffb3cb1"
   },
+  "kubeadm-1.35.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubeadm-1.35.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f34a77f493e045f35166d4bfa2e1e419d2ef06ed41c765b931a3b0ca64d14c80"
+  },
+  "kubeadm-1.35.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubeadm-1.35.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "a884a01787b2d143f4d9f1261d078f5ec7a32c196dbc50b5fe3e9aad7cb028f1"
+  },
+  "kubeadm-1.36.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "234cc68ede05f3a16861cb6e398fd225300dd59d65adb5ae54fb3286d13a7963"
+  },
+  "kubeadm-1.36.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "7b998048c3051be06f62c220c0652cae937153e977616e434c619a67f84392a1"
+  },
+  "kubeadm-1.36.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "71e326beddf8b0708673aa666c40919990e299bd923050bdbe015300516bc3b5"
+  },
+  "kubeadm-1.36.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "5b8e65fd9da3b51f02c3b9734f4911d4c1899269f80b2523a7b4dfea32eb4e4a"
+  },
+  "kubeadm-1.36.2-150500.2.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.2-150500.2.1.aarch64.rpm"
+    ],
+    "sha256": "0d7d3650da2fd07a78f9db38530213130243dd17769154fabffa157fbc2d6229"
+  },
+  "kubeadm-1.36.2-150500.2.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.2-150500.2.1.x86_64.rpm"
+    ],
+    "sha256": "0c5c651a5e6c6d54d7840d6018f789b2d688e2d937ed4f87ca02cd1927c83414"
+  },
+  "kubeadm-1.36.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "92801b963a4483775e18e78e5d7c0b0255b60be710776f8c78d8df508f7e7249"
+  },
+  "kubeadm-1.36.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ba25f33f4db377f1381aabdbdabc1d69a4921afcc44ac3f06825657123651dca"
+  },
   "kubeadm-1.36.4-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.4-150500.1.1.aarch64.rpm"
@@ -232,6 +844,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.4-150500.1.1.x86_64.rpm"
     ],
     "sha256": "9e4fb880ee6ebad4b206f05a752eb3445a7449ac0c5390d4247bfc148c225891"
+  },
+  "kubeadm-1.36.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "537eff640eeffff0ee125095d881ad6a6adb6ac991880745b7127d952e1cd773"
+  },
+  "kubeadm-1.36.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "0f857b25db48cb01e5c69dc1d02a1fc02c125a0d04a5cd58440a4e9adb631f5a"
   },
   "kubeadm-1.37.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -245,6 +869,78 @@
     ],
     "sha256": "4ddafe2675f3dc4448553740a9ffb308d096f421ce1f868393febef436e8bd5a"
   },
+  "kubeadm-1.37.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubeadm-1.37.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "224fee721c5c0774af67fc3c96f5c8d036e28b1b96bf1a0f44c449f444f5484c"
+  },
+  "kubeadm-1.37.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubeadm-1.37.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "2cc39a29b20b926eee305375e793b0e20ae207b2ace5a7fa175ebbc40ecd2cb8"
+  },
+  "kubeadm_1.32.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.0-1.1_amd64.deb"
+    ],
+    "sha256": "4ed5d86ca1675a1180487c22846cdaec86ccf6f1c1abdf6642b837749a60730f"
+  },
+  "kubeadm_1.32.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.0-1.1_arm64.deb"
+    ],
+    "sha256": "bd4cf579082083e1369876c271df699b5dd4d9a1f5956d155372cca99365d5d8"
+  },
+  "kubeadm_1.32.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.1-1.1_amd64.deb"
+    ],
+    "sha256": "0d9508278c2cd314bfecd876e35170419f1cbca08fa1bca600c7f6a7c54316c4"
+  },
+  "kubeadm_1.32.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.1-1.1_arm64.deb"
+    ],
+    "sha256": "277721d19724c140eabbcf69a412c7ac8b300a436d745bf5aa41b8290a831c7b"
+  },
+  "kubeadm_1.32.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.10-1.1_amd64.deb"
+    ],
+    "sha256": "1a6a5765df75365e6479645e0f7b27f0af586dc1f7c92d76c58aa84cdbf4b852"
+  },
+  "kubeadm_1.32.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.10-1.1_arm64.deb"
+    ],
+    "sha256": "791bce88785e0d13001a4c27dfa72f3e632277e6f12c08dbb499a1211660d65d"
+  },
+  "kubeadm_1.32.11-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.11-1.1_amd64.deb"
+    ],
+    "sha256": "4ed5f9944a9210bdbda75c4269f261014e8690f198b634fac502b826f412e6d1"
+  },
+  "kubeadm_1.32.11-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.11-1.1_arm64.deb"
+    ],
+    "sha256": "90bdd501a467a24b576c5f8e80d09918f894c9ec17221d230dac17a11c2ae3dd"
+  },
+  "kubeadm_1.32.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.12-1.1_amd64.deb"
+    ],
+    "sha256": "dadbceca26bfdfb18f8e1bd25e36873b542575c9d3bcdc3c8a272b5d3feb4b96"
+  },
+  "kubeadm_1.32.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.12-1.1_arm64.deb"
+    ],
+    "sha256": "2d201eca47d5b0548a933a316f183a4acdf312bc14cf69158a20a015d170ac5c"
+  },
   "kubeadm_1.32.13-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.13-1.1_amd64.deb"
@@ -256,6 +952,162 @@
       "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.13-1.1_arm64.deb"
     ],
     "sha256": "0b573ce555c7af86ecddf7b65d3d58fc25014865024642c8dff808c42f2878a0"
+  },
+  "kubeadm_1.32.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.2-1.1_amd64.deb"
+    ],
+    "sha256": "a78cb48b6b5c168501259f27ad876d9bf3451a818967ec3e06d528a0405583a4"
+  },
+  "kubeadm_1.32.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.2-1.1_arm64.deb"
+    ],
+    "sha256": "d156255c43c89d8a473ccaf44030729660461b872fb45347822ed989a64ce5f0"
+  },
+  "kubeadm_1.32.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.3-1.1_amd64.deb"
+    ],
+    "sha256": "ac3cf38e900580c26061a3debf9031ed70a0e9532868248d6caf64c8419ced14"
+  },
+  "kubeadm_1.32.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.3-1.1_arm64.deb"
+    ],
+    "sha256": "dbcd60e0b3891c57e7abb231392e8a8f0c42fa409fbfd8f0db03d26636709a2b"
+  },
+  "kubeadm_1.32.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.4-1.1_amd64.deb"
+    ],
+    "sha256": "ef1a5ee78a584bd43d2d90614576fcad8fbdaf22bc9001219d45eda7e57153c8"
+  },
+  "kubeadm_1.32.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.4-1.1_arm64.deb"
+    ],
+    "sha256": "6b9eaa57fe2658e5f4d1b686d836d69034b8e3c77ce9b63e829be4fad6141d6c"
+  },
+  "kubeadm_1.32.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.5-1.1_amd64.deb"
+    ],
+    "sha256": "a78dac97447dd5cb92bfdec90cc5fcdb09e0635a5a3bcb8f94ec866c503fe915"
+  },
+  "kubeadm_1.32.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.5-1.1_arm64.deb"
+    ],
+    "sha256": "052685aa785f34eeb841fa25f9ceccf561e44a983f95153a652d57c41de0d5d4"
+  },
+  "kubeadm_1.32.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.6-1.1_amd64.deb"
+    ],
+    "sha256": "20c44d0474510183dd610680a732f70b8d21ad26bfb4a97ee762a99708173f88"
+  },
+  "kubeadm_1.32.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.6-1.1_arm64.deb"
+    ],
+    "sha256": "c3b19fe2836051abc1815351d742c87df9aaba83094cf4ec8509367c3636465c"
+  },
+  "kubeadm_1.32.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.7-1.1_amd64.deb"
+    ],
+    "sha256": "755ea033933b4615dfc87587b986dc3af6de5f3b3bbcc22e3fd439ae8a5ac2b4"
+  },
+  "kubeadm_1.32.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.7-1.1_arm64.deb"
+    ],
+    "sha256": "5529ca3a60c8d4bb8966df85a08cf59d78971b9cbe0a7509c4dbc256a519319b"
+  },
+  "kubeadm_1.32.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.8-1.1_amd64.deb"
+    ],
+    "sha256": "1350e5237fcd28a271a69bda2376b00a8a2b79469d4855c45a7f766e33db8cfd"
+  },
+  "kubeadm_1.32.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.8-1.1_arm64.deb"
+    ],
+    "sha256": "17ec73eac4f1b0b5386dcac6adb195e653da6b7079913020337dbd30f4324eb6"
+  },
+  "kubeadm_1.32.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubeadm_1.32.9-1.1_amd64.deb"
+    ],
+    "sha256": "30374ae08a5a186b126b694d76100cf32096079c3a1d7608d1638e939fa9e742"
+  },
+  "kubeadm_1.32.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubeadm_1.32.9-1.1_arm64.deb"
+    ],
+    "sha256": "41eb92f825c1d5774cd8912f731799a60ce8d1d7cfa89f19275e231b406ad9ec"
+  },
+  "kubeadm_1.33.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.0-1.1_amd64.deb"
+    ],
+    "sha256": "90fbcd7f7a4439ba7a024aa463c7632d889629f2ac5e2deb62ceb683408d3b0b"
+  },
+  "kubeadm_1.33.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.0-1.1_arm64.deb"
+    ],
+    "sha256": "54650842b3d6daf28bba71a6bca1673d034933b493148d88bd72a666c7112cd6"
+  },
+  "kubeadm_1.33.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.1-1.1_amd64.deb"
+    ],
+    "sha256": "ba85c299948ee4f004e2387d923c726485bd7f62853853f22d2c526274be97d5"
+  },
+  "kubeadm_1.33.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.1-1.1_arm64.deb"
+    ],
+    "sha256": "849497a35c2c830754166a2a0ba8bb797569f8a8483262cdd31bad477bce9a6a"
+  },
+  "kubeadm_1.33.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.10-1.1_amd64.deb"
+    ],
+    "sha256": "1f453f550c67c8cf651589e1b7df3caf9620e444f3a777ee2245abfcbe13dfd8"
+  },
+  "kubeadm_1.33.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.10-1.1_arm64.deb"
+    ],
+    "sha256": "a30b403e3244c8fde4f50f373faedab9851e84aec583cc3e3daf9849a5f35cca"
+  },
+  "kubeadm_1.33.11-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.11-1.1_amd64.deb"
+    ],
+    "sha256": "aad0ec337f301266f254f2bb027c8f8c5b4f434a06db343ec2f82c51d410e242"
+  },
+  "kubeadm_1.33.11-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.11-1.1_arm64.deb"
+    ],
+    "sha256": "1183f6010008585367ef956ce748b84407f6e5771a90a8e204804a0d092cc493"
+  },
+  "kubeadm_1.33.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.12-1.1_amd64.deb"
+    ],
+    "sha256": "be1a3794dcb42970cb74d0613f9b2dc19a53af5b0b2585456dd3f20910615e6f"
+  },
+  "kubeadm_1.33.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.12-1.1_arm64.deb"
+    ],
+    "sha256": "55bc3b04bba971f6f365c2426853d16c8700c83dc4ee16fcab31f261ea13148f"
   },
   "kubeadm_1.33.13-1.1_amd64.deb": {
     "urls": [
@@ -269,6 +1121,138 @@
     ],
     "sha256": "4b596f645a7537ee4614500a0ab4ae3a0a1c88a0e7f9631804026d401b4aa1dd"
   },
+  "kubeadm_1.33.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.2-1.1_amd64.deb"
+    ],
+    "sha256": "a20f8ffc431ec9316558ce62a020039f26af12bc8a56d238488ce6abca9cdb73"
+  },
+  "kubeadm_1.33.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.2-1.1_arm64.deb"
+    ],
+    "sha256": "0ea57e997f92ae9fde9bc0acf4f658b49b4d000a53f5f5243d7a6ce7a3dec14e"
+  },
+  "kubeadm_1.33.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.3-1.1_amd64.deb"
+    ],
+    "sha256": "d06966919d50bb2eec86ab0110c2ed761d5f397d19cb68a18643325a084891ef"
+  },
+  "kubeadm_1.33.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.3-1.1_arm64.deb"
+    ],
+    "sha256": "7ff36a04469c18ba7836bf4a5928f7e8a4f799758dd07753eefea3eb0a227226"
+  },
+  "kubeadm_1.33.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.4-1.1_amd64.deb"
+    ],
+    "sha256": "1c0daf9290b1033599ac0df3be36315886e9bc94a112291ad1702375164c2ee4"
+  },
+  "kubeadm_1.33.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.4-1.1_arm64.deb"
+    ],
+    "sha256": "a097d8dd1131bc5e3354751b434d5fd171047965f875bfb97a22fd7ada16e5c4"
+  },
+  "kubeadm_1.33.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.5-1.1_amd64.deb"
+    ],
+    "sha256": "1d71965932a93822faafcd196d6f78fb426d48db23a6ce8964c63154c3723a35"
+  },
+  "kubeadm_1.33.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.5-1.1_arm64.deb"
+    ],
+    "sha256": "792e0c1363f1e196eac3215a864a1e2af1c6b0ac234b30c909fd04b0a2586c52"
+  },
+  "kubeadm_1.33.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.6-1.1_amd64.deb"
+    ],
+    "sha256": "02cb69c6cc5dd76b7b647760e67c31b0c4981dbbea2c67648b93405cd49d4149"
+  },
+  "kubeadm_1.33.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.6-1.1_arm64.deb"
+    ],
+    "sha256": "a05a473a8d4828e007180bf13b88006d2aab32da286cde67bd1fe88a2876caf5"
+  },
+  "kubeadm_1.33.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.7-1.1_amd64.deb"
+    ],
+    "sha256": "08330911e3199f9d3862cc23e704f412de10304392508fec9665f0fb4ff55ce3"
+  },
+  "kubeadm_1.33.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.7-1.1_arm64.deb"
+    ],
+    "sha256": "f2fbfe816c77ec13bb54685e505ecf544b17f95dbaf86399bdc9b7ad4d14c823"
+  },
+  "kubeadm_1.33.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.8-1.1_amd64.deb"
+    ],
+    "sha256": "0a64ac1c6ca67b40aef46118ed023d1452e09005b9a23e1406c8337a1b81a538"
+  },
+  "kubeadm_1.33.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.8-1.1_arm64.deb"
+    ],
+    "sha256": "b8426e629e2a24e3a4ba01e9021f3c04c2f22b49651ca26d30d4f7d2e31cf6a9"
+  },
+  "kubeadm_1.33.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubeadm_1.33.9-1.1_amd64.deb"
+    ],
+    "sha256": "f04140d36e4667808ecb20d56046e7b8e04409fa240e6fe70f503d62cfc2dfe4"
+  },
+  "kubeadm_1.33.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubeadm_1.33.9-1.1_arm64.deb"
+    ],
+    "sha256": "6a7bff1697c9c376d246dd1c803e46870b83f6a68c85238dd97f817ff0c81b48"
+  },
+  "kubeadm_1.34.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.0-1.1_amd64.deb"
+    ],
+    "sha256": "75bf44e2ea45151dee0ff001ee9a30b5a435dadb77482d24538c4dae3a81d087"
+  },
+  "kubeadm_1.34.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.0-1.1_arm64.deb"
+    ],
+    "sha256": "d890c4a2eafead87aaf4491c507bb0a36213c880ff8e2b51ced60bf5f0e82d2b"
+  },
+  "kubeadm_1.34.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.1-1.1_amd64.deb"
+    ],
+    "sha256": "4495e34693115bb6bcd94dcc5209def1be0a98e110c23a36d38df325627b00d1"
+  },
+  "kubeadm_1.34.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.1-1.1_arm64.deb"
+    ],
+    "sha256": "be153481c69a711721cf24b7637c55c606fec31f5bf4f6c0aac2f95d73dcb0a7"
+  },
+  "kubeadm_1.34.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.10-1.1_amd64.deb"
+    ],
+    "sha256": "b24ebace8706a5924b314cf5970fae037b079ae0ec6f68f4a6ded0211adff8c7"
+  },
+  "kubeadm_1.34.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.10-1.1_arm64.deb"
+    ],
+    "sha256": "515852570516308bf99eb4a4c3697d59d3656a52d6976c678d9e3cc538dc6992"
+  },
   "kubeadm_1.34.11-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.11-1.1_amd64.deb"
@@ -280,6 +1264,210 @@
       "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.11-1.1_arm64.deb"
     ],
     "sha256": "92b50609f90734bc409b30dc8370c40edfe87d1017833ed7de6c672899480fd3"
+  },
+  "kubeadm_1.34.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.12-1.1_amd64.deb"
+    ],
+    "sha256": "21bfb1ab203f2885a90566f1b9ac15c7c639248fbbe4ddc4f2648a1abedda0aa"
+  },
+  "kubeadm_1.34.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.12-1.1_arm64.deb"
+    ],
+    "sha256": "aa0c88993c78b464992a88be2909c14e5f85d210ab01d2d7495e50d6796f20ab"
+  },
+  "kubeadm_1.34.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.2-1.1_amd64.deb"
+    ],
+    "sha256": "326f73dfebf4d8dc01becb217adbf7aa66aa7ffdf4cbc3cf85910ed21d1eb31e"
+  },
+  "kubeadm_1.34.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.2-1.1_arm64.deb"
+    ],
+    "sha256": "107690976b96dcb22aa21fdc1807b560e7d1fa46b247b86ef4074d35779944e6"
+  },
+  "kubeadm_1.34.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.3-1.1_amd64.deb"
+    ],
+    "sha256": "585e17b79d974693f6fa165d2704eb0211d21e63267438296b78f1c1b97142b9"
+  },
+  "kubeadm_1.34.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.3-1.1_arm64.deb"
+    ],
+    "sha256": "dee495093ff1b2a70e2aaf98f3cb5713b047b7ad29d15bb23fa33d548ecffdc9"
+  },
+  "kubeadm_1.34.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.4-1.1_amd64.deb"
+    ],
+    "sha256": "0d2e9a52050a64e499fce942c9737ed8782941e838522711e4a3d497a36361bf"
+  },
+  "kubeadm_1.34.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.4-1.1_arm64.deb"
+    ],
+    "sha256": "bed4d01af716f1daf986e9b8aaee7d98df5788267c958a861e565641221576c2"
+  },
+  "kubeadm_1.34.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.5-1.1_amd64.deb"
+    ],
+    "sha256": "16383166b6f25e6107cf123cf5506efde3ab8db269b39d1fcb6a4cfc1a61b172"
+  },
+  "kubeadm_1.34.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.5-1.1_arm64.deb"
+    ],
+    "sha256": "00bf346a55245dd81d14c80acd38773dc977ecb649ba815eee20a48309c8d620"
+  },
+  "kubeadm_1.34.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.6-1.1_amd64.deb"
+    ],
+    "sha256": "75c5ad336ab096dd8dc5beb9c12ad2568448a2201097c4d0655aea40aa0ede3c"
+  },
+  "kubeadm_1.34.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.6-1.1_arm64.deb"
+    ],
+    "sha256": "beb6bf7e9e2c1c202a03c562ad312e47e06511492fa68adcb265b11045a1c8bb"
+  },
+  "kubeadm_1.34.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.7-1.1_amd64.deb"
+    ],
+    "sha256": "8c31c9d6f22c91a8cafba1b03c3f2137d99458c8c5cc77090b932631c39a1873"
+  },
+  "kubeadm_1.34.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.7-1.1_arm64.deb"
+    ],
+    "sha256": "d85e0709dedbf4a1f47dd9e6d9b56e3efc0fc27156bc07c853547ad865592b14"
+  },
+  "kubeadm_1.34.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.8-1.1_amd64.deb"
+    ],
+    "sha256": "87e86f2a9f88e4187690947d56fe990b5dffb4da0c8594b850dbcb4aa0a40bbf"
+  },
+  "kubeadm_1.34.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.8-1.1_arm64.deb"
+    ],
+    "sha256": "4c5ed5f0002b21273ca745ed04a0217d92fe84342cd43cb602f7ff887be3f2e9"
+  },
+  "kubeadm_1.34.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubeadm_1.34.9-1.1_amd64.deb"
+    ],
+    "sha256": "34d56b6bad326e35f549708f24269c3a58fc2283bcec797d20779edef26bac16"
+  },
+  "kubeadm_1.34.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubeadm_1.34.9-1.1_arm64.deb"
+    ],
+    "sha256": "8dddcc9670d9ab7237f8844d16b60331a45d282da0ac373e7acebfe5babac4d4"
+  },
+  "kubeadm_1.35.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.0-1.1_amd64.deb"
+    ],
+    "sha256": "42038aa8c2d7125ca788c611287f38ffcd2e2b1df2d067a2263bd2f2b59a616b"
+  },
+  "kubeadm_1.35.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.0-1.1_arm64.deb"
+    ],
+    "sha256": "00c50e60fc3ddcb593356611a4251174e74de4d3520a88daa532061e8e33c487"
+  },
+  "kubeadm_1.35.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.1-1.1_amd64.deb"
+    ],
+    "sha256": "eb98dd4659cf071a4a629b7aeafd0df42b25fdb83a9aa7031442b2a1110a5fcc"
+  },
+  "kubeadm_1.35.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.1-1.1_arm64.deb"
+    ],
+    "sha256": "e42b97536446611c56b647a43a26d0399a23aa513302edd22787eefde968f9d1"
+  },
+  "kubeadm_1.35.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.2-1.1_amd64.deb"
+    ],
+    "sha256": "bc6e4b6e4f535fc1cb935175eb8e7b003cc44879344f85a3fc309b71057dc22d"
+  },
+  "kubeadm_1.35.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.2-1.1_arm64.deb"
+    ],
+    "sha256": "1ca128887f44c5127d1830ff427cb0b9ec3fea64bfe8ac627f120fbb9d9a61b4"
+  },
+  "kubeadm_1.35.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.3-1.1_amd64.deb"
+    ],
+    "sha256": "e890b42b3bdd19e3b8599142246f2d4a169a11eb7d04536df080595895cc9a5c"
+  },
+  "kubeadm_1.35.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.3-1.1_arm64.deb"
+    ],
+    "sha256": "e9f40277269822abd982903db065ca5f539c1858f9d3715407144507c5f38500"
+  },
+  "kubeadm_1.35.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.4-1.1_amd64.deb"
+    ],
+    "sha256": "ec352cc53f008320cb458c2d1e284caae2afc6e66876094c07b2469c5ba7a999"
+  },
+  "kubeadm_1.35.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.4-1.1_arm64.deb"
+    ],
+    "sha256": "7ec4664f5a8fe32c8b6fa5f34e16877c966b2841d59419b40293ccd5a302c9fd"
+  },
+  "kubeadm_1.35.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.5-1.1_amd64.deb"
+    ],
+    "sha256": "1ad9b997e89d9cc447e2c8788640f377bf2842b756a0c62ae63411d5f73511b5"
+  },
+  "kubeadm_1.35.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.5-1.1_arm64.deb"
+    ],
+    "sha256": "867f45aa242faf1fdb36dca147b1231c27698f89766fa9f26a813377ce15c903"
+  },
+  "kubeadm_1.35.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.6-1.1_amd64.deb"
+    ],
+    "sha256": "1aa601c1b9dfa82aecd4eeabb7c2cfde4ae3dfabdf9f9be3b5b2f36241b71a87"
+  },
+  "kubeadm_1.35.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.6-1.1_arm64.deb"
+    ],
+    "sha256": "40739f2c53eb62f9a96518ff4b3c696e4fd481d46eeeef8dcfa2c28d13f09368"
+  },
+  "kubeadm_1.35.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.7-1.1_amd64.deb"
+    ],
+    "sha256": "e806dc2a3a1c0b01d1800810b143ea46946249e1d803b26d2224cca364fe16aa"
+  },
+  "kubeadm_1.35.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.7-1.1_arm64.deb"
+    ],
+    "sha256": "e2594402e31f1ffec40d67244418399eec124fbff04296fea8f516f6b0a8d9d2"
   },
   "kubeadm_1.35.8-1.1_amd64.deb": {
     "urls": [
@@ -293,6 +1481,66 @@
     ],
     "sha256": "912da6a869a8f5b7dc5e6d92f119b5daf7cc2978b95adfe444c5fca48b322ed4"
   },
+  "kubeadm_1.35.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubeadm_1.35.9-1.1_amd64.deb"
+    ],
+    "sha256": "c2917c63b33f10302a9a087bf4ae5591864439a88ae9acf5cd2f2eea8d4233be"
+  },
+  "kubeadm_1.35.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubeadm_1.35.9-1.1_arm64.deb"
+    ],
+    "sha256": "0619db6e619852db5208610f005cf3c9338edfbee3a45f7c814dc9c2f8f4ca6f"
+  },
+  "kubeadm_1.36.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.0-1.1_amd64.deb"
+    ],
+    "sha256": "43740bc8e01949b119f0a4cff41f0b77b1c92ed4f2fdd9f7ce36bc4a7282f0b8"
+  },
+  "kubeadm_1.36.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.0-1.1_arm64.deb"
+    ],
+    "sha256": "5e7513cb1d80fb31886ce7c7c97b2931c8663e856e65216d54cf3c1f9b30d577"
+  },
+  "kubeadm_1.36.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.1-1.1_amd64.deb"
+    ],
+    "sha256": "a8d6aa7402def8deb42f398bbc0d21a7ec12e7dbca0834106075580e860ef9a5"
+  },
+  "kubeadm_1.36.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.1-1.1_arm64.deb"
+    ],
+    "sha256": "148fba713e7d5543b6a3772b2054ef79d581b1497b4458d4edeeeb1dffb7dfa1"
+  },
+  "kubeadm_1.36.2-2.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.2-2.1_amd64.deb"
+    ],
+    "sha256": "f08a258812d5c0a3f4828b048576310432b3bedb7cea293f793c606f017a445a"
+  },
+  "kubeadm_1.36.2-2.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.2-2.1_arm64.deb"
+    ],
+    "sha256": "9fd5af3d0d32583e48920582dcd6f48e3c441b5d5d05555de3237b5228e73f64"
+  },
+  "kubeadm_1.36.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.3-1.1_amd64.deb"
+    ],
+    "sha256": "7225b4b7928de8bb9b7a69b75524c2df1a6f78fcbb40724f7e5b49926119c2af"
+  },
+  "kubeadm_1.36.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.3-1.1_arm64.deb"
+    ],
+    "sha256": "0d60b31fd6b3fb385b9426aa2656609da80f9bc02b376767cb658273ca2c9f2a"
+  },
   "kubeadm_1.36.4-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.4-1.1_amd64.deb"
@@ -304,6 +1552,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.4-1.1_arm64.deb"
     ],
     "sha256": "f550d046dc00bccf35c14de74c8423213fccd1d828734c6e6fc510d838c0a832"
+  },
+  "kubeadm_1.36.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.5-1.1_amd64.deb"
+    ],
+    "sha256": "bbb6899335ca6890be4c007e10c66303f68281d342f2e7345db9c03cd5175da9"
+  },
+  "kubeadm_1.36.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.5-1.1_arm64.deb"
+    ],
+    "sha256": "d08b7af27b50d539d91d9c5af69f73feff0e59455fe74d478e0a009cc2bdf260"
   },
   "kubeadm_1.37.0-1.1_amd64.deb": {
     "urls": [
@@ -317,6 +1577,78 @@
     ],
     "sha256": "1e4652c10e36c1405dd27fae58191992d835534b7cda8daa11276323535d1f3e"
   },
+  "kubeadm_1.37.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubeadm_1.37.1-1.1_amd64.deb"
+    ],
+    "sha256": "b7f399d83fcb8c619927042b4dcd06ba68757fb74f9d2baabc358a0e22032f92"
+  },
+  "kubeadm_1.37.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubeadm_1.37.1-1.1_arm64.deb"
+    ],
+    "sha256": "25d485eade81e05d63000ed2848781fd0127218c6e0e9ca66bfa62d39d41886e"
+  },
+  "kubectl-1.32.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "a56c5fdc657bb9cff14523b579c7e793870ae9a10c3253e9c41f2dba2ab3b8e4"
+  },
+  "kubectl-1.32.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "01b16e4810d835cd12167eb589efcacb06646084795d8fff3aedcb5843f9ad27"
+  },
+  "kubectl-1.32.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "05fa6a36537f4f5632af5f22fd7817013b5cdd14561d3bb0a2ffb6a2b7fa1c83"
+  },
+  "kubectl-1.32.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "59c84653d34b60df41f3cf03dc19a2ab337056fd19a6b6f5206352223510df23"
+  },
+  "kubectl-1.32.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "71783d9d708ebeb4d00cda278a16f9c6ba06232ed35a0fc702a49f1ee0916e66"
+  },
+  "kubectl-1.32.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f79b8237172e49b380a1d677997cb68bb31cf7de4c2766349c68e055edf7e1ca"
+  },
+  "kubectl-1.32.11-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.11-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f94650eb788047106dffddb92f689c782da25d8353ca1733442c9fded87779cf"
+  },
+  "kubectl-1.32.11-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.11-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "84636797f288e315411aef77d2d8b61c42103da8527380dab28585576f383bbc"
+  },
+  "kubectl-1.32.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "2787009eb20b97e272eb24eae3aac7e414aeb56ab8ab14c74911ec7fd9f95247"
+  },
+  "kubectl-1.32.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f31536dfa794098705b436eaa804be7cf434dcef8b947a55f589130dc043a0be"
+  },
   "kubectl-1.32.13-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.13-150500.1.1.aarch64.rpm"
@@ -328,6 +1660,162 @@
       "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.13-150500.1.1.x86_64.rpm"
     ],
     "sha256": "8b19d3db40878e8bb2d31d85716d061f9642f3e5073c92fe7c1fe9ffc6ed53ea"
+  },
+  "kubectl-1.32.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "0454b82b1e48aa526caf8b911eaaf0b7c4076ca99faf636dc2ab028a7385db43"
+  },
+  "kubectl-1.32.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "e82e9236a4e9e83ef545b9767993fc405c8a778046676d8eb7e498bfb2d6bd0e"
+  },
+  "kubectl-1.32.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "d29ec310dcff88197d0b056e76ab7fb36b72393b1d6a78a6c8895e1bb02fa234"
+  },
+  "kubectl-1.32.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "30fba7548aca90a3380e4455164c0e8d7dbb35a951dcfeb6d5f0cf944a9d86ac"
+  },
+  "kubectl-1.32.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "6f61ac8395f61a08add5d9595fabc7d30ea8889faf28cf6026c0f404c1f4f649"
+  },
+  "kubectl-1.32.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "defc56e903b5ff6a46e1c4c33831e7f7d608b2fef4518752170430a9de216a22"
+  },
+  "kubectl-1.32.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "847ed76bc12200eeffa59abe6677e8788f27adad7c6b780a7edbfaf64b346114"
+  },
+  "kubectl-1.32.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "bb2868b9af963ec96a94710a6d0d49239ec28811e3398af659fb64f56b5c2383"
+  },
+  "kubectl-1.32.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "59610a1b8a679765a0a53e2265d5cd2d4dbc76068f8315bc626bb3db97861f81"
+  },
+  "kubectl-1.32.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "5da2470befe585f2f4fa2bc38f76f7a2a84df73c25aea7c3288cbbb7bede6e08"
+  },
+  "kubectl-1.32.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "04eba0e6bf25f1c40e8023cf0ddf22d0945186db7838b1a4cef9b92963b45e08"
+  },
+  "kubectl-1.32.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "8fec5e1d3a689fee8865299e8209aed2de100a58dd30e4adfecda6200d121ee4"
+  },
+  "kubectl-1.32.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "182f0a197b04af407baa92718bea56f2152c37072e3ad0940e305c6f273e78ca"
+  },
+  "kubectl-1.32.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "91e6ff7ae0966541604a6de256190052b6dfa6a775bb413f85cdbfb323a94258"
+  },
+  "kubectl-1.32.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubectl-1.32.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "84866c9f069a480fbed87243a75e687673d6dfe0ad64b7f9b3aa875522bd3e29"
+  },
+  "kubectl-1.32.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubectl-1.32.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "6f7887feb45341735881636cf0ca9e4d7c4426722669f85d79a78007c7572593"
+  },
+  "kubectl-1.33.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "24cd4bd4a69d7c3a94aa84f806664594229bdcdea42a3d83c6144e9db8f64487"
+  },
+  "kubectl-1.33.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "d253004ddbac34e654cc35613c5fa74d9cc02623717280f21efd4508f2421520"
+  },
+  "kubectl-1.33.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "14a7bb0aeca15276cf8702c8e721bdea3af6ac91792e93654afc74384fc36bc3"
+  },
+  "kubectl-1.33.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "700804a093b961f60f449ed3981fb76144eb46ccbc6f5bf021bad153103b40e6"
+  },
+  "kubectl-1.33.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "a254cd5c5f9c98afe015f0af3a79567f3c5a547b001c920ffefca9da2f722d94"
+  },
+  "kubectl-1.33.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "a1cb2614b1370d0b5f1b991e31549fabcc74af1b58995ca5c986ddd904c757c5"
+  },
+  "kubectl-1.33.11-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.11-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "00aea3d67ea1e93e085828aae7502605b47afde195b1ef6fa3ed65667820436d"
+  },
+  "kubectl-1.33.11-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.11-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "c5961374f8988692dab3dd976b10ee1cde457087b79d26282d9458d9c7893d4f"
+  },
+  "kubectl-1.33.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "096ddd026f30c5ef784a98cceb63b7838ff6d77deb0d7fe07eae9a972da89c51"
+  },
+  "kubectl-1.33.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "06b5c25cdef469afc8887c3c73e37ffebe438e5fa5edff866a48839edab22a07"
   },
   "kubectl-1.33.13-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -341,6 +1829,138 @@
     ],
     "sha256": "1f61ad5b8fffdcf43d34968f22aafe37f538a0d4c34afee4049ad71a6a548437"
   },
+  "kubectl-1.33.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "3e7d8e4a55316e8cad28e8ee14bacbdd5a44f51e9ca95c206f91cf2dd34bec81"
+  },
+  "kubectl-1.33.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ba56af97f225144b94f258059e86e533c61d8ac34b36a24df4500408b44f2f5f"
+  },
+  "kubectl-1.33.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "38e320520bc4b09d2e6b2222c880c78db35a05bdaa4f1e5f66a7fa6daa8fb934"
+  },
+  "kubectl-1.33.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "d693a87b7855baa076454fa9c7c81594794793cdcff2b8b86135623f66929d9b"
+  },
+  "kubectl-1.33.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "dd5f268c73089f38aeb86de9db65b349bdfd14db2c8bbbcc76cdbb6d02f0d13d"
+  },
+  "kubectl-1.33.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "34083037008dfb1988c587cd87b64e12cf6cd0fde736d4f0e58e68029450c02e"
+  },
+  "kubectl-1.33.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "cd31abfe653402bcc9b23f89b44ea86f7b830dca2436e6576660fa896f8e877f"
+  },
+  "kubectl-1.33.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "35f83e6c80d2c639b551bc1e5b5507cd0cdf243e04698da6e8e1085f70c7a523"
+  },
+  "kubectl-1.33.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "cf91bb8237cee46b98389d6ba527d48a993e2509ee28046284b56ed15e3cb11f"
+  },
+  "kubectl-1.33.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "75e498f0084629bb2b14e2bf3ecfbee49d881ba6cfb5857a2bdc19d34931682c"
+  },
+  "kubectl-1.33.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "d87236d1bf9373acc99d578fd35a510da70280ad8dec8f2fb1961c7d655e2612"
+  },
+  "kubectl-1.33.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "31e347e306cc0f4a38429c66c9aaff4be9ee0faf131d740da4b6c6ee53e88dff"
+  },
+  "kubectl-1.33.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "406bbf04b64d987c2019e9ec699aff6628508def724925db4af43f1c0af97444"
+  },
+  "kubectl-1.33.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "9fa9beb42ca8813078524890a19e1f88e7bb230c1126b7fb3f7593568f72b04d"
+  },
+  "kubectl-1.33.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubectl-1.33.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7e111cf58b26516d2b6f198db4839c4e3d20372b3efeb5292b3fcea06654c244"
+  },
+  "kubectl-1.33.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubectl-1.33.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "84e678c0d1806a0ab80e97450edc2b702cb52359b59bbbeb697d35ad4fd5eca6"
+  },
+  "kubectl-1.34.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "01c517517f0ab3e58dd1cae259049859add07fddb56d4b70e4cedca8b60660af"
+  },
+  "kubectl-1.34.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "935749e814902052c5b06ea519a3e8367283d91f8badf1a1b2aef42494e06dcc"
+  },
+  "kubectl-1.34.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "03b4acccbdfc0d31e0ac247c83aeafd930ea49c8878a952ebc5812732e7d7df7"
+  },
+  "kubectl-1.34.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "87ae9cd351cb755c59a4419495e9e2d64d0eb886903adfd1ec0f567e2f2db319"
+  },
+  "kubectl-1.34.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "2579d905737517804fdd890ce57ff282fa06204b67422d84541fa6138d66745a"
+  },
+  "kubectl-1.34.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "17ef845883e351e8c7b6d18db5f1a0c20f47e518c619b61cf09cb682e35a34fb"
+  },
   "kubectl-1.34.11-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.11-150500.1.1.aarch64.rpm"
@@ -352,6 +1972,210 @@
       "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.11-150500.1.1.x86_64.rpm"
     ],
     "sha256": "924f0cbd94a1e86340703a15abf8380f1d810f40036fbb9376aae8e257ef1d56"
+  },
+  "kubectl-1.34.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "cf063273a9523c7a266172591a4457cf3fedff56e1c3fe6c0dcba71b109ec525"
+  },
+  "kubectl-1.34.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "802baf5f9cf9e32dfeb16bedb015348ac0127e4097759a3d6ab892acc71efa32"
+  },
+  "kubectl-1.34.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "72ac11616c3450ff40609d1e97a97a3fdf14f9125ba523183f2931da904e79f5"
+  },
+  "kubectl-1.34.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "9cd0358e6a611cbc3f019e6fe61327db8503b475f1cb331c885d48ec8f9927d6"
+  },
+  "kubectl-1.34.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "fae1d10a3a697ecc6ea2699d33b4bd62bb0983acdf8bb150980748a6f18cc249"
+  },
+  "kubectl-1.34.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "9efc2bb0809b7702c640eee2009298beca91eac840c92adfea1aa73fd1166a28"
+  },
+  "kubectl-1.34.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "091d2ae01fa6605cf62c9debe2cfbe8905599142a78316df4749da086e913fab"
+  },
+  "kubectl-1.34.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "47c608a21beef405fa797c8f77b1eb43e8542f35bcf97e736d6d9a2fd031f68c"
+  },
+  "kubectl-1.34.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "73baa8b77cd161c731d8824ea44ba6325eb16071afb0dd8443043b0d2059d9a3"
+  },
+  "kubectl-1.34.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "390ee04f864f297fefea5dad1116bd99f02128d974c7a7f871d28b936cde8924"
+  },
+  "kubectl-1.34.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "b8604a529c68e1e53e11f83e9291e6b95ee8d2259b30d5008856f8240ccb2758"
+  },
+  "kubectl-1.34.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "3e0f2de128a0e8cf18ccee8cdb55a93339c43f398dda6b8803ff467bcea4ce1c"
+  },
+  "kubectl-1.34.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "80c833ed17397cf3f75cf3a3907dff49dbf003dbf43312b45d8d7f707d57b4bb"
+  },
+  "kubectl-1.34.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "78706da6d64c39de8419fd685f8bd4ce52c91e9a415fa6dc61e9124e1adce4a0"
+  },
+  "kubectl-1.34.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "4d583a4fa7e9e0cb9e1fa37be6ce840b2210aff157664485668e662178937ec9"
+  },
+  "kubectl-1.34.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "a47193244c8819f9ef655eed1010f3b9f4bfd996fd8188627dbaade08efd97ce"
+  },
+  "kubectl-1.34.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubectl-1.34.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "fafd24643804369a5261f95a4b6081d8f2bf12903457d3e60e51251da2337590"
+  },
+  "kubectl-1.34.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubectl-1.34.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "4285cd3e82fe16033fac996a5e42021af6f253dbe6f5a4eb6219a0e446086900"
+  },
+  "kubectl-1.35.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "627e314f9a5b9a0b53f62ac8bbcd3e25fb7967e13df8dc75bc5d5f16a2162fdd"
+  },
+  "kubectl-1.35.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "90edb48c9e2f9b422dc2f2d71a2c48253849e29609c9c946078908494f44531d"
+  },
+  "kubectl-1.35.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "6b0dda59ecafbdea5a6c126302a49cc99783878a877847c02ccd2d658e70292e"
+  },
+  "kubectl-1.35.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "662c18b7df5872bc9ee969fb9aed9580f30aeec277bbec0e2da6f9f1b34d2b42"
+  },
+  "kubectl-1.35.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "af4d46b15774c5edb4a3a1742ac336811de1ba04cd9b60b069556ba4ad840e61"
+  },
+  "kubectl-1.35.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "715006c8a55817efa25e97fd87a992623b54f94d4bdc60e4ea6f73a736eb4476"
+  },
+  "kubectl-1.35.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "58a2d96887907804173c58e3dc63cdfee02c6ec7866d3d636ca5b3177f405467"
+  },
+  "kubectl-1.35.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "39766eebd3006fc5bc9c5cb41789c6f63d8e8fe03445b2b1d76e64d68be27245"
+  },
+  "kubectl-1.35.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "ccbdaf3569abe711b9d01c475d677aabdd2e74236a189579570e4d7ec1636800"
+  },
+  "kubectl-1.35.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "63601b2885c96dbf92030758c9a23bdbbcb067287bcdfede167d5a76390a8109"
+  },
+  "kubectl-1.35.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "698aee995544b39c9a87f55ca06df0aafeb24c165d7a15e7efc9fa607cfc043f"
+  },
+  "kubectl-1.35.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "e4a471c69fe7ff167f725196ec01628c43aef19a7b1619841e31f44bc6882c66"
+  },
+  "kubectl-1.35.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "566871991495c4e00317bc5a5501b2ba9f13369751c6ee60fd305e1f05f8c394"
+  },
+  "kubectl-1.35.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f1247969f3a93a3a7035f34ed455c81f27d93323e96921c75fef4a3bc2668133"
+  },
+  "kubectl-1.35.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "cc4b3b2e88acc62dcc7e6b6662c6d4c0b4234a135a2a7cc2d42cf5b7d6428b19"
+  },
+  "kubectl-1.35.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f9d7b1541955be2a89b596a5be03d256f507e7e7f2999b39cbf2acf9ec73d59b"
   },
   "kubectl-1.35.8-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -365,6 +2189,66 @@
     ],
     "sha256": "5505d72fc5b8e92fd82a963079a2d03618191f1e018103d2e691a295d0bbaa00"
   },
+  "kubectl-1.35.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubectl-1.35.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "86b5262046a8aa8e6797963768eabbaa375e764369f205e07d7ae0193002050f"
+  },
+  "kubectl-1.35.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubectl-1.35.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "99ca53e62c6c803e9194cfb95f1828452f7b4bdb9df1487da012ef45dea1c10e"
+  },
+  "kubectl-1.36.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "985c8dac674f2a72c015af288c86f0b322cf1fd292607114ac847215f3c56797"
+  },
+  "kubectl-1.36.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "c7984d2bfedd51b4d69c789759eb050302b94898e3af0b2bed5d3d40356b9582"
+  },
+  "kubectl-1.36.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7bc3edc733af6f6167babf0b014a7ba86abef6651140ad9894d394ae39818ea2"
+  },
+  "kubectl-1.36.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "3abd3018cd13a2e04f1094a2260a38430fa1296e832eb68b2194a22bddddd38f"
+  },
+  "kubectl-1.36.2-150500.2.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.2-150500.2.1.aarch64.rpm"
+    ],
+    "sha256": "d9af9d6f8211133ba783f2293c9668343c552ef75454adc7aff60b43b6905de3"
+  },
+  "kubectl-1.36.2-150500.2.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.2-150500.2.1.x86_64.rpm"
+    ],
+    "sha256": "e4c6e7bff5a46d99e86b42dc2042d2c6b9374c46770bd83c22722a69ac25a0fb"
+  },
+  "kubectl-1.36.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "57e8227eaa5e6c3c4497dc2e1279a74a715716ac80f040d81e7ae86e1987f29c"
+  },
+  "kubectl-1.36.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "5cfd2090ba08e5d917e5d2410c169b7acaa15c4ecaef1f2cfd757a60714ec9b2"
+  },
   "kubectl-1.36.4-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.4-150500.1.1.aarch64.rpm"
@@ -376,6 +2260,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.4-150500.1.1.x86_64.rpm"
     ],
     "sha256": "33854d63f2019f7f4582b3292a4ac3a2314befe4e85c21696dfaca4ab8bbaeca"
+  },
+  "kubectl-1.36.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "0e012478f14585eb07b824e54a8c055ed1598520319833562ac08c606c8a0722"
+  },
+  "kubectl-1.36.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "9e406829bad036e45e08f6c49176f479c06d239cf64a96befa56f8b1b55a37fc"
   },
   "kubectl-1.37.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -389,6 +2285,78 @@
     ],
     "sha256": "407e09a380c0848666232675bd86eeace146d6c25255ef17ec9ffee10a76705d"
   },
+  "kubectl-1.37.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubectl-1.37.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "9e547c2291188a615c09d553d6643e0253d8257084d763143f28beaf8c84c4cc"
+  },
+  "kubectl-1.37.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubectl-1.37.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ee93977ad16b76038bc5362aae824e4539855057f4bb4443d792ee06cb2a9cfe"
+  },
+  "kubectl_1.32.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.0-1.1_amd64.deb"
+    ],
+    "sha256": "0c2c09dacd05e3f46ed06e8f257fd2a41f092f7776b9f3780dc3831346d22883"
+  },
+  "kubectl_1.32.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.0-1.1_arm64.deb"
+    ],
+    "sha256": "062ee228eacc2bc3169a3036c80238177fb284458a9de704d3843f63f2a13762"
+  },
+  "kubectl_1.32.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.1-1.1_amd64.deb"
+    ],
+    "sha256": "ae42feea3426b100c4a9a6cfcf0a5927e94c70974b8dfd18e3b85a3a11a5d962"
+  },
+  "kubectl_1.32.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.1-1.1_arm64.deb"
+    ],
+    "sha256": "6442f00caac91d1762aa1b7064068ff1bdb187d824ecaf242e85c10ba4488cd8"
+  },
+  "kubectl_1.32.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.10-1.1_amd64.deb"
+    ],
+    "sha256": "5e5ac079bd8b18388892d6e87d54b2726ee776aa5bb4dd9c3749df521507ca1e"
+  },
+  "kubectl_1.32.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.10-1.1_arm64.deb"
+    ],
+    "sha256": "620f2073b37d874290cf486e5571abcd5c0f644dce4051ada355e109aa67680f"
+  },
+  "kubectl_1.32.11-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.11-1.1_amd64.deb"
+    ],
+    "sha256": "f1d672d153a2b822c7d4e68f01e4f136cfa6484e4f6721f1aaa8a2b476c1f3b9"
+  },
+  "kubectl_1.32.11-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.11-1.1_arm64.deb"
+    ],
+    "sha256": "9db83aa2d065cff76b33a61caaefaea12e832ff0814f386810e0a78e43d69e9b"
+  },
+  "kubectl_1.32.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.12-1.1_amd64.deb"
+    ],
+    "sha256": "95f65274cdd58597067c686fc0fc0ee95c3ba6758e7fc2c0a4f14ca4e237c956"
+  },
+  "kubectl_1.32.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.12-1.1_arm64.deb"
+    ],
+    "sha256": "2470f4f4e9aa25f1a8b041187b9bb824e9cd0882d2d6262ea98cb17acc367b31"
+  },
   "kubectl_1.32.13-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.13-1.1_amd64.deb"
@@ -400,6 +2368,162 @@
       "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.13-1.1_arm64.deb"
     ],
     "sha256": "697d8089ebaac1488db79e865fc5f37f040dcaa9f59eb5dec4f9a3e0a4124be6"
+  },
+  "kubectl_1.32.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.2-1.1_amd64.deb"
+    ],
+    "sha256": "342a59b62f2a93515a9a60e1e0355c85d896af97c38dc464f2452d0700a82dfc"
+  },
+  "kubectl_1.32.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.2-1.1_arm64.deb"
+    ],
+    "sha256": "92fa9c6fdde1cef78d7d1ab25f368f1dbde8af5d3737345be0679ce572b2fd88"
+  },
+  "kubectl_1.32.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.3-1.1_amd64.deb"
+    ],
+    "sha256": "8b7cbb11514f5d1d6eadffe61c8338d09d15de551daecc7d0e109d6c4fd0799f"
+  },
+  "kubectl_1.32.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.3-1.1_arm64.deb"
+    ],
+    "sha256": "a7660aed8fbd6930aecddb73d518e94e2e1f88b7df54c723d236190ececdf42e"
+  },
+  "kubectl_1.32.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.4-1.1_amd64.deb"
+    ],
+    "sha256": "7355ab0c85d4e6db5d45b13522b4b255f2346b2dad98e9916f77a74c33d88a9f"
+  },
+  "kubectl_1.32.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.4-1.1_arm64.deb"
+    ],
+    "sha256": "f4a09190bad5d137ecabe2982bcbb51fd0b5b68f70ab4c0a40969458e305da44"
+  },
+  "kubectl_1.32.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.5-1.1_amd64.deb"
+    ],
+    "sha256": "ff92115104b2b86406d8420b41ff4cea16a25ccce91b5f21bd2253c87b8280b9"
+  },
+  "kubectl_1.32.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.5-1.1_arm64.deb"
+    ],
+    "sha256": "313b5bb96a47d38d9a0984a98aec96d6e76e7f134710facac5803b63d857da5a"
+  },
+  "kubectl_1.32.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.6-1.1_amd64.deb"
+    ],
+    "sha256": "3767a5b6025f77b2ec922e5e3f5887f24f50d7ee5399185df697b8feee38890d"
+  },
+  "kubectl_1.32.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.6-1.1_arm64.deb"
+    ],
+    "sha256": "3d8662a85cfe84614d52cb61888ccb4e74c948d2d78149a5388bc30bc8abeb76"
+  },
+  "kubectl_1.32.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.7-1.1_amd64.deb"
+    ],
+    "sha256": "b346654f4fb7befa4ee35f251bcc8866a82c5e6bd6e168ff2c6620ff90794b8c"
+  },
+  "kubectl_1.32.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.7-1.1_arm64.deb"
+    ],
+    "sha256": "7e5e4a7ead4b18b7ef4063b6e987279a77cddf1dea596327c67087345bbf837f"
+  },
+  "kubectl_1.32.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.8-1.1_amd64.deb"
+    ],
+    "sha256": "a3d1cd9766c83e601c49f74db1d5ba60da7ddfb61a674d136c57451d98b5a25b"
+  },
+  "kubectl_1.32.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.8-1.1_arm64.deb"
+    ],
+    "sha256": "95c978b686b81b4373f3a09a6bfaa8cb5a2c015961540960da2aa67cc7fb8fcf"
+  },
+  "kubectl_1.32.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubectl_1.32.9-1.1_amd64.deb"
+    ],
+    "sha256": "caac03b139b1678390342fe0e65b1839206e481ea33bb2a11bc0ca1625b7b852"
+  },
+  "kubectl_1.32.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubectl_1.32.9-1.1_arm64.deb"
+    ],
+    "sha256": "b559da51d6ab5ad6442d58f086b40536a2805c6108553eb0aa0df3aa604a898a"
+  },
+  "kubectl_1.33.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.0-1.1_amd64.deb"
+    ],
+    "sha256": "24aaaf7856abbf2a6cf68666602506d94993d91518db27605b593f12fff4badd"
+  },
+  "kubectl_1.33.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.0-1.1_arm64.deb"
+    ],
+    "sha256": "ecbe8822b0219c0fa17b798e467b677bccd3850fcdb710fff283118f8cdbd7ba"
+  },
+  "kubectl_1.33.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.1-1.1_amd64.deb"
+    ],
+    "sha256": "7fcedc8feb3d3a524f98e815d60dab914b58ae64581b6f4bd8d83872f8e92872"
+  },
+  "kubectl_1.33.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.1-1.1_arm64.deb"
+    ],
+    "sha256": "e3b3cc30ed28dcc796802ec5062c06195da7484b897e6b5f36f5330a227f6f50"
+  },
+  "kubectl_1.33.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.10-1.1_amd64.deb"
+    ],
+    "sha256": "34b0dc7ff00c19e5f169d07816d83411eaefd1e23ee5623aa80ef3abe6b604ec"
+  },
+  "kubectl_1.33.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.10-1.1_arm64.deb"
+    ],
+    "sha256": "968dffb59238789e824afc632ef957160efb70ac23f1d1dba55f71abefc866f3"
+  },
+  "kubectl_1.33.11-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.11-1.1_amd64.deb"
+    ],
+    "sha256": "a24fb0ffcd28704eff72569f8cda53c24f1ca6f0e3c5fa7aafa02ea0fc61b6e1"
+  },
+  "kubectl_1.33.11-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.11-1.1_arm64.deb"
+    ],
+    "sha256": "21e3728db4287771505466fbc03af236dfb8854a5403cc67c776b8583cdfc920"
+  },
+  "kubectl_1.33.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.12-1.1_amd64.deb"
+    ],
+    "sha256": "d7d92df7027212eed2a291255d9bc9117fcc386727610e60d65fa5061108df83"
+  },
+  "kubectl_1.33.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.12-1.1_arm64.deb"
+    ],
+    "sha256": "9f4c9c45df81b7c14669bcff7a7e5b459473404ebf85106e374febb4f132ccec"
   },
   "kubectl_1.33.13-1.1_amd64.deb": {
     "urls": [
@@ -413,6 +2537,138 @@
     ],
     "sha256": "406a3a50d0f4f54ac432eb97342e1f6730b0f0b6fd4f67b4b15972366995ad2d"
   },
+  "kubectl_1.33.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.2-1.1_amd64.deb"
+    ],
+    "sha256": "022d57b6a8cd60b803109502f0aa0a778db56057d99aba349f58f02714b58e46"
+  },
+  "kubectl_1.33.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.2-1.1_arm64.deb"
+    ],
+    "sha256": "39f68a20e231aa87f128ca849f8f2e259ea06900a8b6661aef28cabf687dd328"
+  },
+  "kubectl_1.33.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.3-1.1_amd64.deb"
+    ],
+    "sha256": "dd8cb36f25830bb3ff543e065c542b5fa8f54aa6869698a7ec8d841f41fe66ac"
+  },
+  "kubectl_1.33.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.3-1.1_arm64.deb"
+    ],
+    "sha256": "2933d7b3bd3be9da65440f14557504288f2f975d425d97fc33504a40b3983b97"
+  },
+  "kubectl_1.33.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.4-1.1_amd64.deb"
+    ],
+    "sha256": "8a78fc78640f993e1282699f39240e4fc057bc536c1b8c23897bd9206dee4b6b"
+  },
+  "kubectl_1.33.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.4-1.1_arm64.deb"
+    ],
+    "sha256": "81a49badd041a21e654091082110d4e7e1e45370c6dbdeb16f90fa988a8f3ade"
+  },
+  "kubectl_1.33.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.5-1.1_amd64.deb"
+    ],
+    "sha256": "c30965ef40e7122f007f57e8050b8b383ae8f1dec50cd56d4de7e39fd025a7a6"
+  },
+  "kubectl_1.33.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.5-1.1_arm64.deb"
+    ],
+    "sha256": "8ae0641edd4bfd25c3f87384851bef87b3ee651f0d40a9e7b1217ffce4450d6b"
+  },
+  "kubectl_1.33.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.6-1.1_amd64.deb"
+    ],
+    "sha256": "5264330fc927aa7922e6970b45ddb6017dd22d528c24109d790bc70e2ea0e2d2"
+  },
+  "kubectl_1.33.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.6-1.1_arm64.deb"
+    ],
+    "sha256": "117396df90fd6007d8e6d001cb6f2cf6533bb464fa4b866b52dc1027895fb784"
+  },
+  "kubectl_1.33.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.7-1.1_amd64.deb"
+    ],
+    "sha256": "b8cd1dd30d60688cbd3a33e22dc1646b22ba262cdfcf3d18a77486cd37f2176b"
+  },
+  "kubectl_1.33.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.7-1.1_arm64.deb"
+    ],
+    "sha256": "dcd420cea9dac024c7be7d52920642ea8bcafc2215dba5b2361dba541c1a0406"
+  },
+  "kubectl_1.33.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.8-1.1_amd64.deb"
+    ],
+    "sha256": "c4ba7cba45c22fdb0d1629109bb50f96f852ed638f71fef7da26844977419937"
+  },
+  "kubectl_1.33.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.8-1.1_arm64.deb"
+    ],
+    "sha256": "9b2e94d9c8430a3c18e1bbcab43f0b500568b5bd2afbe9722edb09b738b447db"
+  },
+  "kubectl_1.33.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubectl_1.33.9-1.1_amd64.deb"
+    ],
+    "sha256": "feadad2cb3b1b76b504fdb89c178d06ebbc0c3321000d3b69aa1f6e367c8e2c9"
+  },
+  "kubectl_1.33.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubectl_1.33.9-1.1_arm64.deb"
+    ],
+    "sha256": "5c92a6c1dd43c6c914f57a04e9ec4eb32dc74f473429d895edd0c986c3dc3c64"
+  },
+  "kubectl_1.34.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.0-1.1_amd64.deb"
+    ],
+    "sha256": "15f0a2d50591d3bf64c3fac9eecdef9d8cbf3f130deb4a5bf92f42f70f7ec1fb"
+  },
+  "kubectl_1.34.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.0-1.1_arm64.deb"
+    ],
+    "sha256": "b5af839553ca6c528a8ead56ea8b62481e9d50448ea86c0926b0c7011ac66da2"
+  },
+  "kubectl_1.34.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.1-1.1_amd64.deb"
+    ],
+    "sha256": "7ad7db3822a32d6fb4434290aa11c51aa5342ef65dcf1235c384ad50d0f0b022"
+  },
+  "kubectl_1.34.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.1-1.1_arm64.deb"
+    ],
+    "sha256": "27a55174cc6b6fa760d573ea43cf908e5b8ba06a4534b222b83d9b1b571278e8"
+  },
+  "kubectl_1.34.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.10-1.1_amd64.deb"
+    ],
+    "sha256": "577cc56d2d399a464c4a3f1758e16f583c7d1debeda9abaf280bf9b6f2f5ba62"
+  },
+  "kubectl_1.34.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.10-1.1_arm64.deb"
+    ],
+    "sha256": "b1fe76092a9e56fe8b4321e9c865d0da5893c8555a9945a84461d3450f1a733f"
+  },
   "kubectl_1.34.11-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.11-1.1_amd64.deb"
@@ -424,6 +2680,210 @@
       "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.11-1.1_arm64.deb"
     ],
     "sha256": "fe6f11853219f43b63e2d07506d97902768a3a4bb9b08cb523437b0930a7f680"
+  },
+  "kubectl_1.34.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.12-1.1_amd64.deb"
+    ],
+    "sha256": "551f4861ab20151a3e7898f893e7943cb9705cc5c62a191284d11eddf7c5652b"
+  },
+  "kubectl_1.34.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.12-1.1_arm64.deb"
+    ],
+    "sha256": "6b24cceaad7dff362d0958d1fb3ba4713e16140a86613f04aef7c8cacbe1d8b9"
+  },
+  "kubectl_1.34.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.2-1.1_amd64.deb"
+    ],
+    "sha256": "9c96ef940509cb1a9137f7d4b9ec0ff872dd2b422cf7e1b821dc8979ba789141"
+  },
+  "kubectl_1.34.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.2-1.1_arm64.deb"
+    ],
+    "sha256": "41d0aa7cfd59bec0c0e0f0373ffa39d2dcc06e010350244899dc25580c2524c6"
+  },
+  "kubectl_1.34.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.3-1.1_amd64.deb"
+    ],
+    "sha256": "de6eaf25ccf492e46bcfed1f5e729442c34b891c956da0df2a056a2d186b2a0a"
+  },
+  "kubectl_1.34.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.3-1.1_arm64.deb"
+    ],
+    "sha256": "035ae94c5175a58907009f203d2b12c85c13ad1420127ae5143c6381d43c9914"
+  },
+  "kubectl_1.34.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.4-1.1_amd64.deb"
+    ],
+    "sha256": "d7a04ac34f76568c86e1e8d9c68daae9aca26dd27f4a16f84f0ba2971be696a9"
+  },
+  "kubectl_1.34.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.4-1.1_arm64.deb"
+    ],
+    "sha256": "ee9597674f704bde74e3a06bd8091b2bf2d6f18a2e9dd1feee9093682224a56c"
+  },
+  "kubectl_1.34.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.5-1.1_amd64.deb"
+    ],
+    "sha256": "30e807b6ad8c60d8ad2607cf892e966b7acb83ad11db45b016ea32774311ab15"
+  },
+  "kubectl_1.34.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.5-1.1_arm64.deb"
+    ],
+    "sha256": "6a1256d1b93872283aa83042462b5aad0ec1befe89093e63c43dc458c54cc68f"
+  },
+  "kubectl_1.34.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.6-1.1_amd64.deb"
+    ],
+    "sha256": "f0fbdf29a780e98265cda51060c8f3172c21cbb8e1f8997e48519cd0b4304a2f"
+  },
+  "kubectl_1.34.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.6-1.1_arm64.deb"
+    ],
+    "sha256": "f3057bc5590444e98deb7aa6c24318c2bbe38bfbe4cb4bcd038cea66755908c4"
+  },
+  "kubectl_1.34.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.7-1.1_amd64.deb"
+    ],
+    "sha256": "996b5eef78cdbf67442331d20bc976b62405f9441c4ca3897554c3a8d0ccfc9d"
+  },
+  "kubectl_1.34.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.7-1.1_arm64.deb"
+    ],
+    "sha256": "a248d0e0833db32c13ee6881888aa791e71920add1d43475b812681b2c695c3a"
+  },
+  "kubectl_1.34.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.8-1.1_amd64.deb"
+    ],
+    "sha256": "dff0d06893126e184a9330fc480c58ea60c6e5aec8aab6c1ade9b56b7f7fa1be"
+  },
+  "kubectl_1.34.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.8-1.1_arm64.deb"
+    ],
+    "sha256": "ffd4bffdbed55cf673324e8d3691c12daeced6f830e36b577d8e24a712f64382"
+  },
+  "kubectl_1.34.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubectl_1.34.9-1.1_amd64.deb"
+    ],
+    "sha256": "ab3e16a325a8a5d0613a11d75460999fdf6a1e325e54165e8165caa7e7544b40"
+  },
+  "kubectl_1.34.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubectl_1.34.9-1.1_arm64.deb"
+    ],
+    "sha256": "e752c32c325c1e8e87294f96e5b2fbcfe9418b2c78fabb1e07bcf5d52b9d67ab"
+  },
+  "kubectl_1.35.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.0-1.1_amd64.deb"
+    ],
+    "sha256": "94817c028e5e968b359c2d35fcf9de9150ee59a29811de26502aa8652ddb15a1"
+  },
+  "kubectl_1.35.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.0-1.1_arm64.deb"
+    ],
+    "sha256": "6f706de0d45a6037358db47dad74e5cca85fce12d666fda62d7707a9f913dffb"
+  },
+  "kubectl_1.35.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.1-1.1_amd64.deb"
+    ],
+    "sha256": "bb4b7be9157492457d94c6384b142a06ac5bee2fcf9b452bf96471031f146643"
+  },
+  "kubectl_1.35.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.1-1.1_arm64.deb"
+    ],
+    "sha256": "704fbfac6a250f5ca4e0fe16f3b97b22674e195127f344efe4185955efead95a"
+  },
+  "kubectl_1.35.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.2-1.1_amd64.deb"
+    ],
+    "sha256": "9eff5df7948198d8aa266f1cdcc6d06d080d34566e29bbca7e888314a204518e"
+  },
+  "kubectl_1.35.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.2-1.1_arm64.deb"
+    ],
+    "sha256": "70a8e4e8d92ed08362880c36641585a28f9ec105bbaa8188339cf15b3979f8f5"
+  },
+  "kubectl_1.35.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.3-1.1_amd64.deb"
+    ],
+    "sha256": "c91392bfea5bcf3fb36303b9d0a17bf42f912e90e8aedecb144dc8157097e9da"
+  },
+  "kubectl_1.35.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.3-1.1_arm64.deb"
+    ],
+    "sha256": "68660145fbbe5fb137bf86bb378f6ca08801fc6b38e9a2d12ebbd7113f1b57b2"
+  },
+  "kubectl_1.35.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.4-1.1_amd64.deb"
+    ],
+    "sha256": "1512fb7b5eea904a3c887b4dba129a8e9a4ebbe966a4af386602f36f70b60d2f"
+  },
+  "kubectl_1.35.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.4-1.1_arm64.deb"
+    ],
+    "sha256": "3a602046cd7d8d63ead5b90ebffe1851ad1b40577f7f2057162208fa984b84d3"
+  },
+  "kubectl_1.35.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.5-1.1_amd64.deb"
+    ],
+    "sha256": "544ae4cdff79c808fd0648ef0ce2bff7a0737f433ae1f62a014fe7933689df3b"
+  },
+  "kubectl_1.35.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.5-1.1_arm64.deb"
+    ],
+    "sha256": "1d1799da8045ff37ce2c1a54daaba746b775d6ca6c8a0629e986064e4f15132f"
+  },
+  "kubectl_1.35.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.6-1.1_amd64.deb"
+    ],
+    "sha256": "aa2a6ed770f797e64cdab5febf6a42e96538dec03f4ac0f59817cbcbb150f251"
+  },
+  "kubectl_1.35.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.6-1.1_arm64.deb"
+    ],
+    "sha256": "51d879f28bd4fea6f13fce1c3473b1ae635e4472d80e289ab1c141d93c467509"
+  },
+  "kubectl_1.35.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.7-1.1_amd64.deb"
+    ],
+    "sha256": "334d170add14b2be2aeb1796ceaa1129ba7d088066e401d6943ee91e584a92ef"
+  },
+  "kubectl_1.35.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.7-1.1_arm64.deb"
+    ],
+    "sha256": "5a098fb3da81c43c2e12ff10e4579b6a88008395d3d172dacec1dd27b17527a2"
   },
   "kubectl_1.35.8-1.1_amd64.deb": {
     "urls": [
@@ -437,6 +2897,66 @@
     ],
     "sha256": "4955fef060d78649ea2467240b82148418def1cf8cea22a59f78e9b1f1037d12"
   },
+  "kubectl_1.35.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubectl_1.35.9-1.1_amd64.deb"
+    ],
+    "sha256": "59e5d923d69ab77df6eac0891a4878de209f79d10d94af1e0e3efd9fd841e1ce"
+  },
+  "kubectl_1.35.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubectl_1.35.9-1.1_arm64.deb"
+    ],
+    "sha256": "1c34f7740f6cfe6526486f62e7697122f9bd47ea5a785ce9354a8073e69a4b21"
+  },
+  "kubectl_1.36.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.0-1.1_amd64.deb"
+    ],
+    "sha256": "73106542b7b4e6c021d39a8a68bcd6b6acb5d11d8c1c5b8036f4545f1942421e"
+  },
+  "kubectl_1.36.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.0-1.1_arm64.deb"
+    ],
+    "sha256": "d54bda2fe46784e39d9aaa0831b090782520deaaa1ca5993b2e4d126ffbeb04c"
+  },
+  "kubectl_1.36.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.1-1.1_amd64.deb"
+    ],
+    "sha256": "645ee9b22a8454147850aebbe362bc257fd330dd7ee5c486a8e0b49b39da1804"
+  },
+  "kubectl_1.36.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.1-1.1_arm64.deb"
+    ],
+    "sha256": "907b280442ba1f6e8cf9767e119d0e4a78b70b2d8c9a45ce05a595f86b58daa9"
+  },
+  "kubectl_1.36.2-2.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.2-2.1_amd64.deb"
+    ],
+    "sha256": "e678e88e6e65fb49f54985994eacaa5555574f0ceb01772208f328037878b58c"
+  },
+  "kubectl_1.36.2-2.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.2-2.1_arm64.deb"
+    ],
+    "sha256": "d34cc5b2b051cce38d5790e90fbe7894b7d1c5ba2e8cd2f344c63a1ae7a8d7fb"
+  },
+  "kubectl_1.36.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.3-1.1_amd64.deb"
+    ],
+    "sha256": "22c1bbcecfdee50ad013ab7ab9e90ea9d3aaa01d3ac38ac578534976f856c330"
+  },
+  "kubectl_1.36.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.3-1.1_arm64.deb"
+    ],
+    "sha256": "54aa4aff98fa41d714822a8eb4f23184a3b8813ef7a23c5e795fd9e1c0ea74fd"
+  },
   "kubectl_1.36.4-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.4-1.1_amd64.deb"
@@ -448,6 +2968,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.4-1.1_arm64.deb"
     ],
     "sha256": "3646252df2009ab4b2d827a4abe6d925287f4c45a386a0439c4715f6550de9f4"
+  },
+  "kubectl_1.36.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.5-1.1_amd64.deb"
+    ],
+    "sha256": "e633cdbcb535b0fdf8bd9aa643cfd0ad080889fddb6794d2af0bbaaf110e7956"
+  },
+  "kubectl_1.36.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.5-1.1_arm64.deb"
+    ],
+    "sha256": "65cdaa8817b252ef493768ba8976b292eccddcfd3d5e9b6d24bbb67ec58027fb"
   },
   "kubectl_1.37.0-1.1_amd64.deb": {
     "urls": [
@@ -461,6 +2993,78 @@
     ],
     "sha256": "2ecc3549965c1446c67337b9cc02a39f86dee94373348cb97ff52da37dbf91fd"
   },
+  "kubectl_1.37.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubectl_1.37.1-1.1_amd64.deb"
+    ],
+    "sha256": "f2a1d6e1d2adf5c5c80d3518917a28b66a423698a553c4be4d181df8ddbdde94"
+  },
+  "kubectl_1.37.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubectl_1.37.1-1.1_arm64.deb"
+    ],
+    "sha256": "4e6ab8199a5ce617286630fe191abb3ed60ee05e347df919911703587caa870a"
+  },
+  "kubelet-1.32.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "31a7924b0beb515b9b37684538c6c033ca17cf8d8434165384f320ed6c7c69c6"
+  },
+  "kubelet-1.32.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "2153311cf13dd6211839d02b213b1aedf4d7b70c44f668cefe44891003535bf1"
+  },
+  "kubelet-1.32.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "0d6903a45388b05020b4c9d02160bea6bc5b2f9ec8d9005faf0779bd3cf09630"
+  },
+  "kubelet-1.32.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "a7be29806bc3f64ccd241086a9df80b1224deb2336113b7116a110a3eba8c43a"
+  },
+  "kubelet-1.32.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "26199c2c2f7729e9182c9c3414d57b1baff61b682c26c20e1abb7135e6576726"
+  },
+  "kubelet-1.32.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "16bf77b47e9d306b0e8afd4b93c6e6ec5857fac6a1a5852345ec9e5ac773d0ed"
+  },
+  "kubelet-1.32.11-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.11-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "685989ab49d14ad7c8055424156c240f17c1718f5c10727f51643ebe2fde27a5"
+  },
+  "kubelet-1.32.11-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.11-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "96dc74265e82b93681315408f45964e9774852f26d992a671ca1493835674752"
+  },
+  "kubelet-1.32.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "efc58ab0b441d3de87776fb58ed613db8bfb35cef1e2ef2a31645d626464af68"
+  },
+  "kubelet-1.32.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "557f437af3ba4f8f21329e4a09f0be7fd64f58c6738fd8b8aa687b3a09788f74"
+  },
   "kubelet-1.32.13-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.13-150500.1.1.aarch64.rpm"
@@ -472,6 +3076,162 @@
       "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.13-150500.1.1.x86_64.rpm"
     ],
     "sha256": "1c68b589cf856aa74fa72fe5fe8eeace1492f03592b13c822f8b988ed69e5a78"
+  },
+  "kubelet-1.32.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "600ebebfb3fce775b10a28174ed0112f53348a191b8e6c230d30abf2bb0bd489"
+  },
+  "kubelet-1.32.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "fb7698733ccc5a8e8871293e087f32d9d13eb33905aabd0c31142cfd091a2f2e"
+  },
+  "kubelet-1.32.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "47059e8a25cb722557d0064a05da4bc475e35dbdcf9cf9cdaaa3cfb0047a2596"
+  },
+  "kubelet-1.32.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "abc124c945588ac7f3c7d8f20f00fb861583e1549f22a25048adb1a676e29915"
+  },
+  "kubelet-1.32.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "438a860231a5bfb08c689575f8e624fd448d67ca1d0fbe5ea5b691b6e52a9251"
+  },
+  "kubelet-1.32.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "6a91a220bba441fb9c3f7106af22603e2f2686f8e77541ae27284f4dd378b082"
+  },
+  "kubelet-1.32.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "2889fdd6ce0046b9f2cc78c364d867a0d2a1fabd143b5e5042efeddb06a96dd2"
+  },
+  "kubelet-1.32.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "dba6ff6d803a26563ac6e99f4801ecacee0ee2bbf5d5b0a987d2bdb6e5e5edd0"
+  },
+  "kubelet-1.32.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "5174a6486127c6f903ad3464afc4f257d85a732507d892351907d13dc651c1ea"
+  },
+  "kubelet-1.32.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "bd412f2d44b39ab7aead0ca204f277e41913bfc8b3649b86b683755a3c755602"
+  },
+  "kubelet-1.32.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f047a0fff8d280dee69658220380ea89f3d5593ecca024b3d959f11a3a89fff3"
+  },
+  "kubelet-1.32.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "0de2bac3b2615421861e5b25d8d9ec7741896434de89b234284be848bc8a3ca0"
+  },
+  "kubelet-1.32.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "c4f6369a1a9d5c12ad388963e1446c305362a3846ecd6c7c5434e8dfecd3a955"
+  },
+  "kubelet-1.32.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "8ce06d4c0780322157bb0c688c0594e5ccf5bd7d42ac0f9f00c7e5003963d247"
+  },
+  "kubelet-1.32.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/aarch64/kubelet-1.32.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "9cb8ab7322dbf522c2065dc33f23f2bb10485efa4fe11b813187cfc6129bbc32"
+  },
+  "kubelet-1.32.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/rpm/x86_64/kubelet-1.32.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "2a95c98c973411a1515ef227cd2b5b37e5885d30c0abade0aa79906f42e02a4b"
+  },
+  "kubelet-1.33.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "4695c4e4bee93fb738bf22863eb488a65132d339e0636a5d24359798a0dcb43c"
+  },
+  "kubelet-1.33.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "796096330282c6fc58b6d2dcb84ad2d804894e5db0476f10cdc30f5f91917490"
+  },
+  "kubelet-1.33.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "d92c61f820d81c59d7ceb8f7c3f5ee31ed69da9bea3749ff4d2e6655e042622f"
+  },
+  "kubelet-1.33.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "5b374b340d27c8614b007bee4c06d896be01934244a54f11adb5b45d8583bd56"
+  },
+  "kubelet-1.33.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "fadf94546d9a7c757be88583b401e6e3f3cb04e64dad8d49ef68830f2abd722d"
+  },
+  "kubelet-1.33.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "414537fa622eb39c8f4f2713aa72e7ca04a31fd1920096c7681ee1145826a41e"
+  },
+  "kubelet-1.33.11-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.11-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "4fa3efa74aef4a2fc3a1dfc0749b728cbdf85be8678737542fc96287578e8f93"
+  },
+  "kubelet-1.33.11-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.11-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ac0961338f36958671f45d7d0c908786a3f4800bed07200d576f416badf9ed48"
+  },
+  "kubelet-1.33.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7dbab2ba219818ec439645fc58ef662d4e76e376a7ce600df6d18415bd51ccd2"
+  },
+  "kubelet-1.33.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "18fb83427d56d275e4858f1f5b0eac58f5b8176e6f7bb22b93d5359b9576762c"
   },
   "kubelet-1.33.13-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -485,6 +3245,138 @@
     ],
     "sha256": "aeb661379522395a58ec9127be66ae9709d2be382d18b996635e12ee489f2714"
   },
+  "kubelet-1.33.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "776dbc676230d17ea3a34d398d07d00c87a896a015f242efe92031c993c621aa"
+  },
+  "kubelet-1.33.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "4265f6279eb80fc26e055e4528fdcb45b4ab5e25370d306175771ab52d10f8be"
+  },
+  "kubelet-1.33.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "bac0bd1111ffc800df9adfecaa6a46ccb692a625b7ae951029bec60f34b816fa"
+  },
+  "kubelet-1.33.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ae5abeab78853dcc807a9143eece7c100e64bf7944b13351c5b4ae443ec10acc"
+  },
+  "kubelet-1.33.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "f98bfa2231268a67897a1e2630a452dee84c5b5f51d8f6bb24c08cb03e065b44"
+  },
+  "kubelet-1.33.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "fc0bf2eeba46adb0a57b01661b28f6f55eae74eeafdda277a6b11d7884267adf"
+  },
+  "kubelet-1.33.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "5e608e9f9c907a8a833c18bf8ca631eee35312890dd8033e75b596863d3f7533"
+  },
+  "kubelet-1.33.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "af7aa9c438865a69511dfa0e7ec8d0adff9fa325e2501d206a33adfb6c23a169"
+  },
+  "kubelet-1.33.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "1ef2a5b4870fb18141c79a6e9befdca3d2f1160d694a88e19870816b1140632c"
+  },
+  "kubelet-1.33.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "d3138ff6c11c866eed129fe897f28b970411c7adb0185b598331585dc62a0035"
+  },
+  "kubelet-1.33.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "b3f160360623138fdd9acd56da3c82e32851024fdf2965a41a4a3e531ea4dd2d"
+  },
+  "kubelet-1.33.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "84acb6bd590f5d0439927b6f3da4a9365666b4b4974c45c25c4832a45f4c836e"
+  },
+  "kubelet-1.33.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "fbfa5944b766ab941e357bc345c6edd65871b679d2446ef904c1dc48196103dd"
+  },
+  "kubelet-1.33.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "6b88d766231bcd34c3b1344a329fc0ea1ca6a12247412ffba35f9988dba8d885"
+  },
+  "kubelet-1.33.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/aarch64/kubelet-1.33.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "c5fe991dfa20c9341ab43184a9159e7342c89a638a2e78d9237a810e358e5867"
+  },
+  "kubelet-1.33.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/rpm/x86_64/kubelet-1.33.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "76b3346626d82f655f6a0eefca1049b7ee60a2d0ecaa9a7f7c7619e100da972a"
+  },
+  "kubelet-1.34.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "3f12883e20795b3194e459a6a7c6c0cfd0ffbd7cc188b908c5de453a76512040"
+  },
+  "kubelet-1.34.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "756aa1b04287823ef94d03200ba490c6c1f02f25e2fbfaa74c938acd67f58c62"
+  },
+  "kubelet-1.34.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "682c68b5f22dcca757404dcecafc13db882f6146f1d80334f2eadfaaf7cfb065"
+  },
+  "kubelet-1.34.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "8a549f12b3348f97f1eab3af517f4d51e3d2783fd97de45f7fb6f9b1838bd4c3"
+  },
+  "kubelet-1.34.10-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.10-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "ecec8a808290a868d06396fa8672cd50882a70d3b11e8a55ddf4dfc173b56662"
+  },
+  "kubelet-1.34.10-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.10-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "b32e0bc73c68fddb12cc640b7ec43a5c89f692a9e710beaaa76073039f5a6ca0"
+  },
   "kubelet-1.34.11-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.11-150500.1.1.aarch64.rpm"
@@ -496,6 +3388,210 @@
       "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.11-150500.1.1.x86_64.rpm"
     ],
     "sha256": "160470d26bed99bc60bf5eab5d7623caf61fc88f31d21226e036ff47586e5596"
+  },
+  "kubelet-1.34.12-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.12-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "ba1d078cb3e6845e3284b2f1a2ec05f2d467d81b07caefd40425d07c5850bb9f"
+  },
+  "kubelet-1.34.12-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.12-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "743dfeebab569462a147ca0bb8eed34331f93ea7a38b5eb7fdfddf824ac49d2e"
+  },
+  "kubelet-1.34.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "75cace027d574edb921fd8d88aee047f22590f399c0096112d1bd7968d34b450"
+  },
+  "kubelet-1.34.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "c1ab47b596826e508b6eae9f13719d5c9eaeddc20b045a89ed609c826ac787db"
+  },
+  "kubelet-1.34.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "2f874180b2119f891ec15b8b6e6df2e3af9692e0cb2e388b8173c8b22672494b"
+  },
+  "kubelet-1.34.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "0f53f121f77fd7b57cca2ce375ff15a4748eb7c597ed8ea1c039c29f0c3a42de"
+  },
+  "kubelet-1.34.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "292f9e6da1cec230f684b42b529880007eca276cf4996cedb3d793d97b35c464"
+  },
+  "kubelet-1.34.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "d175a28f92dd4032f45e80bd6c9fc9adbfad9a7ce1e7bf0d749410d3f2914fc4"
+  },
+  "kubelet-1.34.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "98219ea0fb7a5251b4ba41832739bf78dd71db3b9c3e7d2b1e45ead9163a3d80"
+  },
+  "kubelet-1.34.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "cd2934fe4f9baeb9cae3a063c0242de300b4732834ff62066faffd4781cfa38d"
+  },
+  "kubelet-1.34.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "6193fbc86c0d8da6476d9f3d11f62b195d16913915b718227f0f41ad098aceb6"
+  },
+  "kubelet-1.34.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "8ff73208a453129440c76122521a2fcf283fc01c3bd7778af8c276a79d3497b7"
+  },
+  "kubelet-1.34.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "1c91faae5cca3161778414c917e8f8d01bf89526e858c06026ed9aee71be7285"
+  },
+  "kubelet-1.34.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "0f33591e4ef05abd005cadbeb60c9bb595c09273751cd122cc0a0f86b659ac9a"
+  },
+  "kubelet-1.34.8-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.8-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "517dc27b1d086727af1bcf5bf32bca24c7dbe7e99b2139b13185146b59d314b9"
+  },
+  "kubelet-1.34.8-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.8-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "5ecda541ec20443f14eece7f6bb665a102c781d631b642a2cc64ea584cb37bcf"
+  },
+  "kubelet-1.34.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/aarch64/kubelet-1.34.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "5e94828fea995ad3904ab6cffe5b5d97184f9bf1d16034ca3d6c4b4d07637248"
+  },
+  "kubelet-1.34.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/rpm/x86_64/kubelet-1.34.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "d1b03b15b209d3a38ae5d92b91fe72f52ac918c6e2fc9b06965ad99b5c29c4de"
+  },
+  "kubelet-1.35.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "bf3196d3f5cee88e79a4c9890011a5e40c2e29b2ccd6c30e830ddd9f1f628caa"
+  },
+  "kubelet-1.35.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "3ea5dd6ea41c26317126508f4299001a315369eeca6e8303865ca12ee202c9d6"
+  },
+  "kubelet-1.35.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "b58cc4ff652f12464ae3a9cdfbd2b9b002dc018f868b3105ae49c9fe6ab92230"
+  },
+  "kubelet-1.35.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "d2d3ec8077f9cdce45166d921527a7e69efbf4b43822a6a4fcc19ceabcd15700"
+  },
+  "kubelet-1.35.2-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.2-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "be501762ea6a3c3d58b63d8201cd8b10f0368eaa5367eab2f0dd60044448c66b"
+  },
+  "kubelet-1.35.2-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.2-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "0b2c5697cf44c036866df7cee493fc1ab1eb1d5219023a06e6b26e5a752e242e"
+  },
+  "kubelet-1.35.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "4a2d4701ed633f901cecc00718d06b2e991052a2e59750aada293eeed3c17484"
+  },
+  "kubelet-1.35.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "f1cc8ee5c0115e64be594a036398c93fcb9edd0b67dd6d743bac00a76f42ab88"
+  },
+  "kubelet-1.35.4-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.4-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7eab873511b4c8a0542504bc5bf6b68b7dda521754180d41956504a88bb40a6c"
+  },
+  "kubelet-1.35.4-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.4-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ad7f118145e74db1af885f0995a8d06b51b491b1786191e1d7efcedc32a69746"
+  },
+  "kubelet-1.35.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "24cbee082acd551551633c8e719f54fe8e55e6eb732ce48d30afabce487950d3"
+  },
+  "kubelet-1.35.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "5fa2643fa749c21ec1f5bd1909054f3c39d8179aa91e0884195dfb3045ce7626"
+  },
+  "kubelet-1.35.6-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.6-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "9e9eb322fc8b702e6e2d7b1a9e5c8a2983987f0b5eb431059106dedd1809d0e6"
+  },
+  "kubelet-1.35.6-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.6-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "07e3935f54157a22056e5bafe4da3da45370c8a8fce6de264e4de867a9cc71da"
+  },
+  "kubelet-1.35.7-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.7-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "685d72b04ee581a1f93c436f34282cf2b96de4a991f87568e395003bd2ec59c8"
+  },
+  "kubelet-1.35.7-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.7-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ac680929b407ed77c84d1026b852b404b891ebbc0453563c27c2176543b15a78"
   },
   "kubelet-1.35.8-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -509,6 +3605,66 @@
     ],
     "sha256": "f6b94b33e20264576d9938dc5fdb15c1df5e8a5c23d41d915c60123dd3d03c18"
   },
+  "kubelet-1.35.9-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/aarch64/kubelet-1.35.9-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "ef86adf971152b4225199b84bf73459998959ce926dc92d441fe7b72bfb66279"
+  },
+  "kubelet-1.35.9-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/rpm/x86_64/kubelet-1.35.9-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "9f6ed58e5f197d1838b4a91f790b47252f3e659c6b0544bbaf2c9280242a55d2"
+  },
+  "kubelet-1.36.0-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.0-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "1467ad04fb04133e037d3a4aa3151599552e2376e4652bc1d091c76f774b2bc5"
+  },
+  "kubelet-1.36.0-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.0-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "7ef78d28864d46a2b450b561759d6af3268a343ca567d4bd615c1c738ef21f1e"
+  },
+  "kubelet-1.36.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "205d9582bff87c7ca3fe749126f0254e1706c2c1949ad00fe01bb30a9740b90d"
+  },
+  "kubelet-1.36.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "fc74dc990dad76e33ffb4278afd68b97083cb6de391a831697b432270f4710b8"
+  },
+  "kubelet-1.36.2-150500.2.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.2-150500.2.1.aarch64.rpm"
+    ],
+    "sha256": "2ca306e2406378197d46eae97b0afb2d729ee6a9fc336147e36e9bc1c38fdd89"
+  },
+  "kubelet-1.36.2-150500.2.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.2-150500.2.1.x86_64.rpm"
+    ],
+    "sha256": "d1766397f22133f96b141a063855bfe1690770bc8ecf6bdbed4828aa9f4947bd"
+  },
+  "kubelet-1.36.3-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.3-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7989f271a6249220c7effc8626109178b165034769ab0cad788d75c2415b7ea3"
+  },
+  "kubelet-1.36.3-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.3-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "ee5f435131cb0ddd728d0d8bcf3fbce4dce2f63b78502516790331b698c66cbe"
+  },
   "kubelet-1.36.4-150500.1.1.aarch64.rpm": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.4-150500.1.1.aarch64.rpm"
@@ -520,6 +3676,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.4-150500.1.1.x86_64.rpm"
     ],
     "sha256": "217fcdd849e623d5cca069c40341797322a0d51ac5db3a60b5d2757bda967007"
+  },
+  "kubelet-1.36.5-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.5-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "3da680cc2f3f814e8b1bf8dcd2fe703699990834675afb0f2aae0ce63617f065"
+  },
+  "kubelet-1.36.5-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.5-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "15b55de802c19f1c5b89c065086ad8feec3430fd58da836300f51688ecbbb63b"
   },
   "kubelet-1.37.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -533,6 +3701,78 @@
     ],
     "sha256": "e90ba658b12517421433b6c7b63411e5caa6139e7b40123c210f083920ee69fc"
   },
+  "kubelet-1.37.1-150500.1.1.aarch64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/aarch64/kubelet-1.37.1-150500.1.1.aarch64.rpm"
+    ],
+    "sha256": "7b4e9dd64128312609bd586ce06288fa5e1d063c4632cab972e58c5e6a259828"
+  },
+  "kubelet-1.37.1-150500.1.1.x86_64.rpm": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/rpm/x86_64/kubelet-1.37.1-150500.1.1.x86_64.rpm"
+    ],
+    "sha256": "7682e706bbe6de00a113fe97279d222ec058484e1e7b9afa3a03e4745d659b56"
+  },
+  "kubelet_1.32.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.0-1.1_amd64.deb"
+    ],
+    "sha256": "9c6c9e2c65427d7e95fe6e796d9f5b8381adca0abdd06b3e1f5f49fba3a14406"
+  },
+  "kubelet_1.32.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.0-1.1_arm64.deb"
+    ],
+    "sha256": "846c6a9110d7ca5265da0c575942f7f97e7919365e01c809306c12d1434d70ea"
+  },
+  "kubelet_1.32.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.1-1.1_amd64.deb"
+    ],
+    "sha256": "5a9fc9a404f8c552ac38c561d0240f6ce856c165f8e4b60f24a7299db7a22f78"
+  },
+  "kubelet_1.32.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.1-1.1_arm64.deb"
+    ],
+    "sha256": "90e8654292040e40fc5db53458d0e6c5fb3079ee8ebc8040e162586a367a5f2c"
+  },
+  "kubelet_1.32.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.10-1.1_amd64.deb"
+    ],
+    "sha256": "d8b73745389d2a564817200e2fec2d7b8f855991cb3e4ee5d0a5f8ec9eda3c59"
+  },
+  "kubelet_1.32.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.10-1.1_arm64.deb"
+    ],
+    "sha256": "8bd34a114454963287ff0da456c1d71f8fee8a47e839ee9402adafea172ee216"
+  },
+  "kubelet_1.32.11-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.11-1.1_amd64.deb"
+    ],
+    "sha256": "3e177ef058b9f9c5e744b1e2d0a31504e031cb919f805ffc5303b30cd3e396db"
+  },
+  "kubelet_1.32.11-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.11-1.1_arm64.deb"
+    ],
+    "sha256": "a6a33e3ddfcc8cac2b77fa71acd4810cbd5cb0baf7a585c0e9cfae4d15dcb7cb"
+  },
+  "kubelet_1.32.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.12-1.1_amd64.deb"
+    ],
+    "sha256": "3013d7bb876fb74eb589677f906d1458eb0cfd8926f1447dd2022932d697699c"
+  },
+  "kubelet_1.32.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.12-1.1_arm64.deb"
+    ],
+    "sha256": "c1e5dae472b1713a0736aa43250717e09c3fbac2c0020b500ef0c0939395c7b1"
+  },
   "kubelet_1.32.13-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.13-1.1_amd64.deb"
@@ -544,6 +3784,162 @@
       "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.13-1.1_arm64.deb"
     ],
     "sha256": "be920da578466116dd37b74b2942dba03a3260b18d86b2dedbabdf460523744c"
+  },
+  "kubelet_1.32.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.2-1.1_amd64.deb"
+    ],
+    "sha256": "cbae7d21b30b34ff3c25abf564e937b73ca23928d235a7ffae9fca6b33b601ad"
+  },
+  "kubelet_1.32.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.2-1.1_arm64.deb"
+    ],
+    "sha256": "ddfc9adb07579035292235909e3df57f5f230ae82355272153da27d7ea2f7df7"
+  },
+  "kubelet_1.32.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.3-1.1_amd64.deb"
+    ],
+    "sha256": "54f2039037d5159940284a2fa15056ff8aa8d3297a65f2d4190a18076fb8aaa7"
+  },
+  "kubelet_1.32.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.3-1.1_arm64.deb"
+    ],
+    "sha256": "889875990741300ff3c871fece473b0146233c360f80978cae888ad2411008c6"
+  },
+  "kubelet_1.32.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.4-1.1_amd64.deb"
+    ],
+    "sha256": "c926f005a7f4cf83e051d5166c78c52352adc3ef52d55856ea99681c8aea7de3"
+  },
+  "kubelet_1.32.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.4-1.1_arm64.deb"
+    ],
+    "sha256": "eaf69176960777c8ce53ec784895854ab819879f272a15fb0ab0dafa3c96bf59"
+  },
+  "kubelet_1.32.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.5-1.1_amd64.deb"
+    ],
+    "sha256": "300e559ef6e143e78be9a363e92f25fe109c192fbf739d0b1a6a623acf10fd67"
+  },
+  "kubelet_1.32.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.5-1.1_arm64.deb"
+    ],
+    "sha256": "f07749121f7e2feda730f3f5bddcdf6a4f1f73be39eac73761950fc67e6eaa12"
+  },
+  "kubelet_1.32.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.6-1.1_amd64.deb"
+    ],
+    "sha256": "3fd8097909c90668d3d73870d105286e4898f7a2592501e425a0ce1912fbbdf2"
+  },
+  "kubelet_1.32.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.6-1.1_arm64.deb"
+    ],
+    "sha256": "fe000915965e6adfb39a05c2469674363fd5e353b4dd036151abddf8879bed77"
+  },
+  "kubelet_1.32.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.7-1.1_amd64.deb"
+    ],
+    "sha256": "b9dfde756e89267608c006a72d5a9e94cfd2f64680e3f9885720c3ddac231b29"
+  },
+  "kubelet_1.32.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.7-1.1_arm64.deb"
+    ],
+    "sha256": "dd040f280d48117e7ef8097194287af21a56a8a700d1900c765372916d79100c"
+  },
+  "kubelet_1.32.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.8-1.1_amd64.deb"
+    ],
+    "sha256": "95f5cf3285c999356868312be8eb84df34d0860430d830f31bb22ea6dc86f82c"
+  },
+  "kubelet_1.32.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.8-1.1_arm64.deb"
+    ],
+    "sha256": "66728ae9541b4be5089dd914802dc6a2b86b5a689b61aeb21e7087a6a672532e"
+  },
+  "kubelet_1.32.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/amd64/kubelet_1.32.9-1.1_amd64.deb"
+    ],
+    "sha256": "7bcd6cfb4058a53a1fcffd26b5986deeedc08badc1536c38f00ccdb8a80a1866"
+  },
+  "kubelet_1.32.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.32/deb/arm64/kubelet_1.32.9-1.1_arm64.deb"
+    ],
+    "sha256": "4f7686d26df7d925fb06ca99c56173bc3fbecdd1714fa85318990da107ddbeb1"
+  },
+  "kubelet_1.33.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.0-1.1_amd64.deb"
+    ],
+    "sha256": "9b7f41bffe82d8f60c5ac11e478709f54048ff8b0289602419610dbca944e7db"
+  },
+  "kubelet_1.33.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.0-1.1_arm64.deb"
+    ],
+    "sha256": "f105fbbdd1a72cb90a4cd018457b4250acec895505db1ba01640ade35c1ebd93"
+  },
+  "kubelet_1.33.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.1-1.1_amd64.deb"
+    ],
+    "sha256": "84b7f15b146f08fe5aee9b9d646973766c13d89d42870f44e94ffb10c411feee"
+  },
+  "kubelet_1.33.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.1-1.1_arm64.deb"
+    ],
+    "sha256": "dcf807bb23bac8e5fcec4e340b9f3f7ae094e5297d1a7db0cd08ab9616e1e0c8"
+  },
+  "kubelet_1.33.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.10-1.1_amd64.deb"
+    ],
+    "sha256": "dc1ac2c1b76913e8c498cc28e01c81278a84a9d10e071400b821b3bcd3e29623"
+  },
+  "kubelet_1.33.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.10-1.1_arm64.deb"
+    ],
+    "sha256": "a7cd3ef0595f39e82e22d7a5c0e7c35b4b020df6da25573d65f5ee1d765b2856"
+  },
+  "kubelet_1.33.11-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.11-1.1_amd64.deb"
+    ],
+    "sha256": "b1b73b929d6b880456dc9cb1aa4e17ce03ba3bf9748c11b3c5bd21c2beda45d2"
+  },
+  "kubelet_1.33.11-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.11-1.1_arm64.deb"
+    ],
+    "sha256": "25ed5480f6dfb7b16af063e79352dbfcda0d45abfc7aabe0eba9aa1f630c1304"
+  },
+  "kubelet_1.33.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.12-1.1_amd64.deb"
+    ],
+    "sha256": "84bc6573384cc6ccedd51ecef418f081a4c1b2bc975fd030e1e82a84b45c221a"
+  },
+  "kubelet_1.33.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.12-1.1_arm64.deb"
+    ],
+    "sha256": "0f74f0090ed366239d6f0b373d0fb855ba51d95681172d22af763551c2a0f0e9"
   },
   "kubelet_1.33.13-1.1_amd64.deb": {
     "urls": [
@@ -557,6 +3953,138 @@
     ],
     "sha256": "c46df7feff4732a0161c8b105af7009ae4c142f39d1d1d57176152e5eb0d206d"
   },
+  "kubelet_1.33.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.2-1.1_amd64.deb"
+    ],
+    "sha256": "f63df1898993ab0e3e24576b2810849100b1bfd89d479f46c7ecce9400952d31"
+  },
+  "kubelet_1.33.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.2-1.1_arm64.deb"
+    ],
+    "sha256": "54f043ae5c3cd47b30750d5833c390e910a31e937c2e19f74da11b0dbe54a18c"
+  },
+  "kubelet_1.33.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.3-1.1_amd64.deb"
+    ],
+    "sha256": "fabead6401631b1513aa1b01544a698771bffffb18a9358b347b665d6ecb342b"
+  },
+  "kubelet_1.33.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.3-1.1_arm64.deb"
+    ],
+    "sha256": "08d9df1b1af8ae60fddb9845ae82b5f4d181ec76f326a2778b929351fd8032a4"
+  },
+  "kubelet_1.33.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.4-1.1_amd64.deb"
+    ],
+    "sha256": "ab9c79220010a54346efa34fad406b96d4ff186108f35bc0d8030e2a04e1a130"
+  },
+  "kubelet_1.33.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.4-1.1_arm64.deb"
+    ],
+    "sha256": "fc6898800159d41082f5ebd9d54effb9dd4ab7e1ce2b6ad4636dd7e9234cd1ab"
+  },
+  "kubelet_1.33.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.5-1.1_amd64.deb"
+    ],
+    "sha256": "0a97a00d5922d52676607d7f6442080a7e8cdea783c2182dc02672656bf810cd"
+  },
+  "kubelet_1.33.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.5-1.1_arm64.deb"
+    ],
+    "sha256": "ede8ca2c6cc50c0aac9c0fe8301870effa634aa339ab6f1a546ed64b65246209"
+  },
+  "kubelet_1.33.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.6-1.1_amd64.deb"
+    ],
+    "sha256": "c8afb6f614532892734a359e273f3859784f759c0e1707bb112042b2bbda983f"
+  },
+  "kubelet_1.33.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.6-1.1_arm64.deb"
+    ],
+    "sha256": "a10ffa33176b94a4a3bee3942c253438d81fcbf81b44076aff69ceab55cca8d1"
+  },
+  "kubelet_1.33.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.7-1.1_amd64.deb"
+    ],
+    "sha256": "3e587b2eacf8ce9fc7321356ec3553a0375eb2cfb4714a1b6e3b47a89755a3a8"
+  },
+  "kubelet_1.33.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.7-1.1_arm64.deb"
+    ],
+    "sha256": "d801e5d72c4248e7d754dc24bb029f18fdad3c7a875e2cc59d5e70bc401f03f2"
+  },
+  "kubelet_1.33.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.8-1.1_amd64.deb"
+    ],
+    "sha256": "0d35e0df720fb99ca4d2f764165247eb287447629ce1c9c4872ff5bb3ee0ba79"
+  },
+  "kubelet_1.33.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.8-1.1_arm64.deb"
+    ],
+    "sha256": "a51538bf15068c8b8cd3615b12239969cd0ef6d566449d1b31c8a34830138c0f"
+  },
+  "kubelet_1.33.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/amd64/kubelet_1.33.9-1.1_amd64.deb"
+    ],
+    "sha256": "269a03a15c60e8f738f241cb2a8d415ea542a9adb1be44b111ec677bcc9cf283"
+  },
+  "kubelet_1.33.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.33/deb/arm64/kubelet_1.33.9-1.1_arm64.deb"
+    ],
+    "sha256": "903ecca1a761842d4aafadc9f5252ac67fb036b19f78739fb3b2d3dec63d5bf5"
+  },
+  "kubelet_1.34.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.0-1.1_amd64.deb"
+    ],
+    "sha256": "f89e83ac22806064d30f4e50d768e98bf224aa34fbcca20b1bacca680d4ef32f"
+  },
+  "kubelet_1.34.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.0-1.1_arm64.deb"
+    ],
+    "sha256": "1ba3c6cb3fc1dfa5ffcdb45075ef46a6e6b3a14f592f0a80e777ef3d14d85aac"
+  },
+  "kubelet_1.34.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.1-1.1_amd64.deb"
+    ],
+    "sha256": "78d36ff80f7684f8ecb7aae4ae4ba6500500e4391ead904cbe9f2a97362e2937"
+  },
+  "kubelet_1.34.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.1-1.1_arm64.deb"
+    ],
+    "sha256": "b1084b8159a9870179c898a3ccbabcccc8b30d396a277864fb8bc1580d1a75c2"
+  },
+  "kubelet_1.34.10-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.10-1.1_amd64.deb"
+    ],
+    "sha256": "7ee30984c92600969be0f841d04631079e1afe239f7ac6881d305957a5839c86"
+  },
+  "kubelet_1.34.10-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.10-1.1_arm64.deb"
+    ],
+    "sha256": "f4afb2ff402df3ff9819cba39b8288cc1b8621618be7fbf50709a4d2b0a29c79"
+  },
   "kubelet_1.34.11-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.11-1.1_amd64.deb"
@@ -568,6 +4096,210 @@
       "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.11-1.1_arm64.deb"
     ],
     "sha256": "623051bb46c6c8c7e020ceaf7972e9d902884893069a9e665cb3fff1bfcb5399"
+  },
+  "kubelet_1.34.12-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.12-1.1_amd64.deb"
+    ],
+    "sha256": "cefed44469108a4071a240ce64c558b8162c7fcfce4842b8dbea69bfd0ca57c1"
+  },
+  "kubelet_1.34.12-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.12-1.1_arm64.deb"
+    ],
+    "sha256": "6d4757db240b61f2d1ec5113d17ce5f94d3f11e118494340f0fc3531c2c56c2f"
+  },
+  "kubelet_1.34.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.2-1.1_amd64.deb"
+    ],
+    "sha256": "294915d14e284581bc293698f18e4b7d7f4de3b7563f1bf50bcaaf32b56ead53"
+  },
+  "kubelet_1.34.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.2-1.1_arm64.deb"
+    ],
+    "sha256": "35eed905cb8211f5c1a2709d44610a668f13bcfaedcd45f65db26e512c482086"
+  },
+  "kubelet_1.34.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.3-1.1_amd64.deb"
+    ],
+    "sha256": "2b5afa9994bfdf3850b7801f2f95894dde28a6bc786a9618459d3b1956f1024b"
+  },
+  "kubelet_1.34.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.3-1.1_arm64.deb"
+    ],
+    "sha256": "8fa06366263a6782f844c902041922ba70e0ec1398bc82ccb569cc491b5b07cb"
+  },
+  "kubelet_1.34.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.4-1.1_amd64.deb"
+    ],
+    "sha256": "e9590dc86b983f43f0589c9de83425b1a8e0cb8b3a4b0060dc0f7cbc5a4400cf"
+  },
+  "kubelet_1.34.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.4-1.1_arm64.deb"
+    ],
+    "sha256": "38f5e184f56e7b77c66172e4164f14995866dda08d8b4adc36ca8b75cf00bb92"
+  },
+  "kubelet_1.34.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.5-1.1_amd64.deb"
+    ],
+    "sha256": "ac57742fd4c3c6c801edf1704ad04550af51628554c7c46d5e54ed08450bea57"
+  },
+  "kubelet_1.34.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.5-1.1_arm64.deb"
+    ],
+    "sha256": "c859ca063e275a2a1b1715e19596e24a03417676cb4541e3d0e0af78366cbbb0"
+  },
+  "kubelet_1.34.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.6-1.1_amd64.deb"
+    ],
+    "sha256": "d676bd13e0bc957b76c7b5004f65d1f7fe833325217250a79d35394d7ae52ba7"
+  },
+  "kubelet_1.34.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.6-1.1_arm64.deb"
+    ],
+    "sha256": "db2c19c9e0b3e08fa5b0e822b824adbcdb78a1e9f41e21b0ab4e27d450ab467e"
+  },
+  "kubelet_1.34.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.7-1.1_amd64.deb"
+    ],
+    "sha256": "61d7e080398cffa588da67941ea7abffcf35817431894799f9fa689bc4fc337d"
+  },
+  "kubelet_1.34.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.7-1.1_arm64.deb"
+    ],
+    "sha256": "857c5f82ceda10692a7be3d0240e8e679d558bed7ab5f65c43f6ed0405733613"
+  },
+  "kubelet_1.34.8-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.8-1.1_amd64.deb"
+    ],
+    "sha256": "cad35de9507fa912b057910af54a1794fb9c1fecd737c9270c1eb375c48b273c"
+  },
+  "kubelet_1.34.8-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.8-1.1_arm64.deb"
+    ],
+    "sha256": "c3bdd6490991017efafbe3669cf0ffbe74cb9185b4e83b17d03de6087103a0cc"
+  },
+  "kubelet_1.34.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/amd64/kubelet_1.34.9-1.1_amd64.deb"
+    ],
+    "sha256": "53b9b991db559d07eb18d2f7282e535568a4874cbdcd59dac5d30a44e93dff2b"
+  },
+  "kubelet_1.34.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.34/deb/arm64/kubelet_1.34.9-1.1_arm64.deb"
+    ],
+    "sha256": "7a7dc51ec1a99fc4bd49e307fefa89873c278c91a904f2457983cb51bd139280"
+  },
+  "kubelet_1.35.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.0-1.1_amd64.deb"
+    ],
+    "sha256": "3c86d42fdd5607afa409ace33100d9a5993285f0b8e707878e3151778231f4eb"
+  },
+  "kubelet_1.35.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.0-1.1_arm64.deb"
+    ],
+    "sha256": "4148459fcd7c1326cae5b9e01696a796588bdcf7fc4062b476a0868c529fc8d3"
+  },
+  "kubelet_1.35.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.1-1.1_amd64.deb"
+    ],
+    "sha256": "90b4ed884536e6e8bffeae6cb95648f0e084ef89d2c2ce6020bf4b478d9d77a5"
+  },
+  "kubelet_1.35.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.1-1.1_arm64.deb"
+    ],
+    "sha256": "9880530936db9690855a661885a86d93a4a8767ddf661f93052271f72652aaed"
+  },
+  "kubelet_1.35.2-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.2-1.1_amd64.deb"
+    ],
+    "sha256": "dfb2cbc0d914ac991f795ff0d6321a6d4d71d8f5a93b356d3713f9e42bad5aa8"
+  },
+  "kubelet_1.35.2-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.2-1.1_arm64.deb"
+    ],
+    "sha256": "fdb2a6653e69f5e557472e2029bbed79f6568ad4486ddf1c96f11a217041a4d3"
+  },
+  "kubelet_1.35.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.3-1.1_amd64.deb"
+    ],
+    "sha256": "1134f48a73dcbfff7401a81c6469c8babe0b8c1bf2077a80df46fbc674a6e77f"
+  },
+  "kubelet_1.35.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.3-1.1_arm64.deb"
+    ],
+    "sha256": "a4baec7816d33344eb96dd30842a8214f34d093387ddcec533c3205a76fa459f"
+  },
+  "kubelet_1.35.4-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.4-1.1_amd64.deb"
+    ],
+    "sha256": "249ea6190bcc3cb28d7a4ceaecb695dcb2b4bad78da12b6352c9326d80ba0a08"
+  },
+  "kubelet_1.35.4-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.4-1.1_arm64.deb"
+    ],
+    "sha256": "47e126fe2bf66a52da33ec21de1aad7eeb5ba5b256b3fcc800772bb6689589b4"
+  },
+  "kubelet_1.35.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.5-1.1_amd64.deb"
+    ],
+    "sha256": "5eba50f1921719e91865407cc8c3a08d03f5dd27f6e61ffe961eb6886969ee10"
+  },
+  "kubelet_1.35.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.5-1.1_arm64.deb"
+    ],
+    "sha256": "53dc9d95a8095c68fa6ec81fa57a655dfc42522092ef573f3acd12bbb4c1448a"
+  },
+  "kubelet_1.35.6-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.6-1.1_amd64.deb"
+    ],
+    "sha256": "1b994f644329f2e5f4df79c3666e484402dfe045f6ec73dc59c6b1d9a3bb1315"
+  },
+  "kubelet_1.35.6-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.6-1.1_arm64.deb"
+    ],
+    "sha256": "cd7e535ffc43d04de9c026712f12274ce368a6f02e2642244dfd9310471fcf87"
+  },
+  "kubelet_1.35.7-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.7-1.1_amd64.deb"
+    ],
+    "sha256": "955d515ef600d3d24ecbf860e4db34531e72029797772d7de7e99822155197e0"
+  },
+  "kubelet_1.35.7-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.7-1.1_arm64.deb"
+    ],
+    "sha256": "f41c7f7697125314597c906329973e8ec9fc30f265d3da1555fbcba15d1acddc"
   },
   "kubelet_1.35.8-1.1_amd64.deb": {
     "urls": [
@@ -581,6 +4313,66 @@
     ],
     "sha256": "86fe08e9b54c2cf5f754f06c011920b0b063315ae3f13c83764003936ee4448b"
   },
+  "kubelet_1.35.9-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/amd64/kubelet_1.35.9-1.1_amd64.deb"
+    ],
+    "sha256": "fc2e167155114421f4ca31f222c556756a2718f73d5dff947f0065d5b7b88d1a"
+  },
+  "kubelet_1.35.9-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.35/deb/arm64/kubelet_1.35.9-1.1_arm64.deb"
+    ],
+    "sha256": "d9262070f2033745a1fedeae43f72bcd8c43022580e0468ae370c127157d0dfe"
+  },
+  "kubelet_1.36.0-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.0-1.1_amd64.deb"
+    ],
+    "sha256": "68842635a925bc34db426cc136a401b5b68b16ceb46174a2e7063701e5e5bbe4"
+  },
+  "kubelet_1.36.0-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.0-1.1_arm64.deb"
+    ],
+    "sha256": "ae08405903a5ad8c0d116d7ae8a25154f298b141efce9018f975ddd1981dc53c"
+  },
+  "kubelet_1.36.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.1-1.1_amd64.deb"
+    ],
+    "sha256": "21c09a5fa8741fa30fac5234f71ef892a6d6d2527bbfaa0b77c7c25f54089f43"
+  },
+  "kubelet_1.36.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.1-1.1_arm64.deb"
+    ],
+    "sha256": "884dfef8af78b29e086d31741941f94c2338bd0b58d2df475cce1234f217e572"
+  },
+  "kubelet_1.36.2-2.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.2-2.1_amd64.deb"
+    ],
+    "sha256": "e60c79fa93b6538d3bae79cb325beafe08bc084f8501fe16a3f203af598f6f50"
+  },
+  "kubelet_1.36.2-2.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.2-2.1_arm64.deb"
+    ],
+    "sha256": "d652cf4f38fc1469c38975838a52309474a88c0962a73e3d458ff18705212b58"
+  },
+  "kubelet_1.36.3-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.3-1.1_amd64.deb"
+    ],
+    "sha256": "99c77d7c814ac0b0f1f346c11074160fbbab8243c27ba4236f84f2e536c8eaca"
+  },
+  "kubelet_1.36.3-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.3-1.1_arm64.deb"
+    ],
+    "sha256": "328cf33f3ee78d7572ae6d2cd7c41b38a5db5c837d9c897940c0f4fad142f3a5"
+  },
   "kubelet_1.36.4-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.4-1.1_amd64.deb"
@@ -593,6 +4385,18 @@
     ],
     "sha256": "91e2ac4f95224b5d2ff739e58e4ee8e4c14db9e327ab2165dfe6fb2fdbc3365e"
   },
+  "kubelet_1.36.5-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.5-1.1_amd64.deb"
+    ],
+    "sha256": "dd46254567ee60672c0737a4b5392fae7f3419a876ab6885c48178501ac2fd64"
+  },
+  "kubelet_1.36.5-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.5-1.1_arm64.deb"
+    ],
+    "sha256": "946ae8079938f6be46ec48ff317005d03c87de09a5b557627f348a11c080e0ef"
+  },
   "kubelet_1.37.0-1.1_amd64.deb": {
     "urls": [
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubelet_1.37.0-1.1_amd64.deb"
@@ -604,6 +4408,18 @@
       "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubelet_1.37.0-1.1_arm64.deb"
     ],
     "sha256": "f2ebc0a55ef925a06d0e7343d1337a553cd6e4838bd284e8f4c0b13004a064b9"
+  },
+  "kubelet_1.37.1-1.1_amd64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/amd64/kubelet_1.37.1-1.1_amd64.deb"
+    ],
+    "sha256": "a0692776f7f026ff17de0ede1b97f11c657300f586cc7939766c395f64c2e6d9"
+  },
+  "kubelet_1.37.1-1.1_arm64.deb": {
+    "urls": [
+      "https://pkgs.k8s.io/core:/stable:/v1.37/deb/arm64/kubelet_1.37.1-1.1_arm64.deb"
+    ],
+    "sha256": "c4337289f95727dbe8dea323570acc85969dc06d5c9fd531c3bc711ff4d0ce88"
   },
   "kubernetes-cni-1.6.0-150500.1.1.aarch64.rpm": {
     "urls": [

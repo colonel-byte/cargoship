@@ -1,0 +1,4 @@
+repo:   https://github.com/kubernetes/kubernetes
+tag:    v1.35.8
+commit: 1c2e10a409eb1b03f2f28f401ce935312e20d9fb
+files:  cmd/kubeadm/app/constants/constants.go
