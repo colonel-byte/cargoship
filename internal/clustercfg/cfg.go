@@ -17,16 +17,26 @@ package clustercfg
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 )
 
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
-func Parse(_ context.Context, b []byte) (cluster.ZarfCluster, error) {
+func Parse(_ context.Context, b []byte) (_ cluster.ZarfCluster, err error) {
+	// A bare "!" tag with no following value (e.g. "registries: ! ") makes go-yaml's decoder call
+	// ArrayRange on a TagNode whose Value isn't an array, which returns a nil *ArrayNodeIter that
+	// the decoder then dereferences -- a panic rather than a decode error. Recovering keeps a
+	// malformed cluster config file the parse error it is, rather than a crash on arbitrary input.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("parse cluster config: %v", r)
+		}
+	}()
+
 	var dis cluster.ZarfCluster
-	err := goyaml.Unmarshal(b, &dis)
-	if err != nil {
+	if err := goyaml.Unmarshal(b, &dis); err != nil {
 		return cluster.ZarfCluster{}, err
 	}
 	return dis, nil
