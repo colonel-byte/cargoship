@@ -95,8 +95,8 @@ type ZarfDistroBuildData struct {
 
 // ZarfDistroSpec holds the configuration for a distro package.
 type ZarfDistroSpec struct {
-	// Type selects the distro engine: rke2 or k3s.
-	Type string `json:"type" jsonschema:"enum=rke2,enum=k3s"`
+	// Type selects the distro engine: rke2, k3s, or upstream.
+	Type string `json:"type" jsonschema:"enum=rke2,enum=k3s,enum=upstream"`
 	// Version is the version of the distro engine.
 	Version string `json:"version"`
 	// Actions defines the actions cargoship runs while building the package.

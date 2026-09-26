@@ -74,6 +74,9 @@ var (
 	ErrVersionNotDetected = errors.New("failed to get version from the distro binary")
 	// ErrPathKey if a path key is not used
 	ErrPathKey = errors.New("key for set path does not exist")
+	// ErrNotImplemented is returned by a distro module for capabilities its engine does not
+	// support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
+	ErrNotImplemented = errors.New("not implemented for this distro")
 )
 
 // NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels
