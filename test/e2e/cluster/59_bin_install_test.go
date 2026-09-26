@@ -37,8 +37,12 @@ func (s *phaseWalk) binUploadFiles() {
 	s.runPhase(&phase.BINUploadFiles{Distro: s.harness.distro})
 
 	uploadOnly := s.harness.uploadOnly()
-	s.Require().NotEmpty(uploadOnly,
-		"the inventory has no upload-only host, so this phase is only being tested as a fallback")
+	// k3sOS has no upload-only host by design; see k3sOS in main_test.go. Requiring one there
+	// would fail this phase for a topology that never claimed to carry it.
+	if uploadOnlyCount > 0 {
+		s.Require().NotEmpty(uploadOnly,
+			"the inventory has no upload-only host, so this phase is only being tested as a fallback")
+	}
 
 	for _, host := range uploadOnly {
 		s.Require().NotNilf(host.Metadata.Install,
