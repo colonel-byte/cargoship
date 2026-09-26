@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/stretchr/testify/require"
 )
 

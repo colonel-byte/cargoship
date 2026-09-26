@@ -14,7 +14,7 @@ That makes coexistence nearly free, so it was chosen over a migration:
 - No mode flag, so no command whose meaning depends on an invocation the reader of the file cannot see.
 - No migration deadline, so a legacy vaulted credential can stay as it is indefinitely.
 
-`cluster.IsEncrypted` (`src/api/zarf.dev/v1alpha1/cluster/spec.go`) is the union of the two checks and is what non-crypto code asks. `AgeHeader` is spelled out there rather than taken from `filippo.io/age/armor`, so the package defining the public API types stays free of crypto dependencies; `TestAgeHeaderMatchesArmorHeader` pins the constant to `armor.Header` so the two cannot drift.
+`cluster.IsEncrypted` (`api/zarf.dev/v1alpha1/cluster/spec.go`) is the union of the two checks and is what non-crypto code asks. `AgeHeader` is spelled out there rather than taken from `filippo.io/age/armor`, so the package defining the public API types stays free of crypto dependencies; `TestAgeHeaderMatchesArmorHeader` pins the constant to `armor.Header` so the two cannot drift.
 
 The `vault` command group keeps its name despite now covering both formats. Renaming it would break every operator's scripts to fix a word; the group's `Long` string says what it covers instead.
 
@@ -60,7 +60,7 @@ What the field does buy, given that restriction, is the thing the probe section 
 
 ### Placement, and the shape of the block
 
-It sits in `metadata`, beside `name`, rather than in `spec`. `spec` is the desired state an apply acts on, and this is a record of something that already happened to the file; putting it there would invite exactly the reading -- "this is configuration, so something must consume it" -- that the restriction above forbids. The types are in `src/api/zarf.dev/v1alpha1/cluster/spec.go` as plain strings, keeping that package crypto-free the same way `AgeHeader` does.
+It sits in `metadata`, beside `name`, rather than in `spec`. `spec` is the desired state an apply acts on, and this is a record of something that already happened to the file; putting it there would invite exactly the reading -- "this is configuration, so something must consume it" -- that the restriction above forbids. The types are in `api/zarf.dev/v1alpha1/cluster/spec.go` as plain strings, keeping that package crypto-free the same way `AgeHeader` does.
 
 There is a section per format (`encryption.age`) rather than one flat list, so a document holding both Ansible Vault and age credentials has somewhere to say so later if that ever becomes worth saying. Only age needs a record today: a vaulted value is read with the one password the operator already supplies by name, so there is nothing about it a file could usefully record.
 
@@ -76,7 +76,7 @@ That condition is load-bearing in two directions. It keeps `encrypt-file` byte-f
 
 `RekeyConfig` rewrites the record when the target writes age and strips it when the target writes vault. `DecryptConfig` strips it unless age ciphertext remains somewhere in the document -- checked with `bytes.Contains(doc, []byte(cluster.AgeHeader))` rather than assumed, since `encrypt-path` can leave age values outside the credentials the whole-file commands walk. A list of age recipients above a file that holds no age ciphertext is worse than no list: it reads as a file that is still protected.
 
-A `metadata` mapping written in flow style -- `metadata: {name: e72}` -- is refused rather than recorded. Flow style has no block collection, so splicing a nested block into one produces a document that no longer parses, with the credentials already encrypted into it. `errNoMetadataBlock` carries that out, `recordRecipients` swallows it, and `reportRecipientRecord` in `src/cmd/misc_vault_encrypt_file.go` turns it into a warning. Declining to record a fact about a file is much the smaller loss, and it is the same reasoning `inFlowCollection` already encodes for the value splice.
+A `metadata` mapping written in flow style -- `metadata: {name: e72}` -- is refused rather than recorded. Flow style has no block collection, so splicing a nested block into one produces a document that no longer parses, with the credentials already encrypted into it. `errNoMetadataBlock` carries that out, `recordRecipients` swallows it, and `reportRecipientRecord` in `cmd/misc_vault_encrypt_file.go` turns it into a warning. Declining to record a fact about a file is much the smaller loss, and it is the same reasoning `inFlowCollection` already encodes for the value splice.
 
 Everything in `vaultmeta.go` is a byte-level splice for the reason `spliceScalar` is: go-yaml re-indents multi-line literals and truncates ciphertext nested in sequences, so nothing here re-renders the document.
 
@@ -86,13 +86,13 @@ The age-to-age skip still says the value is encrypted to age recipients already 
 
 The new warning is a different claim about a different thing: what the *document* says it was encrypted to. They are emitted together and they are both worth having. A future change that "fixes" the skip message to mention the record would be merging a cryptographic fact with a piece of documentation, which is the confusion this whole section exists to prevent.
 
-`reportRecipientRecord` lives in `src/cmd` rather than in `clustercfg`, because `clustercfg` does no terminal I/O and the warning is about the document as a whole rather than about one credential path -- so it does not fit `Skip{Path, Reason}`. It is in `encrypt-file` specifically, not in `finishVaultFile`: `decrypt-file` removes the record and `rekey` rewrites it, and in both cases that is the operator getting precisely what they asked for. It is called before `finishVaultFile` for the same reason the skip warnings are emitted where they are -- a run that changed nothing is the run it exists for.
+`reportRecipientRecord` lives in `cmd` rather than in `clustercfg`, because `clustercfg` does no terminal I/O and the warning is about the document as a whole rather than about one credential path -- so it does not fit `Skip{Path, Reason}`. It is in `encrypt-file` specifically, not in `finishVaultFile`: `decrypt-file` removes the record and `rekey` rewrites it, and in both cases that is the operator getting precisely what they asked for. It is called before `finishVaultFile` for the same reason the skip warnings are emitted where they are -- a run that changed nothing is the run it exists for.
 
 It reads the prior claim from the document as it was read, not as it will be written, since a run that encrypted something has already replaced the record. And it fires only when something was skipped: with no skips, every credential in the file is on the keys just named and the record agrees with itself.
 
 ### Compatibility
 
-`ZarfClusterMetadata` carries `additionalProperties: false`, so a document holding this block fails `cargoship validate` on a binary built before it existed. An apply is unaffected -- `clustercfg.Parse` is a non-strict unmarshal, and the generated schema is used only by `cargoship validate` (`src/cmd/misc_validate.go`). Both copies of the schema have to be regenerated together with `mage generate:schema`, since CI does not run the generator.
+`ZarfClusterMetadata` carries `additionalProperties: false`, so a document holding this block fails `cargoship validate` on a binary built before it existed. An apply is unaffected -- `clustercfg.Parse` is a non-strict unmarshal, and the generated schema is used only by `cargoship validate` (`cmd/misc_validate.go`). Both copies of the schema have to be regenerated together with `mage generate:schema`, since CI does not run the generator.
 
 ## Why encryption picks a format but decryption never does
 
@@ -138,7 +138,7 @@ The cost of that decision is that cargoship has to do its own parsing, in `agess
 - Identities cannot be dispatched line by line at all, because an SSH private key is a multi-line PEM block. The file is read whole and routed on a `-----BEGIN ` header.
 - `parseRecipient` refuses anything beginning `AGE-SECRET-KEY-` or `-----BEGIN ` before handing it to `agessh`, because `agessh.ParseRecipient` quotes its argument back in its error where age's own parser deliberately does not. An identity file passed as a recipients file is an ordinary mistake, and a private key in a log has to be treated as compromised everywhere it was used.
 
-## Why the SSH passphrase prompt lives in src/cmd
+## Why the SSH passphrase prompt lives in cmd
 
 A passphrase-protected SSH key becomes an `agessh.EncryptedSSHIdentity`, which asks for the passphrase only once a stanza matches its public key and caches the decrypted key afterwards. That laziness is worth preserving: an operator holding a key nothing was encrypted to is never asked, and one whose key does match is asked once rather than once per credential. On an apply the ask therefore lands in the `VerifyRegistryAuth` preflight, before any host is touched.
 

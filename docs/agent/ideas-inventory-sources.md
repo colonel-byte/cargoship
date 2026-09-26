@@ -4,7 +4,7 @@ This is a shortlist, not a decision. `cargoship inventory from-ansible` establis
 
 ## What every adapter has to do, and nothing more
 
-An adapter builds the `ansibleinv.Input` shape -- `groups`, `hostvars`, `roleGroups` -- and hands it to one translator. Role derivation, controllers-first ordering so that the leader is a controller, the refusal of an unknown `cargoship_` variable, and validation against the embedded inventory schema are written once and are already fuzzed (`src/fuzz/ansible_inventory_fuzz_test.go`). An adapter is a decoder. When one starts wanting rules of its own -- its own notion of a role, its own precedence between two variables that disagree -- that is the signal it does not belong in the binary, and should be a script that emits the JSON contract described below.
+An adapter builds the `ansibleinv.Input` shape -- `groups`, `hostvars`, `roleGroups` -- and hands it to one translator. Role derivation, controllers-first ordering so that the leader is a controller, the refusal of an unknown `cargoship_` variable, and validation against the embedded inventory schema are written once and are already fuzzed (`fuzz/ansible_inventory_fuzz_test.go`). An adapter is a decoder. When one starts wanting rules of its own -- its own notion of a role, its own precedence between two variables that disagree -- that is the signal it does not belong in the binary, and should be a script that emits the JSON contract described below.
 
 One naming consequence, worth settling before a second adapter exists rather than after: the shared translator lives in a package called `ansibleinv`, and the moment anything but Ansible calls it the name is wrong. Rename it to something like `clusterinv` when the second caller lands.
 

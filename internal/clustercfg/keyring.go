@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"filippo.io/age"
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 )
 
 // AgeIdentityFileEnvVar is the environment variable checked for the path to an age identity file

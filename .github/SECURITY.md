@@ -19,7 +19,7 @@ Include the output of `cargoship version`, the host OS of the management node, t
 
 ## Scope
 
-In scope: the `cargoship` CLI and the packages under `src/`; package signing and the verification path (`--verify`, `--key`); credential handling in `clustercfg`, including the vault splice and age encryption; SSH orchestration against target hosts; and the release workflow and the artifacts it publishes.
+In scope: the `cargoship` CLI and the packages under the module root; package signing and the verification path (`--verify`, `--key`); credential handling in `clustercfg`, including the vault splice and age encryption; SSH orchestration against target hosts; and the release workflow and the artifacts it publishes.
 
 Out of scope: vulnerabilities in K3s, RKE2, containerd, or any other upstream component Cargoship packages -- report those to the project that owns them; anything that requires an attacker to already have root on the management node, which by design holds the cluster's credentials; resource exhaustion from deliberately malformed or oversized packages supplied by the operator themselves; and misconfiguration of a user's own cluster.
 

@@ -201,7 +201,7 @@ jobs:
             fi
 
             # The package coordinates are the definition's own: cargoship publishes to
-            # <registry>/<metadata.name>:<metadata.version>. See src/pkg/coci/utils.go.
+            # <registry>/<metadata.name>:<metadata.version>. See pkg/coci/utils.go.
             name=$(yq -r '.metadata.name' "$dir/distro.yaml")
             version=$(yq -r '.metadata.version' "$dir/distro.yaml")
             if [ -z "$name" ] || [ "$name" = "null" ] || [ -z "$version" ] || [ "$version" = "null" ]; then

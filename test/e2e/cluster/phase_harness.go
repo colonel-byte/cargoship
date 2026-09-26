@@ -20,14 +20,14 @@ import (
 	"os"
 	"time"
 
+	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/internal/riglogger"
-	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/distro"
-	"github.com/colonel-byte/cargoship/src/pkg/packager/load"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/colonel-byte/cargoship/src/types/distrocfg"
-	"github.com/colonel-byte/cargoship/src/types/distrocfg/registry"
+	"github.com/colonel-byte/cargoship/pkg/distro"
+	"github.com/colonel-byte/cargoship/pkg/packager/load"
+	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
+	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 

@@ -61,4 +61,4 @@ Both jobs sit behind the same `e2e-cluster` label for now. The point of the stag
 
 ## What this does not do
 
-A stage-only run does not tell you that rke2 installs. It covers connection, OS detection, fact gathering, host validation, the prepare phases, SELinux, fapolicyd, `/etc/hosts`, the firewall and all four upload phases -- which is most of what the suite reaches today, and the part a change to `src/pkg/phase` is most likely to break. It says nothing about whether the cluster comes up, and the full walk remains the only thing that does.
+A stage-only run does not tell you that rke2 installs. It covers connection, OS detection, fact gathering, host validation, the prepare phases, SELinux, fapolicyd, `/etc/hosts`, the firewall and all four upload phases -- which is most of what the suite reaches today, and the part a change to `pkg/phase` is most likely to break. It says nothing about whether the cluster comes up, and the full walk remains the only thing that does.

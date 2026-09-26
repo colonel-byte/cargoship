@@ -15,9 +15,9 @@
 package cluster
 
 import (
-	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/colonel-byte/cargoship/src/pkg/utils"
+	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/utils"
 )
 
 // rpmUploadFiles covers phase/57_rpm_install.go. The phase claims only Enterprise

@@ -17,7 +17,7 @@ package cluster
 import (
 	"context"
 
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/stretchr/testify/suite"
 )
 

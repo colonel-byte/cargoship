@@ -1,0 +1,113 @@
+// Copyright 2023 k0sctl authors
+// Copyright 2026 colonel-byte
+//
+// This file contains code derived from k0sctl:
+// https://github.com/k0sproject/k0sctl
+//
+// Modifications Copyright 2026 colonel-byte.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package phase
+
+import (
+	"context"
+	"time"
+
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/pkg/node"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+)
+
+// InitializeControllers phase state
+type InitializeControllers struct {
+	GenericPhase
+	Distro  distrocfg.Distro
+	control cluster.ZarfHosts
+}
+
+// Prepare the phase
+func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+	p.control = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+		return !h.ServiceIsRunning(ctx, p.Distro.GetControllerService()) && h.IsController() && h.Metadata.DistroVersion == UnknownVersion
+	})
+
+	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.control))
+
+	return nil
+}
+
+// Title for the phase
+func (p *InitializeControllers) Title() string {
+	return "Initialize Controller"
+}
+
+// Explanation about the current phase, used for documentation generation
+func (p *InitializeControllers) Explanation() string {
+	return "If the remote node does not have a running controller service, and is a controller, install the engine and start each service sequentially"
+}
+
+// Run the phase
+func (p *InitializeControllers) Run(ctx context.Context) error {
+	err := p.parallelDoWithMessage(
+		ctx,
+		"installing distro engine",
+		p.control,
+		p.installDistro,
+	)
+	if err != nil {
+		return err
+	}
+	// waiting a second too clean up the logs
+	time.Sleep(1 * time.Second)
+	return p.batchedParallelWithMessage(
+		ctx,
+		"starting engine",
+		p.control,
+		1,
+		p.startService,
+	)
+}
+
+// ShouldRun is true when there are workers
+func (p *InitializeControllers) ShouldRun() bool {
+	return len(p.control) > 0
+}
+
+func (p *InitializeControllers) installDistro(ctx context.Context, h *cluster.ZarfHost) error {
+	if h.Metadata.Install != nil {
+		return h.Metadata.Install(ctx, h)
+	}
+	return nil
+}
+
+func (p *InitializeControllers) startService(ctx context.Context, h *cluster.ZarfHost) error {
+	service := p.Distro.GetControllerService()
+	logger.From(ctx).Info("waiting for the controller service to start", "service", service, "host", h)
+
+	startedAt := time.Now()
+	go func() {
+		err := h.StartService(ctx, service)
+		if err != nil {
+			logger.From(ctx).Warn("failed to start", "service", service, "host", h)
+		}
+	}()
+
+	if err := p.manager.RetryTimeout(ctx, node.ServiceRunningFunc(h, service)); err != nil {
+		return p.captureServiceLogsOnFailure(ctx, h, service, startedAt, err)
+	}
+
+	return h.EnableService(ctx, service)
+}

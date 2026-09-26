@@ -15,9 +15,9 @@
 package cluster
 
 import (
-	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/colonel-byte/cargoship/src/pkg/utils"
+	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/utils"
 )
 
 // aptUploadFiles covers phase/58_apt_install.go, the mirror of the RPM phase for the

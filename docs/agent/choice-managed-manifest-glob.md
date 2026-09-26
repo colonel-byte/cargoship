@@ -1,12 +1,12 @@
 # Why the engine's manifest directory is pruned through a glob
 
-Cargoship prunes the directories it owns. `StaleFiles` (`src/types/distrocfg/managed_files.go`) lists every file under each of a distro's `ManagedDirs` and removes the ones the current configuration no longer asks for, so a registry CA certificate dropped from a cluster inventory does not sit on every node forever. Pruning runs while a node is stopped and about to be restarted, which is the one moment a file can be removed without the engine noticing it go.
+Cargoship prunes the directories it owns. `StaleFiles` (`types/distrocfg/managed_files.go`) lists every file under each of a distro's `ManagedDirs` and removes the ones the current configuration no longer asks for, so a registry CA certificate dropped from a cluster inventory does not sit on every node forever. Pruning runs while a node is stopped and about to be restarted, which is the one moment a file can be removed without the engine noticing it go.
 
 That works because a managed directory holds only files cargoship put there. Two of the three qualify outright: `/etc/cargoship/tls` and the state directory were created by cargoship and are cargoship's to empty. The third is not cargoship's at all.
 
 ## The manifest directory is shared
 
-`<data>/server/manifests` belongs to the engine. RKE2 and K3s ship their own manifests there -- the CNI chart, CoreDNS, metrics-server, the ingress controller -- and lay them down again on startup. Cargoship writes into the same directory because that is where a `HelmChartConfig` has to live for the engine's helm controller to read it: the values a package's `spec.config.engine.manifest` subtree produces become one `<chart>-config.yaml` per chart (`src/types/distrocfg/rancher_common.go`).
+`<data>/server/manifests` belongs to the engine. RKE2 and K3s ship their own manifests there -- the CNI chart, CoreDNS, metrics-server, the ingress controller -- and lay them down again on startup. Cargoship writes into the same directory because that is where a `HelmChartConfig` has to live for the engine's helm controller to read it: the values a package's `spec.config.engine.manifest` subtree produces become one `<chart>-config.yaml` per chart (`types/distrocfg/rancher_common.go`).
 
 Pruning that directory the way the other two are pruned would delete every manifest the engine put there on the first sync, which takes the cluster apart. Not pruning it at all would leave a `HelmChartConfig` behind for a chart a package no longer configures, and the helm controller would keep reconciling the chart to values nobody asks for any more -- the exact failure `StaleFiles` exists to prevent, on the files where it matters most, since these are the only files cargoship writes that something else then acts on.
 

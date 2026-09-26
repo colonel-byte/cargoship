@@ -2,7 +2,7 @@
 
 Cargoship's e2e suite needs a real OCI registry to publish/pull against without a network dependency or a live registry container. `test/registry.go` provides `test.SetupInMemoryRegistry(t)`, which starts one in-process on a random localhost port and tears it down via `t.Cleanup`.
 
-ORAS (`oras.land/oras-go/v2`) isn't a candidate here at all -- it's the *client* library Cargoship already uses in `src/pkg/coci` to talk to registries. It has no server implementation, so it can't be "the registry" in a test; it's what the CLI uses to talk to whichever registry the test stands up.
+ORAS (`oras.land/oras-go/v2`) isn't a candidate here at all -- it's the *client* library Cargoship already uses in `pkg/coci` to talk to registries. It has no server implementation, so it can't be "the registry" in a test; it's what the CLI uses to talk to whichever registry the test stands up.
 
 The zarf project's own `src/test/testutil/registry.go` (this package is modeled on it) uses [`github.com/distribution/distribution/v3`](https://github.com/distribution/distribution) -- the reference registry server implementation -- with its `inmemory` storage driver. That was the first thing tried here, and it was rejected:
 

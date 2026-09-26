@@ -1,12 +1,12 @@
 # Why the firewall backend is chosen by the node's OS, not by what is running
 
-Cargoship's firewall support (`cargoship apply --firewall`) renders a backend-neutral `firewall.Plan` onto whichever firewall a node runs. Three backends exist: `firewalld`, `ufw`, and `nftables`. Selection lives in `firewall.Select` (`src/pkg/firewall/firewall.go`).
+Cargoship's firewall support (`cargoship apply --firewall`) renders a backend-neutral `firewall.Plan` onto whichever firewall a node runs. Three backends exist: `firewalld`, `ufw`, and `nftables`. Selection lives in `firewall.Select` (`pkg/firewall/firewall.go`).
 
 The first implementation matched a host against the backends in a fixed order -- firewalld, then ufw, then nftables -- taking the first whose `Detect` was true. Ordering firewalld and ufw ahead of nftables was already deliberate, since both are front ends onto nftables and a host running either would match the nftables backend as well. What that ordering could not express is the case the current implementation is about: a node whose front end is installed but stopped.
 
 ## The OS decides, and `Detect` only confirms
 
-Each OS module now names the front end its distribution ships, through `PreferredFirewall` on the `Configurer` interface (`src/types/os/interface.go`): firewalld on Enterprise Linux and SUSE, ufw on Debian and Ubuntu, nothing on Alpine, Arch, CoreOS, Flatcar, and Slackware. `Select` looks for that backend first and uses it when it is running. Only a node whose preferred front end is absent, or whose distribution ships none, falls through to the ordered `Detect` match.
+Each OS module now names the front end its distribution ships, through `PreferredFirewall` on the `Configurer` interface (`types/os/interface.go`): firewalld on Enterprise Linux and SUSE, ufw on Debian and Ubuntu, nothing on Alpine, Arch, CoreOS, Flatcar, and Slackware. `Select` looks for that backend first and uses it when it is running. Only a node whose preferred front end is absent, or whose distribution ships none, falls through to the ordered `Detect` match.
 
 The alternative was to keep selection entirely inside the firewall package and infer the front end from what `Detect` finds. That is what the ordered match already did, and it cannot distinguish "this distribution has no front end" from "this distribution's front end is not up". Cargoship already resolves an OS module per host and already asks it distribution-specific questions, so the distribution's own answer is both available and more trustworthy than a probe.
 

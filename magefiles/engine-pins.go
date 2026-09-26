@@ -33,7 +33,7 @@ import (
 const thirdpartySrcDir = "thirdparty-src"
 
 // engineSourcePull describes one upstream file set to pull verbatim into thirdparty-src/ for
-// src/pkg/engineconfig/extract to statically parse. See docs/dev/thirdparty-src.md.
+// pkg/engineconfig/extract to statically parse. See docs/dev/thirdparty-src.md.
 type engineSourcePull struct {
 	repoURL string
 	tag     string

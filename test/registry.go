@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/utils"
+	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/stretchr/testify/require"
 )

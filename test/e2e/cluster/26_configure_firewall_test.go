@@ -15,8 +15,8 @@
 package cluster
 
 import (
-	"github.com/colonel-byte/cargoship/src/pkg/firewall"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/firewall"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // firewallDump maps a backend to the command that prints the rules it is enforcing, so the

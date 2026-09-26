@@ -15,7 +15,7 @@
 package cluster
 
 import (
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // prepareFapolicy covers phase/22_prepare_fapolicyd.go. Like the SELinux phase it is

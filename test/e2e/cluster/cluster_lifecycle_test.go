@@ -17,10 +17,10 @@ package cluster
 import (
 	"os"
 
-	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/action"
-	"github.com/colonel-byte/cargoship/src/pkg/distro"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/action"
+	"github.com/colonel-byte/cargoship/pkg/distro"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // This file holds the steps of ApplyPhaseSuite that are not apply phases: building the

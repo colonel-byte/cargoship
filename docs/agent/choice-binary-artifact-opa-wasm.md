@@ -24,7 +24,7 @@ This document records why that file is there, why it can't be removed, and why t
 `go.mod` lists `github.com/open-policy-agent/opa v1.20.2 // indirect`. `go mod why github.com/open-policy-agent/opa/v1/rego` traces the chain:
 
 ```
-src/cmd -> zarf/src/pkg/signing -> cosign/cmd/cosign/cli/verify -> cosign/pkg/cosign/rego -> opa/v1/rego
+cmd -> zarf/src/pkg/signing -> cosign/cmd/cosign/cli/verify -> cosign/pkg/cosign/rego -> opa/v1/rego
 ```
 
 `opa/v1/rego` is what pulls in `opa/internal/compiler/wasm/opa`, which embeds the wasm file. This is cargoship's signature-verification path, not incidental transitive weight — dropping OPA would mean dropping cosign policy verification.

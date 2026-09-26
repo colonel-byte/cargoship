@@ -17,7 +17,7 @@ package cluster
 import (
 	"net"
 
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // gatherFacts covers phase/10_gather_facts.go. It fills in the host metadata the

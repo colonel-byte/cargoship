@@ -24,7 +24,7 @@ $ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main
 
 This is enough for the tests. A build without the release linker flags leaves `cargoship version` reporting the unset placeholder values, which the tests tolerate — they assert the fields are present and non-empty, not what they contain.
 
-The binary is **not** rebuilt by `go test`. After changing anything under `src/`, rebuild it, or you will be testing the previous binary against the new expectations.
+The binary is **not** rebuilt by `go test`. After changing anything under `api/`, `cmd/`, `config/`, `fuzz/`, `internal/`, `pkg/`, or `types/`, rebuild it, or you will be testing the previous binary against the new expectations.
 
 ## Running
 

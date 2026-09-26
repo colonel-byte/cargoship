@@ -99,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          git add -- example thirdparty-src src/pkg/engineconfig/gen
+          git add -- example thirdparty-src pkg/engineconfig/gen
 
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -133,7 +133,7 @@ jobs:
 
           status=pass
           go build ./... || status=fail
-          go test -count=1 ./src/pkg/schema/... || status=fail
+          go test -count=1 ./pkg/schema/... || status=fail
 
           echo "result=$status" >> "$GITHUB_OUTPUT"
 

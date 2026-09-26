@@ -9,8 +9,8 @@ name: E2E cluster
 # push.
 #
 # It runs on demand from the Actions tab, and automatically on a pull request carrying the
-# "e2e-cluster" label. Add that label to a pull request that touches src/pkg/phase,
-# src/pkg/action or the inventory handling. The trigger lists "labeled" explicitly: without
+# "e2e-cluster" label. Add that label to a pull request that touches pkg/phase,
+# pkg/action or the inventory handling. The trigger lists "labeled" explicitly: without
 # it, adding the label to an open pull request would not start a run until the next push.
 #
 # There are two jobs behind that trigger, and they run the same suite against different

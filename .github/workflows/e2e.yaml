@@ -32,8 +32,8 @@ jobs:
           go build -mod=vendor -a -trimpath \
             -gcflags=all="-l -B -C" \
             -ldflags="-s -w \
-              -X github.com/colonel-byte/cargoship/src/config.CLIVersion=0.0.0 \
-              -X github.com/colonel-byte/cargoship/src/config.CLICommit=${GITHUB_SHA::8}" \
+              -X github.com/colonel-byte/cargoship/config.CLIVersion=0.0.0 \
+              -X github.com/colonel-byte/cargoship/config.CLICommit=${GITHUB_SHA::8}" \
             -v -o cargoship main.go
         env:
           CGO_ENABLED: 0

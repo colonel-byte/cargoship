@@ -8,8 +8,11 @@ It runs from a management node, not on the hosts it manages: cargoship opens the
 
 | Path                              | What lives there                                                                                                                                                                                   |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/`                            | The Go module's source: `cmd/` (Cobra commands), `pkg/` (packages usable from anywhere in `src/`), `internal/` (packages private to `src/`), `fuzz/`, `config/lang/` (user-facing command strings) |
-| `internal/`                       | Go packages shared across the whole module — `src/`, `test/`, and each other — see the quirk below                                                                                                 |
+| `cmd/`                            | Cobra commands                                                                                                                                                                                     |
+| `pkg/`                            | Packages usable from anywhere in the module                                                                                                                                                       |
+| `internal/`                       | Go packages private to this module — `riglogger`, `ansiblemod`, `ansibleinv`, `clustercfg`, `cfg`, `dns`, `heartbeat`, `logging`, `split`                                                          |
+| `fuzz/`                           | Fuzz targets — see [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                                                                                                              |
+| `config/lang/`                    | User-facing command strings — see [`config/lang/AGENTS.md`](config/lang/AGENTS.md)                                                                                                                |
 | `test/e2e/`                       | The end-to-end suite: `cluster/` (needs a bootloose cluster) and `noncluster/` (misc/package commands, plus `testdata/` fixtures)                                                                  |
 | `magefiles/`                      | The mage task runner's source — build, test, and generate targets. See [`docs/dev/mage.md`](docs/dev/mage.md)                                                                                      |
 | `docs/`                           | The mdBook source. Six subpaths are generated and must not be hand-edited — see [`docs/AGENTS.md`](docs/AGENTS.md)                                                                                 |
@@ -29,8 +32,8 @@ Several directories carry their own `AGENTS.md` with rules specific to that dire
 | [`example/AGENTS.md`](example/AGENTS.md)                                               | Generated versus hand-written                                                                                       |
 | [`ansible/AGENTS.md`](ansible/AGENTS.md)                                               | Markdown/string formatting rules that feed generated docs                                                           |
 | [`ansible/colonel_byte/cargoship/AGENTS.md`](ansible/colonel_byte/cargoship/AGENTS.md) | Scope of the Ansible collection: drives cargoship from the management node, does not configure fleet hosts directly |
-| [`src/config/lang/AGENTS.md`](src/config/lang/AGENTS.md)                               | Markdown/string formatting rules that feed generated docs                                                           |
-| [`src/fuzz/AGENTS.md`](src/fuzz/AGENTS.md)                                             | Don't name two `Fuzz*` functions where one is a prefix of the other                                                 |
+| [`config/lang/AGENTS.md`](config/lang/AGENTS.md)                                       | Markdown/string formatting rules that feed generated docs                                                           |
+| [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                     | Don't name two `Fuzz*` functions where one is a prefix of the other                                                 |
 
 ## Building and testing
 
@@ -45,7 +48,7 @@ go run ./magefiles/core generate:document   # regenerate docs/commands, docs/pha
 
 See [`docs/dev/mage.md`](docs/dev/mage.md) for the full namespace reference (`Build`, `Dev`, `Test`, `Generate`) and what each target reads and writes.
 
-Plain Go commands work for anything mage doesn't wrap — `go build ./...`, `go vet ./...`, `go test ./internal/... ./src/...` — but exclude `./magefiles/...` from those, since it fails a bare build for the reason above.
+Plain Go commands work for anything mage doesn't wrap — `go build ./...`, `go vet ./...`, `go test ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/...` — but exclude `./magefiles/...` from those, since it fails a bare build for the reason above.
 
 ## Commit messages
 
@@ -63,17 +66,13 @@ Before creating or updating a pull request description, read [`.github/pull_requ
 
 ## Quirks worth knowing
 
-### `internal/` visibility is scoped to its parent directory, not the whole module
-
-A package under `<X>/internal/...` is importable only from packages rooted at `<X>` or below — that's the Go compiler's rule, not a convention. This repository has two `internal/` roots for exactly that reason: repo-root `internal/` (`riglogger`, `ansiblemod`, `ansibleinv`, `clustercfg`) is reachable from `src/`, `test/`, and each other, while `src/internal/` (`cfg`, `dns`, `heartbeat`, `logging`, `split`) is reachable only from within `src/`. Moving a directory across that boundary — or moving something that imports an `internal/` package across it — breaks the import silently at compile time, not at the point of the move. `go build` won't catch it either; only `go vet` (or a full `go test`) compiles the test files where these breaks tend to show up first.
-
 ### Relative-path fixture constants don't move themselves
 
-Test files and YAML fixtures across the repo hand-encode `../` depth to reach the repository root or a shared `testdata/` directory (e.g. `internal/ansiblemod/collection_test.go`'s `collectionRoot`, `src/cmd/misc_validate_test.go`'s `valuesSchemaPackageDir`, the `$schema=` headers in `test/e2e/noncluster/testdata/*.yaml`). Moving either endpoint of one of these paths changes the required `../` count by exactly the number of levels moved, and nothing catches a wrong count except actually running the test — `go vet` only compiles, it doesn't execute. Recompute depth from the final location of both the file and its target, not from an intermediate state, if the move happens in more than one step.
+Test files and YAML fixtures across the repo hand-encode `../` depth to reach the repository root or a shared `testdata/` directory (e.g. `internal/ansiblemod/collection_test.go`'s `collectionRoot`, `cmd/misc_validate_test.go`'s `valuesSchemaPackageDir`, the `$schema=` headers in `test/e2e/noncluster/testdata/*.yaml`). Moving either endpoint of one of these paths changes the required `../` count by exactly the number of levels moved, and nothing catches a wrong count except actually running the test — `go vet` only compiles, it doesn't execute. Recompute depth from the final location of both the file and its target, not from an intermediate state, if the move happens in more than one step.
 
 ### `src/test/` had a special exemption; `test/` does not
 
-OpenSSF Scorecard's `isTestdataFile` logic excludes anything under a `src/test/` or `testdata/` prefix from every check, by path convention. That's why fuzz targets live in `src/fuzz/` rather than under that prefix — being excluded from Scorecard would zero the Fuzzing check rather than help it. It also means the e2e suite lived under `src/test/` for a while getting a blanket exclusion it didn't need; now that it's `test/`, it doesn't have one. Don't rely on a `test/` or `testdata/`-adjacent path to hide something from Scorecard — check `isTestdataFile` in `checks/fileparser/listing.go` upstream if it matters.
+OpenSSF Scorecard's `isTestdataFile` logic excludes anything under a `src/test/` or `testdata/` prefix from every check, by path convention. That's why fuzz targets never lived under that prefix — being excluded from Scorecard would zero the Fuzzing check rather than help it. It also means the e2e suite lived under `src/test/` for a while getting a blanket exclusion it didn't need; now that it's `test/`, it doesn't have one. Don't rely on a `test/` or `testdata/`-adjacent path to hide something from Scorecard — check `isTestdataFile` in `checks/fileparser/listing.go` upstream if it matters.
 
 ### `docs/agent/choice-*.md` are constraints, not history
 

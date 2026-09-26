@@ -17,7 +17,7 @@ package cluster
 import (
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // osIDByPrefix maps a bootloose name template, with the index placeholder removed, to the

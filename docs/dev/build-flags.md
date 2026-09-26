@@ -1,6 +1,6 @@
 # Build Flags and Environment
 
-This document explains the compiler flags, linker flags, and environment variables used when compiling the `cargoship` binary, and why each one is set. They are defined in `src/pkg/utils/build/utils.go`, which the Mage host build path (`magefiles/utils.go`) uses.
+This document explains the compiler flags, linker flags, and environment variables used when compiling the `cargoship` binary, and why each one is set. They are defined in `pkg/utils/build/utils.go`, which the Mage host build path (`magefiles/utils.go`) uses.
 
 That package exposes two functions, `LDFlags(version, commit string) string` and `GCFLags() string`. The build site additionally sets `CGO_ENABLED=0` and passes `-trimpath` directly in its `go build` invocation rather than through these shared helpers.
 
@@ -49,8 +49,8 @@ Forces rebuilding of all packages, including the standard library, rather than r
 
 *   **`-s`** — omits the symbol table. Symbols aren't needed at runtime and aren't useful without `-w` anyway; this is one of the two biggest size wins available via linker flags.
 *   **`-w`** — omits DWARF debug info. Removes the ability to attach a source-level debugger (`dlv`) to the binary, but this is a release build, not a debug build. Combined with `-s`, this is what turns the ~157MB unstripped analysis build in testing into a much smaller shipped binary.
-*   **`-X github.com/colonel-byte/cargoship/src/config.CLIVersion=%s`** — embeds the release version string at link time.
-*   **`-X github.com/colonel-byte/cargoship/src/config.CLICommit=%s`** — embeds the short git commit SHA at link time.
+*   **`-X github.com/colonel-byte/cargoship/config.CLIVersion=%s`** — embeds the release version string at link time.
+*   **`-X github.com/colonel-byte/cargoship/config.CLICommit=%s`** — embeds the short git commit SHA at link time.
 
     These two `-X` flags aren't size-related; they exist so `cargoship version` can report accurate build metadata without a separate version file shipped alongside the binary.
 

@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // binUploadFiles covers phase/59_bin_install.go, the catch-all upload phase for a

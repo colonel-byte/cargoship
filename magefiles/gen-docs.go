@@ -25,11 +25,11 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/cmd"
-	"github.com/colonel-byte/cargoship/src/pkg/action"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
-	"github.com/colonel-byte/cargoship/src/types/distrocfg"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/cmd"
+	"github.com/colonel-byte/cargoship/pkg/action"
+	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/magefile/mage/mg"
 	"github.com/nao1215/markdown"
@@ -52,7 +52,7 @@ const docsConfigChildEnv = "CARGOSHIP_MAGE_DOCS_CHILD"
 
 // Document creates the docs for this repo
 func (Generate) Document() error {
-	// src/cmd sets its flag defaults from CARGOSHIP_CONFIG the moment the package is
+	// cmd sets its flag defaults from CARGOSHIP_CONFIG the moment the package is
 	// imported (root.go's package-level `var rootCmd = NewCargoshipCommand()` and its
 	// func init() both call initViper(), which is a no-op after the first call). By the
 	// time this function body runs, that has already happened -- setting the env var here

@@ -23,7 +23,7 @@ import (
 	"sort"
 	"strings"
 
-	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	goyaml "github.com/goccy/go-yaml"
 	blcluster "github.com/k0sproject/bootloose/pkg/cluster"
 	rig "github.com/k0sproject/rig/v2"
