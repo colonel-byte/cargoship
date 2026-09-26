@@ -206,6 +206,29 @@ func TestInstallPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 	require.Empty(t, cfg.installed)
 }
 
+// TestBlockOtherInstallsIfUploadedLeavesAHostWithNoFilesOpen is the regression test for #278: a
+// Debian host under a package with no deb selector must stay open for the BIN catch-all phase
+// rather than being marked populated by an OS-specific phase that uploaded nothing to it.
+func TestBlockOtherInstallsIfUploadedLeavesAHostWithNoFilesOpen(t *testing.T) {
+	p := &UploadFilesCommon{}
+	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	h := newDetectedHost(t, "arm64")
+
+	require.NoError(t, p.blockOtherInstallsIfUploaded(byArch)(context.Background(), h))
+
+	require.False(t, h.Metadata.EngineUploaded, "no files for this host's architecture, so other install phases must still see it")
+}
+
+func TestBlockOtherInstallsIfUploadedMarksAHostThatGotFiles(t *testing.T) {
+	p := &UploadFilesCommon{}
+	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "k3s-amd64"}}}
+	h := newDetectedHost(t, "amd64")
+
+	require.NoError(t, p.blockOtherInstallsIfUploaded(byArch)(context.Background(), h))
+
+	require.True(t, h.Metadata.EngineUploaded)
+}
+
 func fileNames(files []v1alpha1.ZarfFile) []string {
 	names := make([]string, 0, len(files))
 	for _, f := range files {
