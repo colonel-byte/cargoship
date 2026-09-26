@@ -55,9 +55,11 @@ type primaryXML struct {
 }
 
 type rpmPackage struct {
-	Name    string     `xml:"name"`
-	Arch    string     `xml:"arch"`
-	Version rpmVersion `xml:"version"`
+	Name     string         `xml:"name"`
+	Arch     string         `xml:"arch"`
+	Version  rpmVersion     `xml:"version"`
+	Checksum string         `xml:"checksum"`
+	Location repomdLocation `xml:"location"`
 }
 
 type rpmVersion struct {

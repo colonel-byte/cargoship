@@ -26,6 +26,8 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"slices"
+	"sort"
 )
 
 // exampleShasumsPath is the committed url -> sha256 cache. Hashing an RPM means downloading
@@ -33,25 +35,73 @@ import (
 // pull roughly a gigabyte. With one, only genuinely new releases are fetched.
 const exampleShasumsPath = "example/shasums.json"
 
-// exampleShasum is one hashed file: the URL it was fetched from, and what it hashed to.
+// exampleShasum is one hashed file: every URL known to serve it, and what it hashed to.
+//
+// pkgs.k8s.io mirrors a package into every minor line's repo that has shipped since, unchanged,
+// under that line's own URL path -- kubernetes-cni and cri-tools do not rev on most k8s minors,
+// so the same filename+digest is genuinely reachable at several different URLs at once. One URL
+// per entry cannot represent that: the second minor line rendered would just overwrite the
+// first's recorded URL, flipping it back and forth on every regeneration for no reason.
 type exampleShasum struct {
-	URL    string `json:"url"`
-	SHA256 string `json:"sha256"`
+	URLs   []string `json:"urls"`
+	SHA256 string   `json:"sha256"`
+}
+
+// UnmarshalJSON accepts either the current "urls" list or the single "url" string the cache
+// used before entries could hold more than one URL, so an older committed shasums.json does not
+// need a one-off migration and does not lose its cached digests.
+func (e *exampleShasum) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		URL    string   `json:"url"`
+		URLs   []string `json:"urls"`
+		SHA256 string   `json:"sha256"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	e.SHA256 = raw.SHA256
+	e.URLs = raw.URLs
+	if raw.URL != "" && !slices.Contains(e.URLs, raw.URL) {
+		e.URLs = append(e.URLs, raw.URL)
+	}
+	return nil
 }
 
 // exampleShasums resolves a remote file's sha256, remembering what it has already hashed.
 // Entries are keyed by file name rather than URL, so the cache reads as a list of the RPMs
-// the examples install; the URL each was fetched from is kept in the entry, and an entry
-// whose URL no longer matches is re-hashed rather than trusted.
+// the examples install; every URL an entry was ever fetched from is kept alongside it, and a
+// file name whose digest changes under a URL not already recorded is re-hashed rather than
+// trusted, since that means the filename was reused for different content.
 type exampleShasums struct {
 	sums  map[string]exampleShasum
 	dirty bool
 }
 
-// lookup finds a cached entry for url, treating a name cached from some other URL as a miss.
+// lookup finds a cached entry that url is one of the recorded URLs for.
 func (s *exampleShasums) lookup(url string) (exampleShasum, bool) {
 	e, ok := s.sums[path.Base(url)]
-	return e, ok && e.URL == url
+	return e, ok && slices.Contains(e.URLs, url)
+}
+
+// store records that url serves a file whose digest is sha256, adding url as one more known
+// location for it when the digest matches what is already cached, or replacing the entry
+// outright when it does not (the same file name serving different content under this url).
+// A no-op when url is already recorded against this digest, so a re-render that changes nothing
+// does not mark the cache dirty.
+func (s *exampleShasums) store(url, sha256 string) {
+	name := path.Base(url)
+	e, ok := s.sums[name]
+	if ok && e.SHA256 == sha256 {
+		if slices.Contains(e.URLs, url) {
+			return
+		}
+		e.URLs = append(e.URLs, url)
+		s.sums[name] = e
+		s.dirty = true
+		return
+	}
+	s.sums[name] = exampleShasum{URLs: []string{url}, SHA256: sha256}
+	s.dirty = true
 }
 
 // loadExampleShasums reads the cache, treating a missing file as an empty one.
@@ -93,9 +143,15 @@ func (s *exampleShasums) get(url string) (string, error) {
 		return "", nil
 	}
 
-	s.sums[path.Base(url)] = exampleShasum{URL: url, SHA256: sum}
-	s.dirty = true
+	s.store(url, sum)
 	return sum, nil
+}
+
+// record stores a digest the caller already knows to be correct -- a repo's own package index
+// publishes a sha256 for each file it lists, so upstream's example never has to download and
+// hash what it can just trust and cache.
+func (s *exampleShasums) record(url, sha256 string) {
+	s.store(url, sha256)
 }
 
 // published reports whether upstream still serves url. Anything already hashed is, by
@@ -130,6 +186,11 @@ func (s *exampleShasums) published(url string) (bool, error) {
 func (s *exampleShasums) save() error {
 	if !s.dirty {
 		return nil
+	}
+
+	for name, e := range s.sums {
+		sort.Strings(e.URLs)
+		s.sums[name] = e
 	}
 
 	data, err := json.MarshalIndent(s.sums, "", "  ")

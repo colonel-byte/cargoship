@@ -71,6 +71,14 @@ func (Generate) Examples() error {
 			}
 		}
 	}
+
+	upstream, err := pins.distro("upstream")
+	if err != nil {
+		return err
+	}
+	if err := renderUpstreamExamples(upstream.Tags, sums); err != nil {
+		return err
+	}
 	return nil
 }
 
