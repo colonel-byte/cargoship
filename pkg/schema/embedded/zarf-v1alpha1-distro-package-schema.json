@@ -632,10 +632,11 @@
           "description": "holds the distro engine configuration."
         },
         "type": {
-          "description": "selects the distro engine: rke2 or k3s.",
+          "description": "selects the distro engine: rke2, k3s, or upstream.",
           "enum": [
             "rke2",
-            "k3s"
+            "k3s",
+            "upstream"
           ],
           "type": "string"
         },
