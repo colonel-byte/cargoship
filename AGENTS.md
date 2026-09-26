@@ -57,6 +57,10 @@ test(fuzz): add fuzz targets for cfg, clustercfg, and identify source
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 ```
 
+## Pull requests
+
+Before creating or updating a pull request description, read [`.github/pull_request_template.md`](.github/pull_request_template.md) and follow the format rules in [`.github/AGENTS.md`](.github/AGENTS.md#writing-a-pull-request-description).
+
 ## Quirks worth knowing
 
 ### `internal/` visibility is scoped to its parent directory, not the whole module
