@@ -15,7 +15,7 @@
 package ansiblemod
 
 import (
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // reportChanged fills in the response's changed field and cargoship.changedSignal from what the

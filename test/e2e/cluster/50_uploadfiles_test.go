@@ -17,8 +17,8 @@ package cluster
 import (
 	"strings"
 
-	apicluster "github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // uploadManifestPath is where the upload phases record what they put on a host. The phase

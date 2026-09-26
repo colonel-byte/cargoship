@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/colonel-byte/cargoship/src/config"
+	"github.com/colonel-byte/cargoship/config"
 )
 
 // distroID is the distro the suite installs, and the value the CLI's --distro flag would

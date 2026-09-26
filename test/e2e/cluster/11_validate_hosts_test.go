@@ -15,7 +15,7 @@
 package cluster
 
 import (
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // validateHosts covers phase/11_validate_hosts.go. The phase rejects a cluster whose

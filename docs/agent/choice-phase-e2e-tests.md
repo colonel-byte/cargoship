@@ -12,9 +12,9 @@ So the phase walk *is* the install. `Test_00_CreatePackage` builds the package a
 
 None of these steps shell out. `Test_00_CreatePackage` calls `distro.Create` and `Test_01_Prepare` calls `action.NewPrepare`, each with its own manager built the way the matching command builds one and its own temp directory to remove. The suite was written against the CLI first, and the binary turned out to be doing nothing the packages could not: it cost a build step in CI, a rebuild-before-you-run rule, and a class of confusing failure where a stale binary disagreed with the source being read. What is lost is coverage of the cobra layer -- flag parsing, `--confirm`, the config file resolution -- which `test/e2e/noncluster` covers against the real binary and does so in seconds.
 
-The cost is that the phase tests do not test `action.NewApply`. If a phase were dropped from the list in `src/pkg/action/apply.go`, the phase tests would keep passing, because they build their own list. Keeping the two lists in sync is done by hand, from the ordering comment in the suite doc. A generated list, read from `action` and iterated, was considered and rejected: it would make the assertions dynamic, and the whole point is that each phase has a hand-written assertion about the artifact it leaves.
+The cost is that the phase tests do not test `action.NewApply`. If a phase were dropped from the list in `pkg/action/apply.go`, the phase tests would keep passing, because they build their own list. Keeping the two lists in sync is done by hand, from the ordering comment in the suite doc. A generated list, read from `action` and iterated, was considered and rejected: it would make the assertions dynamic, and the whole point is that each phase has a hand-written assertion about the artifact it leaves.
 
-## One number per phase, taken from `src/pkg/phase`
+## One number per phase, taken from `pkg/phase`
 
 Testify runs suite methods in lexicographic order of the method name, which is the only ordering mechanism available. So the method name has to carry a number, and there were two candidates: the phase's position in the apply order, or the number of its source file.
 
@@ -22,7 +22,7 @@ The suite first used the apply order, on the grounds that the point of the suite
 
 The numbers are now the source file's, in both places: `25_modify_hosts_file_test.go` contains `Test_25_ModifyHosts`. One number per phase, so the test for a phase is findable from the phase and the ordering needs no separate bookkeeping. Adding a phase adds a file and a method and renumbers nothing.
 
-`src/pkg/phase` numbers its files by rough category -- `20`-`26` prepare the host, `50`-`59` upload, `60`-`72` install and sync, `80`-`81` finish, `91`-`92` lock and unlock -- and that ordering agrees with apply's for every phase but the lock, which apply takes third and the file number puts after the install.
+`pkg/phase` numbers its files by rough category -- `20`-`26` prepare the host, `50`-`59` upload, `60`-`72` install and sync, `80`-`81` finish, `91`-`92` lock and unlock -- and that ordering agrees with apply's for every phase but the lock, which apply takes third and the file number puts after the install.
 
 Steps that are not phases have no source file to take a number from. They use the ends of the ordering instead: `Test_00_CreatePackage` and `Test_01_Prepare` sort before every phase number, and anything that has to run after every phase takes a `Test_ZZ` name, because a letter sorts after a digit.
 

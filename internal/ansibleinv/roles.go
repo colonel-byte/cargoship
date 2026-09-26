@@ -20,7 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 )
 
 // roleOrder is the order roles are emitted in, and it is not cosmetic: ConfigureEngine makes

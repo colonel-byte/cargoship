@@ -72,7 +72,7 @@ jobs:
       # binary, so they are left unanalyzed.
       - name: Build
         if: matrix.build-mode == 'manual'
-        run: go build -mod=vendor ./src/... .
+        run: go build -mod=vendor ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/... .
         env:
           CGO_ENABLED: 0
           # Everything the build needs is vendored, so make any accidental

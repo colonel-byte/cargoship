@@ -23,7 +23,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/colonel-byte/cargoship/src/pkg/utils"
+	"github.com/colonel-byte/cargoship/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 

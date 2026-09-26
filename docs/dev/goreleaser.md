@@ -195,7 +195,7 @@ docker run --rm \
 ### Image Runtime Layout
 
 *   Runs as uid/gid `65532`, which has a real `/etc/passwd` entry named `nonroot` with home `/home/nonroot` in all four images, so `os/user` lookups and `$HOME` agree with each other and across variants. The static image inherits that account from its base; the package-installing images create it to match. The `USER` line stays numeric (`65532:65532`) so the image still runs correctly under a `runAsUser` that ignores names.
-*   `HOME=/home/nonroot`, which backs viper's `$HOME/.zarf` config search path (`src/cmd/viper.go`) and the default cache path `~/.cargoship-cache` (`src/config/common.go`). Both directories are pre-created and owned by `65532`, as is `~/.ssh` at 0700.
+*   `HOME=/home/nonroot`, which backs viper's `$HOME/.zarf` config search path (`cmd/viper.go`) and the default cache path `~/.cargoship-cache` (`config/common.go`). Both directories are pre-created and owned by `65532`, as is `~/.ssh` at 0700.
 *   `WORKDIR /workspace`. Since `.` is viper's first config search path, bind-mounting a package directory there picks up `cargoship-config.yaml` with no extra flags:
 
 ```sh

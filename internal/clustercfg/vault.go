@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	vault "github.com/sosedoff/ansible-vault-go"
 )
 

@@ -23,9 +23,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/distro"
-	"github.com/colonel-byte/cargoship/src/types"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/types"
 	"github.com/invopop/jsonschema"
 	strcase "github.com/stoewer/go-strcase"
 )
@@ -44,7 +44,7 @@ var schemaDir = "schema"
 // reach outside its own package directory, so the copy lives next to the Go file that embeds
 // it rather than being read from schemaDir. Both are written by the same target, and
 // pre-commit runs that target, so the two cannot drift.
-var schemaEmbedDir = filepath.Join("src", "pkg", "schema", "embedded")
+var schemaEmbedDir = filepath.Join("pkg", "schema", "embedded")
 
 type schema struct {
 	schemaStruct any
@@ -59,12 +59,12 @@ func (Generate) Schema() error {
 		{
 			schemaStruct: &distro.ZarfDistro{},
 			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
-			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "distro"},
+			structPath:   []string{"api", "zarf.dev", "v1alpha1", "distro"},
 		},
 		{
 			schemaStruct: &cluster.ZarfCluster{},
 			schemaPath:   "zarf-v1alpha1-cluster-schema.json",
-			structPath:   []string{"src", "api", "zarf.dev", "v1alpha1", "cluster"},
+			structPath:   []string{"api", "zarf.dev", "v1alpha1", "cluster"},
 			keyNamer: func(s string) string {
 				switch strings.ToLower(s) {
 				case "openssh":
@@ -79,7 +79,7 @@ func (Generate) Schema() error {
 		{
 			schemaStruct: &types.DistroConfig{},
 			schemaPath:   "zarf-config-distro-schema.json",
-			structPath:   []string{"src", "types"},
+			structPath:   []string{"types"},
 			keyNamer: func(s string) string {
 				return s
 			},

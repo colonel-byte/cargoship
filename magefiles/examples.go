@@ -31,7 +31,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
 )
 
 const (
@@ -251,7 +251,7 @@ var exampleDistros = []exampleDistroSpec{
 
 // exampleMinorPattern matches the minor line directories examples are grouped under
 // (example/rke2-cilium/v1_35), so anything else at that level is left alone. The naming
-// matches thirdparty-src/<distro>/ and src/pkg/engineconfig/gen/<distro>/.
+// matches thirdparty-src/<distro>/ and pkg/engineconfig/gen/<distro>/.
 var exampleMinorPattern = regexp.MustCompile(`^v[0-9]+_[0-9]+$`)
 
 // exampleVersion is what the templates render against. Every field is derived from one tag

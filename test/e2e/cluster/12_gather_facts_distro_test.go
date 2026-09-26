@@ -15,7 +15,7 @@
 package cluster
 
 import (
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // Test_12_GatherFactsDistro covers phase/12_gather_facts_distro.go. It reads the engine

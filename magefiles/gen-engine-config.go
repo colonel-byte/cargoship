@@ -27,12 +27,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/extract"
-	"github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
 )
 
 const (
-	engineConfigOut = "src/pkg/engineconfig/gen"
+	engineConfigOut = "pkg/engineconfig/gen"
 
 	// rke2CommonFlagsFile holds RKE2's commonFlag []cli.Flag{...} literal, shared by both
 	// zz_server.go and zz_agent.go (appended on top of the wrapped k3s command and RKE2's own
@@ -117,7 +117,7 @@ func (Generate) EngineConfig() error {
 
 			// Only register a distro/version once every target (server and agent) it
 			// declares was generated -- Registry entries are looked up by consumers
-			// (src/types/distrocfg) that assume both are present.
+			// (types/distrocfg) that assume both are present.
 			if written["server"] && written["agent"] {
 				regEntries = append(regEntries, registryEntry{
 					Distro: distro,
@@ -445,8 +445,8 @@ package gen
 
 `
 
-// writeRegistry emits src/pkg/engineconfig/gen/registry.go, wiring every distro/version that
-// EngineConfig successfully generated into gen.Registry so consumers (src/types/distrocfg) pick
+// writeRegistry emits pkg/engineconfig/gen/registry.go, wiring every distro/version that
+// EngineConfig successfully generated into gen.Registry so consumers (types/distrocfg) pick
 // up newly pulled versions automatically, without a hand-maintained import list going stale.
 func writeRegistry(entries []registryEntry) error {
 	if len(entries) == 0 {
@@ -475,7 +475,7 @@ func writeRegistry(entries []registryEntry) error {
 
 	buf.WriteString("import (\n")
 	for _, e := range entries {
-		fmt.Fprintf(&buf, "\t%s %q\n", registryImportAlias(e), fmt.Sprintf("github.com/colonel-byte/cargoship/src/pkg/engineconfig/gen/%s/%s", e.Distro, e.Pkg))
+		fmt.Fprintf(&buf, "\t%s %q\n", registryImportAlias(e), fmt.Sprintf("github.com/colonel-byte/cargoship/pkg/engineconfig/gen/%s/%s", e.Distro, e.Pkg))
 	}
 	buf.WriteString(")\n\n")
 

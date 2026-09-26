@@ -17,7 +17,7 @@ package cluster
 import (
 	"regexp"
 
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // sysctlConfPath is where phase/20_prepare_host.go renders the distro's sysctl settings.

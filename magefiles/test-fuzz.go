@@ -20,12 +20,12 @@ package main
 import "github.com/magefile/mage/sh"
 
 // Fuzz replays the fuzz seed corpus: the f.Add values in each target plus anything committed
-// under src/fuzz/testdata/fuzz/<Target>/. It is its own target rather than part of EndToEnd
+// under fuzz/testdata/fuzz/<Target>/. It is its own target rather than part of EndToEnd
 // because the package is not an e2e suite -- it calls the packages in process and needs no
 // binary, no cluster and no network, so this is a second or so rather than an hour.
 //
 // This replays the corpus; it does not fuzz. Actual fuzzing takes one target at a time and a
 // -fuzztime budget, which is a loop rather than a target. See docs/dev/fuzz-tests.md.
 func (Test) Fuzz() error {
-	return sh.RunV("go", "test", "-count=1", "./src/fuzz/...")
+	return sh.RunV("go", "test", "-count=1", "./fuzz/...")
 }

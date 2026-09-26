@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/config"
-	"github.com/colonel-byte/cargoship/src/pkg/utils/build"
+	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/utils/build"
 	"github.com/magefile/mage/sh"
 )
 

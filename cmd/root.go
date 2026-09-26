@@ -1,0 +1,397 @@
+// Copyright 2021 zarf authors
+// Copyright 2026 colonel-byte
+//
+// This file contains code derived from zarf:
+// https://github.com/zarf-dev/zarf
+//
+// Modifications Copyright 2026 colonel-byte.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package cmd is where the commands for cargoship
+package cmd
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/colonel-byte/cargoship/cmd/flags"
+	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/config/lang"
+	"github.com/colonel-byte/cargoship/internal/logging"
+	"github.com/colonel-byte/cargoship/pkg/utils"
+	"github.com/colonel-byte/cargoship/types"
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+)
+
+const (
+	// RootLoggingLevel command flag log level
+	RootLoggingLevel = "log-level"
+	// RootLoggingFormat command flag log format
+	RootLoggingFormat = "log-format"
+	// RootTimeout command flag timeout
+	RootTimeout = "timeout"
+	// RootZarfCache command flag zarf-cache
+	RootZarfCache = "zarf-cache"
+	// RootArchitecture command flag architecture
+	RootArchitecture = "architecture"
+	// RootPlainHTTP command flag plain-http
+	RootPlainHTTP = "plain_http"
+	// RootInsecureSkipTLSVerify command flag insecure-skip-tls-verify
+	RootInsecureSkipTLSVerify = "insecure_skip_tls_verify"
+	// loggingLevelDefault is the log level used when neither a flag, env var,
+	// config file, nor viper default resolves one.
+	loggingLevelDefault = "info"
+)
+
+const (
+	// InstallConfig flag
+	InstallConfig = "config"
+	// InstallConfirm flag
+	InstallConfirm = "confirm"
+	// InstallDryRun flag
+	InstallDryRun = "dry-run"
+	// InstallConcurrency flag
+	InstallConcurrency = "concurrency"
+	// InstallWorkConcurrency flag
+	InstallWorkConcurrency = "work-concurrency"
+	// InstallUpdateHost flag
+	InstallUpdateHost = "hosts"
+	// InstallUpdateFirewall flag
+	InstallUpdateFirewall = "firewall"
+	// InstallUpdateFAPolicyD flag
+	InstallUpdateFAPolicyD = "fapolicyd"
+	// InstallLabelNodes flag
+	InstallLabelNodes = "label-nodes"
+	// InstallAllowUnmanagedNodes flag
+	InstallAllowUnmanagedNodes = "allow-unmanaged-nodes"
+	// InstallUpdateKubeConfig flag
+	InstallUpdateKubeConfig = "update-kubeconfig"
+	// InstallKubeConfigPath flag
+	InstallKubeConfigPath = "kubeconfig"
+	// InstallVaultPasswordFile flag
+	InstallVaultPasswordFile = "vault-password-file"
+	// InstallValues flag
+	InstallValues = "values"
+)
+
+const (
+	// PackageOCIConcurrency flag
+	PackageOCIConcurrency = "oci-concurrency"
+	// PackageTag flag
+	PackageTag = "tag"
+)
+
+const (
+	// MiscOutput flag
+	MiscOutput = "output"
+)
+
+var (
+	// IsColorDisabled whether to show the colored output
+	IsColorDisabled bool
+	// LogFormat format of the log output
+	LogFormat string
+	// LogLevelCLI log level
+	LogLevelCLI string
+	// LogFile enables always writing a full-verbosity debug log to a file
+	LogFile bool
+	// Timeout for how long a task runs
+	Timeout string
+	// logFile is the file handle backing the always-on debug log, if enabled. Held here so
+	// Execute can close it once the command has finished running.
+	logFile   *os.File
+	distroCfg = types.DistroConfig{}
+)
+
+var (
+	groups = []*cobra.Group{
+		{
+			ID:    lang.RootGroupPackageID,
+			Title: lang.RootGroupPackageTitle,
+		},
+		{
+			ID:    lang.RootGroupInstallID,
+			Title: lang.RootGroupInstallTitle,
+		},
+	}
+)
+
+var rootCmd = NewCargoshipCommand()
+
+// NewCargoshipCommand is the root command
+func NewCargoshipCommand() *cobra.Command {
+	err := initViper()
+	if err != nil {
+		// stderr, not stdout: this runs during package initialisation, so it can land in the
+		// middle of a document a command was asked to write. See emitConfigError.
+		emitConfigError(err)
+	}
+
+	rootCmd := &cobra.Command{
+		Use:           lang.RootCmdUse,
+		Short:         lang.RootCmdShort,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
+		},
+		PersistentPreRunE: preRun,
+	}
+
+	for _, g := range groups {
+		rootCmd.AddGroup(g)
+	}
+
+	// Package related
+	rootCmd.AddCommand(newPackageCreateCommand())
+	rootCmd.AddCommand(newPackagePublishCommand())
+	rootCmd.AddCommand(newPackagePullCommand())
+	rootCmd.AddCommand(newPackageSignCommand())
+	// Install related
+	rootCmd.AddCommand(newInstallApplyCommand())
+	rootCmd.AddCommand(newInstallPrepareCommand())
+	rootCmd.AddCommand(newInstallResetCommand())
+	rootCmd.AddCommand(newInstallKubeConfigCommand())
+	rootCmd.AddCommand(newInstallEngineConfigSyncCommand())
+	// Misc related
+	rootCmd.AddCommand(newVersionCommand())
+	rootCmd.AddCommand(newSha256SumCommand())
+	rootCmd.AddCommand(newSchemaCommand())
+	rootCmd.AddCommand(newInventoryCommand())
+	rootCmd.AddCommand(newValidateCommand())
+	rootCmd.AddCommand(newVaultCommand())
+	rootCmd.AddCommand(newDeprecatedVaultEncryptCommand())
+
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, RootLoggingLevel, "l", resolvedConfig.LogLevel, lang.RootCmdFlagLogLevel)
+	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingLevel, flags.RegisterLogLevel); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", RootLoggingLevel, err)
+	}
+	rootCmd.PersistentFlags().StringVarP(&LogFormat, RootLoggingFormat, "L", resolvedConfig.LogFormat, lang.RootCmdFlagLogFormat)
+	if err := rootCmd.RegisterFlagCompletionFunc(RootLoggingFormat, flags.RegisterLogFormat); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to register %s flag completion: %v\n", RootLoggingFormat, err)
+	}
+	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", resolvedConfig.NoColor, lang.RootCmdFlagNoColor)
+	rootCmd.PersistentFlags().BoolVar(&LogFile, "log-file", resolvedConfig.LogFile, lang.RootCmdFlagLogFile)
+
+	return rootCmd
+}
+
+// Execute is the root execute logic
+func Execute(ctx context.Context) error {
+	defer func() {
+		if logFile != nil {
+			_ = logFile.Close() //nolint:errcheck
+		}
+	}()
+
+	// A config file that was found and could not be used is fatal, but it is reported here rather
+	// than where it was met. Package initialisation is too early to fail a process from: it runs
+	// before main, so an os.Exit there ends an Ansible module run before the module has written
+	// the one JSON object Ansible reads, and Ansible reports a module failure of its own devising
+	// instead of the reason.
+	err := configLoadError
+	if err == nil {
+		_, err = rootCmd.ExecuteContextC(ctx)
+	}
+	if err == nil {
+		return nil
+	}
+	// Use default logger in case there was an error prior to the logger being setup
+	logger.Default().Error(err.Error())
+	return err
+}
+
+// configLoadError is a config file that was found and could not be used. It is met during package
+// initialisation and acted on in Execute, which is the first point in the process that can fail
+// without taking the process with it.
+var configLoadError error //nolint:gochecknoglobals // set once, in init, beside the viper globals
+
+// emitConfigError reports a configuration file that could not be loaded.
+//
+// It writes to stderr, and it exists as a function so that both callers stay that way. Both run
+// during package initialisation, before any flag is parsed and so before the real logger exists,
+// which is early enough that the Ansible module mode in internal/ansiblemod cannot redirect
+// os.Stdout ahead of them. Commands that emit a document on stdout -- schema, validate, inventory
+// from-ansible -- would have that document corrupted by a warning mixed into it.
+func emitConfigError(err error) {
+	fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
+}
+
+// ExecuteArgs runs the root command against an explicit argument vector instead of os.Args.
+//
+// It exists for the Ansible module mode in internal/ansiblemod, which turns a module's JSON
+// parameters into the flags an operator would have typed and then runs the ordinary command.
+// Building an argument vector rather than calling into src/pkg/action directly is the point of the
+// arrangement: keyring resolution, timeout parsing, package loading, and phase construction stay on
+// one path, so what a playbook does and what an operator does cannot drift apart.
+func ExecuteArgs(ctx context.Context, args []string) error {
+	rootCmd.SetArgs(args)
+	return Execute(ctx)
+}
+
+// PrintViperConfigUsed informs users when Zarf has detected a config file.
+func PrintViperConfigUsed(ctx context.Context) error {
+	l := logger.From(ctx)
+
+	// Only print config info if viper is initialized.
+	vInitialized := v != nil
+	if !vInitialized {
+		return nil
+	}
+	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
+		l.Info("using config file", "location", cfgFile)
+	}
+	return nil
+}
+
+func init() {
+	err := initViper()
+	if err != nil {
+		emitConfigError(err)
+	}
+
+	if v.ConfigFileUsed() != "" {
+		if err := loadViperConfig(); err != nil {
+			configLoadError = fmt.Errorf("unable to load the config file %s: %w", v.ConfigFileUsed(), err)
+			emitConfigError(configLoadError)
+		}
+	}
+}
+
+func parsePath(ctx context.Context, value string) string {
+	absValue, err := config.GetAbsHomePath(value)
+	if err != nil {
+		logger.From(ctx).Debug("error when trying to get user path", "error", err)
+		return value
+	}
+	return absValue
+}
+
+func loadViperConfig() error {
+	// get config file from Viper
+	configFile, err := os.ReadFile(v.ConfigFileUsed())
+	if err != nil {
+		return err
+	}
+
+	err = unmarshalAndValidateConfig(configFile, &distroCfg)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func unmarshalAndValidateConfig(configFile []byte, distroCfg *types.DistroConfig) error {
+	err := utils.ReadByteStrict(configFile, &distroCfg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func preRun(cmd *cobra.Command, _ []string) error {
+	logFilePath := ""
+	if LogFile {
+		logFilePath = defaultLogFilePath()
+	}
+
+	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
+	l, f, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled, logFilePath)
+	if err != nil {
+		return err
+	}
+	logFile = f
+	ctx := logger.WithContext(cmd.Context(), l)
+	cmd.SetContext(ctx)
+
+	// if --no-color is set, disable PTerm color in message prints
+	if IsColorDisabled {
+		pterm.DisableColor()
+	}
+
+	// Print out config location
+	err = PrintViperConfigUsed(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	if f != nil {
+		l.Info("logging debug to", "path", f.Name())
+	}
+
+	l.Debug("using temporary directory", "tmpDir", config.CommonOptions.TempDirectory)
+	return nil
+}
+
+// setupLogger handles creating a logger and setting it as the global default. When logFilePath
+// is non-empty, every log level is additionally written to that file as JSON, regardless of
+// what level is configured for the console -- the returned *os.File is the caller's to close
+// once logging is done.
+func setupLogger(level, format string, isColor bool, logFilePath string) (*slog.Logger, *os.File, error) {
+	// If we didn't get a level from config, fallback to "info"
+	if level == "" {
+		level = "info"
+	}
+	sLevel, err := logger.ParseLevel(level)
+	if err != nil {
+		return nil, nil, err
+	}
+	cfg := logger.Config{
+		Level:       sLevel,
+		Format:      logger.Format(format),
+		Destination: logger.DestinationDefault,
+		Color:       logger.Color(isColor),
+	}
+	l, err := logger.New(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var f *os.File
+	if logFilePath != "" {
+		fileHandler, opened, err := logging.OpenFileHandler(logFilePath)
+		if err != nil {
+			// A log file we can't open shouldn't block the CLI from running; fall back to
+			// console-only logging.
+			l.Warn("failed to open log file, continuing without one", "path", logFilePath, "error", err)
+		} else {
+			f = opened
+			l = slog.New(logging.NewMultiHandler(l.Handler(), fileHandler))
+		}
+	}
+
+	logger.SetDefault(l)
+	l.Debug("logger successfully initialized", "cfg", cfg, "logFile", logFilePath)
+	return l, f, nil
+}
+
+// defaultLogFilePath returns where the always-on debug log file is written: under the same
+// cache directory cargoship already uses for OCI artifacts, named to the hundredth of a
+// second. Invocations started within the same hundredth of a second share/append to the same
+// file since the name carries no PID or other disambiguator.
+func defaultLogFilePath() string {
+	cacheDir, err := config.GetAbsCachePath()
+	if err != nil || cacheDir == "" {
+		cacheDir = config.DefaultCachePath
+	}
+	name := fmt.Sprintf("cargoship-%s.log", time.Now().Format(config.TimeFormat))
+	return filepath.Join(cacheDir, "logs", name)
+}

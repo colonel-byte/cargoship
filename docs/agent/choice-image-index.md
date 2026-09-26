@@ -4,7 +4,7 @@ A cargoship package is fat: one tarball carries every architecture it targets, a
 
 ## The OCI store tags by image reference
 
-`images.Pull` (`src/pkg/images/pull.go`) copies each pulled image into an `oci.Store` rooted at the package's `images` directory, and the store is keyed by the image reference it was pulled as. That reference is `registry/name:tag`. It says nothing about a platform.
+`images.Pull` (`pkg/images/pull.go`) copies each pulled image into an `oci.Store` rooted at the package's `images` directory, and the store is keyed by the image reference it was pulled as. That reference is `registry/name:tag`. It says nothing about a platform.
 
 Pull two platforms of `registry.k8s.io/pause:3.10` and both copies want that one tag. Whichever finishes last wins, the other is left in the layout as unreferenced blobs, and a later `Resolve` returns a platform nobody chose. The failure is quiet: the tarball is well formed, the upload succeeds, and the node fails later with an exec format error from a container it cannot run.
 
@@ -27,7 +27,7 @@ Entry order carries no meaning to anything that reads the layout, so the sort ru
 
 ## Selecting a platform when uploading
 
-`src/pkg/phase/50_uploadfiles.go` resolves the image reference against the package's store and exports a tarball for the node. With an index in the store, `resolveImageManifest` picks the child manifest matching the platform and hands that descriptor to `archive.Export`, so the exported tarball holds exactly one platform and looks the same as one exported from a single-architecture package.
+`pkg/phase/50_uploadfiles.go` resolves the image reference against the package's store and exports a tarball for the node. With an index in the store, `resolveImageManifest` picks the child manifest matching the platform and hands that descriptor to `archive.Export`, so the exported tarball holds exactly one platform and looks the same as one exported from a single-architecture package.
 
 The selection is done here rather than left to containerd, even though `archive.Export` accepts a platform matcher and filters an index's children with it. The exporter skips the blobs of the platforms it filters out, but it still writes the full index blob into the tarball, which would leave the tarball referencing manifests whose blobs are not in it. Picking the child ourselves avoids handing nodes a tarball with dangling references.
 
@@ -43,4 +43,4 @@ The matcher is still `platforms.DefaultStrict()`, which describes the machine ru
 
 ## What it means for publishing
 
-Publishing a package to a registry needed no changes. `LayersFromImages` in `src/pkg/coci/pull.go` reads `images/index.json`, finds the entry annotated with the image reference, and already dispatches on media type: `layersFromIndexChildren` walks an index entry and recurses, and the layer list is deduplicated before it is returned. A published multi-arch package therefore shares blobs in the registry the same way it shares them on disk.
+Publishing a package to a registry needed no changes. `LayersFromImages` in `pkg/coci/pull.go` reads `images/index.json`, finds the entry annotated with the image reference, and already dispatches on media type: `layersFromIndexChildren` walks an index entry and recurses, and the layer list is deduplicated before it is returned. A published multi-arch package therefore shares blobs in the registry the same way it shares them on disk.

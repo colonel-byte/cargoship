@@ -27,7 +27,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/colonel-byte/cargoship/src/pkg/utils"
+	"github.com/colonel-byte/cargoship/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
 

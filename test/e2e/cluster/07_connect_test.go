@@ -17,7 +17,7 @@ package cluster
 import (
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // connect covers phase/07_connect.go, the first phase apply runs. Every later phase

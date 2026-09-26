@@ -17,7 +17,7 @@ package cluster
 import (
 	"fmt"
 
-	"github.com/colonel-byte/cargoship/src/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
 // hostsFilePath is the file phase/25_modify_hosts_file.go rewrites.

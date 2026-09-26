@@ -1,20 +1,20 @@
 # Running the Fuzz Tests
 
-The `src/fuzz` package holds Go's native fuzz targets. It is not an e2e suite and does not sit with them: it does not drive the built binary and starts no containers, and the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions -- scalar style, quoting, indentation, byte offsets -- where a wrong answer produces a file that still parses and fails much later. Nothing here needs `build/`, a cluster, or the network.
+The `fuzz` package holds Go's native fuzz targets. It is not an e2e suite and does not sit with them: it does not drive the built binary and starts no containers, and the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions -- scalar style, quoting, indentation, byte offsets -- where a wrong answer produces a file that still parses and fails much later. Nothing here needs `build/`, a cluster, or the network.
 
 It also has to stay out of `src/test/`. OpenSSF Scorecard's file walker discards every path beginning `src/test/` before any check reads it -- `isTestdataFile` in [`checks/fileparser/listing.go`](https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go), which carries the Maven `src/test/java` convention -- so for as long as these targets lived at `src/test/e2e/fuzz` the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under `src/test/` would silently take it to 0 again. The e2e suites themselves moved out of `src/test/` to `test/` for unrelated reasons, which loses that same exclusion for their tree -- worth knowing if a future Scorecard run starts flagging something in `test/` that it did not before.
 
 ## Layout
 
 ```
-src/fuzz/main_test.go                    package documentation
-src/fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
-src/fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
-src/fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
-src/fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
-src/fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
-src/fuzz/ansible_inventory_fuzz_test.go  Ansible inventory targets: the projected request, one host variable, the role mapping
-src/fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per target
+fuzz/main_test.go                    package documentation
+fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
+fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
+fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
+fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
+fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
+fuzz/ansible_inventory_fuzz_test.go  Ansible inventory targets: the projected request, one host variable, the role mapping
+fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per target
 ```
 
 ## The Ansible inventory targets
@@ -39,13 +39,13 @@ A plain `go test` runs the **seed corpus only** -- the `f.Add` values in each ta
 
 ```console
 $ mage test:fuzz
-$ go test -mod=vendor -count=1 ./src/fuzz/     # the same thing, spelled out
+$ go test -mod=vendor -count=1 ./fuzz/     # the same thing, spelled out
 ```
 
 Actual fuzzing needs `-fuzz`, which takes **one target at a time** and runs until it finds a failure or the clock runs out:
 
 ```console
-$ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./src/fuzz/
+$ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzztime=60s ./fuzz/
 ```
 
 *   `-run=XXX` matches no unit test, so the run spends its whole budget on the target rather than on the rest of the package.
@@ -56,8 +56,8 @@ $ go test -mod=vendor -count=1 -run=XXX -fuzz=FuzzDecryptAtPathRoundTrip -fuzzti
 Because only one target runs per invocation, a sweep is a loop:
 
 ```console
-$ for t in $(grep -ho '^func \(Fuzz[A-Za-z]*\)' src/fuzz/*_test.go | cut -d' ' -f2); do
-      go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./src/fuzz/ || break
+$ for t in $(grep -ho '^func \(Fuzz[A-Za-z]*\)' fuzz/*_test.go | cut -d' ' -f2); do
+      go test -mod=vendor -count=1 -run=XXX -fuzz=$t -fuzztime=5m ./fuzz/ || break
   done
 ```
 
@@ -83,7 +83,7 @@ There are two corpora, and only one of them is in the repository.
 
 Inputs the fuzzer generates live in the build cache, under `$(go env GOCACHE)/fuzz/`. They are shared across runs on the same machine, are not portable, and are not meant to be committed; `go clean -fuzzcache` discards them, which is worth doing when a target has been rewritten and its cached corpus is exercising a shape that no longer exists.
 
-Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `src/fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:
+Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:
 
 ```
 FuzzDecryptAtPathRoundTrip/89831cc049267b2c              string("\n")  a credential of one line break, written as an empty block scalar, read back as ""
@@ -145,8 +145,8 @@ Include the input in failure messages. `require.NoError(t, err, "%q canonicalise
 
 Fuzzing pays where a wrong answer still parses, so the targets worth writing next are the places that choose an encoding, canonicalise a string, or hand a path to a parser:
 
-*   `distrocfg.marshalRegistriesYAML` and `quoteRegistryKeys` (`src/types/distrocfg/distro_common.go`) choose a quoting style for keys the engine reparses -- the same shape as the bugs above, over registry names and `rewrite` regex patterns.
+*   `distrocfg.marshalRegistriesYAML` and `quoteRegistryKeys` (`types/distrocfg/distro_common.go`) choose a quoting style for keys the engine reparses -- the same shape as the bugs above, over registry names and `rewrite` regex patterns.
 *   `split.SplitFile` and `split.ReassembleFile` are a round trip over content bytes and a chunk size, and `ReassembleFile` trusts the `part000` metadata it unmarshals from disk.
 *   `cfg.Parse`, `cfg.ParseMultiDoc` and `utils.ReadByteStrict` take document bytes straight into a third-party parser, which is exactly where the panics found so far have come from.
-*   `isCleanPathRegex` (`src/cmd/common.go`) is a path sanitiser, so the property is that an accepted path, joined to a base and cleaned, stays under that base.
+*   `isCleanPathRegex` (`cmd/common.go`) is a path sanitiser, so the property is that an accepted path, joined to a base and cleaned, stays under that base.
 *   `dns.ParseServiceURL` against `dns.IsServiceURL` is a predicate and its implementation, the differential shape.

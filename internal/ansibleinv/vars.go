@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/colonel-byte/cargoship/src/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	rig "github.com/k0sproject/rig/v2"
 	"github.com/k0sproject/rig/v2/protocol/ssh"
 )

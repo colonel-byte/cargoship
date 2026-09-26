@@ -1,6 +1,6 @@
 # Adding an E2E Test for a New Apply Phase
 
-The cluster suite in `test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `src/pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
+The cluster suite in `test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
 
 One top-level test, `TestClusterPhases`, runs the `apply` walk against the cluster it provisions. It is a subtest rather than a top-level test because later walks against the same cluster -- an upgrade, a reset -- hang off the same parent and have to run in a fixed order after it.
 
@@ -10,7 +10,7 @@ For why the suite is built this way, see [choice-phase-e2e-tests](../agent/choic
 
 A phase is identified by its source file's number, and that number is used twice:
 
-*   **The test file name mirrors the phase's source file.** A test for `src/pkg/phase/25_modify_hosts_file.go` goes in `test/e2e/cluster/25_modify_hosts_file_test.go`. Same number, same name, one file each.
+*   **The test file name mirrors the phase's source file.** A test for `pkg/phase/25_modify_hosts_file.go` goes in `test/e2e/cluster/25_modify_hosts_file_test.go`. Same number, same name, one file each.
 *   **The method name carries the same number.** That file contains `Test_25_ModifyHosts`.
 
 Testify runs suite methods in lexicographic order of the method name, so the number is also the order the phases run in here. The numbers are zero-padded to two digits, which makes lexicographic order numeric order.
@@ -21,7 +21,7 @@ Steps that are not phases -- creating the package, `prepare` -- have no phase nu
 
 Take the new phase's file number for both the test file and the method. Nothing else is renumbered: inserting `phase/23_something.go` gives you `23_something_test.go` containing `Test_23_Something`, and it lands between `Test_22_PrepareFapolicy` and `Test_25_ModifyHosts` on its own.
 
-If a phase is renumbered in `src/pkg/phase`, rename its test file and its method to match, and check that its new number still puts it after everything it depends on -- the number is the ordering, so a phase that moves in the source moves here too.
+If a phase is renumbered in `pkg/phase`, rename its test file and its method to match, and check that its new number still puts it after everything it depends on -- the number is the ordering, so a phase that moves in the source moves here too.
 
 ## Writing the test
 
@@ -138,7 +138,7 @@ $ mage test:endToEndCluster
 
 ### In CI
 
-`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions ten containers, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `src/pkg/phase`, `src/pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
+`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions ten containers, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `pkg/phase`, `pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
 
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare step calls `action.NewPrepare`. That is what makes the two workflows independent, which is the point of the split.
 
