@@ -33,6 +33,7 @@ func newTestUpstream() *Upstream {
 			Binary:            "kubectl",
 			Config:            "/etc/kubernetes",
 			Data:              "/var/lib/kubelet",
+			PackageDir:        "/var/lib/kubernetes",
 			ServiceController: "kubelet",
 			ServiceWorker:     "kubelet",
 		},
@@ -181,9 +182,17 @@ func TestUpstreamCleanupPaths(t *testing.T) {
 	d := newTestUpstream()
 
 	got := d.CleanupPaths()
-	want := []string{"/var/lib/kubelet", "/etc/kubernetes"}
+	want := []string{"/var/lib/kubelet", "/etc/kubernetes", "/var/lib/kubernetes"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("CleanupPaths() = %v, want %v", got, want)
+	}
+}
+
+func TestUpstreamPackageStagingDir(t *testing.T) {
+	d := newTestUpstream()
+
+	if got := d.PackageStagingDir(); got != "/var/lib/kubernetes" {
+		t.Fatalf("PackageStagingDir() = %q, want %q", got, "/var/lib/kubernetes")
 	}
 }
 

@@ -35,9 +35,9 @@ import (
 )
 
 var (
-	aptPre   = regexp.MustCompile(`.*\.deb$`)
+	debPre   = regexp.MustCompile(`.*\.deb$`)
 	rpmPre   = regexp.MustCompile(`.*\.rpm$`)
-	pkgsType = []string{"rpm", "apt"}
+	pkgsType = []string{"rpm", "deb"}
 )
 
 // UninstallEngine state
@@ -91,7 +91,7 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 	packages := []string{}
 
 	for _, pkg := range pkgsType {
-		folder := filepath.Join(p.Distro.DataDirPath(), pkg)
+		folder := filepath.Join(p.Distro.PackageStagingDir(), pkg)
 		if h.FileExist(folder) {
 			err := fs.WalkDir(h.Sudo().FS(), folder, func(_ string, d fs.DirEntry, _ error) error {
 				if !d.IsDir() && rpmPre.MatchString(d.Name()) {
@@ -102,7 +102,7 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 					}
 					packages = append(packages, output)
 				}
-				if !d.IsDir() && aptPre.MatchString(d.Name()) {
+				if !d.IsDir() && debPre.MatchString(d.Name()) {
 					cmd := fmt.Sprintf(`dpkg-deb --show --showformat="${Package}" %s/%s`, folder, d.Name())
 					output, err := h.Sudo().ExecOutput(cmd)
 					if err != nil {

@@ -68,6 +68,7 @@ func init() {
 					Binary:            "kubectl",
 					Config:            "/etc/kubernetes",
 					Data:              "/var/lib/kubelet",
+					PackageDir:        "/var/lib/kubernetes",
 					ServiceController: "kubelet",
 					ServiceWorker:     "kubelet",
 				},
@@ -159,9 +160,10 @@ func (d *Upstream) ManagedDirs() []ManagedDir {
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config
-// directory and the kubelet data directory, both of which upstream owns outright.
+// directory, the kubelet data directory, and the staged package directory, all of which
+// upstream owns outright.
 func (d *Upstream) CleanupPaths() []string {
-	return removablePaths(d.DataDirPath(), d.ConfigPath())
+	return removablePaths(d.DataDirPath(), d.ConfigPath(), d.PackageStagingDir())
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has

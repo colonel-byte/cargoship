@@ -100,6 +100,9 @@ type Common struct {
 	Data string
 	// ID the id used to identify the distro
 	ID string
+	// PackageDir where staged .rpm/.deb package files are uploaded to. Empty means DataDirPath
+	// doubles as the staging directory -- see PackageStagingDir.
+	PackageDir string
 	// ServiceController the controller service
 	ServiceController string
 	// ServiceWorker the worker service
@@ -130,6 +133,16 @@ func (r *Common) JoinTokenPath() string {
 
 // DataDirPath returns the full path for the data directory used by the engine
 func (r *Common) DataDirPath() string {
+	return r.Data
+}
+
+// PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It
+// falls back to DataDirPath when PackageDir is unset, so a distro that never stages package
+// files does not need to set it.
+func (r *Common) PackageStagingDir() string {
+	if r.PackageDir != "" {
+		return r.PackageDir
+	}
 	return r.Data
 }
 
