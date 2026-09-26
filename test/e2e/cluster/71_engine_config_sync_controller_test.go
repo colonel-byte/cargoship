@@ -23,6 +23,8 @@ import (
 // phase/60 wrote exactly that config a few phases ago, so there is nothing to correct here.
 // The assertion is that it detects no drift and restarts nothing -- a sync phase that fired
 // on a freshly configured cluster would be bouncing the control plane for no reason.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) engineConfigSyncController() {
 	s.T().Helper()
 
@@ -42,5 +44,13 @@ func (s *phaseWalk) engineConfigSyncController() {
 // Test_71_EngineConfigSyncController checks for drift after the install.
 func (s *ApplyPhaseSuite) Test_71_EngineConfigSyncController() {
 	s.requireEngine()
+	s.engineConfigSyncController()
+}
+
+// Test_71_EngineConfigSyncController checks for drift after the join. The controllers were not
+// reconfigured by it, and Test_60 rendered the same config from the same package, so there is
+// still nothing to correct -- a restart of the control plane here would be the join disturbing
+// nodes it has no business touching.
+func (s *JoinPhaseSuite) Test_71_EngineConfigSyncController() {
 	s.engineConfigSyncController()
 }
