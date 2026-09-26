@@ -23,9 +23,10 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 )
 
-// distroEnvVar picks which distro the suite installs, instead of the rke2 default. See
-// distroID. Set to "k3s" to walk the suite against a k3s package instead -- see
-// cluster_lifecycle_test.go for what package that selects.
+// distroEnvVar picks which distro the suite installs, instead of the k3s default. See
+// distroID. Set to "rke2" to walk the suite against the three-controller rke2 package instead --
+// see cluster_lifecycle_test.go for what package that selects, and rke2EnvVar in main_test.go
+// for the matching inventory switch.
 const distroEnvVar = "CARGOSHIP_E2E_DISTRO"
 
 // distroID is the distro the suite installs, and the value the CLI's --distro flag would
@@ -33,11 +34,15 @@ const distroEnvVar = "CARGOSHIP_E2E_DISTRO"
 // there is no package for them to read it from. It is a function rather than a package
 // variable so that it reads the environment when asked rather than at package init, the same
 // reasoning as stageOnly.
+//
+// k3s is the default because its single-controller SQLite datastore has no etcd raft quorum to
+// time out under the CPU contention a hosted runner's nested nodes create -- see rke2EnvVar in
+// main_test.go for the topology this pairs with and why rke2 became the opt-in.
 func distroID() string {
 	if id := os.Getenv(distroEnvVar); id != "" {
 		return id
 	}
-	return "rke2"
+	return "k3s"
 }
 
 // Node counts for the generated inventory, see the bootloose config in main_test.go: kc0,

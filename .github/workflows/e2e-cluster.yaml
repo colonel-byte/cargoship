@@ -2,16 +2,16 @@
 name: E2E cluster
 
 # The install group, test/e2e/cluster, which provisions a bootloose cluster and walks the
-# apply phase list one phase at a time against it. It installs rke2 onto nine machines, then
-# adds a tenth in the join walk, and takes tens of minutes, so it is not part of every pull
+# apply phase list one phase at a time against it. It installs k3s onto four machines, then
+# adds a fifth in the join walk, and takes tens of minutes, so it is not part of every pull
 # request the way e2e.yaml is. It has its own workflow rather than a gated job in e2e.yaml so
 # that its trigger, its concurrency group and its two-hour budget are independent of the checks
 # that do run on every push.
 #
-# The default run is two walks: the install onto ten machines, and the join, which starts an
-# eleventh machine and walks the same phase list again to bring it into the running cluster.
+# The default run is two walks: the install onto five machines, and the join, which starts a
+# sixth machine and walks the same phase list again to bring it into the running cluster.
 # The join is not opt-in -- it is the only coverage of apply against a cluster that already
-# exists, and it installs the engine onto one node rather than onto nine, so it costs a
+# exists, and it installs the engine onto one node rather than onto four, so it costs a
 # fraction of what the upgrade does.
 #
 # It runs on demand from the Actions tab, and automatically on a pull request carrying the
@@ -19,18 +19,22 @@ name: E2E cluster
 # pkg/action or the inventory handling. The trigger lists "labeled" explicitly: without
 # it, adding the label to an open pull request would not start a run until the next push.
 #
-# There are two jobs behind that trigger, and they run the same suite against different
-# inventories. e2e-cluster-stage provisions five machines and asks for the staging phases only;
-# e2e-cluster provisions ten and walks everything. The first takes minutes and the second takes
-# tens of them, which is the whole reason they are separate -- see
-# docs/agent/choice-e2e-stage-split.md. Both are label gated for now. The intent is to drop the
-# gate on the stage job once a few runs show what it costs and how reliable it is, so that the
-# phases it does cover run on every pull request.
+# There are three jobs behind that trigger. e2e-cluster-stage provisions five machines and asks
+# for the staging phases only, taking minutes; e2e-cluster provisions five and walks everything
+# against k3s's single-controller topology -- see rke2EnvVar in test/e2e/cluster/main_test.go
+# for why k3s is the default. Both are label gated for now. The intent is to drop the gate on
+# the stage job once a few runs show what it costs and how reliable it is, so that the phases
+# it does cover run on every pull request.
 #
-# The upgrade walk is a second opt-in on top of that, either the "upgrade" dispatch input or
-# the "e2e-cluster-upgrade" label. It installs a second complete set of engine images onto all
-# nine nodes, which roughly doubles the disk the run needs and adds tens of minutes to it, so a
-# run that only needs to know the install still works should not pay for it. Either opt-in
+# e2e-cluster-rke2 is the opt-in for the original three-controller rke2 topology, which is
+# workflow_dispatch only: rke2's embedded etcd raft quorum across three controllers was timing
+# out under the CPU contention ten nested nodes create on a hosted runner, so it no longer runs
+# on every pull request. See docs/agent/choice-e2e-stage-split.md.
+#
+# The upgrade walk is a second opt-in on top of the default job, either the "upgrade" dispatch
+# input or the "e2e-cluster-upgrade" label. It installs a second complete set of engine images
+# onto every node, which roughly doubles the disk the run needs and adds tens of minutes to it,
+# so a run that only needs to know the install still works should not pay for it. Either opt-in
 # implies the install walk: the upgrade runs against the cluster the install leaves behind. It
 # has no bearing on the stage job, which starts no engine and so has nothing to upgrade.
 on:
@@ -154,94 +158,11 @@ jobs:
             docker rm -fv $ids
           fi
 
-  # An experiment, not a committed check: one k3s controller and four workers, no etcd. rke2's
-  # embedded etcd raft quorum across three controllers has been timing out on this hosted
-  # runner (see the e2e-cluster job's history) -- CPU contention from ten nested nodes makes
-  # etcd's heartbeat deadlines slip. k3s defaults to a single-controller SQLite datastore, so
-  # this topology has no raft quorum to time out. This job exists to test that hypothesis, not
-  # to replace e2e-cluster: it only runs on workflow_dispatch, never on a pull request, so it
-  # cannot make any check flaky while the idea is unproven.
-  e2e-cluster-k3s-single:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup golang
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-
-      # Five nodes rather than ten, same reasoning as the stage job.
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-            /usr/local/share/boost /usr/share/swift
-          sudo docker image prune --all --force
-          df -h /
-
-      - name: Test
-        run: >-
-          go test -mod=vendor -count=1 -v -timeout=25m
-          ./test/e2e/cluster/...
-        env:
-          # Selects the five-machine, single-controller inventory instead of the ten-machine
-          # rke2 one. See k3sSingleEnvVar in test/e2e/cluster/main_test.go.
-          CARGOSHIP_E2E_K3S_SINGLE: "1"
-          # Selects the k3s example package and expected version instead of rke2's. See
-          # distroEnvVar in test/e2e/cluster/05_manager_test.go.
-          CARGOSHIP_E2E_DISTRO: "k3s"
-          # Leave the machines standing when the run fails, so the step below can read them.
-          CARGOSHIP_E2E_KEEP_CLUSTER: "1"
-          # Everything the test build needs is vendored, so make any accidental network
-          # access fail fast. Matches magefiles/utils.go.
-          CGO_ENABLED: 0
-          GOFLAGS: -mod=vendor
-          GOPROXY: "off"
-          GOSUMDB: "off"
-          GOTOOLCHAIN: local
-
-      # Same reasoning as the full job's diagnostics step below.
-      - name: Collect node diagnostics
-        if: failure()
-        run: |
-          diag="$RUNNER_TEMP/diagnostics"
-          mkdir -p "$diag"
-          df -h / | tee "$diag/df.txt"
-          free -h | tee "$diag/free.txt"
-          docker ps -a | tee "$diag/containers.txt"
-          for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
-            name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
-            docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
-            docker exec "$c" journalctl -u k3s -u k3s-agent --no-pager \
-              > "$diag/$name.journal.log" 2>&1 || true
-            echo "::group::$name"
-            tail -n 200 "$diag/$name.journal.log" || true
-            echo "::endgroup::"
-          done
-          cp -r "$HOME/.cargoship-cache/logs" "$diag/suite-logs" 2>/dev/null || true
-
-      - name: Upload node diagnostics
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: e2e-cluster-k3s-single-diagnostics
-          path: ${{ runner.temp }}/diagnostics
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Remove leftover bootloose containers
-        if: always()
-        run: |
-          ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
-          if [ -n "$ids" ]; then
-            docker rm -fv $ids
-          fi
-
-  # The full walk, over the ten-machine inventory. No build step here either, and for the same
-  # reason as the stage job above.
+  # The full walk, over the five-machine, single-controller k3s inventory. k3s is the default
+  # because its SQLite datastore has no etcd raft quorum to time out under the CPU contention
+  # ten nested rke2 nodes created on this hosted runner -- see rke2EnvVar in
+  # test/e2e/cluster/main_test.go and e2e-cluster-rke2 below. No build step here either, and for
+  # the same reason as the stage job above.
   e2e-cluster:
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -250,7 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     # The suite's own timeout is below this either way, so an overrun is reported as a Go test
     # failure naming the phase it was in rather than as a cancelled job.
-    timeout-minutes: ${{ (inputs.upgrade || contains(github.event.pull_request.labels.*.name, 'e2e-cluster-upgrade')) && 210 || 120 }}
+    timeout-minutes: ${{ (inputs.upgrade || contains(github.event.pull_request.labels.*.name, 'e2e-cluster-upgrade')) && 120 || 30 }}
     env:
       # The suite reads this to decide whether to walk the upgrade phases. On a pull request
       # inputs.upgrade is empty, so the label decides; on a dispatch the input does.
@@ -264,11 +185,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # Ten nodes each import the engine's images into their own containerd store -- nine from
-      # the install and one more from the join -- which does not fit in the ~14GB a hosted
-      # runner leaves free, and the upgrade walk imports a second set on top of the first. None
-      # of what is removed here is used by this job. The tool cache is deliberately left alone:
-      # setup-go puts the toolchain there.
+      # Five nodes rather than the old ten, same reasoning as the stage job. The tool cache is
+      # deliberately left alone: setup-go puts the toolchain there.
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
@@ -279,7 +197,7 @@ jobs:
       - name: Test
         run: >-
           go test -mod=vendor -count=1 -v
-          -timeout=${{ (inputs.upgrade || contains(github.event.pull_request.labels.*.name, 'e2e-cluster-upgrade')) && '195m' || '105m' }}
+          -timeout=${{ (inputs.upgrade || contains(github.event.pull_request.labels.*.name, 'e2e-cluster-upgrade')) && '115m' || '25m' }}
           ./test/e2e/cluster/...
         env:
           # Leave the machines standing when the run fails, so the step below can read their
@@ -317,7 +235,7 @@ jobs:
           for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
             name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
             docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
-            docker exec "$c" journalctl -u rke2-server -u rke2-agent --no-pager \
+            docker exec "$c" journalctl -u k3s -u k3s-agent --no-pager \
               > "$diag/$name.journal.log" 2>&1 || true
             echo "::group::$name"
             tail -n 200 "$diag/$name.journal.log" || true
@@ -340,6 +258,93 @@ jobs:
       # reach neither. A hosted runner is discarded anyway; this is here so the same workflow
       # behaves on a self-hosted one, where it is not. The -v is what takes the anonymous
       # volumes with the containers; see engineData.
+      - name: Remove leftover bootloose containers
+        if: always()
+        run: |
+          ids=$(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose)
+          if [ -n "$ids" ]; then
+            docker rm -fv $ids
+          fi
+
+  # The opt-in for the original three-controller rke2 topology, ten machines. rke2's embedded
+  # etcd raft quorum across three controllers was timing out on this hosted runner -- CPU
+  # contention from ten nested nodes made etcd's heartbeat deadlines slip -- which is why it is
+  # no longer the default walk. It only runs on workflow_dispatch, never on a pull request, so
+  # it cannot make any check flaky. See docs/agent/choice-e2e-stage-split.md.
+  e2e-cluster-rke2:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Ten nodes each import the engine's images into their own containerd store -- nine from
+      # the install and one more from the join -- which does not fit in the ~14GB a hosted
+      # runner leaves free. None of what is removed here is used by this job. The tool cache is
+      # deliberately left alone: setup-go puts the toolchain there.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Test
+        run: >-
+          go test -mod=vendor -count=1 -v -timeout=115m
+          ./test/e2e/cluster/...
+        env:
+          # Selects the ten-machine, three-controller inventory instead of the k3s default. See
+          # rke2EnvVar in test/e2e/cluster/main_test.go.
+          CARGOSHIP_E2E_RKE2: "1"
+          # Selects the rke2 example package and expected version instead of k3s's. See
+          # distroEnvVar in test/e2e/cluster/05_manager_test.go.
+          CARGOSHIP_E2E_DISTRO: "rke2"
+          # Leave the machines standing when the run fails, so the step below can read them.
+          CARGOSHIP_E2E_KEEP_CLUSTER: "1"
+          # Everything the test build needs is vendored, so make any accidental network
+          # access fail fast. Matches magefiles/utils.go.
+          CGO_ENABLED: 0
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      # Same reasoning as the default job's diagnostics step above, with rke2's unit names.
+      - name: Collect node diagnostics
+        if: failure()
+        run: |
+          diag="$RUNNER_TEMP/diagnostics"
+          mkdir -p "$diag"
+          df -h / | tee "$diag/df.txt"
+          free -h | tee "$diag/free.txt"
+          docker ps -a | tee "$diag/containers.txt"
+          for c in $(docker ps -aq --filter label=io.k0sproject.bootloose.owner=bootloose); do
+            name=$(docker inspect -f '{{.Name}}' "$c" | tr -d /)
+            docker logs "$c" > "$diag/$name.docker.log" 2>&1 || true
+            docker exec "$c" journalctl -u rke2-server -u rke2-agent --no-pager \
+              > "$diag/$name.journal.log" 2>&1 || true
+            echo "::group::$name"
+            tail -n 200 "$diag/$name.journal.log" || true
+            echo "::endgroup::"
+          done
+          cp -r "$HOME/.cargoship-cache/logs" "$diag/suite-logs" 2>/dev/null || true
+
+      - name: Upload node diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-cluster-rke2-diagnostics
+          path: ${{ runner.temp }}/diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Remove leftover bootloose containers
         if: always()
         run: |
