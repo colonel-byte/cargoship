@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f222ea4e.js";
+            window.path_to_searchindex_js = "../searchindex-07bc0159.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-27b31ff2.js"></script>
@@ -199,8 +199,9 @@
 <h2 id="an-environment-variable-not-a-build-tag"><a class="header" href="#an-environment-variable-not-a-build-tag">An environment variable, not a build tag</a></h2>
 <p>The gate is <code>stageOnlyEnvVar</code>, read through <code>strconv.ParseBool</code>, under the <code>CARGOSHIP_E2E_</code> prefix the suite already uses for its other knobs. Build tags were the alternative and were rejected twice over: a tagged file is invisible to <code>go vet</code> and the linter unless the tag is set, so the gated half rots silently, and the suite would need two <code>go test</code> invocations with different tags to cover what one binary covers now. An environment variable is one build, one binary, and the same code compiled either way.</p>
 <p>It is a function rather than a package variable so that it reads the environment when asked rather than at package init, which is what lets a caller set it in process – <code>mage test:endToEndClusterStage</code> does exactly that.</p>
-<h2 id="the-engine-steps-are-skipped-one-at-a-time"><a class="header" href="#the-engine-steps-are-skipped-one-at-a-time">The engine steps are skipped one at a time</a></h2>
-<p><code>ApplyPhaseSuite</code> is gated per method rather than as a whole. Each of <code>Test_61</code> through <code>Test_81</code> begins with <code>requireEngine()</code>, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.</p>
+<h2 id="two-granularities-of-skip"><a class="header" href="#two-granularities-of-skip">Two granularities of skip</a></h2>
+<p><code>ApplyPhaseSuite</code> is skipped per method. Each of <code>Test_61</code> through <code>Test_81</code> begins with <code>requireEngine()</code>, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.</p>
+<p>The join walk is skipped whole, in <code>TestClusterPhases</code>. It starts from the cluster the apply walk installed – there is nothing to join when nothing was started – so gating it method by method would produce a suite of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.</p>
 <h2 id="the-phases-after-the-engine-still-run"><a class="header" href="#the-phases-after-the-engine-still-run">The phases after the engine still run</a></h2>
 <p><code>Test_91_Lock</code>, <code>Test_92_Unlock</code> and <code>Test_99_Disconnect</code> carry no <code>requireEngine()</code>, and that is deliberate rather than an oversight. The lock is a file on each host holding the instance ID of the process that took it; unlock removes it; disconnect clears the staged binary paths and drops the SSH connections. All three need a connected host and none needs an engine, so all three run on a stage-only walk and fail it if they regress.</p>
 <p>That matters more than it looks. A lock left behind delays the next run by thirty seconds on every node, and a stage-only walk that took the lock and skipped the release would do exactly that to the run after it. The three tests are commented to say they are ungated on purpose, so that a later change adding <code>requireEngine()</code> to everything after 60 has to argue with a comment first.</p>
