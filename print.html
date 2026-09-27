@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c8d56d79.js";
+            window.path_to_searchindex_js = "searchindex-560e7e7e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-27b31ff2.js"></script>
+        <script src="toc-8e84177d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -14988,7 +14988,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="build-flags-and-environment"><a class="header" href="#build-flags-and-environment">Build Flags and Environment</a></h1>
 <p>This document explains the compiler flags, linker flags, and environment variables used when compiling the <code>cargoship</code> binary, and why each one is set. They are defined in <code>pkg/utils/build/utils.go</code>, which the Mage host build path (<code>magefiles/utils.go</code>) uses.</p>
-<p>That package exposes two functions, <code>LDFlags(version, commit string) string</code> and <code>GCFLags() string</code>. The build site additionally sets <code>CGO_ENABLED=0</code> and passes <code>-trimpath</code> directly in its <code>go build</code> invocation rather than through these shared helpers.</p>
+<p>That package exposes two functions, <code>LDFlags(version, commit string) string</code> and <code>GCFLags() string</code>. The build site additionally sets <code>CGO_ENABLED=0</code> and passes <code>-trimpath</code> directly in its <code>go build</code> invocation rather than through these shared helpers. <code>.goreleaser.yaml</code> and <code>.github/workflows/e2e.yaml</code> spell the same flags out inline, so a change here has to be made in those two files as well.</p>
 <h2 id="why-this-matters"><a class="header" href="#why-this-matters">Why this matters</a></h2>
 <p>An unoptimized <code>go build</code> of this repo produces a binary well over 130MB on Linux/amd64, mostly because <code>cargoship</code> pulls in large transitive dependency trees (<code>k8s.io/client-go</code>, <code>zarf</code>’s signing stack, cloud SDKs, etc.) and, without <code>CGO_ENABLED=0</code>, dynamically links against glibc. The flags below were chosen specifically to keep the shipped binary as small and portable as possible without changing behavior.</p>
 <p>Measured impact on a Linux/amd64 build of this repo:</p>
@@ -15001,7 +15001,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <tr><td style="text-align: left"><code>go build</code> with no flags</td><td style="text-align: left">~136MB</td><td style="text-align: left">dynamic (glibc)</td></tr>
 <tr><td style="text-align: left"><code>+ CGO_ENABLED=0</code></td><td style="text-align: left">~98.5MB</td><td style="text-align: left">static</td></tr>
 <tr><td style="text-align: left"><code>+ -trimpath</code></td><td style="text-align: left">~98.2MB</td><td style="text-align: left">static</td></tr>
-<tr><td style="text-align: left">default gcflags instead of <code>-l -B -C</code> (for comparison)</td><td style="text-align: left">~113MB</td><td style="text-align: left">static</td></tr>
+<tr><td style="text-align: left">default gcflags instead of <code>-l</code> (for comparison)</td><td style="text-align: left">~113MB</td><td style="text-align: left">static</td></tr>
+<tr><td style="text-align: left"><code>-l</code> (shipped)</td><td style="text-align: left">97.95MB</td><td style="text-align: left">static</td></tr>
+<tr><td style="text-align: left"><code>-l -B -C</code> (former setting, for comparison)</td><td style="text-align: left">96.86MB</td><td style="text-align: left">static</td></tr>
 </tbody>
 </table>
 </div>
@@ -15042,7 +15044,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>These two <code>-X</code> flags aren’t size-related; they exist so <code>cargoship version</code> can report accurate build metadata without a separate version file shipped alongside the binary.</p>
 </li>
 </ul>
-<h3 id="-gcflagsall-see-gcflags-in-both-utilsgo-files"><a class="header" href="#-gcflagsall-see-gcflags-in-both-utilsgo-files"><code>-gcflags=all="..."</code> (see <code>GCFLags</code> in both <code>utils.go</code> files)</a></h3>
+<h3 id="-gcflagsall-l-see-gcflags-in-pkgutilsbuildutilsgo"><a class="header" href="#-gcflagsall-l-see-gcflags-in-pkgutilsbuildutilsgo"><code>-gcflags=all="-l"</code> (see <code>GCFLags</code> in <code>pkg/utils/build/utils.go</code>)</a></h3>
 <p>Applied to <code>all</code> packages (including the standard library and vendored dependencies), not just this module’s own code.</p>
 <ul>
 <li>
@@ -15053,8 +15055,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li>
 <p><strong><code>-C</code></strong> - disables the compiler’s automatic detection of <code>unsafe.Pointer</code> misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.</p>
-<p>Because <code>-B</code> and <code>-C</code> remove safety checks, any regression they’d otherwise catch (out-of-bounds access, pointer misuse) will instead surface as memory corruption or silent wrong behavior. If a hard-to-diagnose crash ever shows up only in release builds and not in <code>go test</code>/plain <code>go run</code>, try reproducing without these two flags first.</p>
+<p>Note that <code>all=</code> means changing this flag invalidates the build cache for the entire dependency tree, so the first build after touching it is slow. That is a per-flag-change cost, not a per-build one.</p>
 </li>
+</ul>
+<h2 id="flags-that-were-removed"><a class="header" href="#flags-that-were-removed">Flags that were removed</a></h2>
+<p>These three were set in an earlier revision of this build and are no longer used.</p>
+<ul>
+<li><strong><code>-gcflags=all=-B</code> (disable bounds checking)</strong> - removed. Measured at 1.09MB of 97.95MB, about 1.1%. In exchange it stripped bounds checks from every package in the tree, including the code whose job is parsing input this binary does not control: archive extraction, OCI manifests and layers, registry responses. That is exactly where a bounds check is the mechanism that turns a malformed length field into a panic instead of an out-of-bounds read, and 1% of binary size is not worth giving that up. If a hard-to-diagnose crash ever appeared only in release builds, this flag was the first suspect — one more reason it is gone.</li>
+<li><strong><code>-gcflags=all=-C</code></strong> - removed. It never did anything for size. <code>go tool compile -help</code> documents <code>-C</code> as “disable printing of columns in error messages”: a compiler diagnostic formatting flag with no effect on generated code. An earlier revision of this document claimed it disabled <code>unsafe.Pointer</code>/checkptr-adjacent checks; that was wrong.</li>
+<li><strong><code>-a</code> (force rebuild of all packages)</strong> - removed. It was justified here as a guard against a stale build cache masking flag changes, but Go’s build cache is keyed on build flags, so that situation cannot arise: changing <code>-gcflags</code> or <code>-ldflags</code> already rebuilds everything those flags affect. All <code>-a</code> did was make every build redo the standard library.</li>
 </ul>
 <h2 id="what-was-deliberately-not-changed"><a class="header" href="#what-was-deliberately-not-changed">What was deliberately not changed</a></h2>
 <ul>
@@ -15064,7 +15073,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
 <p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
-<p>One top-level test, <code>TestClusterPhases</code>, runs three walks against the same cluster in the order they work in: <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, and <code>upgrade</code> walks the same phases again with a newer package. A new phase needs a test in the apply walk, and usually one in each of the others too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
+<p>One top-level test, <code>TestClusterPhases</code>, runs four walks against the same cluster in the order they work in: <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, <code>upgrade</code> walks the same phases again with a newer package, and <code>reset</code> takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
 <p>For why the suite is built this way, see <a href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">choice-phase-e2e-tests</a>. For running the e2e suites generally, see <a href="#running-the-end-to-end-tests">e2e-tests</a>.</p>
 <h2 id="one-number-per-phase"><a class="header" href="#one-number-per-phase">One number per phase</a></h2>
 <p>A phase is identified by its source file’s number, and that number is used twice:</p>
@@ -15074,7 +15083,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </ul>
 <p>Testify runs suite methods in lexicographic order of the method name, so the number is also the order the phases run in here. The numbers are zero-padded to two digits, which makes lexicographic order numeric order.</p>
 <p>That order matches apply’s everywhere except the lock. Apply takes the lock third, right after OS detection, and holds it for the whole run; <code>phase/91_lock.go</code>’s number puts it after the install instead, with <code>phase/92_unlock.go</code> right behind it. The lock test still asserts what the phase writes on each host. What it no longer does is hold the lock across the phases in between, so a phase that misbehaves while the cluster is locked is not something this suite would see.</p>
-<p>Steps that are not phases – creating the package, <code>prepare</code>, the health check – have no phase number to take, so they use the two ends of the ordering: <code>Test_00</code> and <code>Test_01</code> sort before every phase, and <code>Test_ZZ1</code> onwards sort after every phase, because a letter sorts after a digit. They live in <code>cluster_lifecycle_test.go</code>. Those steps run whole actions rather than single phases – <code>distro.Create</code>, <code>action.NewPrepare</code>, <code>action.NewApply</code> – each with its own manager, and are given <code>e2e.ClusterConfigPath</code>, the engine-only inventory, rather than the full one the harness is built from; see the section on the upload-only host below.</p>
+<p>Steps that are not phases – creating the package, <code>prepare</code>, the health check – have no phase number to take, so they use the two ends of the ordering: <code>Test_00</code> and <code>Test_01</code> sort before every phase, and <code>Test_ZZ1</code> onwards sort after every phase, because a letter sorts after a digit. They live in <code>cluster_lifecycle_test.go</code>, alongside <code>ResetSuite</code>, which is the whole of the <code>reset</code> walk. Those steps run whole actions rather than single phases – <code>distro.Create</code>, <code>action.NewPrepare</code>, <code>action.NewApply</code>, <code>action.NewReset</code>, <code>action.NewKubeConfig</code> – each with its own manager, and are given <code>e2e.ClusterConfigPath</code>, the engine-only inventory, rather than the full one the harness is built from; see the section on the upload-only host below.</p>
 <h2 id="adding-a-phase"><a class="header" href="#adding-a-phase">Adding a phase</a></h2>
 <p>Take the new phase’s file number for both the test file and the method. Nothing else is renumbered: inserting <code>phase/23_something.go</code> gives you <code>23_something_test.go</code> containing <code>Test_23_Something</code>, and it lands between <code>Test_22_PrepareFapolicy</code> and <code>Test_25_ModifyHosts</code> on its own.</p>
 <p>If a phase is renumbered in <code>pkg/phase</code>, rename its test file and its method to match, and check that its new number still puts it after everything it depends on – the number is the ordering, so a phase that moves in the source moves here too.</p>
@@ -15214,14 +15223,14 @@ s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version
 <p>The upgrade walk is off unless <code>CARGOSHIP_E2E_UPGRADE</code> is set. It installs a second complete set of engine images onto every node, which roughly doubles the disk the run needs and adds tens of minutes.</p>
 <pre><code class="language-console">$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./src/test/e2e/cluster/...
 </code></pre>
-<p>Without it, <code>TestClusterPhases/upgrade</code> skips with a message naming the variable.</p>
+<p>Without it, <code>TestClusterPhases/upgrade</code> skips with a message naming the variable, and the reset walk runs against the installed cluster as before.</p>
 <h2 id="prerequisites-and-running-it"><a class="header" href="#prerequisites-and-running-it">Prerequisites and running it</a></h2>
 <p>The suite needs Docker and a real distro package, and it is not fast: it provisions five containers and installs k3s onto all of them, one controller and four workers, then starts a sixth and joins it. It needs no prebuilt binary – every step calls the cargoship packages directly, so a bare checkout is enough.</p>
 <pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
 </code></pre>
 <p>Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:</p>
-<pre><code class="language-console">$ mage test:endToEndCluster           # the install and join walks
-$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk after them
+<pre><code class="language-console">$ mage test:endToEndCluster           # the install, join and reset walks
+$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in between
 </code></pre>
 <p><code>-short</code> skips the whole suite, and <code>CARGOSHIP_E2E_UPGRADE</code> adds the upgrade walk. <code>TestMain</code> deletes the bootloose cluster on the way out even when tests fail.</p>
 <p>This full walk, the one that installs and bootstraps k3s, is not run in CI – see below. It is a local-box check: run <code>mage test:endToEndCluster</code> (or the <code>go test</code> invocation above) on a machine with Docker before trusting a change to the engine-bootstrap phases, <code>phase/61</code> onward.</p>
@@ -15231,8 +15240,29 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk after th
 <h3 id="in-ci"><a class="header" href="#in-ci">In CI</a></h3>
 <p><code>.github/workflows/e2e-cluster.yaml</code> runs the staging half of this suite – <code>CARGOSHIP_E2E_STAGE_ONLY=1</code>, stopping at the boundary <code>Test_60_ConfigureEngine</code> draws – on its own trigger, separate from <code>e2e.yaml</code>. It runs on every pull request, the same as <code>e2e.yaml</code>, and on demand from the Actions tab. No label is needed.</p>
 <p>The engine-bootstrap half, including the join and upgrade walks, does not run in CI at all. It was not reliable enough on a free hosted runner to be a required check, even on the single-controller k3s topology that replaced the original three-controller rke2 one – see <a href="#why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half">choice-e2e-stage-split</a>. Trusting a change to the engine-bootstrap phases, the join walk, or the upgrade walk means running <code>mage test:endToEndCluster</code> or <code>mage test:endToEndClusterUpgrade</code> locally; CI cannot cover that for you.</p>
-<p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare step calls <code>action.NewPrepare</code>. That is what makes the two workflows independent, which is the point of the split.</p>
+<p>The upgrade walk is a second opt-in on top of that: the <code>upgrade</code> input when dispatching by hand, or the <code>e2e-cluster-upgrade</code> label on a pull request. Either one implies the install and join walks, sets <code>CARGOSHIP_E2E_UPGRADE</code> for the job and raises its budget from 120 to 210 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.</p>
+<p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare, apply, reset and kube-config steps call the matching <code>action.New*</code> entry points. That is what makes the two workflows independent, which is the point of the split.</p>
 <p>The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes stuck mid-upload, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.</p>
+<h2 id="iterating-while-writing-a-new-phase-test"><a class="header" href="#iterating-while-writing-a-new-phase-test">Iterating while writing a new phase test</a></h2>
+<p>A new phase test needs the suite up to that point, not the whole run. Three environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.</p>
+<p><strong>Run only the walk your phase is in.</strong> <code>TestClusterPhases</code> runs <code>apply</code>, <code>join</code>, <code>upgrade</code> and <code>reset</code> as separate subtests of one parent, so <code>-run</code> at that path segment excludes the ones you are not touching:</p>
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+</code></pre>
+<p>This still walks every phase from <code>Test_00</code> onward – there is no way to start partway through a walk, because each phase depends on state the ones before it left on the host, <code>Test_07_Connect</code> first among them. What this buys you is skipping the walks after the one you are writing for.</p>
+<p><strong>Stay in stage-only mode if your phase is before the <code>Test_60</code> boundary.</strong> <code>CARGOSHIP_E2E_STAGE_ONLY=1</code> uses the five-machine <code>stageOS</code> inventory and never starts the engine, so it finishes in a few minutes instead of tens:</p>
+<pre><code class="language-console">$ CARGOSHIP_E2E_STAGE_ONLY=1 go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+</code></pre>
+<p>A phase numbered 60 or higher needs the full <code>k3sOS</code> walk instead, so drop this variable for those.</p>
+<p><strong>Keep the containers after a failure to inspect them by hand.</strong> <code>CARGOSHIP_E2E_KEEP_CLUSTER=1</code> leaves the machines running instead of deleting them when the run fails, so you can <code>docker exec</code> into one and check what your phase actually left, rather than only what the test’s own assertions could see:</p>
+<pre><code class="language-console">$ CARGOSHIP_E2E_STAGE_ONLY=1 CARGOSHIP_E2E_KEEP_CLUSTER=1 \
+    go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+$ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
+$ docker exec -it &lt;container&gt; sh
+</code></pre>
+<p>Each <code>go test</code> invocation provisions fresh containers – there is no “resume the cluster from last time” path, so a kept cluster from a failed run is for reading, not for the next run to build on. Clean it up before running again:</p>
+<pre><code class="language-console">$ mage test:cleanCluster
+</code></pre>
+<p>or, without mage, the same removal <code>stopBootlooseContainers</code> does – see <a href="#running-the-test-targets-without-mage">mage-test-manual</a>.</p>
 <h2 id="things-that-will-cost-you-time"><a class="header" href="#things-that-will-cost-you-time">Things that will cost you time</a></h2>
 <ul>
 <li><strong>You cannot run one phase test on its own.</strong> <code>-run 'TestClusterPhases/apply/Test_25_ModifyHosts'</code> fails: the hosts were never connected, because <code>Test_07_Connect</code> and <code>Test_09_DetectOS</code> are earlier methods that <code>-run</code> filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.</li>
@@ -15245,7 +15275,7 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk after th
 <p>The <code>noncluster</code> e2e suite drives the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. It does not import the command packages, so what it proves is that the shipped binary behaves, not that the internals compile. Everything below is about that suite and is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it. The <code>cluster</code> suite is the other way round – it calls the cargoship packages directly and needs no binary at all; see <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a>.</p>
 <h2 id="layout-1"><a class="header" href="#layout-1">Layout</a></h2>
 <pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
-test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), with the apply phases walked one phase at a time
+test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
 test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
 test/registry.go       in-process OCI registry used by the publish/pull/sign tests
@@ -15660,6 +15690,60 @@ sha256sum /tmp/from-image
 <li><strong><code>--skip=sign</code> also disables package signing</strong>, not just cosign. GoReleaser’s nfpm pipe zeroes all three <code>Signature</code> structs when that skip is set (<code>internal/pipe/nfpm/nfpm.go</code>), so a run that skips signing produces unsigned packages no matter what <code>GPG_KEY_PATH</code> and <code>APK_RSA_KEY_PATH</code> say. To exercise package signing locally, drop <code>sign</code> from the skip list and supply cosign keys too.</li>
 </ul>
 <p>Artifacts land in <code>dist/</code>, which is gitignored.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="running-the-test-targets-without-mage"><a class="header" href="#running-the-test-targets-without-mage">Running the Test Targets Without Mage</a></h1>
+<p>Every <code>mage test:*</code> target is a thin wrapper around a <code>go test</code> (or, for <code>AnsibleRequirements</code>, a plain function call) plus a little bit of setup: an environment variable, a temp directory, a container cleanup pass. This page names exactly what each target does, so you can run the same check by hand – on a box without <code>mage</code> installed, in a script, or just to see what’s actually happening behind the wrapper. For what each <em>suite</em> covers and how to extend it, see <a href="#running-the-end-to-end-tests">e2e-tests</a>, <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a>, and <a href="#running-the-fuzz-tests">fuzz-tests</a>; this page is only about the wrapper.</p>
+<p><code>mage.md</code>’s <a href="#running-mage-directly-without-the-cli">Running Mage Directly</a> section covers the other way to skip the installed <code>mage</code> binary – <code>go run ./magefiles/core test:endToEndCluster</code> runs the exact same Go function <code>mage test:endToEndCluster</code> would, just compiled and invoked directly. The commands below go one level further: they are what that function itself runs, with mage (and <code>magefiles/core</code>) out of the picture entirely.</p>
+<h2 id="the-two-shared-helpers"><a class="header" href="#the-two-shared-helpers">The two shared helpers</a></h2>
+<p>Every <code>EndToEnd*</code> target funnels through one of two functions in <code>magefiles/test-common.go</code>:</p>
+<ul>
+<li><strong><code>runE2E</code></strong> – builds the binary for the host’s OS/arch first (<code>go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./main.go</code>, the same flags <code>mage build:binary</code> uses), then calls <code>runE2ENoBuild</code>.</li>
+<li><strong><code>runE2ENoBuild</code></strong> – creates <code>build/tmp</code>, then runs <code>go test -timeout=&lt;T&gt; -count=1 -v &lt;pkg&gt;</code> with <code>CARGOSHIP_E2E_TMPDIR</code> and <code>TMPDIR</code> both pointed at that directory.</li>
+</ul>
+<p>The manual commands below spell both steps out for each target, so <code>-mod=vendor</code> is included explicitly even though the mage helper relies on the repo’s <code>go env GOFLAGS</code> to add it.</p>
+<h2 id="testendtoend"><a class="header" href="#testendtoend"><code>Test.EndToEnd</code></a></h2>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/...
+</code></pre>
+<p>Runs both e2e groups, including the example packages that pull real engine artifacts and images. Needs Docker.</p>
+<h2 id="testendtoendnoncluster"><a class="header" href="#testendtoendnoncluster"><code>Test.EndToEndNonCluster</code></a></h2>
+<pre><code class="language-console">$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=30m -count=1 -v -short github.com/colonel-byte/cargoship/test/e2e/noncluster/...
+</code></pre>
+<p>The <code>-short</code> is what the mage target passes; drop it to include <code>TestCargoshipCreateExample</code>, which builds a real example package. Mirrors the <code>e2e-noncluster</code> CI job. No Docker needed.</p>
+<h2 id="testendtoendcluster"><a class="header" href="#testendtoendcluster"><code>Test.EndToEndCluster</code></a></h2>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
+</code></pre>
+<p>No binary build step – this suite calls the cargoship packages directly. Needs Docker. This is the full engine-bootstrap walk; CI does not run it, see <a href="#in-ci">e2e-phase-tests</a>.</p>
+<h2 id="testendtoendclusterstage"><a class="header" href="#testendtoendclusterstage"><code>Test.EndToEndClusterStage</code></a></h2>
+<p>Same as <code>EndToEndCluster</code>, plus one env var that makes the suite stop before the engine starts:</p>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_STAGE_ONLY=1 \
+    go test -mod=vendor -timeout=30m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
+</code></pre>
+<p>This is the one CI actually runs, on every pull request.</p>
+<h2 id="testcleancluster"><a class="header" href="#testcleancluster"><code>Test.CleanCluster</code></a></h2>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+</code></pre>
+<p>No test runs; this is only the cleanup step the two cluster targets run before they start, exposed on its own for a run that was killed before teardown.</p>
+<h2 id="testfuzz"><a class="header" href="#testfuzz"><code>Test.Fuzz</code></a></h2>
+<pre><code class="language-console">$ go test -count=1 ./fuzz/...
+</code></pre>
+<p>No binary, no Docker, no temp-dir env vars – this replays the committed seed corpus in process, which is the whole reason it’s a separate target from the suites above.</p>
+<h2 id="testansiblerequirements"><a class="header" href="#testansiblerequirements"><code>Test.AnsibleRequirements</code></a></h2>
+<p>This one has no <code>go test</code> underneath it at all – <code>Test.AnsibleRequirements</code> in <code>magefiles/test-ansible-requirements.go</code> is a plain Go function that reads <code>ansible/colonel_byte/cargoship/requirements.yml</code>, queries the Galaxy API, and returns an error. There’s no equivalent shell pipeline to hand-roll; the only way to run it without the <code>mage</code> CLI is the <code>magefiles/core</code> entry point mage.md already documents:</p>
+<pre><code class="language-console">$ go run -mod=vendor ./magefiles/core test:ansibleRequirements
+</code></pre>
+<p>This is also exactly how <code>.github/workflows/check-ansible-requirements.yaml</code> runs it in CI.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="mage-tasks-and-automation"><a class="header" href="#mage-tasks-and-automation">Mage Tasks and Automation</a></h1>
 <p>This document explains how Cargoship uses <a href="https://magefile.org/">Mage</a> to orchestrate build, test, and generation tasks.</p>
@@ -16534,10 +16618,11 @@ goCommand not pinned by hash: vendor/github.com/json-iterator/go/build.sh:10
 <p>It is a function rather than a package variable so that it reads the environment when asked rather than at package init, which is what lets a caller set it in process – <code>mage test:endToEndClusterStage</code> does exactly that. <code>CARGOSHIP_E2E_UPGRADE</code>, the opt-in for the upgrade walk, is read the same way for the same reasons; the two gates are independent, and a stage-only run has nothing to upgrade.</p>
 <h2 id="two-granularities-of-skip"><a class="header" href="#two-granularities-of-skip">Two granularities of skip</a></h2>
 <p><code>ApplyPhaseSuite</code> is skipped per method. Each of <code>Test_61</code> through <code>Test_81</code> begins with <code>requireEngine()</code>, which skips that one step. The walk still runs to the end and still tears the cluster down, which is what lets the phases on the far side of the engine half keep running.</p>
-<p>The join and upgrade walks are skipped whole, in <code>TestClusterPhases</code>. Each starts from the cluster the apply walk installed – there is nothing to join or upgrade when nothing was started – so gating them method by method would produce two suites of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.</p>
+<p>The join, upgrade and reset walks are skipped whole, in <code>TestClusterPhases</code>. Each starts from the cluster the apply walk installed – there is nothing to join, upgrade or reset when nothing was started – so gating them method by method would produce three suites of uniformly skipped tests, and a machine provisioned and a phase list walked to reach them. The apply walk is the only one with anything left to say.</p>
 <h2 id="the-phases-after-the-engine-still-run"><a class="header" href="#the-phases-after-the-engine-still-run">The phases after the engine still run</a></h2>
 <p><code>Test_91_Lock</code>, <code>Test_92_Unlock</code> and <code>Test_99_Disconnect</code> carry no <code>requireEngine()</code>, and that is deliberate rather than an oversight. The lock is a file on each host holding the instance ID of the process that took it; unlock removes it; disconnect clears the staged binary paths and drops the SSH connections. All three need a connected host and none needs an engine, so all three run on a stage-only walk and fail it if they regress.</p>
 <p>That matters more than it looks. A lock left behind delays the next run by thirty seconds on every node, and a stage-only walk that took the lock and skipped the release would do exactly that to the run after it. The three tests are commented to say they are ungated on purpose, so that a later change adding <code>requireEngine()</code> to everything after 60 has to argue with a comment first.</p>
+<p>Nothing else in the 85-95 range can run here. <code>phase/85</code> through <code>phase/88</code> and <code>phase/95_daemon_reload.go</code> belong to reset, which tears down an engine that a stage-only run never installed.</p>
 <h2 id="five-machines-not-three-and-not-ten"><a class="header" href="#five-machines-not-three-and-not-ten">Five machines, not three and not ten</a></h2>
 <p>The full walk provisions ten machines for reasons <a href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">choice-phase-e2e-tests</a> sets out: three controllers, six workers, both roles split across Ubuntu and Fedora, plus the Alpine upload-only node. A stage-only run provisions five – one Ubuntu controller, one Fedora controller, one Ubuntu worker, one Fedora worker, and the Alpine node.</p>
 <p>Three was the obvious target: one machine per OS family, which is the axis the phase list most visibly routes on. It is one short. <code>APTUploadFiles.Prepare</code> filters both host sets by family <em>and</em> by role, and <code>UploadFilesCommon.Run</code> uploads once per role with that role’s file list:</p>
@@ -16723,7 +16808,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <h2 id="replacing-the-cli-apply-rather-than-adding-to-it"><a class="header" href="#replacing-the-cli-apply-rather-than-adding-to-it">Replacing the CLI apply rather than adding to it</a></h2>
 <p>The obvious way to add phase-level coverage is to leave the existing <code>cargoship apply</code> test alone and add a second suite beside it. That was rejected: a bootloose cluster is the expensive part of the run, and installing rke2 onto it twice costs several minutes and a lot of memory for coverage that overlaps almost entirely.</p>
 <p>So the phase walk <em>is</em> the install. <code>Test_00_CreatePackage</code> builds the package and <code>Test_01_Prepare</code> readies the hosts, the phase tests then perform the install one phase at a time, and a whole <code>apply</code> survives only as <code>Test_ZZ2_ApplyIsIdempotent</code>, which runs after the cluster is already up. That step now earns its place twice over: it is the idempotency check <em>and</em> the only test that exercises <code>action.NewApply</code>’s own wiring – the phase list, the flag plumbing, the ordering – which the phase tests deliberately bypass.</p>
-<p>None of these steps shell out. <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the whole-action steps call <code>action.NewPrepare</code> and <code>action.NewApply</code>, each with its own manager built the way the matching command builds one and its own temp directory to remove. The suite was written against the CLI first, and the binary turned out to be doing nothing the packages could not: it cost a build step in CI, a rebuild-before-you-run rule, and a class of confusing failure where a stale binary disagreed with the source being read. What is lost is coverage of the cobra layer – flag parsing, <code>--confirm</code>, the config file resolution – which <code>test/e2e/noncluster</code> covers against the real binary and does so in seconds.</p>
+<p>None of these steps shell out. <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the four whole-action steps call <code>action.NewPrepare</code>, <code>action.NewApply</code>, <code>action.NewReset</code> and <code>action.NewKubeConfig</code>, each with its own manager built the way the matching command builds one and its own temp directory to remove. The suite was written against the CLI first, and the binary turned out to be doing nothing the packages could not: it cost a build step in CI, a rebuild-before-you-run rule, and a class of confusing failure where a stale binary disagreed with the source being read. What is lost is coverage of the cobra layer – flag parsing, <code>--confirm</code>, the config file resolution – which <code>test/e2e/noncluster</code> covers against the real binary and does so in seconds.</p>
 <p>The cost is that the phase tests do not test <code>action.NewApply</code>. If a phase were dropped from the list in <code>pkg/action/apply.go</code>, the phase tests would keep passing, because they build their own list. <code>Test_ZZ2</code> is what catches that, and the ordering comment in the suite doc is what keeps the two lists in sync by hand. A generated list, read from <code>action</code> and iterated, was considered and rejected: it would make the assertions dynamic, and the whole point is that each phase has a hand-written assertion about the artifact it leaves.</p>
 <h2 id="one-number-per-phase-taken-from-pkgphase"><a class="header" href="#one-number-per-phase-taken-from-pkgphase">One number per phase, taken from <code>pkg/phase</code></a></h2>
 <p>Testify runs suite methods in lexicographic order of the method name, which is the only ordering mechanism available. So the method name has to carry a number, and there were two candidates: the phase’s position in the apply order, or the number of its source file.</p>
@@ -16770,12 +16855,13 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>It cannot run the engine: rke2 links against glibc and Alpine is musl. Three things follow from that, and each had an alternative.</p>
 <p><strong>The host is a worker in the inventory, not a role of its own.</strong> The upload phases select by role, so a host with no role would not have been claimed and the whole point would be lost. It is named <code>kwa0</code>, which the inventory’s <code>kw</code> prefix maps to the worker role with no special case, and <code>uploadOnlyPrefix</code> in <code>cluster_inventory.go</code> is what marks it as more than a worker. The name template in <code>main_test.go</code> is built from that same constant so the two cannot drift.</p>
 <p><strong>It is removed from the manager after the last upload phase, rather than skipped by each later test.</strong> <code>Test_60_ConfigureEngine</code> calls <code>harness.dropUploadOnlyHosts()</code> before it runs anything. Skipping was tried first and is not sufficient: <code>InitializeWorkers.Prepare</code> claims every non-controller host whose agent is not already running, with no OS gate at all, so a test that merely declined to assert on the Alpine host would still have watched the phase spend its retry budget trying to install rke2 on it. Taking it off <code>manager.Config.Spec.Hosts</code> is the only thing that stops the phase from selecting it, and the harness keeps what it dropped so that <code>close</code> can disconnect it, since the Disconnect phase only sees the hosts still on the manager.</p>
-<p><strong>There are two generated inventory files.</strong> <code>generated-cluster-full.yaml</code> has all ten machines and is what the harness is built from; <code>generated-cluster.yaml</code> has the nine that join and is what <code>e2e.ClusterConfigPath</code> points at. The whole-action steps – <code>Test_01_Prepare</code> and <code>Test_ZZ2_ApplyIsIdempotent</code> – load that path, because an action has no notion of an upload-only host and would try to install the engine on Alpine. A single file with an annotation the loader ignores was considered and rejected: it would put a test-only concept into the inventory schema.</p>
-<h2 id="three-walks-against-one-cluster-in-one-parent-test"><a class="header" href="#three-walks-against-one-cluster-in-one-parent-test">Three walks against one cluster, in one parent test</a></h2>
-<p>The suite runs three suites rather than one: <code>ApplyPhaseSuite</code> installs the distro, <code>JoinPhaseSuite</code> adds a machine to what it installed, and <code>UpgradePhaseSuite</code> walks the same phases again with a newer package. They share one bootloose cluster and one kubeconfig, and they only work in that order.</p>
-<p>Go runs top-level test functions in the order they are declared across the package’s files, sorted by file name – which is an ordering nobody declared and that a renamed file silently changes. So there is one top-level test, <code>TestClusterPhases</code> in <code>main_test.go</code>, and the three walks are <code>t.Run</code> subtests of it. The apply subtest’s result is checked: if the install failed there is no cluster for the other two to walk, and the run returns rather than reporting three failures for one cause. The join subtest’s result is not checked, because an upgrade that has to carry a half-joined cluster is still an upgrade worth watching.</p>
+<p><strong>There are two generated inventory files.</strong> <code>generated-cluster-full.yaml</code> has all ten machines and is what the harness is built from; <code>generated-cluster.yaml</code> has the nine that join and is what <code>e2e.ClusterConfigPath</code> points at. The whole-action steps – <code>Test_01_Prepare</code>, <code>Test_ZZ2_ApplyIsIdempotent</code>, and <code>ResetSuite</code>’s two – load that path, because an action has no notion of an upload-only host and would try to install the engine on Alpine. A single file with an annotation the loader ignores was considered and rejected: it would put a test-only concept into the inventory schema.</p>
+<h2 id="four-walks-against-one-cluster-in-one-parent-test"><a class="header" href="#four-walks-against-one-cluster-in-one-parent-test">Four walks against one cluster, in one parent test</a></h2>
+<p>The suite runs four suites rather than one: <code>ApplyPhaseSuite</code> installs the distro, <code>JoinPhaseSuite</code> adds a machine to what it installed, <code>UpgradePhaseSuite</code> walks the same phases again with a newer package, and <code>ResetSuite</code> takes the distro back off. They share one bootloose cluster and one kubeconfig, and they only work in that order.</p>
+<p>Go runs top-level test functions in the order they are declared across the package’s files, sorted by file name – which is an ordering nobody declared and that a renamed file silently changes. So there is one top-level test, <code>TestClusterPhases</code> in <code>main_test.go</code>, and the four walks are <code>t.Run</code> subtests of it. The apply subtest’s result is checked: if the install failed there is no cluster for the other three to walk, and the run returns rather than reporting four failures for one cause. The join and upgrade results are not checked, because a half-joined or half-upgraded cluster is still something reset has to be able to tear down.</p>
 <p>The join walk runs before the upgrade rather than after it, so that the upgrade has to carry the node that joined late as well as the nodes the install bootstrapped.</p>
-<p><code>kubeconfigPath</code> moved to <code>TestMain</code> for the same reason. All three walks touch the same file: the apply walk writes it and the upgrade walk rewrites it against the upgraded control plane. A suite-owned <code>t.TempDir()</code> would have been deleted between them.</p>
+<p>That ordering is also why <code>reset</code> is not <code>Test_ZZ3</code>/<code>Test_ZZ4</code> on the apply suite. Reset has to run last and the other two walks have to run in between, so the two steps moved into <code>ResetSuite</code>. It loads no package – reset and kube-config both build a bare manager – so it needs neither a harness nor a package path, only the <code>distroID</code> constant.</p>
+<p><code>kubeconfigPath</code> moved to <code>TestMain</code> for the same reason. Three of the walks touch the same file: the apply walk writes it, the upgrade walk rewrites it against the upgraded control plane, and the reset walk asserts it survives a teardown that can no longer reach a controller. A suite-owned <code>t.TempDir()</code> would have been deleted between them.</p>
 <h2 id="what-the-join-walk-covers-that-the-install-cannot"><a class="header" href="#what-the-join-walk-covers-that-the-install-cannot">What the join walk covers that the install cannot</a></h2>
 <p>Apply against a cluster that already exists routes differently from apply against bare machines, and the install walk cannot exercise that: on a fresh install every host is new. The join walk is what does. It starts one more machine, rewrites both inventories to name it, and walks the same phase list carrying the same package at the same version.</p>
 <p><strong>The new machine is a Fedora worker, <code>kwf2</code>.</strong> A third replica of an existing template rather than a template of its own, because bootloose names a machine by formatting its template’s name with the replica index and a second template would start counting from zero and collide with <code>kwf0</code>. Fedora rather than Ubuntu so that the node has to come through the SELinux, fapolicyd, firewalld and dnf branches on its own, rather than inheriting anything the apply walk already proved on the nodes beside it. A worker rather than a controller because adding a controller to a running control plane is a different operation with a different failure mode, and the phase list treats it as one.</p>

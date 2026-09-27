@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c8d56d79.js";
+            window.path_to_searchindex_js = "../searchindex-560e7e7e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-27b31ff2.js"></script>
+        <script src="../toc-8e84177d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
                     <main>
                         <h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
 <p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
-<p>One top-level test, <code>TestClusterPhases</code>, runs three walks against the same cluster in the order they work in: <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, and <code>upgrade</code> walks the same phases again with a newer package. A new phase needs a test in the apply walk, and usually one in each of the others too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
+<p>One top-level test, <code>TestClusterPhases</code>, runs four walks against the same cluster in the order they work in: <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, <code>upgrade</code> walks the same phases again with a newer package, and <code>reset</code> takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
 <p>For why the suite is built this way, see <a href="../agent/choice-phase-e2e-tests.html">choice-phase-e2e-tests</a>. For running the e2e suites generally, see <a href="e2e-tests.html">e2e-tests</a>.</p>
 <h2 id="one-number-per-phase"><a class="header" href="#one-number-per-phase">One number per phase</a></h2>
 <p>A phase is identified by its source file’s number, and that number is used twice:</p>
@@ -194,7 +194,7 @@
 </ul>
 <p>Testify runs suite methods in lexicographic order of the method name, so the number is also the order the phases run in here. The numbers are zero-padded to two digits, which makes lexicographic order numeric order.</p>
 <p>That order matches apply’s everywhere except the lock. Apply takes the lock third, right after OS detection, and holds it for the whole run; <code>phase/91_lock.go</code>’s number puts it after the install instead, with <code>phase/92_unlock.go</code> right behind it. The lock test still asserts what the phase writes on each host. What it no longer does is hold the lock across the phases in between, so a phase that misbehaves while the cluster is locked is not something this suite would see.</p>
-<p>Steps that are not phases – creating the package, <code>prepare</code>, the health check – have no phase number to take, so they use the two ends of the ordering: <code>Test_00</code> and <code>Test_01</code> sort before every phase, and <code>Test_ZZ1</code> onwards sort after every phase, because a letter sorts after a digit. They live in <code>cluster_lifecycle_test.go</code>. Those steps run whole actions rather than single phases – <code>distro.Create</code>, <code>action.NewPrepare</code>, <code>action.NewApply</code> – each with its own manager, and are given <code>e2e.ClusterConfigPath</code>, the engine-only inventory, rather than the full one the harness is built from; see the section on the upload-only host below.</p>
+<p>Steps that are not phases – creating the package, <code>prepare</code>, the health check – have no phase number to take, so they use the two ends of the ordering: <code>Test_00</code> and <code>Test_01</code> sort before every phase, and <code>Test_ZZ1</code> onwards sort after every phase, because a letter sorts after a digit. They live in <code>cluster_lifecycle_test.go</code>, alongside <code>ResetSuite</code>, which is the whole of the <code>reset</code> walk. Those steps run whole actions rather than single phases – <code>distro.Create</code>, <code>action.NewPrepare</code>, <code>action.NewApply</code>, <code>action.NewReset</code>, <code>action.NewKubeConfig</code> – each with its own manager, and are given <code>e2e.ClusterConfigPath</code>, the engine-only inventory, rather than the full one the harness is built from; see the section on the upload-only host below.</p>
 <h2 id="adding-a-phase"><a class="header" href="#adding-a-phase">Adding a phase</a></h2>
 <p>Take the new phase’s file number for both the test file and the method. Nothing else is renumbered: inserting <code>phase/23_something.go</code> gives you <code>23_something_test.go</code> containing <code>Test_23_Something</code>, and it lands between <code>Test_22_PrepareFapolicy</code> and <code>Test_25_ModifyHosts</code> on its own.</p>
 <p>If a phase is renumbered in <code>pkg/phase</code>, rename its test file and its method to match, and check that its new number still puts it after everything it depends on – the number is the ordering, so a phase that moves in the source moves here too.</p>
@@ -334,14 +334,14 @@ s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version
 <p>The upgrade walk is off unless <code>CARGOSHIP_E2E_UPGRADE</code> is set. It installs a second complete set of engine images onto every node, which roughly doubles the disk the run needs and adds tens of minutes.</p>
 <pre><code class="language-console">$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./src/test/e2e/cluster/...
 </code></pre>
-<p>Without it, <code>TestClusterPhases/upgrade</code> skips with a message naming the variable.</p>
+<p>Without it, <code>TestClusterPhases/upgrade</code> skips with a message naming the variable, and the reset walk runs against the installed cluster as before.</p>
 <h2 id="prerequisites-and-running-it"><a class="header" href="#prerequisites-and-running-it">Prerequisites and running it</a></h2>
 <p>The suite needs Docker and a real distro package, and it is not fast: it provisions five containers and installs k3s onto all of them, one controller and four workers, then starts a sixth and joins it. It needs no prebuilt binary – every step calls the cargoship packages directly, so a bare checkout is enough.</p>
 <pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
 </code></pre>
 <p>Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:</p>
-<pre><code class="language-console">$ mage test:endToEndCluster           # the install and join walks
-$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk after them
+<pre><code class="language-console">$ mage test:endToEndCluster           # the install, join and reset walks
+$ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in between
 </code></pre>
 <p><code>-short</code> skips the whole suite, and <code>CARGOSHIP_E2E_UPGRADE</code> adds the upgrade walk. <code>TestMain</code> deletes the bootloose cluster on the way out even when tests fail.</p>
 <p>This full walk, the one that installs and bootstraps k3s, is not run in CI – see below. It is a local-box check: run <code>mage test:endToEndCluster</code> (or the <code>go test</code> invocation above) on a machine with Docker before trusting a change to the engine-bootstrap phases, <code>phase/61</code> onward.</p>
@@ -351,8 +351,29 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk after th
 <h3 id="in-ci"><a class="header" href="#in-ci">In CI</a></h3>
 <p><code>.github/workflows/e2e-cluster.yaml</code> runs the staging half of this suite – <code>CARGOSHIP_E2E_STAGE_ONLY=1</code>, stopping at the boundary <code>Test_60_ConfigureEngine</code> draws – on its own trigger, separate from <code>e2e.yaml</code>. It runs on every pull request, the same as <code>e2e.yaml</code>, and on demand from the Actions tab. No label is needed.</p>
 <p>The engine-bootstrap half, including the join and upgrade walks, does not run in CI at all. It was not reliable enough on a free hosted runner to be a required check, even on the single-controller k3s topology that replaced the original three-controller rke2 one – see <a href="../agent/choice-e2e-stage-split.html">choice-e2e-stage-split</a>. Trusting a change to the engine-bootstrap phases, the join walk, or the upgrade walk means running <code>mage test:endToEndCluster</code> or <code>mage test:endToEndClusterUpgrade</code> locally; CI cannot cover that for you.</p>
-<p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare step calls <code>action.NewPrepare</code>. That is what makes the two workflows independent, which is the point of the split.</p>
+<p>The upgrade walk is a second opt-in on top of that: the <code>upgrade</code> input when dispatching by hand, or the <code>e2e-cluster-upgrade</code> label on a pull request. Either one implies the install and join walks, sets <code>CARGOSHIP_E2E_UPGRADE</code> for the job and raises its budget from 120 to 210 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.</p>
+<p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare, apply, reset and kube-config steps call the matching <code>action.New*</code> entry points. That is what makes the two workflows independent, which is the point of the split.</p>
 <p>The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes stuck mid-upload, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.</p>
+<h2 id="iterating-while-writing-a-new-phase-test"><a class="header" href="#iterating-while-writing-a-new-phase-test">Iterating while writing a new phase test</a></h2>
+<p>A new phase test needs the suite up to that point, not the whole run. Three environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.</p>
+<p><strong>Run only the walk your phase is in.</strong> <code>TestClusterPhases</code> runs <code>apply</code>, <code>join</code>, <code>upgrade</code> and <code>reset</code> as separate subtests of one parent, so <code>-run</code> at that path segment excludes the ones you are not touching:</p>
+<pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+</code></pre>
+<p>This still walks every phase from <code>Test_00</code> onward – there is no way to start partway through a walk, because each phase depends on state the ones before it left on the host, <code>Test_07_Connect</code> first among them. What this buys you is skipping the walks after the one you are writing for.</p>
+<p><strong>Stay in stage-only mode if your phase is before the <code>Test_60</code> boundary.</strong> <code>CARGOSHIP_E2E_STAGE_ONLY=1</code> uses the five-machine <code>stageOS</code> inventory and never starts the engine, so it finishes in a few minutes instead of tens:</p>
+<pre><code class="language-console">$ CARGOSHIP_E2E_STAGE_ONLY=1 go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+</code></pre>
+<p>A phase numbered 60 or higher needs the full <code>k3sOS</code> walk instead, so drop this variable for those.</p>
+<p><strong>Keep the containers after a failure to inspect them by hand.</strong> <code>CARGOSHIP_E2E_KEEP_CLUSTER=1</code> leaves the machines running instead of deleting them when the run fails, so you can <code>docker exec</code> into one and check what your phase actually left, rather than only what the test’s own assertions could see:</p>
+<pre><code class="language-console">$ CARGOSHIP_E2E_STAGE_ONLY=1 CARGOSHIP_E2E_KEEP_CLUSTER=1 \
+    go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+$ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
+$ docker exec -it &lt;container&gt; sh
+</code></pre>
+<p>Each <code>go test</code> invocation provisions fresh containers – there is no “resume the cluster from last time” path, so a kept cluster from a failed run is for reading, not for the next run to build on. Clean it up before running again:</p>
+<pre><code class="language-console">$ mage test:cleanCluster
+</code></pre>
+<p>or, without mage, the same removal <code>stopBootlooseContainers</code> does – see <a href="mage-test-manual.html">mage-test-manual</a>.</p>
 <h2 id="things-that-will-cost-you-time"><a class="header" href="#things-that-will-cost-you-time">Things that will cost you time</a></h2>
 <ul>
 <li><strong>You cannot run one phase test on its own.</strong> <code>-run 'TestClusterPhases/apply/Test_25_ModifyHosts'</code> fails: the hosts were never connected, because <code>Test_07_Connect</code> and <code>Test_09_DetectOS</code> are earlier methods that <code>-run</code> filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.</li>

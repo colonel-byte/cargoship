@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c8d56d79.js";
+            window.path_to_searchindex_js = "../searchindex-560e7e7e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-27b31ff2.js"></script>
+        <script src="../toc-8e84177d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,7 +186,7 @@
 <p>The <code>noncluster</code> e2e suite drives the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. It does not import the command packages, so what it proves is that the shipped binary behaves, not that the internals compile. Everything below is about that suite and is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it. The <code>cluster</code> suite is the other way round – it calls the cargoship packages directly and needs no binary at all; see <a href="e2e-phase-tests.html">e2e-phase-tests</a>.</p>
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
 <pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
-test/e2e/cluster/      the install group: a nine-node bootloose cluster (plus one upload-only node), with the apply phases walked one phase at a time
+test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
 test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
 test/registry.go       in-process OCI registry used by the publish/pull/sign tests

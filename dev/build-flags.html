@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c8d56d79.js";
+            window.path_to_searchindex_js = "../searchindex-560e7e7e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-27b31ff2.js"></script>
+        <script src="../toc-8e84177d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
                     <main>
                         <h1 id="build-flags-and-environment"><a class="header" href="#build-flags-and-environment">Build Flags and Environment</a></h1>
 <p>This document explains the compiler flags, linker flags, and environment variables used when compiling the <code>cargoship</code> binary, and why each one is set. They are defined in <code>pkg/utils/build/utils.go</code>, which the Mage host build path (<code>magefiles/utils.go</code>) uses.</p>
-<p>That package exposes two functions, <code>LDFlags(version, commit string) string</code> and <code>GCFLags() string</code>. The build site additionally sets <code>CGO_ENABLED=0</code> and passes <code>-trimpath</code> directly in its <code>go build</code> invocation rather than through these shared helpers.</p>
+<p>That package exposes two functions, <code>LDFlags(version, commit string) string</code> and <code>GCFLags() string</code>. The build site additionally sets <code>CGO_ENABLED=0</code> and passes <code>-trimpath</code> directly in its <code>go build</code> invocation rather than through these shared helpers. <code>.goreleaser.yaml</code> and <code>.github/workflows/e2e.yaml</code> spell the same flags out inline, so a change here has to be made in those two files as well.</p>
 <h2 id="why-this-matters"><a class="header" href="#why-this-matters">Why this matters</a></h2>
 <p>An unoptimized <code>go build</code> of this repo produces a binary well over 130MB on Linux/amd64, mostly because <code>cargoship</code> pulls in large transitive dependency trees (<code>k8s.io/client-go</code>, <code>zarf</code>’s signing stack, cloud SDKs, etc.) and, without <code>CGO_ENABLED=0</code>, dynamically links against glibc. The flags below were chosen specifically to keep the shipped binary as small and portable as possible without changing behavior.</p>
 <p>Measured impact on a Linux/amd64 build of this repo:</p>
@@ -197,7 +197,9 @@
 <tr><td style="text-align: left"><code>go build</code> with no flags</td><td style="text-align: left">~136MB</td><td style="text-align: left">dynamic (glibc)</td></tr>
 <tr><td style="text-align: left"><code>+ CGO_ENABLED=0</code></td><td style="text-align: left">~98.5MB</td><td style="text-align: left">static</td></tr>
 <tr><td style="text-align: left"><code>+ -trimpath</code></td><td style="text-align: left">~98.2MB</td><td style="text-align: left">static</td></tr>
-<tr><td style="text-align: left">default gcflags instead of <code>-l -B -C</code> (for comparison)</td><td style="text-align: left">~113MB</td><td style="text-align: left">static</td></tr>
+<tr><td style="text-align: left">default gcflags instead of <code>-l</code> (for comparison)</td><td style="text-align: left">~113MB</td><td style="text-align: left">static</td></tr>
+<tr><td style="text-align: left"><code>-l</code> (shipped)</td><td style="text-align: left">97.95MB</td><td style="text-align: left">static</td></tr>
+<tr><td style="text-align: left"><code>-l -B -C</code> (former setting, for comparison)</td><td style="text-align: left">96.86MB</td><td style="text-align: left">static</td></tr>
 </tbody>
 </table>
 </div>
@@ -238,7 +240,7 @@
 <p>These two <code>-X</code> flags aren’t size-related; they exist so <code>cargoship version</code> can report accurate build metadata without a separate version file shipped alongside the binary.</p>
 </li>
 </ul>
-<h3 id="-gcflagsall-see-gcflags-in-both-utilsgo-files"><a class="header" href="#-gcflagsall-see-gcflags-in-both-utilsgo-files"><code>-gcflags=all="..."</code> (see <code>GCFLags</code> in both <code>utils.go</code> files)</a></h3>
+<h3 id="-gcflagsall-l-see-gcflags-in-pkgutilsbuildutilsgo"><a class="header" href="#-gcflagsall-l-see-gcflags-in-pkgutilsbuildutilsgo"><code>-gcflags=all="-l"</code> (see <code>GCFLags</code> in <code>pkg/utils/build/utils.go</code>)</a></h3>
 <p>Applied to <code>all</code> packages (including the standard library and vendored dependencies), not just this module’s own code.</p>
 <ul>
 <li>
@@ -249,8 +251,15 @@
 </li>
 <li>
 <p><strong><code>-C</code></strong> - disables the compiler’s automatic detection of <code>unsafe.Pointer</code> misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.</p>
-<p>Because <code>-B</code> and <code>-C</code> remove safety checks, any regression they’d otherwise catch (out-of-bounds access, pointer misuse) will instead surface as memory corruption or silent wrong behavior. If a hard-to-diagnose crash ever shows up only in release builds and not in <code>go test</code>/plain <code>go run</code>, try reproducing without these two flags first.</p>
+<p>Note that <code>all=</code> means changing this flag invalidates the build cache for the entire dependency tree, so the first build after touching it is slow. That is a per-flag-change cost, not a per-build one.</p>
 </li>
+</ul>
+<h2 id="flags-that-were-removed"><a class="header" href="#flags-that-were-removed">Flags that were removed</a></h2>
+<p>These three were set in an earlier revision of this build and are no longer used.</p>
+<ul>
+<li><strong><code>-gcflags=all=-B</code> (disable bounds checking)</strong> - removed. Measured at 1.09MB of 97.95MB, about 1.1%. In exchange it stripped bounds checks from every package in the tree, including the code whose job is parsing input this binary does not control: archive extraction, OCI manifests and layers, registry responses. That is exactly where a bounds check is the mechanism that turns a malformed length field into a panic instead of an out-of-bounds read, and 1% of binary size is not worth giving that up. If a hard-to-diagnose crash ever appeared only in release builds, this flag was the first suspect — one more reason it is gone.</li>
+<li><strong><code>-gcflags=all=-C</code></strong> - removed. It never did anything for size. <code>go tool compile -help</code> documents <code>-C</code> as “disable printing of columns in error messages”: a compiler diagnostic formatting flag with no effect on generated code. An earlier revision of this document claimed it disabled <code>unsafe.Pointer</code>/checkptr-adjacent checks; that was wrong.</li>
+<li><strong><code>-a</code> (force rebuild of all packages)</strong> - removed. It was justified here as a guard against a stale build cache masking flag changes, but Go’s build cache is keyed on build flags, so that situation cannot arise: changing <code>-gcflags</code> or <code>-ldflags</code> already rebuilds everything those flags affect. All <code>-a</code> did was make every build redo the standard library.</li>
 </ul>
 <h2 id="what-was-deliberately-not-changed"><a class="header" href="#what-was-deliberately-not-changed">What was deliberately not changed</a></h2>
 <ul>
