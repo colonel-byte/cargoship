@@ -1,5 +1,68 @@
 # Changelog
 
+## [0.28.0](https://github.com/colonel-byte/cargoship/compare/v0.27.0...v0.28.0) (2026-09-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* move src/ contents to repo root ([#503](https://github.com/colonel-byte/cargoship/issues/503))
+* update to v2 rig ([#214](https://github.com/colonel-byte/cargoship/issues/214))
+
+### Features
+
+* add k3s single-controller topology for e2e-cluster CI ([#504](https://github.com/colonel-byte/cargoship/issues/504)) ([f95b31b](https://github.com/colonel-byte/cargoship/commit/f95b31b08b0dcb930fe41b18b4261fc21cd348f9))
+* finish the apply walk, from the engine config to disconnect ([#273](https://github.com/colonel-byte/cargoship/issues/273)) ([8f4830c](https://github.com/colonel-byte/cargoship/commit/8f4830c7ab17706221df2ab6133abccdbaea0285))
+* generate example/upstream/distro.yaml instead of hand-writing it ([#519](https://github.com/colonel-byte/cargoship/issues/519)) ([853f22d](https://github.com/colonel-byte/cargoship/commit/853f22d1cf389346507d4829a87fd65b2c4b95ff))
+* register upstream (kubeadm) distro type ([#508](https://github.com/colonel-byte/cargoship/issues/508)) ([8934c6d](https://github.com/colonel-byte/cargoship/commit/8934c6d7f9c3ed9753f008af45e12c3fcefea223))
+* tear the distro back off the cluster at the end of the run ([#276](https://github.com/colonel-byte/cargoship/issues/276)) ([2d67c45](https://github.com/colonel-byte/cargoship/commit/2d67c452dbe02f9b01506d29edbb690ad429aaab))
+* update to v2 rig ([#214](https://github.com/colonel-byte/cargoship/issues/214)) ([b7c5440](https://github.com/colonel-byte/cargoship/commit/b7c54404bc323b4ba5c3b14d8cef7d39a69d22ca))
+* walk the apply phases a second time against the installed cluster ([#274](https://github.com/colonel-byte/cargoship/issues/274)) ([1f04e4e](https://github.com/colonel-byte/cargoship/commit/1f04e4ed6324164e7b0a1a50411585d5f09f9a60))
+* walk the phases a third time to upgrade the installed cluster ([#275](https://github.com/colonel-byte/cargoship/issues/275)) ([c13eaa3](https://github.com/colonel-byte/cargoship/commit/c13eaa329e2c92444fe9100ed0072ba2894ca3be))
+
+
+### Bug Fixes
+
+* mark engine populated only when a phase actually uploaded files ([#502](https://github.com/colonel-byte/cargoship/issues/502)) ([9e78c0d](https://github.com/colonel-byte/cargoship/commit/9e78c0d0b93de68204430ee188774aaa2ca526c1))
+
+
+### Refactoring
+
+* move src/ contents to repo root ([#503](https://github.com/colonel-byte/cargoship/issues/503)) ([cdf9b5f](https://github.com/colonel-byte/cargoship/commit/cdf9b5f298892ee45d96d54ae0fc83d9c79e5205))
+* move test/ out of src/ and consolidate shared internal/ packages ([#495](https://github.com/colonel-byte/cargoship/issues/495)) ([cd771c4](https://github.com/colonel-byte/cargoship/commit/cd771c4c8a95a2626308716ecc09aea9a1aee841))
+
+
+### Documentation
+
+* add src/fuzz AGENTS.md and rename FuzzParseRecipient to avoid -fuzz ambiguity ([#500](https://github.com/colonel-byte/cargoship/issues/500)) ([970d154](https://github.com/colonel-byte/cargoship/commit/970d154534efeb2d2c54bc0cb213959d85aea91b))
+* **agent:** require pre-commit before commit, drop em dash ([#523](https://github.com/colonel-byte/cargoship/issues/523)) ([458cc4d](https://github.com/colonel-byte/cargoship/commit/458cc4d8b2b0e3b46ad319480535e3aa30158c92))
+* ai disclosure ([#496](https://github.com/colonel-byte/cargoship/issues/496)) ([770b931](https://github.com/colonel-byte/cargoship/commit/770b931e38bae7343c2a16517962a59123662ca0))
+* generate godoc and schema reference pages ([#524](https://github.com/colonel-byte/cargoship/issues/524)) ([157ab95](https://github.com/colonel-byte/cargoship/commit/157ab95031db179949ff03434c7edcbdbd34f2a0))
+* **security:** annotate Binary-Artifacts scorecard finding ([#491](https://github.com/colonel-byte/cargoship/issues/491)) ([705db3f](https://github.com/colonel-byte/cargoship/commit/705db3f8d1e4e3eac7885655815af9694b9cdbc1))
+* **workflows:** add per-workflow explanations under docs/workflows ([#525](https://github.com/colonel-byte/cargoship/issues/525)) ([d4467af](https://github.com/colonel-byte/cargoship/commit/d4467af21eaf772431540dad78c2ed7041439c67))
+
+
+### Miscellaneous
+
+* **deps:** update Kubernetes upstream pin in thirdparty-src/pins.json ([#526](https://github.com/colonel-byte/cargoship/issues/526)) ([e85c04d](https://github.com/colonel-byte/cargoship/commit/e85c04dc4d572e98873f26d2bb71ce00380df263))
+* regenerate example/upstream from the new generator ([#520](https://github.com/colonel-byte/cargoship/issues/520)) ([b4ac7c4](https://github.com/colonel-byte/cargoship/commit/b4ac7c49828c5616621bde48e397fe5ab8c3a2e9))
+
+
+### CI/CD
+
+* **fuzz:** address found error in parser ([#506](https://github.com/colonel-byte/cargoship/issues/506)) ([a41ca5f](https://github.com/colonel-byte/cargoship/commit/a41ca5fd7b20c7a799c394c0b7d60480644af3b8))
+* publish artifacts on regular basis ([#445](https://github.com/colonel-byte/cargoship/issues/445)) ([89085d7](https://github.com/colonel-byte/cargoship/commit/89085d78629533be47af69ddbca8ea0b700af079))
+* test-build container images on dependabot docker bumps ([#499](https://github.com/colonel-byte/cargoship/issues/499)) ([a76827f](https://github.com/colonel-byte/cargoship/commit/a76827fd0792c649f36d4f5ea1cc3d8aaa6b0567))
+
+
+### Build
+
+* **deps:** bump chainguard/cgr.dev/chainguard/static from `90b7f22` to `a6d1bbf` ([#490](https://github.com/colonel-byte/cargoship/issues/490)) ([b547eae](https://github.com/colonel-byte/cargoship/commit/b547eaef57371719c48acd2ec48eb04b091c1fcb))
+* **deps:** bump chainguard/cgr.dev/chainguard/static from `a6d1bbf` to `f2787f1` ([#497](https://github.com/colonel-byte/cargoship/issues/497)) ([c25c5e8](https://github.com/colonel-byte/cargoship/commit/c25c5e858b2e2a69288d6c705da309fb0f90950e))
+* **deps:** bump github.com/containerd/containerd/v2 from 2.4.0 to 2.4.1 ([#507](https://github.com/colonel-byte/cargoship/issues/507)) ([d0e9b6c](https://github.com/colonel-byte/cargoship/commit/d0e9b6c858880d61bcea220cf5feef9622087456))
+* **deps:** bump k8s.io/streaming from 0.37.0 to 0.37.1 in the k8s group ([#492](https://github.com/colonel-byte/cargoship/issues/492)) ([b78c39e](https://github.com/colonel-byte/cargoship/commit/b78c39ef0b87329f5f9add4845624387ca8b8eb9))
+* **deps:** bump the golang group with 2 updates ([#493](https://github.com/colonel-byte/cargoship/issues/493)) ([24a532c](https://github.com/colonel-byte/cargoship/commit/24a532c94f37fbe2cc5622aa06fce06d7fb00baf))
+* **deps:** bump the misc group with 5 updates ([#494](https://github.com/colonel-byte/cargoship/issues/494)) ([e9f76d2](https://github.com/colonel-byte/cargoship/commit/e9f76d21bd4c21aef0089b624986acd6c1d185f5))
+
 ## [0.27.0](https://github.com/colonel-byte/cargoship/compare/v0.26.2...v0.27.0) (2026-09-24)
 
 
