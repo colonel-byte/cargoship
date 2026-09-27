@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-68c82b3b.js";
+            window.path_to_searchindex_js = "searchindex-f222ea4e.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ea7344ca.js"></script>
+        <script src="toc-27b31ff2.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -16040,6 +16040,148 @@ mage generate:updatePins            # refresh every line already pinned
 <h2 id="consuming-it"><a class="header" href="#consuming-it">Consuming it</a></h2>
 <p><code>mage generate:engineConfig</code> walks every <code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> directory and writes generated structs to <code>pkg/engineconfig/gen/&lt;distro&gt;/&lt;version&gt;/</code>, alongside a <code>zz_addons.go</code> holding that version’s <code>Addons</code> (valid <code>disable:</code> values), <code>CNIs</code>, and <code>IngressControllers</code>. <code>zz_addons.go</code> is written for every version even when nothing was extracted - the generated registry references those vars from every package, so one package without them would not compile. An empty <code>Addons</code> means no component source was pulled for that version, and consumers treat it as “no data to check against” rather than “nothing is valid”. For k3s (and any distro that declares its flags outright) it parses whichever of <code>zz_server.go</code>/<code>zz_agent.go</code> it finds directly; for RKE2 it composes as described above. See <code>docs/dev/mage.md</code> for the broader <code>Generate</code> namespace.</p>
 <p>It also (re)writes <code>pkg/engineconfig/gen/zz_registry.go</code>, wiring every distro/version it just generated into <code>gen.Registry</code> so nothing needs hand-maintaining as new versions are pulled. <code>types/distrocfg</code> (<code>RancherCommon.ConfigureEngine</code>) uses <code>gen.Lookup</code> to find the struct matching a node’s distro and minor version, and drops (with a warning) any <code>config.yaml</code> key that isn’t a real flag for it – falling back to the previous unvalidated, pass-everything-through behavior with a warning if that distro/version was never pulled/generated. On controllers it also checks each <code>disable:</code> value against <code>Entry.Addons</code> via <code>gen.UnknownAddons</code>; an unrecognized component is warned about but <strong>kept</strong>, since the addon vocabulary is composed rather than read straight off a declaration and dropping the entry would silently deploy something the user asked to be without. See “Consumption: wired into <code>types/distrocfg</code>” in <code>docs/agent/design-config-codegen.md</code> for the full picture.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="check-ansible-requirementsyaml"><a class="header" href="#check-ansible-requirementsyaml">check-ansible-requirements.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests, merge groups.</p>
+<p>Checks that every pinned Ansible collection version supports the <code>ansible-core</code> range declared in the collection’s <code>meta/runtime.yml</code>. It does this by asking galaxy.ansible.com what each pinned version’s <code>requires_ansible</code> field says, via <code>mage test:ansibleRequirements</code>.</p>
+<p>This is the one check workflow that reaches the network, since no dependency bot can validate this constraint on its own. It does not check whether pins are the newest available — an upstream release from this morning should not fail an unrelated PR. Run <code>mage generate:ansibleRequirements</code> locally to move pins forward.</p>
+<p>See <code>docs/agent/choice-ansible-collection-pins.md</code> for the reasoning.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="check-base-image-labelyaml"><a class="header" href="#check-base-image-labelyaml">check-base-image-label.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests touching <code>containers/**/Dockerfile</code>, <code>.release-please-manifest.json</code>, or <code>CHANGELOG.md</code>.</p>
+<p>Compares each Dockerfile’s final <code>FROM</code> line against its <code>org.opencontainers.image.base.name</code> label. Dependabot bumps the <code>FROM</code> line automatically, but the label is written by hand, so the two can silently drift - leaving consumers reading a label that names an image that’s no longer actually used.</p>
+<p>The digest is stripped from the <code>FROM</code> reference before comparison (the label carries the human-readable tag, not the digest). A reference pinned only by digest with no tag left is compared against <code>:latest</code>.</p>
+<p>Drift doesn’t fail the build - it’s reported as a sticky PR comment, since the fix belongs in the same PR that bumped the <code>FROM</code> line.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="check-go-modyaml"><a class="header" href="#check-go-modyaml">check-go-mod.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests, merge groups.</p>
+<p>Two checks that keep the module graph and its vendored security metadata honest:</p>
+<ol>
+<li>Runs <code>go mod tidy</code> and fails if it produces a diff against the committed <code>go.mod</code>/<code>go.sum</code>.</li>
+<li>Runs <code>mage dev:verifyVendor</code> to check the four generated <code>osv-scanner.toml</code> override files under <code>vendor/</code> are present and current. These overrides keep the Scorecard Vulnerabilities check reporting on cargoship’s own code rather than on the JS/Python tooling its Go dependencies happen to ship in their own repos.</li>
+</ol>
+<p><code>go mod vendor</code> deletes and regenerates <code>vendor/</code>, so any PR that re-vendors (which Dependabot always does) drops these override files and fails this check on the first push. <code>fix-vendor-osv.yaml</code> regenerates and pushes them back onto Dependabot’s branch so the check passes on rerun. A genuinely dropped module or newly uncovered lockfile still fails here, since fixing that needs a manual edit to <code>osvOverrides</code>.</p>
+<p>Uses <code>go run ./magefiles/core</code> rather than an installed <code>mage</code> binary - same targets, but built from <code>vendor/</code> with no extra tool needed on the runner.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="check-pinsyaml"><a class="header" href="#check-pinsyaml">check-pins.yaml</a></h1>
+<p><strong>Triggers:</strong> scheduled every 2 days at 06:00 UTC, and manual dispatch.</p>
+<p>Two independent jobs that look for newer upstream versions and file a GitHub issue when they find one:</p>
+<ul>
+<li><strong>check-dnf-pins</strong> - runs <code>mage dev:dnfPins</code> to check for newer AlmaLinux 10 DNF package versions used in containers and <code>.goreleaser.yaml</code>. If the run produces a diff, it opens or updates a tracking issue (keyed by an HTML comment marker) with the proposed diff.</li>
+<li><strong>check-engine-pins</strong> - runs <code>mage generate:updatePins</code> to check for newer RKE2/k3s engine releases for pinned minor versions, against <code>thirdparty-src/pins.json</code>. Same open-or-update-issue pattern.</li>
+</ul>
+<p>Neither job pushes a fix itself - both leave a diff in an issue for a human to apply by running the named mage target locally.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="codeqlyaml"><a class="header" href="#codeqlyaml">codeql.yaml</a></h1>
+<p><strong>Triggers:</strong> push to <code>main</code>, pull requests, merge groups, weekly schedule (Mondays 05:37 UTC).</p>
+<p>Runs GitHub CodeQL static analysis over two matrix targets: Go source (<code>build-mode: manual</code>) and GitHub Actions workflow files (<code>build-mode: none</code>).</p>
+<p>For Go, CodeQL analyzes by building the code, so the <code>go build</code> step’s package list - spelled out explicitly rather than <code>./...</code> - decides what gets extracted. Two directories are deliberately excluded from that list:</p>
+<ul>
+<li><code>thirdparty-src/</code> - a second, intentionally non-compiling module holding verbatim upstream k3s/RKE2 source (see <code>docs/dev/thirdparty-src.md</code>). Anything that walks the checkout for module roots, including CodeQL’s autobuilder, would otherwise try to resolve its unvendored imports and fetch modules from the network.</li>
+<li><code>magefiles/</code> - build-tag-gated (<code>//go:build mage</code>) dev tooling with no <code>main</code> function of its own; it can’t be compiled with plain <code>go build</code>.</li>
+</ul>
+<p>The build runs fully offline (<code>GOPROXY=off</code>, <code>GOSUMDB=off</code>, vendored modules only) so any accidental network dependency fails loudly.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="commitlintyaml"><a class="header" href="#commitlintyaml">commitlint.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests (milestoned, opened, reopened, synchronize, edited).</p>
+<p>Lints the PR <strong>title</strong> - not individual commit messages - against conventional-commit rules, since release-please squash-merges PRs and the PR title becomes the final commit message on <code>main</code>. A dedicated lint action was written rather than reusing a commit-message-linting GitHub Action, because those lint the commits, not the title.</p>
+<p>The <code>milestoned</code> event type is included as a workaround: release-please doesn’t otherwise trigger pull_request workflows, so its PRs are added to a milestone specifically to fire this check.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="dependabot-validateyaml"><a class="header" href="#dependabot-validateyaml">dependabot-validate.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests touching <code>.github/dependabot.yaml</code> or this workflow file.</p>
+<p>Validates <code>.github/dependabot.yaml</code> using <code>marocchino/validate-dependabot</code>, then posts the validation result as a sticky PR comment. Catches malformed Dependabot config before it merges and silently breaks dependency update PRs.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="deploy-bookyaml"><a class="header" href="#deploy-bookyaml">deploy-book.yaml</a></h1>
+<p><strong>Triggers:</strong> push to <code>main</code>.</p>
+<p>Builds the project’s mdBook documentation site and deploys it to GitHub Pages by pushing the built output to the <code>gh-pages</code> branch. This is the only workflow that writes with <code>contents: write</code> permission, and it never touches pull requests - it only runs after a merge to <code>main</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="e2e-clusteryaml"><a class="header" href="#e2e-clusteryaml">e2e-cluster.yaml</a></h1>
+<p><strong>Triggers:</strong> manual dispatch, pull requests (opened/synchronize/reopened, excluding doc-only path changes).</p>
+<p>Runs the “staging” half of the multi-machine end-to-end suite (<code>test/e2e/cluster</code>): it provisions a bootloose cluster of Docker machines, uploads the cargoship package, and renders the engine config on every OS family - then stops before actually starting the engine anywhere.</p>
+<p>This is intentionally split out from <code>e2e.yaml</code> into its own workflow so its trigger, concurrency group, and time budget are independent of the checks required on every push. It calls the cargoship packages directly (<code>distro.Create</code>, <code>action.NewPrepare</code>/<code>action.NewApply</code>) rather than a built binary, so it needs no build step.</p>
+<p>The other half - actually installing k3s and bringing the cluster fully up - is <strong>not</strong> run in CI. It isn’t reliable enough on hosted runners to be a required check (even after switching from a three-controller RKE2/etcd topology to single-controller k3s to remove quorum timeouts). That half still exists and runs locally via <code>mage test:endToEndCluster</code>. See <code>docs/dev/e2e-phase-tests.md</code> and <code>docs/agent/choice-e2e-stage-split.md</code>.</p>
+<p>On failure, node diagnostics (disk, memory, container logs) are collected and uploaded as an artifact, and leftover bootloose containers are always cleaned up.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="e2eyaml"><a class="header" href="#e2eyaml">e2e.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests (excluding <code>CODEOWNERS</code>-only changes).</p>
+<p>Three jobs, “Basic build”:</p>
+<ol>
+<li><strong>build-e2e</strong> - builds the <code>cargoship</code> binary (<code>CGO_ENABLED=0</code>, fully vendored/offline build) and uploads it as an artifact.</li>
+<li><strong>e2e-noncluster</strong> (needs build-e2e) - downloads that binary and runs the non-cluster e2e test groups (misc and package commands), which need no Docker/bootloose infrastructure. Uses <code>-short</code> to additionally skip example packages, which would otherwise pull ~1.5GB of engine artifacts and images.</li>
+<li><strong>binary-size</strong> (needs build-e2e) - compares the PR’s binary size against the latest release’s binary and posts the diff as a sticky PR comment.</li>
+</ol>
+<p>The cluster-dependent e2e group is deliberately not run here - it needs Docker, provisions ten containers, and installs RKE2 on nine of them, so it lives in its own workflow, <code>e2e-cluster.yaml</code>, on its own trigger.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="fix-vendor-osvyaml"><a class="header" href="#fix-vendor-osvyaml">fix-vendor-osv.yaml</a></h1>
+<p><strong>Triggers:</strong> <code>pull_request_target</code> (opened/reopened/synchronize) touching <code>vendor/**</code>, dependabot PRs only.</p>
+<p>Dependabot re-runs <code>go mod vendor</code> on every dependency bump, which deletes and recreates <code>vendor/</code> - taking the four generated <code>osv-scanner.toml</code> override files with it (see <code>check-go-mod.yaml</code>). This workflow regenerates those files from the <strong>base branch</strong> (via <code>mage dev:writeOSVOverrides</code>) and commits them back onto the dependabot branch through the git data API.</p>
+<p>Uses <code>pull_request_target</code> deliberately so the job runs against the base branch with a write-capable token, without ever checking out the PR’s own tree - avoiding the classic <code>pull_request_target</code> vulnerability of running a write-privileged job against untrusted code. Overrides are generated purely from <code>magefiles/vendor-osv.go</code>, which no dependency bump touches, so the base branch produces the exact bytes the check wants.</p>
+<p>Only runs for <code>dependabot[bot]</code>-authored PRs, since those branches live in this repo and can be pushed to with an app token; forks can’t be pushed to, and nothing else re-vendors on a schedule.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="pre-commityaml"><a class="header" href="#pre-commityaml">pre-commit.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests, merge groups.</p>
+<p>Runs the hooks defined in <code>.pre-commit-config.yaml</code> (via <code>prek-action</code>) against all files, so formatting, licensing, and sorting checks can’t drift from what runs locally.</p>
+<p>Three hooks are explicitly skipped in CI:</p>
+<ul>
+<li><code>schema-generator</code>, <code>docs-generator</code> - <code>repo: local</code> hooks that shell out to <code>mage</code> and need the full dev toolchain.</li>
+<li><code>golangci-lint</code> - already covered separately by <code>scan-lint.yaml</code>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="prune-example-pr-packagesyaml"><a class="header" href="#prune-example-pr-packagesyaml">prune-example-pr-packages.yaml</a></h1>
+<p><strong>Triggers:</strong> daily schedule (05:23 UTC), manual dispatch (with <code>retention_days</code> and <code>dry_run</code> inputs).</p>
+<p>Deletes throwaway GHCR container packages that <code>publish-example.yaml</code> writes when it runs on a pull request (published under <code>ghcr.io/colonel-byte/cargoship-examples/pr-N</code>, so PR test runs never overwrite the release reference). Nothing consumes these once the PR is done, and each one costs gigabytes of registry storage.</p>
+<p>Only <code>pr-N</code> namespaces are ever touched - the release reference (<code>cargoship-examples/&lt;flavor&gt;</code>) is never a candidate. Candidates are enumerated from PRs carrying the <code>publish-example</code> label (the label that gates <code>publish-example.yaml</code> on PRs at all), then probed individually and deleted whole (not version-by-version - GHCR refuses to delete a package’s last version, and whole-package delete also removes orphaned untagged child manifests) if their newest version is older than the retention window (default 30 days).</p>
+<p>Package names are constructed from data already in the repo rather than listed via the GitHub API, because <code>GITHUB_TOKEN</code> can delete an individual package but can’t list an organization’s packages (<code>GET /orgs/{org}/packages</code> rejects Actions tokens).</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="publish-exampleyaml"><a class="header" href="#publish-exampleyaml">publish-example.yaml</a></h1>
+<p><strong>Triggers:</strong> manual dispatch (choose a flavor or “changed”), <code>workflow_call</code> (from <code>release.yaml</code> after a release), pull requests carrying the <code>publish-example</code> label.</p>
+<p>Builds the example distro definitions shipped in this repo using the <strong>released</strong> cargoship CLI (not one built in this run) and publishes them to GHCR - exercising what a user actually gets from a release, against the definitions the repo ships.</p>
+<p><strong>Two jobs:</strong></p>
+<ul>
+<li><strong>select</strong> - decides what to publish before building anything (cheap API probes vs. expensive multi-gigabyte builds). “Changed” mode checks every flavor’s newest example version against what’s already in the registry and only selects ones that moved. A named flavor is always published regardless of registry state. Output is grouped into one matrix entry per distro (RKE2 vs. k3s), because flavors of the same distro/version share most of their cached image pulls.</li>
+<li><strong>publish-example</strong> - for each distro, builds and publishes its selected flavors sequentially in one job, so the <code>~/.cargoship-cache</code> bulk (image lists, RPMs) is shared across flavors instead of pulled once per flavor. Each flavor is published under two tags: the regular version tag and a precise <code>&lt;version&gt;-&lt;job&gt;-&lt;short-sha&gt;</code> tag. Signing uses <code>--signing-key env://COSIGN_PRIVATE_KEY</code> (key material never touches disk).</li>
+</ul>
+<p>On a pull request, publishing goes to a per-PR namespace (<code>cargoship-examples/pr-N</code>) instead of the real reference, so test runs of the workflow itself never clobber a release artifact. <code>prune-example-pr-packages.yaml</code> cleans those up later. Fork PRs are excluded since they lack the signing/write secrets needed to publish.</p>
+<p>The chain from a release is: release-please cuts the release and pushes a tag → the tag push triggers <code>release.yaml</code>’s goreleaser job → that job calls this workflow via <code>needs</code>, ensuring the release archives exist before <code>setup-cargoship</code> tries to install the just-released CLI.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="refresh-examplesyaml"><a class="header" href="#refresh-examplesyaml">refresh-examples.yaml</a></h1>
+<p><strong>Triggers:</strong> weekly schedule (Mondays 06:41 UTC), manual dispatch (with a <code>no_cache</code> input for when upstream re-cuts release assets in place).</p>
+<p>Regenerates everything under <code>example/</code> from whatever upstream RKE2/k3s has released since the last run, and opens (or updates) a single pull request with the result. Nothing else generates <code>example/</code> on a schedule - the mage targets involved are otherwise run by hand - so this turns “staying current with upstream” into a review task instead of something someone has to remember.</p>
+<p>Runs three mage targets in a fixed, dependency-ordered sequence: <code>generate:updatePins</code> (re-pulls source for any moved pin, writes <code>thirdparty-src/pins.json</code>) → <code>generate:engineConfig</code> (reads that source into each version’s component vocabulary) → <code>generate:examples</code> (renders values schemas against that vocabulary). Running them out of order means a schema can render empty instead of failing.</p>
+<p>After rendering, it runs <code>go build ./...</code> and the schema validation tests against the result and reports pass/fail in the PR body - a render that doesn’t compile still opens the PR (so it’s visible for debugging) but the job itself fails.</p>
+<p>The branch (<code>chore/refresh-examples</code>) is force-pushed each week rather than accumulating one PR per run, so any hand edit to that branch is lost on the next refresh by design - template changes belong in <code>magefiles/templates/</code> instead. Uses a GitHub App token (same one release-please uses) rather than <code>GITHUB_TOKEN</code>, since a PR opened with the default token wouldn’t trigger <code>pull_request</code> workflows like e2e or pre-commit.</p>
+<p>Publishing is a separate concern - this workflow only writes definitions; <code>publish-example.yaml</code> picks them up at the next release or on demand.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="release-pleaseyaml"><a class="header" href="#release-pleaseyaml">release-please.yaml</a></h1>
+<p><strong>Triggers:</strong> push to <code>main</code>, manual dispatch.</p>
+<p>Runs <code>googleapis/release-please-action</code> to manage version bumps, <code>CHANGELOG.md</code>, and release PRs, driven by <code>release-please-config.json</code> and <code>.release-please-manifest.json</code>. It mints a GitHub App token up front and hands it to the release-please action for every write it makes - <code>GITHUB_TOKEN</code> itself is never granted write permission.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="releaseyaml"><a class="header" href="#releaseyaml">release.yaml</a></h1>
+<p><strong>Triggers:</strong> push of any tag.</p>
+<p>The actual release pipeline (“goreleaser” job), granted <code>contents: write</code> (create release, upload archives), <code>packages: write</code> (push images), <code>id-token: write</code> (OIDC token for cosign), and <code>attestations: write</code>.</p>
+<p>Sets up Syft (SBOM), cosign, ansible-core, Go, QEMU, and Docker Buildx, then logs into three registries (GHCR, Registry1/DSO, Docker Hub) before running GoReleaser (<code>goreleaser release --clean</code>), which builds and publishes binaries, packages, and container images.</p>
+<p>Package signing keys (GPG for rpm/deb, a bare RSA key for apk) are written to <code>RUNNER_TEMP</code> - outside the checkout, so no <code>.goreleaser.yaml</code> glob can accidentally pick them up - and removed at the end regardless of outcome. A missing signing secret disables signing for that artifact type with a warning rather than failing the release.</p>
+<p>After GoReleaser runs, the job attests packages, images, and a generated AI-BOM (<code>.github/ai-bom.json</code>, stamped with the release version/commit/timestamp) via <code>actions/attest</code>, and uploads the resulting provenance bundles to the GitHub release.</p>
+<p>A second job, <strong>publish-example</strong>, runs after <code>goreleaser</code> completes (only for <code>v*</code> tags) and calls <code>publish-example.yaml</code> as a reusable workflow with <code>secrets: inherit</code>, so a fresh example package gets published against the release that was just cut. Its permissions are written to exactly match what the called workflow needs, since a caller’s grant is a ceiling that can only be narrowed downstream.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="scan-lintyaml"><a class="header" href="#scan-lintyaml">scan-lint.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests, merge groups.</p>
+<p>Two independent lint jobs:</p>
+<ul>
+<li><strong>lint</strong> - runs <code>golangci-lint</code> over the Go source.</li>
+<li><strong>containers</strong> - runs <code>hadolint</code> against each container Dockerfile individually (<code>ansible</code>, <code>base</code>, <code>deb</code>, <code>ubi</code>), matrix-style. Paths are listed explicitly rather than using hadolint’s recursive glob mode, which would otherwise pull in vendored Dockerfiles under <code>vendor/</code>.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="scorecardyaml"><a class="header" href="#scorecardyaml">scorecard.yaml</a></h1>
+<p><strong>Triggers:</strong> branch protection rule changes, weekly schedule (Saturdays 01:30 UTC), push to <code>main</code>.</p>
+<p>Runs the OpenSSF Scorecard supply-chain security analysis (<code>ossf/scorecard-action</code>) against the default branch, uploads the SARIF results as a workflow artifact, and publishes them to GitHub’s code-scanning dashboard. Adapted from zarf-dev/zarf’s equivalent workflow. Default permissions are <code>read-all</code>, with <code>security-events: write</code> and <code>id-token: write</code> granted only to the analysis job (for code-scanning upload and Scorecard’s OIDC badge).</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="test-build-containersyaml"><a class="header" href="#test-build-containersyaml">test-build-containers.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests (opened/reopened/synchronize/labeled) touching <code>containers/**</code>, <code>.goreleaser.yaml</code>, <code>.release-please-manifest.json</code>, or this workflow file - gated on the PR carrying the <code>docker</code> label.</p>
+<p>Actually builds all four container images (<code>ansible</code>, <code>base</code>, <code>deb</code>, <code>ubi</code>) via <code>goreleaser release --snapshot --clean --skip=sign,sbom</code>, closing a gap neither <code>check-base-image-label.yaml</code> (text diff only) nor <code>scan-lint.yaml</code>’s hadolint job (syntax only) covers: a Dependabot bump that breaks the actual build wasn’t otherwise caught until release.</p>
+<p>These Dockerfiles are written for GoReleaser’s <code>dockers_v2</code> pipe, not a plain <code>docker build</code> - several <code>COPY</code> nfpm-produced <code>.rpm</code>/<code>.deb</code> packages and extra files that only GoReleaser stages. That pipe has no per-image build flag, so a snapshot build always builds all four images together; there’s no cheaper way to build “just the one that changed.”</p>
+<p><code>labeled</code> is included in <code>types</code> because Dependabot’s <code>docker</code> label is applied <em>after</em> the PR opens - without it, the <code>if</code> condition would be evaluated (and fail) on the <code>opened</code> event before the label exists, and nothing would re-trigger once it’s added.</p>
+<p><code>--snapshot</code> skips publish/validate/announce entirely - nothing is pushed anywhere.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="ai-usage-in-cargoships-development"><a class="header" href="#ai-usage-in-cargoships-development">AI usage in cargoship’s development</a></h1>
 <p>This document discloses how AI coding agents are used to build cargoship. It is not a CycloneDX ML-BOM or SPDX AI profile - those describe AI/ML models and datasets shipped <em>inside</em> a product, and cargoship has none: it’s an Ansible/Kubernetes deployment CLI with no inference or model-serving code of its own. What follows instead is a disclosure of the tools used to <em>write</em> cargoship, in the same spirit as the supply-chain artifacts described in <a href="#security-policy">the security policy</a> - an SBOM discloses what’s in a release; this discloses how the release was produced.</p>
