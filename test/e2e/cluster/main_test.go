@@ -90,88 +90,8 @@ var (
 			Destination: "/var/lib/rancher",
 		},
 	}
-	// mixedOS provisions ten machines, and is what a full walk runs against -- a stage-only
-	// run uses stageOS instead. It is a nine-node cluster of three controllers and six
-	// workers with each role split across the Ubuntu and Fedora images, plus one Alpine
-	// machine that receives uploads and never joins. Nine cluster nodes is enough that the
-	// worker concurrency batching in the initialize and upgrade phases runs more than one
-	// batch at the WorkerConcurrent the suite sets, which a six-node cluster did not.
-	//
-	// Every machine is privileged, which is what lets the engine run in a container at all:
-	// the engine mounts filesystems, loads kernel modules and runs its own containerd, none of
-	// which an unprivileged container is allowed to do. It is also what lets the prepare phase
-	// finish. That phase runs `sysctl --system`, which applies every file in the image's own
-	// sysctl.d directories as well as the one cargoship writes, and the Fedora image ships
-	// defaults for keys that are not network namespaced -- vm.max_map_count, kernel.pid_max,
-	// fs.protected_symlinks. Unprivileged, /proc/sys is mounted read only, those keys are
-	// refused, and sysctl exits 1 even though the file cargoship wrote applied cleanly.
-	//
-	// The cost is that the settings land on the kernel of whatever machine runs the tests,
-	// because those keys are shared with the host. That is the same bargain every
-	// engine-in-Docker test harness makes, and the values are the distro defaults the nodes
-	// would set anyway.
-	mixedOS = config.Config{
-		Cluster: config.Cluster{
-			Name:       "cargoship-e2e",
-			PrivateKey: "cluster-key",
-		},
-		Machines: []config.MachineReplicas{
-			{
-				Count: 2,
-				Spec: &config.Machine{
-					Name:         bootKC,
-					Image:        bootUbuntu,
-					Privileged:   true,
-					PortMappings: ports,
-					Volumes:      engineData,
-				},
-			},
-			{
-				Count: 1,
-				Spec: &config.Machine{
-					Name:         bootKCF,
-					Image:        bootFedora,
-					Privileged:   true,
-					PortMappings: ports,
-					Volumes:      engineData,
-				},
-			},
-			{
-				Count: 3,
-				Spec: &config.Machine{
-					Name:         bootKW,
-					Image:        bootUbuntu,
-					Privileged:   true,
-					PortMappings: ports,
-					Volumes:      engineData,
-				},
-			},
-			{
-				Count: 3,
-				Spec: &config.Machine{
-					Name:         bootKWF,
-					Image:        bootFedora,
-					Privileged:   true,
-					PortMappings: ports,
-					Volumes:      engineData,
-				},
-			},
-			{
-				Count: 1,
-				Spec: &config.Machine{
-					Name:         bootKWA,
-					Image:        bootAlpine,
-					Privileged:   true,
-					PortMappings: ports,
-					Volumes:      engineData,
-				},
-			},
-		},
-	}
-
 	// stageOS is the inventory a stage-only run provisions instead: one machine per family per
-	// role, and the upload-only Alpine node. It is half the containers of mixedOS and half the
-	// uploads, which is what makes the stage job cheap enough to be worth running on its own.
+	// role, and the upload-only Alpine node.
 	//
 	// Five is the floor rather than three, because the upload phases route on family and role
 	// together -- APTUploadFiles.Prepare filters p.control and p.workers by both -- and the file
@@ -181,9 +101,9 @@ var (
 	// claiming lived on, so it is the one cell a smaller inventory must not lose.
 	//
 	// Nothing else the staging phases do is sensitive to how many machines there are. The
-	// upload batching that mixedOS's ten machines justify is bounded by applyConcurrency, which
-	// is 300, so every host already goes in one batch; and the WorkerConcurrent batching is
-	// only reached in the initialize and upgrade phases, which a stage-only run skips.
+	// upload batching is bounded by applyConcurrency, which is 300, so every host already goes
+	// in one batch; and the WorkerConcurrent batching is only reached in the initialize and
+	// upgrade phases, which a stage-only run skips.
 	stageOS = config.Config{
 		Cluster: config.Cluster{
 			Name:       "cargoship-e2e",
@@ -199,9 +119,23 @@ var (
 	}
 )
 
-// stageMachine is one machine of stageOS. Every machine there differs only in its name and its
-// image, and the rest is what mixedOS gives its machines and for the same reasons: see the
-// comments on mixedOS for the privilege, and on engineData for the volume.
+// stageMachine builds one machine of stageOS or k3sOS. Every machine differs only in its name
+// and its image; the rest is shared.
+//
+// Every machine is privileged, which is what lets the engine run in a container at all: the
+// engine mounts filesystems, loads kernel modules and runs its own containerd, none of which an
+// unprivileged container is allowed to do. It is also what lets the prepare phase finish. That
+// phase runs `sysctl --system`, which applies every file in the image's own sysctl.d directories
+// as well as the one cargoship writes, and the Fedora image ships defaults for keys that are not
+// network namespaced -- vm.max_map_count, kernel.pid_max, fs.protected_symlinks. Unprivileged,
+// /proc/sys is mounted read only, those keys are refused, and sysctl exits 1 even though the file
+// cargoship wrote applied cleanly.
+//
+// The cost is that the settings land on the kernel of whatever machine runs the tests, because
+// those keys are shared with the host. That is the same bargain every engine-in-Docker test
+// harness makes, and the values are the distro defaults the nodes would set anyway.
+//
+// See engineData for the volume every machine gets.
 func stageMachine(name, image string) *config.Machine {
 	return &config.Machine{
 		Name:         name,
@@ -212,13 +146,13 @@ func stageMachine(name, image string) *config.Machine {
 	}
 }
 
-// k3sOS is the inventory a k3s-single-controller run provisions: one controller and four
-// workers split across the Ubuntu and Fedora images, no upload-only Alpine host. It exists to
-// test whether a single-controller k3s cluster -- SQLite datastore, no etcd raft quorum --
-// avoids the etcd-quorum timeouts the ten-node, three-controller rke2 walk hits on a hosted
-// runner (see the e2e-cluster-k3s-single job in the workflow). The Alpine upload-only host is
-// left out because it exercises the BIN-upload fallback path, which is orthogonal to what
-// this topology is checking.
+// k3sOS is the inventory a full walk provisions: one controller and four workers split across
+// the Ubuntu and Fedora images, no upload-only Alpine host. It is a single-controller k3s
+// cluster -- SQLite datastore, no etcd raft quorum -- which is what lets it run reliably on a
+// hosted runner: an earlier three-controller rke2 topology's embedded etcd raft quorum hit
+// timeouts there under the CPU contention of ten nested node containers, and k3s's SQLite
+// datastore has no quorum to time out. The Alpine upload-only host is left out because it
+// exercises the BIN-upload fallback path, which the stage job's stageOS already covers.
 var k3sOS = config.Config{ //nolint:gochecknoglobals
 	Cluster: config.Cluster{
 		Name:       "cargoship-e2e",
@@ -231,26 +165,13 @@ var k3sOS = config.Config{ //nolint:gochecknoglobals
 	},
 }
 
-// k3sSingleEnvVar selects k3sOS instead of the default inventory. See stageOnlyEnvVar for the
-// same pattern; this one is checked first because it is a different distro rather than a
-// smaller run of the same one.
-const k3sSingleEnvVar = "CARGOSHIP_E2E_K3S_SINGLE"
-
-func k3sSingle() bool {
-	on, err := strconv.ParseBool(os.Getenv(k3sSingleEnvVar))
-	return err == nil && on
-}
-
-// clusterConfig is the inventory this run provisions: the k3s single-controller inventory when
-// asked for it, the smaller staging inventory when asked for that, and the full one otherwise.
+// clusterConfig is the inventory this run provisions: the smaller staging inventory when asked
+// for that, and the full k3s inventory otherwise.
 func clusterConfig() config.Config {
-	if k3sSingle() {
-		return k3sOS
-	}
 	if stageOnly() {
 		return stageOS
 	}
-	return mixedOS
+	return k3sOS
 }
 
 // clusterCounts is how many hosts of each kind a bootloose config produces, split the way the
@@ -291,13 +212,10 @@ func countsFor(cfg config.Config) clusterCounts {
 //
 // The two halves are worth separating because they cost different amounts and depend on
 // different things. The staging half finishes in about three minutes and asks nothing of the
-// machine beyond Docker. The engine half brings up a nine-node rke2 cluster, which wants more
-// CPU than a hosted runner has, and needs a container runtime nested inside the node
-// containers -- see engineData for what that costs. Turning this on is how a runner that
-// cannot give the engine half what it needs still covers the phases that do not need it.
-//
-// The walk does not reach those phases yet, so for now setting this selects stageOS and nothing
-// else. The per-phase skip arrives with the phases it skips.
+// machine beyond Docker. The engine half brings up a k3s cluster, which needs a container
+// runtime nested inside the node containers -- see engineData for what that costs. Turning
+// this on is how a runner that cannot give the engine half what it needs still covers the
+// phases that do not need it.
 const stageOnlyEnvVar = "CARGOSHIP_E2E_STAGE_ONLY"
 
 // stageOnly reports whether the run was asked to stop before the engine phases.
@@ -316,7 +234,7 @@ func stageOnly() bool {
 // and their containers are the only place their journals exist. Deleting the cluster takes
 // them with it.
 //
-// It is off by default, because a local run that leaves ten containers and their volumes
+// It is off by default, because a local run that leaves five containers and their volumes
 // behind is a surprise. CI turns it on and then removes the containers itself, in the step
 // after the one that reads them.
 const keepClusterEnvVar = "CARGOSHIP_E2E_KEEP_CLUSTER"
@@ -344,6 +262,11 @@ var (
 	// whole-action steps run prepare, apply and reset, which would try to install the engine
 	// on a host that cannot run it.
 	fullClusterConfigPath string //nolint:gochecknoglobals
+
+	// kubeconfigPath is the file KUBECONFIG points at for the whole run. TestMain owns it
+	// rather than a suite, so that the kubeconfig the apply walk writes outlives the suite
+	// that wrote it and the walks that follow can be handed the same cluster.
+	kubeconfigPath string //nolint:gochecknoglobals
 )
 
 // TestClusterPhases runs the apply walk against the shared bootloose cluster. It is a subtest
@@ -362,7 +285,20 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
+	kubeDir, err := os.MkdirTemp("", "cargoship-e2e-kube")
+	if err != nil {
+		log.Fatal(err)
+	}
+	kubeconfigPath = filepath.Join(kubeDir, "config")
+	if err := os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
+		log.Fatal(err)
+	}
+
 	code := m.Run()
+
+	if err := os.RemoveAll(kubeDir); err != nil {
+		log.Print(err)
+	}
 
 	// Deleting the machines takes a failed run's evidence with them; see keepClusterEnvVar.
 	// The exit code is untouched either way, so a kept cluster is still a failed run.

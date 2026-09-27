@@ -25,9 +25,13 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
-// EndToEndCluster runs only the group that needs a bootloose cluster: the install command
-// group. Needs Docker. It builds nothing: that suite calls the cargoship packages directly
-// rather than driving a binary.
+// EndToEndCluster runs the full install-command-group suite, including the phases that install
+// and bootstrap k3s. Needs Docker. It builds nothing: that suite calls the cargoship packages
+// directly rather than driving a binary.
+//
+// This is a local-box target. CI only runs EndToEndClusterStage -- a free hosted runner is not
+// reliable enough to bootstrap a real cluster on, see docs/agent/choice-e2e-stage-split.md --
+// so this is the only way to exercise the engine-bootstrap phases, phase/61 onward, end to end.
 func (Test) EndToEndCluster() error {
 	if err := stopBootlooseContainers(); err != nil {
 		return err
@@ -37,9 +41,9 @@ func (Test) EndToEndCluster() error {
 
 // EndToEndClusterStage runs the same suite as EndToEndCluster, but stops at the boundary
 // phase/60 draws: it stages the files and renders the engine config without starting the
-// engine on any node, and it provisions five machines rather than ten. It takes a few minutes
-// rather than tens of them and brings up no rke2 cluster, which is what makes it runnable
-// somewhere a nine-node cluster is not. Use EndToEndCluster for the walk that bootstraps.
+// engine on any node. It takes a few minutes rather than tens of them and brings up no k3s
+// cluster, which is what makes it reliable on a free hosted runner and why it is the one CI
+// runs. Use EndToEndCluster for the walk that bootstraps.
 func (Test) EndToEndClusterStage() error {
 	if err := stopBootlooseContainers(); err != nil {
 		return err
@@ -52,7 +56,7 @@ func (Test) EndToEndClusterStage() error {
 
 // CleanCluster removes the containers a bootloose cluster left behind. EndToEndCluster does
 // this before it runs, so this target is for the run that was killed partway through and left
-// nine nodes holding memory, or for looking at what a failed run left and then clearing it.
+// its five nodes holding memory, or for looking at what a failed run left and then clearing it.
 func (Test) CleanCluster() error {
 	return stopBootlooseContainers()
 }
