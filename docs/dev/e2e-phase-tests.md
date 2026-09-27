@@ -17,7 +17,7 @@ Testify runs suite methods in lexicographic order of the method name, so the num
 
 That order matches apply's everywhere except the lock. Apply takes the lock third, right after OS detection, and holds it for the whole run; `phase/91_lock.go`'s number puts it after the install instead, with `phase/92_unlock.go` right behind it. The lock test still asserts what the phase writes on each host. What it no longer does is hold the lock across the phases in between, so a phase that misbehaves while the cluster is locked is not something this suite would see.
 
-Steps that are not phases -- creating the package, `prepare`, the health check -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` onwards sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`. Those steps run whole actions rather than single phases -- `distro.Create`, `action.NewPrepare`, `action.NewApply` -- each with its own manager, and are given `e2e.ClusterConfigPath`, the nine-host inventory, rather than the ten-host one the harness is built from; see the section on the upload-only host below.
+Steps that are not phases -- creating the package, `prepare`, the health check -- have no phase number to take, so they use the two ends of the ordering: `Test_00` and `Test_01` sort before every phase, and `Test_ZZ1` onwards sort after every phase, because a letter sorts after a digit. They live in `cluster_lifecycle_test.go`. Those steps run whole actions rather than single phases -- `distro.Create`, `action.NewPrepare`, `action.NewApply` -- each with its own manager, and are given `e2e.ClusterConfigPath`, the engine-only inventory, rather than the full one the harness is built from; see the section on the upload-only host below.
 
 ## Adding a phase
 
@@ -101,7 +101,7 @@ This tests the routing, which is the part most likely to break, and it keeps wor
 
 ## Phases that route on the OS family
 
-The cluster runs three OS families on purpose. Nine of the machines join the cluster -- three controllers and six workers, each role split between Ubuntu (`kc0`, `kc1`, `kw0`-`kw2`) and Fedora (`kcf0`, `kwf0`-`kwf2`) -- and a tenth, `kwa0`, runs Alpine. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.
+The cluster runs multiple OS families on purpose. In the default full-walk inventory (`k3sOS`), all five machines join the cluster -- one controller and four workers, split between Ubuntu (`kc0`, `kw0`, `kw1`) and Fedora (`kwf0`, `kwf1`). The stage-only inventory (`stageOS`) adds a third family, running an Alpine machine (`kwa0`) that receives uploads but never joins the cluster -- see the section on the upload-only host below. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.
 
 Derive the host set from the same filters the phase uses, so the test cannot disagree with it:
 
@@ -118,7 +118,9 @@ Require the set you are testing to be non-empty. If someone collapses the cluste
 
 Alpine is neither Enterprise Linux nor Debian, so both of the filters above decline it and it falls through to the BIN upload phase. That is why it is in the inventory: without it, `59_bin_install.go` is only ever exercised as the path every host happens to take, never as the fallback it is written to be.
 
-It cannot run rke2, which links against glibc. So `Test_60_ConfigureEngine` calls `s.harness.dropUploadOnlyHosts()` before it does anything else, and from that point on the host is gone from the manager entirely. **Phases up to and including `Test_59` see ten hosts; everything after sees nine.**
+It cannot run the engine, which links against glibc. So `Test_60_ConfigureEngine` calls `s.harness.dropUploadOnlyHosts()` before it does anything else, and from that point on the host is gone from the manager entirely, when there is one to drop. **Phases up to and including `Test_59` see every host in the inventory; everything after sees one fewer, if the inventory carried an upload-only host at all.**
+
+The default full-walk inventory (`k3sOS`) has no upload-only host, so that drop is a no-op there; the Alpine host, and the boundary it exercises, live in the smaller stage-only inventory (`stageOS`) instead. See `clusterConfig` in `main_test.go`.
 
 This matters when adding a phase:
 
@@ -130,7 +132,7 @@ This matters when adding a phase:
 
 ## Prerequisites and running it
 
-The suite needs Docker and a real distro package, and it is not fast: it provisions ten containers and installs rke2 onto nine of them. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
+The suite needs Docker and a real distro package, and it is not fast: it provisions five containers and installs k3s onto all of them, one controller and four workers. It needs no prebuilt binary -- every step calls the cargoship packages directly, so a bare checkout is enough.
 
 ```console
 $ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
@@ -146,15 +148,15 @@ $ mage test:endToEndCluster
 
 ### In CI
 
-`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions ten containers and installs rke2 onto nine of them, which is most of a hosted runner. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `pkg/phase`, `pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
+`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions five containers and installs k3s onto all of them. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `pkg/phase`, `pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
 
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare step calls `action.NewPrepare`. That is what makes the two workflows independent, which is the point of the split.
 
-The job frees disk before it starts, because nine containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one -- that is the failure mode a nine-node cluster on four cores produces, and a larger runner is the fix.
+The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.
 
 ## Things that will cost you time
 
 *   **You cannot run one phase test on its own.** `-run 'TestClusterPhases/apply/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
 *   **The first failure stops the rest.** `SetupTest` skips every remaining step once one has failed, so the output names one phase rather than twenty-five. If the first failure looks like a symptom, it is the cause -- everything after it was skipped, not passed.
 *   **Constants the phase package keeps unexported.** Where a path is not exported, the test file redeclares it with a comment saying where it came from (`uploadManifestPath` in `50_uploadfiles_test.go`, `sysctlConfPath` in `20_prepare_host_test.go`). Prefer exporting from `phase` when the constant is genuinely part of the contract; duplicate it, with the comment, when it is not.
-*   **Ten containers is a lot of memory.** Nine of them each run an rke2 node, which is the reason this suite is not part of the default `go test ./...` path.
+*   **Five containers is still a lot of memory.** Each runs a k3s node, which is the reason this suite is not part of the default `go test ./...` path.

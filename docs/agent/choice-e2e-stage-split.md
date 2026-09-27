@@ -1,6 +1,8 @@
 # Why the cluster e2e suite splits into a staging half and an engine half
 
-The cluster suite (`test/e2e/cluster`) walks the apply phase list one phase at a time against a bootloose cluster, as [choice-phase-e2e-tests](choice-phase-e2e-tests.md) describes. That suite is now two runs rather than one: with `CARGOSHIP_E2E_STAGE_ONLY` set it provisions five machines instead of ten and stops asserting at the boundary `phase/60_configure_engine.go` draws, and without it nothing changes. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.
+> The reasoning below was written against the original ten-machine, three-controller rke2 topology (`mixedOS`). The default full walk later switched engines, to a five-machine, single-controller k3s topology (`k3sOS`) -- see the e2e-cluster workflow's header comment -- because rke2's embedded etcd raft quorum across three controllers was timing out on the hosted runner. The rke2/overlayfs and host-count specifics below are historical; the stage/engine split they justify is still exactly how the suite works today.
+
+The cluster suite (`test/e2e/cluster`) walks the apply phase list one phase at a time against a bootloose cluster, as [choice-phase-e2e-tests](choice-phase-e2e-tests.md) describes. That suite is two runs rather than one: with `CARGOSHIP_E2E_STAGE_ONLY` set it provisions the smaller staging inventory and stops asserting at the boundary `phase/60_configure_engine.go` draws, and without it, it walks the full inventory end to end. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.
 
 ## What forced it
 
