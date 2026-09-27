@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4eae70d7.js";
+            window.path_to_searchindex_js = "../searchindex-3b92133f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -183,16 +183,16 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="ai-usage-in-cargoships-development"><a class="header" href="#ai-usage-in-cargoships-development">AI usage in cargoship’s development</a></h1>
-<p>This document discloses how AI coding agents are used to build cargoship. It is not a CycloneDX ML-BOM or SPDX AI profile — those describe AI/ML models and datasets shipped <em>inside</em> a product, and cargoship has none: it’s an Ansible/Kubernetes deployment CLI with no inference or model-serving code of its own. What follows instead is a disclosure of the tools used to <em>write</em> cargoship, in the same spirit as the supply-chain artifacts described in <a href="../security.html">the security policy</a> — an SBOM discloses what’s in a release; this discloses how the release was produced.</p>
+<p>This document discloses how AI coding agents are used to build cargoship. It is not a CycloneDX ML-BOM or SPDX AI profile - those describe AI/ML models and datasets shipped <em>inside</em> a product, and cargoship has none: it’s an Ansible/Kubernetes deployment CLI with no inference or model-serving code of its own. What follows instead is a disclosure of the tools used to <em>write</em> cargoship, in the same spirit as the supply-chain artifacts described in <a href="../security.html">the security policy</a> - an SBOM discloses what’s in a release; this discloses how the release was produced.</p>
 <h2 id="tools-in-use"><a class="header" href="#tools-in-use">Tools in use</a></h2>
-<p>Claude Code (Anthropic, Claude models) is used across the repository for code changes, documentation, and the design records under this directory. Its operating rules for this repository live in the various <code>AGENTS.md</code> files scattered through the tree — <a href="../../AGENTS.html">the repository root’s</a>, and the per-directory ones it points to — which tell an agent how this codebase expects to be worked in, not just what the code does.</p>
+<p>Claude Code (Anthropic, Claude models) is used across the repository for code changes, documentation, and the design records under this directory. Its operating rules for this repository live in the various <code>AGENTS.md</code> files scattered through the tree - <a href="../../AGENTS.html">the repository root’s</a>, and the per-directory ones it points to - which tell an agent how this codebase expects to be worked in, not just what the code does.</p>
 <h2 id="human-review"><a class="header" href="#human-review">Human review</a></h2>
-<p>AI-authored and human-authored changes go through the same gate: a reviewed pull request, and the same CI checks — CodeQL, linting, the test suites, OpenSSF Scorecard — regardless of who or what wrote the diff. Nothing here grants an AI-authored change an exemption from review or from CI.</p>
+<p>AI-authored and human-authored changes go through the same gate: a reviewed pull request, and the same CI checks - CodeQL, linting, the test suites, OpenSSF Scorecard - regardless of who or what wrote the diff. Nothing here grants an AI-authored change an exemption from review or from CI.</p>
 <h2 id="where-the-provenance-trail-lives"><a class="header" href="#where-the-provenance-trail-lives">Where the provenance trail lives</a></h2>
 <p>Two records carry this forward:</p>
 <ul>
-<li><a href="."><code>choice-*.md</code></a> files in this directory record non-obvious design decisions and the tradeoffs behind them, agent-driven or not — see <a href="../../AGENTS.html"><code>AGENTS.md</code></a> for why they’re treated as constraints rather than history.</li>
-<li>Every tagged release publishes <code>ai-bom.json</code> as a release asset, attested the same way as the release’s <a href="../security.html#verifying-a-release">SBOM and provenance</a>. It’s a per-release snapshot of this document’s claims — which tools, what they’re used for, and the human-review statement above — rather than a list of what’s in that particular release.</li>
+<li><a href="."><code>choice-*.md</code></a> files in this directory record non-obvious design decisions and the tradeoffs behind them, agent-driven or not - see <a href="../../AGENTS.html"><code>AGENTS.md</code></a> for why they’re treated as constraints rather than history.</li>
+<li>Every tagged release publishes <code>ai-bom.json</code> as a release asset, attested the same way as the release’s <a href="../security.html#verifying-a-release">SBOM and provenance</a>. It’s a per-release snapshot of this document’s claims - which tools, what they’re used for, and the human-review statement above - rather than a list of what’s in that particular release.</li>
 </ul>
 
                     </main>

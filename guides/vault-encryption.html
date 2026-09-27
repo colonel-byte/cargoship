@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4eae70d7.js";
+            window.path_to_searchindex_js = "../searchindex-3b92133f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -203,7 +203,7 @@
 </div>
 <p>Decryption happens during an apply, when Cargoship writes the engine’s registry configuration. A field that does not carry the <code>$ANSIBLE_VAULT</code> header is passed through untouched, so a configuration can mix encrypted and plaintext values freely.</p>
 <p>A CA certificate is public and does not need encrypting. Cargoship accepts an encrypted one anyway, so that a document can be vaulted as a whole without the parts that did not have to be causing a failure.</p>
-<p>Encrypting any other field produces a document Cargoship can load but never unwraps: the ciphertext reaches the host verbatim, as if that were the literal value. <code>vault encrypt-path</code> warns when you ask for such a path, but does not refuse — see <a href="#encrypting-a-value-already-in-a-file">Encrypting a Value Already in a File</a>.</p>
+<p>Encrypting any other field produces a document Cargoship can load but never unwraps: the ciphertext reaches the host verbatim, as if that were the literal value. <code>vault encrypt-path</code> warns when you ask for such a path, but does not refuse - see <a href="#encrypting-a-value-already-in-a-file">Encrypting a Value Already in a File</a>.</p>
 <h2 id="supplying-the-password"><a class="header" href="#supplying-the-password">Supplying the Password</a></h2>
 <p>Every <code>vault</code> command, and every command that applies a configuration, resolves the password the same way and stops at the first that is set:</p>
 <ol>

@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4eae70d7.js";
+            window.path_to_searchindex_js = "../searchindex-3b92133f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-dcf7addb.js"></script>
@@ -220,21 +220,21 @@
 <h3 id="-a"><a class="header" href="#-a"><code>-a</code></a></h3>
 <p>Forces rebuilding of all packages, including the standard library, rather than reusing cached <code>.a</code> files.</p>
 <ul>
-<li><strong>Why:</strong> ensures the build flags below (especially <code>-gcflags</code>) are actually applied everywhere, since Go’s build cache is keyed on flags but a stale cache can otherwise mask flag changes during iteration. Not a size optimization on its own — mainly a correctness/reproducibility guard for a release build.</li>
+<li><strong>Why:</strong> ensures the build flags below (especially <code>-gcflags</code>) are actually applied everywhere, since Go’s build cache is keyed on flags but a stale cache can otherwise mask flag changes during iteration. Not a size optimization on its own - mainly a correctness/reproducibility guard for a release build.</li>
 </ul>
 <h3 id="-ldflags-see-ldflags-in-both-utilsgo-files"><a class="header" href="#-ldflags-see-ldflags-in-both-utilsgo-files"><code>-ldflags</code> (see <code>LDFlags</code> in both <code>utils.go</code> files)</a></h3>
 <ul>
 <li>
-<p><strong><code>-s</code></strong> — omits the symbol table. Symbols aren’t needed at runtime and aren’t useful without <code>-w</code> anyway; this is one of the two biggest size wins available via linker flags.</p>
+<p><strong><code>-s</code></strong> - omits the symbol table. Symbols aren’t needed at runtime and aren’t useful without <code>-w</code> anyway; this is one of the two biggest size wins available via linker flags.</p>
 </li>
 <li>
-<p><strong><code>-w</code></strong> — omits DWARF debug info. Removes the ability to attach a source-level debugger (<code>dlv</code>) to the binary, but this is a release build, not a debug build. Combined with <code>-s</code>, this is what turns the ~157MB unstripped analysis build in testing into a much smaller shipped binary.</p>
+<p><strong><code>-w</code></strong> - omits DWARF debug info. Removes the ability to attach a source-level debugger (<code>dlv</code>) to the binary, but this is a release build, not a debug build. Combined with <code>-s</code>, this is what turns the ~157MB unstripped analysis build in testing into a much smaller shipped binary.</p>
 </li>
 <li>
-<p><strong><code>-X github.com/colonel-byte/cargoship/config.CLIVersion=%s</code></strong> — embeds the release version string at link time.</p>
+<p><strong><code>-X github.com/colonel-byte/cargoship/config.CLIVersion=%s</code></strong> - embeds the release version string at link time.</p>
 </li>
 <li>
-<p><strong><code>-X github.com/colonel-byte/cargoship/config.CLICommit=%s</code></strong> — embeds the short git commit SHA at link time.</p>
+<p><strong><code>-X github.com/colonel-byte/cargoship/config.CLICommit=%s</code></strong> - embeds the short git commit SHA at link time.</p>
 <p>These two <code>-X</code> flags aren’t size-related; they exist so <code>cargoship version</code> can report accurate build metadata without a separate version file shipped alongside the binary.</p>
 </li>
 </ul>
@@ -242,20 +242,20 @@
 <p>Applied to <code>all</code> packages (including the standard library and vendored dependencies), not just this module’s own code.</p>
 <ul>
 <li>
-<p><strong><code>-l</code></strong> — disables inlining. Counterintuitively, this <em>reduces</em> binary size in this repo: inlining duplicates the inlined function’s code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn’t CPU-bound in a hot loop. Measured: <code>-l -B -C</code> together produced a binary ~13% smaller than the same build with default <code>gcflags</code>.</p>
+<p><strong><code>-l</code></strong> - disables inlining. Counterintuitively, this <em>reduces</em> binary size in this repo: inlining duplicates the inlined function’s code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn’t CPU-bound in a hot loop. Measured: <code>-l -B -C</code> together produced a binary ~13% smaller than the same build with default <code>gcflags</code>.</p>
 </li>
 <li>
-<p><strong><code>-B</code></strong> — disables bounds checking. Trades a small amount of runtime safety (out-of-bounds slice/array access becomes undefined behavior instead of a panic) for reduced code size and slightly faster execution, on the assumption that this codebase’s indexing is already correct and covered by tests.</p>
+<p><strong><code>-B</code></strong> - disables bounds checking. Trades a small amount of runtime safety (out-of-bounds slice/array access becomes undefined behavior instead of a panic) for reduced code size and slightly faster execution, on the assumption that this codebase’s indexing is already correct and covered by tests.</p>
 </li>
 <li>
-<p><strong><code>-C</code></strong> — disables the compiler’s automatic detection of <code>unsafe.Pointer</code> misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.</p>
+<p><strong><code>-C</code></strong> - disables the compiler’s automatic detection of <code>unsafe.Pointer</code> misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.</p>
 <p>Because <code>-B</code> and <code>-C</code> remove safety checks, any regression they’d otherwise catch (out-of-bounds access, pointer misuse) will instead surface as memory corruption or silent wrong behavior. If a hard-to-diagnose crash ever shows up only in release builds and not in <code>go test</code>/plain <code>go run</code>, try reproducing without these two flags first.</p>
 </li>
 </ul>
 <h2 id="what-was-deliberately-not-changed"><a class="header" href="#what-was-deliberately-not-changed">What was deliberately not changed</a></h2>
 <ul>
-<li><strong>UPX or other binary compressors</strong> — not used. UPX-compressed binaries unpack themselves into memory at startup, adding a small latency hit, and self-modifying/self-extracting binaries are frequently flagged by antivirus and endpoint security tools. Given <code>cargoship</code> operates in cluster-management/infrastructure contexts where such scanning is common, this tradeoff wasn’t taken.</li>
-<li><strong>Trimming <code>zarf</code>/<code>k8s.io/client-go</code> dependencies</strong> — these are the largest remaining contributors to binary size (particularly <code>zarf</code>’s signing stack, which pulls in <code>sigstore</code>/<code>cosign</code>/<code>go-tuf</code>/cloud SDKs), but they’re load-bearing for existing features (image signing, cluster operations) and weren’t touched here. Removing them would require dropping or refactoring those features, not just changing build flags.</li>
+<li><strong>UPX or other binary compressors</strong> - not used. UPX-compressed binaries unpack themselves into memory at startup, adding a small latency hit, and self-modifying/self-extracting binaries are frequently flagged by antivirus and endpoint security tools. Given <code>cargoship</code> operates in cluster-management/infrastructure contexts where such scanning is common, this tradeoff wasn’t taken.</li>
+<li><strong>Trimming <code>zarf</code>/<code>k8s.io/client-go</code> dependencies</strong> - these are the largest remaining contributors to binary size (particularly <code>zarf</code>’s signing stack, which pulls in <code>sigstore</code>/<code>cosign</code>/<code>go-tuf</code>/cloud SDKs), but they’re load-bearing for existing features (image signing, cluster operations) and weren’t touched here. Removing them would require dropping or refactoring those features, not just changing build flags.</li>
 </ul>
 
                     </main>

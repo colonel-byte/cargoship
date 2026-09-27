@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4eae70d7.js";
+            window.path_to_searchindex_js = "searchindex-3b92133f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-dcf7addb.js"></script>
@@ -261,9 +261,9 @@ cargoship create ./distro-defs -o ./build/
 <h2 id="ansible-integration"><a class="header" href="#ansible-integration">Ansible Integration</a></h2>
 <p>Cargoship also ships as an Ansible collection, <code>colonel_byte.cargoship</code>, so the workflows above run as ordinary playbook tasks: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_reset</code>, <code>cargoship_kube_config</code>, and <code>cargoship_engine_config_sync</code>, plus a <code>cluster</code> role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.</p>
 <ul>
-<li><a href="guides/ansible-module.html">Running Cargoship as an Ansible Module</a> — the modules, their parameters, check mode, and what <code>changed</code> means.</li>
-<li><a href="guides/ansible-inv.html">Generating an Inventory from Ansible</a> — the group and host-variable translation, usable with or without the modules.</li>
-<li><a href="guides/ansible-container.html">The Ansible Container Image</a> — <code>ghcr.io/colonel-byte/cargoship-ansible</code>, which carries the binary and the collection together.</li>
+<li><a href="guides/ansible-module.html">Running Cargoship as an Ansible Module</a> - the modules, their parameters, check mode, and what <code>changed</code> means.</li>
+<li><a href="guides/ansible-inv.html">Generating an Inventory from Ansible</a> - the group and host-variable translation, usable with or without the modules.</li>
+<li><a href="guides/ansible-container.html">The Ansible Container Image</a> - <code>ghcr.io/colonel-byte/cargoship-ansible</code>, which carries the binary and the collection together.</li>
 </ul>
 <hr>
 <h2 id="configuration-and-schemas"><a class="header" href="#configuration-and-schemas">Configuration and Schemas</a></h2>
