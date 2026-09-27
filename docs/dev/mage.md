@@ -88,7 +88,7 @@ mage test:ansibleRequirements   # check the Galaxy pins run on the declared ansi
 
 The `Generate` namespace handles code-generation and repository asset updates:
 
-*   `Document` - Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, renders the Ansible collection's module and role reference pages from the action plugins' `DOCUMENTATION` blocks and the roles' `meta/argument_specs.yml`, rebases `README.md` into `docs/index.md` and `.github/SECURITY.md` into `docs/security.md` for the book, and formats the mdBook `docs/SUMMARY.md` structure.
+*   `Document` - Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, renders godoc comments in `pkg/`, `api/`, and `types/` into `docs/golang/` with `gomarkdoc`, renders `docs/schema/` from the same struct reflection `Schema` feeds to `schema/*.json`, renders the Ansible collection's module and role reference pages from the action plugins' `DOCUMENTATION` blocks and the roles' `meta/argument_specs.yml`, rebases `README.md` into `docs/index.md` and `.github/SECURITY.md` into `docs/security.md` for the book, and formats the mdBook `docs/SUMMARY.md` structure.
 *   `Schema` - Generates YAML-compatible JSON schemas in `schema/` from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.
 *   `PullEngineSource` - Fetches raw k3s/RKE2 source at the tags pinned in `thirdparty-src/pins.json` into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). Touches the network.
 *   `LatestTag <distro> <vMAJOR.MINOR>` - Resolves the newest non-RC upstream tag for that minor line, pins it in `thirdparty-src/pins.json`, and re-pulls that version's source if the pin moved. Touches the network.
@@ -122,7 +122,7 @@ The `Generate` namespace handles code-generation and repository asset updates:
     The controller range in `meta/runtime.yml` is the single input, and it is a range rather than a floor (`">=2.16.0,<2.17.0"`) because a floor alone does not say which ansible-core the pins are resolved for. It tracks whatever `dnf install ansible-core` resolves to on the base image in `containers/ansible/Dockerfile`; bumping that image means editing the line and re-running this target. A `requires_ansible` that does not parse as a PEP 440 specifier, or that is unbounded on either side, fails the target rather than being skipped - ansible-core itself swallows that case and downgrades it to a warning in playbook output.
 
 ```sh
-mage generate:document                  # regenerate docs/commands, docs/phases, docs/ansible, docs/index.md, docs/security.md, and docs/SUMMARY.md
+mage generate:document                  # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/index.md, docs/security.md, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
 
 mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
@@ -186,13 +186,15 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `build/cargoship_*`                               | Compiled release binaries                                                                   | `Build.All`                                        |
 | `docs/commands/*`                                 | Auto-generated CLI documentation                                                            | `Generate.Document`                                |
 | `docs/phases/*`                                   | Auto-generated cluster phase descriptors                                                    | `Generate.Document`                                |
+| `docs/golang/*`                                   | Auto-generated Go package reference, from godoc comments in `pkg/`, `api/`, `types/`        | `Generate.Document`                                |
+| `docs/schema/*`                                   | Auto-generated schema field reference, from the same struct reflection as `schema/*.json`   | `Generate.Document`                                |
 | `docs/ansible/module_*.md`                        | Auto-generated Ansible module reference, from the action plugins                            | `Generate.Document`                                |
 | `docs/ansible/role_*.md`                          | Auto-generated Ansible role reference, from each role's `meta/argument_specs.yml`           | `Generate.Document`                                |
 | `docs/index.md`                                   | The root `README.md`, with its links rebased onto `docs/` for the book                      | `Generate.Document`                                |
 | `docs/security.md`                                | `.github/SECURITY.md`, with its links rebased onto `docs/` for the book                     | `Generate.Document`                                |
 | `docs/SUMMARY.md`                                 | Compiled table of contents for mdBook                                                       | `Generate.Document`                                |
 | `schema/*.json`                                   | JSON schemas for YAML validations                                                           | `Generate.Schema`                                  |
-| `pkg/engineconfig/gen/*`                      | Typed engine `config.yaml` structs per distro/version                                       | `Generate.EngineConfig`                            |
+| `pkg/engineconfig/gen/*`                          | Typed engine `config.yaml` structs per distro/version                                       | `Generate.EngineConfig`                            |
 | `thirdparty-src/<distro>/<minor>/*`               | Raw pinned upstream k3s/RKE2 source                                                         | `Generate.PullEngineSource` / `Generate.LatestTag` |
 | `thirdparty-src/pins.json`                        | Pinned upstream tags                                                                        | `Generate.LatestTag` / `Generate.UpdatePins`       |
 | `example/<distro>-<cni>/<minor>/*/distro.yaml`    | Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line | `Generate.Examples`                                |

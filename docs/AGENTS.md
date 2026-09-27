@@ -31,19 +31,21 @@ Adding a row that is wider than the column repads the whole table, which is expe
 
 ## Do not hand-edit the generated pages
 
-Six parts of the `docs/` tree are generated from the code and are overwritten wholesale on the next run. `docs/commands/`, `docs/phases/`, `docs/ansible/module_*.md`, and `docs/ansible/role_*.md` are deleted and recreated, so an edit made there does not survive; `docs/index.md` and `docs/security.md` are rewritten from files that live outside `docs/` because GitHub reads them there; and `docs/SUMMARY.md` is rewritten from the tree that run produced.
+Eight parts of the `docs/` tree are generated from the code and are overwritten wholesale on the next run. `docs/commands/`, `docs/phases/`, `docs/golang/`, `docs/schema/`, `docs/ansible/module_*.md`, and `docs/ansible/role_*.md` are deleted and recreated, so an edit made there does not survive; `docs/index.md` and `docs/security.md` are rewritten from files that live outside `docs/` because GitHub reads them there; and `docs/SUMMARY.md` is rewritten from the tree that run produced.
 
-| Path                       | Generated from                                                                      |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| `docs/commands/`           | The Cobra command tree, rendered by `doc.GenMarkdownTreeCustom`                     |
-| `docs/phases/`             | The cluster phase descriptors named in `phaseDocs()` in `magefiles/gen-docs.go`     |
-| `docs/ansible/module_*.md` | The Ansible module action plugins parsed in `generateModuleDocs()` in `gen-docs.go` |
-| `docs/ansible/role_*.md`   | The role `meta/argument_specs.yml` files, parsed in `generateRoleDocs()`            |
-| `docs/index.md`            | `README.md`, with its relative links rebased from the repository root onto `docs/`  |
-| `docs/security.md`         | `.github/SECURITY.md`, with its relative links rebased the same way                 |
-| `docs/SUMMARY.md`          | The mdBook table of contents, compiled from the rest of the `docs/` tree            |
+| Path                       | Generated from                                                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/commands/`           | The Cobra command tree, rendered by `doc.GenMarkdownTreeCustom`                                                                     |
+| `docs/phases/`             | The cluster phase descriptors named in `phaseDocs()` in `magefiles/gen-docs.go`                                                     |
+| `docs/golang/`             | Godoc comments in `pkg/`, `api/`, and `types/`, rendered by `gomarkdoc`                                                             |
+| `docs/schema/`             | The struct reflection `schemaTargets()` feeds to `Generate.Schema`, rendered by `generateSchemaDocs()` in `gen-schema-docs.go`      |
+| `docs/ansible/module_*.md` | The Ansible module action plugins parsed in `generateModuleDocs()` in `gen-docs.go`                                                 |
+| `docs/ansible/role_*.md`   | The role `meta/argument_specs.yml` files, parsed in `generateRoleDocs()`                                                            |
+| `docs/index.md`            | `README.md`, with its relative links rebased from the repository root onto `docs/`                                                 |
+| `docs/security.md`         | `.github/SECURITY.md`, with its relative links rebased the same way                                                                 |
+| `docs/SUMMARY.md`          | The mdBook table of contents, compiled from the rest of the `docs/` tree                                                            |
 
-To change one of those pages, change what it is generated from - a command's `Short`/`Long`/flag help, a phase's title and explanation, or `phaseDocs()` for which phase pages exist - and then regenerate:
+To change one of those pages, change what it is generated from - a command's `Short`/`Long`/flag help, a phase's title and explanation, `phaseDocs()` for which phase pages exist, a godoc comment in `pkg/`, `api/`, or `types/`, or the struct/tags a `schemaTargets()` entry reflects - and then regenerate:
 
 ```sh
 go run ./magefiles/core generate:document

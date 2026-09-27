@@ -15,7 +15,7 @@ It runs from a management node, not on the hosts it manages: cargoship opens the
 | `config/lang/`                    | User-facing command strings - see [`config/lang/AGENTS.md`](config/lang/AGENTS.md)                                                                                                                 |
 | `test/e2e/`                       | The end-to-end suite: `cluster/` (needs a bootloose cluster) and `noncluster/` (misc/package commands, plus `testdata/` fixtures)                                                                  |
 | `magefiles/`                      | The mage task runner's source - build, test, and generate targets. See [`docs/dev/mage.md`](docs/dev/mage.md)                                                                                      |
-| `docs/`                           | The mdBook source. Six subpaths are generated and must not be hand-edited - see [`docs/AGENTS.md`](docs/AGENTS.md)                                                                                 |
+| `docs/`                           | The mdBook source. Eight subpaths are generated and must not be hand-edited - see [`docs/AGENTS.md`](docs/AGENTS.md)                                                                               |
 | `docs/agent/choice-*.md`          | Records of non-obvious decisions and the tradeoffs behind them - read before reversing one                                                                                                         |
 | `ansible/colonel_byte/cargoship/` | The Ansible collection: action plugins, modules, roles                                                                                                                                             |
 | `example/`                        | Generated example packages - see [`example/AGENTS.md`](example/AGENTS.md)                                                                                                                          |
@@ -43,7 +43,7 @@ Build and test targets run through mage, not a Makefile. `magefiles/` itself doe
 mage build:binary                           # build for this host's OS/arch
 mage test:endToEndNonCluster                # misc/package suites, no cluster needed
 mage test:endToEndCluster                   # install suite, needs Docker + bootloose
-go run ./magefiles/core generate:document   # regenerate docs/commands, docs/phases, docs/ansible, docs/index.md, docs/security.md, docs/SUMMARY.md
+go run ./magefiles/core generate:document   # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/index.md, docs/security.md, docs/SUMMARY.md
 ```
 
 See [`docs/dev/mage.md`](docs/dev/mage.md) for the full namespace reference (`Build`, `Dev`, `Test`, `Generate`) and what each target reads and writes.

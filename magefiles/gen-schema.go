@@ -46,20 +46,44 @@ var schemaDir = "schema"
 // pre-commit runs that target, so the two cannot drift.
 var schemaEmbedDir = filepath.Join("pkg", "schema", "embedded")
 
+// sharedV1Alpha1Dir holds the ZarfFile and BinarySelector types the distro and cluster APIs both
+// embed. generateV1Alpha1Schema walks it in addition to a schema's own structPath, so their doc
+// comments reach the schema even though neither of those two directories is an ancestor of it.
+var sharedV1Alpha1Dir = filepath.Join("api", "zarf.dev", "v1alpha1")
+
 type schema struct {
 	schemaStruct any
 	schemaPath   string
 	structPath   []string
 	keyNamer     func(string) string
+
+	// docTitle and docFile name this schema's page under docs/schema/, rendered by
+	// generateSchemaDocs. They are independent of schemaPath, which is fixed by the published
+	// raw.githubusercontent.com URLs schemaDir cannot move.
+	docTitle string
+	docFile  string
 }
 
-// Schema creates the jsonschema files for a number of the yaml files
-func (Generate) Schema() error {
-	var sch = []schema{
+// namer is the KeyNamer generateV1Alpha1Schema reflects the struct with: the schema's own, or
+// strcase.LowerCamelCase when it declares none.
+func (s schema) namer() func(string) string {
+	if s.keyNamer != nil {
+		return s.keyNamer
+	}
+	return strcase.LowerCamelCase
+}
+
+// schemaTargets lists every struct this repository publishes a JSON schema for, shared by
+// Generate.Schema, which writes schema/*.json, and generateSchemaDocs, which renders docs/schema/
+// from the same reflection.
+func schemaTargets() []schema {
+	return []schema{
 		{
 			schemaStruct: &distro.ZarfDistro{},
 			schemaPath:   "zarf-v1alpha1-distro-package-schema.json",
 			structPath:   []string{"api", "zarf.dev", "v1alpha1", "distro"},
+			docTitle:     "Distro package",
+			docFile:      "distro.md",
 		},
 		{
 			schemaStruct: &cluster.ZarfCluster{},
@@ -75,6 +99,8 @@ func (Generate) Schema() error {
 					return strcase.LowerCamelCase(s)
 				}
 			},
+			docTitle: "Cluster configuration",
+			docFile:  "cluster.md",
 		},
 		{
 			schemaStruct: &types.DistroConfig{},
@@ -83,19 +109,16 @@ func (Generate) Schema() error {
 			keyNamer: func(s string) string {
 				return s
 			},
+			docTitle: "Cargoship configuration file",
+			docFile:  "config.md",
 		},
 	}
+}
 
-	for _, s := range sch {
-		var schema []byte
-		var err error
-
-		if s.keyNamer != nil {
-			schema, err = generateV1Alpha1Schema(s.schemaStruct, s.structPath, s.keyNamer)
-		} else {
-			schema, err = generateV1Alpha1Schema(s.schemaStruct, s.structPath, strcase.LowerCamelCase)
-		}
-
+// Schema creates the jsonschema files for a number of the yaml files
+func (Generate) Schema() error {
+	for _, s := range schemaTargets() {
+		schema, err := generateV1Alpha1Schema(s.schemaStruct, s.structPath, s.namer())
 		if err != nil {
 			return fmt.Errorf("unable to generate %s: %w", s.schemaPath, err)
 		}
@@ -151,6 +174,18 @@ func generateV1Alpha1Schema(v any, path []string, key func(string) string) ([]by
 
 	if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", typePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
+	}
+
+	// AddGoComments only walks typePath itself, so a struct's own comments never reach fields whose
+	// type -- ZarfFile, BinarySelector -- is defined one directory up, in the shared v1alpha1
+	// package both distro and cluster embed. Without a comment, invopop/jsonschema collapses an
+	// "any" field's schema to the bare boolean `true`, which cannot carry a description at all (see
+	// PermMode in api/zarf.dev/v1alpha1/file.go). Walking the shared package too fixes that for
+	// every schema, not just the ones that happen to reference it.
+	if typePath != sharedV1Alpha1Dir {
+		if err := reflector.AddGoComments("github.com/colonel-byte/cargoship", sharedV1Alpha1Dir); err != nil {
+			return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
+		}
 	}
 
 	re := regexp.MustCompile(`\.([A-Za-z0-9]+)$`)

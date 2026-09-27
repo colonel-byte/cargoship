@@ -90,7 +90,6 @@ func NodeLabelsMapToList(m map[string]string) []string {
 
 // Common for all the distro's
 type Common struct {
-	//keep-sorted start
 	// Binary name of the engine binary
 	Binary string
 	// BinaryDir where the engine binary is stored in
@@ -107,7 +106,6 @@ type Common struct {
 	ServiceWorker string
 	// Token the token path
 	Token string
-	//keep-sorted end
 }
 
 // BinaryPath returns the full path to the engine binary
