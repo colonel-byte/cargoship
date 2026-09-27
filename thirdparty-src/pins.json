@@ -35,6 +35,19 @@
         "v1.33.13+rke2r1",
         "v1.32.13+rke2r1"
       ]
+    },
+    {
+      "name": "upstream",
+      "repo": "https://github.com/kubernetes/kubernetes",
+      "files": [],
+      "tags": [
+        "v1.37.0",
+        "v1.36.4",
+        "v1.35.8",
+        "v1.34.11",
+        "v1.33.13",
+        "v1.32.13"
+      ]
     }
   ]
 }

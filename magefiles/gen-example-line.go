@@ -30,6 +30,7 @@ import (
 //
 //	mage generate:exampleLine rke2 v1.36
 //	mage generate:exampleLine k3s 1.36
+//	mage generate:exampleLine upstream v1.37
 func (Generate) ExampleLine(distro, prefix string) error {
 	// Accept "1.36" as well as "v1.36" -- upstream tags carry the v, but the minor line is
 	// as often written without it.
@@ -37,17 +38,7 @@ func (Generate) ExampleLine(distro, prefix string) error {
 		prefix = "v" + prefix
 	}
 
-	spec, err := exampleDistroByName(distro)
-	if err != nil {
-		return err
-	}
-
 	pins, err := readEnginePins()
-	if err != nil {
-		return err
-	}
-
-	d, err := pins.distro(spec.name)
 	if err != nil {
 		return err
 	}
@@ -63,6 +54,26 @@ func (Generate) ExampleLine(distro, prefix string) error {
 			fmt.Println("warning: " + err.Error())
 		}
 	}()
+
+	// Upstream (kubeadm) does not fit exampleDistroSpec -- see gen-examples-upstream.go -- so
+	// it gets its own backfill rather than one more exampleDistros entry.
+	if distro == "upstream" {
+		d, err := pins.distro("upstream")
+		if err != nil {
+			return err
+		}
+		return renderUpstreamLine(d.Repo, prefix, sums)
+	}
+
+	spec, err := exampleDistroByName(distro)
+	if err != nil {
+		return err
+	}
+
+	d, err := pins.distro(spec.name)
+	if err != nil {
+		return err
+	}
 
 	tmpl, err := parseExampleTemplate(spec, sums)
 	if err != nil {
