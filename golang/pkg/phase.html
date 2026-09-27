@@ -1,0 +1,2099 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>phase</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../../docs/css/print-69d0807c.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../searchindex-2ec98814.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc-ea7344ca.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/golang/pkg/phase.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="phase"><a class="header" href="#phase">phase</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/phase"
+</code></pre>
+<p>Package phase is all the various phases used for bootstrapping a cluster. The phase files are named in a rough order used during an install; - 0x are for preconnection resources, along with ssh-ing into the node - 1x are used to gather information about the nodes in the cluster - 2x are for modifying host services, like firewalls, host files, and enabling kernel level modules - 5x are for staging files for the distro engine, e.i. rpm’s, apt’s, or binary files - 6x are for starting the engine or for upgrading an existing install - 8x are for resetting the engine from the nodes - 9x are last minute things and finally disconnecting from a node - ext are files that are currently not used but may be incorporated later</p>
+<h2 id="index"><a class="header" href="#index">Index</a></h2>
+<ul>
+<li><a href="#constants">Constants</a></li>
+<li><a href="#variables">Variables</a></li>
+<li><a href="#DryRunNote">func DryRunNote(p Phase) string</a></li>
+<li><a href="#Titles">func Titles(results []PhaseResult) []string</a></li>
+<li><a href="#APTUploadFiles">type APTUploadFiles</a>
+<ul>
+<li><a href="#APTUploadFiles.Explanation">func (p *APTUploadFiles) Explanation() string</a></li>
+<li><a href="#APTUploadFiles.Prepare">func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#APTUploadFiles.Run">func (p *APTUploadFiles) Run(ctx context.Context) (err error)</a></li>
+<li><a href="#APTUploadFiles.Title">func (p *APTUploadFiles) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#BINUploadFiles">type BINUploadFiles</a>
+<ul>
+<li><a href="#BINUploadFiles.Explanation">func (p *BINUploadFiles) Explanation() string</a></li>
+<li><a href="#BINUploadFiles.Prepare">func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#BINUploadFiles.Run">func (p *BINUploadFiles) Run(ctx context.Context) (err error)</a></li>
+<li><a href="#BINUploadFiles.Title">func (p *BINUploadFiles) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#ConfigureEngine">type ConfigureEngine</a>
+<ul>
+<li><a href="#ConfigureEngine.Explanation">func (p *ConfigureEngine) Explanation() string</a></li>
+<li><a href="#ConfigureEngine.Prepare">func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ConfigureEngine.Run">func (p *ConfigureEngine) Run(ctx context.Context) error</a></li>
+<li><a href="#ConfigureEngine.Title">func (p *ConfigureEngine) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#ConfigureFirewall">type ConfigureFirewall</a>
+<ul>
+<li><a href="#ConfigureFirewall.Explanation">func (p *ConfigureFirewall) Explanation() string</a></li>
+<li><a href="#ConfigureFirewall.Prepare">func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#ConfigureFirewall.Run">func (p *ConfigureFirewall) Run(ctx context.Context) error</a></li>
+<li><a href="#ConfigureFirewall.ShouldRun">func (p *ConfigureFirewall) ShouldRun() bool</a></li>
+<li><a href="#ConfigureFirewall.Title">func (p *ConfigureFirewall) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#Connect">type Connect</a>
+<ul>
+<li><a href="#Connect.Explanation">func (p *Connect) Explanation() string</a></li>
+<li><a href="#Connect.ReadOnly">func (p *Connect) ReadOnly() string</a></li>
+<li><a href="#Connect.Run">func (p *Connect) Run(ctx context.Context) error</a></li>
+<li><a href="#Connect.Title">func (p *Connect) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#DaemonReload">type DaemonReload</a>
+<ul>
+<li><a href="#DaemonReload.Explanation">func (p *DaemonReload) Explanation() string</a></li>
+<li><a href="#DaemonReload.Run">func (p *DaemonReload) Run(ctx context.Context) error</a></li>
+<li><a href="#DaemonReload.ShouldRun">func (p *DaemonReload) ShouldRun() bool</a></li>
+<li><a href="#DaemonReload.Title">func (p *DaemonReload) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#DeleteCommon">type DeleteCommon</a>
+<ul>
+<li><a href="#DeleteCommon.Prepare">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+</ul>
+</li>
+<li><a href="#DeleteControllers">type DeleteControllers</a>
+<ul>
+<li><a href="#DeleteControllers.Explanation">func (p *DeleteControllers) Explanation() string</a></li>
+<li><a href="#DeleteControllers.Prepare">func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#DeleteControllers.Run">func (p *DeleteControllers) Run(ctx context.Context) error</a></li>
+<li><a href="#DeleteControllers.ShouldRun">func (p *DeleteControllers) ShouldRun() bool</a></li>
+<li><a href="#DeleteControllers.Title">func (p *DeleteControllers) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#DeleteWorkers">type DeleteWorkers</a>
+<ul>
+<li><a href="#DeleteWorkers.Explanation">func (p *DeleteWorkers) Explanation() string</a></li>
+<li><a href="#DeleteWorkers.Prepare">func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#DeleteWorkers.Run">func (p *DeleteWorkers) Run(ctx context.Context) error</a></li>
+<li><a href="#DeleteWorkers.ShouldRun">func (p *DeleteWorkers) ShouldRun() bool</a></li>
+<li><a href="#DeleteWorkers.Title">func (p *DeleteWorkers) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#DetectOS">type DetectOS</a>
+<ul>
+<li><a href="#DetectOS.Explanation">func (p *DetectOS) Explanation() string</a></li>
+<li><a href="#DetectOS.ReadOnly">func (p *DetectOS) ReadOnly() string</a></li>
+<li><a href="#DetectOS.Run">func (p *DetectOS) Run(ctx context.Context) error</a></li>
+<li><a href="#DetectOS.Title">func (p *DetectOS) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#DetectRemovedHosts">type DetectRemovedHosts</a>
+<ul>
+<li><a href="#DetectRemovedHosts.Explanation">func (p *DetectRemovedHosts) Explanation() string</a></li>
+<li><a href="#DetectRemovedHosts.Prepare">func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#DetectRemovedHosts.ReadOnly">func (p *DetectRemovedHosts) ReadOnly() string</a></li>
+<li><a href="#DetectRemovedHosts.Run">func (p *DetectRemovedHosts) Run(ctx context.Context) error</a></li>
+<li><a href="#DetectRemovedHosts.ShouldRun">func (p *DetectRemovedHosts) ShouldRun() bool</a></li>
+<li><a href="#DetectRemovedHosts.Title">func (p *DetectRemovedHosts) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#Disconnect">type Disconnect</a>
+<ul>
+<li><a href="#Disconnect.DryRun">func (p *Disconnect) DryRun() error</a></li>
+<li><a href="#Disconnect.Explanation">func (p *Disconnect) Explanation() string</a></li>
+<li><a href="#Disconnect.Run">func (p *Disconnect) Run(ctx context.Context) error</a></li>
+<li><a href="#Disconnect.Title">func (p *Disconnect) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#DryRunBehavior">type DryRunBehavior</a>
+<ul>
+<li><a href="#ClassifyDryRun">func ClassifyDryRun(p Phase) DryRunBehavior</a></li>
+<li><a href="#DryRunBehavior.String">func (b DryRunBehavior) String() string</a></li>
+</ul>
+</li>
+<li><a href="#EngineConfigSyncController">type EngineConfigSyncController</a>
+<ul>
+<li><a href="#EngineConfigSyncController.Explanation">func (p *EngineConfigSyncController) Explanation() string</a></li>
+<li><a href="#EngineConfigSyncController.Prepare">func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#EngineConfigSyncController.Run">func (p *EngineConfigSyncController) Run(ctx context.Context) error</a></li>
+<li><a href="#EngineConfigSyncController.Title">func (p *EngineConfigSyncController) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#EngineConfigSyncHosts">type EngineConfigSyncHosts</a>
+<ul>
+<li><a href="#EngineConfigSyncHosts.Changed">func (p *EngineConfigSyncHosts) Changed() bool</a></li>
+<li><a href="#EngineConfigSyncHosts.ShouldRun">func (p *EngineConfigSyncHosts) ShouldRun() bool</a></li>
+</ul>
+</li>
+<li><a href="#EngineConfigSyncWorker">type EngineConfigSyncWorker</a>
+<ul>
+<li><a href="#EngineConfigSyncWorker.Explanation">func (p *EngineConfigSyncWorker) Explanation() string</a></li>
+<li><a href="#EngineConfigSyncWorker.Prepare">func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#EngineConfigSyncWorker.Run">func (p *EngineConfigSyncWorker) Run(ctx context.Context) error</a></li>
+<li><a href="#EngineConfigSyncWorker.Title">func (p *EngineConfigSyncWorker) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#GatherFacts">type GatherFacts</a>
+<ul>
+<li><a href="#GatherFacts.Explanation">func (p *GatherFacts) Explanation() string</a></li>
+<li><a href="#GatherFacts.ReadOnly">func (p *GatherFacts) ReadOnly() string</a></li>
+<li><a href="#GatherFacts.Run">func (p *GatherFacts) Run(ctx context.Context) error</a></li>
+<li><a href="#GatherFacts.Title">func (p *GatherFacts) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#GatherFactsDistro">type GatherFactsDistro</a>
+<ul>
+<li><a href="#GatherFactsDistro.Explanation">func (p *GatherFactsDistro) Explanation() string</a></li>
+<li><a href="#GatherFactsDistro.Prepare">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#GatherFactsDistro.ReadOnly">func (p *GatherFactsDistro) ReadOnly() string</a></li>
+<li><a href="#GatherFactsDistro.Run">func (p *GatherFactsDistro) Run(ctx context.Context) (err error)</a></li>
+<li><a href="#GatherFactsDistro.Title">func (p *GatherFactsDistro) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#GenericPhase">type GenericPhase</a>
+<ul>
+<li><a href="#GenericPhase.GetConfig">func (p *GenericPhase) GetConfig() *cluster.ZarfCluster</a></li>
+<li><a href="#GenericPhase.GetDistro">func (p *GenericPhase) GetDistro() *distro.ZarfDistro</a></li>
+<li><a href="#GenericPhase.Prepare">func (p *GenericPhase) Prepare(c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#GenericPhase.SetManager">func (p *GenericPhase) SetManager(m *Manager)</a></li>
+<li><a href="#GenericPhase.VersionGreater">func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool</a></li>
+<li><a href="#GenericPhase.VersionLess">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool</a></li>
+<li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
+</ul>
+</li>
+<li><a href="#InitializeControllers">type InitializeControllers</a>
+<ul>
+<li><a href="#InitializeControllers.Explanation">func (p *InitializeControllers) Explanation() string</a></li>
+<li><a href="#InitializeControllers.Prepare">func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeControllers.Run">func (p *InitializeControllers) Run(ctx context.Context) error</a></li>
+<li><a href="#InitializeControllers.ShouldRun">func (p *InitializeControllers) ShouldRun() bool</a></li>
+<li><a href="#InitializeControllers.Title">func (p *InitializeControllers) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#InitializeWorkers">type InitializeWorkers</a>
+<ul>
+<li><a href="#InitializeWorkers.Explanation">func (p *InitializeWorkers) Explanation() string</a></li>
+<li><a href="#InitializeWorkers.Prepare">func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeWorkers.Run">func (p *InitializeWorkers) Run(ctx context.Context) error</a></li>
+<li><a href="#InitializeWorkers.ShouldRun">func (p *InitializeWorkers) ShouldRun() bool</a></li>
+<li><a href="#InitializeWorkers.Title">func (p *InitializeWorkers) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#InstallFapolicy">type InstallFapolicy</a>
+<ul>
+<li><a href="#InstallFapolicy.Prepare">func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InstallFapolicy.Run">func (p *InstallFapolicy) Run(ctx context.Context) error</a></li>
+<li><a href="#InstallFapolicy.ShouldRun">func (p *InstallFapolicy) ShouldRun() bool</a></li>
+<li><a href="#InstallFapolicy.Title">func (p *InstallFapolicy) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#KubeConfig">type KubeConfig</a>
+<ul>
+<li><a href="#KubeConfig.Bytes">func (p *KubeConfig) Bytes() ([]byte, error)</a></li>
+<li><a href="#KubeConfig.Config">func (p *KubeConfig) Config() *clientcmdapi.Config</a></li>
+<li><a href="#KubeConfig.Explanation">func (p *KubeConfig) Explanation() string</a></li>
+<li><a href="#KubeConfig.Prepare">func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#KubeConfig.Run">func (p *KubeConfig) Run(_ context.Context) error</a></li>
+<li><a href="#KubeConfig.ShouldRun">func (p *KubeConfig) ShouldRun() bool</a></li>
+<li><a href="#KubeConfig.Title">func (p *KubeConfig) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#LabelNodes">type LabelNodes</a>
+<ul>
+<li><a href="#LabelNodes.Explanation">func (p *LabelNodes) Explanation() string</a></li>
+<li><a href="#LabelNodes.Prepare">func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#LabelNodes.Run">func (p *LabelNodes) Run(ctx context.Context) error</a></li>
+<li><a href="#LabelNodes.ShouldRun">func (p *LabelNodes) ShouldRun() bool</a></li>
+<li><a href="#LabelNodes.Title">func (p *LabelNodes) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#Lock">type Lock</a>
+<ul>
+<li><a href="#Lock.Cancel">func (p *Lock) Cancel(_ context.Context)</a></li>
+<li><a href="#Lock.CleanUp">func (p *Lock) CleanUp()</a></li>
+<li><a href="#Lock.Explanation">func (p *Lock) Explanation() string</a></li>
+<li><a href="#Lock.Prepare">func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#Lock.Run">func (p *Lock) Run(ctx context.Context) error</a></li>
+<li><a href="#Lock.Title">func (p *Lock) Title() string</a></li>
+<li><a href="#Lock.UnlockPhase">func (p *Lock) UnlockPhase() Phase</a></li>
+</ul>
+</li>
+<li><a href="#Manager">type Manager</a>
+<ul>
+<li><a href="#NewManager">func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error)</a></li>
+<li><a href="#Manager.AddPhase">func (m *Manager) AddPhase(p …Phase)</a></li>
+<li><a href="#Manager.GetDistroOSFiles">func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles</a></li>
+<li><a href="#Manager.RetryTimeout">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
+<li><a href="#Manager.Run">func (m *Manager) Run(ctx context.Context) error</a></li>
+<li><a href="#Manager.SetPhases">func (m *Manager) SetPhases(p Phases)</a></li>
+<li><a href="#Manager.SetTimout">func (m *Manager) SetTimout(tm time.Duration)</a></li>
+<li><a href="#Manager.Wet">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs …errorfunc) error</a></li>
+</ul>
+</li>
+<li><a href="#ManagerDistroConfig">type ManagerDistroConfig</a></li>
+<li><a href="#ManifestEntry">type ManifestEntry</a>
+<ul>
+<li><a href="#ParseManifest">func ParseManifest(content string) []ManifestEntry</a></li>
+</ul>
+</li>
+<li><a href="#ModifyHosts">type ModifyHosts</a>
+<ul>
+<li><a href="#ModifyHosts.Explanation">func (p *ModifyHosts) Explanation() string</a></li>
+<li><a href="#ModifyHosts.Prepare">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#ModifyHosts.Run">func (p *ModifyHosts) Run(ctx context.Context) error</a></li>
+<li><a href="#ModifyHosts.ShouldRun">func (p *ModifyHosts) ShouldRun() bool</a></li>
+<li><a href="#ModifyHosts.Title">func (p *ModifyHosts) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#Phase">type Phase</a></li>
+<li><a href="#PhaseResult">type PhaseResult</a></li>
+<li><a href="#Phases">type Phases</a>
+<ul>
+<li><a href="#Phases.Index">func (p Phases) Index(title string) int</a></li>
+<li><a href="#Phases.InsertAfter">func (p *Phases) InsertAfter(title string, phase Phase)</a></li>
+<li><a href="#Phases.InsertBefore">func (p *Phases) InsertBefore(title string, phase Phase)</a></li>
+<li><a href="#Phases.Replace">func (p *Phases) Replace(title string, phase Phase)</a></li>
+</ul>
+</li>
+<li><a href="#PrepareFapolicy">type PrepareFapolicy</a>
+<ul>
+<li><a href="#PrepareFapolicy.Explanation">func (p *PrepareFapolicy) Explanation() string</a></li>
+<li><a href="#PrepareFapolicy.Prepare">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareFapolicy.Run">func (p *PrepareFapolicy) Run(ctx context.Context) error</a></li>
+<li><a href="#PrepareFapolicy.ShouldRun">func (p *PrepareFapolicy) ShouldRun() bool</a></li>
+<li><a href="#PrepareFapolicy.Title">func (p *PrepareFapolicy) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#PrepareHosts">type PrepareHosts</a>
+<ul>
+<li><a href="#PrepareHosts.Explanation">func (p *PrepareHosts) Explanation() string</a></li>
+<li><a href="#PrepareHosts.Prepare">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareHosts.Run">func (p *PrepareHosts) Run(ctx context.Context) error</a></li>
+<li><a href="#PrepareHosts.Title">func (p *PrepareHosts) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#PrepareKernelModules">type PrepareKernelModules</a>
+<ul>
+<li><a href="#PrepareKernelModules.Explanation">func (p *PrepareKernelModules) Explanation() string</a></li>
+<li><a href="#PrepareKernelModules.Prepare">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareKernelModules.Run">func (p *PrepareKernelModules) Run(ctx context.Context) error</a></li>
+<li><a href="#PrepareKernelModules.ShouldRun">func (p *PrepareKernelModules) ShouldRun() bool</a></li>
+<li><a href="#PrepareKernelModules.Title">func (p *PrepareKernelModules) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#PrepareSelinux">type PrepareSelinux</a>
+<ul>
+<li><a href="#PrepareSelinux.Explanation">func (p *PrepareSelinux) Explanation() string</a></li>
+<li><a href="#PrepareSelinux.Prepare">func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#PrepareSelinux.Run">func (p *PrepareSelinux) Run(ctx context.Context) error</a></li>
+<li><a href="#PrepareSelinux.ShouldRun">func (p *PrepareSelinux) ShouldRun() bool</a></li>
+<li><a href="#PrepareSelinux.Title">func (p *PrepareSelinux) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#RPMUploadFiles">type RPMUploadFiles</a>
+<ul>
+<li><a href="#RPMUploadFiles.Explanation">func (p *RPMUploadFiles) Explanation() string</a></li>
+<li><a href="#RPMUploadFiles.Prepare">func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#RPMUploadFiles.Run">func (p *RPMUploadFiles) Run(ctx context.Context) (err error)</a></li>
+<li><a href="#RPMUploadFiles.Title">func (p *RPMUploadFiles) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#ResultSink">type ResultSink</a>
+<ul>
+<li><a href="#WithResultSink">func WithResultSink(ctx context.Context) (context.Context, *ResultSink)</a></li>
+<li><a href="#ResultSink.Observed">func (s *ResultSink) Observed() bool</a></li>
+<li><a href="#ResultSink.Result">func (s *ResultSink) Result() RunResult</a></li>
+</ul>
+</li>
+<li><a href="#RunResult">type RunResult</a>
+<ul>
+<li><a href="#RunResult.Changed">func (r RunResult) Changed() bool</a></li>
+<li><a href="#RunResult.Complete">func (r RunResult) Complete() bool</a></li>
+<li><a href="#RunResult.Outstanding">func (r RunResult) Outstanding() bool</a></li>
+<li><a href="#RunResult.Undeclared">func (r RunResult) Undeclared() []string</a></li>
+</ul>
+</li>
+<li><a href="#UninstallEngine">type UninstallEngine</a>
+<ul>
+<li><a href="#UninstallEngine.Explanation">func (p *UninstallEngine) Explanation() string</a></li>
+<li><a href="#UninstallEngine.Prepare">func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#UninstallEngine.Run">func (p *UninstallEngine) Run(ctx context.Context) error</a></li>
+<li><a href="#UninstallEngine.Title">func (p *UninstallEngine) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#Unlock">type Unlock</a>
+<ul>
+<li><a href="#Unlock.Explanation">func (p *Unlock) Explanation() string</a></li>
+<li><a href="#Unlock.Prepare">func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#Unlock.Run">func (p *Unlock) Run(ctx context.Context) error</a></li>
+<li><a href="#Unlock.Title">func (p *Unlock) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#UpgradeController">type UpgradeController</a>
+<ul>
+<li><a href="#UpgradeController.Explanation">func (p *UpgradeController) Explanation() string</a></li>
+<li><a href="#UpgradeController.Prepare">func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#UpgradeController.Run">func (p *UpgradeController) Run(ctx context.Context) error</a></li>
+<li><a href="#UpgradeController.Title">func (p *UpgradeController) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#UpgradeHosts">type UpgradeHosts</a>
+<ul>
+<li><a href="#UpgradeHosts.ShouldRun">func (p *UpgradeHosts) ShouldRun() bool</a></li>
+</ul>
+</li>
+<li><a href="#UpgradeWorkers">type UpgradeWorkers</a>
+<ul>
+<li><a href="#UpgradeWorkers.Explanation">func (p *UpgradeWorkers) Explanation() string</a></li>
+<li><a href="#UpgradeWorkers.Prepare">func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#UpgradeWorkers.Run">func (p *UpgradeWorkers) Run(ctx context.Context) error</a></li>
+<li><a href="#UpgradeWorkers.Title">func (p *UpgradeWorkers) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#UploadFiles">type UploadFiles</a>
+<ul>
+<li><a href="#UploadFiles.Explanation">func (p *UploadFiles) Explanation() string</a></li>
+<li><a href="#UploadFiles.Prepare">func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#UploadFiles.Run">func (p *UploadFiles) Run(ctx context.Context) error</a></li>
+<li><a href="#UploadFiles.ShouldRun">func (p *UploadFiles) ShouldRun() bool</a></li>
+<li><a href="#UploadFiles.Title">func (p *UploadFiles) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#UploadFilesCommon">type UploadFilesCommon</a>
+<ul>
+<li><a href="#UploadFilesCommon.CleanUp">func (p *UploadFilesCommon) CleanUp(ctx context.Context)</a></li>
+<li><a href="#UploadFilesCommon.Prepare">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#UploadFilesCommon.Run">func (p *UploadFilesCommon) Run(ctx context.Context) (err error)</a></li>
+<li><a href="#UploadFilesCommon.ShouldRun">func (p *UploadFilesCommon) ShouldRun() bool</a></li>
+</ul>
+</li>
+<li><a href="#ValidateHosts">type ValidateHosts</a>
+<ul>
+<li><a href="#ValidateHosts.Explanation">func (p *ValidateHosts) Explanation() string</a></li>
+<li><a href="#ValidateHosts.ReadOnly">func (p *ValidateHosts) ReadOnly() string</a></li>
+<li><a href="#ValidateHosts.Run">func (p *ValidateHosts) Run(ctx context.Context) error</a></li>
+<li><a href="#ValidateHosts.Title">func (p *ValidateHosts) Title() string</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
+<p><a name="FIREWALLD"></a></p>
+<pre><code class="language-go">const (
+    // FIREWALLD name of the service for firewalld
+    FIREWALLD = firewall.FirewalldService
+    // UFW name of the service for ufw
+    UFW = firewall.UFWService
+)
+</code></pre>
+<p><a name="ContainerSELinux"></a></p>
+<pre><code class="language-go">const (
+    // ContainerSELinux package name
+    ContainerSELinux = "container-selinux"
+)
+</code></pre>
+<p><a name="FAPOLICYD"></a></p>
+<pre><code class="language-go">const (
+    // FAPOLICYD name of the service for fapolicyd
+    FAPOLICYD = "fapolicyd"
+)
+</code></pre>
+<p><a name="FAPolicydRuleFile"></a></p>
+<pre><code class="language-go">const (
+    // FAPolicydRuleFile path on the host
+    FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
+)
+</code></pre>
+<p><a name="UnknownVersion"></a></p>
+<pre><code class="language-go">const (
+    // UnknownVersion for when the version is not set
+    UnknownVersion = "v0.0.0"
+)
+</code></pre>
+<h2 id="variables"><a class="header" href="#variables">Variables</a></h2>
+<p><a name="ErrNoControllers"></a>ErrNoControllers an error for when no controllers are running</p>
+<pre><code class="language-go">var ErrNoControllers = errors.New("no controllers are running")
+</code></pre>
+<p><a name="ErrNoKubeConfig"></a>ErrNoKubeConfig is returned when the config is asked for before the phase has run</p>
+<pre><code class="language-go">var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
+</code></pre>
+<p><a name="ErrUnmanagedNodes"></a>ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for. Apply removes nothing, so continuing would report success over a machine that is still running the engine and still joined.</p>
+<pre><code class="language-go">var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
+</code></pre>
+<p><a name="Force"></a>Force is used by various phases to attempt a forced installation</p>
+<pre><code class="language-go">var Force bool
+</code></pre>
+<p><a name="Interval"></a></p>
+<pre><code class="language-go">var (
+    // Interval is the time to wait between retry attempts
+    Interval = 10 * time.Second
+)
+</code></pre>
+<p><a name="NoWait"></a>NoWait is used by various phases to decide if node ready state should be waited for or not</p>
+<pre><code class="language-go">var NoWait bool
+</code></pre>
+<p><a name="DryRunNote"></a></p>
+<h2 id="func-dryrunnote"><a class="header" href="#func-dryrunnote">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L174">DryRunNote</a></a></h2>
+<pre><code class="language-go">func DryRunNote(p Phase) string
+</code></pre>
+<p>DryRunNote returns the phase’s own account of why a dry run runs it, or “” for a phase that gives none. Only read-only phases carry one: they are the phases a dry run runs against live hosts, so they are the ones a reader is entitled to an argument about.</p>
+<p><a name="Titles"></a></p>
+<h2 id="func-titles"><a class="header" href="#func-titles">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L273">Titles</a></a></h2>
+<pre><code class="language-go">func Titles(results []PhaseResult) []string
+</code></pre>
+<p>Titles names the phases in a slice, for a caller that reports a list of names rather than the detail behind them.</p>
+<p><a name="APTUploadFiles"></a></p>
+<h2 id="type-aptuploadfiles"><a class="header" href="#type-aptuploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L28-L30">APTUploadFiles</a></a></h2>
+<p>APTUploadFiles implements a phase which upload files to hosts</p>
+<pre><code class="language-go">type APTUploadFiles struct {
+    UploadFilesCommon
+}
+</code></pre>
+<p><a name="APTUploadFiles.Explanation"></a></p>
+<h3 id="func-aptuploadfiles-explanation"><a class="header" href="#func-aptuploadfiles-explanation">func (*APTUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L38">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *APTUploadFiles) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="APTUploadFiles.Prepare"></a></p>
+<h3 id="func-aptuploadfiles-prepare"><a class="header" href="#func-aptuploadfiles-prepare">func (*APTUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L43">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="APTUploadFiles.Run"></a></p>
+<h3 id="func-aptuploadfiles-run"><a class="header" href="#func-aptuploadfiles-run">func (*APTUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L58">Run</a></a></h3>
+<pre><code class="language-go">func (p *APTUploadFiles) Run(ctx context.Context) (err error)
+</code></pre>
+<p>Run the phase</p>
+<p><a name="APTUploadFiles.Title"></a></p>
+<h3 id="func-aptuploadfiles-title"><a class="header" href="#func-aptuploadfiles-title">func (*APTUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L33">Title</a></a></h3>
+<pre><code class="language-go">func (p *APTUploadFiles) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="BINUploadFiles"></a></p>
+<h2 id="type-binuploadfiles"><a class="header" href="#type-binuploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/59_bin_install.go#L35-L38">BINUploadFiles</a></a></h2>
+<p>BINUploadFiles implements a phase which upload files to hosts</p>
+<pre><code class="language-go">type BINUploadFiles struct {
+    UploadFilesCommon
+    Distro distrocfg.Distro
+}
+</code></pre>
+<p><a name="BINUploadFiles.Explanation"></a></p>
+<h3 id="func-binuploadfiles-explanation"><a class="header" href="#func-binuploadfiles-explanation">func (*BINUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/59_bin_install.go#L46">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *BINUploadFiles) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="BINUploadFiles.Prepare"></a></p>
+<h3 id="func-binuploadfiles-prepare"><a class="header" href="#func-binuploadfiles-prepare">func (*BINUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/59_bin_install.go#L51">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *BINUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="BINUploadFiles.Run"></a></p>
+<h3 id="func-binuploadfiles-run"><a class="header" href="#func-binuploadfiles-run">func (*BINUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/59_bin_install.go#L63">Run</a></a></h3>
+<pre><code class="language-go">func (p *BINUploadFiles) Run(ctx context.Context) (err error)
+</code></pre>
+<p>Run the phase</p>
+<p><a name="BINUploadFiles.Title"></a></p>
+<h3 id="func-binuploadfiles-title"><a class="header" href="#func-binuploadfiles-title">func (*BINUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/59_bin_install.go#L41">Title</a></a></h3>
+<pre><code class="language-go">func (p *BINUploadFiles) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="ConfigureEngine"></a></p>
+<h2 id="type-configureengine"><a class="header" href="#type-configureengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/60_configure_engine.go#L33-L42">ConfigureEngine</a></a></h2>
+<p>ConfigureEngine writes the engine configuration to host engine config dir</p>
+<pre><code class="language-go">type ConfigureEngine struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // Keyring decrypts encrypted registry credentials, in either supported format. If it holds
+    // nothing that reads a given value, Prepare errors.
+    Keyring *clustercfg.Keyring
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ConfigureEngine.Explanation"></a></p>
+<h3 id="func-configureengine-explanation"><a class="header" href="#func-configureengine-explanation">func (*ConfigureEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/60_configure_engine.go#L114">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureEngine) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ConfigureEngine.Prepare"></a></p>
+<h3 id="func-configureengine-prepare"><a class="header" href="#func-configureengine-prepare">func (*ConfigureEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/60_configure_engine.go#L45">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureEngine) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ConfigureEngine.Run"></a></p>
+<h3 id="func-configureengine-run"><a class="header" href="#func-configureengine-run">func (*ConfigureEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/60_configure_engine.go#L119">Run</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureEngine) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase title</p>
+<p><a name="ConfigureEngine.Title"></a></p>
+<h3 id="func-configureengine-title"><a class="header" href="#func-configureengine-title">func (*ConfigureEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/60_configure_engine.go#L109">Title</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureEngine) Title() string
+</code></pre>
+<p>Title returns the phase title</p>
+<p><a name="ConfigureFirewall"></a></p>
+<h2 id="type-configurefirewall"><a class="header" href="#type-configurefirewall">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L38-L45">ConfigureFirewall</a></a></h2>
+<p>ConfigureFirewall state</p>
+<pre><code class="language-go">type ConfigureFirewall struct {
+    GenericPhase
+    Distro  distrocfg.Distro
+    Enabled bool
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ConfigureFirewall.Explanation"></a></p>
+<h3 id="func-configurefirewall-explanation"><a class="header" href="#func-configurefirewall-explanation">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L53">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureFirewall) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ConfigureFirewall.Prepare"></a></p>
+<h3 id="func-configurefirewall-prepare"><a class="header" href="#func-configurefirewall-prepare">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L61">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureFirewall) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ConfigureFirewall.Run"></a></p>
+<h3 id="func-configurefirewall-run"><a class="header" href="#func-configurefirewall-run">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L101">Run</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureFirewall) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ConfigureFirewall.ShouldRun"></a></p>
+<h3 id="func-configurefirewall-shouldrun"><a class="header" href="#func-configurefirewall-shouldrun">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L96">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureFirewall) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when the firewall is being managed and at least one node runs one</p>
+<p><a name="ConfigureFirewall.Title"></a></p>
+<h3 id="func-configurefirewall-title"><a class="header" href="#func-configurefirewall-title">func (*ConfigureFirewall) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/26_configure_firewall.go#L48">Title</a></a></h3>
+<pre><code class="language-go">func (p *ConfigureFirewall) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="Connect"></a></p>
+<h2 id="type-connect"><a class="header" href="#type-connect">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/07_connect.go#L36-L38">Connect</a></a></h2>
+<p>Connect connects to each of the hosts</p>
+<pre><code class="language-go">type Connect struct {
+    GenericPhase
+}
+</code></pre>
+<p><a name="Connect.Explanation"></a></p>
+<h3 id="func-connect-explanation"><a class="header" href="#func-connect-explanation">func (*Connect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/07_connect.go#L46">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *Connect) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="Connect.ReadOnly"></a></p>
+<h3 id="func-connect-readonly"><a class="header" href="#func-connect-readonly">func (*Connect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/07_connect.go#L51">ReadOnly</a></a></h3>
+<pre><code class="language-go">func (p *Connect) ReadOnly() string
+</code></pre>
+<p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
+<p><a name="Connect.Run"></a></p>
+<h3 id="func-connect-run"><a class="header" href="#func-connect-run">func (*Connect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/07_connect.go#L56">Run</a></a></h3>
+<pre><code class="language-go">func (p *Connect) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="Connect.Title"></a></p>
+<h3 id="func-connect-title"><a class="header" href="#func-connect-title">func (*Connect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/07_connect.go#L41">Title</a></a></h3>
+<pre><code class="language-go">func (p *Connect) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="DaemonReload"></a></p>
+<h2 id="type-daemonreload"><a class="header" href="#type-daemonreload">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L32-L34">DaemonReload</a></a></h2>
+<p>DaemonReload phase runs `systemctl daemon-reload` or equivalent on all hosts.</p>
+<pre><code class="language-go">type DaemonReload struct {
+    GenericPhase
+}
+</code></pre>
+<p><a name="DaemonReload.Explanation"></a></p>
+<h3 id="func-daemonreload-explanation"><a class="header" href="#func-daemonreload-explanation">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L42">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *DaemonReload) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="DaemonReload.Run"></a></p>
+<h3 id="func-daemonreload-run"><a class="header" href="#func-daemonreload-run">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L52">Run</a></a></h3>
+<pre><code class="language-go">func (p *DaemonReload) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="DaemonReload.ShouldRun"></a></p>
+<h3 id="func-daemonreload-shouldrun"><a class="header" href="#func-daemonreload-shouldrun">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L47">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *DaemonReload) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there are controllers that needs to be reset</p>
+<p><a name="DaemonReload.Title"></a></p>
+<h3 id="func-daemonreload-title"><a class="header" href="#func-daemonreload-title">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L37">Title</a></a></h3>
+<pre><code class="language-go">func (p *DaemonReload) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="DeleteCommon"></a></p>
+<h2 id="type-deletecommon"><a class="header" href="#type-deletecommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L34-L38">DeleteCommon</a></a></h2>
+<p>DeleteCommon phase state</p>
+<pre><code class="language-go">type DeleteCommon struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="DeleteCommon.Prepare"></a></p>
+<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L41">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="DeleteControllers"></a></p>
+<h2 id="type-deletecontrollers"><a class="header" href="#type-deletecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L33-L37">DeleteControllers</a></a></h2>
+<p>DeleteControllers phase state</p>
+<pre><code class="language-go">type DeleteControllers struct {
+    DeleteCommon
+    NoDrain bool
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="DeleteControllers.Explanation"></a></p>
+<h3 id="func-deletecontrollers-explanation"><a class="header" href="#func-deletecontrollers-explanation">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L45">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *DeleteControllers) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="DeleteControllers.Prepare"></a></p>
+<h3 id="func-deletecontrollers-prepare"><a class="header" href="#func-deletecontrollers-prepare">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L55">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="DeleteControllers.Run"></a></p>
+<h3 id="func-deletecontrollers-run"><a class="header" href="#func-deletecontrollers-run">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L84">Run</a></a></h3>
+<pre><code class="language-go">func (p *DeleteControllers) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="DeleteControllers.ShouldRun"></a></p>
+<h3 id="func-deletecontrollers-shouldrun"><a class="header" href="#func-deletecontrollers-shouldrun">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L50">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *DeleteControllers) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when this phase is enabled</p>
+<p><a name="DeleteControllers.Title"></a></p>
+<h3 id="func-deletecontrollers-title"><a class="header" href="#func-deletecontrollers-title">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L40">Title</a></a></h3>
+<pre><code class="language-go">func (p *DeleteControllers) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="DeleteWorkers"></a></p>
+<h2 id="type-deleteworkers"><a class="header" href="#type-deleteworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L32-L37">DeleteWorkers</a></a></h2>
+<p>DeleteWorkers phase state</p>
+<pre><code class="language-go">type DeleteWorkers struct {
+    DeleteCommon
+    NoDrain          bool
+    WorkerConcurrent string
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="DeleteWorkers.Explanation"></a></p>
+<h3 id="func-deleteworkers-explanation"><a class="header" href="#func-deleteworkers-explanation">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L45">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *DeleteWorkers) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="DeleteWorkers.Prepare"></a></p>
+<h3 id="func-deleteworkers-prepare"><a class="header" href="#func-deleteworkers-prepare">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L55">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="DeleteWorkers.Run"></a></p>
+<h3 id="func-deleteworkers-run"><a class="header" href="#func-deleteworkers-run">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L84">Run</a></a></h3>
+<pre><code class="language-go">func (p *DeleteWorkers) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="DeleteWorkers.ShouldRun"></a></p>
+<h3 id="func-deleteworkers-shouldrun"><a class="header" href="#func-deleteworkers-shouldrun">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L50">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *DeleteWorkers) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when this phase is enabled</p>
+<p><a name="DeleteWorkers.Title"></a></p>
+<h3 id="func-deleteworkers-title"><a class="header" href="#func-deleteworkers-title">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L40">Title</a></a></h3>
+<pre><code class="language-go">func (p *DeleteWorkers) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="DetectOS"></a></p>
+<h2 id="type-detectos"><a class="header" href="#type-detectos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/09_detect_os.go#L31-L33">DetectOS</a></a></h2>
+<p>DetectOS performs remote OS detection</p>
+<pre><code class="language-go">type DetectOS struct {
+    GenericPhase
+}
+</code></pre>
+<p><a name="DetectOS.Explanation"></a></p>
+<h3 id="func-detectos-explanation"><a class="header" href="#func-detectos-explanation">func (*DetectOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/09_detect_os.go#L41">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *DetectOS) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="DetectOS.ReadOnly"></a></p>
+<h3 id="func-detectos-readonly"><a class="header" href="#func-detectos-readonly">func (*DetectOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/09_detect_os.go#L46">ReadOnly</a></a></h3>
+<pre><code class="language-go">func (p *DetectOS) ReadOnly() string
+</code></pre>
+<p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
+<p><a name="DetectOS.Run"></a></p>
+<h3 id="func-detectos-run"><a class="header" href="#func-detectos-run">func (*DetectOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/09_detect_os.go#L51">Run</a></a></h3>
+<pre><code class="language-go">func (p *DetectOS) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="DetectOS.Title"></a></p>
+<h3 id="func-detectos-title"><a class="header" href="#func-detectos-title">func (*DetectOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/09_detect_os.go#L36">Title</a></a></h3>
+<pre><code class="language-go">func (p *DetectOS) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="DetectRemovedHosts"></a></p>
+<h2 id="type-detectremovedhosts"><a class="header" href="#type-detectremovedhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L71-L79">DetectRemovedHosts</a></a></h2>
+<p>DetectRemovedHosts state.</p>
+<p>Apply drives the cluster towards the config, but only ever forwards: every phase after this one reads Spec.Hosts and acts on what it finds there. A host deleted from the config is therefore invisible to all of them, and the machine keeps running the engine and stays joined to the cluster while apply reports success. This phase is what stops that from being silent.</p>
+<p>It detects and refuses. It does not reconcile, and the reason is not effort: apply cannot reach the machine it would have to clean up. Draining a node and deleting its Node object needs only the name, which the API gives us. Uninstalling the engine needs an SSH connection, and the address, user and key for that lived in the host block that was just deleted. Deleting the Node object without the uninstall is worse than doing nothing, because it looks like the removal worked while the machine keeps its certificates and tries to rejoin -- and for a controller it stays an etcd member, so the quorum arithmetic silently moves against a member nobody can reach.</p>
+<p>The layer that does hold the connection details for a removed host is the OpenTofu provider, which still has the old host block in its state file when it plans the destroy. That is where a real removal path belongs, and it can call reset against exactly that host. Until then this phase makes the gap loud instead of invisible.</p>
+<pre><code class="language-go">type DetectRemovedHosts struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // AllowUnmanaged downgrades the refusal to a warning. A cluster can hold nodes cargoship
+    // never joined, and refusing on those would block every apply on a working setup, so the
+    // operator needs a way to say the extra nodes are deliberate.
+    AllowUnmanaged bool
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="DetectRemovedHosts.Explanation"></a></p>
+<h3 id="func-detectremovedhosts-explanation"><a class="header" href="#func-detectremovedhosts-explanation">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L87">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *DetectRemovedHosts) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="DetectRemovedHosts.Prepare"></a></p>
+<h3 id="func-detectremovedhosts-prepare"><a class="header" href="#func-detectremovedhosts-prepare">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L102">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *DetectRemovedHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase.</p>
+<p>The leader is any host in the config already running the controller service, which is the same way the label and delete phases find one. Nothing is running on a first install, so there is no leader, and ShouldRun turns the phase off: a cluster that does not exist yet cannot have had a host removed from it.</p>
+<p><a name="DetectRemovedHosts.ReadOnly"></a></p>
+<h3 id="func-detectremovedhosts-readonly"><a class="header" href="#func-detectremovedhosts-readonly">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L92">ReadOnly</a></a></h3>
+<pre><code class="language-go">func (p *DetectRemovedHosts) ReadOnly() string
+</code></pre>
+<p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
+<p><a name="DetectRemovedHosts.Run"></a></p>
+<h3 id="func-detectremovedhosts-run"><a class="header" href="#func-detectremovedhosts-run">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L123">Run</a></a></h3>
+<pre><code class="language-go">func (p *DetectRemovedHosts) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase.</p>
+<p>Only positive evidence stops the apply. Failing to reach the cluster says nothing about whether a host was removed, and this phase runs before every phase that does the real work, so treating an unreachable cluster as a refusal would turn a transient failure into a failed apply that had nothing to do with removals. Those cases warn and continue.</p>
+<p><a name="DetectRemovedHosts.ShouldRun"></a></p>
+<h3 id="func-detectremovedhosts-shouldrun"><a class="header" href="#func-detectremovedhosts-shouldrun">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L113">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *DetectRemovedHosts) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true once there is a running controller to ask</p>
+<p><a name="DetectRemovedHosts.Title"></a></p>
+<h3 id="func-detectremovedhosts-title"><a class="header" href="#func-detectremovedhosts-title">func (*DetectRemovedHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/13_detect_removed_hosts.go#L82">Title</a></a></h3>
+<pre><code class="language-go">func (p *DetectRemovedHosts) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="Disconnect"></a></p>
+<h2 id="type-disconnect"><a class="header" href="#type-disconnect">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/99_disconnect.go#L31-L33">Disconnect</a></a></h2>
+<p>Disconnect disconnects from the hosts</p>
+<pre><code class="language-go">type Disconnect struct {
+    GenericPhase
+}
+</code></pre>
+<p><a name="Disconnect.DryRun"></a></p>
+<h3 id="func-disconnect-dryrun"><a class="header" href="#func-disconnect-dryrun">func (*Disconnect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/99_disconnect.go#L46">DryRun</a></a></h3>
+<pre><code class="language-go">func (p *Disconnect) DryRun() error
+</code></pre>
+<p>DryRun cleans up the temporary binary from the hosts</p>
+<p><a name="Disconnect.Explanation"></a></p>
+<h3 id="func-disconnect-explanation"><a class="header" href="#func-disconnect-explanation">func (*Disconnect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/99_disconnect.go#L41">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *Disconnect) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="Disconnect.Run"></a></p>
+<h3 id="func-disconnect-run"><a class="header" href="#func-disconnect-run">func (*Disconnect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/99_disconnect.go#L69">Run</a></a></h3>
+<pre><code class="language-go">func (p *Disconnect) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="Disconnect.Title"></a></p>
+<h3 id="func-disconnect-title"><a class="header" href="#func-disconnect-title">func (*Disconnect) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/99_disconnect.go#L36">Title</a></a></h3>
+<pre><code class="language-go">func (p *Disconnect) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="DryRunBehavior"></a></p>
+<h2 id="type-dryrunbehavior"><a class="header" href="#type-dryrunbehavior">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L134">DryRunBehavior</a></a></h2>
+<p>DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the phase implements, and it is exported so magefiles/gen-docs.go can label each phase in docs/phases/&lt;name&gt;.md with the same classification Run() gates on. The docs and the gate cannot disagree, because there is only one classifier.</p>
+<pre><code class="language-go">type DryRunBehavior int
+</code></pre>
+<p><a name="DryRunSkip"></a></p>
+<pre><code class="language-go">const (
+    // DryRunSkip is the default: the phase declares nothing, so a dry run reports it and
+    // does not run it.
+    DryRunSkip DryRunBehavior = iota
+    // DryRunReadOnly is a phase implementing readOnly. It reads hosts and changes nothing,
+    // so a dry run runs it as itself.
+    DryRunReadOnly
+    // DryRunOwnPath is a phase implementing withDryRun. A dry run calls DryRun() instead of
+    // Run().
+    DryRunOwnPath
+)
+</code></pre>
+<p><a name="ClassifyDryRun"></a></p>
+<h3 id="func-classifydryrun"><a class="header" href="#func-classifydryrun">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L161">ClassifyDryRun</a></a></h3>
+<pre><code class="language-go">func ClassifyDryRun(p Phase) DryRunBehavior
+</code></pre>
+<p>ClassifyDryRun reports what a dry run does with p.</p>
+<p><a name="DryRunBehavior.String"></a></p>
+<h3 id="func-dryrunbehavior-string"><a class="header" href="#func-dryrunbehavior-string">func (DryRunBehavior) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L149">String</a></a></h3>
+<pre><code class="language-go">func (b DryRunBehavior) String() string
+</code></pre>
+<p>String is the label written into the phase docs.</p>
+<p><a name="EngineConfigSyncController"></a></p>
+<h2 id="type-engineconfigsynccontroller"><a class="header" href="#type-engineconfigsynccontroller">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/71_engine_config_sync_controller.go#L27-L29">EngineConfigSyncController</a></a></h2>
+<p>EngineConfigSyncController phase state</p>
+<pre><code class="language-go">type EngineConfigSyncController struct {
+    EngineConfigSyncHosts
+}
+</code></pre>
+<p><a name="EngineConfigSyncController.Explanation"></a></p>
+<h3 id="func-engineconfigsynccontroller-explanation"><a class="header" href="#func-engineconfigsynccontroller-explanation">func (*EngineConfigSyncController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/71_engine_config_sync_controller.go#L37">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncController) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="EngineConfigSyncController.Prepare"></a></p>
+<h3 id="func-engineconfigsynccontroller-prepare"><a class="header" href="#func-engineconfigsynccontroller-prepare">func (*EngineConfigSyncController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/71_engine_config_sync_controller.go#L42">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="EngineConfigSyncController.Run"></a></p>
+<h3 id="func-engineconfigsynccontroller-run"><a class="header" href="#func-engineconfigsynccontroller-run">func (*EngineConfigSyncController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/71_engine_config_sync_controller.go#L72">Run</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncController) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="EngineConfigSyncController.Title"></a></p>
+<h3 id="func-engineconfigsynccontroller-title"><a class="header" href="#func-engineconfigsynccontroller-title">func (*EngineConfigSyncController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/71_engine_config_sync_controller.go#L32">Title</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncController) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="EngineConfigSyncHosts"></a></p>
+<h2 id="type-engineconfigsynchosts"><a class="header" href="#type-engineconfigsynchosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L41-L64">EngineConfigSyncHosts</a></a></h2>
+<p>EngineConfigSyncHosts phase state</p>
+<pre><code class="language-go">type EngineConfigSyncHosts struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // Keyring decrypts encrypted registry credentials, in either supported format.
+    Keyring *clustercfg.Keyring
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="EngineConfigSyncHosts.Changed"></a></p>
+<h3 id="func-engineconfigsynchosts-changed"><a class="header" href="#func-engineconfigsynchosts-changed">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L81">Changed</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncHosts) Changed() bool
+</code></pre>
+<p>Changed reports whether this phase altered any host, which is what Ansible’s changed is built from. See changedReporter in 05_manager.go.</p>
+<p>There are two ways this phase changes a host and both count. The obvious one is the sync itself. The other is the file a host carries that the engine re-reads without a restart: that is written while Prepare is deciding which hosts have drifted, and the host is then not listed as needing a sync, so a run that changed only those files would otherwise read as a run that did nothing.</p>
+<p><a name="EngineConfigSyncHosts.ShouldRun"></a></p>
+<h3 id="func-engineconfigsynchosts-shouldrun"><a class="header" href="#func-engineconfigsynchosts-shouldrun">func (*EngineConfigSyncHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/70_engine_config_sync_common.go#L88">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncHosts) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there are hosts to sync</p>
+<p><a name="EngineConfigSyncWorker"></a></p>
+<h2 id="type-engineconfigsyncworker"><a class="header" href="#type-engineconfigsyncworker">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/72_engine_config_sync_worker.go#L27-L30">EngineConfigSyncWorker</a></a></h2>
+<p>EngineConfigSyncWorker phase state</p>
+<pre><code class="language-go">type EngineConfigSyncWorker struct {
+    EngineConfigSyncHosts
+    WorkerConcurrent string
+}
+</code></pre>
+<p><a name="EngineConfigSyncWorker.Explanation"></a></p>
+<h3 id="func-engineconfigsyncworker-explanation"><a class="header" href="#func-engineconfigsyncworker-explanation">func (*EngineConfigSyncWorker) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/72_engine_config_sync_worker.go#L38">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncWorker) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="EngineConfigSyncWorker.Prepare"></a></p>
+<h3 id="func-engineconfigsyncworker-prepare"><a class="header" href="#func-engineconfigsyncworker-prepare">func (*EngineConfigSyncWorker) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/72_engine_config_sync_worker.go#L43">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncWorker) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="EngineConfigSyncWorker.Run"></a></p>
+<h3 id="func-engineconfigsyncworker-run"><a class="header" href="#func-engineconfigsyncworker-run">func (*EngineConfigSyncWorker) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/72_engine_config_sync_worker.go#L73">Run</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncWorker) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="EngineConfigSyncWorker.Title"></a></p>
+<h3 id="func-engineconfigsyncworker-title"><a class="header" href="#func-engineconfigsyncworker-title">func (*EngineConfigSyncWorker) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/72_engine_config_sync_worker.go#L33">Title</a></a></h3>
+<pre><code class="language-go">func (p *EngineConfigSyncWorker) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="GatherFacts"></a></p>
+<h2 id="type-gatherfacts"><a class="header" href="#type-gatherfacts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/10_gather_facts.go#L34-L37">GatherFacts</a></a></h2>
+<p>GatherFacts gathers information about hosts</p>
+<pre><code class="language-go">type GatherFacts struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="GatherFacts.Explanation"></a></p>
+<h3 id="func-gatherfacts-explanation"><a class="header" href="#func-gatherfacts-explanation">func (*GatherFacts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/10_gather_facts.go#L45">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *GatherFacts) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="GatherFacts.ReadOnly"></a></p>
+<h3 id="func-gatherfacts-readonly"><a class="header" href="#func-gatherfacts-readonly">func (*GatherFacts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/10_gather_facts.go#L50">ReadOnly</a></a></h3>
+<pre><code class="language-go">func (p *GatherFacts) ReadOnly() string
+</code></pre>
+<p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
+<p><a name="GatherFacts.Run"></a></p>
+<h3 id="func-gatherfacts-run"><a class="header" href="#func-gatherfacts-run">func (*GatherFacts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/10_gather_facts.go#L55">Run</a></a></h3>
+<pre><code class="language-go">func (p *GatherFacts) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="GatherFacts.Title"></a></p>
+<h3 id="func-gatherfacts-title"><a class="header" href="#func-gatherfacts-title">func (*GatherFacts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/10_gather_facts.go#L40">Title</a></a></h3>
+<pre><code class="language-go">func (p *GatherFacts) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="GatherFactsDistro"></a></p>
+<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L33-L38">GatherFactsDistro</a></a></h2>
+<p>GatherFactsDistro state</p>
+<pre><code class="language-go">type GatherFactsDistro struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="GatherFactsDistro.Explanation"></a></p>
+<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L46">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *GatherFactsDistro) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="GatherFactsDistro.Prepare"></a></p>
+<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="GatherFactsDistro.ReadOnly"></a></p>
+<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51">ReadOnly</a></a></h3>
+<pre><code class="language-go">func (p *GatherFactsDistro) ReadOnly() string
+</code></pre>
+<p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
+<p><a name="GatherFactsDistro.Run"></a></p>
+<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L63">Run</a></a></h3>
+<pre><code class="language-go">func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
+</code></pre>
+<p>Run the phase</p>
+<p><a name="GatherFactsDistro.Title"></a></p>
+<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L41">Title</a></a></h3>
+<pre><code class="language-go">func (p *GatherFactsDistro) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="GenericPhase"></a></p>
+<h2 id="type-genericphase"><a class="header" href="#type-genericphase">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L53-L56">GenericPhase</a></a></h2>
+<p>GenericPhase state</p>
+<pre><code class="language-go">type GenericPhase struct {
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="GenericPhase.GetConfig"></a></p>
+<h3 id="func-genericphase-getconfig"><a class="header" href="#func-genericphase-getconfig">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L59">GetConfig</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) GetConfig() *cluster.ZarfCluster
+</code></pre>
+<p>GetConfig is an accessor to phase Config</p>
+<p><a name="GenericPhase.GetDistro"></a></p>
+<h3 id="func-genericphase-getdistro"><a class="header" href="#func-genericphase-getdistro">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L64">GetDistro</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) GetDistro() *distro.ZarfDistro
+</code></pre>
+<p>GetDistro is an accessor to phase Distro</p>
+<p><a name="GenericPhase.Prepare"></a></p>
+<h3 id="func-genericphase-prepare"><a class="header" href="#func-genericphase-prepare">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L69">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) Prepare(c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="GenericPhase.SetManager"></a></p>
+<h3 id="func-genericphase-setmanager"><a class="header" href="#func-genericphase-setmanager">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L76">SetManager</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) SetManager(m *Manager)
+</code></pre>
+<p>SetManager adds a reference to the phase manager</p>
+<p><a name="GenericPhase.VersionGreater"></a></p>
+<h3 id="func-genericphase-versiongreater"><a class="header" href="#func-genericphase-versiongreater">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L189">VersionGreater</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool
+</code></pre>
+<p>VersionGreater if host version is greater then the distro version</p>
+<p><a name="GenericPhase.VersionLess"></a></p>
+<h3 id="func-genericphase-versionless"><a class="header" href="#func-genericphase-versionless">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L176">VersionLess</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool
+</code></pre>
+<p>VersionLess if host version is less then the distro version</p>
+<p><a name="GenericPhase.Wet"></a></p>
+<h3 id="func-genericphase-wet"><a class="header" href="#func-genericphase-wet">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L171">Wet</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
+</code></pre>
+<p>Wet is a shorthand for manager.Wet</p>
+<p><a name="InitializeControllers"></a></p>
+<h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L39">InitializeControllers</a></a></h2>
+<p>InitializeControllers phase state</p>
+<pre><code class="language-go">type InitializeControllers struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="InitializeControllers.Explanation"></a></p>
+<h3 id="func-initializecontrollers-explanation"><a class="header" href="#func-initializecontrollers-explanation">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L58">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *InitializeControllers) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="InitializeControllers.Prepare"></a></p>
+<h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L42">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="InitializeControllers.Run"></a></p>
+<h3 id="func-initializecontrollers-run"><a class="header" href="#func-initializecontrollers-run">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L63">Run</a></a></h3>
+<pre><code class="language-go">func (p *InitializeControllers) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="InitializeControllers.ShouldRun"></a></p>
+<h3 id="func-initializecontrollers-shouldrun"><a class="header" href="#func-initializecontrollers-shouldrun">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L85">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *InitializeControllers) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there are workers</p>
+<p><a name="InitializeControllers.Title"></a></p>
+<h3 id="func-initializecontrollers-title"><a class="header" href="#func-initializecontrollers-title">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L53">Title</a></a></h3>
+<pre><code class="language-go">func (p *InitializeControllers) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="InitializeWorkers"></a></p>
+<h2 id="type-initializeworkers"><a class="header" href="#type-initializeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L40">InitializeWorkers</a></a></h2>
+<p>InitializeWorkers phase state</p>
+<pre><code class="language-go">type InitializeWorkers struct {
+    GenericPhase
+    Distro distrocfg.Distro
+
+    WorkerConcurrent string
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="InitializeWorkers.Explanation"></a></p>
+<h3 id="func-initializeworkers-explanation"><a class="header" href="#func-initializeworkers-explanation">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L48">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *InitializeWorkers) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="InitializeWorkers.Prepare"></a></p>
+<h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L53">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="InitializeWorkers.Run"></a></p>
+<h3 id="func-initializeworkers-run"><a class="header" href="#func-initializeworkers-run">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L68">Run</a></a></h3>
+<pre><code class="language-go">func (p *InitializeWorkers) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="InitializeWorkers.ShouldRun"></a></p>
+<h3 id="func-initializeworkers-shouldrun"><a class="header" href="#func-initializeworkers-shouldrun">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L63">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *InitializeWorkers) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there are workers</p>
+<p><a name="InitializeWorkers.Title"></a></p>
+<h3 id="func-initializeworkers-title"><a class="header" href="#func-initializeworkers-title">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L43">Title</a></a></h3>
+<pre><code class="language-go">func (p *InitializeWorkers) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="InstallFapolicy"></a></p>
+<h2 id="type-installfapolicy"><a class="header" href="#type-installfapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L31-L35">InstallFapolicy</a></a></h2>
+<p>InstallFapolicy installs required packages and so on on the hosts.</p>
+<pre><code class="language-go">type InstallFapolicy struct {
+    GenericPhase
+    Enabled bool
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="InstallFapolicy.Prepare"></a></p>
+<h3 id="func-installfapolicy-prepare"><a class="header" href="#func-installfapolicy-prepare">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L38">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="InstallFapolicy.Run"></a></p>
+<h3 id="func-installfapolicy-run"><a class="header" href="#func-installfapolicy-run">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L54">Run</a></a></h3>
+<pre><code class="language-go">func (p *InstallFapolicy) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="InstallFapolicy.ShouldRun"></a></p>
+<h3 id="func-installfapolicy-shouldrun"><a class="header" href="#func-installfapolicy-shouldrun">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L59">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *InstallFapolicy) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
+<p><a name="InstallFapolicy.Title"></a></p>
+<h3 id="func-installfapolicy-title"><a class="header" href="#func-installfapolicy-title">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L49">Title</a></a></h3>
+<pre><code class="language-go">func (p *InstallFapolicy) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="KubeConfig"></a></p>
+<h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L43-L61">KubeConfig</a></a></h2>
+<p>KubeConfig phase state</p>
+<pre><code class="language-go">type KubeConfig struct {
+    GenericPhase
+    Distro    distrocfg.Distro
+    ClusterID string
+    ClusterLB string
+    Enabled   bool
+    // Write merges the config into the operator's local kubeconfig once it is built. The
+    // CLI sets it. A caller that only wants the value -- a provider holding it as an
+    // attribute, say -- leaves it false and reads Config after the run, so nobody's
+    // ~/.kube/config is touched as a side effect.
+    Write bool
+    // Path is the kubeconfig file Write merges into. Empty means the standard location:
+    // KUBECONFIG when set, otherwise ~/.kube/config. A path that does not exist is created,
+    // and one that does keeps every cluster already in it.
+    Path string
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="KubeConfig.Bytes"></a></p>
+<h3 id="func-kubeconfig-bytes"><a class="header" href="#func-kubeconfig-bytes">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L143">Bytes</a></a></h3>
+<pre><code class="language-go">func (p *KubeConfig) Bytes() ([]byte, error)
+</code></pre>
+<p>Bytes is Config serialized as a kubeconfig file, which is the form a caller storing it elsewhere wants.</p>
+<p><a name="KubeConfig.Config"></a></p>
+<h3 id="func-kubeconfig-config"><a class="header" href="#func-kubeconfig-config">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L137">Config</a></a></h3>
+<pre><code class="language-go">func (p *KubeConfig) Config() *clientcmdapi.Config
+</code></pre>
+<p>Config is the kubeconfig for this cluster, built during Run from the admin credentials on the leader. It is nil until the phase has run.</p>
+<p><a name="KubeConfig.Explanation"></a></p>
+<h3 id="func-kubeconfig-explanation"><a class="header" href="#func-kubeconfig-explanation">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L69">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *KubeConfig) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="KubeConfig.Prepare"></a></p>
+<h3 id="func-kubeconfig-prepare"><a class="header" href="#func-kubeconfig-prepare">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L74">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *KubeConfig) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="KubeConfig.Run"></a></p>
+<h3 id="func-kubeconfig-run"><a class="header" href="#func-kubeconfig-run">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L108">Run</a></a></h3>
+<pre><code class="language-go">func (p *KubeConfig) Run(_ context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="KubeConfig.ShouldRun"></a></p>
+<h3 id="func-kubeconfig-shouldrun"><a class="header" href="#func-kubeconfig-shouldrun">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L103">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *KubeConfig) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when enabled by flags</p>
+<p><a name="KubeConfig.Title"></a></p>
+<h3 id="func-kubeconfig-title"><a class="header" href="#func-kubeconfig-title">func (*KubeConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L64">Title</a></a></h3>
+<pre><code class="language-go">func (p *KubeConfig) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="LabelNodes"></a></p>
+<h2 id="type-labelnodes"><a class="header" href="#type-labelnodes">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L40-L46">LabelNodes</a></a></h2>
+<p>LabelNodes phase state</p>
+<pre><code class="language-go">type LabelNodes struct {
+    GenericPhase
+    Distro    distrocfg.Distro
+    ClusterLB string
+    Enabled   bool
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="LabelNodes.Explanation"></a></p>
+<h3 id="func-labelnodes-explanation"><a class="header" href="#func-labelnodes-explanation">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L54">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *LabelNodes) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="LabelNodes.Prepare"></a></p>
+<h3 id="func-labelnodes-prepare"><a class="header" href="#func-labelnodes-prepare">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L59">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *LabelNodes) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="LabelNodes.Run"></a></p>
+<h3 id="func-labelnodes-run"><a class="header" href="#func-labelnodes-run">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L79">Run</a></a></h3>
+<pre><code class="language-go">func (p *LabelNodes) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="LabelNodes.ShouldRun"></a></p>
+<h3 id="func-labelnodes-shouldrun"><a class="header" href="#func-labelnodes-shouldrun">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L74">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *LabelNodes) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when enabled by flags</p>
+<p><a name="LabelNodes.Title"></a></p>
+<h3 id="func-labelnodes-title"><a class="header" href="#func-labelnodes-title">func (*LabelNodes) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go#L49">Title</a></a></h3>
+<pre><code class="language-go">func (p *LabelNodes) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="Lock"></a></p>
+<h2 id="type-lock"><a class="header" href="#type-lock">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L38-L44">Lock</a></a></h2>
+<p>Lock phase state</p>
+<pre><code class="language-go">type Lock struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="Lock.Cancel"></a></p>
+<h3 id="func-lock-cancel"><a class="header" href="#func-lock-cancel">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L69">Cancel</a></a></h3>
+<pre><code class="language-go">func (p *Lock) Cancel(_ context.Context)
+</code></pre>
+<p>Cancel releases the lock</p>
+<p><a name="Lock.CleanUp"></a></p>
+<h3 id="func-lock-cleanup"><a class="header" href="#func-lock-cleanup">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L79">CleanUp</a></a></h3>
+<pre><code class="language-go">func (p *Lock) CleanUp()
+</code></pre>
+<p>CleanUp calls Cancel to release the lock</p>
+<p><a name="Lock.Explanation"></a></p>
+<h3 id="func-lock-explanation"><a class="header" href="#func-lock-explanation">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L64">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *Lock) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="Lock.Prepare"></a></p>
+<h3 id="func-lock-prepare"><a class="header" href="#func-lock-prepare">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L47">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *Lock) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="Lock.Run"></a></p>
+<h3 id="func-lock-run"><a class="header" href="#func-lock-run">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L89">Run</a></a></h3>
+<pre><code class="language-go">func (p *Lock) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="Lock.Title"></a></p>
+<h3 id="func-lock-title"><a class="header" href="#func-lock-title">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L59">Title</a></a></h3>
+<pre><code class="language-go">func (p *Lock) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="Lock.UnlockPhase"></a></p>
+<h3 id="func-lock-unlockphase"><a class="header" href="#func-lock-unlockphase">func (*Lock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/91_lock.go#L84">UnlockPhase</a></a></h3>
+<pre><code class="language-go">func (p *Lock) UnlockPhase() Phase
+</code></pre>
+<p>UnlockPhase returns an unlock phase for this lock phase</p>
+<p><a name="Manager"></a></p>
+<h2 id="type-manager"><a class="header" href="#type-manager">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L377-L398">Manager</a></a></h2>
+<p>Manager executes phases to construct the cluster</p>
+<pre><code class="language-go">type Manager struct {
+    Config *cluster.ZarfCluster
+    Distro *distro.ZarfDistro
+    // Values is the configuration the package ships with, merged with the
+    // overrides in the cluster inventory and checked against the package's
+    // values schema. Phases read it instead of re-reading either source, so
+    // every phase sees the same values.
+    Values            map[string]any
+    DistroID          string
+    Concurrency       int
+    ConcurrentUploads int
+    DryRun            bool
+    Writer            io.Writer
+    TempDirectory     string
+    Timeout           time.Duration
+    // Result is what the last Run did, phase by phase. Run fills it in whether it succeeded or
+    // failed, so a caller reading it after an error sees the phases the run got through. It is
+    // a field rather than a return value because Run has five call sites and one caller that
+    // wants this.
+    Result RunResult
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="NewManager"></a></p>
+<h3 id="func-newmanager"><a class="header" href="#func-newmanager">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L411">NewManager</a></a></h3>
+<pre><code class="language-go">func NewManager(config *cluster.ZarfCluster, distro distrocfg.Distro) (*Manager, error)
+</code></pre>
+<p>NewManager creates a new Manager</p>
+<p><a name="Manager.AddPhase"></a></p>
+<h3 id="func-manager-addphase"><a class="header" href="#func-manager-addphase">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L423">AddPhase</a></a></h3>
+<pre><code class="language-go">func (m *Manager) AddPhase(p ...Phase)
+</code></pre>
+<p>AddPhase adds a Phase to Manager</p>
+<p><a name="Manager.GetDistroOSFiles"></a></p>
+<h3 id="func-manager-getdistroosfiles"><a class="header" href="#func-manager-getdistroosfiles">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L446">GetDistroOSFiles</a></a></h3>
+<pre><code class="language-go">func (m *Manager) GetDistroOSFiles() v1alpha1.ZarfFiles
+</code></pre>
+<p>GetDistroOSFiles returns the ZarfFiles for a distro</p>
+<p><a name="Manager.RetryTimeout"></a></p>
+<h3 id="func-manager-retrytimeout"><a class="header" href="#func-manager-retrytimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L438">RetryTimeout</a></a></h3>
+<pre><code class="language-go">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error
+</code></pre>
+<p>RetryTimeout wraps retry Timeout logic</p>
+<p><a name="Manager.Run"></a></p>
+<h3 id="func-manager-run"><a class="header" href="#func-manager-run">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L471">Run</a></a></h3>
+<pre><code class="language-go">func (m *Manager) Run(ctx context.Context) error
+</code></pre>
+<p>Run executes all the added Phases in order</p>
+<p><a name="Manager.SetPhases"></a></p>
+<h3 id="func-manager-setphases"><a class="header" href="#func-manager-setphases">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L428">SetPhases</a></a></h3>
+<pre><code class="language-go">func (m *Manager) SetPhases(p Phases)
+</code></pre>
+<p>SetPhases sets the list of phases</p>
+<p><a name="Manager.SetTimout"></a></p>
+<h3 id="func-manager-settimout"><a class="header" href="#func-manager-settimout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433">SetTimout</a></a></h3>
+<pre><code class="language-go">func (m *Manager) SetTimout(tm time.Duration)
+</code></pre>
+<p>SetTimout sets the timeout for the manager</p>
+<p><a name="Manager.Wet"></a></p>
+<h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L455">Wet</a></a></h3>
+<pre><code class="language-go">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
+</code></pre>
+<p>Wet runs the first given function when not in dry-run mode. The second function will be run when in dry-mode and the message will be displayed. Any error returned from the functions will be returned and will halt the operation.</p>
+<p><a name="ManagerDistroConfig"></a></p>
+<h2 id="type-managerdistroconfig"><a class="header" href="#type-managerdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L401-L408">ManagerDistroConfig</a></a></h2>
+<p>ManagerDistroConfig stores some values for manager distro config</p>
+<pre><code class="language-go">type ManagerDistroConfig struct {
+    BinaryDir string
+    Binary    string
+    Config    string
+    Token     string
+    Data      string
+    Version   string
+}
+</code></pre>
+<p><a name="ManifestEntry"></a></p>
+<h2 id="type-manifestentry"><a class="header" href="#type-manifestentry">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L38-L43">ManifestEntry</a></a></h2>
+<p>ManifestEntry is a single file cargoship uploaded to a host, recorded so it can be found and removed later during an upgrade or uninstall.</p>
+<pre><code class="language-go">type ManifestEntry struct {
+    // Category labels why the file was uploaded, e.g. "engine", "image", "file", "data".
+    Category string
+    // Path is the absolute path of the file on the remote host.
+    Path string
+}
+</code></pre>
+<p><a name="ParseManifest"></a></p>
+<h3 id="func-parsemanifest"><a class="header" href="#func-parsemanifest">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/03_manifest.go#L55">ParseManifest</a></a></h3>
+<pre><code class="language-go">func ParseManifest(content string) []ManifestEntry
+</code></pre>
+<p>ParseManifest reads manifest file content back into entries. Malformed lines are skipped.</p>
+<p><a name="ModifyHosts"></a></p>
+<h2 id="type-modifyhosts"><a class="header" href="#type-modifyhosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L33-L37">ModifyHosts</a></a></h2>
+<p>ModifyHosts state</p>
+<pre><code class="language-go">type ModifyHosts struct {
+    GenericPhase
+    Enabled bool
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ModifyHosts.Explanation"></a></p>
+<h3 id="func-modifyhosts-explanation"><a class="header" href="#func-modifyhosts-explanation">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L45">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ModifyHosts) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ModifyHosts.Prepare"></a></p>
+<h3 id="func-modifyhosts-prepare"><a class="header" href="#func-modifyhosts-prepare">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L50">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ModifyHosts) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ModifyHosts.Run"></a></p>
+<h3 id="func-modifyhosts-run"><a class="header" href="#func-modifyhosts-run">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L69">Run</a></a></h3>
+<pre><code class="language-go">func (p *ModifyHosts) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ModifyHosts.ShouldRun"></a></p>
+<h3 id="func-modifyhosts-shouldrun"><a class="header" href="#func-modifyhosts-shouldrun">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L64">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *ModifyHosts) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when this phase is enabled</p>
+<p><a name="ModifyHosts.Title"></a></p>
+<h3 id="func-modifyhosts-title"><a class="header" href="#func-modifyhosts-title">func (*ModifyHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/25_modify_hosts_file.go#L40">Title</a></a></h3>
+<pre><code class="language-go">func (p *ModifyHosts) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="Phase"></a></p>
+<h2 id="type-phase"><a class="header" href="#type-phase">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L48-L52">Phase</a></a></h2>
+<p>Phase represents a runnable phase which can be added to Manager.</p>
+<pre><code class="language-go">type Phase interface {
+    Run(context.Context) error
+    Title() string
+    Explanation() string
+}
+</code></pre>
+<p><a name="PhaseResult"></a></p>
+<h2 id="type-phaseresult"><a class="header" href="#type-phaseresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L198-L207">PhaseResult</a></a></h2>
+<p>PhaseResult is what a single phase did during a run.</p>
+<pre><code class="language-go">type PhaseResult struct {
+    Title       string
+    Explanation string
+    // DryRun is what a dry run does with this phase, whether or not this run was one.
+    DryRun DryRunBehavior
+    // Declared is whether the phase implements changedReporter. When it is false, Changed is
+    // false because nothing was asked, not because nothing happened.
+    Declared bool
+    Changed  bool
+}
+</code></pre>
+<p><a name="Phases"></a></p>
+<h2 id="type-phases"><a class="header" href="#type-phases">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L55">Phases</a></a></h2>
+<p>Phases is a slice of Phases</p>
+<pre><code class="language-go">type Phases []Phase
+</code></pre>
+<p><a name="Phases.Index"></a></p>
+<h3 id="func-phases-index"><a class="header" href="#func-phases-index">func (Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L58">Index</a></a></h3>
+<pre><code class="language-go">func (p Phases) Index(title string) int
+</code></pre>
+<p>Index returns the index of the first occurrence matching the given phase title or -1 if not found</p>
+<p><a name="Phases.InsertAfter"></a></p>
+<h3 id="func-phases-insertafter"><a class="header" href="#func-phases-insertafter">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L68">InsertAfter</a></a></h3>
+<pre><code class="language-go">func (p *Phases) InsertAfter(title string, phase Phase)
+</code></pre>
+<p>InsertAfter inserts a phase after the first occurrence of a phase with the given title</p>
+<p><a name="Phases.InsertBefore"></a></p>
+<h3 id="func-phases-insertbefore"><a class="header" href="#func-phases-insertbefore">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L77">InsertBefore</a></a></h3>
+<pre><code class="language-go">func (p *Phases) InsertBefore(title string, phase Phase)
+</code></pre>
+<p>InsertBefore inserts a phase before the first occurrence of a phase with the given title</p>
+<p><a name="Phases.Replace"></a></p>
+<h3 id="func-phases-replace"><a class="header" href="#func-phases-replace">func (*Phases) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L86">Replace</a></a></h3>
+<pre><code class="language-go">func (p *Phases) Replace(title string, phase Phase)
+</code></pre>
+<p>Replace replaces the first occurrence of a phase with the given title</p>
+<p><a name="PrepareFapolicy"></a></p>
+<h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L31-L34">PrepareFapolicy</a></a></h2>
+<p>PrepareFapolicy installs required packages and so on on the hosts.</p>
+<pre><code class="language-go">type PrepareFapolicy struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="PrepareFapolicy.Explanation"></a></p>
+<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L53">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *PrepareFapolicy) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="PrepareFapolicy.Prepare"></a></p>
+<h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L37">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="PrepareFapolicy.Run"></a></p>
+<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L58">Run</a></a></h3>
+<pre><code class="language-go">func (p *PrepareFapolicy) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="PrepareFapolicy.ShouldRun"></a></p>
+<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L63">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *PrepareFapolicy) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
+<p><a name="PrepareFapolicy.Title"></a></p>
+<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L48">Title</a></a></h3>
+<pre><code class="language-go">func (p *PrepareFapolicy) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="PrepareHosts"></a></p>
+<h2 id="type-preparehosts"><a class="header" href="#type-preparehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L46-L49">PrepareHosts</a></a></h2>
+<p>PrepareHosts installs required packages and so on on the hosts.</p>
+<pre><code class="language-go">type PrepareHosts struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="PrepareHosts.Explanation"></a></p>
+<h3 id="func-preparehosts-explanation"><a class="header" href="#func-preparehosts-explanation">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L57">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *PrepareHosts) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="PrepareHosts.Prepare"></a></p>
+<h3 id="func-preparehosts-prepare"><a class="header" href="#func-preparehosts-prepare">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L62">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *PrepareHosts) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="PrepareHosts.Run"></a></p>
+<h3 id="func-preparehosts-run"><a class="header" href="#func-preparehosts-run">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L68">Run</a></a></h3>
+<pre><code class="language-go">func (p *PrepareHosts) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="PrepareHosts.Title"></a></p>
+<h3 id="func-preparehosts-title"><a class="header" href="#func-preparehosts-title">func (*PrepareHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/20_prepare_host.go#L52">Title</a></a></h3>
+<pre><code class="language-go">func (p *PrepareHosts) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="PrepareKernelModules"></a></p>
+<h2 id="type-preparekernelmodules"><a class="header" href="#type-preparekernelmodules">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L27-L31">PrepareKernelModules</a></a></h2>
+<p>PrepareKernelModules enables the list of requested modules on the host, then reboots the box if modules are added</p>
+<pre><code class="language-go">type PrepareKernelModules struct {
+    GenericPhase
+    Enabled bool
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="PrepareKernelModules.Explanation"></a></p>
+<h3 id="func-preparekernelmodules-explanation"><a class="header" href="#func-preparekernelmodules-explanation">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L39">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *PrepareKernelModules) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="PrepareKernelModules.Prepare"></a></p>
+<h3 id="func-preparekernelmodules-prepare"><a class="header" href="#func-preparekernelmodules-prepare">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L44">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *PrepareKernelModules) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="PrepareKernelModules.Run"></a></p>
+<h3 id="func-preparekernelmodules-run"><a class="header" href="#func-preparekernelmodules-run">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L55">Run</a></a></h3>
+<pre><code class="language-go">func (p *PrepareKernelModules) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="PrepareKernelModules.ShouldRun"></a></p>
+<h3 id="func-preparekernelmodules-shouldrun"><a class="header" href="#func-preparekernelmodules-shouldrun">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L50">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *PrepareKernelModules) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when we need to enable kernel modules</p>
+<p><a name="PrepareKernelModules.Title"></a></p>
+<h3 id="func-preparekernelmodules-title"><a class="header" href="#func-preparekernelmodules-title">func (*PrepareKernelModules) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/23_prepare_kernel_modules.go#L34">Title</a></a></h3>
+<pre><code class="language-go">func (p *PrepareKernelModules) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="PrepareSelinux"></a></p>
+<h2 id="type-prepareselinux"><a class="header" href="#type-prepareselinux">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L32-L35">PrepareSelinux</a></a></h2>
+<p>PrepareSelinux installs required packages and so on on the hosts.</p>
+<pre><code class="language-go">type PrepareSelinux struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="PrepareSelinux.Explanation"></a></p>
+<h3 id="func-prepareselinux-explanation"><a class="header" href="#func-prepareselinux-explanation">func (*PrepareSelinux) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L54">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinux) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="PrepareSelinux.Prepare"></a></p>
+<h3 id="func-prepareselinux-prepare"><a class="header" href="#func-prepareselinux-prepare">func (*PrepareSelinux) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L38">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinux) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="PrepareSelinux.Run"></a></p>
+<h3 id="func-prepareselinux-run"><a class="header" href="#func-prepareselinux-run">func (*PrepareSelinux) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L59">Run</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinux) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="PrepareSelinux.ShouldRun"></a></p>
+<h3 id="func-prepareselinux-shouldrun"><a class="header" href="#func-prepareselinux-shouldrun">func (*PrepareSelinux) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L64">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinux) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there is a host with selinux on the hosts</p>
+<p><a name="PrepareSelinux.Title"></a></p>
+<h3 id="func-prepareselinux-title"><a class="header" href="#func-prepareselinux-title">func (*PrepareSelinux) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/21_prepare_selinux.go#L49">Title</a></a></h3>
+<pre><code class="language-go">func (p *PrepareSelinux) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="RPMUploadFiles"></a></p>
+<h2 id="type-rpmuploadfiles"><a class="header" href="#type-rpmuploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L28-L30">RPMUploadFiles</a></a></h2>
+<p>RPMUploadFiles implements a phase which upload files to hosts</p>
+<pre><code class="language-go">type RPMUploadFiles struct {
+    UploadFilesCommon
+}
+</code></pre>
+<p><a name="RPMUploadFiles.Explanation"></a></p>
+<h3 id="func-rpmuploadfiles-explanation"><a class="header" href="#func-rpmuploadfiles-explanation">func (*RPMUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L38">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *RPMUploadFiles) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="RPMUploadFiles.Prepare"></a></p>
+<h3 id="func-rpmuploadfiles-prepare"><a class="header" href="#func-rpmuploadfiles-prepare">func (*RPMUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L43">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *RPMUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="RPMUploadFiles.Run"></a></p>
+<h3 id="func-rpmuploadfiles-run"><a class="header" href="#func-rpmuploadfiles-run">func (*RPMUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L58">Run</a></a></h3>
+<pre><code class="language-go">func (p *RPMUploadFiles) Run(ctx context.Context) (err error)
+</code></pre>
+<p>Run the phase</p>
+<p><a name="RPMUploadFiles.Title"></a></p>
+<h3 id="func-rpmuploadfiles-title"><a class="header" href="#func-rpmuploadfiles-title">func (*RPMUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/57_rpm_install.go#L33">Title</a></a></h3>
+<pre><code class="language-go">func (p *RPMUploadFiles) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="ResultSink"></a></p>
+<h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L301-L305">ResultSink</a></a></h2>
+<p>ResultSink collects the RunResult of every Manager.Run that happens on a context.</p>
+<p>It exists because the Ansible module mode runs cargoship by building an argument vector and calling the ordinary command, which returns an error and nothing else -- see src/cmd.ExecuteArgs. Threading a return value back through cobra, the action and the manager would change five call sites to serve one caller. A sink on the context that nobody else installs does not, and a run with no sink on its context pays nothing for this.</p>
+<pre><code class="language-go">type ResultSink struct {
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="WithResultSink"></a></p>
+<h3 id="func-withresultsink"><a class="header" href="#func-withresultsink">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L308">WithResultSink</a></a></h3>
+<pre><code class="language-go">func WithResultSink(ctx context.Context) (context.Context, *ResultSink)
+</code></pre>
+<p>WithResultSink returns a context carrying a sink, and the sink itself.</p>
+<p><a name="ResultSink.Observed"></a></p>
+<h3 id="func-resultsink-observed"><a class="header" href="#func-resultsink-observed">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L330">Observed</a></a></h3>
+<pre><code class="language-go">func (s *ResultSink) Observed() bool
+</code></pre>
+<p>Observed reports whether any run reached its phases at all. A command that failed before that -- an unreadable package, a configuration that does not validate -- publishes nothing, and that is a different thing from a run in which no phase changed anything.</p>
+<p><a name="ResultSink.Result"></a></p>
+<h3 id="func-resultsink-result"><a class="header" href="#func-resultsink-result">func (*ResultSink) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L321">Result</a></a></h3>
+<pre><code class="language-go">func (s *ResultSink) Result() RunResult
+</code></pre>
+<p>Result is every run that reached its phases on this context, flattened into one.</p>
+<p><a name="RunResult"></a></p>
+<h2 id="type-runresult"><a class="header" href="#type-runresult">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L211-L224">RunResult</a></a></h2>
+<p>RunResult is what a whole Manager.Run did, phase by phase. Manager.Run fills it in on the way through, so a run that returned an error still carries the phases it got through first.</p>
+<pre><code class="language-go">type RunResult struct {
+    // Ran are the phases that executed, in order. That includes the read-only phases a dry run
+    // runs as themselves and the phases that took their own dry-run path. Running is not
+    // changing: Connect, DetectOS, GatherFacts and ValidateHosts all land here and change
+    // nothing, which is why Changed is asked separately.
+    Ran []PhaseResult
+    // Planned are the phases a dry run reported instead of running.
+    Planned []PhaseResult
+    // Skipped are the phases ShouldRun filtered out. They are kept because a phase can finish
+    // its work in Prepare and then have nothing left to run: EngineConfigSyncHosts writes the
+    // files the engine re-reads without a restart while it is deciding which hosts have
+    // drifted, and then reports no hosts to sync.
+    Skipped []PhaseResult
+}
+</code></pre>
+<p><a name="RunResult.Changed"></a></p>
+<h3 id="func-runresult-changed"><a class="header" href="#func-runresult-changed">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L228">Changed</a></a></h3>
+<pre><code class="language-go">func (r RunResult) Changed() bool
+</code></pre>
+<p>Changed reports whether any phase said it changed something on the fleet. Phases that declared nothing do not contribute; read Complete to find out whether that leaves the answer partial.</p>
+<p><a name="RunResult.Complete"></a></p>
+<h3 id="func-runresult-complete"><a class="header" href="#func-runresult-complete">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L267">Complete</a></a></h3>
+<pre><code class="language-go">func (r RunResult) Complete() bool
+</code></pre>
+<p>Complete reports whether every phase the run reached declared whether it changed anything.</p>
+<p><a name="RunResult.Outstanding"></a></p>
+<h3 id="func-runresult-outstanding"><a class="header" href="#func-runresult-outstanding">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L243">Outstanding</a></a></h3>
+<pre><code class="language-go">func (r RunResult) Outstanding() bool
+</code></pre>
+<p>Outstanding is the dry-run counterpart of Changed: it reports whether any phase that can report a change was reported rather than run. A phase reaches Planned only after its ShouldRun said there was work to do, so this answers “would a real run change anything” for the phases that have said how to tell.</p>
+<p><a name="RunResult.Undeclared"></a></p>
+<h3 id="func-runresult-undeclared"><a class="header" href="#func-runresult-undeclared">func (RunResult) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L254">Undeclared</a></a></h3>
+<pre><code class="language-go">func (r RunResult) Undeclared() []string
+</code></pre>
+<p>Undeclared names the phases that did not say whether they changed anything, in the order the run reached them. A caller reporting Changed is expected to report these alongside it.</p>
+<p><a name="UninstallEngine"></a></p>
+<h2 id="type-uninstallengine"><a class="header" href="#type-uninstallengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L44-L49">UninstallEngine</a></a></h2>
+<p>UninstallEngine state</p>
+<pre><code class="language-go">type UninstallEngine struct {
+    GenericPhase
+    Distro           distrocfg.Distro
+    WorkerConcurrent string
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="UninstallEngine.Explanation"></a></p>
+<h3 id="func-uninstallengine-explanation"><a class="header" href="#func-uninstallengine-explanation">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L57">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *UninstallEngine) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="UninstallEngine.Prepare"></a></p>
+<h3 id="func-uninstallengine-prepare"><a class="header" href="#func-uninstallengine-prepare">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L62">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="UninstallEngine.Run"></a></p>
+<h3 id="func-uninstallengine-run"><a class="header" href="#func-uninstallengine-run">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L69">Run</a></a></h3>
+<pre><code class="language-go">func (p *UninstallEngine) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="UninstallEngine.Title"></a></p>
+<h3 id="func-uninstallengine-title"><a class="header" href="#func-uninstallengine-title">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L52">Title</a></a></h3>
+<pre><code class="language-go">func (p *UninstallEngine) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="Unlock"></a></p>
+<h2 id="type-unlock"><a class="header" href="#type-unlock">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/92_unlock.go#L32-L35">Unlock</a></a></h2>
+<p>Unlock phase state</p>
+<pre><code class="language-go">type Unlock struct {
+    GenericPhase
+    Cancel func(context.Context)
+}
+</code></pre>
+<p><a name="Unlock.Explanation"></a></p>
+<h3 id="func-unlock-explanation"><a class="header" href="#func-unlock-explanation">func (*Unlock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/92_unlock.go#L54">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *Unlock) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="Unlock.Prepare"></a></p>
+<h3 id="func-unlock-prepare"><a class="header" href="#func-unlock-prepare">func (*Unlock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/92_unlock.go#L38">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *Unlock) Prepare(_ context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="Unlock.Run"></a></p>
+<h3 id="func-unlock-run"><a class="header" href="#func-unlock-run">func (*Unlock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/92_unlock.go#L59">Run</a></a></h3>
+<pre><code class="language-go">func (p *Unlock) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="Unlock.Title"></a></p>
+<h3 id="func-unlock-title"><a class="header" href="#func-unlock-title">func (*Unlock) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/92_unlock.go#L49">Title</a></a></h3>
+<pre><code class="language-go">func (p *Unlock) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="UpgradeController"></a></p>
+<h2 id="type-upgradecontroller"><a class="header" href="#type-upgradecontroller">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L32-L34">UpgradeController</a></a></h2>
+<p>UpgradeController phase state</p>
+<pre><code class="language-go">type UpgradeController struct {
+    UpgradeHosts
+}
+</code></pre>
+<p><a name="UpgradeController.Explanation"></a></p>
+<h3 id="func-upgradecontroller-explanation"><a class="header" href="#func-upgradecontroller-explanation">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L42">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeController) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="UpgradeController.Prepare"></a></p>
+<h3 id="func-upgradecontroller-prepare"><a class="header" href="#func-upgradecontroller-prepare">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L47">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="UpgradeController.Run"></a></p>
+<h3 id="func-upgradecontroller-run"><a class="header" href="#func-upgradecontroller-run">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L68">Run</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeController) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="UpgradeController.Title"></a></p>
+<h3 id="func-upgradecontroller-title"><a class="header" href="#func-upgradecontroller-title">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L37">Title</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeController) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="UpgradeHosts"></a></p>
+<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L36-L42">UpgradeHosts</a></a></h2>
+<p>UpgradeHosts phase state</p>
+<pre><code class="language-go">type UpgradeHosts struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="UpgradeHosts.ShouldRun"></a></p>
+<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L45">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeHosts) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there are workers</p>
+<p><a name="UpgradeWorkers"></a></p>
+<h2 id="type-upgradeworkers"><a class="header" href="#type-upgradeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L32-L35">UpgradeWorkers</a></a></h2>
+<p>UpgradeWorkers phase state</p>
+<pre><code class="language-go">type UpgradeWorkers struct {
+    UpgradeHosts
+    WorkerConcurrent string
+}
+</code></pre>
+<p><a name="UpgradeWorkers.Explanation"></a></p>
+<h3 id="func-upgradeworkers-explanation"><a class="header" href="#func-upgradeworkers-explanation">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L43">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeWorkers) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="UpgradeWorkers.Prepare"></a></p>
+<h3 id="func-upgradeworkers-prepare"><a class="header" href="#func-upgradeworkers-prepare">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L48">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="UpgradeWorkers.Run"></a></p>
+<h3 id="func-upgradeworkers-run"><a class="header" href="#func-upgradeworkers-run">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L69">Run</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeWorkers) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="UpgradeWorkers.Title"></a></p>
+<h3 id="func-upgradeworkers-title"><a class="header" href="#func-upgradeworkers-title">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L38">Title</a></a></h3>
+<pre><code class="language-go">func (p *UpgradeWorkers) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="UploadFiles"></a></p>
+<h2 id="type-uploadfiles"><a class="header" href="#type-uploadfiles">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L53-L67">UploadFiles</a></a></h2>
+<p>UploadFiles implements a phase which upload files to hosts</p>
+<pre><code class="language-go">type UploadFiles struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="UploadFiles.Explanation"></a></p>
+<h3 id="func-uploadfiles-explanation"><a class="header" href="#func-uploadfiles-explanation">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L75">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *UploadFiles) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="UploadFiles.Prepare"></a></p>
+<h3 id="func-uploadfiles-prepare"><a class="header" href="#func-uploadfiles-prepare">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L85">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *UploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="UploadFiles.Run"></a></p>
+<h3 id="func-uploadfiles-run"><a class="header" href="#func-uploadfiles-run">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L279">Run</a></a></h3>
+<pre><code class="language-go">func (p *UploadFiles) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="UploadFiles.ShouldRun"></a></p>
+<h3 id="func-uploadfiles-shouldrun"><a class="header" href="#func-uploadfiles-shouldrun">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L274">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *UploadFiles) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there are workers</p>
+<p><a name="UploadFiles.Title"></a></p>
+<h3 id="func-uploadfiles-title"><a class="header" href="#func-uploadfiles-title">func (*UploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/50_uploadfiles.go#L70">Title</a></a></h3>
+<pre><code class="language-go">func (p *UploadFiles) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="UploadFilesCommon"></a></p>
+<h2 id="type-uploadfilescommon"><a class="header" href="#type-uploadfilescommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L46-L63">UploadFilesCommon</a></a></h2>
+<p>UploadFilesCommon implements a phase which upload files to hosts</p>
+<pre><code class="language-go">type UploadFilesCommon struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="UploadFilesCommon.CleanUp"></a></p>
+<h3 id="func-uploadfilescommon-cleanup"><a class="header" href="#func-uploadfilescommon-cleanup">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L262">CleanUp</a></a></h3>
+<pre><code class="language-go">func (p *UploadFilesCommon) CleanUp(ctx context.Context)
+</code></pre>
+<p>CleanUp the phase</p>
+<p><a name="UploadFilesCommon.Prepare"></a></p>
+<h3 id="func-uploadfilescommon-prepare"><a class="header" href="#func-uploadfilescommon-prepare">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L66">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *UploadFilesCommon) Prepare(_ context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="UploadFilesCommon.Run"></a></p>
+<h3 id="func-uploadfilescommon-run"><a class="header" href="#func-uploadfilescommon-run">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L87">Run</a></a></h3>
+<pre><code class="language-go">func (p *UploadFilesCommon) Run(ctx context.Context) (err error)
+</code></pre>
+<p>Run the phase</p>
+<p><a name="UploadFilesCommon.ShouldRun"></a></p>
+<h3 id="func-uploadfilescommon-shouldrun"><a class="header" href="#func-uploadfilescommon-shouldrun">func (*UploadFilesCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/55_files_common.go#L197">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *UploadFilesCommon) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there are workers</p>
+<p><a name="ValidateHosts"></a></p>
+<h2 id="type-validatehosts"><a class="header" href="#type-validatehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/11_validate_hosts.go#L37-L41">ValidateHosts</a></a></h2>
+<p>ValidateHosts performs remote OS detection</p>
+<pre><code class="language-go">type ValidateHosts struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ValidateHosts.Explanation"></a></p>
+<h3 id="func-validatehosts-explanation"><a class="header" href="#func-validatehosts-explanation">func (*ValidateHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/11_validate_hosts.go#L49">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ValidateHosts) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ValidateHosts.ReadOnly"></a></p>
+<h3 id="func-validatehosts-readonly"><a class="header" href="#func-validatehosts-readonly">func (*ValidateHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/11_validate_hosts.go#L54">ReadOnly</a></a></h3>
+<pre><code class="language-go">func (p *ValidateHosts) ReadOnly() string
+</code></pre>
+<p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
+<p><a name="ValidateHosts.Run"></a></p>
+<h3 id="func-validatehosts-run"><a class="header" href="#func-validatehosts-run">func (*ValidateHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/11_validate_hosts.go#L59">Run</a></a></h3>
+<pre><code class="language-go">func (p *ValidateHosts) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ValidateHosts.Title"></a></p>
+<h3 id="func-validatehosts-title"><a class="header" href="#func-validatehosts-title">func (*ValidateHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/11_validate_hosts.go#L44">Title</a></a></h3>
+<pre><code class="language-go">func (p *ValidateHosts) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../golang/pkg/packager/load.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../golang/pkg/retry.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../golang/pkg/packager/load.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../golang/pkg/retry.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../mark-09e88c2c.min.js"></script>
+        <script src="../../searcher-09f2665d.js"></script>
+
+        <script src="../../clipboard-1626706a.min.js"></script>
+        <script src="../../highlight-abc7f01d.js"></script>
+        <script src="../../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

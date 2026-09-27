@@ -1,0 +1,682 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>cluster</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-2ec98814.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-ea7344ca.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/schema/cluster.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cluster-configuration"><a class="header" href="#cluster-configuration">Cluster configuration</a></h2>
+<p>is the root object of a cluster configuration document.</p>
+<p>Rendered from <code>schema/zarf-v1alpha1-cluster-schema.json</code>.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>apiVersion</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the API group and version of this configuration document. One of <code>zarf.dev/v1alpha1</code>.</td></tr>
+<tr><td><code>kind</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the document type. The value must be ZarfCluster. One of <code>ZarfCluster</code>.</td></tr>
+<tr><td><code>metadata</code></td><td><a href="#zarfclustermetadata">ZarfClusterMetadata</a></td><td>yes</td><td></td><td>holds identifying information for the cluster.</td></tr>
+<tr><td><code>spec</code></td><td><a href="#zarfclusterspec">ZarfClusterSpec</a></td><td>yes</td><td></td><td>holds the configuration and hosts for the cluster.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="opensshconfig"><a class="header" href="#opensshconfig">OpenSSHConfig</a></h3>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host</td></tr>
+<tr><td><code>configPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH config file</td></tr>
+<tr><td><code>disableMultiplexing</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td><td>Disable SSH connection multiplexing</td></tr>
+<tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH private key</td></tr>
+<tr><td><code>options</code></td><td><a href="#optionarguments">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
+<tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td></td><td>Optional SSH port</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>Optional SSH user</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="optionarguments"><a class="header" href="#optionarguments">OptionArguments</a></h3>
+<h3 id="sshconfig"><a class="header" href="#sshconfig">SSHConfig</a></h3>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host (IP or hostname)</td></tr>
+<tr><td><code>bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Optional bastion host</td></tr>
+<tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH private key</td></tr>
+<tr><td><code>options</code></td><td><a href="#optionarguments">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
+<tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td><code>22.0</code></td><td>SSH port (default 22)</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td><code>root</code></td><td>User to log in as</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="winrmconfig"><a class="header" href="#winrmconfig">WinRMConfig</a></h3>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host</td></tr>
+<tr><td><code>bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Optional SSH bastion</td></tr>
+<tr><td><code>caCertPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to CA certificate</td></tr>
+<tr><td><code>certPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to client certificate</td></tr>
+<tr><td><code>insecure</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td><td>Accept invalid TLS certificates</td></tr>
+<tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to client key</td></tr>
+<tr><td><code>password</code></td><td><code>string</code></td><td>no</td><td></td><td>Password for WinRM authentication</td></tr>
+<tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td></td><td>WinRM port (default 5985; 5986 when useHTTPS is true)</td></tr>
+<tr><td><code>tlsServerName</code></td><td><code>string</code></td><td>no</td><td></td><td>TLS server name override</td></tr>
+<tr><td><code>useHttps</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td><td>Use HTTPS for WinRM</td></tr>
+<tr><td><code>useNtlm</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td><td>Use NTLM authentication</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td><code>Administrator</code></td><td>User to authenticate as</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterageencryption"><a class="header" href="#zarfclusterageencryption">ZarfClusterAgeEncryption</a></h3>
+<p>records the age recipients a document’s credentials were encrypted to.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>lastModified</code></td><td><code>string</code></td><td>no</td><td></td><td>is when cargoship last rewrote the credentials in this document, in RFC 3339.</td></tr>
+<tr><td><code>recipients</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the age public keys cargoship encrypted to, in the order they were given. An SSH key keeps its authorized_keys comment, since that is the part that says whose key it is.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterconfig"><a class="header" href="#zarfclusterconfig">ZarfClusterConfig</a></h3>
+<p>holds cluster-wide configuration.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>loadbalancer</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the hostname clients use to reach the cluster control plane.</td></tr>
+<tr><td><code>profiles</code></td><td>map[string]<a href="#zarfclusterprofiles">ZarfClusterProfiles</a></td><td>no</td><td></td><td>maps a profile name to host and engine overrides that a host can select.</td></tr>
+<tr><td><code>registries</code></td><td>array of <a href="#zarfclusterregistries">ZarfClusterRegistries</a></td><td>no</td><td></td><td>lists the container registries the cluster uses.</td></tr>
+<tr><td><code>values</code></td><td>object</td><td>no</td><td></td><td>overrides the values the distro package was built with. It is the same<br>nested structure the package ships, addressed by the same dotted paths, and it<br>must still satisfy the package’s values schema. Keys the package does not<br>define are kept, so a cluster can carry values a later package version reads.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterencryption"><a class="header" href="#zarfclusterencryption">ZarfClusterEncryption</a></h3>
+<p>records how the credentials in a document were encrypted.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>age</code></td><td><a href="#zarfclusterageencryption">ZarfClusterAgeEncryption</a></td><td>no</td><td></td><td>records the age recipients this document’s credentials were encrypted to. Nothing verifies this list and nothing can: an age header carries no recipient identifier, so editing it changes what the file claims and not a byte of what it holds.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterfiles"><a class="header" href="#zarfclusterfiles">ZarfClusterFiles</a></h3>
+<p>defines a file to write to a host.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>data</code></td><td><code>string</code></td><td>no</td><td></td><td>holds inline content for the file, as an alternative to Source.</td></tr>
+<tr><td><code>dst</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path on the host where cargoship writes the file.</td></tr>
+<tr><td><code>dstDir</code></td><td><code>string</code></td><td>no</td><td></td><td>is the directory on the host where cargoship writes the file.</td></tr>
+<tr><td><code>group</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the file group on the host.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the file in the cluster configuration.</td></tr>
+<tr><td><code>perm</code></td><td><code>string</code></td><td>no</td><td></td><td>sets the file mode cargoship applies on the host.</td></tr>
+<tr><td><code>src</code></td><td><code>string</code></td><td>no</td><td></td><td>is the local path or URL cargoship reads the file from.</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the file owner on the host.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclustermetadata"><a class="header" href="#zarfclustermetadata">ZarfClusterMetadata</a></h3>
+<p>holds identifying information for a cluster.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>encryption</code></td><td><a href="#zarfclusterencryption">ZarfClusterEncryption</a></td><td>no</td><td></td><td>records how the credentials in this document were encrypted. Cargoship writes it and never reads it back as key material, because an age header names no recipient: this records what was done, not a fact anything can check against the ciphertext beside it.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>sets the cluster name. If you allow cargoship to update the kubeconfig, cargoship uses this name there.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterprofiles"><a class="header" href="#zarfclusterprofiles">ZarfClusterProfiles</a></h3>
+<p>holds the host and engine overrides for one profile.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>concurrency</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>limits how many hosts using this profile cargoship processes at once, e.g.<br>draining, upgrading, initializing, or uninstalling. It accepts a fixed count (“1”) or a<br>percentage of the hosts sharing this profile (“25%”). Empty falls back to the phase’s<br>default concurrency.</td></tr>
+<tr><td><code>engine</code></td><td><a href="#zarfhostengine">ZarfHostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides applied to a host that selects this profile.</td></tr>
+<tr><td><code>host</code></td><td><a href="#zarfhostconfig">ZarfHostConfig</a></td><td>no</td><td></td><td>holds the configuration overrides applied to a host that selects this profile.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterregistries"><a class="header" href="#zarfclusterregistries">ZarfClusterRegistries</a></h3>
+<p>holds the credentials and pull proxy for one container registry.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>auth</code></td><td><a href="#zarfclusterregistryauth">ZarfClusterRegistryAuth</a></td><td>no</td><td></td><td>holds the credentials for the registry.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the registry. With a proxy it is the registry pulls are redirected away<br>from; without one it is the registry the credentials authenticate to.</td></tr>
+<tr><td><code>proxy</code></td><td><a href="#zarfclusterregistryproxy">ZarfClusterRegistryProxy</a></td><td>no</td><td></td><td>holds the pull redirect settings for the registry. Omit it to configure credentials<br>or TLS for the registry without redirecting pulls away from it.</td></tr>
+<tr><td><code>tls</code></td><td><a href="#zarfclusterregistrytls">ZarfClusterRegistryTLS</a></td><td>no</td><td></td><td>configures TLS verification and certificates for the registry endpoint.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterregistryauth"><a class="header" href="#zarfclusterregistryauth">ZarfClusterRegistryAuth</a></h3>
+<p>holds the credentials for a container registry.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>pass</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login secret for the remote registry.</td></tr>
+<tr><td><code>token</code></td><td><code>string</code></td><td>no</td><td></td><td>authenticates to the remote registry instead of a username and password.</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login name for the remote registry.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterregistryproxy"><a class="header" href="#zarfclusterregistryproxy">ZarfClusterRegistryProxy</a></h3>
+<p>redirects pulls for a registry to a different URL.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rewrite</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps a regex pattern to a replacement, transforming the image name (not the tag)<br>before it is pulled from this mirror. See https://docs.rke2.io/install/private_registry#rewrites</td></tr>
+<tr><td><code>url</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the registry address the engine pulls from instead of the original registry.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterregistrytls"><a class="header" href="#zarfclusterregistrytls">ZarfClusterRegistryTLS</a></h3>
+<p>holds the TLS connection settings for a container registry.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ca</code></td><td><code>string</code></td><td>no</td><td></td><td>is the PEM-encoded CA certificate used to verify the registry certificate. Cargoship<br>writes it to a file on each host and points the engine at that path, so the certificate<br>travels with the cluster configuration instead of having to be distributed separately.<br>Use CAFile instead when the certificate is already on the hosts. It may also be given as<br>an Ansible Vault-encrypted string, which cargoship decrypts at apply time.</td></tr>
+<tr><td><code>caFile</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path on the host to the CA bundle used to verify the registry certificate.</td></tr>
+<tr><td><code>certFile</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path on the host to the client certificate used to authenticate to the registry.</td></tr>
+<tr><td><code>insecureSkipVerify</code></td><td><code>boolean</code></td><td>no</td><td></td><td>disables TLS certificate verification.</td></tr>
+<tr><td><code>keyFile</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path on the host to the client private key used to authenticate to the registry.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfclusterspec"><a class="header" href="#zarfclusterspec">ZarfClusterSpec</a></h3>
+<p>holds the configuration and hosts for a cluster.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>config</code></td><td><a href="#zarfclusterconfig">ZarfClusterConfig</a></td><td>yes</td><td></td><td>holds the cluster-wide configuration.</td></tr>
+<tr><td><code>hosts</code></td><td><a href="#zarfhosts">ZarfHosts</a></td><td>yes</td><td></td><td>lists the hosts that make up the cluster.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarffirewallconfig"><a class="header" href="#zarffirewallconfig">ZarfFirewallConfig</a></h3>
+<p>is the backend-neutral firewall configuration for a node.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>rules</code></td><td>array of <a href="#zarffirewallrule">ZarfFirewallRule</a></td><td>no</td><td></td><td>lists the firewall rules cargoship applies to the node.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarffirewallpolicyconfig"><a class="header" href="#zarffirewallpolicyconfig">ZarfFirewallPolicyConfig</a></h3>
+<p>configures a firewalld policy that opens ports from one zone to another.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>egress</code></td><td><a href="#zarffirewallzone">ZarfFirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic to.</td></tr>
+<tr><td><code>ingress</code></td><td><a href="#zarffirewallzone">ZarfFirewallZone</a></td><td>yes</td><td></td><td>is the zone the policy allows traffic from.</td></tr>
+<tr><td><code>ports</code></td><td>array of <a href="#zarffirewallport">ZarfFirewallPort</a></td><td>no</td><td></td><td>lists the ports this policy allows.</td></tr>
+<tr><td><code>target</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the action taken on traffic that matches the policy. One of <code>CONTINUE</code>, <code>ACCEPT</code>, <code>REJECT</code>, <code>DROP</code>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarffirewallport"><a class="header" href="#zarffirewallport">ZarfFirewallPort</a></h3>
+<p>defines a port allowed through the firewalld policy.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>port</code></td><td><code>string</code> or <code>integer</code></td><td>yes</td><td></td><td>is the port number, or port range, cargoship opens.</td></tr>
+<tr><td><code>protocol</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the type of allowed traffic. One of <code>tcp</code>, <code>udp</code>, <code>sctp</code>, <code>dccp</code>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarffirewallrule"><a class="header" href="#zarffirewallrule">ZarfFirewallRule</a></h3>
+<p>is a single backend-neutral firewall rule.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>action</code></td><td><code>string</code></td><td>yes</td><td></td><td>is what cargoship does with traffic that matches the rule. One of <code>allow</code>, <code>deny</code>, <code>reject</code>.</td></tr>
+<tr><td><code>destination</code></td><td><code>string</code></td><td>no</td><td></td><td>is the address or CIDR the traffic goes to.</td></tr>
+<tr><td><code>direction</code></td><td><code>string</code></td><td>no</td><td><code>in</code></td><td>selects which traffic the rule matches. It defaults to in. One of <code>in</code>, <code>out</code>, <code>forward</code>.</td></tr>
+<tr><td><code>egress</code></td><td><code>string</code></td><td>no</td><td></td><td>names where forward traffic leaves. It is a zone on firewalld hosts and an<br>interface on ufw hosts. It applies to forward rules only.</td></tr>
+<tr><td><code>ingress</code></td><td><code>string</code></td><td>no</td><td></td><td>names where forward traffic enters. It is a zone on firewalld hosts and an<br>interface on ufw hosts. It applies to forward rules only.</td></tr>
+<tr><td><code>name</code></td><td><code>string</code></td><td>no</td><td></td><td>identifies the rule. Cargoship uses it to name the artifacts it writes on the<br>node, so it must be unique within a host. Cargoship generates one when it is empty.</td></tr>
+<tr><td><code>port</code></td><td><code>string</code> or <code>integer</code></td><td>no</td><td></td><td>is the port number, or inclusive port range, the rule matches.</td></tr>
+<tr><td><code>protocol</code></td><td><code>string</code></td><td>no</td><td></td><td>is the type of traffic the rule matches. One of <code>tcp</code>, <code>udp</code>, <code>sctp</code>, <code>dccp</code>.</td></tr>
+<tr><td><code>source</code></td><td><code>string</code></td><td>no</td><td></td><td>is the address or CIDR the traffic comes from.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarffirewallzone"><a class="header" href="#zarffirewallzone">ZarfFirewallZone</a></h3>
+<p>is the name of either the ingress or egress zone for a policy.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td><code>string</code></td><td>yes</td><td></td><td>identifies the firewalld zone.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfhost"><a class="header" href="#zarfhost">ZarfHost</a></h3>
+<p>is a remote connection to a node</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>engine</code></td><td><a href="#zarfhostengine">ZarfHostEngine</a></td><td>no</td><td></td><td>holds the node label and taint overrides for this node.</td></tr>
+<tr><td><code>environment</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps environment variables cargoship sets on the host.</td></tr>
+<tr><td><code>files</code></td><td>array of <a href="#zarfclusterfiles">ZarfClusterFiles</a></td><td>no</td><td></td><td>lists files cargoship uploads to the host.</td></tr>
+<tr><td><code>host</code></td><td><a href="#zarfhostconfig">ZarfHostConfig</a></td><td>no</td><td></td><td>holds the host-level configuration overrides for this node.</td></tr>
+<tr><td><code>hostname</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered name of the node.</td></tr>
+<tr><td><code>localhost</code></td><td><code>boolean</code></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>openSSH</code></td><td><a href="#opensshconfig">OpenSSHConfig</a></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>privateAddress</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered private address of the node.</td></tr>
+<tr><td><code>privateInterface</code></td><td><code>string</code></td><td>no</td><td></td><td>overrides the discovered private interface of the node.</td></tr>
+<tr><td><code>profile</code></td><td><code>string</code></td><td>no</td><td></td><td>selects a profile by name from the cluster config’s Profiles map.</td></tr>
+<tr><td><code>role</code></td><td><code>string</code></td><td>yes</td><td></td><td>sets the node role when cargoship adds this host to the cluster. It must be controller or worker. One of <code>controller</code>, <code>worker</code>.</td></tr>
+<tr><td><code>ssh</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>winRM</code></td><td><a href="#winrmconfig">WinRMConfig</a></td><td>no</td><td></td><td></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfhostconfig"><a class="header" href="#zarfhostconfig">ZarfHostConfig</a></h3>
+<p>defines the configuration for a specific host, including firewall policies and the ports cargoship opens on the node.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>firewall</code></td><td><a href="#zarffirewallconfig">ZarfFirewallConfig</a></td><td>no</td><td></td><td>holds the backend-neutral firewall rules cargoship renders onto whichever<br>firewall the node runs, firewalld, ufw, or nftables.</td></tr>
+<tr><td><code>policy</code></td><td>map[string]<a href="#zarffirewallpolicyconfig">ZarfFirewallPolicyConfig</a></td><td>no</td><td></td><td>maps a policy name to a firewalld policy that allows traffic from one interface to another.<br>It is firewalld-only; prefer forward rules under <code>firewall.rules</code> for new configuration.</td></tr>
+<tr><td><code>ports</code></td><td>array of <a href="#zarfhostport">ZarfHostPort</a></td><td>no</td><td></td><td>lists the ports and protocols cargoship opens on the node.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfhostengine"><a class="header" href="#zarfhostengine">ZarfHostEngine</a></h3>
+<p>defines configuration options for node-level metadata, specifically Kubernetes node labels and taints applied to a cluster host.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>labels</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps Kubernetes node label keys to their values.</td></tr>
+<tr><td><code>taints</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the Kubernetes node taints cargoship applies to the node.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfhostport"><a class="header" href="#zarfhostport">ZarfHostPort</a></h3>
+<p>is a port cargoship opens on the public side of the firewall.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>port</code></td><td><code>string</code> or <code>integer</code></td><td>yes</td><td></td><td>is the port number, or port range, cargoship opens.</td></tr>
+<tr><td><code>protocol</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the type of allowed traffic. One of <code>tcp</code>, <code>udp</code>.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="zarfhosts"><a class="header" href="#zarfhosts">ZarfHosts</a></h3>
+<p>is an ordered list of hosts that cargoship manages together.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../commands/cargoship_version.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../schema/config.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../commands/cargoship_version.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../schema/config.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

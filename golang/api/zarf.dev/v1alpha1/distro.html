@@ -1,0 +1,501 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>distro</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../../../../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../../../../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../../../../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../../../../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../../../../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../../../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../../../../docs/css/print-69d0807c.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../../../../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../../../../searchindex-2ec98814.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../../toc-ea7344ca.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/golang/api/zarf.dev/v1alpha1/distro.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="distro"><a class="header" href="#distro">distro</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+</code></pre>
+<p>Package distro defines the API types for a distro package.</p>
+<h2 id="index"><a class="header" href="#index">Index</a></h2>
+<ul>
+<li><a href="#constants">Constants</a></li>
+<li><a href="#ZarfDistro">type ZarfDistro</a>
+<ul>
+<li><a href="#ZarfDistro.Arches">func (distro ZarfDistro) Arches() api.Arches</a></li>
+<li><a href="#ZarfDistro.IsSBOMAble">func (distro ZarfDistro) IsSBOMAble() bool</a></li>
+</ul>
+</li>
+<li><a href="#ZarfDistroActions">type ZarfDistroActions</a></li>
+<li><a href="#ZarfDistroBuildData">type ZarfDistroBuildData</a>
+<ul>
+<li><a href="#ZarfDistroBuildData.Arches">func (b ZarfDistroBuildData) Arches() api.Arches</a></li>
+</ul>
+</li>
+<li><a href="#ZarfDistroConfig">type ZarfDistroConfig</a>
+<ul>
+<li><a href="#ZarfDistroConfig.JSONSchemaExtend">func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema)</a></li>
+</ul>
+</li>
+<li><a href="#ZarfDistroImageConfig">type ZarfDistroImageConfig</a>
+<ul>
+<li><a href="#ZarfDistroImageConfig.TarballSuffix">func (c ZarfDistroImageConfig) TarballSuffix() (string, error)</a></li>
+</ul>
+</li>
+<li><a href="#ZarfDistroMetadata">type ZarfDistroMetadata</a>
+<ul>
+<li><a href="#ZarfDistroMetadata.Arches">func (m ZarfDistroMetadata) Arches() api.Arches</a></li>
+</ul>
+</li>
+<li><a href="#ZarfDistroOS">type ZarfDistroOS</a>
+<ul>
+<li><a href="#ZarfDistroOS.JSONSchemaExtend">func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)</a></li>
+</ul>
+</li>
+<li><a href="#ZarfDistroSpec">type ZarfDistroSpec</a></li>
+<li><a href="#ZarfDistroValueMapping">type ZarfDistroValueMapping</a></li>
+<li><a href="#ZarfDistroValues">type ZarfDistroValues</a></li>
+</ul>
+<h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
+<p><a name="CompressionNone"></a>Compression formats accepted by ZarfDistroImageConfig.Compression.</p>
+<pre><code class="language-go">const (
+    // CompressionNone writes the image tarballs uncompressed. This is the default.
+    CompressionNone = "none"
+    // CompressionGzip writes the image tarballs with gzip compression.
+    CompressionGzip = "gz"
+    // CompressionZstd writes the image tarballs with zstd compression.
+    CompressionZstd = "zstd"
+)
+</code></pre>
+<p><a name="ZarfDistro"></a></p>
+<h2 id="type-zarfdistro"><a class="header" href="#type-zarfdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L29-L40">ZarfDistro</a></a></h2>
+<p>ZarfDistro is the root object of a distro package configuration document.</p>
+<pre><code class="language-go">type ZarfDistro struct {
+    // APIVersion identifies the API group and version of this configuration document.
+    APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
+    // Kind identifies the document type. The value must be ZarfDistro.
+    Kind v1alpha1.ZarfDistroKind `json:"kind" jsonschema:"enum=ZarfDistro"`
+    // Metadata holds identifying information for the distro package.
+    Metadata ZarfDistroMetadata `json:"metadata"`
+    // Build holds information recorded when the package was built.
+    Build ZarfDistroBuildData `json:"build,omitempty"`
+    // Spec holds the configuration for the distro package.
+    Spec ZarfDistroSpec `json:"spec"`
+}
+</code></pre>
+<p><a name="ZarfDistro.Arches"></a></p>
+<h3 id="func-zarfdistro-arches"><a class="header" href="#func-zarfdistro-arches">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L275">Arches</a></a></h3>
+<pre><code class="language-go">func (distro ZarfDistro) Arches() api.Arches
+</code></pre>
+<p>Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.</p>
+<p><a name="ZarfDistro.IsSBOMAble"></a></p>
+<h3 id="func-zarfdistro-issbomable"><a class="header" href="#func-zarfdistro-issbomable">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L283">IsSBOMAble</a></a></h3>
+<pre><code class="language-go">func (distro ZarfDistro) IsSBOMAble() bool
+</code></pre>
+<p>IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.</p>
+<p><a name="ZarfDistroActions"></a></p>
+<h2 id="type-zarfdistroactions"><a class="header" href="#type-zarfdistroactions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L137-L140">ZarfDistroActions</a></a></h2>
+<p>ZarfDistroActions defines the actions cargoship runs during specific phases of building the distro package.</p>
+<pre><code class="language-go">type ZarfDistroActions struct {
+    // OnCreate lists the actions cargoship runs when it creates the package.
+    OnCreate zarf.ZarfComponentActionSet `json:"onCreate,omitempty"`
+}
+</code></pre>
+<p><a name="ZarfDistroBuildData"></a></p>
+<h2 id="type-zarfdistrobuilddata"><a class="header" href="#type-zarfdistrobuilddata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L73-L94">ZarfDistroBuildData</a></a></h2>
+<p>ZarfDistroBuildData holds information recorded when the package was built.</p>
+<pre><code class="language-go">type ZarfDistroBuildData struct {
+    // Architecture is the CPU architecture used to build the package. Populated only when the package targets a single architecture.
+    Architecture api.Arch `json:"architecture,omitempty"`
+    // Architectures lists the CPU architectures used to build the package.
+    Architectures api.Arches `json:"architectures,omitempty"`
+    // Timestamp is the time the package was created.
+    Timestamp string `json:"timestamp,omitempty"`
+    // Version records the distro version used to build the package.
+    Version string `json:"version,omitempty"`
+    // RegistryOverrides maps each original registry to the registry actually used to build the package.
+    RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
+    // Signed indicates whether the package was signed. A nil value means the signing status was not recorded.
+    Signed *bool `json:"signed,omitempty"`
+    // Reproducible indicates Build.Timestamp was pinned to a fixed value
+    // (config.Timestamp) instead of the actual build time, so identical
+    // package inputs produce byte-identical output.
+    Reproducible bool `json:"reproducible,omitempty"`
+    // ProvenanceFiles lists files in the package that checksums.txt does not cover.
+    // These are files added after cargoship generates checksums, for example signature files.
+    // The signed distro.yaml authenticates this list.
+    ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
+}
+</code></pre>
+<p><a name="ZarfDistroBuildData.Arches"></a></p>
+<h3 id="func-zarfdistrobuilddata-arches"><a class="header" href="#func-zarfdistrobuilddata-arches">func (ZarfDistroBuildData) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L262">Arches</a></a></h3>
+<pre><code class="language-go">func (b ZarfDistroBuildData) Arches() api.Arches
+</code></pre>
+<p>Arches returns the CPU architectures the package was built for. It prefers Architectures and falls back to the single Architecture field.</p>
+<p><a name="ZarfDistroConfig"></a></p>
+<h2 id="type-zarfdistroconfig"><a class="header" href="#type-zarfdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L143-L152">ZarfDistroConfig</a></a></h2>
+<p>ZarfDistroConfig holds the configuration for the distro engine.</p>
+<pre><code class="language-go">type ZarfDistroConfig struct {
+    // Files lists files that cargoship writes to every host, no matter which install method it uses.
+    Files v1alpha1.ZarfFiles `json:"files,omitempty"`
+    // ImagesConfig holds settings for the images bundled with the package.
+    ImagesConfig ZarfDistroImageConfig `json:"imageConfig,omitempty"`
+    // OS holds settings applied to the host operating system.
+    OS  ZarfDistroOS `json:"os,omitempty"`
+    // Engine holds configuration passed through to the distro engine.
+    Engine dig.Mapping `json:"engine,omitempty"`
+}
+</code></pre>
+<p><a name="ZarfDistroConfig.JSONSchemaExtend"></a></p>
+<h3 id="func-zarfdistroconfig-jsonschemaextend"><a class="header" href="#func-zarfdistroconfig-jsonschemaextend">func (ZarfDistroConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L158">JSONSchemaExtend</a></a></h3>
+<pre><code class="language-go">func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema)
+</code></pre>
+<p>JSONSchemaExtend pins down the shape of the engine’s manifest section, whose values are Helm values written into a HelmChartConfig: either a YAML string or a mapping cargoship serializes to YAML for the chart. Engine is otherwise a free-form mapping handed to the distro engine, so the section list stays open and every other section keeps validating as it did.</p>
+<p><a name="ZarfDistroImageConfig"></a></p>
+<h2 id="type-zarfdistroimageconfig"><a class="header" href="#type-zarfdistroimageconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L193-L200">ZarfDistroImageConfig</a></a></h2>
+<p>ZarfDistroImageConfig holds settings for the images cargoship writes to a host.</p>
+<pre><code class="language-go">type ZarfDistroImageConfig struct {
+    // Compression sets the compression format for the image tarballs.
+    Compression string `json:"compression,omitempty" jsonschema:"default=none,enum=none,enum=gz,enum=zstd"`
+    // Path is the upload destination for the image tarballs.
+    Path string `json:"path,omitempty"`
+    // Images lists the offline images required by the package.
+    Images []string `json:"images,omitempty" jsonschema:"uniqueItems=true"`
+}
+</code></pre>
+<p><a name="ZarfDistroImageConfig.TarballSuffix"></a></p>
+<h3 id="func-zarfdistroimageconfig-tarballsuffix"><a class="header" href="#func-zarfdistroimageconfig-tarballsuffix">func (ZarfDistroImageConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L206">TarballSuffix</a></a></h3>
+<pre><code class="language-go">func (c ZarfDistroImageConfig) TarballSuffix() (string, error)
+</code></pre>
+<p>TarballSuffix returns the file suffix image tarballs get for the configured compression format. The suffixes match the archive extensions a host imports, so a compressed tarball is still picked up. An unset format means no compression. It returns an error for a format cargoship cannot write.</p>
+<p><a name="ZarfDistroMetadata"></a></p>
+<h2 id="type-zarfdistrometadata"><a class="header" href="#type-zarfdistrometadata">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L43-L70">ZarfDistroMetadata</a></a></h2>
+<p>ZarfDistroMetadata holds identifying information for a distro package.</p>
+<pre><code class="language-go">type ZarfDistroMetadata struct {
+    // Uncompressed disables compression for this package when true.
+    Uncompressed bool `json:"uncompressed,omitempty"`
+    // Architecture is the CPU architecture this distro package targets. Use Architectures to target more than one.
+    Architecture api.Arch `json:"architecture,omitempty" jsonschema:"default=amd64"`
+    // Architectures lists the CPU architectures this distro package targets. It supersedes Architecture, which stays valid for a package targeting a single architecture.
+    Architectures api.Arches `json:"architectures,omitempty"`
+    // Name identifies the distro package.
+    Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+    // Description explains what this distro package does.
+    Description string `json:"description,omitempty"`
+    // Version is the distro version cargoship installs. We recommend matching it to the Kubernetes version you install.
+    Version string `json:"version,omitempty"`
+    // Annotations holds key-value pairs added to the OCI manifest.
+    Annotations map[string]string `json:"annotations,omitempty"`
+    // URL sets the OCI annotation for more information about the image.
+    URL string `json:"url,omitempty"`
+    // Authors sets the OCI annotation for the contact details of the people or organization responsible for the image.
+    Authors string `json:"athors,omitempty"`
+    // Documentation sets the OCI annotation for the URL to the image documentation.
+    Documentation string `json:"documentation,omitempty"`
+    // Source sets the OCI annotation for the URL to the image source code.
+    Source string `json:"source,omitempty"`
+    // Vendor sets the OCI annotation for the name of the organization or individual that distributes the image.
+    Vendor string `json:"vendor,omitempty"`
+    // AggregateChecksum is the checksum of the checksums.txt file, which lists the checksum for every layer in the package.
+    AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+}
+</code></pre>
+<p><a name="ZarfDistroMetadata.Arches"></a></p>
+<h3 id="func-zarfdistrometadata-arches"><a class="header" href="#func-zarfdistrometadata-arches">func (ZarfDistroMetadata) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L250">Arches</a></a></h3>
+<pre><code class="language-go">func (m ZarfDistroMetadata) Arches() api.Arches
+</code></pre>
+<p>Arches returns the CPU architectures the package targets. It prefers Architectures and falls back to the single Architecture field, so callers never have to know which one the package set.</p>
+<p><a name="ZarfDistroOS"></a></p>
+<h2 id="type-zarfdistroos"><a class="header" href="#type-zarfdistroos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L220-L231">ZarfDistroOS</a></a></h2>
+<p>ZarfDistroOS holds settings applied to a host.</p>
+<pre><code class="language-go">type ZarfDistroOS struct {
+    // Sysctl maps sysctl keys to the values cargoship applies to a host.
+    Sysctl map[string]string `json:"sysctl,omitempty"`
+    // FAPolicyd holds the fapolicyd config file contents cargoship writes to a host.
+    FAPolicyd string `json:"fapolicyd,omitempty"`
+    // Files lists files cargoship uploads to a host.
+    Files v1alpha1.ZarfFiles `json:"files,omitempty"`
+    // Kernel lists the kernel modules cargoship enables on the host.
+    Kernel []string `json:"kernel,omitempty"`
+    // Environment maps environment variables cargoship sets on the host.
+    Environment map[string]string `json:"env,omitempty"`
+}
+</code></pre>
+<p><a name="ZarfDistroOS.JSONSchemaExtend"></a></p>
+<h3 id="func-zarfdistroos-jsonschemaextend"><a class="header" href="#func-zarfdistroos-jsonschemaextend">func (ZarfDistroOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L235">JSONSchemaExtend</a></a></h3>
+<pre><code class="language-go">func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)
+</code></pre>
+<p>JSONSchemaExtend widens sysctl values to accept numbers alongside strings, so unquoted numeric values in YAML validate.</p>
+<p><a name="ZarfDistroSpec"></a></p>
+<h2 id="type-zarfdistrospec"><a class="header" href="#type-zarfdistrospec">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L97-L108">ZarfDistroSpec</a></a></h2>
+<p>ZarfDistroSpec holds the configuration for a distro package.</p>
+<pre><code class="language-go">type ZarfDistroSpec struct {
+    // Type selects the distro engine: rke2, k3s, or upstream.
+    Type string `json:"type" jsonschema:"enum=rke2,enum=k3s,enum=upstream"`
+    // Version is the version of the distro engine.
+    Version string `json:"version"`
+    // Actions defines the actions cargoship runs while building the package.
+    Actions ZarfDistroActions `json:"actions,omitempty"`
+    // Config holds the distro engine configuration.
+    Config ZarfDistroConfig `json:"config"`
+    // Values holds the default values the package is built with, and the schema they must satisfy.
+    Values ZarfDistroValues `json:"values,omitempty"`
+}
+</code></pre>
+<p><a name="ZarfDistroValueMapping"></a></p>
+<h2 id="type-zarfdistrovaluemapping"><a class="header" href="#type-zarfdistrovaluemapping">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L128-L134">ZarfDistroValueMapping</a></a></h2>
+<p>ZarfDistroValueMapping projects one value onto one place in the engine configuration.</p>
+<pre><code class="language-go">type ZarfDistroValueMapping struct {
+    // Source is the dotted path to read from the resolved values, e.g. .cilium.encryption.enabled
+    Source string `json:"source" jsonschema:"example=.cilium.encryption.enabled"`
+    // Target is the dotted path to write, relative to spec.config.engine,
+    // e.g. .manifest.rke2-cilium.encryption.enabled
+    Target string `json:"target" jsonschema:"example=.manifest.rke2-cilium.encryption.enabled"`
+}
+</code></pre>
+<p><a name="ZarfDistroValues"></a></p>
+<h2 id="type-zarfdistrovalues"><a class="header" href="#type-zarfdistrovalues">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L113-L125">ZarfDistroValues</a></a></h2>
+<p>ZarfDistroValues declares the values a package ships with. Values are the Helm-style configuration described by ZEP-0021: a nested structure addressed by dotted paths, which templates in the package read as .Values.</p>
+<pre><code class="language-go">type ZarfDistroValues struct {
+    // Files lists the YAML values files cargoship merges, in order, to build the package's default values. Each entry is a path relative to the package definition, an absolute path, or a URL. A later file overrides an earlier one, key by key.
+    Files []string `json:"files,omitempty" jsonschema:"example=values.yaml,example=overrides/prod.yaml,example=https://example.com/values.yaml"`
+    // Schema is the JSON Schema document the merged values must satisfy. Cargoship checks the values against it when it builds the package, and refuses to build when they do not match. The schema must not use $ref.
+    Schema string `json:"schema,omitempty" jsonschema:"example=values.schema.json"`
+    // Mappings project values onto the engine configuration, so that one value a
+    // cluster sets reaches wherever the distro needs it. Each mapping reads the
+    // source path out of the resolved values and writes it to the target path,
+    // which is relative to spec.config.engine. A source the values do not define
+    // is left alone, so the package's own engine configuration stands as the
+    // default.
+    Mappings []ZarfDistroValueMapping `json:"mappings,omitempty"`
+}
+</code></pre>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../../golang/api/zarf.dev/v1alpha1/cluster.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../../golang/pkg/action.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../../golang/api/zarf.dev/v1alpha1/cluster.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../../golang/pkg/action.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../../../../mark-09e88c2c.min.js"></script>
+        <script src="../../../../searcher-09f2665d.js"></script>
+
+        <script src="../../../../clipboard-1626706a.min.js"></script>
+        <script src="../../../../highlight-abc7f01d.js"></script>
+        <script src="../../../../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>
