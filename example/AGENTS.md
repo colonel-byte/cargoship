@@ -8,7 +8,7 @@ Almost everything under `example/` is generated. Regenerate it with mage; do not
 | :------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------- |
 | `example/<distro>-<flavor>/<minor>/<version>/distro.yaml`                       | `Generate.Examples` / `Generate.ExampleLine`, from `magefiles/templates/<distro>-distro.yaml.tmpl` |
 | `example/<distro>-<flavor>/<minor>/<version>/values.yaml`, `values.schema.json` | the same targets, from `magefiles/templates/<distro>/*.tmpl`                                       |
-| `example/shasums.json`                                                          | the same targets — a cache of the digests of the files the examples install                        |
+| `example/shasums.json`                                                          | the same targets - a cache of the digests of the files the examples install                        |
 | `example/upstream/<minor>/<version>/distro.yaml`                                | `Generate.Examples`, from `magefiles/templates/upstream-distro.yaml.tmpl`                          |
 
 To change a generated example, edit its template in `magefiles/templates/` and re-run `mage generate:examples`, which re-renders every example directory already on disk. An edit made directly to a rendered file is lost on the next run.
@@ -24,9 +24,9 @@ mage generate:exampleLine k3s v1.36
 mage generate:exampleLine rke2 v1.37
 ```
 
-Once a line is on disk, `mage generate:examples` keeps it current — it renders every pinned tag plus every example directory that already exists.
+Once a line is on disk, `mage generate:examples` keeps it current - it renders every pinned tag plus every example directory that already exists.
 
-A flavor that names minor lines is rendered only for the lines it names, so asking for a line it does not cover renders the other flavors alone. That covers the multi-architecture flavors — `example/rke2-multi-cni-canal`, `example/rke2-multi-cni-cilium`, `example/k3s-multi` — which are gated to the lines in `exampleMultiMinors` in [`magefiles/examples.go`](../magefiles/examples.go). Add a new line there before rendering it, or those flavors stay empty for it:
+A flavor that names minor lines is rendered only for the lines it names, so asking for a line it does not cover renders the other flavors alone. That covers the multi-architecture flavors - `example/rke2-multi-cni-canal`, `example/rke2-multi-cni-cilium`, `example/k3s-multi` - which are gated to the lines in `exampleMultiMinors` in [`magefiles/examples.go`](../magefiles/examples.go). Add a new line there before rendering it, or those flavors stay empty for it:
 
 ```go
 exampleMultiMinors = []string{"v1_35", "v1_36"}
@@ -48,7 +48,7 @@ Adding an rke2 minor line means adding the matching k3s minor line too, because 
 
 ## Network and caching
 
-Both example targets touch the network. Each release's text assets are cached under `<zarf_cache>/examples/`, and file digests are cached in `example/shasums.json`, so re-rendering a version already on disk fetches nothing. Set `CARGOSHIP_EXAMPLES_NO_CACHE=1` to refetch a run's assets — needed when Rancher re-cuts a release's assets in place, since the URL does not change when it does.
+Both example targets touch the network. Each release's text assets are cached under `<zarf_cache>/examples/`, and file digests are cached in `example/shasums.json`, so re-rendering a version already on disk fetches nothing. Set `CARGOSHIP_EXAMPLES_NO_CACHE=1` to refetch a run's assets - needed when Rancher re-cuts a release's assets in place, since the URL does not change when it does.
 
 Commit `example/shasums.json` with the examples that produced it. Delete an entry to force that file to be hashed again.
 

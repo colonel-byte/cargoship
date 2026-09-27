@@ -199,7 +199,7 @@ func (d *DistroLayout) computeManifest(ctx context.Context) error {
 			fileSize = int64(len(checksumsBytes))
 		default:
 			// zarf.yaml and post-signing provenance files (signature, bundle) are
-			// small — read from disk.
+			// small - read from disk.
 			hex, err := helpers.GetSHA256OfFile(filePath)
 			if err != nil {
 				return err

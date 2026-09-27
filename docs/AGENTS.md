@@ -27,7 +27,7 @@ Not this:
 | `.spec.config.registries[N].auth.user` | Registry username |
 ```
 
-Adding a row that is wider than the column repads the whole table, which is expected — the alignment is part of the content, not a one-time cleanup.
+Adding a row that is wider than the column repads the whole table, which is expected - the alignment is part of the content, not a one-time cleanup.
 
 ## Do not hand-edit the generated pages
 
@@ -43,7 +43,7 @@ Six parts of the `docs/` tree are generated from the code and are overwritten wh
 | `docs/security.md`         | `.github/SECURITY.md`, with its relative links rebased the same way                 |
 | `docs/SUMMARY.md`          | The mdBook table of contents, compiled from the rest of the `docs/` tree            |
 
-To change one of those pages, change what it is generated from — a command's `Short`/`Long`/flag help, a phase's title and explanation, or `phaseDocs()` for which phase pages exist — and then regenerate:
+To change one of those pages, change what it is generated from - a command's `Short`/`Long`/flag help, a phase's title and explanation, or `phaseDocs()` for which phase pages exist - and then regenerate:
 
 ```sh
 go run ./magefiles/core generate:document

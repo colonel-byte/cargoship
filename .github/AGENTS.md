@@ -12,7 +12,7 @@ curl -fsSL "https://github.com/ossf/scorecard/releases/download/${ver}/scorecard
 ./scorecard --local . --checks=Token-Permissions,Dangerous-Workflow,Pinned-Dependencies --show-details
 ```
 
-`--local` reads the working tree, so it scores a change that is not yet committed. For an honest before and after, take the baseline from a clean export — `git archive HEAD | tar -x -C "$(mktemp -d)"` — rather than by stashing, which silently reports the wrong thing once the branch has moved under you.
+`--local` reads the working tree, so it scores a change that is not yet committed. For an honest before and after, take the baseline from a clean export - `git archive HEAD | tar -x -C "$(mktemp -d)"` - rather than by stashing, which silently reports the wrong thing once the branch has moved under you.
 
 Read [the check reference](https://github.com/ossf/scorecard/blob/main/docs/checks.md) for what a check measures and GitHub's [Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use) for the practices behind it. What follows is only the handful this repository has actually tripped.
 
@@ -45,13 +45,13 @@ A job that calls a reusable workflow sets the ceiling for it: permissions can be
 
 ### Never take a checkout ref from the event payload
 
-Under `workflow_run` or `pull_request_target` a workflow runs with secrets and a writable token, so Dangerous-Workflow zeroes any `actions/checkout` whose `ref:` contains `github.event.pull_request` or `github.event.workflow_run` — that ref is attacker-controlled on a fork pull request, and the checkout hands it the token.
+Under `workflow_run` or `pull_request_target` a workflow runs with secrets and a writable token, so Dangerous-Workflow zeroes any `actions/checkout` whose `ref:` contains `github.event.pull_request` or `github.event.workflow_run` - that ref is attacker-controlled on a fork pull request, and the checkout hands it the token.
 
 Sequence the work with a reusable workflow and `needs:` instead. A called workflow already runs at its caller's ref, so the checkout needs no `ref:` at all, and `needs:` orders the jobs more tightly than waiting on a run to finish. [`workflows/release.yaml`](workflows/release.yaml) calling [`workflows/publish-example.yaml`](workflows/publish-example.yaml) is the worked example.
 
 ### Pin every action to a full commit SHA
 
-A `uses:` names the forty-character commit and carries the tag in a trailing comment, which is what Pinned-Dependencies counts and the only form that pins immutably — a tag can be moved.
+A `uses:` names the forty-character commit and carries the tag in a trailing comment, which is what Pinned-Dependencies counts and the only form that pins immutably - a tag can be moved.
 
 ```yaml
 - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -97,13 +97,13 @@ Relates to #
 
 ### Description
 
-Open with one or two sentences carrying the core of the change: what is wrong or missing, and how the change answers it. Where the problem was found — a failing test, a fuzz corpus entry, a report — belongs in that opening, so a reviewer knows the change is not speculative.
+Open with one or two sentences carrying the core of the change: what is wrong or missing, and how the change answers it. Where the problem was found - a failing test, a fuzz corpus entry, a report - belongs in that opening, so a reviewer knows the change is not speculative.
 
 Then add at most three `###` subsections, one per point a reviewer has to know about, each one or two sentences. Aim for 50 to 75 words of prose in a subsection, measured without any code block it holds; fewer is fine when the point is small, and a subsection past 100 words needs a reason to be that long. Spend them on what a reviewer cannot get from the diff: why the old behaviour was wrong, what the new behaviour is, or which behaviour that looks broken is in fact preserved. A change with one point of note gets one subsection; nothing obliges a description to reach three.
 
-Tests and leftover work compete for the same three subsections. Add `### Tests` where the tests are themselves a point of note, saying what they pin down and which checks were run — and do not claim a check passed without running it. Add `### Follow-up` where the change leaves work behind for another branch or repository, saying what and where.
+Tests and leftover work compete for the same three subsections. Add `### Tests` where the tests are themselves a point of note, saying what they pin down and which checks were run - and do not claim a check passed without running it. Add `### Follow-up` where the change leaves work behind for another branch or repository, saying what and where.
 
-Name symbols, files, and identifiers in backticks — `EncryptAtPath`, `docs/dev/fuzz-tests.md`, `{0, pass: hunter2}` — so a reviewer can search for them.
+Name symbols, files, and identifiers in backticks - `EncryptAtPath`, `docs/dev/fuzz-tests.md`, `{0, pass: hunter2}` - so a reviewer can search for them.
 
 Markdown in a pull request body follows the same rule as the rest of the repository: no hard-wrapped lines, one paragraph or list item per line. See [`docs/AGENTS.md`](../docs/AGENTS.md).
 
@@ -113,7 +113,7 @@ Keep exactly one of the two forms. Use `Fixes #<n>` when merging the pull reques
 
 ### Checklist before merging
 
-Leave the box unchecked until it is true. Check it once tests, docs, or an ADR have been added or updated as the change needed — or once you have confirmed none were needed.
+Leave the box unchecked until it is true. Check it once tests, docs, or an ADR have been added or updated as the change needed - or once you have confirmed none were needed.
 
 ### Example
 
@@ -122,7 +122,7 @@ Leave the box unchecked until it is true. Check it once tests, docs, or an ADR h
 ```markdown
 ## Description
 
-Two defects in the vault path splice, both found by the expanded fuzz suite on `tests/fuzzing`, rewrite a cluster configuration into a file that no longer parses — the first of them with the credential already encrypted and the plaintext gone.
+Two defects in the vault path splice, both found by the expanded fuzz suite on `tests/fuzzing`, rewrite a cluster configuration into a file that no longer parses - the first of them with the credential already encrypted and the plaintext gone.
 
 ### Flow mappings holding a bare entry
 

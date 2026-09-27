@@ -21,7 +21,7 @@ Decryption happens during an apply, when Cargoship writes the engine's registry 
 
 A CA certificate is public and does not need encrypting. Cargoship accepts an encrypted one anyway, so that a document can be vaulted as a whole without the parts that did not have to be causing a failure.
 
-Encrypting any other field produces a document Cargoship can load but never unwraps: the ciphertext reaches the host verbatim, as if that were the literal value. `vault encrypt-path` warns when you ask for such a path, but does not refuse — see [Encrypting a Value Already in a File](#encrypting-a-value-already-in-a-file).
+Encrypting any other field produces a document Cargoship can load but never unwraps: the ciphertext reaches the host verbatim, as if that were the literal value. `vault encrypt-path` warns when you ask for such a path, but does not refuse - see [Encrypting a Value Already in a File](#encrypting-a-value-already-in-a-file).
 
 ## Supplying the Password
 
