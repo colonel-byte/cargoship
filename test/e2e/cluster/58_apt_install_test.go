@@ -24,6 +24,8 @@ import (
 // Debian side of the cluster: it claims the Ubuntu replicas and must leave the Fedora ones
 // untouched. As with RPM, an rke2 package carries no .deb, so the phase is expected to record
 // nothing -- what it must never do is drop what phase/50 already staged.
+//
+// Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) aptUploadFiles() {
 	s.T().Helper()
 
@@ -53,9 +55,28 @@ func (s *phaseWalk) aptUploadFiles() {
 		s.Require().Subsetf(after, before[host.String()],
 			"%s: the APT phase dropped files an earlier upload phase staged", host)
 	}
+
+	if s.harness.carriesFilesFor(config.SelectorAPT) {
+		return
+	}
+
+	// A phase claims a host by setting EngineUploaded, which is what the later upload phases
+	// filter on. Claiming a Debian host this package has no .deb for locks phase/59, the
+	// catch-all, out of the one host it exists to serve, and the host reaches the initialize
+	// phases with no engine on it at all.
+	for _, host := range debian {
+		s.Require().Falsef(host.Metadata.EngineUploaded,
+			"%s: the APT phase claimed a host it uploaded nothing to", host)
+	}
 }
 
 // Test_58_APTUploadFiles routes the install's APT uploads.
 func (s *ApplyPhaseSuite) Test_58_APTUploadFiles() {
+	s.aptUploadFiles()
+}
+
+// Test_58_APTUploadFiles routes the join's APT uploads, on the same split: the joining machine
+// runs Fedora, so this phase has to leave it alone.
+func (s *JoinPhaseSuite) Test_58_APTUploadFiles() {
 	s.aptUploadFiles()
 }

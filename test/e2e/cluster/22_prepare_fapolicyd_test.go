@@ -22,6 +22,8 @@ import (
 // gated on what the hosts run: it only fires where fapolicyd is running and the package
 // carries a rule set. The assertion is that the gate matches the hosts, and that the rule
 // file lands where it fires.
+//
+// Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) prepareFapolicy() {
 	s.T().Helper()
 
@@ -52,5 +54,10 @@ func (s *phaseWalk) prepareFapolicy() {
 }
 
 func (s *ApplyPhaseSuite) Test_22_PrepareFapolicy() {
+	s.prepareFapolicy()
+}
+
+// Test_22_PrepareFapolicy re-checks the fapolicyd gate with the new node in the cluster.
+func (s *JoinPhaseSuite) Test_22_PrepareFapolicy() {
 	s.prepareFapolicy()
 }
