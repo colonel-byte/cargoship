@@ -151,6 +151,7 @@
 - [e2e-tests](dev/e2e-tests.md)
 - [fuzz-tests](dev/fuzz-tests.md)
 - [goreleaser](dev/goreleaser.md)
+- [mage-test-manual](dev/mage-test-manual.md)
 - [mage](dev/mage.md)
 - [shell-completion](dev/shell-completion.md)
 - [thirdparty-src](dev/thirdparty-src.md)

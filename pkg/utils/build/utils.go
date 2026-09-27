@@ -44,14 +44,24 @@ func LDFlags(version string, commit string) string {
 	)
 }
 
-// GCFLags will return the gc flags needed to build this binary
+// GCFLags will return the gc flags needed to build this binary.
+//
+// Only -l (disable inlining) is set, and it is set for its size effect:
+// inlining copies a function body to every call site, which across this
+// repo's dependency tree costs far more space than it buys a CLI that is not
+// CPU-bound.
+//
+// Two flags that used to be here were removed deliberately, see
+// docs/dev/build-flags.md:
+//
+//   - -B (disable bounds checking) bought about 1% of binary size in exchange
+//     for removing bounds checks from every package in the tree, including the
+//     code that parses untrusted archives and registry responses. That is where
+//     a bounds check is what turns a malformed length field into a panic rather
+//     than an out-of-bounds read.
+//   - -C does nothing for size. `go tool compile -help` documents it as
+//     "disable printing of columns in error messages" -- a diagnostic
+//     formatting flag with no effect on generated code.
 func GCFLags() string {
-	return strings.Join(
-		[]string{
-			"-l",
-			"-B",
-			"-C",
-		},
-		" ",
-	)
+	return "-l"
 }

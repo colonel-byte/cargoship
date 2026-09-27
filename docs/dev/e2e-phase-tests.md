@@ -235,6 +235,43 @@ The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in
 
 The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes stuck mid-upload, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.
 
+## Iterating while writing a new phase test
+
+A new phase test needs the suite up to that point, not the whole run. Three environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.
+
+**Run only the walk your phase is in.** `TestClusterPhases` runs `apply`, `join`, `upgrade` and `reset` as separate subtests of one parent, so `-run` at that path segment excludes the ones you are not touching:
+
+```console
+$ go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+```
+
+This still walks every phase from `Test_00` onward -- there is no way to start partway through a walk, because each phase depends on state the ones before it left on the host, `Test_07_Connect` first among them. What this buys you is skipping the walks after the one you are writing for.
+
+**Stay in stage-only mode if your phase is before the `Test_60` boundary.** `CARGOSHIP_E2E_STAGE_ONLY=1` uses the five-machine `stageOS` inventory and never starts the engine, so it finishes in a few minutes instead of tens:
+
+```console
+$ CARGOSHIP_E2E_STAGE_ONLY=1 go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+```
+
+A phase numbered 60 or higher needs the full `k3sOS` walk instead, so drop this variable for those.
+
+**Keep the containers after a failure to inspect them by hand.** `CARGOSHIP_E2E_KEEP_CLUSTER=1` leaves the machines running instead of deleting them when the run fails, so you can `docker exec` into one and check what your phase actually left, rather than only what the test's own assertions could see:
+
+```console
+$ CARGOSHIP_E2E_STAGE_ONLY=1 CARGOSHIP_E2E_KEEP_CLUSTER=1 \
+    go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+$ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
+$ docker exec -it <container> sh
+```
+
+Each `go test` invocation provisions fresh containers -- there is no "resume the cluster from last time" path, so a kept cluster from a failed run is for reading, not for the next run to build on. Clean it up before running again:
+
+```console
+$ mage test:cleanCluster
+```
+
+or, without mage, the same removal `stopBootlooseContainers` does -- see [mage-test-manual](mage-test-manual.md).
+
 ## Things that will cost you time
 
 *   **You cannot run one phase test on its own.** `-run 'TestClusterPhases/apply/Test_25_ModifyHosts'` fails: the hosts were never connected, because `Test_07_Connect` and `Test_09_DetectOS` are earlier methods that `-run` filtered out. Run the whole suite, or accept that reproducing one phase means reproducing its predecessors.
