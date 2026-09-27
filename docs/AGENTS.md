@@ -45,7 +45,7 @@ Eight parts of the `docs/` tree are generated from the code and are overwritten 
 | `docs/security.md`         | `.github/SECURITY.md`, with its relative links rebased the same way                                                                 |
 | `docs/SUMMARY.md`          | The mdBook table of contents, compiled from the rest of the `docs/` tree                                                            |
 
-To change one of those pages, change what it is generated from — a command's `Short`/`Long`/flag help, a phase's title and explanation, `phaseDocs()` for which phase pages exist, a godoc comment in `pkg/`, `api/`, or `types/`, or the struct/tags a `schemaTargets()` entry reflects — and then regenerate:
+To change one of those pages, change what it is generated from - a command's `Short`/`Long`/flag help, a phase's title and explanation, `phaseDocs()` for which phase pages exist, a godoc comment in `pkg/`, `api/`, or `types/`, or the struct/tags a `schemaTargets()` entry reflects - and then regenerate:
 
 ```sh
 go run ./magefiles/core generate:document
