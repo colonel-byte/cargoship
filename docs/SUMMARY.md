@@ -55,6 +55,15 @@
 
 -----------
 
+# Schema
+
+- [cluster](schema/cluster.md)
+- [config](schema/config.md)
+- [distro](schema/distro.md)
+
+
+-----------
+
 # Ansible
 
 - [collection](ansible/collection.md)
@@ -77,6 +86,58 @@
 - [kube-config](phases/kube-config.md)
 - [prepare](phases/prepare.md)
 - [reset](phases/reset.md)
+
+
+-----------
+
+# Golang
+
+- [api](golang/api.md)
+  - [v1alpha1](golang/api/zarf.dev/v1alpha1.md)
+    - [cluster](golang/api/zarf.dev/v1alpha1/cluster.md)
+    - [distro](golang/api/zarf.dev/v1alpha1/distro.md)
+- [action](golang/pkg/action.md)
+- [coci](golang/pkg/coci.md)
+  - [layers](golang/pkg/coci/layers.md)
+- [distro](golang/pkg/distro.md)
+- [extract](golang/pkg/engineconfig/extract.md)
+- [gen](golang/pkg/engineconfig/gen.md)
+  - [v1_31](golang/pkg/engineconfig/gen/k3s/v1_31.md)
+  - [v1_32](golang/pkg/engineconfig/gen/k3s/v1_32.md)
+  - [v1_33](golang/pkg/engineconfig/gen/k3s/v1_33.md)
+  - [v1_34](golang/pkg/engineconfig/gen/k3s/v1_34.md)
+  - [v1_35](golang/pkg/engineconfig/gen/k3s/v1_35.md)
+  - [v1_36](golang/pkg/engineconfig/gen/k3s/v1_36.md)
+  - [v1_37](golang/pkg/engineconfig/gen/k3s/v1_37.md)
+  - [v1_31](golang/pkg/engineconfig/gen/rke2/v1_31.md)
+  - [v1_32](golang/pkg/engineconfig/gen/rke2/v1_32.md)
+  - [v1_33](golang/pkg/engineconfig/gen/rke2/v1_33.md)
+  - [v1_34](golang/pkg/engineconfig/gen/rke2/v1_34.md)
+  - [v1_35](golang/pkg/engineconfig/gen/rke2/v1_35.md)
+  - [v1_36](golang/pkg/engineconfig/gen/rke2/v1_36.md)
+  - [v1_37](golang/pkg/engineconfig/gen/rke2/v1_37.md)
+- [firewall](golang/pkg/firewall.md)
+- [helmvalues](golang/pkg/helmvalues.md)
+- [helpers](golang/pkg/helpers.md)
+- [images](golang/pkg/images.md)
+- [lint](golang/pkg/lint.md)
+- [node](golang/pkg/node.md)
+- [archive](golang/pkg/oci/archive.md)
+- [platform](golang/pkg/oci/platform.md)
+- [assemble](golang/pkg/packager/assemble.md)
+- [layout](golang/pkg/packager/layout.md)
+- [load](golang/pkg/packager/load.md)
+- [phase](golang/pkg/phase.md)
+- [retry](golang/pkg/retry.md)
+- [schema](golang/pkg/schema.md)
+- [utils](golang/pkg/utils.md)
+  - [build](golang/pkg/utils/build.md)
+- [types](golang/types.md)
+  - [distrocfg](golang/types/distrocfg.md)
+    - [registry](golang/types/distrocfg/registry.md)
+  - [os](golang/types/os.md)
+    - [linux](golang/types/os/linux.md)
+      - [enterpriselinux](golang/types/os/linux/enterpriselinux.md)
 
 
 -----------

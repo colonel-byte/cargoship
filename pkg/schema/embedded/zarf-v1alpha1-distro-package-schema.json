@@ -14,14 +14,17 @@
     },
     "BinarySelector": {
       "additionalProperties": false,
+      "description": "selects which files to upload to a host, based on host role and install method.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "arch": {
-          "$ref": "#/$defs/Arches"
+          "$ref": "#/$defs/Arches",
+          "description": "lists the CPU architectures this file applies to. An empty list means every architecture the package targets."
         },
         "package": {
+          "description": "selects which install method receives this file: rpm, apt, or binary.",
           "enum": [
             "rpm",
             "apt",
@@ -30,6 +33,7 @@
           "type": "string"
         },
         "profile": {
+          "description": "selects which host role receives this file: worker or controller.",
           "enum": [
             "worker",
             "controller"
@@ -37,6 +41,7 @@
           "type": "string"
         },
         "roles": {
+          "description": "lists the host roles this file applies to.",
           "items": {
             "type": "string"
           },
@@ -722,51 +727,67 @@
     },
     "ZarfFile": {
       "additionalProperties": false,
+      "description": "defines a file shared by the distro and cluster APIs.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "data": {
+          "description": "holds the inline file content.",
           "type": "string"
         },
         "executable": {
+          "description": "sets executable permissions on the file when true.",
           "type": "boolean"
         },
         "extractPath": {
+          "description": "is the path cargoship extracts from a tarball.",
           "type": "string"
         },
         "group": {
+          "description": "is the group that owns the file.",
           "type": "string"
         },
         "isDirectory": {
+          "description": "indicates that Target is a directory. Cargoship uses this mainly for image uploads.",
           "type": "boolean"
         },
         "name": {
+          "description": "identifies the file entry. It is not the file name on disk.",
           "type": "string"
         },
-        "perm": true,
+        "perm": {
+          "description": "sets the permissions cargoship applies to the file. It accepts an octal string or an integer, for example \"0644\" or 644."
+        },
         "selector": {
-          "$ref": "#/$defs/BinarySelector"
+          "$ref": "#/$defs/BinarySelector",
+          "description": "controls whether cargoship uploads this file to a given node."
         },
         "shasum": {
+          "description": "verifies the file when cargoship sources the distro package.",
           "type": "string"
         },
         "source": {
+          "description": "is the path where cargoship finds the file when it creates the package.",
           "type": "string"
         },
         "symlinks": {
+          "description": "lists the symlinks cargoship creates that point to Target.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "target": {
+          "description": "is the path on the remote host where cargoship writes the file.",
           "type": "string"
         },
         "template": {
+          "description": "renders the file's contents as a Go template against the package's values before cargoship uploads it. It defaults to false, because most files are binaries or archives that a template pass would corrupt.",
           "type": "boolean"
         },
         "user": {
+          "description": "is the user that owns the file.",
           "type": "string"
         }
       },
@@ -777,6 +798,7 @@
       "type": "object"
     },
     "ZarfFiles": {
+      "description": "is an ordered list of files.",
       "items": {
         "$ref": "#/$defs/ZarfFile"
       },
