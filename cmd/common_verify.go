@@ -168,7 +168,7 @@ func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 
 // addVerifyFlags registers the full verification flag set on cmd and marks the
 // key/keyless flags mutually exclusive. Use this for all commands that load packages.
-// The sign and verify commands are exceptions — they register --key manually and use
+// The sign and verify commands are exceptions - they register --key manually and use
 // newKeylessVerifyFlagSet directly, then call markVerifyFlagsMutuallyExclusive themselves.
 func addVerifyFlags(cmd *cobra.Command, v *viper.Viper, f *packageVerifyFlags) {
 	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, f))

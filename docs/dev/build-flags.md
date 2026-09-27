@@ -43,14 +43,14 @@ Strips local filesystem paths (e.g. `/home/user/git/cargoship/...`) from the com
 
 Forces rebuilding of all packages, including the standard library, rather than reusing cached `.a` files.
 
-*   **Why:** ensures the build flags below (especially `-gcflags`) are actually applied everywhere, since Go's build cache is keyed on flags but a stale cache can otherwise mask flag changes during iteration. Not a size optimization on its own — mainly a correctness/reproducibility guard for a release build.
+*   **Why:** ensures the build flags below (especially `-gcflags`) are actually applied everywhere, since Go's build cache is keyed on flags but a stale cache can otherwise mask flag changes during iteration. Not a size optimization on its own - mainly a correctness/reproducibility guard for a release build.
 
 ### `-ldflags` (see `LDFlags` in both `utils.go` files)
 
-*   **`-s`** — omits the symbol table. Symbols aren't needed at runtime and aren't useful without `-w` anyway; this is one of the two biggest size wins available via linker flags.
-*   **`-w`** — omits DWARF debug info. Removes the ability to attach a source-level debugger (`dlv`) to the binary, but this is a release build, not a debug build. Combined with `-s`, this is what turns the ~157MB unstripped analysis build in testing into a much smaller shipped binary.
-*   **`-X github.com/colonel-byte/cargoship/config.CLIVersion=%s`** — embeds the release version string at link time.
-*   **`-X github.com/colonel-byte/cargoship/config.CLICommit=%s`** — embeds the short git commit SHA at link time.
+*   **`-s`** - omits the symbol table. Symbols aren't needed at runtime and aren't useful without `-w` anyway; this is one of the two biggest size wins available via linker flags.
+*   **`-w`** - omits DWARF debug info. Removes the ability to attach a source-level debugger (`dlv`) to the binary, but this is a release build, not a debug build. Combined with `-s`, this is what turns the ~157MB unstripped analysis build in testing into a much smaller shipped binary.
+*   **`-X github.com/colonel-byte/cargoship/config.CLIVersion=%s`** - embeds the release version string at link time.
+*   **`-X github.com/colonel-byte/cargoship/config.CLICommit=%s`** - embeds the short git commit SHA at link time.
 
     These two `-X` flags aren't size-related; they exist so `cargoship version` can report accurate build metadata without a separate version file shipped alongside the binary.
 
@@ -58,13 +58,13 @@ Forces rebuilding of all packages, including the standard library, rather than r
 
 Applied to `all` packages (including the standard library and vendored dependencies), not just this module's own code.
 
-*   **`-l`** — disables inlining. Counterintuitively, this *reduces* binary size in this repo: inlining duplicates the inlined function's code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn't CPU-bound in a hot loop. Measured: `-l -B -C` together produced a binary ~13% smaller than the same build with default `gcflags`.
-*   **`-B`** — disables bounds checking. Trades a small amount of runtime safety (out-of-bounds slice/array access becomes undefined behavior instead of a panic) for reduced code size and slightly faster execution, on the assumption that this codebase's indexing is already correct and covered by tests.
-*   **`-C`** — disables the compiler's automatic detection of `unsafe.Pointer` misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.
+*   **`-l`** - disables inlining. Counterintuitively, this *reduces* binary size in this repo: inlining duplicates the inlined function's code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn't CPU-bound in a hot loop. Measured: `-l -B -C` together produced a binary ~13% smaller than the same build with default `gcflags`.
+*   **`-B`** - disables bounds checking. Trades a small amount of runtime safety (out-of-bounds slice/array access becomes undefined behavior instead of a panic) for reduced code size and slightly faster execution, on the assumption that this codebase's indexing is already correct and covered by tests.
+*   **`-C`** - disables the compiler's automatic detection of `unsafe.Pointer` misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.
 
     Because `-B` and `-C` remove safety checks, any regression they'd otherwise catch (out-of-bounds access, pointer misuse) will instead surface as memory corruption or silent wrong behavior. If a hard-to-diagnose crash ever shows up only in release builds and not in `go test`/plain `go run`, try reproducing without these two flags first.
 
 ## What was deliberately not changed
 
-*   **UPX or other binary compressors** — not used. UPX-compressed binaries unpack themselves into memory at startup, adding a small latency hit, and self-modifying/self-extracting binaries are frequently flagged by antivirus and endpoint security tools. Given `cargoship` operates in cluster-management/infrastructure contexts where such scanning is common, this tradeoff wasn't taken.
-*   **Trimming `zarf`/`k8s.io/client-go` dependencies** — these are the largest remaining contributors to binary size (particularly `zarf`'s signing stack, which pulls in `sigstore`/`cosign`/`go-tuf`/cloud SDKs), but they're load-bearing for existing features (image signing, cluster operations) and weren't touched here. Removing them would require dropping or refactoring those features, not just changing build flags.
+*   **UPX or other binary compressors** - not used. UPX-compressed binaries unpack themselves into memory at startup, adding a small latency hit, and self-modifying/self-extracting binaries are frequently flagged by antivirus and endpoint security tools. Given `cargoship` operates in cluster-management/infrastructure contexts where such scanning is common, this tradeoff wasn't taken.
+*   **Trimming `zarf`/`k8s.io/client-go` dependencies** - these are the largest remaining contributors to binary size (particularly `zarf`'s signing stack, which pulls in `sigstore`/`cosign`/`go-tuf`/cloud SDKs), but they're load-bearing for existing features (image signing, cluster operations) and weren't touched here. Removing them would require dropping or refactoring those features, not just changing build flags.

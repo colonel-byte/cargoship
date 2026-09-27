@@ -22,7 +22,7 @@ Build the binary first. The suite looks for it at `build/cargoship_<goos>_<goarc
 $ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
 ```
 
-This is enough for the tests. A build without the release linker flags leaves `cargoship version` reporting the unset placeholder values, which the tests tolerate — they assert the fields are present and non-empty, not what they contain.
+This is enough for the tests. A build without the release linker flags leaves `cargoship version` reporting the unset placeholder values, which the tests tolerate - they assert the fields are present and non-empty, not what they contain.
 
 The binary is **not** rebuilt by `go test`. After changing anything under `api/`, `cmd/`, `config/`, `fuzz/`, `internal/`, `pkg/`, or `types/`, rebuild it, or you will be testing the previous binary against the new expectations.
 
@@ -57,21 +57,21 @@ $ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires
 
 ## Environment variables
 
-*   **`CARGOSHIP_E2E_TMPDIR`** — parent directory for the temp dirs the harness creates, one per `e2e.Cargoship` call, plus the shared minimal package. Unset means the system temp directory. Point it at `build/tmp` to keep all test scratch inside the repo, which makes it easy to see what a run left behind: `CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...`.
-*   **`TMPDIR`** — respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.
-*   **`CARGOSHIP_E2E_KEEP_REGISTRY_LOG`** — set to any non-empty value to keep the in-memory registry's request log for passing tests as well as failing ones. See "Artifacts and logs" below.
-*   **`CARGOSHIP_CONFIG`** — the config file the binary loads. `TestCargoshipCreateExample` sets it (to `test/e2e/cargoship-config.yaml`), and the Ansible module suite's "reports a broken config file as a module failure" case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.
+*   **`CARGOSHIP_E2E_TMPDIR`** - parent directory for the temp dirs the harness creates, one per `e2e.Cargoship` call, plus the shared minimal package. Unset means the system temp directory. Point it at `build/tmp` to keep all test scratch inside the repo, which makes it easy to see what a run left behind: `CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...`.
+*   **`TMPDIR`** - respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.
+*   **`CARGOSHIP_E2E_KEEP_REGISTRY_LOG`** - set to any non-empty value to keep the in-memory registry's request log for passing tests as well as failing ones. See "Artifacts and logs" below.
+*   **`CARGOSHIP_CONFIG`** - the config file the binary loads. `TestCargoshipCreateExample` sets it (to `test/e2e/cargoship-config.yaml`), and the Ansible module suite's "reports a broken config file as a module failure" case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.
 
 ## Seeing what the binary actually did
 
 `e2e.Cargoship` runs the binary with `exec.PrintCfg()`, so its stdout and stderr are written through to the test process's stdout and stderr, not into `t.Log`. `go test` buffers that per package and prints it only when the package fails; add `-v` to see it as it happens.
 
-One flag is appended to every invocation automatically: `--no-color`, so assertions are matching plain text. Each invocation also gets a fresh staging directory, passed as `DISTRO_TMP_DIR` and removed when the call returns. It is the environment variable rather than `--tmpdir` because only the commands that stage package content register that flag — passing it to `version` or `vault` fails argument parsing.
+One flag is appended to every invocation automatically: `--no-color`, so assertions are matching plain text. Each invocation also gets a fresh staging directory, passed as `DISTRO_TMP_DIR` and removed when the call returns. It is the environment variable rather than `--tmpdir` because only the commands that stage package content register that flag - passing it to `version` or `vault` fails argument parsing.
 
 ## Artifacts and logs
 
-*   **In-memory registry log.** The registry used by the publish, pull and sign tests writes one line per HTTP request to a file under the user cache directory, `~/.cache/cargoship/e2e-logs/registry-<timestamp>.log` (`$XDG_CACHE_HOME/cargoship/e2e-logs` if that is set), named the way the CLI names its own log files in `logs/`, rather than to stderr where it would bury the test output. A passing test deletes its log; a failing one keeps it and prints the path in the failure output. Set `CARGOSHIP_E2E_KEEP_REGISTRY_LOG=1` to keep the logs of passing tests too — the path is then printed by `go test -v` for every test that started a registry. That log is usually what explains a publish or pull that failed for a non-obvious reason.
-*   **Example packages.** `TestCargoshipCreateExample` writes where `test/e2e/cargoship-config.yaml` points it, `test/e2e/`. Those `.tar.zst` files are gitignored, and they are large — delete them when done.
+*   **In-memory registry log.** The registry used by the publish, pull and sign tests writes one line per HTTP request to a file under the user cache directory, `~/.cache/cargoship/e2e-logs/registry-<timestamp>.log` (`$XDG_CACHE_HOME/cargoship/e2e-logs` if that is set), named the way the CLI names its own log files in `logs/`, rather than to stderr where it would bury the test output. A passing test deletes its log; a failing one keeps it and prints the path in the failure output. Set `CARGOSHIP_E2E_KEEP_REGISTRY_LOG=1` to keep the logs of passing tests too - the path is then printed by `go test -v` for every test that started a registry. That log is usually what explains a publish or pull that failed for a non-obvious reason.
+*   **Example packages.** `TestCargoshipCreateExample` writes where `test/e2e/cargoship-config.yaml` points it, `test/e2e/`. Those `.tar.zst` files are gitignored, and they are large - delete them when done.
 *   **Per-call temp dirs** are removed when each `e2e.Cargoship` call returns, including on failure, so nothing the binary wrote under `DISTRO_TMP_DIR` survives for inspection. To keep it, reproduce the command by hand as described below.
 
 ## Debugging a failure

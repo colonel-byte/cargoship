@@ -1,6 +1,6 @@
 # Shell Tab Completion
 
-Two commands complete on the command line in this repository. `cargoship` generates its own completion scripts, and `mage` installs its own for targets and flags — but neither knows about the positional arguments the `generate:` targets take, which is what the overlay in this document adds.
+Two commands complete on the command line in this repository. `cargoship` generates its own completion scripts, and `mage` installs its own for targets and flags - but neither knows about the positional arguments the `generate:` targets take, which is what the overlay in this document adds.
 
 ## cargoship
 
@@ -22,7 +22,7 @@ Mage installs its own completion:
 mage -install fish       # also: bash, zsh, powershell, pwsh
 ```
 
-This completes every target — the same list `mage -autocomplete` prints — and every mage flag, marking `-d`, `-w` and `--compile` as taking a path. Do this first; the overlay below only adds arguments.
+This completes every target - the same list `mage -autocomplete` prints - and every mage flag, marking `-d`, `-w` and `--compile` as taking a path. Do this first; the overlay below only adds arguments.
 
 ## mage: positional arguments
 
@@ -85,7 +85,7 @@ One caveat: the completion written by `mage -install fish` registers its target 
 
 ### Bash
 
-This one supersedes `mage -install bash` rather than adding to it — bash allows a single `complete -F` per command, so the overlay has to serve targets too, and mage's flag completion is lost. Install this file instead of running `mage -install bash`.
+This one supersedes `mage -install bash` rather than adding to it - bash allows a single `complete -F` per command, so the overlay has to serve targets too, and mage's flag completion is lost. Install this file instead of running `mage -install bash`.
 
 File: `~/.local/share/bash-completion/completions/mage`
 

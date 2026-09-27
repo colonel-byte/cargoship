@@ -158,7 +158,7 @@ func validateDistroIntegrity(disLayout *DistroLayout) error {
 	delete(packageFiles, filepath.Join(disLayout.dirPath, config.Checksums))
 	delete(packageFiles, filepath.Join(disLayout.dirPath, config.Bundle))
 	// Remove provenance files declared in the signed distro.yaml.
-	// This enables forward compatibility — new files added by future CLI versions
+	// This enables forward compatibility - new files added by future CLI versions
 	// are excluded from the strict check without requiring code changes.
 	if disLayout.IsSigned() {
 		for _, f := range disLayout.Distro.Build.ProvenanceFiles {
@@ -496,7 +496,7 @@ func (d *DistroLayout) SignPackage(ctx context.Context, opts signing.SignBlobOpt
 
 	originalProvenanceFiles := slices.Clone(d.Distro.Build.ProvenanceFiles)
 
-	// Consolidated in-memory rollback — fires on any error exit via named return.
+	// Consolidated in-memory rollback - fires on any error exit via named return.
 	defer func() {
 		if err != nil {
 			d.Distro.Build.Signed = originalSigned
@@ -598,7 +598,7 @@ func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.
 	// Handle the case where the package is not signed
 	if !d.IsSigned() {
 		if hasVerificationMaterial {
-			// Providing material implies expecting a signature — always fatal.
+			// Providing material implies expecting a signature - always fatal.
 			return errors.New("verification material was provided but the package is not signed")
 		}
 		return fmt.Errorf("package is not signed - verification cannot be performed: %w", ErrNoVerificationMaterial)
