@@ -158,6 +158,34 @@
 
 -----------
 
+# Workflows
+
+<!-- Excluded from the print page (print.html) by docs/css/print.css. -->
+
+- [check-ansible-requirements](workflows/check-ansible-requirements.md)
+- [check-base-image-label](workflows/check-base-image-label.md)
+- [check-go-mod](workflows/check-go-mod.md)
+- [check-pins](workflows/check-pins.md)
+- [codeql](workflows/codeql.md)
+- [commitlint](workflows/commitlint.md)
+- [dependabot-validate](workflows/dependabot-validate.md)
+- [deploy-book](workflows/deploy-book.md)
+- [e2e-cluster](workflows/e2e-cluster.md)
+- [e2e](workflows/e2e.md)
+- [fix-vendor-osv](workflows/fix-vendor-osv.md)
+- [pre-commit](workflows/pre-commit.md)
+- [prune-example-pr-packages](workflows/prune-example-pr-packages.md)
+- [publish-example](workflows/publish-example.md)
+- [refresh-examples](workflows/refresh-examples.md)
+- [release-please](workflows/release-please.md)
+- [release](workflows/release.md)
+- [scan-lint](workflows/scan-lint.md)
+- [scorecard](workflows/scorecard.md)
+- [test-build-containers](workflows/test-build-containers.md)
+
+
+-----------
+
 # Agent
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->

@@ -19,8 +19,10 @@
         { "type": "ci", "section": "CI/CD" },
         { "type": "build", "section": "Build" }
       ],
-      "extra-files": ["ansible/colonel_byte/cargoship/galaxy.yml"],
-      "extra-label": "e2e-cluster"
+      "extra-files": [
+        "ansible/colonel_byte/cargoship/galaxy.yml"
+      ],
+      "extra-label": "e2e-cluster,docker"
     }
   },
   "release-type": "go",
