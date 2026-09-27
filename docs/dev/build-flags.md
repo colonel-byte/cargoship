@@ -2,7 +2,7 @@
 
 This document explains the compiler flags, linker flags, and environment variables used when compiling the `cargoship` binary, and why each one is set. They are defined in `pkg/utils/build/utils.go`, which the Mage host build path (`magefiles/utils.go`) uses.
 
-That package exposes two functions, `LDFlags(version, commit string) string` and `GCFLags() string`. The build site additionally sets `CGO_ENABLED=0` and passes `-trimpath` directly in its `go build` invocation rather than through these shared helpers.
+That package exposes two functions, `LDFlags(version, commit string) string` and `GCFLags() string`. The build site additionally sets `CGO_ENABLED=0` and passes `-trimpath` directly in its `go build` invocation rather than through these shared helpers. `.goreleaser.yaml` and `.github/workflows/e2e.yaml` spell the same flags out inline, so a change here has to be made in those two files as well.
 
 ## Why this matters
 
@@ -10,12 +10,14 @@ An unoptimized `go build` of this repo produces a binary well over 130MB on Linu
 
 Measured impact on a Linux/amd64 build of this repo:
 
-| Configuration                                          | Size    | Linking         |
-| :----------------------------------------------------- | :------ | :-------------- |
-| `go build` with no flags                               | ~136MB  | dynamic (glibc) |
-| `+ CGO_ENABLED=0`                                      | ~98.5MB | static          |
-| `+ -trimpath`                                          | ~98.2MB | static          |
-| default gcflags instead of `-l -B -C` (for comparison) | ~113MB  | static          |
+| Configuration                                    | Size    | Linking         |
+| :----------------------------------------------- | :------ | :-------------- |
+| `go build` with no flags                         | ~136MB  | dynamic (glibc) |
+| `+ CGO_ENABLED=0`                                | ~98.5MB | static          |
+| `+ -trimpath`                                    | ~98.2MB | static          |
+| default gcflags instead of `-l` (for comparison) | ~113MB  | static          |
+| `-l` (shipped)                                   | 97.95MB | static          |
+| `-l -B -C` (former setting, for comparison)      | 96.86MB | static          |
 
 ## Environment variables
 
@@ -54,7 +56,7 @@ Forces rebuilding of all packages, including the standard library, rather than r
 
     These two `-X` flags aren't size-related; they exist so `cargoship version` can report accurate build metadata without a separate version file shipped alongside the binary.
 
-### `-gcflags=all="..."` (see `GCFLags` in both `utils.go` files)
+### `-gcflags=all="-l"` (see `GCFLags` in `pkg/utils/build/utils.go`)
 
 Applied to `all` packages (including the standard library and vendored dependencies), not just this module's own code.
 
@@ -62,7 +64,15 @@ Applied to `all` packages (including the standard library and vendored dependenc
 *   **`-B`** - disables bounds checking. Trades a small amount of runtime safety (out-of-bounds slice/array access becomes undefined behavior instead of a panic) for reduced code size and slightly faster execution, on the assumption that this codebase's indexing is already correct and covered by tests.
 *   **`-C`** - disables the compiler's automatic detection of `unsafe.Pointer` misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.
 
-    Because `-B` and `-C` remove safety checks, any regression they'd otherwise catch (out-of-bounds access, pointer misuse) will instead surface as memory corruption or silent wrong behavior. If a hard-to-diagnose crash ever shows up only in release builds and not in `go test`/plain `go run`, try reproducing without these two flags first.
+    Note that `all=` means changing this flag invalidates the build cache for the entire dependency tree, so the first build after touching it is slow. That is a per-flag-change cost, not a per-build one.
+
+## Flags that were removed
+
+These three were set in an earlier revision of this build and are no longer used.
+
+*   **`-gcflags=all=-B` (disable bounds checking)** - removed. Measured at 1.09MB of 97.95MB, about 1.1%. In exchange it stripped bounds checks from every package in the tree, including the code whose job is parsing input this binary does not control: archive extraction, OCI manifests and layers, registry responses. That is exactly where a bounds check is the mechanism that turns a malformed length field into a panic instead of an out-of-bounds read, and 1% of binary size is not worth giving that up. If a hard-to-diagnose crash ever appeared only in release builds, this flag was the first suspect — one more reason it is gone.
+*   **`-gcflags=all=-C`** - removed. It never did anything for size. `go tool compile -help` documents `-C` as "disable printing of columns in error messages": a compiler diagnostic formatting flag with no effect on generated code. An earlier revision of this document claimed it disabled `unsafe.Pointer`/checkptr-adjacent checks; that was wrong.
+*   **`-a` (force rebuild of all packages)** - removed. It was justified here as a guard against a stale build cache masking flag changes, but Go's build cache is keyed on build flags, so that situation cannot arise: changing `-gcflags` or `-ldflags` already rebuilds everything those flags affect. All `-a` did was make every build redo the standard library.
 
 ## What was deliberately not changed
 

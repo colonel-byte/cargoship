@@ -35,8 +35,10 @@ builds:
       - -w
       - -X github.com/colonel-byte/cargoship/config.CLIVersion={{ .Version }}
       - -X github.com/colonel-byte/cargoship/config.CLICommit={{ .ShortCommit }}
+    # Keep in step with pkg/utils/build.GCFLags(); -B and -C were removed
+    # deliberately -- see docs/dev/build-flags.md.
     gcflags:
-      - all=-l -B -C
+      - all=-l
     env:
       - CGO_ENABLED=0
     goos:

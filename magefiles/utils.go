@@ -43,7 +43,10 @@ func hostBuildLocal(oper string, arch string) error {
 	gc := build.GCFLags()
 	ld := build.LDFlags(config.UnsetCLIVersion, gitCommit())
 
-	goBuild := fmt.Sprintf(`go build -a -trimpath -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
+	// No -a here: the Go build cache is keyed on build flags, so a change to
+	// -gcflags/-ldflags already rebuilds what it affects. -a only forced every
+	// build to redo the whole standard library. See docs/dev/build-flags.md.
+	goBuild := fmt.Sprintf(`go build -trimpath -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
 
 	fmt.Println("executing:\n  " + goBuild)
 

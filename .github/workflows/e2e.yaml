@@ -29,8 +29,8 @@ jobs:
 
       - name: Build
         run: |
-          go build -mod=vendor -a -trimpath \
-            -gcflags=all="-l -B -C" \
+          go build -mod=vendor -trimpath \
+            -gcflags=all="-l" \
             -ldflags="-s -w \
               -X github.com/colonel-byte/cargoship/config.CLIVersion=0.0.0 \
               -X github.com/colonel-byte/cargoship/config.CLICommit=${GITHUB_SHA::8}" \
