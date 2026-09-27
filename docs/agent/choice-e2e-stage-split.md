@@ -69,7 +69,13 @@ This fix is unverified. It addresses the exact error in the logs and it is the s
 
 `e2e-cluster-stage` and `e2e-cluster` are separate jobs with duplicated steps. A matrix over a `mode` dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagree on into an expression over the matrix value. They disagree on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differ by a factor of two because that difference is the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.
 
-Both jobs sit behind the same `e2e-cluster` label for now. The point of the stage job is that it is cheap enough to run unconditionally, and the intent is to drop its `if:` once a few runs show what it actually costs and how steady it is. Landing it unconditional immediately was rejected for one reason: an unproven job in every pull request's path, if it turns out to be flaky, teaches people to ignore a red check, and that is expensive to undo. The flip is one line when the data supports it.
+Both jobs sat behind the same `e2e-cluster` label at first. The point of the stage job was that it is cheap enough to run unconditionally, and the intent was to drop its `if:` once a few runs showed what it actually cost and how steady it was. That data came in, and it went the way this section expected: the stage job is cheap and steady. It now runs on every pull request, ungated.
+
+## The engine-bootstrap job left CI entirely
+
+The full-install job (`e2e-cluster`, walking the engine half through bootstrap) did not get the same answer. Even after switching its inventory from the three-controller rke2 topology to the single-controller k3s one to remove the etcd quorum timeouts, the job was still not reliable enough on a free hosted runner to be worth keeping as a CI check -- the free tier is not the environment to run a real cluster bootstrap in, independent of which distro is installed.
+
+The choice was between keeping it as a `workflow_dispatch`-only manual job or removing it from the workflow entirely. It was removed entirely. A manual CI job that nobody runs because the free runner it would run on cannot be trusted is worse than no CI job at all: it looks like a check that exists, and an engineer who runs it and gets a flaky failure has no way to tell a real regression from a runner limitation. The engine-bootstrap walk is still real and still worth running -- just on a local box, with `mage test:endToEndCluster`, documented in [e2e-phase-tests](../dev/e2e-phase-tests.md). CI's job is now only the stage half: uploading and rendering files across every OS family, which is exactly what "call that good for the pipeline" asks of it.
 
 ## What this does not do
 

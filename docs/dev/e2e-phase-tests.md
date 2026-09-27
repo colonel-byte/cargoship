@@ -146,13 +146,23 @@ $ mage test:endToEndCluster
 
 `-short` skips the whole suite. `TestMain` deletes the bootloose cluster on the way out even when tests fail.
 
+This full walk, the one that installs and bootstraps k3s, is not run in CI -- see below. It is a local-box check: run `mage test:endToEndCluster` (or the `go test` invocation above) on a machine with Docker before trusting a change to the engine-bootstrap phases, `phase/61` onward.
+
+For the smaller staging walk on its own, without the engine phases:
+
+```console
+$ mage test:endToEndClusterStage
+```
+
 ### In CI
 
-`.github/workflows/e2e-cluster.yaml` runs it, on its own trigger and separate from `e2e.yaml`, which is what runs on every pull request. This one does not: it provisions five containers and installs k3s onto all of them. It runs when triggered by hand from the Actions tab, and automatically on a pull request labelled `e2e-cluster`. Add that label to a PR touching `pkg/phase`, `pkg/action` or the inventory handling; the trigger listens for `labeled`, so labelling an open PR starts a run without needing a push.
+`.github/workflows/e2e-cluster.yaml` runs the staging half of this suite -- `CARGOSHIP_E2E_STAGE_ONLY=1`, stopping at the boundary `Test_60_ConfigureEngine` draws -- on its own trigger, separate from `e2e.yaml`. It runs on every pull request, the same as `e2e.yaml`, and on demand from the Actions tab. No label is needed.
+
+The engine-bootstrap half does not run in CI at all. It was not reliable enough on a free hosted runner to be a required check, even on the single-controller k3s topology that replaced the original three-controller rke2 one -- see [choice-e2e-stage-split](../agent/choice-e2e-stage-split.md). Trusting a change to the engine-bootstrap phases means running `mage test:endToEndCluster` locally; CI cannot cover that for you.
 
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare step calls `action.NewPrepare`. That is what makes the two workflows independent, which is the point of the split.
 
-The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes that never reach Ready, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.
+The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes stuck mid-upload, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.
 
 ## Things that will cost you time
 
