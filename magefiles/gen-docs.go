@@ -241,6 +241,12 @@ func generateSummary() error {
 			note:   printExcludedNote,
 		},
 		{
+			title:  "Workflows",
+			folder: "workflows",
+			regex:  `(.+)\.md`,
+			note:   printExcludedNote,
+		},
+		{
 			title:  "Agent",
 			folder: "agent",
 			regex:  `(.+)\.md`,

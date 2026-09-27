@@ -1,5 +1,13 @@
 # Working in `.github/`
 
+## Keeping `docs/workflows/` in sync
+
+Every file under [`workflows/`](workflows/) has a matching high-level explanation under [`docs/workflows/`](../docs/workflows/), named after the workflow file with a `.md` extension, and indexed in [`docs/workflows/README.md`](../docs/workflows/README.md). When you add, remove, or meaningfully change a workflow's triggers, jobs, or behavior, update its doc in the same pull request:
+
+- New workflow: add `docs/workflows/<name>.md` and a row in `docs/workflows/README.md`.
+- Removed workflow: delete both.
+- Changed triggers, jobs, or behavior: update the doc's content to match; the doc is a summary, not a mirror, so only what a reader needs to understand what the workflow does and why has to stay current.
+
 ## Checking a workflow against OpenSSF Scorecard
 
 This repository publishes an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship), and [`workflows/scorecard.yaml`](workflows/scorecard.yaml) recomputes it on every push to `main`. A workflow change can move that score without anything failing in CI, so run the checks that read workflows before opening the pull request, and name the ones you ran in the description.
