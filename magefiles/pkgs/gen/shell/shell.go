@@ -33,32 +33,37 @@ type completionTarget struct {
 	gen  func(c *cobra.Command, w io.Writer) error
 }
 
+// completionDir is where .goreleaser.yaml expects to find the generated completion scripts to
+// package under /etc/bash_completion.d, /usr/share/fish/vendor_completions.d, and
+// /usr/local/share/zsh/site-functions.
+var completionDir = filepath.Join("hack", "completion")
+
 // completionTargets is the complete set of shells cargoship generates completion scripts for.
 var completionTargets = []completionTarget{
 	{
 		name: "bash",
-		path: filepath.Join("hack", "cargoship.bash"),
+		path: filepath.Join(completionDir, "cargoship.bash"),
 		gen: func(c *cobra.Command, w io.Writer) error {
 			return c.GenBashCompletion(w)
 		},
 	},
 	{
 		name: "zsh",
-		path: filepath.Join("hack", "cargoship.zsh"),
+		path: filepath.Join(completionDir, "cargoship.zsh"),
 		gen: func(c *cobra.Command, w io.Writer) error {
 			return c.GenZshCompletion(w)
 		},
 	},
 	{
 		name: "fish",
-		path: filepath.Join("hack", "cargoship.fish"),
+		path: filepath.Join(completionDir, "cargoship.fish"),
 		gen: func(c *cobra.Command, w io.Writer) error {
 			return c.GenFishCompletion(w, true)
 		},
 	},
 	{
 		name: "powershell",
-		path: filepath.Join("hack", "cargoship.ps1"),
+		path: filepath.Join(completionDir, "cargoship.ps1"),
 		gen: func(c *cobra.Command, w io.Writer) error {
 			return c.GenPowerShellCompletionWithDesc(w)
 		},
@@ -66,8 +71,12 @@ var completionTargets = []completionTarget{
 }
 
 // GenerateShell writes cargoship's bash, zsh, fish, and PowerShell tab completion scripts to
-// their respective paths under hack/.
+// their respective paths under completionDir.
 func GenerateShell() error {
+	if err := os.MkdirAll(completionDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create %s: %w", completionDir, err)
+	}
+
 	cargo := cmd.NewCargoshipCommand()
 
 	for _, t := range completionTargets {
