@@ -53,10 +53,22 @@ func TestParseRegistryOverridesErrors(t *testing.T) {
 		name  string
 		input []string
 	}{
-		{"missing equals", []string{"docker.io"}},
-		{"missing source", []string{"=docker.example.com"}},
-		{"missing value", []string{"docker.io="}},
-		{"duplicate source", []string{"docker.io=a.example.com", "docker.io=b.example.com"}},
+		{
+			"missing equals",
+			[]string{"docker.io"},
+		},
+		{
+			"missing source",
+			[]string{"=docker.example.com"},
+		},
+		{
+			"missing value",
+			[]string{"docker.io="},
+		},
+		{
+			"duplicate source",
+			[]string{"docker.io=a.example.com", "docker.io=b.example.com"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

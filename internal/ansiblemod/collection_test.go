@@ -39,9 +39,18 @@ func TestCollectionCoversEveryModule(t *testing.T) {
 		what string
 		got  func(t *testing.T) []string
 	}{
-		{what: "action plugins", got: actionPlugins},
-		{what: "role task files", got: roleTasks},
-		{what: "packaged module symlinks", got: packagedModules},
+		{
+			what: "action plugins",
+			got:  actionPlugins,
+		},
+		{
+			what: "role task files",
+			got:  roleTasks,
+		},
+		{
+			what: "packaged module symlinks",
+			got:  packagedModules,
+		},
 	} {
 		t.Run(tt.what, func(t *testing.T) {
 			require.Equal(t, Modules(), tt.got(t))

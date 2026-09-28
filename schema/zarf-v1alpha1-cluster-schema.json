@@ -60,6 +60,10 @@
           "$ref": "#/$defs/SSHConfig",
           "description": "Optional bastion host"
         },
+        "ignoreSshConfig": {
+          "description": "Do not read ~/.ssh/config or the system ssh_config for this host",
+          "type": "boolean"
+        },
         "keyPath": {
           "description": "Path to SSH private key",
           "type": "string"

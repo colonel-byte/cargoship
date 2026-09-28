@@ -47,12 +47,36 @@ func TestDetectKind(t *testing.T) {
 		want Kind
 		err  string
 	}{
-		{name: "inventory", doc: "kind: ZarfCluster\n", want: KindInventory},
-		{name: "package", doc: "kind: ZarfDistro\n", want: KindPackage},
-		{name: "no kind", doc: "architecture: amd64\n", err: "declares no kind"},
-		{name: "empty kind", doc: "kind: \"\"\n", err: "declares no kind"},
-		{name: "foreign kind", doc: "kind: Deployment\n", err: `kind "Deployment"`},
-		{name: "not a mapping", doc: "- a\n- b\n", err: "not a YAML mapping"},
+		{
+			name: "inventory",
+			doc:  "kind: ZarfCluster\n",
+			want: KindInventory,
+		},
+		{
+			name: "package",
+			doc:  "kind: ZarfDistro\n",
+			want: KindPackage,
+		},
+		{
+			name: "no kind",
+			doc:  "architecture: amd64\n",
+			err:  "declares no kind",
+		},
+		{
+			name: "empty kind",
+			doc:  "kind: \"\"\n",
+			err:  "declares no kind",
+		},
+		{
+			name: "foreign kind",
+			doc:  "kind: Deployment\n",
+			err:  `kind "Deployment"`,
+		},
+		{
+			name: "not a mapping",
+			doc:  "- a\n- b\n",
+			err:  "not a YAML mapping",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			doc, err := Decode([]byte(tc.doc))

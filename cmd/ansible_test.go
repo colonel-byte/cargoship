@@ -131,11 +131,34 @@ func TestModuleArgsParse(t *testing.T) {
 		// dryRun is whether check mode should have rendered a dry run.
 		dryRun bool
 	}{
-		{module: "engine_config_sync", command: "engine-config-sync", confirm: InstallEngineConfigSyncConfirm, dryRun: true},
-		{module: "apply", command: "apply", confirm: InstallConfirm, dryRun: true},
-		{module: "prepare", command: "prepare", confirm: InstallConfirm, dryRun: true},
-		{module: "reset", command: "reset", confirm: InstallResetConfirm, dryRun: true},
-		{module: "kube_config", command: "kube-config"},
+		{
+			module:  "engine_config_sync",
+			command: "engine-config-sync",
+			confirm: InstallEngineConfigSyncConfirm,
+			dryRun:  true,
+		},
+		{
+			module:  "apply",
+			command: "apply",
+			confirm: InstallConfirm,
+			dryRun:  true,
+		},
+		{
+			module:  "prepare",
+			command: "prepare",
+			confirm: InstallConfirm,
+			dryRun:  true,
+		},
+		{
+			module:  "reset",
+			command: "reset",
+			confirm: InstallResetConfirm,
+			dryRun:  true,
+		},
+		{
+			module:  "kube_config",
+			command: "kube-config",
+		},
 	} {
 		t.Run(tt.module, func(t *testing.T) {
 			argsPath := filepath.Join(t.TempDir(), "args.json")

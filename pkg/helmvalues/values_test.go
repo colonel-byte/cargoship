@@ -161,18 +161,54 @@ func TestTypedScalar(t *testing.T) {
 		in   string
 		want any
 	}{
-		{name: "booleans are case insensitive", in: "TRUE", want: true},
-		{name: "false", in: "False", want: false},
-		{name: "null becomes nil", in: "NULL", want: nil},
-		{name: "integer", in: "3", want: int64(3)},
-		{name: "bare zero is a number", in: "0", want: int64(0)},
+		{
+			name: "booleans are case insensitive",
+			in:   "TRUE",
+			want: true,
+		},
+		{
+			name: "false",
+			in:   "False",
+			want: false,
+		},
+		{
+			name: "null becomes nil",
+			in:   "NULL",
+			want: nil,
+		},
+		{
+			name: "integer",
+			in:   "3",
+			want: int64(3),
+		},
+		{
+			name: "bare zero is a number",
+			in:   "0",
+			want: int64(0),
+		},
 		// Helm does not parse floats, and parsing them would turn the version
 		// "1.10" into 1.1 and drop a digit.
-		{name: "decimals stay strings", in: "1.10", want: "1.10"},
+		{
+			name: "decimals stay strings",
+			in:   "1.10",
+			want: "1.10",
+		},
 		// Image tags, zip codes and account numbers all live in chart values.
-		{name: "leading zero stays a string", in: "0755", want: "0755"},
-		{name: "empty stays empty", in: "", want: ""},
-		{name: "plain string", in: "nginx", want: "nginx"},
+		{
+			name: "leading zero stays a string",
+			in:   "0755",
+			want: "0755",
+		},
+		{
+			name: "empty stays empty",
+			in:   "",
+			want: "",
+		},
+		{
+			name: "plain string",
+			in:   "nginx",
+			want: "nginx",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, typedScalar(tt.in))
@@ -335,11 +371,26 @@ func TestTemplateRendering(t *testing.T) {
 			in   string
 			want any
 		}{
-			{"1.10", "1.10"},
-			{"0123456789", "0123456789"},
-			{"3", int64(3)},
-			{"true", true},
-			{"plain", "plain"},
+			{
+				in:   "1.10",
+				want: "1.10",
+			},
+			{
+				in:   "0123456789",
+				want: "0123456789",
+			},
+			{
+				in:   "3",
+				want: int64(3),
+			},
+			{
+				in:   "true",
+				want: true,
+			},
+			{
+				in:   "plain",
+				want: "plain",
+			},
 		} {
 			got, err := EvaluateValuesTemplates("{{ .V }}", map[string]any{"V": tt.in})
 			require.NoError(t, err)

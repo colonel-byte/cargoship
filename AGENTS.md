@@ -54,6 +54,22 @@ Plain Go commands work for anything mage doesn't wrap - `go build ./...`, `go ve
 
 Run `pre-commit run --all-files` before every commit and fix anything it flags. Several hooks in [`.pre-commit-config.yaml`](.pre-commit-config.yaml) rewrite files (`end-of-file-fixer`, `trailing-whitespace`, `keep-sorted`, `addlicense`, doc/schema generators) - re-stage after it runs. Don't skip hooks with `--no-verify` or `SKIP=`.
 
+## Go test formatting
+
+Do not condense struct literals in table-driven test cases onto single lines (such as `{name: "...", input: "...", want: "..."}`). Format each field on its own line within the struct literal to keep test cases legible and easy to review, diff, and edit.
+
+```go
+// Do not condense:
+{name: "unconstrained release", release: "", want: true},
+
+// Prefer multi-line:
+{
+	name:    "unconstrained release",
+	release: "",
+	want:    true,
+},
+```
+
 ## Writing style
 
 Use `-` (hyphen), not `—` (em dash), wherever a hyphen reads fine.

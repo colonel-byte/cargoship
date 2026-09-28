@@ -77,11 +77,31 @@ func TestValidateDistroPathsRejectsEscapingValues(t *testing.T) {
 		schema string
 		want   string
 	}{
-		{"traversing file", []string{"../../secrets.yaml"}, "", "values file"},
-		{"absolute file", []string{"/etc/values.yaml"}, "", "values file"},
-		{"remote file", []string{"https://example.com/values.yaml"}, "", "values file"},
-		{"traversing schema", nil, "../schema.json", "values schema"},
-		{"remote schema", nil, "https://example.com/schema.json", "values schema"},
+		{
+			name:  "traversing file",
+			files: []string{"../../secrets.yaml"},
+			want:  "values file",
+		},
+		{
+			name:  "absolute file",
+			files: []string{"/etc/values.yaml"},
+			want:  "values file",
+		},
+		{
+			name:  "remote file",
+			files: []string{"https://example.com/values.yaml"},
+			want:  "values file",
+		},
+		{
+			name:   "traversing schema",
+			schema: "../schema.json",
+			want:   "values schema",
+		},
+		{
+			name:   "remote schema",
+			schema: "https://example.com/schema.json",
+			want:   "values schema",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -454,8 +474,14 @@ func TestApplyValuesRendersTemplates(t *testing.T) {
 			autoscale bool
 			want      string
 		}{
-			{true, "autoscaler"},
-			{false, "replicas: 2"},
+			{
+				autoscale: true,
+				want:      "autoscaler",
+			},
+			{
+				autoscale: false,
+				want:      "replicas: 2",
+			},
 		} {
 			l := templatedLayout()
 			if err := l.ApplyValues(templateValues(false, tt.autoscale)); err != nil {
@@ -549,9 +575,18 @@ func TestRenderFiles(t *testing.T) {
 		path string
 		want string
 	}{
-		{rendered, "address: 127.0.0.1:31999\n"},
-		{verbatim, tmpl},
-		{osFile, "welcome to 127.0.0.1:31999\n"},
+		{
+			path: rendered,
+			want: "address: 127.0.0.1:31999\n",
+		},
+		{
+			path: verbatim,
+			want: tmpl,
+		},
+		{
+			path: osFile,
+			want: "welcome to 127.0.0.1:31999\n",
+		},
 	} {
 		got, err := os.ReadFile(tt.path)
 		if err != nil {

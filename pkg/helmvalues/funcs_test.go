@@ -44,11 +44,31 @@ func TestHelmExtrasRender(t *testing.T) {
 		tmpl string
 		want string
 	}{
-		{"toToml", `{{ toToml .Values.registry }}`, "address = \"127.0.0.1:31999\"\n"},
-		{"fromToml", `{{ (fromToml .Values.toml).address }}`, "127.0.0.1:31999"},
-		{"toYamlPretty", `{{ toYamlPretty .Values.registry }}`, "address: 127.0.0.1:31999"},
-		{"fromYamlArray", `{{ index (fromYamlArray .Values.yamlList) 1 }}`, "two"},
-		{"fromJsonArray", `{{ index (fromJsonArray .Values.jsonList) 0 }}`, "one"},
+		{
+			name: "toToml",
+			tmpl: `{{ toToml .Values.registry }}`,
+			want: "address = \"127.0.0.1:31999\"\n",
+		},
+		{
+			name: "fromToml",
+			tmpl: `{{ (fromToml .Values.toml).address }}`,
+			want: "127.0.0.1:31999",
+		},
+		{
+			name: "toYamlPretty",
+			tmpl: `{{ toYamlPretty .Values.registry }}`,
+			want: "address: 127.0.0.1:31999",
+		},
+		{
+			name: "fromYamlArray",
+			tmpl: `{{ index (fromYamlArray .Values.yamlList) 1 }}`,
+			want: "two",
+		},
+		{
+			name: "fromJsonArray",
+			tmpl: `{{ index (fromJsonArray .Values.jsonList) 0 }}`,
+			want: "one",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := RenderTemplate(tt.tmpl, data)

@@ -47,9 +47,21 @@ func TestEncryptAtPathAgeRoundTrip(t *testing.T) {
 		path string
 		want string
 	}{
-		{"plain scalar", ".spec.config.registries[0].auth.pass", "hunter2"},
-		{"quoted scalar", ".spec.config.registries[0].auth.token", "tok #1"},
-		{"literal block", ".spec.config.registries[0].tls.ca", "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n"},
+		{
+			name: "plain scalar",
+			path: ".spec.config.registries[0].auth.pass",
+			want: "hunter2",
+		},
+		{
+			name: "quoted scalar",
+			path: ".spec.config.registries[0].auth.token",
+			want: "tok #1",
+		},
+		{
+			name: "literal block",
+			path: ".spec.config.registries[0].tls.ca",
+			want: "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n",
+		},
 	}
 
 	for _, tt := range tests {

@@ -57,8 +57,16 @@ func TestValidateHostArchAcceptsACarriedArch(t *testing.T) {
 		carried  api.Arches
 		detected string
 	}{
-		{name: "single architecture package", carried: api.Arches{api.ArchAMD64}, detected: "amd64"},
-		{name: "multi architecture package", carried: api.Arches{api.ArchAMD64, api.ArchARM64}, detected: "arm64"},
+		{
+			name:     "single architecture package",
+			carried:  api.Arches{api.ArchAMD64},
+			detected: "amd64",
+		},
+		{
+			name:     "multi architecture package",
+			carried:  api.Arches{api.ArchAMD64, api.ArchARM64},
+			detected: "arm64",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			p := newArchValidator(t, tt.carried)

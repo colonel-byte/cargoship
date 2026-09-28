@@ -41,11 +41,31 @@ func TestEncryptAtPathRoundTrip(t *testing.T) {
 		path string
 		want string
 	}{
-		{"plain scalar", ".spec.config.registries[0].auth.pass", "hunter2"},
-		{"quoted scalar", ".spec.config.registries[0].auth.token", "tok #1"},
-		{"literal block", ".spec.config.registries[0].tls.ca", "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n"},
-		{"rooted path", "$.spec.config.registries[0].auth.user", "admin"},
-		{"unprefixed path", "spec.config.loadbalancer", "lb.example.com"},
+		{
+			name: "plain scalar",
+			path: ".spec.config.registries[0].auth.pass",
+			want: "hunter2",
+		},
+		{
+			name: "quoted scalar",
+			path: ".spec.config.registries[0].auth.token",
+			want: "tok #1",
+		},
+		{
+			name: "literal block",
+			path: ".spec.config.registries[0].tls.ca",
+			want: "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n",
+		},
+		{
+			name: "rooted path",
+			path: "$.spec.config.registries[0].auth.user",
+			want: "admin",
+		},
+		{
+			name: "unprefixed path",
+			path: "spec.config.loadbalancer",
+			want: "lb.example.com",
+		},
 	}
 
 	for _, tt := range tests {
@@ -189,11 +209,31 @@ func TestEncryptAtPathErrors(t *testing.T) {
 		path    string
 		wantErr string
 	}{
-		{"missing path", ".spec.config.registries[0].auth.missing", "no value found"},
-		{"missing index", ".spec.config.registries[7].auth.pass", "no value found"},
-		{"mapping", ".spec.config.registries[0].auth", "not a single scalar value"},
-		{"sequence", ".spec.config.registries", "not a single scalar value"},
-		{"malformed path", ".spec.config.registries[", "invalid YAML path"},
+		{
+			name:    "missing path",
+			path:    ".spec.config.registries[0].auth.missing",
+			wantErr: "no value found",
+		},
+		{
+			name:    "missing index",
+			path:    ".spec.config.registries[7].auth.pass",
+			wantErr: "no value found",
+		},
+		{
+			name:    "mapping",
+			path:    ".spec.config.registries[0].auth",
+			wantErr: "not a single scalar value",
+		},
+		{
+			name:    "sequence",
+			path:    ".spec.config.registries",
+			wantErr: "not a single scalar value",
+		},
+		{
+			name:    "malformed path",
+			path:    ".spec.config.registries[",
+			wantErr: "invalid YAML path",
+		},
 	}
 
 	for _, tt := range tests {
@@ -431,20 +471,53 @@ func TestPathIsDecryptable(t *testing.T) {
 		path string
 		want bool
 	}{
-		{".spec.config.registries[0].auth.user", true},
-		{".spec.config.registries[0].auth.pass", true},
-		{".spec.config.registries[12].auth.token", true},
-		{".spec.config.registries[0].tls.ca", true},
-		{"$.spec.config.registries[0].auth.pass", true},
-		{".spec.config.registries[0].tls.insecureSkipVerify", false},
-		{".spec.config.registries[0].name", false},
-		{".spec.config.loadbalancer", false},
-		{".spec.config.registries[", false},
+		{
+			path: ".spec.config.registries[0].auth.user",
+			want: true,
+		},
+		{
+			path: ".spec.config.registries[0].auth.pass",
+			want: true,
+		},
+		{
+			path: ".spec.config.registries[12].auth.token",
+			want: true,
+		},
+		{
+			path: ".spec.config.registries[0].tls.ca",
+			want: true,
+		},
+		{
+			path: "$.spec.config.registries[0].auth.pass",
+			want: true,
+		},
+		{
+			path: ".spec.config.registries[0].tls.insecureSkipVerify",
+			want: false,
+		},
+		{
+			path: ".spec.config.registries[0].name",
+			want: false,
+		},
+		{
+			path: ".spec.config.loadbalancer",
+			want: false,
+		},
+		{
+			path: ".spec.config.registries[",
+			want: false,
+		},
 		// An index that is opened, given digits and never closed used to run go-yaml off the end of
 		// the path and panic, which reached an operator as a stack trace rather than as the typo it
 		// is. The empty "[" above takes a different route through go-yaml and always errored.
-		{".spec.config.registries[0", false},
-		{"a[1", false},
+		{
+			path: ".spec.config.registries[0",
+			want: false,
+		},
+		{
+			path: "a[1",
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -463,15 +536,33 @@ func TestCanonicalYAMLPath(t *testing.T) {
 		path string
 		want string // empty means the path has to be rejected
 	}{
-		{"$.spec.config.registries[0].auth.pass", "$.spec.config.registries[0].auth.pass"},
-		{".spec.config.registries[0].auth.pass", "$.spec.config.registries[0].auth.pass"},
-		{"spec.config.registries[0].auth.pass", "$.spec.config.registries[0].auth.pass"},
-		{"$", "$"},
-		{"", ""},
+		{
+			path: "$.spec.config.registries[0].auth.pass",
+			want: "$.spec.config.registries[0].auth.pass",
+		},
+		{
+			path: ".spec.config.registries[0].auth.pass",
+			want: "$.spec.config.registries[0].auth.pass",
+		},
+		{
+			path: "spec.config.registries[0].auth.pass",
+			want: "$.spec.config.registries[0].auth.pass",
+		},
+		{
+			path: "$",
+			want: "$",
+		},
+		{
+			path: "",
+			want: "",
+		},
 		// go-yaml accepts a quoted key and then prints it without its quotes, so this one
 		// canonicalises to "$.$", which does not parse. Rejecting it keeps the failure on the path
 		// the operator typed rather than on a spelling this package invented.
-		{"'$'", ""},
+		{
+			path: "'$'",
+			want: "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -548,11 +639,31 @@ func TestDecryptAtPathRoundTrip(t *testing.T) {
 		path string
 		want string
 	}{
-		{"plain scalar", ".spec.config.registries[0].auth.pass", "hunter2"},
-		{"quoted scalar", ".spec.config.registries[0].auth.token", "tok #1"},
-		{"literal block", ".spec.config.registries[0].tls.ca", "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n"},
-		{"rooted path", "$.spec.config.registries[0].auth.user", "admin"},
-		{"unprefixed path", "spec.config.loadbalancer", "lb.example.com"},
+		{
+			name: "plain scalar",
+			path: ".spec.config.registries[0].auth.pass",
+			want: "hunter2",
+		},
+		{
+			name: "quoted scalar",
+			path: ".spec.config.registries[0].auth.token",
+			want: "tok #1",
+		},
+		{
+			name: "literal block",
+			path: ".spec.config.registries[0].tls.ca",
+			want: "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n",
+		},
+		{
+			name: "rooted path",
+			path: "$.spec.config.registries[0].auth.user",
+			want: "admin",
+		},
+		{
+			name: "unprefixed path",
+			path: "spec.config.loadbalancer",
+			want: "lb.example.com",
+		},
 	}
 
 	for _, tt := range tests {
@@ -763,10 +874,22 @@ func TestDecryptAtPathErrors(t *testing.T) {
 		name string
 		path string
 	}{
-		{"path not found", ".spec.config.registries[0].auth.missing"},
-		{"path is a mapping", ".spec.config.registries[0].auth"},
-		{"path is a sequence", ".spec.config.registries"},
-		{"invalid path", ".spec.config.registries[bogus"},
+		{
+			name: "path not found",
+			path: ".spec.config.registries[0].auth.missing",
+		},
+		{
+			name: "path is a mapping",
+			path: ".spec.config.registries[0].auth",
+		},
+		{
+			name: "path is a sequence",
+			path: ".spec.config.registries",
+		},
+		{
+			name: "invalid path",
+			path: ".spec.config.registries[bogus",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1302,9 +1425,18 @@ func TestConfigRejectsADocumentWithoutRegistries(t *testing.T) {
 		name string
 		doc  string
 	}{
-		{"no registries key", "apiVersion: zarf.dev/v1alpha1\nspec:\n  config: {}\n"},
-		{"registries is not a list", "spec:\n  config:\n    registries: nope\n"},
-		{"not YAML at all", "\tnot: [valid"},
+		{
+			name: "no registries key",
+			doc:  "apiVersion: zarf.dev/v1alpha1\nspec:\n  config: {}\n",
+		},
+		{
+			name: "registries is not a list",
+			doc:  "spec:\n  config:\n    registries: nope\n",
+		},
+		{
+			name: "not YAML at all",
+			doc:  "\tnot: [valid",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1762,8 +1894,14 @@ func TestEncryptConfigRewritesFlowStyle(t *testing.T) {
 		t.Fatalf("registries = %d, want 3", len(registries))
 	}
 	for i, want := range []struct{ user, pass, token, ca string }{
-		{user: "flow-user", pass: "flow-pass"},
-		{user: "nested-user", ca: "nested-ca"},
+		{
+			user: "flow-user",
+			pass: "flow-pass",
+		},
+		{
+			user: "nested-user",
+			ca:   "nested-ca",
+		},
 		{token: "whole-token"},
 	} {
 		auth := registries[i].Authentication
@@ -1822,10 +1960,26 @@ func TestEncryptAtPathQuotesIntoAFlowMappingHoldingABareEntry(t *testing.T) {
 		doc   string
 		value string
 	}{
-		{"a bare entry before the credential", "a:\n  b: {0, pass: hunter2}\n", "hunter2"},
-		{"written without spaces", "a:\n  b: {0,pass:00}\n", "00"},
-		{"several bare entries", "a:\n  b: {q, r, s, pass: hunter2}\n", "hunter2"},
-		{"a bare entry and a nested mapping", "a:\n  b: {0, tls: {q: r}, pass: hunter2}\n", "hunter2"},
+		{
+			name:  "a bare entry before the credential",
+			doc:   "a:\n  b: {0, pass: hunter2}\n",
+			value: "hunter2",
+		},
+		{
+			name:  "written without spaces",
+			doc:   "a:\n  b: {0,pass:00}\n",
+			value: "00",
+		},
+		{
+			name:  "several bare entries",
+			doc:   "a:\n  b: {q, r, s, pass: hunter2}\n",
+			value: "hunter2",
+		},
+		{
+			name:  "a bare entry and a nested mapping",
+			doc:   "a:\n  b: {0, tls: {q: r}, pass: hunter2}\n",
+			value: "hunter2",
+		},
 	}
 
 	const path = "$.a.b.pass"
@@ -1868,8 +2022,14 @@ func TestPathsKeepCRLFLineEndings(t *testing.T) {
 		name string
 		path string
 	}{
-		{"a single-line credential", ".spec.config.registries[0].auth.pass"},
-		{"a credential written as a literal block", ".spec.config.registries[0].tls.ca"},
+		{
+			name: "a single-line credential",
+			path: ".spec.config.registries[0].auth.pass",
+		},
+		{
+			name: "a credential written as a literal block",
+			path: ".spec.config.registries[0].tls.ca",
+		},
 	}
 
 	for _, tt := range tests {

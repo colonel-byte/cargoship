@@ -440,14 +440,54 @@ func TestSameRecipientsComparesKeysRatherThanText(t *testing.T) {
 		b    []string
 		want bool
 	}{
-		{"identical", []string{"age1a", "age1b"}, []string{"age1a", "age1b"}, true},
-		{"reordered", []string{"age1a", "age1b"}, []string{"age1b", "age1a"}, true},
-		{"one added", []string{"age1a"}, []string{"age1a", "age1b"}, false},
-		{"one replaced", []string{"age1a", "age1b"}, []string{"age1a", "age1c"}, false},
-		{"both empty", nil, nil, true},
-		{"ssh comment added", []string{key.authorized}, []string{key.authorized + " alice@laptop"}, true},
-		{"ssh options added", []string{key.authorized}, []string{"no-agent-forwarding " + key.authorized}, true},
-		{"different ssh keys", []string{key.authorized}, []string{newEd25519SSHKey(t).authorized}, false},
+		{
+			name: "identical",
+			a:    []string{"age1a", "age1b"},
+			b:    []string{"age1a", "age1b"},
+			want: true,
+		},
+		{
+			name: "reordered",
+			a:    []string{"age1a", "age1b"},
+			b:    []string{"age1b", "age1a"},
+			want: true,
+		},
+		{
+			name: "one added",
+			a:    []string{"age1a"},
+			b:    []string{"age1a", "age1b"},
+			want: false,
+		},
+		{
+			name: "one replaced",
+			a:    []string{"age1a", "age1b"},
+			b:    []string{"age1a", "age1c"},
+			want: false,
+		},
+		{
+			name: "both empty",
+			a:    nil,
+			b:    nil,
+			want: true,
+		},
+		{
+			name: "ssh comment added",
+			a:    []string{key.authorized},
+			b:    []string{key.authorized + " alice@laptop"},
+			want: true,
+		},
+		{
+			name: "ssh options added",
+			a:    []string{key.authorized},
+			b:    []string{"no-agent-forwarding " + key.authorized},
+			want: true,
+		},
+		{
+			name: "different ssh keys",
+			a:    []string{key.authorized},
+			b:    []string{newEd25519SSHKey(t).authorized},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {

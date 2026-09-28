@@ -50,10 +50,22 @@ func TestEncryptAgeRoundTrip(t *testing.T) {
 		name  string
 		value string
 	}{
-		{"short", "hunter2"},
-		{"empty", ""},
-		{"multi-line", "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n"},
-		{"unicode", "pässwörd ✓"},
+		{
+			name:  "short",
+			value: "hunter2",
+		},
+		{
+			name:  "empty",
+			value: "",
+		},
+		{
+			name:  "multi-line",
+			value: "-----BEGIN CERTIFICATE-----\naGVsbG8gd29ybGQ=\n-----END CERTIFICATE-----\n",
+		},
+		{
+			name:  "unicode",
+			value: "pässwörd ✓",
+		},
 	}
 
 	for _, tt := range tests {

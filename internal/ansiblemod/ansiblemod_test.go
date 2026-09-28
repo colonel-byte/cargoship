@@ -37,27 +37,56 @@ func TestModuleName(t *testing.T) {
 		want  string
 		ok    bool
 	}{
-		{name: "plain binary", argv0: "/usr/bin/cargoship"},
-		{name: "module symlink", argv0: "/tmp/ansible/cargoship_engine_config_sync", want: "engine_config_sync", ok: true},
-		{name: "bare name", argv0: "cargoship_apply", want: "apply", ok: true},
+		{
+			name:  "plain binary",
+			argv0: "/usr/bin/cargoship",
+		},
+		{
+			name:  "module symlink",
+			argv0: "/tmp/ansible/cargoship_engine_config_sync",
+			want:  "engine_config_sync",
+			ok:    true,
+		},
+		{
+			name:  "bare name",
+			argv0: "cargoship_apply",
+			want:  "apply",
+			ok:    true,
+		},
 		// Ansible runs a copy of the module file, under a name of its own making. This is the
 		// name every real module run arrives under; the symlink name above is only ever seen by
 		// an operator running the module by hand.
 		{
 			name:  "ansible copy",
 			argv0: "/home/op/.ansible/tmp/ansible-tmp-1/AnsiballZ_cargoship_apply",
-			want:  "apply", ok: true,
+			want:  "apply",
+			ok:    true,
 		},
-		{name: "ansible copy of something else", argv0: "AnsiballZ_setup"},
+		{
+			name:  "ansible copy of something else",
+			argv0: "AnsiballZ_setup",
+		},
 		// A name that is nothing but the prefix selects no action, so it is not module mode.
-		{name: "prefix only", argv0: "cargoship_"},
+		{
+			name:  "prefix only",
+			argv0: "cargoship_",
+		},
 		// The prefix is not enough. This is the name the repository builds its own binary under
 		// and the name every e2e suite runs, and it is an ordinary CLI invocation.
-		{name: "the build name", argv0: "build/cargoship_linux_amd64"},
+		{
+			name:  "the build name",
+			argv0: "build/cargoship_linux_amd64",
+		},
 		// A name the binary does not answer as is the CLI too, including a misspelled module
 		// file, which fails where it parses the arguments file as a command.
-		{name: "misspelled module", argv0: "cargoship_engine_confg_sync"},
-		{name: "unrelated", argv0: "kubectl"},
+		{
+			name:  "misspelled module",
+			argv0: "cargoship_engine_confg_sync",
+		},
+		{
+			name:  "unrelated",
+			argv0: "kubectl",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, ok := ModuleName(tt.argv0)
@@ -270,8 +299,16 @@ func TestRunRequiresPackageAndInventory(t *testing.T) {
 		args string
 		want string
 	}{
-		{name: "no package", args: `{"inventory": ` + minimalInventory + `}`, want: `"package" parameter is required`},
-		{name: "no inventory", args: `{"package": "./package.tar.zst"}`, want: `"inventory" parameter is required`},
+		{
+			name: "no package",
+			args: `{"inventory": ` + minimalInventory + `}`,
+			want: `"package" parameter is required`,
+		},
+		{
+			name: "no inventory",
+			args: `{"package": "./package.tar.zst"}`,
+			want: `"inventory" parameter is required`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			argv := []string{"cargoship_engine_config_sync", writeArgs(t, tt.args)}
