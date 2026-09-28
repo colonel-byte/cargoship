@@ -1,5 +1,10 @@
 test/rigtest
-test/footloose.yaml
+test/bootloose.yaml
 test/Library
 test/.ssh
 test/*.iid
+
+/internal/apidiff/apidiff
+
+# workspace sums are derivable from the per-module go.sum files
+go.work.sum

@@ -29,13 +29,28 @@ var (
 	errGrepFailed              = errors.New("grep failed")
 	errTestFailed              = errors.New("test failed")
 	errStatInitFailed          = errors.New("stat command not found or unsupported stat implementation")
-	statCmdGNU                 = `env -i PATH="$PATH" LC_ALL=C stat -c '%%#f %%s %%.9Y //%%n//' -- %s 2> /dev/null`
-	statCmdBSD                 = `env -i PATH="$PATH" LC_ALL=C stat -f '%%#p %%z %%Fm //%%N//' -- %s 2> /dev/null`
+	errEmptyTempPath           = errors.New("no temporary file path returned") // also returned by WinFS.CreateTemp
+
+	// The modification time is read from %y, which spells the timestamp out, rather
+	// than from the epoch seconds of %.9Y: the uutils (Rust) reimplementation of
+	// coreutils, the default on Ubuntu 25.10 and later, formats %.9Y through a float
+	// and truncates the outcome onto a 100ns grid, leaving the time it reports up to
+	// ~200ns away from the one the file actually has. %y is exact there, GNU coreutils
+	// prints the same layout, and busybox, which ignores the precision of %.9Y
+	// altogether, does too.
+	statCmdGNU = `env -i PATH="$PATH" LC_ALL=C stat -c '%%#f %%s %%y //%%n//' -- %s 2> /dev/null`
+	statCmdBSD = `env -i PATH="$PATH" LC_ALL=C stat -f '%%#p %%z %%Fm //%%N//' -- %s 2> /dev/null`
 )
 
 const (
 	defaultBlockSize = 4096
 	supportedFlags   = os.O_RDONLY | os.O_WRONLY | os.O_RDWR | os.O_CREATE | os.O_EXCL | os.O_TRUNC | os.O_APPEND | os.O_SYNC
+
+	// statTimeLayout is the timestamp format of stat -c %y under LC_ALL=C: a date, a
+	// time with a fraction of a second and a UTC offset.
+	statTimeLayout = "2006-01-02 15:04:05.999999999 -0700"
+	// statDateLayout is the date the %y timestamp starts with, its first field.
+	statDateLayout = "2006-01-02"
 )
 
 // PosixFS implements fs.FS for a remote filesystem that uses POSIX commands for access.
@@ -71,17 +86,21 @@ func (s *PosixFS) initStat() error {
 	return errStatInitFailed
 }
 
-// second precision touch for busybox.
-func (s *PosixFS) secChtimes(name string, atime, mtime int64) error {
+// chtimes sets the access and modification times of name from timestamps in the
+// -d format of touch, the access time first.
+//
+// The times are set in separate invocations because -d is a single valued option:
+// uutils coreutils rejects a repeated --date outright ("the argument '--date
+// <STRING>' cannot be used multiple times") and GNU touch silently lets the last
+// one win, which would set the access time to the modification timestamp.
+func (s *PosixFS) chtimes(name string, timestamps [2]string) error {
 	accessOrMod := [2]rune{'a', 'm'}
-	// only supports setting one of them at a time
-	for i, t := range [2]int64{atime, mtime} {
-		ts := int64ToTime(t)
-		utc := ts.UTC()
-		cmd := fmt.Sprintf(`[ -e %[3]s ] && env -i PATH="$PATH" LC_ALL=C TZ=UTC touch -%[1]c -d @%[2]d -- %[3]s`,
+	escapedName := shellescape.Quote(name)
+	for i, ts := range timestamps {
+		cmd := fmt.Sprintf(`[ -e %[3]s ] && env -i PATH="$PATH" LC_ALL=C TZ=UTC touch -%[1]c -d %[2]s -- %[3]s`,
 			accessOrMod[i],
-			utc.Unix(),
-			shellescape.Quote(name),
+			ts,
+			escapedName,
 		)
 		if err := s.Exec(cmd); err != nil {
 			return fmt.Errorf("touch %s (%ctime): %w", name, accessOrMod[i], err)
@@ -90,23 +109,23 @@ func (s *PosixFS) secChtimes(name string, atime, mtime int64) error {
 	return nil
 }
 
+// second precision touch for busybox.
+func (s *PosixFS) secChtimes(name string, atime, mtime int64) error {
+	var timestamps [2]string
+	for i, t := range [2]int64{atime, mtime} {
+		timestamps[i] = fmt.Sprintf("@%d", int64ToTime(t).UTC().Unix())
+	}
+	return s.chtimes(name, timestamps)
+}
+
 // nanosecond precision touch for stats that support it.
 func (s *PosixFS) nsecChtimes(name string, atime, mtime int64) error {
-	atimeTS := int64ToTime(atime)
-	mtimeTS := int64ToTime(mtime)
-	utcA := atimeTS.UTC()
-	utcM := mtimeTS.UTC()
-	escapedName := shellescape.Quote(name)
-	cmd := fmt.Sprintf(`[ -e %s ] && env -i PATH="$PATH" LC_ALL=C TZ=UTC touch -a -d %s.%09d -m -d %s.%09d -- %s`,
-		escapedName,
-		utcA.Format("2006-01-02T15:04:05"), utcA.Nanosecond(),
-		utcM.Format("2006-01-02T15:04:05"), utcM.Nanosecond(),
-		escapedName,
-	)
-	if err := s.Exec(cmd); err != nil {
-		return fmt.Errorf("touch (ns) %s: %w", name, err)
+	var timestamps [2]string
+	for i, t := range [2]int64{atime, mtime} {
+		utc := int64ToTime(t).UTC()
+		timestamps[i] = fmt.Sprintf("%s.%09d", utc.Format("2006-01-02T15:04:05"), utc.Nanosecond())
 	}
-	return nil
+	return s.chtimes(name, timestamps)
 }
 
 func (s *PosixFS) initTouch() error {
@@ -177,8 +196,69 @@ func posixBitsToFileMode(bits int64) fs.FileMode {
 	return mode
 }
 
+// fileModeToPosixBits is the inverse of posixBitsToFileMode for the bits chmod
+// understands: the permission bits plus setuid, setgid and sticky. The file
+// type bits have no chmod representation and are ignored.
+func fileModeToPosixBits(mode fs.FileMode) int64 {
+	bits := int64(mode.Perm())
+
+	if mode&fs.ModeSetuid != 0 {
+		bits |= 0o4000
+	}
+	if mode&fs.ModeSetgid != 0 {
+		bits |= 0o2000
+	}
+	if mode&fs.ModeSticky != 0 {
+		bits |= 0o1000
+	}
+
+	return bits
+}
+
+// isStatDate reports whether a stat timestamp field is the date a %y timestamp starts
+// with instead of epoch seconds. An epoch can carry a leading minus, but no dash of its own.
+func isStatDate(field string) bool {
+	return len(field) == len(statDateLayout) && field[4] == '-' && field[7] == '-'
+}
+
+// parseStatModTime reads the modification time from the trailing fields of a stat line
+// and returns it along with the remainder, which holds the file name.
+//
+// The %y timestamp of a GNU style stat is spread over three space separated fields -
+// date, time and UTC offset - so it reaches into rest, while the %Fm of a BSD stat is a
+// single epoch field and leaves rest alone.
+func parseStatModTime(field, rest string) (time.Time, string, error) {
+	if isStatDate(field) {
+		timeParts := strings.SplitN(rest, " ", 3)
+		if len(timeParts) != 3 {
+			return time.Time{}, "", fmt.Errorf("%w: timestamp is missing its time or offset", errInvalid)
+		}
+		modTime, err := time.Parse(statTimeLayout, field+" "+timeParts[0]+" "+timeParts[1])
+		if err != nil {
+			return time.Time{}, "", fmt.Errorf("parse timestamp: %w", err)
+		}
+		return modTime, timeParts[2], nil
+	}
+
+	epochParts := strings.SplitN(field, ".", 2)
+	seconds, err := strconv.ParseInt(epochParts[0], 10, 64)
+	if err != nil {
+		return time.Time{}, "", fmt.Errorf("parse epoch seconds: %w", err)
+	}
+	var nanoseconds int64
+	if len(epochParts) == 2 {
+		nanoseconds, err = strconv.ParseInt(epochParts[1], 10, 64)
+		if err != nil {
+			return time.Time{}, "", fmt.Errorf("parse epoch nanoseconds: %w", err)
+		}
+	}
+
+	return time.Unix(seconds, nanoseconds), rest, nil
+}
+
 func (s *PosixFS) parseStat(stat string) (*FileInfo, error) {
-	// output looks like: 0x81a4 0 1699970097.220228000 //test_20231114155456.txt//
+	// output looks like: 0x81a4 0 2023-11-14 15:54:56.220228000 +0000 //test.txt//
+	// or, from a BSD stat: 0x81a4 0 1699970097.220228000 //test.txt//
 	parts := strings.SplitN(stat, " ", 4)
 	if len(parts) != 4 {
 		return nil, fmt.Errorf("%w: parse stat output %s", errInvalid, stat)
@@ -208,62 +288,164 @@ func (s *PosixFS) parseStat(stat string) (*FileInfo, error) {
 	}
 	res.FSize = size
 
-	timeParts := strings.SplitN(parts[2], ".", 2)
-	mtime, err := strconv.ParseInt(timeParts[0], 10, 64)
+	modTime, name, err := parseStatModTime(parts[2], parts[3])
 	if err != nil {
 		return nil, fmt.Errorf("parse stat mtime %s: %w", stat, err)
 	}
-	var mtimeNano int64
-	if len(timeParts) == 2 {
-		mtimeNano, err = strconv.ParseInt(timeParts[1], 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parse stat mtime ns %s: %w", stat, err)
-		}
-	}
-	res.FModTime = time.Unix(mtime, mtimeNano)
-	res.FName = strings.TrimSuffix(strings.TrimPrefix(parts[3], "//"), "//")
+	res.FModTime = modTime
+	res.FName = strings.TrimSuffix(strings.TrimPrefix(name, "//"), "//")
 
 	return res, nil
 }
 
-func (s *PosixFS) multiStat(names ...string) ([]fs.FileInfo, error) { //nolint:cyclop // TODO refactor
+// exitStatuser is satisfied by the exit errors of the native SSH protocol,
+// which report the status the remote command exited with.
+type exitStatuser interface {
+	error
+	ExitStatus() int
+}
+
+// exitCoder is satisfied by the exit errors of the protocols that run a local
+// process, which report the code that process exited with.
+type exitCoder interface {
+	error
+	ExitCode() int
+}
+
+// localProcessFailureExit is the exit code the openssh client uses for its own
+// failures instead of relaying a status from the remote host. The openssh
+// protocol runs the ssh binary locally, so a failure to connect surfaces as an
+// ordinary non-zero exit of a local process and is otherwise indistinguishable
+// from a remote command that failed.
+//
+// This is a stat-specific convention, not a general contract. It is only sound
+// here because multiStat runs nothing but stat, and stat exits 0 or 1 when it
+// actually runs -- including for permission denied. It is deliberately not
+// applied to exitStatuser, where a status of 255 is one the remote host really
+// reported.
+const localProcessFailureExit = 255
+
+// commandRanAndFailed reports whether err describes a command that ran on the
+// host and exited non-zero, as opposed to one that never ran at all -- a
+// connection that could not be established, a session that could not be
+// started, or a connection that died mid-command.
+//
+// Only a status strictly greater than zero qualifies. A negative one means the
+// process was terminated without a status, by a signal or by a cancelled
+// context, which is "did not complete" rather than "ran and failed". Zero is
+// rejected because it does not describe a failure at all: neither *ssh.ExitError
+// nor *exec.ExitError is constructed for a successful command, so an error
+// carrying zero comes from something other than a command that ran, and the
+// safe answer for anything unrecognised here is false.
+func commandRanAndFailed(err error) bool {
+	if withStatus, ok := errors.AsType[exitStatuser](err); ok {
+		// x/crypto/ssh initialises its wait message with a status of -1 and only
+		// an "exit-status" request overwrites it, so a remote command killed by a
+		// signal reports -1.
+		return withStatus.ExitStatus() > 0
+	}
+	if withCode, ok := errors.AsType[exitCoder](err); ok {
+		code := withCode.ExitCode()
+		return code > 0 && code != localProcessFailureExit
+	}
+	return false
+}
+
+// statBatchBytes caps how much of a stat command line one batch may fill. The
+// limit is on the arguments alone, so it leaves room for the command itself
+// within a conservative view of the remote ARG_MAX.
+const statBatchBytes = 1024
+
+// statBatch quotes names into one command line, starting at idx and stopping
+// once the batch is full or the names run out. It returns the batch and the
+// index to continue from, which always advances, so a caller looping until the
+// names are exhausted terminates.
+//
+// Empty names are skipped rather than passed to stat, which would read them as
+// a missing operand and fail the whole batch. A batch of nothing but empty
+// names therefore comes back empty.
+func statBatch(names []string, idx int) (string, int) {
+	var batch strings.Builder
+	batch.Grow(statBatchBytes)
+	for batch.Len() < statBatchBytes && idx < len(names) {
+		if names[idx] != "" {
+			if batch.Len() > 0 {
+				batch.WriteRune(' ')
+			}
+			batch.WriteString(shellescape.Quote(names[idx]))
+		}
+		idx++
+	}
+	return batch.String(), idx
+}
+
+// statScanError explains a stat command that failed rather than a path that
+// could not be parsed.
+//
+// A single name gets the os package's treatment: a command that ran and exited
+// non-zero means the path is not there, while anything else -- a transport
+// failure, a stat that is not installed -- says nothing about the path and is
+// reported as it came. Several names cannot pin the failure on one of them, so
+// they are all named instead -- every name the call asked for, not just the
+// batch that failed, since a name that stat never reached is as unanswered as
+// one it did.
+func statScanError(err error, names []string) error {
+	if len(names) != 1 {
+		return fmt.Errorf("stat %s: %w", names, err)
+	}
+	if commandRanAndFailed(err) {
+		return PathError(OpStat, names[0], fs.ErrNotExist)
+	}
+	return PathErrorf(OpStat, names[0], "stat: %w", err)
+}
+
+// appendStatLines parses every line the scanner yields onto res and returns it,
+// so a failure part way through still carries what was read before it.
+func (s *PosixFS) appendStatLines(scanner *bufio.Scanner, res []fs.FileInfo) ([]fs.FileInfo, error) {
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		info, err := s.parseStat(line)
+		if err != nil {
+			return res, err
+		}
+		res = append(res, info)
+	}
+	return res, nil
+}
+
+func (s *PosixFS) multiStat(names ...string) ([]fs.FileInfo, error) {
 	if err := s.initStat(); err != nil {
 		return nil, err
 	}
-	var idx int
 	res := make([]fs.FileInfo, 0, len(names))
-	var batch strings.Builder
-	batch.Grow(1024)
-	for idx < len(names) {
-		batch.Reset()
-		// build max 1kb batches of names to stat
-		for batch.Len() < 1024 && idx < len(names) {
-			if names[idx] != "" {
-				batch.WriteString(shellescape.Quote(names[idx]))
-				if idx < len(names)-1 {
-					batch.WriteRune(' ')
-				}
-			}
-			idx++
+	for idx := 0; idx < len(names); {
+		var batch string
+		batch, idx = statBatch(names, idx)
+		if batch == "" {
+			// Every name in this batch was empty. Running stat with no operands
+			// would only fail, and Stat turns the missing result into ErrNotExist
+			// on its own.
+			continue
 		}
 
-		scanner := s.ExecScanner(fmt.Sprintf(*s.statCmd, batch.String()))
-		for scanner.Scan() {
-			line := scanner.Text()
-			if line == "" {
-				continue
-			}
-			info, err := s.parseStat(line)
-			if err != nil {
-				return res, err
-			}
-			res = append(res, info)
+		scanner := s.ExecScanner(fmt.Sprintf(*s.statCmd, batch))
+		// Assigned, not declared: a := here would shadow res and quietly drop
+		// every batch's results.
+		var err error
+		res, err = s.appendStatLines(scanner, res)
+		if err != nil {
+			return res, err
 		}
-		if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
+		if err := scanner.Err(); err != nil {
 			if len(names) == 1 {
-				return nil, PathError(OpStat, names[0], fs.ErrNotExist)
+				// A lone name is answered as a path error, so a partial result is
+				// not worth carrying back.
+				return nil, statScanError(err, names)
 			}
-			return res, fmt.Errorf("stat %s: %w", names, err)
+			return res, statScanError(err, names)
 		}
 	}
 	return res, nil
@@ -339,9 +521,11 @@ func (s *PosixFS) Truncate(name string, size int64) error {
 	return nil
 }
 
-// Chmod changes the mode of the named file to mode.
+// Chmod changes the mode of the named file to mode. The permission bits and
+// the setuid, setgid and sticky bits are applied; the file type bits are
+// ignored, as chmod has no representation for them.
 func (s *PosixFS) Chmod(name string, mode fs.FileMode) error {
-	if err := s.Exec(sh.Command("chmod", fmt.Sprintf("%#o", mode), name)); err != nil {
+	if err := s.Exec(sh.Command("chmod", fmt.Sprintf("%#o", fileModeToPosixBits(mode)), name)); err != nil {
 		if isNotExist(err) {
 			return PathError("chmod", name, fs.ErrNotExist)
 		}
@@ -398,17 +582,45 @@ func (s *PosixFS) ChownTreeInt(name string, uid, gid int) error {
 	return nil
 }
 
-// DownloadURL downloads the contents of url to dst. It prefers curl when available
-// and falls back to wget. Returns a descriptive error if neither is available.
+// DownloadURL downloads the contents of url to dst.
+//
+// The transfer goes to a temporary file next to dst and is renamed into place
+// only once it completes, so an interrupted download never leaves a truncated
+// file sitting at dst looking complete.
 func (s *PosixFS) DownloadURL(url, dst string) error {
+	return downloadURL(s, url, dst)
+}
+
+// fetchURL downloads url into dst. It prefers curl when available and falls
+// back to wget. Returns a descriptive error if neither is available.
+//
+// Resuming appends to whatever is already at dst, which is only sound because
+// the callers point it at a partial file they created themselves for this same
+// url. Neither tool can tell whether a local file is a valid prefix of the
+// remote one, so it must never be aimed at a file of unknown origin.
+//
+// wget takes -c alongside -qO even though its manual says -O truncates the
+// output file immediately: with -c it does not, and wget still sends the range
+// request (measured with wget 1.25 against a range-serving host).
+func (s *PosixFS) fetchURL(ctx context.Context, url, dst string, resume bool) error {
 	if _, err := s.LookPath("curl"); err == nil {
-		if err := s.Exec(sh.Command("curl", "-sSLf", "-o", dst, "--", url)); err != nil {
+		args := []string{"-sSLf", "-o", dst}
+		if resume {
+			args = append(args, "-C", "-")
+		}
+		args = append(args, "--", url)
+		if err := s.ExecContext(ctx, sh.Command("curl", args...), cmd.Sensitive()); err != nil {
 			return fmt.Errorf("download %s: %w", url, err)
 		}
 		return nil
 	}
 	if _, err := s.LookPath("wget"); err == nil {
-		if err := s.Exec(sh.Command("wget", "-qO", dst, "--", url)); err != nil {
+		args := []string{}
+		if resume {
+			args = append(args, "-c")
+		}
+		args = append(args, "-qO", dst, "--", url)
+		if err := s.ExecContext(ctx, sh.Command("wget", args...), cmd.Sensitive()); err != nil {
 			return fmt.Errorf("download %s: %w", url, err)
 		}
 		return nil
@@ -448,6 +660,40 @@ func (s *PosixFS) httpStatusInsecure(ctx context.Context, rawURL string) (int, e
 		return 0, fmt.Errorf("http-status %s: %w", rawURL, errWgetStatusUnknown)
 	}
 	return 0, fmt.Errorf("%w: neither curl nor wget found", ErrHTTPStatusNotSupported)
+}
+
+// httpHead performs an HTTP HEAD request for rawURL and reports what the server
+// said. It prefers curl and falls back to wget. TLS certificates are verified.
+func (s *PosixFS) httpHead(ctx context.Context, rawURL string) (*URLInfo, error) {
+	if _, err := s.LookPath("curl"); err == nil {
+		out, err := s.ExecOutputContext(ctx, sh.Command("curl", "-sS", "-L", "-I", "--connect-timeout", "20", "--", rawURL), cmd.Sensitive())
+		if err != nil {
+			return nil, fmt.Errorf("http-head %s: %w", rawURL, err)
+		}
+		info, err := parseHeadResponse(out)
+		if err != nil {
+			return nil, fmt.Errorf("http-head %s: %w", rawURL, err)
+		}
+		return info, nil
+	}
+	if _, err := s.LookPath("wget"); err == nil {
+		// wget writes the server response to stderr, and --spider makes it a
+		// HEAD request. It exits non-zero for non-2xx statuses, but the headers
+		// are still worth reporting, so the exit status is only consulted when
+		// nothing could be parsed.
+		var errBuf strings.Builder
+		execErr := s.ExecContext(ctx, sh.Command("wget", "--spider", "--server-response", "-q", "--", rawURL),
+			cmd.Sensitive(), cmd.Stderr(&errBuf))
+		info, err := parseHeadResponse(errBuf.String())
+		if err != nil {
+			if execErr != nil {
+				return nil, fmt.Errorf("http-head %s: %w", rawURL, execErr)
+			}
+			return nil, fmt.Errorf("http-head %s: %w", rawURL, err)
+		}
+		return info, nil
+	}
+	return nil, fmt.Errorf("%w: neither curl nor wget found", ErrHTTPHeadNotSupported)
 }
 
 // FileContains reports whether the file at path contains the given substring.
@@ -540,7 +786,7 @@ func (s *PosixFS) openNew(name string, flags int, perm fs.FileMode) (fs.FileInfo
 		return nil, PathErrorf(OpOpen, name, "%w: failed to stat parent directory", fs.ErrInvalid)
 	}
 
-	if err := s.Exec(sh.Command("install", "-m", fmt.Sprintf("%#o", perm), "/dev/null", name)); err != nil {
+	if err := s.Exec(sh.Command("install", "-m", fmt.Sprintf("%#o", fileModeToPosixBits(perm)), "/dev/null", name)); err != nil {
 		return nil, PathError(OpOpen, name, err)
 	}
 
@@ -635,7 +881,7 @@ func (s *PosixFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		items = append(items, scanner.Text())
 	}
 
-	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
+	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("read dir (find) %s: %w", name, err)
 	}
 
@@ -659,22 +905,57 @@ func (s *PosixFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return res, err
 }
 
-// Remove deletes the named file or (empty) directory.
+// Remove deletes the named file. A path that does not exist is an error,
+// matching os.Remove.
+//
+// Unlike os.Remove it does not delete an empty directory: rm refuses one
+// without an option POSIX does not require it to have. Use RemoveAll for a
+// directory.
 func (s *PosixFS) Remove(name string) error {
-	if err := s.Exec(sh.Command("rm", "-f", name)); err != nil {
-		return fmt.Errorf("delete %s: %w", name, err)
+	// Deliberately not "rm -f": -f makes a missing path succeed, which the OS
+	// interface, modeled after the os package, says it must not. rm still does
+	// not prompt for a write-protected file here, because it only does so when
+	// stdin is a terminal.
+	if err := s.Exec(sh.Command("rm", "--", name)); err != nil {
+		if isNotExist(err) {
+			return PathError(OpRemove, name, fs.ErrNotExist)
+		}
+		return PathError(OpRemove, name, err)
 	}
 	return nil
 }
 
+// errNoSuchFile is the reason coreutils give for a path that is not there. They
+// print the path first and the reason last, so the reason is exactly what is
+// lost when a message is shortened.
+const errNoSuchFile = "No such file or directory"
+
+// isNotExist reports whether err means the path was not there.
+//
+// Commands that do not report absence in a structured form leave only their
+// diagnostic to go on. That is read from the command's full stderr rather than
+// from the error message, which carries a shortened form: with a long enough
+// path, matching the message alone makes the answer depend on how long the path
+// is. The message is still consulted as a fallback, for errors that do not come
+// from a command and so carry no stderr of their own.
 func isNotExist(err error) bool {
-	return err != nil && (errors.Is(err, fs.ErrNotExist) || strings.Contains(err.Error(), "No such file or directory"))
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return true
+	}
+	if strings.Contains(cmd.StderrOf(err), errNoSuchFile) {
+		return true
+	}
+	return strings.Contains(err.Error(), errNoSuchFile)
 }
 
-// RemoveAll removes path and any children it contains.
+// RemoveAll removes path and any children it contains. A path that does not
+// exist is not an error, matching os.RemoveAll.
 func (s *PosixFS) RemoveAll(name string) error {
 	if err := s.Exec(sh.Command("rm", "-rf", name)); err != nil {
-		return fmt.Errorf("remove all %s: %w", name, err)
+		return PathError(OpRemoveAll, name, err)
 	}
 	return nil
 }
@@ -698,6 +979,22 @@ func (s *PosixFS) TempDir() string {
 
 // MkdirAll creates a new directory structure with the specified name and permission bits.
 // If the directory already exists, MkDirAll does nothing and returns nil.
+//
+// The permission bits of perm are applied to every directory that is created,
+// like os.MkdirAll does; directories that already exist are left alone. The
+// setgid, setuid and sticky bits of perm are applied to the last directory of
+// the path only. The file type bits are ignored.
+//
+// The mode comes from a umask instead of `install -d -m ...` because the uutils
+// (Rust) reimplementation of coreutils, the default on Ubuntu 25.10 and later,
+// applies -m only to the last component of the path while GNU install applies it
+// to every directory it creates, leaving the intermediate directories at the
+// remote default mode. A umask covers all of them, but only the nine permission
+// bits, so the special bits need the trailing chmod.
+//
+// Note that a perm without u+wx makes creating nested directories fail for a
+// non-root user, as it does with os.MkdirAll: the intermediate directory can't
+// be written to once it has been created.
 func (s *PosixFS) MkdirAll(name string, perm fs.FileMode) error {
 	if existing, err := s.Stat(name); err == nil {
 		if existing.IsDir() {
@@ -706,7 +1003,19 @@ func (s *PosixFS) MkdirAll(name string, perm fs.FileMode) error {
 		return fmt.Errorf("mkdir %s: %w", name, fs.ErrExist)
 	}
 
-	if err := s.Exec(sh.Command("install", "-d", "-m", fmt.Sprintf("%#o", perm), name)); err != nil {
+	mode := fileModeToPosixBits(perm)
+	hasSpecialBits := mode&^int64(fs.ModePerm) != 0
+
+	command := sh.CommandBuilder(fmt.Sprintf("umask %#o", fs.ModePerm&^perm.Perm())).
+		Raw("&&").Raw(sh.Command("mkdir", "-p", "--", name))
+
+	if hasSpecialBits {
+		// "--" precedes the mode because BSD chmod stops parsing options at the
+		// first operand, where "chmod 0644 -- file" would treat "--" as a filename.
+		command = command.Raw("&&").Raw(sh.Command("chmod", "--", fmt.Sprintf("%#o", mode), name))
+	}
+
+	if err := s.Exec(command.String()); err != nil {
 		return fmt.Errorf("mkdir %s: %w", name, err)
 	}
 
@@ -714,17 +1023,50 @@ func (s *PosixFS) MkdirAll(name string, perm fs.FileMode) error {
 }
 
 // Mkdir creates a new directory with the specified name and permission bits.
+//
+// The permission bits and the setgid, setuid and sticky bits of perm are
+// applied; the file type bits are ignored.
 func (s *PosixFS) Mkdir(name string, perm fs.FileMode) error {
-	if err := s.Exec(sh.Command("mkdir", "-m", fmt.Sprintf("%#o", perm), name)); err != nil {
+	if err := s.Exec(sh.Command("mkdir", "-m", fmt.Sprintf("%#o", fileModeToPosixBits(perm)), name)); err != nil {
 		return PathError("mkdir", name, err)
 	}
 
 	return nil
 }
 
-// WriteFile writes data to a file named by filename.
+// WriteFile writes data to a file named by filename. Any missing parent
+// directories are created.
+//
+// The file is created via a shell redirect instead of `install -m ... /dev/stdin`
+// because the uutils (Rust) reimplementation of coreutils, the default on Ubuntu
+// 25.10 and later, fails with "install: No such file or directory" when the
+// source is /dev/stdin and the destination already exists — which is exactly
+// what writing to a mktemp'd file does. See
+// https://github.com/uutils/coreutils/issues/12407.
+//
+// The umask keeps a newly created file from being more permissive than perm
+// while the content is written; the trailing chmod then applies perm's
+// permission bits along with its setuid, setgid and sticky bits, also to a file
+// that already existed. The file type bits of perm are ignored, as chmod has no
+// representation for them. A umask only covers the nine permission bits, so the
+// special bits come from the chmod alone — which is the safe ordering anyway, as
+// the content is fully written by then. The umask is set after mkdir so that it
+// does not affect the mode of the created parent directories.
+//
+// Missing parent directories get the remote default mode (0777 minus the remote
+// umask) instead of the fixed 0755 that GNU `install -D` used. Use MkdirAll if
+// the parent directories need a specific mode.
 func (s *PosixFS) WriteFile(filename string, data []byte, perm fs.FileMode) error {
-	if err := s.Exec(sh.Command("install", "-D", "-m", fmt.Sprintf("%#o", perm), "/dev/stdin", filename), cmd.Stdin(bytes.NewReader(data))); err != nil {
+	mode := fileModeToPosixBits(perm)
+
+	// "--" precedes the mode because BSD chmod stops parsing options at the
+	// first operand, where "chmod 0644 -- file" would treat "--" as a filename.
+	command := sh.CommandBuilder(sh.Command("mkdir", "-p", "--", s.Dir(filename))).
+		Raw("&&").Raw(fmt.Sprintf("umask %#o", fs.ModePerm&^perm.Perm())).
+		Raw("&&").Raw("cat").OutToFile(filename).
+		Raw("&&").Raw(sh.Command("chmod", "--", fmt.Sprintf("%#o", mode), filename))
+
+	if err := s.Exec(command.String(), cmd.Stdin(bytes.NewReader(data))); err != nil {
 		return fmt.Errorf("write file %s: %w", filename, err)
 	}
 	return nil
@@ -760,6 +1102,13 @@ func (s *PosixFS) CreateTemp(dir, prefix string) (string, error) {
 	out, err := s.ExecOutput(sh.Command("mktemp", "--", s.Join(dir, prefix+"XXXXXX")))
 	if err != nil {
 		return "", fmt.Errorf("create temp %s: %w", dir, err)
+	}
+	// mktemp always prints the path it created, so silence means the command
+	// succeeded without doing the job. An empty string is not a path to anything:
+	// the callers would go on to run curl -o '' and mv -f '' dst, which fail
+	// naming nothing at all, a long way from the cause.
+	if out == "" {
+		return "", fmt.Errorf("create temp %s: %w", dir, errEmptyTempPath)
 	}
 	return out, nil
 }

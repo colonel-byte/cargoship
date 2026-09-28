@@ -60,7 +60,10 @@ var statCmdTemplate = `if (Test-Path -LiteralPath %[1]s) {
 func (s *WinFS) Stat(name string) (fs.FileInfo, error) {
 	out, err := s.ExecOutput(fmt.Sprintf(statCmdTemplate, ps.DoubleQuotePath(name)), cmd.PS())
 	if err != nil {
-		return nil, PathErrorf(OpStat, name, "%w: %w", err, fs.ErrNotExist)
+		// An execution failure says nothing about the path. Absence is reported by
+		// a *successful* command that prints the marker handled below, so this
+		// branch must never claim fs.ErrNotExist.
+		return nil, PathError(OpStat, name, err)
 	}
 
 	fi := &winFileInfo{fs: s}
@@ -92,12 +95,12 @@ func (s *WinFS) Sha256(name string) (string, error) {
 }
 
 // ReadDir reads the directory named by dirname and returns a list of directory entries.
-func (s *WinFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (s *WinFS) ReadDir(name string) (entries []fs.DirEntry, err error) {
 	f, err := s.OpenFile(name, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, PathError("readdir", name, err)
 	}
-	defer f.Close()
+	defer closeWithSession(f, &err)
 	dir, ok := f.(*winDir)
 	if !ok {
 		return nil, PathErrorf("readdir", name, "readdir: %w", fs.ErrInvalid)
@@ -106,38 +109,90 @@ func (s *WinFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return dir.ReadDir(-1)
 }
 
-// Remove deletes the named file or (empty) directory.
-func (s *WinFS) Remove(name string) error {
-	if existing, err := s.Stat(name); err == nil && existing.IsDir() {
-		return s.removeDir(name)
+// closeWithSession closes f, and reports a close that failed because the
+// remote session timed out through err when the operation itself had no
+// complaint. Anything the caller reads or writes afterwards would go to a
+// host that is no longer there, so it must not look like a success.
+func closeWithSession(f io.Closer, err *error) {
+	closeErr := f.Close()
+	if *err == nil && errors.Is(closeErr, ErrTimeout) {
+		*err = closeErr
 	}
+}
 
-	if err := s.Exec("cmd.exe /c del " + ps.DoubleQuotePath(name)); err != nil {
-		return fmt.Errorf("remove %s: %w", name, err)
+// Remove deletes the named file or (empty) directory. A path that does not
+// exist is an error, matching os.Remove.
+//
+// Every failure is reported as a *fs.PathError whose Op is OpRemove, so a
+// caller reading it sees the call it made rather than one of the commands used
+// to carry it out.
+func (s *WinFS) Remove(name string) error {
+	existing, err := s.Stat(name)
+	if err != nil {
+		// Covers both a path that is genuinely absent -- an error for os.Remove --
+		// and a stat that could not be performed. Neither may fall through to del:
+		// a transport failure is not evidence of anything about the path.
+		return PathError(OpRemove, name, pathErrorCause(err))
+	}
+	if existing.IsDir() {
+		err = s.removeDir(name)
+	} else {
+		err = s.removeFile(name)
+	}
+	if err != nil {
+		return PathError(OpRemove, name, err)
 	}
 
 	return nil
 }
 
-// RemoveAll deletes the named file or directory and all its child items.
+// RemoveAll deletes the named file or directory and all its child items. A path
+// that does not exist is not an error, matching os.RemoveAll.
+//
+// Failures are reported as a *fs.PathError whose Op is OpRemoveAll, on the same
+// reasoning as Remove.
 func (s *WinFS) RemoveAll(name string) error {
-	if existing, err := s.Stat(name); err == nil && existing.IsDir() {
-		return s.removeDirAll(name)
+	existing, err := s.Stat(name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return PathError(OpRemoveAll, name, pathErrorCause(err))
+	}
+	if existing.IsDir() {
+		err = s.removeDirAll(name)
+	} else {
+		err = s.removeFile(name)
+	}
+	if err != nil {
+		return PathError(OpRemoveAll, name, err)
 	}
 
-	return s.Remove(name)
+	return nil
+}
+
+// The helpers below name the command that failed but not the path: their
+// callers wrap them in a PathError that carries it, and repeating it would put
+// it in the message twice.
+
+func (s *WinFS) removeFile(name string) error {
+	if err := s.Exec("cmd.exe /c del " + ps.DoubleQuotePath(name)); err != nil {
+		return fmt.Errorf("del: %w", err)
+	}
+
+	return nil
 }
 
 func (s *WinFS) removeDir(name string) error {
 	if err := s.Exec("cmd.exe /c rmdir /q " + ps.DoubleQuotePath(name)); err != nil {
-		return fmt.Errorf("rmdir %s: %w", name, err)
+		return fmt.Errorf("rmdir: %w", err)
 	}
 	return nil
 }
 
 func (s *WinFS) removeDirAll(name string) error {
 	if err := s.Exec("cmd.exe /c rmdir /s /q " + ps.DoubleQuotePath(name)); err != nil {
-		return fmt.Errorf("rmdir %s: %w", name, err)
+		return fmt.Errorf("rmdir /s: %w", err)
 	}
 
 	return nil
@@ -205,6 +260,13 @@ func (s *WinFS) CreateTemp(dir, prefix string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("create temp %s: %w", dir, err)
 	}
+	// The script writes the path it created or throws, so silence means neither
+	// happened. An empty string is not a path to anything: the callers would go
+	// on to run Invoke-WebRequest -OutFile "" and Move-Item -LiteralPath "",
+	// which fail naming nothing at all, a long way from the cause.
+	if out == "" {
+		return "", fmt.Errorf("create temp %s: %w", dir, errEmptyTempPath)
+	}
 	return toSlashes(out), nil
 }
 
@@ -234,9 +296,9 @@ func (s *WinFS) OpenFile(name string, flags int, _ fs.FileMode) (File, error) {
 	}
 	var o opener
 	if fi != nil && fi.IsDir() {
-		o = &winDir{winFileDirBase: winFileDirBase{withPath: withPath{name}, fs: s}}
+		o = &winDir{withPath: withPath{name}, fs: s}
 	} else {
-		o = &winFile{winFileDirBase: winFileDirBase{withPath: withPath{name}, fs: s}}
+		o = &winFile{withPath: withPath{name}, fs: s}
 	}
 	if err := o.open(flags); err != nil {
 		return nil, fmt.Errorf("open: %w", err)
@@ -250,12 +312,12 @@ func (s *WinFS) OpenFile(name string, flags int, _ fs.FileMode) (File, error) {
 }
 
 // ReadFile reads the named file and returns its contents.
-func (s *WinFS) ReadFile(name string) ([]byte, error) {
+func (s *WinFS) ReadFile(name string) (contents []byte, err error) {
 	f, err := s.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("readfile %s: %w", name, err)
 	}
-	defer f.Close()
+	defer closeWithSession(f, &err)
 	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("readfile %s: %w", name, err)
@@ -264,12 +326,12 @@ func (s *WinFS) ReadFile(name string) ([]byte, error) {
 }
 
 // WriteFile writes data to the named file, creating it if necessary.
-func (s *WinFS) WriteFile(name string, data []byte, mode fs.FileMode) error {
+func (s *WinFS) WriteFile(name string, data []byte, mode fs.FileMode) (err error) {
 	f, err := s.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 	if err != nil {
 		return fmt.Errorf("writefile %s: %w", name, err)
 	}
-	defer f.Close()
+	defer closeWithSession(f, &err)
 	reader := bytes.NewReader(data)
 	_, err = io.Copy(f, reader)
 	if err != nil {
@@ -447,7 +509,23 @@ func (s *WinFS) ChownTreeInt(name string, _, _ int) error {
 }
 
 // DownloadURL downloads the contents of url to dst using Invoke-WebRequest.
+//
+// The transfer goes to a temporary file next to dst and is renamed into place
+// only once it completes, so an interrupted download never leaves a truncated
+// file sitting at dst looking complete.
 func (s *WinFS) DownloadURL(url, dst string) error {
+	return downloadURL(s, url, dst)
+}
+
+// fetchURL downloads url into dst using Invoke-WebRequest.
+//
+// The resume flag is ignored: -Resume arrived in PowerShell 6.1, which ships
+// separately as pwsh.exe, while [cmd.PS] runs powershell.exe -- Windows
+// PowerShell 5.1 -- so it is never reachable here. Restarting is always
+// correct, as -OutFile rewrites the file from the beginning rather than
+// appending to it. UseBasicParsing is for that same 5.1 baseline, where there
+// may be no IE engine to parse the response with.
+func (s *WinFS) fetchURL(ctx context.Context, url, dst string, _ bool) error {
 	script := fmt.Sprintf(`$ProgressPreference='SilentlyContinue'
 try {
   Invoke-WebRequest -Uri %s -OutFile %s -UseBasicParsing -ErrorAction Stop | Out-Null
@@ -455,10 +533,74 @@ try {
   Write-Error $_.Exception.Message
   exit 1
 }`, ps.SingleQuote(url), ps.DoubleQuotePath(dst))
-	if err := s.Exec(script, cmd.PS()); err != nil {
+	if err := s.ExecContext(ctx, script, cmd.PS(), cmd.Sensitive()); err != nil {
 		return fmt.Errorf("download %s: %w", url, err)
 	}
 	return nil
+}
+
+// httpHead performs an HTTP HEAD request for rawURL and reports what the server
+// said. TLS certificates are verified and redirects are followed, matching the
+// curl and wget paths.
+//
+// The status line is synthesized so the output parses with the same reader as
+// the curl and wget responses.
+//
+// Getting a non-2xx status back without an error takes some care, because
+// Invoke-WebRequest reports those by throwing:
+//
+//   - PowerShell 7+ has -SkipHttpErrorCheck, so nothing is thrown and the
+//     normal path handles every status.
+//   - PowerShell 5.1 throws a WebException carrying an HttpWebResponse, whose
+//     Headers collection is keyed like the success-path dictionary.
+//   - PowerShell 6.x has neither, and its HttpResponseMessage exposes headers
+//     as key/value pairs instead of by key. That version is end of life, so it
+//     falls back to enumerating pairs and may omit Content-Length, which lives
+//     on the content headers there. The status is still reported.
+//
+// Windows PowerShell 5.1, the version shipped with Windows Server 2019 and
+// still the built-in on current Windows, is the baseline: it needs
+// UseBasicParsing (there may be no IE engine to fall back on), and both its
+// success-path dictionary and the WebHeaderCollection hanging off a
+// WebException expose headers by key, so the keyed branch covers it. Absent
+// properties read as null in PowerShell rather than throwing, which is what
+// makes the null check a safe way to tell the shapes apart.
+//
+// Header values are a string in 5.1 and a list in 6+, so they are joined.
+func (s *WinFS) httpHead(ctx context.Context, rawURL string) (*URLInfo, error) {
+	script := fmt.Sprintf(`$ProgressPreference='SilentlyContinue'
+$ErrorActionPreference='Stop'
+$v=$PSVersionTable.PSVersion.Major
+$params=@{Uri=%s;Method='HEAD'}
+if($v -lt 6){$params['UseBasicParsing']=$true}
+if($v -ge 7){$params['SkipHttpErrorCheck']=$true}
+function Emit($code,$headers){
+  "HTTP/1.1 " + [int]$code
+  if($headers -eq $null){return}
+  if($headers.Keys -ne $null){
+    foreach($k in $headers.Keys){"{0}: {1}" -f $k,($headers[$k] -join ',')}
+  }else{
+    foreach($p in $headers.GetEnumerator()){"{0}: {1}" -f $p.Key,($p.Value -join ',')}
+  }
+}
+try{
+  $r=Invoke-WebRequest @params
+  Emit $r.StatusCode $r.Headers
+}catch{
+  $resp=$_.Exception.Response
+  if($resp -eq $null){Write-Error $_.Exception.Message;exit 1}
+  Emit $resp.StatusCode $resp.Headers
+}`, ps.SingleQuote(rawURL))
+
+	out, err := s.ExecOutputContext(ctx, script, cmd.PS(), cmd.Sensitive())
+	if err != nil {
+		return nil, fmt.Errorf("http-head %s: %w", rawURL, err)
+	}
+	info, err := parseHeadResponse(out)
+	if err != nil {
+		return nil, fmt.Errorf("http-head %s: %w", rawURL, err)
+	}
+	return info, nil
 }
 
 // httpStatusInsecure checks whether url is reachable and returns the HTTP status

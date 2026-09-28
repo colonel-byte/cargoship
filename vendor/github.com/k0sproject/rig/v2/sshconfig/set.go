@@ -495,7 +495,7 @@ func (s *Setter) appendPathList(key string, values ...string) error {
 		field.Set(reflect.ValueOf(values))
 	}
 
-	oldValues, ok := field.Interface().([]string)
+	oldValues, ok := reflect.TypeAssert[[]string](field)
 	if !ok {
 		return fmt.Errorf("%w: field %q is not a slice of strings", errInvalidField, key)
 	}
@@ -533,7 +533,7 @@ func (s *Setter) appendStringList(key string, values ...string) error {
 		field.Set(reflect.ValueOf(values))
 		return nil
 	}
-	oldValues, ok := field.Interface().([]string)
+	oldValues, ok := reflect.TypeAssert[[]string](field)
 	if !ok {
 		return fmt.Errorf("%w: field %q is not a slice of strings", errInvalidField, key)
 	}
@@ -598,7 +598,7 @@ func (s *Setter) setRekeyLimitOption(key string, values ...string) error { //nol
 		}
 		return fmt.Errorf("%w: field %q is not a RekeyLimitOption or a string slice", errInvalidField, key)
 	}
-	rk, ok := field.Interface().(options.RekeyLimitOption)
+	rk, ok := reflect.TypeAssert[options.RekeyLimitOption](field)
 	if !ok {
 		return fmt.Errorf("%w: field %q is not a RekeyLimitOption", errInvalidField, key)
 	}
@@ -719,7 +719,7 @@ func (s *Setter) setForwardOption(key string, values ...string) error {
 		res = make(map[string]string)
 	} else {
 		var ok bool
-		res, ok = field.Interface().(map[string]string)
+		res, ok = reflect.TypeAssert[map[string]string](field)
 		if !ok {
 			return fmt.Errorf("%w: field %q is not a map[string]string", errInvalidField, key)
 		}
@@ -759,7 +759,7 @@ func (s *Setter) setSendEnvOption(key string, values ...string) error {
 		}
 		if value[0] == '-' {
 			value = value[1:]
-			oldVals, ok := field.Interface().([]string)
+			oldVals, ok := reflect.TypeAssert[[]string](field)
 			if !ok {
 				return fmt.Errorf("%w: field %q is not a slice of strings", errInvalidField, key)
 			}
@@ -796,7 +796,7 @@ func (s *Setter) setSetEnvOption(key string, values ...string) error {
 	if field.IsNil() {
 		res = make(map[string]string)
 	} else {
-		r, ok := field.Interface().(map[string]string)
+		r, ok := reflect.TypeAssert[map[string]string](field)
 		if !ok {
 			return fmt.Errorf("%w: field %q is not a map of strings", errInvalidField, key)
 		}
@@ -973,7 +973,8 @@ func (s *Setter) Set(key string, values ...string) error {
 	return nil
 }
 
-// Reset sets a field to its zero value. This is useful in testing.
+// Reset clears a field. A pointer field is set to a pointer to its zero value,
+// any other field to the zero value itself. This is useful in testing.
 func (s *Setter) Reset(key string) error {
 	info, ok := knownKeys[strings.ToLower(key)]
 	if !ok {
@@ -983,7 +984,6 @@ func (s *Setter) Reset(key string) error {
 	if !ok {
 		return fmt.Errorf("%w: field %q is not found", errFieldNotFound, key)
 	}
-	// Set a pointer to nil and a non-pointer to zero value.
 	if field.Kind() == reflect.Pointer {
 		field.Set(reflect.New(field.Type().Elem()))
 	} else {
@@ -1020,25 +1020,55 @@ func (s *Setter) Finalize() error { //nolint:cyclop
 				field.Set(reflect.ValueOf(newVal))
 			}
 		case reflect.Map:
-			// do nothing unless it's a map[string]string
-			if field.Type().Key().Kind() != reflect.String && field.Type().Elem().Kind() != reflect.String {
+			// Only map[string]string can be expanded. Anything else, such as
+			// ChannelTimeout's map[string]time.Duration, must not reach it. The types are
+			// compared instead of the kinds because expandStringMap indexes the map with a
+			// plain string, which a named string key type would not accept.
+			if field.Type() != reflect.TypeFor[map[string]string]() {
 				continue
 			}
-			if info.key != "LocalForward" && info.key != "RemoteForward" {
-				for _, k := range field.MapKeys() {
-					value := field.MapIndex(k)
-					if value.Len() == 1 && strings.Contains(value.Index(0).String(), "$") {
-						newValue, err := shellescape.Expand(value.Index(0).String(), shellescape.ExpandNoDollarVars(), shellescape.ExpandErrorIfUnset())
-						if err != nil {
-							return fmt.Errorf("%w: failed to expand localforward value %q: %w", errInvalidValue, info.key, err)
-						}
-						field.SetMapIndex(k, reflect.ValueOf([]string{newValue}))
-					}
-				}
-				continue
+			if err := s.expandStringMap(field, info); err != nil {
+				return err
 			}
 		}
 	}
+	return nil
+}
+
+// expandStringMap expands the keys and the values of a map[string]string field according to the
+// expansion rules of the key. Both halves are expanded because a forwarding entry can use a unix
+// socket path on either side and those accept tokens.
+//
+// The result is collected into a new map so that two entries expanding into the same key are
+// reported as an error instead of one of them silently replacing the other.
+func (s *Setter) expandStringMap(field reflect.Value, info keyInfo) error {
+	oldKeys := make([]string, 0, field.Len())
+	for _, k := range field.MapKeys() {
+		oldKeys = append(oldKeys, k.String())
+	}
+	if len(oldKeys) == 0 {
+		return nil
+	}
+	// Sorted so that a collision is always reported against the same entry.
+	slices.Sort(oldKeys)
+
+	expanded := reflect.MakeMapWithSize(field.Type(), len(oldKeys))
+	for _, oldKey := range oldKeys {
+		newKey, err := s.expand(oldKey, info)
+		if err != nil {
+			return fmt.Errorf("%w: failed to expand %q key %q: %w", errInvalidValue, info.key, oldKey, err)
+		}
+		oldValue := field.MapIndex(reflect.ValueOf(oldKey)).String()
+		newValue, err := s.expand(oldValue, info)
+		if err != nil {
+			return fmt.Errorf("%w: failed to expand %q value %q: %w", errInvalidValue, info.key, oldValue, err)
+		}
+		if expanded.MapIndex(reflect.ValueOf(newKey)).IsValid() {
+			return fmt.Errorf("%w: %q key %q expands to %q which is already set", errInvalidValue, info.key, oldKey, newKey)
+		}
+		expanded.SetMapIndex(reflect.ValueOf(newKey), reflect.ValueOf(newValue))
+	}
+	field.Set(expanded)
 	return nil
 }
 
@@ -1160,7 +1190,7 @@ func (s *Setter) expandToken(token string) (string, error) { //nolint:cyclop
 		}
 		if f, err := s.get("ProxyJump", reflect.Slice, reflect.String); err == nil {
 			if f.Len() > 0 {
-				if slice, ok := f.Interface().([]string); ok {
+				if slice, ok := reflect.TypeAssert[[]string](f); ok {
 					return strings.Join(slice, ","), nil
 				}
 				return "", fmt.Errorf("%w: failed to convert ProxyJump to string slice", errInvalidValue)
@@ -1257,9 +1287,9 @@ func (s *Setter) ExpandString(key string) (string, error) {
 		var stringer fmt.Stringer
 		var ok bool
 		if field.CanInterface() {
-			stringer, ok = field.Interface().(fmt.Stringer)
+			stringer, ok = reflect.TypeAssert[fmt.Stringer](field)
 		} else if field.CanAddr() {
-			stringer, ok = field.Addr().Interface().(fmt.Stringer)
+			stringer, ok = reflect.TypeAssert[fmt.Stringer](field.Addr())
 		}
 		if !ok {
 			return "", fmt.Errorf("%w: field %q is not a stringer", errInvalidField, key)
@@ -1294,11 +1324,11 @@ func (s *Setter) ExpandSlice(key string) ([]string, error) { //nolint:cyclop
 		case f.Kind() == reflect.String:
 			values = append(values, f.String())
 		case f.CanInterface():
-			if str, ok := f.Interface().(fmt.Stringer); ok {
+			if str, ok := reflect.TypeAssert[fmt.Stringer](f); ok {
 				values = append(values, str.String())
 			}
 		case f.CanAddr():
-			if str, ok := f.Addr().Interface().(fmt.Stringer); ok {
+			if str, ok := reflect.TypeAssert[fmt.Stringer](f.Addr()); ok {
 				values = append(values, str.String())
 			}
 		default:
@@ -1348,27 +1378,141 @@ func (s *Setter) matchesHost(conditions ...string) (bool, error) {
 	return match, nil
 }
 
-// matchesMatch checks if the Match directive conditions are met.
-func (s *Setter) matchesMatch(conditions ...string) (bool, error) { //nolint:funlen,cyclop // TODO extract functions
-	log.Trace(context.Background(), "matching Match directive", "conditions", conditions)
-	for i := range conditions {
-		condition := conditions[i]
-		log.Trace(context.Background(), "matching Match directive", "condition", condition)
-		var negate bool
-		if condition[0] == '!' {
-			negate = true
-			condition = condition[1:]
+// Match directive criteria keywords as documented in ssh_config(5).
+const (
+	matchCriteriaAll          = "all"
+	matchCriteriaCanonical    = "canonical"
+	matchCriteriaExec         = "exec"
+	matchCriteriaFinal        = "final"
+	matchCriteriaHost         = "host"
+	matchCriteriaLocalNetwork = "localnetwork"
+	matchCriteriaLocalUser    = "localuser"
+	matchCriteriaOriginalHost = "originalhost"
+	matchCriteriaTagged       = "tagged"
+	matchCriteriaUser         = "user"
+)
+
+var (
+	// arglessMatchCriteria are the Match criteria that must not be given an argument.
+	arglessMatchCriteria = []string{matchCriteriaAll, matchCriteriaCanonical, matchCriteriaFinal}
+
+	// argumentMatchCriteria are the Match criteria that require an argument.
+	argumentMatchCriteria = []string{
+		matchCriteriaExec, matchCriteriaHost, matchCriteriaLocalNetwork,
+		matchCriteriaLocalUser, matchCriteriaOriginalHost, matchCriteriaTagged,
+		matchCriteriaUser,
+	}
+)
+
+// matchCondition is a single criteria of a Match directive together with its
+// argument and negation flag.
+type matchCondition struct {
+	criteria string
+	arg      string
+	negate   bool
+}
+
+// matchCriteriaTakesArgument reports whether one of the Match criteria
+// supported by this package requires an argument. Every supported criteria
+// except "all", "canonical" and "final" does. The criteria that ssh_config(5)
+// documents but this package does not implement are absent from both lists and
+// are rejected as unknown, see the package documentation for the details.
+func matchCriteriaTakesArgument(criteria string) bool {
+	return slices.Contains(argumentMatchCriteria, criteria)
+}
+
+// parseMatchConditions pairs the tokens of a Match directive into criteria and
+// their arguments.
+func parseMatchConditions(tokens []string) ([]matchCondition, error) {
+	conditions := make([]matchCondition, 0, len(tokens))
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i] == "" {
+			continue
 		}
-		switch condition {
-		case "all":
-			// For 'all', return true. Using '!all' is useful maybe only for
-			// commenting out a block, but it's a valid condition which is always false.
-			return !negate, nil
-		case "canonical", "final":
+		condition, consumed, err := parseMatchCondition(tokens[i:])
+		if err != nil {
+			return nil, err
+		}
+		i += consumed - 1
+		conditions = append(conditions, condition)
+	}
+	if len(conditions) == 0 {
+		return nil, fmt.Errorf("%w: Match directive without conditions", ErrSyntax)
+	}
+	// OpenSSH rejects a Match line where anything follows "all", so the criteria
+	// may only appear as the last condition of the directive.
+	for _, condition := range conditions[:len(conditions)-1] {
+		if condition.criteria == matchCriteriaAll {
+			token := matchCriteriaAll
+			if condition.negate {
+				token = "!" + token
+			}
+			return nil, fmt.Errorf("%w: Match criteria %q cannot be combined with the criteria following it", ErrSyntax, token)
+		}
+	}
+	return conditions, nil
+}
+
+// parseMatchCondition parses the Match criteria at the head of tokens and
+// returns it together with the number of tokens it consumed.
+func parseMatchCondition(tokens []string) (matchCondition, int, error) {
+	token := tokens[0]
+	negate := strings.HasPrefix(token, "!")
+	criteria, arg, attached := strings.Cut(strings.TrimPrefix(token, "!"), "=")
+	criteria = strings.ToLower(criteria)
+	// A bare "!" or a "!=argument" leaves nothing to name a criteria, which
+	// would otherwise be reported as an invalid criteria "".
+	if criteria == "" {
+		return matchCondition{}, 0, fmt.Errorf("%w: Match condition %q is missing the criteria name", ErrSyntax, token)
+	}
+
+	if !matchCriteriaTakesArgument(criteria) {
+		if !slices.Contains(arglessMatchCriteria, criteria) {
+			return matchCondition{}, 0, fmt.Errorf("%w: invalid Match condition: %q", ErrSyntax, criteria)
+		}
+		if attached {
+			return matchCondition{}, 0, fmt.Errorf("%w: Match criteria %q does not take an argument", ErrSyntax, criteria)
+		}
+		return matchCondition{criteria: criteria, negate: negate}, 1, nil
+	}
+
+	// OpenSSH accepts the argument of a criteria either attached with an equals
+	// sign or as the token following the criteria, so "Match host=example.com"
+	// and "Match host example.com" are equivalent.
+	consumed := 1
+	if !attached {
+		if len(tokens) < 2 {
+			return matchCondition{}, 0, fmt.Errorf("%w: missing argument for Match criteria %q", ErrSyntax, criteria)
+		}
+		arg, consumed = tokens[1], 2
+	}
+	if arg == "" {
+		return matchCondition{}, 0, fmt.Errorf("%w: missing argument for Match criteria %q", ErrSyntax, criteria)
+	}
+	return matchCondition{criteria: criteria, arg: arg, negate: negate}, consumed, nil
+}
+
+// matchesMatch checks if the Match directive conditions are met.
+func (s *Setter) matchesMatch(tokens ...string) (bool, error) {
+	log.Trace(context.Background(), "matching Match directive", "conditions", tokens)
+	conditions, err := parseMatchConditions(tokens)
+	if err != nil {
+		return false, err
+	}
+	for _, condition := range conditions {
+		log.Trace(context.Background(), "matching Match criteria", "criteria", condition.criteria, "argument", condition.arg, "negate", condition.negate)
+		switch condition.criteria {
+		case matchCriteriaAll:
+			// parseMatchConditions guarantees 'all' is the last condition, so
+			// returning here does not skip any remaining criteria. Using '!all'
+			// is useful maybe only for commenting out a block, but it's a valid
+			// condition which is always false.
+			return !condition.negate, nil
+		case matchCriteriaCanonical, matchCriteriaFinal:
 			// We're going to perform canonical and final during the same pass, so
 			// we can treat them as synonyms.
 			if s.phase == phaseFinal {
-				if negate {
+				if condition.negate {
 					// it's the final round but !final is used, so return false
 					return false, nil
 				}
@@ -1376,7 +1520,7 @@ func (s *Setter) matchesMatch(conditions ...string) (bool, error) { //nolint:fun
 				continue
 			}
 			// Not on the final round
-			if negate {
+			if condition.negate {
 				// !canonical or !final is used, so proceed to check other conditions
 				continue
 			}
@@ -1385,125 +1529,112 @@ func (s *Setter) matchesMatch(conditions ...string) (bool, error) { //nolint:fun
 			return false, nil
 		}
 
-		parts := strings.Split(condition, "=")
-		if len(parts) != 2 {
-			return false, fmt.Errorf("%w: invalid Match condition: %q", ErrSyntax, condition)
-		}
-		condition, quotedArgs := parts[0], parts[1]
-		args, err := shellescape.Unquote(quotedArgs)
+		match, err := s.matchesCriteria(condition)
 		if err != nil {
-			return false, fmt.Errorf("%w: failed to unquote match condition %q: %w", ErrSyntax, args, err)
+			return false, err
 		}
-
-		// Deal with "exec" condition because its parameter is parsed differently.
-		if condition == "exec" { //nolint:nestif // TODO extract function
-			cmdStr, err := s.expand(args, keyInfo{
-				key:    "exec",
-				tokens: tokenset1,
-			})
-			if err != nil {
-				return false, fmt.Errorf("%w: failed to expand %q for Match exec condition: %w", ErrSyntax, args, err)
-			}
-			unq, err := shellescape.Split(cmdStr)
-			if err != nil {
-				return false, fmt.Errorf("%w: failed to process %q: %w", ErrSyntax, args, err)
-			}
-			cmd := unq[0]
-			var args []string
-			if len(unq) > 1 {
-				args = unq[1:]
-			}
-			log.Trace(context.Background(), "executing command from match directive", "condition", condition, "cmd", cmd, "args", args)
-			if runErr := s.executor.Run(cmd, args...); runErr != nil {
-				log.Trace(context.Background(), "command failed", "condition", condition, "cmd", cmd, "args", args, "error", runErr)
-				if negate {
-					return false, nil
-				}
-				continue
-			}
-			log.Trace(context.Background(), "command succeeded", "condition", condition, "cmd", cmd, "args", args)
-			if negate {
-				return false, nil
-			}
-			continue
-		}
-
-		// The rest of the conditions take a comma separated list of arguments.
-		argsSlice := strings.Split(args, ",")
-
-		// Deal with "localnetwork" condition separately.
-		if condition == "localnetwork" { //nolint:nestif
-			match, err := matchLocalNetwork(argsSlice)
-			if err != nil {
-				return false, fmt.Errorf("failed to match local network: %w", err)
-			}
-			if match {
-				if negate {
-					return false, nil
-				}
-				continue
-			}
-			if negate {
-				continue
-			}
-			return false, nil
-		}
-
-		// The rest of the conditions share an equal logic:
-		// The args are patterns and depending on the condition, a different
-		// value is matched against the patterns.
-		//
-		// The patterns are already in the args and the switch statement below
-		// is used to determine the matchTarget.
-		var matchTarget string
-
-		// continue with the condition
-		switch condition {
-		case "user":
-			// consume next arg
-			user, err := s.get("User", reflect.String)
-			if err != nil {
-				return false, fmt.Errorf("%w: user field not found", ErrInvalidObject)
-			}
-			matchTarget = user.String()
-		case "originalhost":
-			matchTarget = s.OriginalHost
-		case "localuser":
-			matchTarget = username()
-		case "host":
-			if hostname, err := s.get("Hostname", reflect.String); err == nil && hostname.Len() > 0 {
-				matchTarget = hostname.String()
-			} else if host, err := s.get("Host", reflect.String); err == nil && host.Len() > 0 {
-				matchTarget = host.String()
-			} else {
-				return false, fmt.Errorf("%w: host or hostname fields not found or empty", ErrInvalidObject)
-			}
-		case "tagged":
-			tag, err := s.get("Tag", reflect.String)
-			if err != nil {
-				return false, fmt.Errorf("%w: tag field not found", ErrInvalidObject)
-			}
-			matchTarget = tag.String()
-		default:
-			return false, fmt.Errorf("%w: unknown match condition: %q", ErrSyntax, condition)
-		}
-
-		match, err := patternMatchAll(matchTarget, argsSlice...)
-		if err != nil {
-			return false, fmt.Errorf("match %q for match condition: %w", condition, err)
-		}
-		if match && !negate {
-			continue
-		}
-		if match && negate {
-			return false, nil
-		}
-		if !match && !negate {
+		if match == condition.negate {
+			// Either the criteria did not match, or it matched a negated one.
 			return false, nil
 		}
 	}
 
 	// If none of the conditions explicitly return false, the match is successful
+	return true, nil
+}
+
+// matchesCriteria evaluates a single argument-taking Match criteria, ignoring
+// the negation which is handled by the caller.
+func (s *Setter) matchesCriteria(condition matchCondition) (bool, error) {
+	switch condition.criteria {
+	case matchCriteriaExec:
+		// The exec argument is a command line, not a pattern list.
+		return s.matchesExec(condition.arg)
+	case matchCriteriaLocalNetwork:
+		match, err := matchLocalNetwork(strings.Split(condition.arg, ","))
+		if err != nil {
+			return false, fmt.Errorf("failed to match local network: %w", err)
+		}
+		return match, nil
+	}
+
+	// The rest of the criteria share an equal logic: the argument is a comma
+	// separated list of patterns and depending on the criteria, a different
+	// value is matched against the patterns.
+	target, err := s.matchTarget(condition.criteria)
+	if err != nil {
+		return false, err
+	}
+	match, err := patternMatchAll(target, strings.Split(condition.arg, ",")...)
+	if err != nil {
+		return false, fmt.Errorf("match %q for match condition: %w", condition.criteria, err)
+	}
+	return match, nil
+}
+
+// matchTarget returns the value that the argument patterns of a pattern based
+// Match criteria are matched against.
+func (s *Setter) matchTarget(criteria string) (string, error) {
+	switch criteria {
+	case matchCriteriaUser:
+		user, err := s.get("User", reflect.String)
+		if err != nil {
+			return "", fmt.Errorf("%w: user field not found", ErrInvalidObject)
+		}
+		return user.String(), nil
+	case matchCriteriaOriginalHost:
+		return s.OriginalHost, nil
+	case matchCriteriaLocalUser:
+		return username(), nil
+	case matchCriteriaHost:
+		return s.matchHostTarget()
+	case matchCriteriaTagged:
+		tag, err := s.get("Tag", reflect.String)
+		if err != nil {
+			return "", fmt.Errorf("%w: tag field not found", ErrInvalidObject)
+		}
+		return tag.String(), nil
+	default:
+		return "", fmt.Errorf("%w: unknown match condition: %q", ErrSyntax, criteria)
+	}
+}
+
+// matchHostTarget returns the Hostname if one has been resolved, falling back
+// to the Host given to the parser.
+func (s *Setter) matchHostTarget() (string, error) {
+	if hostname, err := s.get("Hostname", reflect.String); err == nil && hostname.Len() > 0 {
+		return hostname.String(), nil
+	}
+	if host, err := s.get("Host", reflect.String); err == nil && host.Len() > 0 {
+		return host.String(), nil
+	}
+	return "", fmt.Errorf("%w: host or hostname fields not found or empty", ErrInvalidObject)
+}
+
+// matchesExec runs the command given as the argument of a Match exec criteria
+// and reports whether it exited successfully.
+func (s *Setter) matchesExec(command string) (bool, error) {
+	cmdStr, err := s.expand(command, keyInfo{
+		key:    matchCriteriaExec,
+		tokens: tokenset1,
+	})
+	if err != nil {
+		return false, fmt.Errorf("%w: failed to expand %q for Match exec condition: %w", ErrSyntax, command, err)
+	}
+	parts, err := shellescape.Split(cmdStr)
+	if err != nil {
+		return false, fmt.Errorf("%w: failed to process %q: %w", ErrSyntax, cmdStr, err)
+	}
+	if len(parts) == 0 {
+		return false, fmt.Errorf("%w: empty command for Match exec condition", ErrSyntax)
+	}
+	cmd, args := parts[0], parts[1:]
+	log.Trace(context.Background(), "executing command from match directive", "cmd", cmd, "args", args)
+	if runErr := s.executor.Run(cmd, args...); runErr != nil {
+		log.Trace(context.Background(), "command failed", "cmd", cmd, "args", args, "error", runErr)
+		return false, nil
+	}
+	log.Trace(context.Background(), "command succeeded", "cmd", cmd, "args", args)
 	return true, nil
 }
 
@@ -1566,9 +1697,9 @@ func (s *Setter) doCanonicalize() bool { //nolint:cyclop
 	ok = false
 
 	if canonicalizeHostname.CanInterface() {
-		cfo, ok = canonicalizeHostname.Interface().(options.CanonicalizeHostnameOption)
+		cfo, ok = reflect.TypeAssert[options.CanonicalizeHostnameOption](canonicalizeHostname)
 	} else if canonicalizeHostname.CanAddr() {
-		cfo, ok = canonicalizeHostname.Addr().Interface().(options.CanonicalizeHostnameOption)
+		cfo, ok = reflect.TypeAssert[options.CanonicalizeHostnameOption](canonicalizeHostname.Addr())
 	}
 
 	if !ok {
@@ -1616,12 +1747,12 @@ func (s *Setter) canonicalizeMaxDots() int {
 func (s *Setter) canonicalDomains() []string {
 	if canonicalDomains, err := s.get("CanonicalDomains", reflect.Slice, reflect.String); err == nil { //nolint:nestif
 		if canonicalDomains.CanInterface() {
-			if cd, ok := canonicalDomains.Interface().([]string); ok {
+			if cd, ok := reflect.TypeAssert[[]string](canonicalDomains); ok {
 				return cd
 			}
 		}
 		if canonicalDomains.CanAddr() {
-			if cd, ok := canonicalDomains.Addr().Interface().([]string); ok {
+			if cd, ok := reflect.TypeAssert[[]string](canonicalDomains.Addr()); ok {
 				return cd
 			}
 		}
