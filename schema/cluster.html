@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f9e99185.js";
+            window.path_to_searchindex_js = "../searchindex-df9d34cc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-8e84177d.js"></script>
@@ -233,6 +233,7 @@
 <tbody>
 <tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host (IP or hostname)</td></tr>
 <tr><td><code>bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Optional bastion host</td></tr>
+<tr><td><code>ignoreSshConfig</code></td><td><code>boolean</code></td><td>no</td><td></td><td>Do not read ~/.ssh/config or the system ssh_config for this host</td></tr>
 <tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH private key</td></tr>
 <tr><td><code>options</code></td><td><a href="#optionarguments">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
 <tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td><code>22.0</code></td><td>SSH port (default 22)</td></tr>

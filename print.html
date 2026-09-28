@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f9e99185.js";
+            window.path_to_searchindex_js = "searchindex-df9d34cc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8e84177d.js"></script>
@@ -3307,6 +3307,7 @@ $ cargoship version -o json
 <tbody>
 <tr><td><code>address</code></td><td><code>string</code></td><td>yes</td><td></td><td>Address of the remote host (IP or hostname)</td></tr>
 <tr><td><code>bastion</code></td><td><a href="#sshconfig">SSHConfig</a></td><td>no</td><td></td><td>Optional bastion host</td></tr>
+<tr><td><code>ignoreSshConfig</code></td><td><code>boolean</code></td><td>no</td><td></td><td>Do not read ~/.ssh/config or the system ssh_config for this host</td></tr>
 <tr><td><code>keyPath</code></td><td><code>string</code></td><td>no</td><td></td><td>Path to SSH private key</td></tr>
 <tr><td><code>options</code></td><td><a href="#optionarguments">OptionArguments</a></td><td>no</td><td></td><td>Additional SSH options as ssh_config key-value pairs</td></tr>
 <tr><td><code>port</code></td><td><code>integer</code></td><td>no</td><td><code>22.0</code></td><td>SSH port (default 22)</td></tr>
@@ -13562,10 +13563,16 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#LDFlags">func LDFlags(version string, commit string) string</a></li>
 </ul>
 <p><a name="GCFLags"></a></p>
-<h2 id="func-gcflags"><a class="header" href="#func-gcflags">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/build/utils.go#L48">GCFLags</a></a></h2>
+<h2 id="func-gcflags"><a class="header" href="#func-gcflags">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/build/utils.go#L65">GCFLags</a></a></h2>
 <pre><code class="language-go">func GCFLags() string
 </code></pre>
-<p>GCFLags will return the gc flags needed to build this binary</p>
+<p>GCFLags will return the gc flags needed to build this binary.</p>
+<p>Only -l (disable inlining) is set, and it is set for its size effect: inlining copies a function body to every call site, which across this repo’s dependency tree costs far more space than it buys a CLI that is not CPU-bound.</p>
+<p>Two flags that used to be here were removed deliberately, see docs/dev/build-flags.md:</p>
+<ul>
+<li>-B (disable bounds checking) bought about 1% of binary size in exchange for removing bounds checks from every package in the tree, including the code that parses untrusted archives and registry responses. That is where a bounds check is what turns a malformed length field into a panic rather than an out-of-bounds read.</li>
+<li>-C does nothing for size. `go tool compile -help` documents it as “disable printing of columns in error messages” -- a diagnostic formatting flag with no effect on generated code.</li>
+</ul>
 <p><a name="LDFlags"></a></p>
 <h2 id="func-ldflags"><a class="header" href="#func-ldflags">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/utils/build/utils.go#L29">LDFlags</a></a></h2>
 <pre><code class="language-go">func LDFlags(version string, commit string) string
