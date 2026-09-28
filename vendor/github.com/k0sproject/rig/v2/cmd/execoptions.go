@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/k0sproject/rig/v2/iostream"
 	"github.com/k0sproject/rig/v2/log"
@@ -29,7 +30,7 @@ type ExecOptions struct {
 	out    io.Writer
 	errOut io.Writer
 
-	errBuf *bytes.Buffer
+	errBuf *syncBuffer
 
 	allowWinStderr bool
 
@@ -57,10 +58,31 @@ type ExecOptions struct {
 
 // Format returns the command string with all per-call decorators applied.
 func (o *ExecOptions) Format(cmd string) string {
-	for _, decorator := range o.decorateFuncs {
-		cmd = decorator(cmd)
+	return applyDecorators(cmd, o.decorateFuncs, nil)
+}
+
+// formatMasked is [ExecOptions.Format] with a mask applied after every decorator.
+// See [applyDecorators].
+func (o *ExecOptions) formatMasked(cmd string, mask func(string) string) string {
+	return applyDecorators(cmd, o.decorateFuncs, mask)
+}
+
+// hasRedaction reports whether any secrets are registered for redaction.
+func (o *ExecOptions) hasRedaction() bool {
+	return len(o.redactStrings) > 0
+}
+
+// needsMaskedReplay reports whether masking the formatted command could miss a
+// registered secret. Quoting only ever rewrites single quotes and backslashes,
+// so a secret containing neither stays contiguous however many times the command
+// is quoted, and can be masked in the formatted command directly.
+func (o *ExecOptions) needsMaskedReplay() bool {
+	for _, secret := range o.redactStrings {
+		if strings.ContainsAny(secret, `'\`) {
+			return true
+		}
 	}
-	return cmd
+	return false
 }
 
 // AllowWinStderr returns the allowWinStderr option.
@@ -198,6 +220,29 @@ func (o *ExecOptions) Stderr() io.Writer {
 // ErrString returns the contents of stderr after exec.
 func (o *ExecOptions) ErrString() string {
 	return o.errBuf.String()
+}
+
+// syncBuffer is the stderr capture buffer. It is read as soon as Wait
+// returns, and a Wait that gives up on a command its host stopped answering
+// can return while the goroutine copying stderr is still writing here, so
+// the two have to be able to happen at once.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.buf.Write(p) //nolint:wrapcheck // bytes.Buffer.Write never returns an error
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.buf.String()
 }
 
 // AllowWinStderr exec option allows command to output to stderr without failing.
@@ -374,7 +419,7 @@ func Build(opts ...ExecOption) *ExecOptions {
 		streamOutput: false,
 		trimOutput:   true,
 		redactMask:   DefaultRedactMask,
-		errBuf:       bytes.NewBuffer(nil),
+		errBuf:       &syncBuffer{},
 	}
 
 	options.Apply(opts...)
