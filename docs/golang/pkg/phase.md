@@ -977,7 +977,7 @@ Title for the phase
 <a name="DryRunBehavior"></a>
 ## type [DryRunBehavior](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L134>)
 
-DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the phase implements, and it is exported so magefiles/gen\-docs.go can label each phase in docs/phases/\<name\>.md with the same classification Run\(\) gates on. The docs and the gate cannot disagree, because there is only one classifier.
+DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the phase implements, and it is exported so magefiles/pkg/gen/phasedoc can label each phase in docs/phases/\<name\>.md with the same classification Run\(\) gates on. The docs and the gate cannot disagree, because there is only one classifier.
 
 ```go
 type DryRunBehavior int

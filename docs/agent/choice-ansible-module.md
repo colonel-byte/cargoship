@@ -121,7 +121,7 @@ The role sets `run_once: true` on every task. Cargoship converges the whole flee
 
 ## The interface is documented in the plugins, and nothing validates against it
 
-Each action plugin carries a `DOCUMENTATION` block naming every parameter the module takes, its type, and the flag it renders. `generateModuleDocs` in `magefiles/gen-docs.go` reads those blocks, `generateRoleDocs` reads each role's `meta/argument_specs.yml`, and together they write `docs/ansible/`. The reference pages therefore cannot be edited into disagreement with the modules, and a parameter added to the Go struct without being documented shows up as a missing row rather than as nothing at all.
+Each action plugin carries a `DOCUMENTATION` block naming every parameter the module takes, its type, and the flag it renders. `generateModuleDocs` in `magefiles/pkg/gen/ansibledoc` reads those blocks, `generateRoleDocs` reads each role's `meta/argument_specs.yml`, and together they write `docs/ansible/`. The reference pages therefore cannot be edited into disagreement with the modules, and a parameter added to the Go struct without being documented shows up as a missing row rather than as nothing at all.
 
 The blocks are inert. An action plugin's `DOCUMENTATION` exists for `ansible-doc`, which is not run against this collection, so nothing in Ansible reads them and no rule moved into Python: there is still no `argument_spec`, and argument validation is still hand-written in Go. What keeps them honest is `TestActionPluginDocsMatchModuleParams`, which reads the Python and fails when a documented parameter has no Go field, when a Go field is undocumented, or when a documented `cli_flag` is not the flag the argument vector actually renders.
 

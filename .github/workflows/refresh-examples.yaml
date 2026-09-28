@@ -47,7 +47,7 @@ jobs:
     env:
       BRANCH: chore/refresh-examples
       # Everything the build needs is vendored, so make any accidental network access fail
-      # fast. Matches magefiles/utils.go. The targets' own fetches use net/http and git, not
+      # fast. Matches magefiles/pkg/hostbuild/hostbuild.go. The targets' own fetches use net/http and git, not
       # the module proxy, so this does not restrict them.
       GOFLAGS: -mod=vendor
       GOPROXY: "off"

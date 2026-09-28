@@ -29,7 +29,7 @@ import (
 )
 
 // documentationBlock pulls the DOCUMENTATION literal out of an action plugin, the same way
-// magefiles/gen-docs.go reads it and ansibleinv's plugin test reads the variable allowlist.
+// magefiles/pkg/gen/ansibledoc reads it and ansibleinv's plugin test reads the variable allowlist.
 var documentationBlock = regexp.MustCompile(`(?sm)^DOCUMENTATION = r"""\n(.*?)\n"""$`)
 
 // pluginParameters is the part of a DOCUMENTATION block this test reads. Order is not checked here:

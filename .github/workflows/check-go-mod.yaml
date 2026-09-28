@@ -28,7 +28,7 @@ jobs:
       # Vulnerabilities check reporting on cargoship rather than on the JavaScript and Python
       # tooling its Go dependencies ship in their own repositories. go mod vendor deletes them,
       # so this fails the pull request that dropped one, and fails on a new dependency that
-      # brings in a lockfile nothing covers yet. See magefiles/vendor-osv.go.
+      # brings in a lockfile nothing covers yet. See magefiles/pkg/osv/osv.go.
       #
       # Dependabot re-vendors on every gomod update, so it trips the first case every time.
       # fix-vendor-osv.yaml pushes the regenerated files back onto its branch, which makes this

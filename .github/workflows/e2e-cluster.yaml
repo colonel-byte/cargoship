@@ -93,7 +93,7 @@ jobs:
           # See keepClusterEnvVar in the same file.
           CARGOSHIP_E2E_KEEP_CLUSTER: "1"
           # Everything the test build needs is vendored, so make any accidental network
-          # access fail fast. Matches magefiles/utils.go.
+          # access fail fast. Matches magefiles/pkg/hostbuild/hostbuild.go.
           CGO_ENABLED: 0
           GOFLAGS: -mod=vendor
           GOPROXY: "off"

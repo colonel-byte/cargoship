@@ -30,8 +30,9 @@ cargoship-signing.asc
 # Added for goreleaser:
 dist/
 
-# Added for mdbook:
-book/
+# Added for mdbook: the rendered site, which book.toml writes next to itself at the repository
+# root. Anchored so it cannot also swallow a source directory named book/ further down the tree.
+/book/
 
 # Added for go mod vendor
 !/vendor/

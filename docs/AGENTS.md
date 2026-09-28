@@ -36,16 +36,16 @@ Eight parts of the `docs/` tree are generated from the code and are overwritten 
 | Path                       | Generated from                                                                                                                     |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `docs/commands/`           | The Cobra command tree, rendered by `doc.GenMarkdownTreeCustom`                                                                     |
-| `docs/phases/`             | The cluster phase descriptors named in `phaseDocs()` in `magefiles/gen-docs.go`                                                     |
+| `docs/phases/`             | The cluster phase descriptors named in `Docs()` in `magefiles/pkg/gen/phasedoc`                                                     |
 | `docs/golang/`             | Godoc comments in `pkg/`, `api/`, and `types/`, rendered by `gomarkdoc`                                                             |
-| `docs/schema/`             | The struct reflection `schemaTargets()` feeds to `Generate.Schema`, rendered by `generateSchemaDocs()` in `gen-schema-docs.go`      |
-| `docs/ansible/module_*.md` | The Ansible module action plugins parsed in `generateModuleDocs()` in `gen-docs.go`                                                 |
+| `docs/schema/`             | The struct reflection `Targets()` in `magefiles/pkg/gen/schema` feeds to `Generate.Schema`, rendered by `Generate()` in `magefiles/pkg/gen/schemadoc`      |
+| `docs/ansible/module_*.md` | The Ansible module action plugins parsed in `generateModuleDocs()` in `magefiles/pkg/gen/ansibledoc`                                                 |
 | `docs/ansible/role_*.md`   | The role `meta/argument_specs.yml` files, parsed in `generateRoleDocs()`                                                            |
 | `docs/index.md`            | `README.md`, with its relative links rebased from the repository root onto `docs/`                                                 |
 | `docs/security.md`         | `.github/SECURITY.md`, with its relative links rebased the same way                                                                 |
 | `docs/SUMMARY.md`          | The mdBook table of contents, compiled from the rest of the `docs/` tree                                                            |
 
-To change one of those pages, change what it is generated from - a command's `Short`/`Long`/flag help, a phase's title and explanation, `phaseDocs()` for which phase pages exist, a godoc comment in `pkg/`, `api/`, or `types/`, or the struct/tags a `schemaTargets()` entry reflects - and then regenerate:
+To change one of those pages, change what it is generated from - a command's `Short`/`Long`/flag help, a phase's title and explanation, `phasedoc.Docs()` for which phase pages exist, a godoc comment in `pkg/`, `api/`, or `types/`, or the struct/tags a `schema.Targets()` entry reflects - and then regenerate:
 
 ```sh
 go run ./magefiles/core generate:document

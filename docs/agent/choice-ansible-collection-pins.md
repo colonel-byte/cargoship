@@ -20,7 +20,7 @@ GET /api/v3/plugin/ansible/content/published/collections/index/{namespace}/{name
 -> data[].requires_ansible
 ```
 
-Every published version carries its specifier. Resolving the pin correctly is then a filter and a max, which is `magefiles/ansible-requirements.go`, driven by two targets:
+Every published version carries its specifier. Resolving the pin correctly is then a filter and a max, which is `magefiles/pkg/ansiblereq`, driven by two targets:
 
 - `mage generate:ansibleRequirements` pins each collection to the newest release whose `requires_ansible` admits the whole controller range, and names the newest release alongside it when the two differ, so a held-back pin reads as held back rather than current.
 - `mage test:ansibleRequirements` checks only the pinned versions and fails when one does not admit that range. `.github/workflows/check-ansible-requirements.yaml` runs it on every pull request.

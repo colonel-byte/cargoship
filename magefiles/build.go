@@ -18,63 +18,119 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
+	"time"
+
+	"github.com/colonel-byte/cargoship/magefiles/pkg/example"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/hostbuild"
 
 	"github.com/magefile/mage/mg"
+	"github.com/magefile/mage/sh"
 )
 
-const (
-	buildDir = "build"
-)
-
-var Default = Build.All
+var Default = Build.Binary
 
 type (
-	Build  mg.Namespace
-	Binary mg.Namespace
+	Build mg.Namespace
 )
 
-// Binary will build a binary of the local system, on the host
+// Binary builds one OS/arch pair on the host, defaulting to this machine's own.
 func (Build) Binary() error {
-	return hostBuildLocal(runtime.GOOS, runtime.GOARCH)
+	buildOS, buildArch := runtime.GOOS, runtime.GOARCH
+	// if os != nil {
+	// 	buildOS = *os
+	// }
+	// if arch != nil {
+	// 	buildOS = *arch
+	// }
+
+	return hostbuild.Local(buildOS, buildArch)
 }
 
-// Linuxamd64 build a linux amd64 binary, on the host
-func (Build) Linuxamd64() error {
-	return hostBuildLocal("linux", "amd64")
-}
+// Examples builds a package from every example definition, with the cargoship on PATH.
+//
+// It uses the installed CLI rather than a binary built here, so what it exercises is what a
+// user gets from a release, the same as .github/workflows/publish-example.yaml does for a
+// single flavor. Run mage build:binary and put build/ on PATH first to test a local build
+// instead.
+//
+// Every example is built, which is gigabytes per package and hours in total: it pulls each
+// definition's whole image list and its RPMs or binaries. One failure does not stop the run,
+// since a broken definition should not throw away the packages that already built; the
+// failures are reported together at the end.
+//
+// Packages are written to build/examples, and TMPDIR is pointed at build/tmp because a
+// package is assembled in temporary space before it is written out, which is more than a
+// tmpfs /tmp usually has.
+func (Build) Examples() error {
+	bin, err := exec.LookPath("cargoship")
+	if err != nil {
+		return fmt.Errorf("cargoship must be on PATH: %w", err)
+	}
 
-// Linuxarm64 build a linux arm64 binary, on the host
-func (Build) Linuxarm64() error {
-	return hostBuildLocal("linux", "arm64")
-}
+	dirs, err := example.Definitions()
+	if err != nil {
+		return err
+	}
+	if len(dirs) == 0 {
+		return errors.New("no example definitions found under example/")
+	}
 
-// Macamd64 build a mac amd64 binary, on the host
-func (Build) Macamd64() error {
-	return hostBuildLocal("darwin", "amd64")
-}
-
-// Macarm64 build a mac arm64 binary, on the host
-func (Build) Macarm64() error {
-	return hostBuildLocal("darwin", "arm64")
-}
-
-// All builds all cargoship binaries, on the host
-func (b Build) All() error {
-	return runSquential(
-		b.Linuxamd64,
-		b.Linuxarm64,
-		b.Macamd64,
-		b.Macarm64,
-	)
-}
-
-func runSquential(funcs ...func() error) error {
-	for _, f := range funcs {
-		if err := f(); err != nil {
-			fmt.Printf("got an error: %v", err)
+	out, err := filepath.Abs(filepath.Join(hostbuild.Dir, "examples"))
+	if err != nil {
+		return err
+	}
+	tmp, err := filepath.Abs(filepath.Join(hostbuild.Dir, "tmp"))
+	if err != nil {
+		return err
+	}
+	for _, dir := range []string{out, tmp} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
 		}
 	}
-	return nil
+
+	signingKey := os.Getenv("SIGNING_KEY")
+	signingKeyPass := os.Getenv("SIGNING_KEY_PASS")
+	reproducible := os.Getenv("REPRODUCIBLE") == "true" || os.Getenv("REPRODUCIBLE") == "1"
+
+	var extraFlags []string
+	if signingKey != "" {
+		extraFlags = append(extraFlags, "--signing-key", signingKey)
+	}
+	if signingKeyPass != "" {
+		extraFlags = append(extraFlags, "--signing-key-pass", signingKeyPass)
+	}
+	if reproducible {
+		extraFlags = append(extraFlags, "--reproducible")
+	}
+
+	fmt.Printf("Building %d examples with %s into %s\n", len(dirs), bin, out)
+
+	var failed []error
+	for i, dir := range dirs {
+		fmt.Printf("\n[%d/%d] %s\n", i+1, len(dirs), dir)
+
+		args := append([]string{"create", dir, "--output", out, "--confirm"}, extraFlags...)
+		start := time.Now()
+		err := sh.RunWithV(
+			map[string]string{"TMPDIR": tmp},
+			bin,
+			args...,
+		)
+		if err != nil {
+			fmt.Printf("FAILED %s: %v\n", dir, err)
+			failed = append(failed, fmt.Errorf("building %s: %w", dir, err))
+			continue
+		}
+		fmt.Printf("Built %s in %s\n", dir, time.Since(start).Round(time.Second))
+	}
+
+	fmt.Printf("\n%d of %d examples built, %d failed\n", len(dirs)-len(failed), len(dirs), len(failed))
+	return errors.Join(failed...)
 }

@@ -120,7 +120,7 @@ type withDryRun interface {
 // added later is safe without anyone having remembered to think about it.
 //
 // ReadOnly returns why the phase is safe to run and why a dry run wants it run. The reason is a
-// return value rather than a comment because magefiles/gen-docs.go renders it into
+// return value rather than a comment because magefiles/pkg/gen/phasedoc renders it into
 // docs/phases/<name>.md next to the phase, so the claim a reader sees is the one the phase
 // makes, not a second copy of it that can drift.
 type readOnly interface {
@@ -128,7 +128,7 @@ type readOnly interface {
 }
 
 // DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the
-// phase implements, and it is exported so magefiles/gen-docs.go can label each phase in
+// phase implements, and it is exported so magefiles/pkg/gen/phasedoc can label each phase in
 // docs/phases/<name>.md with the same classification Run() gates on. The docs and the gate
 // cannot disagree, because there is only one classifier.
 type DryRunBehavior int
@@ -632,7 +632,7 @@ func (m *Manager) Run(ctx context.Context) error {
 
 // logDryRunSummary reports what a dry run did and what it left alone.
 //
-// Each planned phase is listed with the same Explanation() that magefiles/gen-docs.go renders
+// Each planned phase is listed with the same Explanation() that magefiles/pkg/gen/phasedoc renders
 // into docs/phases/<name>.md, so the run and the docs describe a phase in the same words by
 // construction rather than by anyone keeping two strings in step.
 //

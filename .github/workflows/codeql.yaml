@@ -68,15 +68,16 @@ jobs:
       #
       # magefiles/ is package main behind //go:build mage, and mage supplies the
       # main function at runtime, so `go build` cannot compile it at all -- with
-      # or without -tags mage. Those targets are dev tooling and ship in no
-      # binary, so they are left unanalyzed.
+      # or without -tags mage. The packages under magefiles/pkg/ that hold the
+      # logic behind those targets would build, but they are dev tooling too and
+      # ship in no binary, so the whole tree is left unanalyzed.
       - name: Build
         if: matrix.build-mode == 'manual'
         run: go build -mod=vendor ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/... .
         env:
           CGO_ENABLED: 0
           # Everything the build needs is vendored, so make any accidental
-          # network access fail fast. Matches e2e.yaml and magefiles/utils.go.
+          # network access fail fast. Matches e2e.yaml and magefiles/pkg/hostbuild/hostbuild.go.
           GOFLAGS: -mod=vendor
           GOPROXY: "off"
           GOSUMDB: "off"

@@ -14,7 +14,7 @@ It runs from a management node, not on the hosts it manages: cargoship opens the
 | `fuzz/`                           | Fuzz targets - see [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                                                                                                              |
 | `config/lang/`                    | User-facing command strings - see [`config/lang/AGENTS.md`](config/lang/AGENTS.md)                                                                                                                 |
 | `test/e2e/`                       | The end-to-end suite: `cluster/` (needs a bootloose cluster) and `noncluster/` (misc/package commands, plus `testdata/` fixtures)                                                                  |
-| `magefiles/`                      | The mage task runner's source - build, test, and generate targets. See [`docs/dev/mage.md`](docs/dev/mage.md)                                                                                      |
+| `magefiles/`                      | The mage task runner's targets - build, test, and generate. The logic behind them is ordinary Go under `magefiles/pkg/`. See [`docs/dev/mage.md`](docs/dev/mage.md)                                |
 | `docs/`                           | The mdBook source. Eight subpaths are generated and must not be hand-edited - see [`docs/AGENTS.md`](docs/AGENTS.md)                                                                               |
 | `docs/agent/choice-*.md`          | Records of non-obvious decisions and the tradeoffs behind them - read before reversing one                                                                                                         |
 | `ansible/colonel_byte/cargoship/` | The Ansible collection: action plugins, modules, roles                                                                                                                                             |
@@ -37,18 +37,20 @@ Several directories carry their own `AGENTS.md` with rules specific to that dire
 
 ## Building and testing
 
-Build and test targets run through mage, not a Makefile. `magefiles/` itself does not build with a plain `go build` - it needs mage's special build tag - so drive it through the `mage` CLI or `go run ./magefiles/core <namespace>:<target>`. The latter form needs only the Go toolchain and works on a host with no `mage` binary installed; it's what CI and pre-commit hooks use.
+Build and test targets run through mage, not a Makefile. The target files in `magefiles/` are behind mage's own build tag, so `go build ./magefiles/` alone reports that build constraints exclude every file there - drive them through the `mage` CLI or `go run ./magefiles/core <namespace>:<target>`. The latter form needs only the Go toolchain and works on a host with no `mage` binary installed; it's what CI and pre-commit hooks use.
 
 ```sh
 mage build:binary                           # build for this host's OS/arch
+mage build:binary -os=darwin -arch=arm64    # cross-compile; either flag may be omitted
 mage test:endToEndNonCluster                # misc/package suites, no cluster needed
 mage test:endToEndCluster                   # install suite, needs Docker + bootloose
+mage test:unit                              # everything that needs no cluster, Docker or network
 go run ./magefiles/core generate:document   # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/index.md, docs/security.md, docs/SUMMARY.md
 ```
 
 See [`docs/dev/mage.md`](docs/dev/mage.md) for the full namespace reference (`Build`, `Dev`, `Test`, `Generate`) and what each target reads and writes.
 
-Plain Go commands work for anything mage doesn't wrap - `go build ./...`, `go vet ./...`, `go test ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/...` - but exclude `./magefiles/...` from those, since it fails a bare build for the reason above.
+Plain Go commands work for anything mage doesn't wrap - `go build ./...`, `go vet ./...`, `go test ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/... ./magefiles/pkg/...`. The wildcard forms are fine: `./magefiles` itself contributes no files once the tag excludes them, and `./magefiles/pkg/...` is ordinary Go that builds, vets, lints and tests like anything else. Only naming `./magefiles` on its own fails, for the reason above.
 
 ## Committing changes
 

@@ -6,10 +6,10 @@ name: Publish example package
 # what a user gets from a release against the definitions this repository ships.
 #
 # Neither the flavor nor the version is a pin. Each flavor directory holds every build that
-# is still installable -- magefiles/gen-examples.go removes an example once its upstream
+# is still installable -- magefiles/pkg/example removes an example once its upstream
 # artifacts go away -- so "the latest example" is the highest version directory the flavor
 # has, and the flavors themselves are the directories under example/ that hold one. Both are
-# resolved at run time, so a flavor added to magefiles/examples.go is published without this
+# resolved at run time, so a flavor added to magefiles/pkg/example is published without this
 # workflow being edited.
 #
 # Which flavors get published is decided by asking the registry. Every flavor's newest
@@ -188,7 +188,7 @@ jobs:
             # Examples live at example/<flavor>/<minor>/<version>/distro.yaml, so the version
             # directories are exactly the depth-two directories under the flavor. Version sort
             # over the whole path orders the minor line first and the rke2rN/k3sN revision
-            # last, which is the order magefiles/examples.go treats as newest.
+            # last, which is the order magefiles/pkg/example treats as newest.
             dir=$(find "$root" -mindepth 2 -maxdepth 2 -type d | sort -V | tail -n 1)
             if [ -z "$dir" ] || [ ! -f "$dir/distro.yaml" ]; then
               # A hand-written directory under example/ is not a flavor and is not an error;

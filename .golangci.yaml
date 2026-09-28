@@ -10,7 +10,11 @@ linters:
   default: none
   exclusions:
     paths:
-      - magefiles/
+      # The mage target files themselves are package main behind //go:build mage, which the
+      # linter cannot build without mage's generated entry point. Everything under
+      # magefiles/pkg/ is ordinary Go and is linted like the rest of the module.
+      - magefiles/[^/]*\.go$
+      - magefiles/core/
   enable:
     - errcheck
     - errorlint

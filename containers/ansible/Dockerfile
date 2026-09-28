@@ -34,8 +34,7 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
     ansible-core-${ANSIBLE_CORE_VERSION} \
     bash-completion-${BASH_COMPLETION_VERSION} \
   && dnf clean all \
-  && rm -rf /var/cache/yum \
-  && ansible-galaxy collection install --requirements-file /etc/cargoship/ansible/requirements.yml --collections-path /usr/share/ansible/collections/ansible_collections
+  && rm -rf /var/cache/yum
 
 ARG UID=65532
 ARG GID=65532
