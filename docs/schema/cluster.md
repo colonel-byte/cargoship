@@ -39,14 +39,15 @@ Rendered from `schema/zarf-v1alpha1-cluster-schema.json`.
 
 <div class="schema-table">
 
-| Property  | Type                                | Required | Default | Description                                          |
-| --------- | ----------------------------------- | -------- | ------- | ---------------------------------------------------- |
-| `address` | `string`                            | yes      |         | Address of the remote host (IP or hostname)          |
-| `bastion` | [SSHConfig](#sshconfig)             | no       |         | Optional bastion host                                |
-| `keyPath` | `string`                            | no       |         | Path to SSH private key                              |
-| `options` | [OptionArguments](#optionarguments) | no       |         | Additional SSH options as ssh_config key-value pairs |
-| `port`    | `integer`                           | no       | `22.0`  | SSH port (default 22)                                |
-| `user`    | `string`                            | no       | `root`  | User to log in as                                    |
+| Property          | Type                                | Required | Default | Description                                                      |
+| ----------------- | ----------------------------------- | -------- | ------- | ---------------------------------------------------------------- |
+| `address`         | `string`                            | yes      |         | Address of the remote host (IP or hostname)                      |
+| `bastion`         | [SSHConfig](#sshconfig)             | no       |         | Optional bastion host                                            |
+| `ignoreSshConfig` | `boolean`                           | no       |         | Do not read ~/.ssh/config or the system ssh_config for this host |
+| `keyPath`         | `string`                            | no       |         | Path to SSH private key                                          |
+| `options`         | [OptionArguments](#optionarguments) | no       |         | Additional SSH options as ssh_config key-value pairs             |
+| `port`            | `integer`                           | no       | `22.0`  | SSH port (default 22)                                            |
+| `user`            | `string`                            | no       | `root`  | User to log in as                                                |
 
 </div>
 

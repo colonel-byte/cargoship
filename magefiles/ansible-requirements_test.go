@@ -52,20 +52,76 @@ func TestParseSpecifier(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{name: "empty is unbounded", spec: "", want: "*"},
-		{name: "floor only", spec: ">=2.16.0", want: ">=2.16.0"},
-		{name: "partial version fills out", spec: ">=2.9", want: ">=2.9.0"},
-		{name: "floor and ceiling", spec: ">=2.9,<2.11", want: ">=2.9.0,<2.11.0"},
-		{name: "whitespace around clauses", spec: ">=2.16.0 , <2.17.0", want: ">=2.16.0,<2.17.0"},
-		{name: "exclusive floor", spec: ">2.16.0", want: ">2.16.0"},
-		{name: "equality is a point", spec: "==2.16.16", want: ">=2.16.16,<=2.16.16"},
-		{name: "tightest floor wins", spec: ">=2.9,>=2.16.0", want: ">=2.16.0"},
-		{name: "tightest ceiling wins", spec: "<2.19,<2.17.0", want: "<2.17.0"},
-		{name: "bare version", spec: "2.16.16", wantErr: true},
-		{name: "operator with no version", spec: ">=", wantErr: true},
-		{name: "unreducible operator", spec: "~=2.16.0", wantErr: true},
-		{name: "exclusion is not an interval", spec: "!=2.16.0", wantErr: true},
-		{name: "unparseable version", spec: ">=two", wantErr: true},
+		{
+			name: "empty is unbounded",
+			spec: "",
+			want: "*",
+		},
+		{
+			name: "floor only",
+			spec: ">=2.16.0",
+			want: ">=2.16.0",
+		},
+		{
+			name: "partial version fills out",
+			spec: ">=2.9",
+			want: ">=2.9.0",
+		},
+		{
+			name: "floor and ceiling",
+			spec: ">=2.9,<2.11",
+			want: ">=2.9.0,<2.11.0",
+		},
+		{
+			name: "whitespace around clauses",
+			spec: ">=2.16.0 , <2.17.0",
+			want: ">=2.16.0,<2.17.0",
+		},
+		{
+			name: "exclusive floor",
+			spec: ">2.16.0",
+			want: ">2.16.0",
+		},
+		{
+			name: "equality is a point",
+			spec: "==2.16.16",
+			want: ">=2.16.16,<=2.16.16",
+		},
+		{
+			name: "tightest floor wins",
+			spec: ">=2.9,>=2.16.0",
+			want: ">=2.16.0",
+		},
+		{
+			name: "tightest ceiling wins",
+			spec: "<2.19,<2.17.0",
+			want: "<2.17.0",
+		},
+		{
+			name:    "bare version",
+			spec:    "2.16.16",
+			wantErr: true,
+		},
+		{
+			name:    "operator with no version",
+			spec:    ">=",
+			wantErr: true,
+		},
+		{
+			name:    "unreducible operator",
+			spec:    "~=2.16.0",
+			wantErr: true,
+		},
+		{
+			name:    "exclusion is not an interval",
+			spec:    "!=2.16.0",
+			wantErr: true,
+		},
+		{
+			name:    "unparseable version",
+			spec:    ">=two",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -98,15 +154,51 @@ func TestVersionRangeAdmits(t *testing.T) {
 		release string
 		want    bool
 	}{
-		{name: "unconstrained release", release: "", want: true},
-		{name: "floor below the controller", release: ">=2.15.0", want: true},
-		{name: "floor equal to the controller", release: ">=2.16.0", want: true},
-		{name: "floor above the controller", release: ">=2.18.0", want: false},
-		{name: "floor inside the controller range", release: ">=2.16.5", want: false},
-		{name: "ceiling below the controller ceiling", release: ">=2.9,<2.11", want: false},
-		{name: "ceiling at the controller ceiling", release: ">=2.9,<2.17.0", want: true},
-		{name: "ceiling above the controller ceiling", release: ">=2.9,<2.19.0", want: true},
-		{name: "exclusive floor at an inclusive controller floor", release: ">2.16.0", want: false},
+		{
+			name:    "unconstrained release",
+			release: "",
+			want:    true,
+		},
+		{
+			name:    "floor below the controller",
+			release: ">=2.15.0",
+			want:    true,
+		},
+		{
+			name:    "floor equal to the controller",
+			release: ">=2.16.0",
+			want:    true,
+		},
+		{
+			name:    "floor above the controller",
+			release: ">=2.18.0",
+			want:    false,
+		},
+		{
+			name:    "floor inside the controller range",
+			release: ">=2.16.5",
+			want:    false,
+		},
+		{
+			name:    "ceiling below the controller ceiling",
+			release: ">=2.9,<2.11",
+			want:    false,
+		},
+		{
+			name:    "ceiling at the controller ceiling",
+			release: ">=2.9,<2.17.0",
+			want:    true,
+		},
+		{
+			name:    "ceiling above the controller ceiling",
+			release: ">=2.9,<2.19.0",
+			want:    true,
+		},
+		{
+			name:    "exclusive floor at an inclusive controller floor",
+			release: ">2.16.0",
+			want:    false,
+		},
 	}
 
 	controller := mustRange(t, controllerSpec)
@@ -240,8 +332,18 @@ func TestGalaxyVersionsURL(t *testing.T) {
 			coll:   "kubernetes.core",
 			want:   "https://hub.example.mil/api/galaxy/api/v3/plugin/ansible/content/published/collections/index/kubernetes/core/versions/?limit=100",
 		},
-		{name: "collection without a namespace", source: "https://galaxy.ansible.com", coll: "general", wantErr: true},
-		{name: "collection with an empty namespace", source: "https://galaxy.ansible.com", coll: ".general", wantErr: true},
+		{
+			name:    "collection without a namespace",
+			source:  "https://galaxy.ansible.com",
+			coll:    "general",
+			wantErr: true,
+		},
+		{
+			name:    "collection with an empty namespace",
+			source:  "https://galaxy.ansible.com",
+			coll:    ".general",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

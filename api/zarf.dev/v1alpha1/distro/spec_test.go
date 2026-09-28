@@ -28,10 +28,26 @@ func TestTarballSuffix(t *testing.T) {
 		compression string
 		want        string
 	}{
-		{name: "unset defaults to uncompressed", compression: "", want: ".tar"},
-		{name: "none", compression: CompressionNone, want: ".tar"},
-		{name: "gzip", compression: CompressionGzip, want: ".tar.gz"},
-		{name: "zstd", compression: CompressionZstd, want: ".tar.zst"},
+		{
+			name:        "unset defaults to uncompressed",
+			compression: "",
+			want:        ".tar",
+		},
+		{
+			name:        "none",
+			compression: CompressionNone,
+			want:        ".tar",
+		},
+		{
+			name:        "gzip",
+			compression: CompressionGzip,
+			want:        ".tar.gz",
+		},
+		{
+			name:        "zstd",
+			compression: CompressionZstd,
+			want:        ".tar.zst",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ZarfDistroImageConfig{Compression: tt.compression}.TarballSuffix()

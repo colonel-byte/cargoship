@@ -68,11 +68,30 @@ func TestFormatOf(t *testing.T) {
 		want          Format
 		wantEncrypted bool
 	}{
-		{"vault", vaulted, FormatVault, true},
-		{"age", aged, FormatAge, true},
-		{"plaintext", "hunter2", "", false},
-		{"empty", "", "", false},
-		{"looks like a certificate", "-----BEGIN CERTIFICATE-----\naGk=\n-----END CERTIFICATE-----\n", "", false},
+		{
+			name:          "vault",
+			value:         vaulted,
+			want:          FormatVault,
+			wantEncrypted: true,
+		},
+		{
+			name:          "age",
+			value:         aged,
+			want:          FormatAge,
+			wantEncrypted: true,
+		},
+		{
+			name:  "plaintext",
+			value: "hunter2",
+		},
+		{
+			name:  "empty",
+			value: "",
+		},
+		{
+			name:  "looks like a certificate",
+			value: "-----BEGIN CERTIFICATE-----\naGk=\n-----END CERTIFICATE-----\n",
+		},
 	}
 
 	for _, tt := range tests {
@@ -198,9 +217,21 @@ func TestResolveKeyringErrors(t *testing.T) {
 		options KeyOptions
 		wantErr string
 	}{
-		{"missing identity file", KeyOptions{AgeIdentityFiles: []string{missing}}, "reading age identity file"},
-		{"missing recipients file", KeyOptions{AgeRecipientFiles: []string{missing}}, "reading age recipients file"},
-		{"missing vault password file", KeyOptions{VaultPasswordFile: missing}, "reading vault password file"},
+		{
+			name:    "missing identity file",
+			options: KeyOptions{AgeIdentityFiles: []string{missing}},
+			wantErr: "reading age identity file",
+		},
+		{
+			name:    "missing recipients file",
+			options: KeyOptions{AgeRecipientFiles: []string{missing}},
+			wantErr: "reading age recipients file",
+		},
+		{
+			name:    "missing vault password file",
+			options: KeyOptions{VaultPasswordFile: missing},
+			wantErr: "reading vault password file",
+		},
 		{
 			"identity file holding a public key",
 			KeyOptions{AgeIdentityFiles: []string{writeFile(t, "key.txt", id.Recipient().String()+"\n")}},
@@ -263,22 +294,38 @@ func TestKeyringEncryptFormat(t *testing.T) {
 		want    Format
 		wantErr string
 	}{
-		{"vault only", NewVaultKeyring("hunter2"), FormatVault, ""},
-		{"age only", &Keyring{recipients: recipients, ageExplicit: true}, FormatAge, ""},
+		{
+			name:    "vault only",
+			keyring: NewVaultKeyring("hunter2"),
+			want:    FormatVault,
+		},
+		{
+			name:    "age only",
+			keyring: &Keyring{recipients: recipients, ageExplicit: true},
+			want:    FormatAge,
+		},
 		// The common case on a machine already set up for vault: the password is in a shell
 		// profile, and an operator passing --age-recipient means what they said.
 		{
-			"age flag beats an environment vault password",
-			&Keyring{vaultPassword: "hunter2", recipients: recipients, ageExplicit: true},
-			FormatAge, "",
+			name:    "age flag beats an environment vault password",
+			keyring: &Keyring{vaultPassword: "hunter2", recipients: recipients, ageExplicit: true},
+			want:    FormatAge,
 		},
 		{
-			"both explicit",
-			&Keyring{vaultPassword: "hunter2", vaultExplicit: true, recipients: recipients, ageExplicit: true},
-			"", "pass one or the other",
+			name:    "both explicit",
+			keyring: &Keyring{vaultPassword: "hunter2", vaultExplicit: true, recipients: recipients, ageExplicit: true},
+			wantErr: "pass one or the other",
 		},
-		{"nothing", &Keyring{}, "", ErrNoKeyMaterial.Error()},
-		{"nil", nil, "", ErrNoKeyMaterial.Error()},
+		{
+			name:    "nothing",
+			keyring: &Keyring{},
+			wantErr: ErrNoKeyMaterial.Error(),
+		},
+		{
+			name:    "nil",
+			keyring: nil,
+			wantErr: ErrNoKeyMaterial.Error(),
+		},
 	}
 
 	for _, tt := range tests {

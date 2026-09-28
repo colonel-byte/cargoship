@@ -257,8 +257,14 @@ func TestParseRecipientDoesNotEchoPrivateKeys(t *testing.T) {
 		name   string
 		secret string
 	}{
-		{"an age identity", native.String()},
-		{"an SSH private key", strings.SplitN(string(ssh.private), "\n", 2)[0]},
+		{
+			name:   "an age identity",
+			secret: native.String(),
+		},
+		{
+			name:   "an SSH private key",
+			secret: strings.SplitN(string(ssh.private), "\n", 2)[0],
+		},
 	}
 
 	for _, tt := range tests {

@@ -64,8 +64,14 @@ func TestDeletePhasesPrepareWithNoLeader(t *testing.T) {
 		name  string
 		phase deletePhase
 	}{
-		{"workers", &DeleteWorkers{DeleteCommon: DeleteCommon{Distro: dis}}},
-		{"controllers", &DeleteControllers{DeleteCommon: DeleteCommon{Distro: dis}}},
+		{
+			name:  "workers",
+			phase: &DeleteWorkers{DeleteCommon: DeleteCommon{Distro: dis}},
+		},
+		{
+			name:  "controllers",
+			phase: &DeleteControllers{DeleteCommon: DeleteCommon{Distro: dis}},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// One host, so the filter that dereferences the leader actually runs. With an empty

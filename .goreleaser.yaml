@@ -19,12 +19,10 @@ version: 2
 
 before:
   hooks:
-    - go generate ./...
     # The Ansible collection is a release artifact of its own: the management node that runs the
     # playbooks is inside the airlock, so it installs the collection from this tarball rather than
     # from Galaxy. A snapshot passes no version, because its version is not the one in galaxy.yml.
     - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}{{ else }}{{ .Version }}{{ end }}
-    - hack/shell-completion.sh
 
 builds:
   - id: cargoship
@@ -52,7 +50,9 @@ builds:
       - amd64
       - riscv64
     goamd64:
-      - v1
+      - v2
+      - v3
+      - v4
     goarm:
       - "6"
       - "7"
@@ -67,7 +67,7 @@ archives:
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
+      {{- if eq .Arch "amd64" }}x86_64{{- if ne .Amd64 "v4" }}_{{ .Amd64 }}{{ end }}
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
@@ -96,7 +96,9 @@ nfpms:
       - deb
       - rpm
     goamd64:
-      - v1
+      - v2
+      - v3
+      - v4
     mtime: "{{ .CommitDate }}"
     contents:
       # The Ansible collection. /usr/share/ansible/collections is on ansible-core's default
@@ -126,15 +128,15 @@ nfpms:
         dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_reset
         type: symlink
       # Shell completion
-      - src: build/tmp/completion/{{ .ProjectName }}.bash
+      - src: hack/completion/{{ .ProjectName }}.bash
         dst: /etc/bash_completion.d/{{ .ProjectName }}
         file_info:
           mode: 0644
-      - src: build/tmp/completion/{{ .ProjectName }}.fish
+      - src: hack/completion/{{ .ProjectName }}.fish
         dst: /usr/share/fish/vendor_completions.d/{{ .ProjectName }}.fish
         file_info:
           mode: 0644
-      - src: build/tmp/completion/{{ .ProjectName }}.fish
+      - src: hack/completion/{{ .ProjectName }}.zsh
         dst: /usr/local/share/zsh/site-functions/_{{ .ProjectName }}
         file_info:
           mode: 0644
