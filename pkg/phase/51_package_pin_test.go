@@ -37,8 +37,18 @@ func fakeNameOf(calls *[]string) func(*cluster.ZarfHost, string) (string, error)
 func TestInstallAndPinPackagesForInstallsThenHolds(t *testing.T) {
 	p := &UploadFilesCommon{}
 	byArch := map[api.Arch][]v1alpha1.ZarfFile{
-		api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}},
-		api.ArchARM64: {{Name: "kubelet-arm64", Target: "/tmp/kubelet-arm64.deb"}},
+		api.ArchAMD64: {
+			{
+				Name:   "kubelet-amd64",
+				Target: "/tmp/kubelet-amd64.deb",
+			},
+		},
+		api.ArchARM64: {
+			{
+				Name:   "kubelet-arm64",
+				Target: "/tmp/kubelet-arm64.deb",
+			},
+		},
 	}
 	h, cfg := newInstallHost(t, "arm64")
 
