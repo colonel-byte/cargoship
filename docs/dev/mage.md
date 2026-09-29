@@ -21,21 +21,16 @@ Mage targets are organized into logical Go namespaces to group related operation
 
 The `Build` namespace is the default target and the build path for the Cargoship binary. It compiles natively with the host's Go toolchain:
 
-*   `Binary` - Compiles the binary for the host's platform.
-*   `Linuxamd64` / `Linuxarm64` - Compiles Linux binaries.
-*   `Macamd64` / `Macarm64` - Compiles macOS binaries.
+*   `Binary` - Compiles the binary for the host's platform by default, or for a specified OS and architecture via `-os` and `-arch` flags.
 *   `All` - Compiles all release binaries into `build/`.
 *   `Examples` - Builds a package from every example definition using the cargoship binary on `PATH` (not a binary built here), exercising the same path a release user would take. Gigabytes per package and hours in total; one failure does not stop the run.
 
 ```sh
-mage build:binary         # build for this host's OS/arch
-mage build:linuxamd64     # build build/cargoship_linux_amd64
-mage build:linuxarm64     # build build/cargoship_linux_arm64
-mage build:macamd64       # build build/cargoship_darwin_amd64
-mage build:macarm64       # build build/cargoship_darwin_arm64
-mage build:all            # build every release binary into build/
-mage build:examples       # build every example package with cargoship on PATH
-mage                      # same as `mage build:all` -- it is the default target
+mage build:binary                        # build for this host's OS/arch
+mage build:binary -os=darwin -arch=arm64 # build build/cargoship_darwin_arm64
+mage build:all                           # build every release binary into build/
+mage build:examples                      # build every example package with cargoship on PATH
+mage                                     # same as `mage build:all` -- it is the default target
 ```
 
 ### `Dev` Namespace
@@ -70,7 +65,6 @@ The `Test` namespace hosts the integration and validation suites:
 *   `EndToEndClusterStage` - Runs the same suite as `EndToEndCluster`, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.
 *   `CleanCluster` - Removes the containers a bootloose cluster left behind. `EndToEndCluster` does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.
 *   `Fuzz` - Replays the fuzz seed corpus (the `f.Add` values in each target plus anything committed under `fuzz/testdata/fuzz/<Target>/`). Calls the packages in process; needs no binary, cluster, or network. See [fuzz-tests](fuzz-tests.md).
-*   `AnsibleRequirements` - Checks every collection pinned in `ansible/colonel_byte/cargoship/requirements.yml` can run on the ansible-core declared in that collection's `meta/runtime.yml`. Asks Galaxy what each *pinned* version declares in `requires_ansible` and fails when that does not cover the whole controller range. Touches the network. `.github/workflows/check-ansible-requirements.yaml` runs it on every pull request.
 
 ```sh
 mage test:endToEnd              # build the binary, then run both e2e groups (needs Docker)
@@ -79,10 +73,7 @@ mage test:endToEndCluster       # run the install command suite against a bootlo
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
-mage test:ansibleRequirements   # check the Galaxy pins run on the declared ansible-core
 ```
-
-`Test.AnsibleRequirements` deliberately does not check the pins are the *newest* available - an upstream collection released that morning must not fail an unrelated pull request. Moving the pins forward is `Generate.AnsibleRequirements`, run on purpose.
 
 ### `Generate` Namespace
 
@@ -90,6 +81,7 @@ The `Generate` namespace handles code-generation and repository asset updates:
 
 *   `Document` - Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, renders godoc comments in `pkg/`, `api/`, and `types/` into `docs/golang/` with `gomarkdoc`, renders `docs/schema/` from the same struct reflection `Schema` feeds to `schema/*.json`, renders the Ansible collection's module and role reference pages from the action plugins' `DOCUMENTATION` blocks and the roles' `meta/argument_specs.yml`, rebases `README.md` into `docs/index.md` and `.github/SECURITY.md` into `docs/security.md` for the book, and formats the mdBook `docs/SUMMARY.md` structure.
 *   `Schema` - Generates YAML-compatible JSON schemas in `schema/` from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.
+*   `Completion` - Generates shell tab completion scripts for bash, zsh, fish, and powershell into `hack/completion/`.
 *   `PullEngineSource` - Fetches raw k3s/RKE2 source at the tags pinned in `thirdparty-src/pins.json` into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). Touches the network.
 *   `LatestTag <distro> <vMAJOR.MINOR>` - Resolves the newest non-RC upstream tag for that minor line, pins it in `thirdparty-src/pins.json`, and re-pulls that version's source if the pin moved. Touches the network.
 *   `UpdatePins` - Runs `LatestTag` over every minor line already pinned in `thirdparty-src/pins.json`, refreshing each to its newest patch release. Touches the network.
@@ -115,15 +107,11 @@ The `Generate` namespace handles code-generation and repository asset updates:
 
     `ExampleLine upstream <vMAJOR.MINOR>` is a separate path (see `gen-examples-upstream.go`), since kubeadm does not fit `exampleDistroSpec`. It backfills every stable patch on the line by picking, per package, the closest version published on `pkgs.k8s.io` at or before that patch - pkgs.k8s.io keeps every patch's packages on a minor line, not just the newest, so `v1.37.0` and `v1.37.1` render distinct `kubelet`/`kubectl`/`kubeadm`/`cri-tools`/`kubernetes-cni` versions. The etcd, coreDNS, and pause versions kubeadm pins come from that same tag's own `cmd/kubeadm/app/constants/constants.go`, fetched live from `raw.githubusercontent.com`, not from the single per-minor cached copy `thirdparty-src/upstream/<minor>/` holds - that copy only ever reflects whichever tag is currently pinned. `containerd.io`, pulled from `download.docker.com`, is the one package still resolved to whatever is newest at render time, since its release cadence is independent of the Kubernetes tag.
 *   `EngineConfig` - Statically parses raw engine source under `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)) to generate typed `config.yaml` structs per distro/version in `pkg/engineconfig/gen/`, plus each version's packaged-component vocabulary (the valid `disable:`, `cni:`, and `ingress-controller:` values) in a `zz_addons.go` alongside them.
-*   `AnsibleRequirements` - Rewrites `ansible/colonel_byte/cargoship/requirements.yml`, pinning each Galaxy collection to the newest release whose `requires_ansible` admits the whole ansible-core range declared in the collection's `meta/runtime.yml`. Where a collection has releases the controller cannot run, the newest one is named alongside the pin, so a held-back pin reads as held back rather than current. Touches the network.
-
-    This is a generated file because no dependency bot can produce it. Renovate has an `ansible-galaxy` manager that reads this exact file, but its `galaxy-collection` datasource never surfaces `requires_ansible`, and `constraintsFiltering` does not cover that datasource - so it would bump the pins blind. The constraint is not theoretical: `community.general` 13.4.0 needs ansible-core 2.18, while the newest release usable on 2.16 is 11.4.9, two majors behind. See [choice-ansible-collection-pins](../agent/choice-ansible-collection-pins.md).
-
-    The controller range in `meta/runtime.yml` is the single input, and it is a range rather than a floor (`">=2.16.0,<2.17.0"`) because a floor alone does not say which ansible-core the pins are resolved for. It tracks whatever `dnf install ansible-core` resolves to on the base image in `containers/ansible/Dockerfile`; bumping that image means editing the line and re-running this target. A `requires_ansible` that does not parse as a PEP 440 specifier, or that is unbounded on either side, fails the target rather than being skipped - ansible-core itself swallows that case and downgrades it to a warning in playbook output.
 
 ```sh
 mage generate:document                  # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/index.md, docs/security.md, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
+mage generate:completion                # regenerate hack/completion/ shell completion scripts (bash, zsh, fish, powershell)
 
 mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
 mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
@@ -133,8 +121,6 @@ mage generate:engineConfig              # regenerate pkg/engineconfig/gen/ from 
 mage generate:examples                  # re-render every example/<distro>-<cni>/<minor>/*/distro.yaml
 mage generate:exampleLine rke2 v1.36    # render an example for every rke2 release on the 1.36 line
 mage generate:exampleLine k3s 1.36      # same for k3s -- the leading v is optional
-
-mage generate:ansibleRequirements       # bump the Galaxy pins to the newest the controller runs
 ```
 
 `LatestTag` is also how a *new* minor line is added: pass a prefix that `thirdparty-src/pins.json` does not yet pin and it appends that line rather than replacing one. Adding an rke2 minor means adding the matching k3s minor too, because rke2's config is composed against k3s's flags at the same version:
@@ -153,27 +139,16 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 ## File-by-File Reference
 
 *   **`core/core.go`:** Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in `magefiles/`) so it does not collide with the `func main()` that the `mage` CLI generates on the fly - see [Running Mage Directly](#running-mage-directly-without-the-cli) below.
-*   **`build.go`:** Defines compilation tasks utilizing the local host Go toolchain.
-*   **`dev.go`:** Defines convenience tasks under the `Dev` and `Test` namespaces.
-*   **`dev-dnf-pins.go`:** Holds `Dev.DnfPins` and AlmaLinux 10 repodata HTTP fetching and version comparison logic.
-*   **`gen-docs.go`:** Performs Cobra command extraction and phase parser generation to update everything inside the `docs/` tree.
-*   **`gen-schema.go`:** Maps Go types to JSON schemas under `schema/`.
-*   **`gen-engine-source.go`:** Holds `Generate.PullEngineSource` and the clone-and-copy logic behind it.
-*   **`gen-engine-latest-tag.go`:** Holds `Generate.LatestTag`.
-*   **`gen-engine-update-pins.go`:** Holds `Generate.UpdatePins`.
-*   **`gen-engine-config.go`:** Holds `Generate.EngineConfig`, including RKE2's flag composition against k3s.
-*   **`gen-examples.go`:** Holds `Generate.Examples`.
-*   **`gen-example-line.go`:** Holds `Generate.ExampleLine`.
-*   **`examples.go`:** Shared, target-free layer behind both example targets: what an example is rendered from (the tag-derived fields and the fetched image manifests) and how one is written.
-*   **`example-shasums.go`:** The `example/shasums.json` cache, and the `sha256` function the example template hashes its remote files with.
-*   **`example-release-lines.go`:** The cache behind `fetchReleaseLines`: where it lives, how an asset URL is flattened into one file name, how an entry is trusted, and the atomic write that keeps a half-written entry from being read back as a whole asset.
-*   **`engine-pins.go`:** Shared, target-free layer over `thirdparty-src/pins.json`: reading, writing, tag parsing, and tag resolution used by the four `gen-engine-*.go` targets.
-*   **`gen-ansible-requirements.go`:** Holds `Generate.AnsibleRequirements`.
-*   **`test-ansible-requirements.go`:** Holds `Test.AnsibleRequirements`.
-*   **`ansible-requirements.go`:** Shared, target-free layer behind both: reading `requirements.yml` and the controller range out of `meta/runtime.yml`, paging the Galaxy v3 versions endpoint, reducing a PEP 440 specifier to an interval, and deciding whether a release admits the controller range. Containment rather than overlap - an operator anywhere in the declared range has to be able to run the pin, so a release capped below the range's own ceiling is rejected too.
-*   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl` and `k3s-distro.yaml.tmpl`, one per distro that has examples.
-*   **`utils.go`:** Implements low-level helper functions for file cleanup, host compilation, and compiler flag construction. See [build-flags](build-flags.md) for what each flag/env var does and why.
-*   **`binary.go`:** Includes non-exported validation functions to verify binary existences within `GOPATH`.
+*   **`build.go`:** Entrypoint for the `Build` namespace (`Build.Binary`, `Build.All`, `Build.Examples`), delegating to `magefiles/pkg/build`.
+*   **`dev.go`:** Entrypoint for the `Dev` namespace (`Dev.Clean`, `Dev.Tidy`, `Dev.Vendor`, `Dev.Digest`, `Dev.DnfPins`, `Dev.WriteOSVOverrides`, `Dev.VerifyVendor`).
+*   **`generate.go`:** Entrypoint for the `Generate` namespace (`Generate.Document`, `Generate.Schema`, `Generate.Completion`, `Generate.EngineConfig`, `Generate.Examples`, etc.), delegating to `magefiles/pkg/gen/...`.
+*   **`test.go`:** Entrypoint for the `Test` namespace (`Test.EndToEnd`, `Test.EndToEndCluster`, `Test.Fuzz`), delegating to `magefiles/pkg/testrunner`.
+*   **`pkg/build/`:** Binary compilation logic, flag assembly, and example package builds.
+*   **`pkg/devtools/`:** Developer tooling packages, including `dnfpins` (AlmaLinux repomd XML parser and pin updater) and `osv` (OpenSSF Scorecard vendor overrides).
+*   **`pkg/gen/`:** Generator implementations: `completion/` (shell completion scripts), `docs/` (Cobra command docs and mdBook pages), `engineconfig/` (k3s/RKE2 source pins and struct codegen), `examples/` (Rancher and upstream distro examples), and `schema/` (JSON schema reflection and docs).
+*   **`pkg/testrunner/`:** Test runner implementations for e2e suites and fuzz corpus replay.
+*   **`pkg/util/`:** Shared helpers for aligned table formatting, git commit resolution, and clean build tasks.
+*   **`templates/`:** Text templates the generation targets render: `rke2-distro.yaml.tmpl`, `k3s-distro.yaml.tmpl`, and `upstream-distro.yaml.tmpl`.
 
 ---
 
@@ -194,13 +169,13 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `docs/security.md`                                | `.github/SECURITY.md`, with its links rebased onto `docs/` for the book                     | `Generate.Document`                                |
 | `docs/SUMMARY.md`                                 | Compiled table of contents for mdBook                                                       | `Generate.Document`                                |
 | `schema/*.json`                                   | JSON schemas for YAML validations                                                           | `Generate.Schema`                                  |
+| `hack/completion/*`                               | Shell completion scripts for bash, zsh, fish, and powershell                                | `Generate.Completion`                              |
 | `pkg/engineconfig/gen/*`                          | Typed engine `config.yaml` structs per distro/version                                       | `Generate.EngineConfig`                            |
 | `thirdparty-src/<distro>/<minor>/*`               | Raw pinned upstream k3s/RKE2 source                                                         | `Generate.PullEngineSource` / `Generate.LatestTag` |
 | `thirdparty-src/pins.json`                        | Pinned upstream tags                                                                        | `Generate.LatestTag` / `Generate.UpdatePins`       |
 | `example/<distro>-<cni>/<minor>/*/distro.yaml`    | Rendered rke2 and k3s example packages, one directory per CNI flavor, grouped by minor line | `Generate.Examples`                                |
 | `example/shasums.json`                            | Cached sha256 of every remote file the examples hash                                        | `Generate.Examples` / `Generate.ExampleLine`       |
 | `<zarf_cache>/examples/*`                         | Cached release text assets (image lists), not committed                                     | `Generate.Examples` / `Generate.ExampleLine`       |
-| `ansible/colonel_byte/cargoship/requirements.yml` | Galaxy collection pins for the Ansible collection                                           | `Generate.AnsibleRequirements`                     |
 | `containers/ansible/Dockerfile`                   | Base image package pins for ansible-core and bash-completion                                | `Dev.DnfPins`                                      |
 | `containers/ubi/Dockerfile`                       | Base image package pins for shadow-utils and bash-completion                                | `Dev.DnfPins`                                      |
 | `.goreleaser.yaml`                                | Build args pinning container package versions                                               | `Dev.DnfPins`                                      |
@@ -221,7 +196,7 @@ go run ./magefiles/core
 
 This builds and runs the same `mage.Main()` entry point that the `mage` CLI would otherwise generate for you. It's useful when:
 
-*   The `mage` binary isn't installed on the host (e.g. a minimal CI or container image that already has a Go toolchain). This is how `.github/workflows/check-ansible-requirements.yaml` runs its gate - `go run -mod=vendor ./magefiles/core test:ansibleRequirements` - so the workflow needs nothing beyond `setup-go` and the vendored tree.
+*   The `mage` binary isn't installed on the host (e.g. a minimal CI or container image that already has a Go toolchain). This is how CI runs its document checks - `go run -mod=vendor ./magefiles/core generate:document` - so the workflow needs nothing beyond `setup-go` and the vendored tree.
 *   You want a single, explicit `go run` invocation instead of depending on a separately-installed tool.
 
 Task selection still works the same way - pass the namespace:target as an argument, e.g.:

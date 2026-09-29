@@ -18,14 +18,10 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
 
+	"github.com/colonel-byte/cargoship/magefiles/pkg/build"
 	"github.com/magefile/mage/mg"
-)
-
-const (
-	buildDir = "build"
 )
 
 var Default = Build.All
@@ -35,46 +31,30 @@ type (
 	Binary mg.Namespace
 )
 
-// Binary will build a binary of the local system, on the host
-func (Build) Binary() error {
-	return hostBuildLocal(runtime.GOOS, runtime.GOARCH)
-}
-
-// Linuxamd64 build a linux amd64 binary, on the host
-func (Build) Linuxamd64() error {
-	return hostBuildLocal("linux", "amd64")
-}
-
-// Linuxarm64 build a linux arm64 binary, on the host
-func (Build) Linuxarm64() error {
-	return hostBuildLocal("linux", "arm64")
-}
-
-// Macamd64 build a mac amd64 binary, on the host
-func (Build) Macamd64() error {
-	return hostBuildLocal("darwin", "amd64")
-}
-
-// Macarm64 build a mac arm64 binary, on the host
-func (Build) Macarm64() error {
-	return hostBuildLocal("darwin", "arm64")
+// Binary will build a binary of the local system, or for the specified OS and architecture
+func (Build) Binary(
+	// target OS (defaults to host runtime.GOOS)
+	os *string,
+	// target architecture (defaults to host runtime.GOARCH)
+	arch *string,
+) error {
+	targetOS := runtime.GOOS
+	if os != nil && *os != "" {
+		targetOS = *os
+	}
+	targetArch := runtime.GOARCH
+	if arch != nil && *arch != "" {
+		targetArch = *arch
+	}
+	return build.Binary(targetOS, targetArch)
 }
 
 // All builds all cargoship binaries, on the host
-func (b Build) All() error {
-	return runSquential(
-		b.Linuxamd64,
-		b.Linuxarm64,
-		b.Macamd64,
-		b.Macarm64,
-	)
+func (Build) All() error {
+	return build.All()
 }
 
-func runSquential(funcs ...func() error) error {
-	for _, f := range funcs {
-		if err := f(); err != nil {
-			fmt.Printf("got an error: %v", err)
-		}
-	}
-	return nil
+// Examples builds a package from every example definition, with the cargoship on PATH.
+func (Build) Examples() error {
+	return build.Examples()
 }

@@ -41,7 +41,8 @@ repos:
         exclude: |-
           (?x)^(
               vendor/.*|
-              thirdparty-src/.*
+              thirdparty-src/.*|
+              hack/completion/.*
           )$
         exclude_types:
           - yaml
@@ -76,9 +77,14 @@ repos:
         name: generate-schemas
         language: system
         pass_filenames: false
-        entry: mage generate:schema
+        entry: go run ./magefiles/core generate:schema
+      - id: shell-completion-generator
+        name: generate-shell-completion
+        language: system
+        pass_filenames: false
+        entry: go run ./magefiles/core generate:shellCompletion
       - id: docs-generator
         name: generate-docs
         language: system
         pass_filenames: false
-        entry: bash -c "CARGOSHIP_MAGE_DOCS_CHILD=1 CARGOSHIP_CONFIG=hack/config.yaml mage generate:document"
+        entry: bash -c "CARGOSHIP_MAGE_DOCS_CHILD=1 CARGOSHIP_CONFIG=hack/config.yaml go run ./magefiles/core generate:document"
