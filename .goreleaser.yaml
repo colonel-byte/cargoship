@@ -96,8 +96,6 @@ nfpms:
       - deb
       - rpm
     goamd64:
-      - v2
-      - v3
       - v4
     mtime: "{{ .CommitDate }}"
     contents:
