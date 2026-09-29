@@ -79,6 +79,11 @@ type Distro interface {
 	// directory cargoship shares with the engine names the files that are its own. A distro
 	// that keeps no such directory returns nil.
 	ManagedDirs() []ManagedDir
+	// PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to,
+	// so the uninstall phase knows where to recover installed package names from. A distro that
+	// installs from a single binary rather than staged package files shares this with
+	// DataDirPath, since nothing else uses the value.
+	PackageStagingDir() string
 	// DistroCmdf returns a string that can be used to execute commands on the core engine binary
 	DistroCmdf(string, ...any) string
 	// GetClusterCIDR returns a string array with the all the known cluster cidr blocks
