@@ -181,7 +181,7 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      - linux/386
+      # - linux/386
       - linux/amd64
       - linux/arm64
     flags:
@@ -208,9 +208,9 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      - linux/386
+      # - linux/386
       - linux/amd64
-      - linux/arm/v7
+      # - linux/arm/v7
       - linux/arm64
     flags:
       - "--pull"
@@ -230,7 +230,7 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      - linux/386
+      # - linux/386
       - linux/amd64
       - linux/arm64
     flags:
