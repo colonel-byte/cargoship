@@ -17,6 +17,7 @@
 kind: ZarfDistro
 metadata:
   name: upstream
+  version: 1.34.8
   architectures:
     - amd64
     - arm64
