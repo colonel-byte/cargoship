@@ -50,9 +50,7 @@ builds:
       - amd64
       - riscv64
     goamd64:
-      - v2
-      - v3
-      - v4
+      - v1
     goarm:
       - "6"
       - "7"
@@ -67,7 +65,7 @@ archives:
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64{{- if ne .Amd64 "v4" }}_{{ .Amd64 }}{{ end }}
+      {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
@@ -96,9 +94,7 @@ nfpms:
       - deb
       - rpm
     goamd64:
-      - v2
-      - v3
-      - v4
+      - v1
     mtime: "{{ .CommitDate }}"
     contents:
       # The Ansible collection. /usr/share/ansible/collections is on ansible-core's default
@@ -170,10 +166,27 @@ dockers_v2:
     flags:
       - "--pull"
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
-
+      <<: &labels
+        "org.opencontainers.image.description": |-
+          Airgapped Kubernetes distribution packaging and deployment
+        "org.opencontainers.image.version": |-
+          {{ .Version }}
+        "org.opencontainers.image.revision": |-
+          {{ .FullCommit }}
+        "org.opencontainers.image.created": |-
+          {{ .CommitDate }}
+        "org.opencontainers.image.base.name": |-
+          {{ .BaseImage }}
+        "org.opencontainers.image.base.digest": |-
+          {{ .BaseImageDigest }}
+        "index,manifest:org.opencontainers.image.source": |-
+          https://github.com/colonel-byte/cargoship
+        "index,manifest:org.opencontainers.image.title": |-
+          cargoship
+        "index,manifest:org.opencontainers.image.licenses": |-
+          Apache-2.0
+        "index,manifest:org.opencontainers.image.description": |-
+          Airgapped Kubernetes distribution packaging and deployment
   - id: cargoship-ubi
     ids:
       - packagers
@@ -192,9 +205,7 @@ dockers_v2:
       SHADOW_UTILS_VERSION: 4.15.0-11.el10
       BASH_COMPLETION_VERSION: 2.11-16.el10
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
+      <<: *labels
     extra_files:
       - crypto/software@conlon.dev.gpg
 
@@ -217,9 +228,7 @@ dockers_v2:
     flags:
       - "--pull"
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
+      <<: *labels
     extra_files:
       - crypto/software@conlon.dev.gpg
 
@@ -241,9 +250,11 @@ dockers_v2:
       ANSIBLE_CORE_VERSION: 2.16.16-2.el10_2.1
       BASH_COMPLETION_VERSION: 2.11-16.el10
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
+      "org.opencontainers.image.description": |-
+        Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection
+      "index,manifest:org.opencontainers.image.description": |-
+        Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection
+      <<: *labels
     extra_files:
       - crypto/software@conlon.dev.gpg
       - ansible/colonel_byte/cargoship/requirements.yml
