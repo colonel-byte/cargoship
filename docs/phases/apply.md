@@ -62,6 +62,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Initialize Controller
     - If the remote node does not have a running controller service, and is a controller, install the engine and start each service sequentially
     - Dry run: reported, not run
+1. Apply manifests
+    - For a distro whose package declares raw manifests -- a CNI, typically -- kubectl applies each one from the leader
+    - Dry run: reported, not run
 1. Initialize Worker
     - If the remote node does not have a running worker service, and is not a controller, install the engine and start each service by the set concurrency limit
     - Dry run: reported, not run

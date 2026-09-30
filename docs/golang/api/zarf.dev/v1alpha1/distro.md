@@ -93,7 +93,7 @@ type ZarfDistro struct {
 ```
 
 <a name="ZarfDistro.Arches"></a>
-### func \(ZarfDistro\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L310>)
+### func \(ZarfDistro\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L315>)
 
 ```go
 func (distro ZarfDistro) Arches() api.Arches
@@ -102,7 +102,7 @@ func (distro ZarfDistro) Arches() api.Arches
 Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.
 
 <a name="ZarfDistro.IsSBOMAble"></a>
-### func \(ZarfDistro\) [IsSBOMAble](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L318>)
+### func \(ZarfDistro\) [IsSBOMAble](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L323>)
 
 ```go
 func (distro ZarfDistro) IsSBOMAble() bool
@@ -163,7 +163,7 @@ type ZarfDistroBuildData struct {
 ```
 
 <a name="ZarfDistroBuildData.Arches"></a>
-### func \(ZarfDistroBuildData\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L297>)
+### func \(ZarfDistroBuildData\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L302>)
 
 ```go
 func (b ZarfDistroBuildData) Arches() api.Arches
@@ -172,7 +172,7 @@ func (b ZarfDistroBuildData) Arches() api.Arches
 Arches returns the CPU architectures the package was built for. It prefers Architectures and falls back to the single Architecture field.
 
 <a name="ZarfDistroConfig"></a>
-## type [ZarfDistroConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L178-L187>)
+## type [ZarfDistroConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L178-L192>)
 
 ZarfDistroConfig holds the configuration for the distro engine.
 
@@ -186,11 +186,16 @@ type ZarfDistroConfig struct {
     OS  ZarfDistroOS `json:"os,omitempty"`
     // Engine holds configuration passed through to the distro engine.
     Engine dig.Mapping `json:"engine,omitempty"`
+    // Manifests lists on-host paths -- each one the Target of a Files entry -- that cargoship
+    // kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by
+    // Files; this is only the marker that says "and apply this one," e.g. for a CNI a package
+    // declares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.
+    Manifests []string `json:"manifests,omitempty"`
 }
 ```
 
 <a name="ZarfDistroConfig.JSONSchemaExtend"></a>
-### func \(ZarfDistroConfig\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L193>)
+### func \(ZarfDistroConfig\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L198>)
 
 ```go
 func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema)
@@ -199,7 +204,7 @@ func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend pins down the shape of the engine's manifest section, whose values are Helm values written into a HelmChartConfig: either a YAML string or a mapping cargoship serializes to YAML for the chart. Engine is otherwise a free\-form mapping handed to the distro engine, so the section list stays open and every other section keeps validating as it did.
 
 <a name="ZarfDistroImageConfig"></a>
-## type [ZarfDistroImageConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L228-L235>)
+## type [ZarfDistroImageConfig](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L233-L240>)
 
 ZarfDistroImageConfig holds settings for the images cargoship writes to a host.
 
@@ -215,7 +220,7 @@ type ZarfDistroImageConfig struct {
 ```
 
 <a name="ZarfDistroImageConfig.TarballSuffix"></a>
-### func \(ZarfDistroImageConfig\) [TarballSuffix](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L241>)
+### func \(ZarfDistroImageConfig\) [TarballSuffix](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L246>)
 
 ```go
 func (c ZarfDistroImageConfig) TarballSuffix() (string, error)
@@ -260,7 +265,7 @@ type ZarfDistroMetadata struct {
 ```
 
 <a name="ZarfDistroMetadata.Arches"></a>
-### func \(ZarfDistroMetadata\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L285>)
+### func \(ZarfDistroMetadata\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L290>)
 
 ```go
 func (m ZarfDistroMetadata) Arches() api.Arches
@@ -269,7 +274,7 @@ func (m ZarfDistroMetadata) Arches() api.Arches
 Arches returns the CPU architectures the package targets. It prefers Architectures and falls back to the single Architecture field, so callers never have to know which one the package set.
 
 <a name="ZarfDistroOS"></a>
-## type [ZarfDistroOS](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L255-L266>)
+## type [ZarfDistroOS](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L260-L271>)
 
 ZarfDistroOS holds settings applied to a host.
 
@@ -289,7 +294,7 @@ type ZarfDistroOS struct {
 ```
 
 <a name="ZarfDistroOS.JSONSchemaExtend"></a>
-### func \(ZarfDistroOS\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L270>)
+### func \(ZarfDistroOS\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L275>)
 
 ```go
 func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)
