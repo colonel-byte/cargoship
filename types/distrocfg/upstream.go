@@ -57,11 +57,12 @@ type Upstream struct {
 }
 
 var (
-	_ Distro           = (*Upstream)(nil)
-	_ ImageImporter    = (*Upstream)(nil)
-	_ Bootstrapper     = (*Upstream)(nil)
-	_ ManifestApplier  = (*Upstream)(nil)
-	_ PreStartUpgrader = (*Upstream)(nil)
+	_ Distro               = (*Upstream)(nil)
+	_ ImageImporter        = (*Upstream)(nil)
+	_ Bootstrapper         = (*Upstream)(nil)
+	_ ManifestApplier      = (*Upstream)(nil)
+	_ PreStartUpgrader     = (*Upstream)(nil)
+	_ PreUninstallResetter = (*Upstream)(nil)
 )
 
 func init() {
@@ -284,7 +285,7 @@ func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string {
 // directory, the kubelet data directory, and the staged package directory, all of which
 // upstream owns outright.
 func (d *Upstream) CleanupPaths() []string {
-	return removablePaths(d.DataDirPath(), d.ConfigPath(), d.PackageStagingDir())
+	return removablePaths(d.DataDirPath(), d.ConfigPath(), d.PackageStagingDir(), "/etc/cni/net.d")
 }
 
 // JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has
