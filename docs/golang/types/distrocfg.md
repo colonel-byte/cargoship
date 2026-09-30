@@ -684,13 +684,13 @@ func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (Adm
 AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.
 
 <a name="Upstream.Bootstrap"></a>
-### func \(\*Upstream\) [Bootstrap](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L58>)
+### func \(\*Upstream\) [Bootstrap](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L63>)
 
 ```go
 func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error
 ```
 
-Bootstrap forms the cluster on the leader with \`kubeadm init\`, or joins it on every other host with \`kubeadm join\`, against the kubeadm\-config.yaml ConfigureEngine already wrote to host.
+Bootstrap forms the cluster on the leader with \`kubeadm init\`, joins an additional controller onto it with kubeadm's HA control\-plane path, or joins a worker with a plain \`kubeadm join\`, against the kubeadm\-config.yaml ConfigureEngine already wrote to host.
 
 <a name="Upstream.CleanupPaths"></a>
 ### func \(\*Upstream\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L285>)
@@ -747,7 +747,7 @@ func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error
 ImportImages imports every image tarball staged under path into containerd's k8s.io image store. Unlike rke2/k3s, upstream's containerd has no agent watching that directory on its own, so cargoship has to trigger the import itself.
 
 <a name="Upstream.IsBootstrapped"></a>
-### func \(\*Upstream\) [IsBootstrapped](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L52>)
+### func \(\*Upstream\) [IsBootstrapped](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L56>)
 
 ```go
 func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool
