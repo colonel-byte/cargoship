@@ -15,14 +15,17 @@
 package phase
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // fakeNameOf returns a stable, made-up package name per staged file path, recording each call so a
@@ -55,7 +58,7 @@ func TestInstallAndPinPackagesForInstallsThenHolds(t *testing.T) {
 	var nameOfCalls []string
 	var heldNames []string
 	var heldHost *cluster.ZarfHost
-	hold := func(hh *cluster.ZarfHost, names []string) error {
+	hold := func(_ context.Context, hh *cluster.ZarfHost, names []string) error {
 		heldHost = hh
 		heldNames = names
 		return nil
@@ -76,7 +79,7 @@ func TestInstallAndPinPackagesForSkipsHostWithNoPackages(t *testing.T) {
 	h, cfg := newInstallHost(t, "arm64")
 
 	holdCalled := false
-	hold := func(*cluster.ZarfHost, []string) error {
+	hold := func(context.Context, *cluster.ZarfHost, []string) error {
 		holdCalled = true
 		return nil
 	}
@@ -93,7 +96,7 @@ func TestInstallAndPinPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
 	h, cfg := newInstallHost(t, "sparc64")
 
-	hold := func(*cluster.ZarfHost, []string) error {
+	hold := func(context.Context, *cluster.ZarfHost, []string) error {
 		t.Fatal("hold must not run when the install never happened")
 		return nil
 	}
@@ -104,6 +107,9 @@ func TestInstallAndPinPackagesForFailsWithoutAnArchitecture(t *testing.T) {
 	require.Empty(t, cfg.installed)
 }
 
+// TestInstallAndPinPackagesForPropagatesNameLookupError covers a staged file whose package name
+// cannot be read. That is a property of the file, not of the host's pinning tooling, so it fails
+// the phase on either package manager rather than quietly leaving the host unpinned.
 func TestInstallAndPinPackagesForPropagatesNameLookupError(t *testing.T) {
 	p := &UploadFilesCommon{}
 	byArch := map[api.Arch][]v1alpha1.ZarfFile{api.ArchAMD64: {{Name: "kubelet-amd64", Target: "/tmp/kubelet-amd64.deb"}}}
@@ -111,7 +117,7 @@ func TestInstallAndPinPackagesForPropagatesNameLookupError(t *testing.T) {
 
 	wantErr := errors.New("dpkg-deb failed")
 	nameOf := func(*cluster.ZarfHost, string) (string, error) { return "", wantErr }
-	hold := func(*cluster.ZarfHost, []string) error {
+	hold := func(context.Context, *cluster.ZarfHost, []string) error {
 		t.Fatal("hold must not run when a package name could not be resolved")
 		return nil
 	}
@@ -128,9 +134,67 @@ func TestInstallAndPinPackagesForPropagatesHoldError(t *testing.T) {
 	h, _ := newInstallHost(t, "amd64")
 
 	wantErr := errors.New("apt-mark hold failed")
-	hold := func(*cluster.ZarfHost, []string) error { return wantErr }
+	holdCalled := false
+	hold := func(context.Context, *cluster.ZarfHost, []string) error {
+		holdCalled = true
+		return wantErr
+	}
 
 	err := p.installAndPinPackagesFor(context.Background(), byArch, h, fakeNameOf(&[]string{}), hold)
 
 	require.ErrorIs(t, err, wantErr)
+	require.True(t, holdCalled, "the hold error can only be propagated if hold actually ran")
+}
+
+func TestHoldRPMPackagesUsingLocksWhenVersionlockIsPresent(t *testing.T) {
+	h, _ := newInstallHost(t, "amd64")
+
+	var lockedNames []string
+	var lockedHost *cluster.ZarfHost
+	add := func(hh *cluster.ZarfHost, names []string) error {
+		lockedHost = hh
+		lockedNames = names
+		return nil
+	}
+	present := func(*cluster.ZarfHost) error { return nil }
+
+	err := holdRPMPackagesUsing(context.Background(), h, []string{"k3s", "kubelet"}, present, add)
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"k3s", "kubelet"}, lockedNames)
+	require.Same(t, h, lockedHost)
+}
+
+func TestHoldRPMPackagesUsingPropagatesLockError(t *testing.T) {
+	h, _ := newInstallHost(t, "amd64")
+
+	wantErr := errors.New("dnf versionlock add failed")
+	add := func(*cluster.ZarfHost, []string) error { return wantErr }
+	present := func(*cluster.ZarfHost) error { return nil }
+
+	err := holdRPMPackagesUsing(context.Background(), h, []string{"k3s"}, present, add)
+
+	require.ErrorIs(t, err, wantErr, "a host that has the plugin and still failed to pin is a real error")
+}
+
+// TestHoldRPMPackagesUsingWarnsWhenVersionlockIsMissing covers the RHEL-family host that never had
+// the versionlock plugin. Cargoship cannot install it over an air gap, and the engine packages are
+// already on the host by this point, so the run continues unpinned and says so.
+func TestHoldRPMPackagesUsingWarnsWhenVersionlockIsMissing(t *testing.T) {
+	h, _ := newInstallHost(t, "amd64")
+
+	add := func(*cluster.ZarfHost, []string) error {
+		t.Fatal("dnf versionlock add must not run on a host without the plugin")
+		return nil
+	}
+	present := func(*cluster.ZarfHost) error { return errors.New("No such command: versionlock") }
+
+	var buf bytes.Buffer
+	ctx := logger.WithContext(context.Background(), slog.New(slog.NewTextHandler(&buf, nil)))
+
+	err := holdRPMPackagesUsing(ctx, h, []string{"k3s"}, present, add)
+
+	require.NoError(t, err)
+	require.Contains(t, buf.String(), "no dnf versionlock plugin", "an unpinned host has to be visible in the log")
+	require.Contains(t, buf.String(), "k3s", "the warning names the packages left unpinned")
 }
