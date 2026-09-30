@@ -25,6 +25,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
+	"github.com/k0sproject/dig"
 )
 
 const (
@@ -132,13 +133,13 @@ func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error) {
 func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
 
-	svc := nodeConfig.DigString(config.EngineConfig, keyServiceSubnet)
+	svc := nodeConfig.DigString(config.EngineConfig, keyNetworking, keyServiceSubnet)
 	if svc == "" {
 		svc = upstreamServiceCIDR
 	}
 
 	cidrs := []string{svc}
-	if pod := nodeConfig.DigString(config.EngineConfig, keyPodSubnet); pod != "" {
+	if pod := nodeConfig.DigString(config.EngineConfig, keyNetworking, keyPodSubnet); pod != "" {
 		cidrs = append(cidrs, pod)
 	}
 	return cidrs
@@ -154,7 +155,7 @@ func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ clu
 // DesiredFiles returns the full set of engine config files this distro would write: containerd's
 // config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship
 // configures a mirror, credential, or TLS setting for.
-func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *Upstream) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	configTOML, err := marshalTOML(buildContainerdConfig(dis))
@@ -180,6 +181,40 @@ func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta
 	for path, ca := range registryCAFiles(run.Registries) {
 		files[path] = DesiredFile{Content: ca, Mode: modeConfigFile}
 	}
+
+	nodeConfig := dis.Spec.Config.Engine.Dup()
+
+	if audit := nodeConfig.DigMapping(config.EngineAudit); len(audit) > 0 {
+		audit[keyKind] = "Policy"
+		audit[keyAPIVersion] = "audit.k8s.io/v1"
+		b, err := marshalYAML(audit)
+		if err != nil {
+			return nil, err
+		}
+		files[upstreamAuditFilePath] = DesiredFile{Content: b, Mode: modeConfigFile}
+	}
+
+	if pss := nodeConfig.DigMapping(config.EnginePSS); len(pss) > 0 {
+		pss[keyKind] = "AdmissionConfiguration"
+		pss[keyAPIVersion] = "apiserver.config.k8s.io/v1"
+		b, err := marshalYAML(pss)
+		if err != nil {
+			return nil, err
+		}
+		files[upstreamPSSFilePath] = DesiredFile{Content: b, Mode: modeConfigFile}
+	}
+
+	var kubeadmDocs []dig.Mapping
+	if host.Metadata.IsLeader {
+		kubeadmDocs = []dig.Mapping{buildClusterConfiguration(dis, run), buildInitConfiguration(host), buildKubeletConfiguration()}
+	} else {
+		kubeadmDocs = []dig.Mapping{buildJoinConfiguration(host, run), buildKubeletConfiguration()}
+	}
+	kubeadmYAML, err := marshalYAMLDocs(kubeadmDocs...)
+	if err != nil {
+		return nil, err
+	}
+	files[kubeadmConfigPath] = DesiredFile{Content: kubeadmYAML, Mode: modeConfigFile}
 
 	if path, df, ok, err := DistroReleaseDesiredFile(dis, files); err != nil {
 		return nil, err

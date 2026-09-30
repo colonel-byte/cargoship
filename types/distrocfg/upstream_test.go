@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
@@ -110,7 +111,9 @@ func TestUpstreamGetClusterCIDR(t *testing.T) {
 		{
 			name: "service subnet overridden, no pod subnet",
 			engine: dig.Mapping{
-				"config": dig.Mapping{keyServiceSubnet: "172.16.0.0/16"},
+				"config": dig.Mapping{
+					keyNetworking: dig.Mapping{keyServiceSubnet: "172.16.0.0/16"},
+				},
 			},
 			want: []string{"172.16.0.0/16"},
 		},
@@ -135,8 +138,10 @@ func TestUpstreamGetClusterCIDRWithPodSubnet(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	dis.Spec.Config.Engine = dig.Mapping{
 		"config": dig.Mapping{
-			keyPodSubnet:     "10.10.0.0/16",
-			keyServiceSubnet: "10.20.0.0/16",
+			keyNetworking: dig.Mapping{
+				keyPodSubnet:     "10.10.0.0/16",
+				keyServiceSubnet: "10.20.0.0/16",
+			},
 		},
 	}
 
@@ -194,6 +199,61 @@ func TestUpstreamDesiredFilesRendersRegistryHostsTOML(t *testing.T) {
 	want := containerdHostsPath("docker.io")
 	if _, ok := files[want]; !ok {
 		t.Fatalf("DesiredFiles() = %v, want a %s entry", files, want)
+	}
+}
+
+func TestUpstreamDesiredFilesRendersKubeadmConfigPerRole(t *testing.T) {
+	tests := []struct {
+		name    string
+		host    *cluster.ZarfHost
+		wantHas []string
+		wantNot []string
+	}{
+		{
+			name:    "leader",
+			host:    &cluster.ZarfHost{Hostname: "leader-1", Metadata: cluster.ZarfHostMetadata{IsLeader: true}},
+			wantHas: []string{"kind: ClusterConfiguration", "kind: InitConfiguration", "kind: KubeletConfiguration"},
+			wantNot: []string{"kind: JoinConfiguration"},
+		},
+		{
+			name:    "joining controller",
+			host:    &cluster.ZarfHost{Hostname: "controller-2", Role: cluster.RoleController},
+			wantHas: []string{"kind: JoinConfiguration", "kind: KubeletConfiguration", "controlPlane"},
+			wantNot: []string{"kind: ClusterConfiguration", "kind: InitConfiguration"},
+		},
+		{
+			name:    "worker",
+			host:    &cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker},
+			wantHas: []string{"kind: JoinConfiguration", "kind: KubeletConfiguration"},
+			wantNot: []string{"kind: ClusterConfiguration", "kind: InitConfiguration", "controlPlane"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := newTestUpstream()
+
+			files, err := d.DesiredFiles(tt.host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+
+			if err != nil {
+				t.Fatalf("DesiredFiles() error = %v, want nil", err)
+			}
+			df, ok := files[kubeadmConfigPath]
+			if !ok {
+				t.Fatalf("DesiredFiles() = %v, want a %s entry", files, kubeadmConfigPath)
+			}
+			content := string(df.Content)
+			for _, want := range tt.wantHas {
+				if !strings.Contains(content, want) {
+					t.Fatalf("kubeadm config = %q, want it to contain %q", content, want)
+				}
+			}
+			for _, notWant := range tt.wantNot {
+				if strings.Contains(content, notWant) {
+					t.Fatalf("kubeadm config = %q, want it to not contain %q", content, notWant)
+				}
+			}
+		})
 	}
 }
 
