@@ -254,7 +254,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 	// (registries/audit/pss) on those is rolled out via the engine-config-sync phases,
 	// which pair the write with a drain/restart/uncordon of the node.
 	if !d.engineServiceRunning(ctx, host) {
-		desired, err := d.DesiredFiles(host, run, dis)
+		desired, err := d.DesiredFiles(ctx, host, run, dis)
 		if err != nil {
 			logger.From(ctx).Warn("failed to render desired files", "host", host)
 		}
@@ -352,7 +352,7 @@ func (d *RancherCommon) engineServiceRunning(ctx context.Context, h *cluster.Zar
 // DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for
 // the given host/run/dis, keyed by their full destination path. Content is identical across
 // hosts of the same run (no host-varying fields are involved), unlike config.yaml.
-func (d *RancherCommon) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	if len(run.Registries) > 0 {

@@ -40,6 +40,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
@@ -82,6 +83,10 @@ type AssembleOptions struct {
 // keyDisable is the engine config key listing packaged components the engine must not deploy.
 const keyDisable = "disable"
 
+// distroTypeUpstream is Upstream's `.spec.type` id (distrocfg.DistroUpstream) -- repeated here
+// rather than imported to avoid a dependency from this package onto src/types/distrocfg.
+const distroTypeUpstream = "upstream"
+
 // logUnknownEngineConfig logs engine config keys -- and `disable:` values -- the distro version
 // being packaged does not recognize, so a typo is visible here rather than only on every node at
 // install time.
@@ -105,6 +110,13 @@ func logUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
 		return
 	}
 
+	if d.Spec.Type == distroTypeUpstream {
+		if node, ok := entry.Server.(extract.FieldNode); ok {
+			logUnknownNestedEngineConfig(ctx, d, node, cfg)
+		}
+		return
+	}
+
 	// A package installs controllers and workers alike, so a key either role accepts belongs
 	// here.
 	valid := gen.Keys(entry.Server)
@@ -123,6 +135,28 @@ func logUnknownEngineConfig(ctx context.Context, d distro.ZarfDistro) {
 	for _, name := range gen.UnknownAddons(cfg[keyDisable], entry.Addons) {
 		l.Debug("engine config disables a component this distro/version does not package",
 			"distro", d.Spec.Type, "version", d.Spec.Version, "component", name)
+	}
+}
+
+// logUnknownNestedEngineConfig is logUnknownEngineConfig's upstream twin: it recurses through
+// cfg alongside node instead of checking a flat key set, since upstream's schema is a nested
+// extract.FieldNode tree, not a flag-derived struct gen.Keys can reflect over. Warn-only, like
+// its caller -- nothing here mutates cfg.
+func logUnknownNestedEngineConfig(ctx context.Context, d distro.ZarfDistro, node extract.FieldNode, cfg map[string]any) {
+	l := logger.From(ctx)
+	for _, k := range slices.Sorted(maps.Keys(cfg)) {
+		child, known := node.Children[k]
+		if !known {
+			l.Debug("engine config key not recognized for this distro/version, it will be dropped at install time",
+				"distro", d.Spec.Type, "version", d.Spec.Version, "key", k)
+			continue
+		}
+		if child.Children == nil {
+			continue
+		}
+		if nested := engineConfigKeys(cfg[k]); len(nested) > 0 {
+			logUnknownNestedEngineConfig(ctx, d, child, nested)
+		}
 	}
 }
 

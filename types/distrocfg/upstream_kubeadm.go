@@ -15,12 +15,16 @@
 package distrocfg
 
 import (
+	"context"
 	"strings"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
 	"github.com/k0sproject/dig"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // For Rancher, `.spec.config.engine.config` is a flat bag of CLI flags (`cluster-cidr`,
@@ -38,6 +42,14 @@ const (
 	// kubeadmConfigPath is where cargoship renders the kubeadm config documents. Nothing reads
 	// this path automatically -- it is passed to `kubeadm init --config`/`kubeadm join --config`
 	// explicitly, which is a distro-specific bootstrap step, not DesiredFiles' concern.
+	//
+	// Rewriting this file after init/join does not, by itself, change anything: kubeadm only
+	// reads ClusterConfiguration/InitConfiguration/JoinConfiguration at that one-shot bootstrap
+	// moment, so a drifted ClusterConfiguration/apiServer/etc. key needs `kubeadm upgrade apply
+	// --config` (or hand-editing the control plane's static pod manifests) to take effect --
+	// engine-config-sync's rewrite-and-restart-the-service cycle does not do that for kubeadm.
+	// The KubeletConfiguration document in this same file is the exception: the kubelet re-reads
+	// its own config on restart, so a kubelet key does get picked up by that cycle.
 	kubeadmConfigPath = "/etc/kubernetes/kubeadm-config.yaml"
 	// kubeadmAPIVersion is the kubeadm config API version cargoship renders.
 	kubeadmAPIVersion = "kubeadm.k8s.io/v1beta4"
@@ -65,8 +77,9 @@ func extraArg(name, value string) dig.Mapping {
 // buildClusterConfiguration renders kubeadm's ClusterConfiguration: the cluster-wide document a
 // leader's `kubeadm init` reads. Every other host only ever sees a JoinConfiguration -- this
 // object is deliberately never rendered for them.
-func buildClusterConfiguration(dis distro.ZarfDistro, run cluster.ZarfRuntimeMeta) dig.Mapping {
+func buildClusterConfiguration(ctx context.Context, dis distro.ZarfDistro, run cluster.ZarfRuntimeMeta) dig.Mapping {
 	nodeConfig := dis.Spec.Config.Engine.Dup()
+	validateNestedEngineConfig(ctx, dis.Spec.Version, nodeConfig.DigMapping(config.EngineConfig))
 
 	svc := nodeConfig.DigString(config.EngineConfig, keyNetworking, keyServiceSubnet)
 	if svc == "" {
@@ -236,5 +249,46 @@ func buildKubeletConfiguration() dig.Mapping {
 		"apiVersion":   kubeletConfigAPIVersion,
 		"kind":         "KubeletConfiguration",
 		"cgroupDriver": "systemd",
+	}
+}
+
+// validateNestedEngineConfig drops any `.spec.config.engine.config` key -- at any depth -- that
+// isn't part of kubeadm's ClusterConfiguration for this version, logging each one removed at
+// debug, the same drop-and-log contract RancherCommon.validateEngineConfig gives k3s/rke2. If no
+// generated schema exists for this version, there's nothing to check against, so it warns once
+// and leaves cfg untouched.
+func validateNestedEngineConfig(ctx context.Context, version string, cfg dig.Mapping) {
+	entry, ok := gen.Lookup(DistroUpstream, version)
+	if !ok {
+		logger.From(ctx).Warn("no generated engine config schema for this distro/version, skipping config key validation", "distro", DistroUpstream, "version", version)
+		return
+	}
+
+	node, ok := entry.Server.(extract.FieldNode)
+	if !ok {
+		return
+	}
+
+	dropUnknownNested(ctx, version, cfg, node)
+}
+
+// dropUnknownNested recurses into cfg alongside node, deleting any key cfg has that node doesn't
+// recognize. A leaf node (Children == nil) stops the recursion there -- its value is a scalar,
+// slice, or map, and passes through unvalidated, same as ExtractNestedKeys' extraction stopped
+// there.
+func dropUnknownNested(ctx context.Context, version string, cfg dig.Mapping, node extract.FieldNode) {
+	for k, v := range cfg {
+		child, known := node.Children[k]
+		if !known {
+			logger.From(ctx).Debug("engine config key not recognized for this distro/version, dropping it from the kubeadm config", "distro", DistroUpstream, "version", version, "key", k)
+			delete(cfg, k)
+			continue
+		}
+		if child.Children == nil {
+			continue
+		}
+		if nested, ok := v.(dig.Mapping); ok {
+			dropUnknownNested(ctx, version, nested, child)
+		}
 	}
 }
