@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-32946831.js";
+            window.path_to_searchindex_js = "searchindex-35f08d76.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8e84177d.js"></script>
+        <script src="toc-b39b55ae.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -16953,6 +16953,27 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <h2 id="what-would-justify-revisiting"><a class="header" href="#what-would-justify-revisiting">What would justify revisiting</a></h2>
 <p>Not a state file, and not inferring removal from absence. The variant that survives every argument above is a tombstone: the host stays in the config for one apply, marked for removal, so the connection details are present and current rather than remembered, and the operator is editing a file that says in the present tense which machine is to be destroyed. OpenTofu’s own <code>removed</code> block is precedent for stating a removal explicitly rather than inferring it.</p>
 <p>What that needs from the phases is exactly what #339 builds – act on this subset, use those other hosts for access – and a subset reset does both halves on the target, so the orphaned etcd member stops being a hazard. If #339 lands, the remaining work is a per-host config marker, a quorum guard before a controller is removed, and a decision on when the marker is cleaned up. This check stays either way, as the backstop for a host deleted outright rather than tombstoned.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-a-missing-dnf-versionlock-plugin-warns-instead-of-failing-the-install"><a class="header" href="#why-a-missing-dnf-versionlock-plugin-warns-instead-of-failing-the-install">Why a missing dnf versionlock plugin warns instead of failing the install</a></h1>
+<p>After installing the engine packages, cargoship pins them at the installed version so a host-level package manager update cannot move the engine out from under it (<code>pkg/phase/51_package_pin.go</code>). On Debian-family hosts that is <code>apt-mark hold</code>; on RHEL-family hosts it is <code>dnf versionlock add</code>. The two are not equally available, and that asymmetry is the whole of this decision.</p>
+<h2 id="apt-mark-is-always-there-versionlock-is-not"><a class="header" href="#apt-mark-is-always-there-versionlock-is-not">apt-mark is always there; versionlock is not</a></h2>
+<p><code>apt-mark</code> ships inside the <code>apt</code> package itself. Any Debian-family host that just installed a <code>.deb</code> has it, so a failing <code>apt-mark hold</code> means something is genuinely wrong and <code>holdAPTPackages</code> returns the error.</p>
+<p><code>dnf versionlock</code> is a plugin in a separate package – <code>python3-dnf-plugin-versionlock</code> on dnf4, <code>dnf5-plugin-versionlock</code> on dnf5 – and a minimal RHEL-family install does not include it. On such a host <code>dnf versionlock add</code> exits non-zero with <code>No such command: versionlock</code>, which under fail-fast turned a perfectly good install into a failed apply.</p>
+<h2 id="cargoship-cannot-fix-it-and-cannot-fix-it-later"><a class="header" href="#cargoship-cannot-fix-it-and-cannot-fix-it-later">Cargoship cannot fix it, and cannot fix it later</a></h2>
+<p>The obvious repair is to install the plugin first, and cargoship cannot. It runs from a management node against an air-gapped fleet, so a package that is not staged inside the package being applied has to come from a repository the host can reach, and the versionlock plugin is not staged.</p>
+<p>Cargoship does install <code>container-selinux</code> by name, in <code>pkg/phase/21_prepare_selinux.go</code>, and that phase is fatal on failure. It looks like a counterexample and is in fact the rule this decision follows. The staged RPM set carries <code>k3s-selinux</code> / <code>rke2-selinux</code>, and those declare <code>Requires: container-selinux</code>. With no repository to resolve it from, dnf installing the staged file fails on the unmet dependency unless <code>container-selinux</code> is already on the host, which is why that phase runs at 21, ahead of the install, and why it stops the run when it cannot succeed.</p>
+<p>The distinction is not by-name against staged, it is prerequisite against convenience. Without <code>container-selinux</code> there is no engine install to pin. Without versionlock the install completes and is merely unpinned. Failing one and warning the other is the same rule applied to two different stakes.</p>
+<p>So the choice on an unpinnable host is between installing unpinned and not installing at all.</p>
+<p>Failing is also badly timed. By the time pinning runs, <code>InstallPackage</code> has already succeeded and the engine packages are on disk. Returning an error there does not undo the install; it reports a failure for a host that is in fact installed, and the operator’s only route forward is to stop the run from trying to pin. An unpinned host is a weaker guarantee than a pinned one, but it is a working host, and the warning names it and the packages it left unpinned.</p>
+<h2 id="what-is-still-fatal"><a class="header" href="#what-is-still-fatal">What is still fatal</a></h2>
+<p>The tolerance is deliberately narrow, and it lives in <code>holdRPMPackages</code> rather than in the shared <code>installAndPinPackagesFor</code>, so it cannot spread to the apt path:</p>
+<ul>
+<li>A host that <em>has</em> versionlock and still fails to pin is a real error. The probe (<code>dnf versionlock --help</code>, chosen because it reads no repository metadata and touches no existing lock) is what separates “this tooling is absent” from “this tooling failed”.</li>
+<li>A staged file whose package name cannot be read fails the phase on either package manager. That is a property of the artifact, not of the host’s pinning tooling, and <code>packageNames</code> gives up on the first file it cannot read – so continuing would leave <em>every</em> package on the host unpinned while reporting success.</li>
+</ul>
+<h2 id="what-would-justify-revisiting-1"><a class="header" href="#what-would-justify-revisiting-1">What would justify revisiting</a></h2>
+<p>Staging the versionlock plugin as part of the package, so a RHEL-family host can be given the plugin before the pin instead of excused from it. That turns an unpinnable host back into a fatal error, which is the stronger behavior, and it is the only change that should reverse this.</p>
+<p>Note also that nothing unpins yet: the comment on <code>holdAPTPackages</code> defers the unhold needed before an upgrade installs a newer set to the upgrade phase, which does not exist. Until it does, the warning is the only record that a host’s engine is not pinned.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
 <p>Cargoship’s Ansible Vault support (<code>cargoship vault encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>
