@@ -111,6 +111,12 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*GenericPhase\) VersionGreater\(host \*cluster.ZarfHost, version string\) bool](<#GenericPhase.VersionGreater>)
   - [func \(p \*GenericPhase\) VersionLess\(host \*cluster.ZarfHost, version string\) bool](<#GenericPhase.VersionLess>)
   - [func \(p \*GenericPhase\) Wet\(host fmt.Stringer, msg string, funcs ...errorfunc\) error](<#GenericPhase.Wet>)
+- [type ImportImages](<#ImportImages>)
+  - [func \(p \*ImportImages\) Explanation\(\) string](<#ImportImages.Explanation>)
+  - [func \(p \*ImportImages\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#ImportImages.Prepare>)
+  - [func \(p \*ImportImages\) Run\(ctx context.Context\) error](<#ImportImages.Run>)
+  - [func \(p \*ImportImages\) ShouldRun\(\) bool](<#ImportImages.ShouldRun>)
+  - [func \(p \*ImportImages\) Title\(\) string](<#ImportImages.Title>)
 - [type InitializeControllers](<#InitializeControllers>)
   - [func \(p \*InitializeControllers\) Explanation\(\) string](<#InitializeControllers.Explanation>)
   - [func \(p \*InitializeControllers\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InitializeControllers.Prepare>)
@@ -1326,6 +1332,64 @@ func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) er
 ```
 
 Wet is a shorthand for manager.Wet
+
+<a name="ImportImages"></a>
+## type [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L29-L34>)
+
+ImportImages imports uploaded image tarballs into a distro's engine, for a distro whose engine does not do this on its own. rke2 and k3s's own agents import automatically, so most applies skip this phase entirely \-\- ShouldRun is false unless the distro opts in.
+
+```go
+type ImportImages struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+```
+
+<a name="ImportImages.Explanation"></a>
+### func \(\*ImportImages\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L42>)
+
+```go
+func (p *ImportImages) Explanation() string
+```
+
+Explanation about the current phase, used for documentation generation
+
+<a name="ImportImages.Prepare"></a>
+### func \(\*ImportImages\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L47>)
+
+```go
+func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+```
+
+Prepare the phase
+
+<a name="ImportImages.Run"></a>
+### func \(\*ImportImages\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L64>)
+
+```go
+func (p *ImportImages) Run(ctx context.Context) error
+```
+
+Run the phase
+
+<a name="ImportImages.ShouldRun"></a>
+### func \(\*ImportImages\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L58>)
+
+```go
+func (p *ImportImages) ShouldRun() bool
+```
+
+ShouldRun is true when the distro needs images imported for it and there is somewhere to import them from.
+
+<a name="ImportImages.Title"></a>
+### func \(\*ImportImages\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L37>)
+
+```go
+func (p *ImportImages) Title() string
+```
+
+Title for the phase
 
 <a name="InitializeControllers"></a>
 ## type [InitializeControllers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L39>)
