@@ -10,7 +10,13 @@ After installing the engine packages, cargoship pins them at the installed versi
 
 ## Cargoship cannot fix it, and cannot fix it later
 
-The obvious repair is to install the plugin first, and cargoship cannot. It runs from a management node against an air-gapped fleet: the only packages reaching a host are the ones staged inside the package being applied, and the versionlock plugin is not one of them. There is no repository to reach for it at apply time, so the choice on such a host is between installing unpinned and not installing at all.
+The obvious repair is to install the plugin first, and cargoship cannot. It runs from a management node against an air-gapped fleet, so a package that is not staged inside the package being applied has to come from a repository the host can reach, and the versionlock plugin is not staged.
+
+Cargoship does install `container-selinux` by name, in `pkg/phase/21_prepare_selinux.go`, and that phase is fatal on failure. It looks like a counterexample and is in fact the rule this decision follows. The staged RPM set carries `k3s-selinux` / `rke2-selinux`, and those declare `Requires: container-selinux`. With no repository to resolve it from, dnf installing the staged file fails on the unmet dependency unless `container-selinux` is already on the host, which is why that phase runs at 21, ahead of the install, and why it stops the run when it cannot succeed.
+
+The distinction is not by-name against staged, it is prerequisite against convenience. Without `container-selinux` there is no engine install to pin. Without versionlock the install completes and is merely unpinned. Failing one and warning the other is the same rule applied to two different stakes.
+
+So the choice on an unpinnable host is between installing unpinned and not installing at all.
 
 Failing is also badly timed. By the time pinning runs, `InstallPackage` has already succeeded and the engine packages are on disk. Returning an error there does not undo the install; it reports a failure for a host that is in fact installed, and the operator's only route forward is to stop the run from trying to pin. An unpinned host is a weaker guarantee than a pinned one, but it is a working host, and the warning names it and the packages it left unpinned.
 
