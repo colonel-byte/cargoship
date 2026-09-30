@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.28.2](https://github.com/colonel-byte/cargoship/compare/v0.28.1...v0.28.2) (2026-09-30)
+
+
+### Features
+
+* **install:** address issue when dnf pin is not present ([#543](https://github.com/colonel-byte/cargoship/issues/543)) ([d27943c](https://github.com/colonel-byte/cargoship/commit/d27943c1816b3324985f813b72d2bb554ea1f66e))
+
+
+### Bug Fixes
+
+* **gitattributes:** drop stale src/ prefix from the generated Go pattern ([#544](https://github.com/colonel-byte/cargoship/issues/544)) ([8241486](https://github.com/colonel-byte/cargoship/commit/824148639afe89b52a8ba3e99e9217c0220adefb))
+
+
+### Documentation
+
+* **agents:** symlink CLAUDE.md to AGENTS.md and warn on its root-only scope ([#545](https://github.com/colonel-byte/cargoship/issues/545)) ([09d5858](https://github.com/colonel-byte/cargoship/commit/09d5858c40fb33dc3ad09890765ae81ceabc48f8))
+
+
+### Build
+
+* **deps:** bump https://github.com/golangci/golangci-lint from v2.13.2 to 2.14.0 in the core group ([#541](https://github.com/colonel-byte/cargoship/issues/541)) ([4328aab](https://github.com/colonel-byte/cargoship/commit/4328aab4c822632b2dd8625403da34a2c18c67eb))
+
 ## [0.28.1](https://github.com/colonel-byte/cargoship/compare/v0.28.0...v0.28.1) (2026-09-30)
 
 
