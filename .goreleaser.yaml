@@ -99,6 +99,7 @@ nfpms:
     goamd64:
       - v2
       - v3
+      - v4
     mtime: "{{ .CommitDate }}"
     contents:
       # The Ansible collection. /usr/share/ansible/collections is on ansible-core's default
