@@ -37,6 +37,7 @@ const (
 	yamlExtensionRegex   = "^x-"
 )
 
+// Where the generated schemas, their embedded copies, and their docs are written.
 var (
 	SchemaDir         = "schema"
 	SchemaEmbedDir    = filepath.Join("pkg", "schema", "embedded")

@@ -146,6 +146,6 @@ func removeExample(dir string) error {
 		return err
 	}
 	// Fails while the line still holds examples, which is exactly when it should stay.
-	os.Remove(filepath.Dir(dir))
+	os.Remove(filepath.Dir(dir)) //nolint:errcheck // fails while the line still holds examples, which is when it should stay
 	return nil
 }

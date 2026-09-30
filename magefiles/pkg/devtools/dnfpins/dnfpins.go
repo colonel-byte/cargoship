@@ -25,6 +25,7 @@ import (
 	"time"
 )
 
+// The AlmaLinux 10 repository and the files whose pins are rewritten from it.
 const (
 	AlmaLinuxBaseURL      = "https://repo.almalinux.org/almalinux/10"
 	AnsibleDockerfilePath = "containers/ansible/Dockerfile"
@@ -38,11 +39,13 @@ type RepomdXML struct {
 	Data    []RepomdDataElem `xml:"data"`
 }
 
+// RepomdDataElem is one <data> element of a repomd.xml index.
 type RepomdDataElem struct {
 	Type     string         `xml:"type,attr"`
 	Location RepomdLocation `xml:"location"`
 }
 
+// RepomdLocation is a location href, relative to the repository root.
 type RepomdLocation struct {
 	Href string `xml:"href,attr"`
 }
@@ -53,6 +56,7 @@ type PrimaryXML struct {
 	Packages []RpmPackage `xml:"package"`
 }
 
+// RpmPackage is one <package> entry of a primary.xml document.
 type RpmPackage struct {
 	Name     string         `xml:"name"`
 	Arch     string         `xml:"arch"`
@@ -61,6 +65,7 @@ type RpmPackage struct {
 	Location RepomdLocation `xml:"location"`
 }
 
+// RpmVersion is an RPM epoch-version-release triple, as primary.xml spells it.
 type RpmVersion struct {
 	Epoch string `xml:"epoch,attr"`
 	Ver   string `xml:"ver,attr"`
@@ -75,8 +80,9 @@ func (v RpmVersion) FullVersion() string {
 // Compare compares RpmVersion to other using standard RPM EVR comparison semantics.
 // Returns -1 if v < other, 0 if v == other, 1 if v > other.
 func (v RpmVersion) Compare(other RpmVersion) int {
-	vEpoch, _ := strconv.Atoi(v.Epoch)
-	oEpoch, _ := strconv.Atoi(other.Epoch)
+	// An absent or non-numeric epoch is epoch 0 in RPM, which is what Atoi returns on error.
+	vEpoch, _ := strconv.Atoi(v.Epoch)     //nolint:errcheck // absent epoch is 0
+	oEpoch, _ := strconv.Atoi(other.Epoch) //nolint:errcheck // absent epoch is 0
 	if vEpoch != oEpoch {
 		if vEpoch < oEpoch {
 			return -1
@@ -104,7 +110,7 @@ func FetchPrimaryXML(ctx context.Context, client *http.Client, repo string) (*Pr
 	if err != nil {
 		return nil, fmt.Errorf("fetching %s: %w", repomdURL, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("fetching %s: unexpected HTTP %d", repomdURL, resp.StatusCode)
@@ -136,7 +142,7 @@ func FetchPrimaryXML(ctx context.Context, client *http.Client, repo string) (*Pr
 	if err != nil {
 		return nil, fmt.Errorf("fetching %s: %w", primaryURL, err)
 	}
-	defer pResp.Body.Close()
+	defer pResp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
 
 	if pResp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("fetching %s: unexpected HTTP %d", primaryURL, pResp.StatusCode)
@@ -146,7 +152,7 @@ func FetchPrimaryXML(ctx context.Context, client *http.Client, repo string) (*Pr
 	if err != nil {
 		return nil, fmt.Errorf("decompressing %s: %w", primaryURL, err)
 	}
-	defer gzReader.Close()
+	defer gzReader.Close() //nolint:errcheck // decompressor is read to completion, nothing to do with a close error
 
 	var primary PrimaryXML
 	if err := xml.NewDecoder(gzReader).Decode(&primary); err != nil {
@@ -174,6 +180,7 @@ func FindLatestRPM(primary *PrimaryXML, pkgName string) (*RpmPackage, error) {
 	return newest, nil
 }
 
+// AlmaLinuxPins holds the newest version of each package the containers pin.
 type AlmaLinuxPins struct {
 	AnsibleCore    string
 	BashCompletion string

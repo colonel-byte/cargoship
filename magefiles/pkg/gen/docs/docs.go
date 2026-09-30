@@ -101,9 +101,6 @@ func GenerateDocument() error {
 	if err := generateBookPages(); err != nil {
 		return err
 	}
-	if err := generateSummary(); err != nil {
-		return err
-	}
 
-	return nil
+	return generateSummary()
 }

@@ -54,7 +54,7 @@ func GitCommit() string {
 
 // CleanBuild removes compiled binary artifacts under build/.
 func CleanBuild() error {
-	files, _ := filepath.Glob("build/cargoship_*")
+	files, _ := filepath.Glob("build/cargoship_*") //nolint:errcheck // the only error is a malformed pattern, and this one is a constant
 	for _, f := range files {
 		fmt.Println("removing: " + f)
 		if err := os.Remove(f); err != nil {

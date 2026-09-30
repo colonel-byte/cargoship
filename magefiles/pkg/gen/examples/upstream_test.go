@@ -84,7 +84,9 @@ const (
 func TestKubeadmConstants(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/kubernetes/kubernetes/v1.35.8/cmd/kubeadm/app/constants/constants.go", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(testKubeadmConstants))
+		if _, err := w.Write([]byte(testKubeadmConstants)); err != nil {
+			t.Errorf("writing test response: %v", err)
+		}
 	})
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -129,18 +131,24 @@ func newTestRPMRepo(t *testing.T) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repodata/repomd.xml", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+		if _, err := w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
 <repomd xmlns="http://linux.duke.edu/metadata/repo">
   <data type="primary">
     <location href="repodata/primary.xml.gz"/>
   </data>
 </repomd>
-`))
+`)); err != nil {
+			t.Errorf("writing test response: %v", err)
+		}
 	})
 	mux.HandleFunc("/repodata/primary.xml.gz", func(w http.ResponseWriter, _ *http.Request) {
 		gz := gzip.NewWriter(w)
-		_, _ = gz.Write([]byte(testPrimaryXML))
-		_ = gz.Close()
+		if _, err := gz.Write([]byte(testPrimaryXML)); err != nil {
+			t.Errorf("writing test response: %v", err)
+		}
+		if err := gz.Close(); err != nil {
+			t.Errorf("closing test response: %v", err)
+		}
 	})
 	return httptest.NewServer(mux)
 }

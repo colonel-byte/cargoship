@@ -41,7 +41,7 @@ func TestGenerate(t *testing.T) {
 	for _, filename := range expectedFiles {
 		path := filepath.Join(tmpDir, filename)
 		info, err := os.Stat(path)
-		assert.NoError(t, err, "file should exist: %s", filename)
+		require.NoError(t, err, "file should exist: %s", filename)
 		assert.Positive(t, info.Size(), "file should not be empty: %s", filename)
 	}
 }

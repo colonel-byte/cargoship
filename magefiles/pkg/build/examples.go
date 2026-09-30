@@ -26,6 +26,7 @@ import (
 	"github.com/magefile/mage/sh"
 )
 
+// BuildDir is where compiled binaries and other build artifacts are written.
 const (
 	BuildDir = "build"
 )

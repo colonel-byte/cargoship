@@ -218,10 +218,10 @@ func writeFileAtomic(path string, data []byte) error {
 		return fmt.Errorf("creating temp file in %s: %w", dir, err)
 	}
 	tmp := f.Name()
-	defer os.Remove(tmp)
+	defer os.Remove(tmp) //nolint:errcheck // best-effort cleanup of a temp file the rename usually consumed
 
 	if _, err := f.Write(data); err != nil {
-		f.Close()
+		f.Close() //nolint:errcheck // the write error below is the real failure; a close error cannot add to it
 		return fmt.Errorf("writing %s: %w", tmp, err)
 	}
 	if err := f.Close(); err != nil {

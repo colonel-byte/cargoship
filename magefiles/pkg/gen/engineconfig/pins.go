@@ -294,7 +294,7 @@ func PullEngineSource(p SourcePull) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	defer os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup of a temp file the rename usually consumed
 
 	srcDir := filepath.Join(tmp, "src")
 	cloneCmd := exec.Command("git", "clone", "--quiet", "--depth", "1", "--branch", p.Tag, p.RepoURL, srcDir)

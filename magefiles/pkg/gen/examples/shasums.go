@@ -168,7 +168,7 @@ func (s *exampleShasums) published(url string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("checking %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -213,7 +213,7 @@ func hashURL(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fetching %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
 
 	if resp.StatusCode == http.StatusNotFound {
 		return "", nil

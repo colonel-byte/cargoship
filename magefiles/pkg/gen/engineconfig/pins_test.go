@@ -112,7 +112,7 @@ func TestEnginePinsLookupAndPulls(t *testing.T) {
 	assert.Equal(t, "k3s", d.Name)
 
 	_, err = pins.Distro("nonexistent")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	pulls, err := pins.Pulls()
 	require.NoError(t, err)

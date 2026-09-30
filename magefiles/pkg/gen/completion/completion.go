@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package completion generates the shell completion scripts under hack/completion.
 package completion
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -41,8 +43,8 @@ func Generate(targetDir string) error {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
-				return cmd.NewCargoshipCommand().GenBashCompletionV2(f, true)
+				err = cmd.NewCargoshipCommand().GenBashCompletionV2(f, true)
+				return errors.Join(err, f.Close())
 			},
 		},
 		{
@@ -53,8 +55,8 @@ func Generate(targetDir string) error {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
-				return cmd.NewCargoshipCommand().GenZshCompletion(f)
+				err = cmd.NewCargoshipCommand().GenZshCompletion(f)
+				return errors.Join(err, f.Close())
 			},
 		},
 		{
@@ -65,8 +67,8 @@ func Generate(targetDir string) error {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
-				return cmd.NewCargoshipCommand().GenFishCompletion(f, true)
+				err = cmd.NewCargoshipCommand().GenFishCompletion(f, true)
+				return errors.Join(err, f.Close())
 			},
 		},
 		{
@@ -77,8 +79,8 @@ func Generate(targetDir string) error {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
-				return cmd.NewCargoshipCommand().GenPowerShellCompletionWithDesc(f)
+				err = cmd.NewCargoshipCommand().GenPowerShellCompletionWithDesc(f)
+				return errors.Join(err, f.Close())
 			},
 		},
 	}

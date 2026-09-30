@@ -68,7 +68,7 @@ func TestGenerateDocs(t *testing.T) {
 	for _, target := range schema.Targets() {
 		docPath := filepath.Join(tmpDir, target.DocFile)
 		data, err := os.ReadFile(docPath)
-		assert.NoError(t, err, "expected doc file to exist: %s", target.DocFile)
+		require.NoError(t, err, "expected doc file to exist: %s", target.DocFile)
 		assert.NotEmpty(t, data)
 	}
 }
@@ -94,11 +94,11 @@ func TestGenerateSchemas(t *testing.T) {
 		embedFile := filepath.Join(schema.SchemaEmbedDir, target.SchemaPath)
 
 		sData, err := os.ReadFile(schemaFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotEmpty(t, sData)
 
 		eData, err := os.ReadFile(embedFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sData, eData)
 	}
 }
