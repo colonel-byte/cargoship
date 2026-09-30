@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/pkg/node"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -39,6 +40,7 @@ type UpgradeHosts struct {
 	service string
 	hosts   cluster.ZarfHosts
 	leader  *cluster.ZarfHost
+	dis     *distro.ZarfDistro
 }
 
 // ShouldRun is true when there are workers
@@ -59,6 +61,18 @@ func (p *UpgradeHosts) installDistro(ctx context.Context, h *cluster.ZarfHost) e
 		return h.Metadata.Install(ctx, h)
 	}
 	return nil
+}
+
+// preStartUpgrade runs the distro's kubeadm-style upgrade step, when it implements one, after the
+// new packages are staged but before the service restarts. A no-op for rke2/k3s, whose plain
+// restart on the new binary needs nothing in between.
+func (p *UpgradeHosts) preStartUpgrade(ctx context.Context, h *cluster.ZarfHost) error {
+	u, ok := p.Distro.(distrocfg.PreStartUpgrader)
+	if !ok {
+		return nil
+	}
+	logger.From(ctx).Info("running pre-start upgrade step", "host", h)
+	return u.PreStartUpgrade(ctx, h, *p.dis)
 }
 
 func (p *UpgradeHosts) startService(ctx context.Context, h *cluster.ZarfHost) error {
