@@ -50,10 +50,10 @@ builds:
       - amd64
       # - riscv64
     goamd64:
-      - v1
+      # - v1
       # - v2
-      # - v3
-      - v4
+      - v3
+      # - v4
     goarm:
       # - "6"
       - "7"
@@ -68,7 +68,7 @@ archives:
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64{{- if ne .Amd64 "v4" }}_{{ .Amd64 }}{{ end }}
+      {{- if eq .Arch "amd64" }}x86_64{{- if ne .Amd64 "v3" }}_{{ .Amd64 }}{{ end }}
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
