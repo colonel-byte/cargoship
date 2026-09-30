@@ -89,6 +89,11 @@ func writeRegistry(entries []registryEntry) error {
 		fmt.Fprintf(&buf, "\t%q: {\n", distro)
 		for _, e := range byDistro[distro] {
 			alias := registryImportAlias(e)
+			if distro == "upstream" {
+				fmt.Fprintf(&buf, "\t\t%q: {Server: %s.%s, Addons: %s.Addons, CNIs: %s.CNIs, IngressControllers: %s.IngressControllers},\n",
+					e.Pkg, alias, upstreamKeysVar, alias, alias, alias)
+				continue
+			}
 			fmt.Fprintf(&buf, "\t\t%q: {Server: %s.ServerConfig{}, Agent: %s.AgentConfig{}, Addons: %s.Addons, CNIs: %s.CNIs, IngressControllers: %s.IngressControllers},\n",
 				e.Pkg, alias, alias, alias, alias, alias)
 		}

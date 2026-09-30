@@ -31,6 +31,12 @@ import (
 	rke2_v1_35 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_35"
 	rke2_v1_36 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_36"
 	rke2_v1_37 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_37"
+	upstream_v1_32 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_32"
+	upstream_v1_33 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_33"
+	upstream_v1_34 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_34"
+	upstream_v1_35 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_35"
+	upstream_v1_36 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_36"
+	upstream_v1_37 "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_37"
 )
 
 // Registry maps distro id (e.g. "k3s", "rke2") -> sanitized minor version package
@@ -53,5 +59,13 @@ var Registry = map[string]map[string]Entry{
 		"v1_35": {Server: rke2_v1_35.ServerConfig{}, Agent: rke2_v1_35.AgentConfig{}, Addons: rke2_v1_35.Addons, CNIs: rke2_v1_35.CNIs, IngressControllers: rke2_v1_35.IngressControllers},
 		"v1_36": {Server: rke2_v1_36.ServerConfig{}, Agent: rke2_v1_36.AgentConfig{}, Addons: rke2_v1_36.Addons, CNIs: rke2_v1_36.CNIs, IngressControllers: rke2_v1_36.IngressControllers},
 		"v1_37": {Server: rke2_v1_37.ServerConfig{}, Agent: rke2_v1_37.AgentConfig{}, Addons: rke2_v1_37.Addons, CNIs: rke2_v1_37.CNIs, IngressControllers: rke2_v1_37.IngressControllers},
+	},
+	"upstream": {
+		"v1_32": {Server: upstream_v1_32.ClusterConfigurationKeys, Addons: upstream_v1_32.Addons, CNIs: upstream_v1_32.CNIs, IngressControllers: upstream_v1_32.IngressControllers},
+		"v1_33": {Server: upstream_v1_33.ClusterConfigurationKeys, Addons: upstream_v1_33.Addons, CNIs: upstream_v1_33.CNIs, IngressControllers: upstream_v1_33.IngressControllers},
+		"v1_34": {Server: upstream_v1_34.ClusterConfigurationKeys, Addons: upstream_v1_34.Addons, CNIs: upstream_v1_34.CNIs, IngressControllers: upstream_v1_34.IngressControllers},
+		"v1_35": {Server: upstream_v1_35.ClusterConfigurationKeys, Addons: upstream_v1_35.Addons, CNIs: upstream_v1_35.CNIs, IngressControllers: upstream_v1_35.IngressControllers},
+		"v1_36": {Server: upstream_v1_36.ClusterConfigurationKeys, Addons: upstream_v1_36.Addons, CNIs: upstream_v1_36.CNIs, IngressControllers: upstream_v1_36.IngressControllers},
+		"v1_37": {Server: upstream_v1_37.ClusterConfigurationKeys, Addons: upstream_v1_37.Addons, CNIs: upstream_v1_37.CNIs, IngressControllers: upstream_v1_37.IngressControllers},
 	},
 }

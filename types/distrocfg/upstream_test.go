@@ -171,7 +171,7 @@ func TestUpstreamConfigureEngineWritesDesiredFiles(t *testing.T) {
 func TestUpstreamDesiredFilesRendersContainerdAndCrictl(t *testing.T) {
 	d := newTestUpstream()
 
-	files, err := d.DesiredFiles(&cluster.ZarfHost{}, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
 
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -197,7 +197,7 @@ func TestUpstreamDesiredFilesRendersRegistryHostsTOML(t *testing.T) {
 		},
 	}
 
-	files, err := d.DesiredFiles(&cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, distro.ZarfDistro{})
 
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v, want nil", err)
@@ -239,7 +239,7 @@ func TestUpstreamDesiredFilesRendersKubeadmConfigPerRole(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newTestUpstream()
 
-			files, err := d.DesiredFiles(tt.host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+			files, err := d.DesiredFiles(context.Background(), tt.host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
 
 			if err != nil {
 				t.Fatalf("DesiredFiles() error = %v, want nil", err)

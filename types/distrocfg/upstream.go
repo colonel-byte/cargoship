@@ -154,8 +154,8 @@ func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string {
 // RancherCommon.ConfigureEngine there is no already-running guard -- kubeadm-config.yaml is meant
 // to be rewritten every run (Bootstrap rewrites it again with the real join token right before
 // `kubeadm join`), so an unconditional overwrite is correct here, not a gap.
-func (d *Upstream) ConfigureEngine(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
-	desired, err := d.DesiredFiles(host, run, dis)
+func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+	desired, err := d.DesiredFiles(ctx, host, run, dis)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (d *Upstream) ConfigureEngine(_ context.Context, host *cluster.ZarfHost, ru
 // DesiredFiles returns the full set of engine config files this distro would write: containerd's
 // config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship
 // configures a mirror, credential, or TLS setting for.
-func (d *Upstream) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
 	files := map[string]DesiredFile{}
 
 	configTOML, err := marshalTOML(buildContainerdConfig(dis))
@@ -221,7 +221,7 @@ func (d *Upstream) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeM
 
 	var kubeadmDocs []dig.Mapping
 	if host.Metadata.IsLeader {
-		kubeadmDocs = []dig.Mapping{buildClusterConfiguration(dis, run), buildInitConfiguration(host), buildKubeletConfiguration()}
+		kubeadmDocs = []dig.Mapping{buildClusterConfiguration(ctx, dis, run), buildInitConfiguration(host), buildKubeletConfiguration()}
 	} else {
 		kubeadmDocs = []dig.Mapping{buildJoinConfiguration(host, run), buildKubeletConfiguration()}
 	}

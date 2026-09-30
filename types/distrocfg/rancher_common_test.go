@@ -830,7 +830,7 @@ func TestDesiredFilesEmpty(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	run := cluster.ZarfRuntimeMeta{}
 
-	got, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v", err)
 	}
@@ -862,7 +862,7 @@ func TestDesiredFilesIncludesDistroReleaseMetadata(t *testing.T) {
 	}
 	run := cluster.ZarfRuntimeMeta{}
 
-	got, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
 	require.NoError(t, err)
 
 	metaFile, ok := got[DistroReleaseFile]
@@ -905,7 +905,7 @@ func TestDesiredFilesRegistriesAuditPSS(t *testing.T) {
 		},
 	}
 
-	got, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v", err)
 	}
@@ -1417,7 +1417,7 @@ func TestDesiredFilesWritesInlineCA(t *testing.T) {
 		},
 	}
 
-	files, err := d.DesiredFiles(&cluster.ZarfHost{}, run, distro.ZarfDistro{})
+	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, distro.ZarfDistro{})
 	require.NoError(t, err)
 	require.Equal(t, []byte(testCAPEM), files["/etc/cargoship/tls/mirror.example.com.crt"].Content)
 	require.Contains(t, files, filepath.Join(filepath.Dir(d.Config), "registries.yaml"))
@@ -1442,7 +1442,7 @@ func TestDesiredFilesModes(t *testing.T) {
 		},
 	}
 
-	files, err := d.DesiredFiles(&cluster.ZarfHost{}, run, dis)
+	files, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{}, run, dis)
 	require.NoError(t, err)
 
 	dir := filepath.Dir(d.Config)
@@ -1522,7 +1522,7 @@ func TestDesiredFilesHelmChartConfigs(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	dis.Spec.Config.Engine = manifestEngine()
 
-	got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 
 	manifests := filepath.Join(d.Data, "server", "manifests")
@@ -1558,7 +1558,7 @@ func TestDesiredFilesHelmChartConfigsControllerOnly(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	dis.Spec.Config.Engine = manifestEngine()
 
-	got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleWorker}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Empty(t, got, "an agent carries no chart configuration")
 }
@@ -1607,7 +1607,7 @@ func TestDesiredFilesHelmChartConfigsSkipsDisabledCharts(t *testing.T) {
 			dis.Spec.Config.Engine = manifestEngine()
 			dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyDisable: tt.disable}
 
-			got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+			got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
 			require.NoError(t, err)
 
 			paths := slices.Collect(maps.Keys(got))
@@ -1627,7 +1627,7 @@ func TestDesiredFilesHelmChartConfigsWithoutDisable(t *testing.T) {
 	dis.Spec.Config.Engine = manifestEngine()
 	dis.Spec.Config.Engine[config.EngineConfig] = dig.Mapping{keyNodeLabel: []string{"role=worker"}}
 
-	got, err := d.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
+	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 }
