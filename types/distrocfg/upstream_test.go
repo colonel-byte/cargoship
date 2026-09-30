@@ -277,7 +277,7 @@ func TestUpstreamCleanupPaths(t *testing.T) {
 	d := newTestUpstream()
 
 	got := d.CleanupPaths()
-	want := []string{"/var/lib/kubelet", "/etc/kubernetes", "/var/lib/kubernetes"}
+	want := []string{"/var/lib/kubelet", "/etc/kubernetes", "/var/lib/kubernetes", "/etc/cni/net.d"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("CleanupPaths() = %v, want %v", got, want)
 	}

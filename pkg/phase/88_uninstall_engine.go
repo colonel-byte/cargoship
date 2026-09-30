@@ -86,8 +86,24 @@ func (p *UninstallEngine) stopService(ctx context.Context, h *cluster.ZarfHost) 
 	return p.Distro.StopControllerService(h)
 }
 
+// preUninstallReset runs the distro's pre-package-removal teardown, when it implements one --
+// kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. Warns and
+// continues on error, matching the rest of uninstallNode: a host that is unreachable or already
+// reset should not block the rest of the uninstall.
+func (p *UninstallEngine) preUninstallReset(ctx context.Context, h *cluster.ZarfHost) error {
+	if r, ok := p.Distro.(distrocfg.PreUninstallResetter); ok {
+		return r.PreUninstallReset(ctx, h)
+	}
+	return nil
+}
+
 func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("uninstall", "node", h)
+
+	if err := p.preUninstallReset(ctx, h); err != nil {
+		logger.From(ctx).Warn("failed to reset the host before removing packages", "error", err)
+	}
+
 	packages := []string{}
 
 	for _, pkg := range pkgsType {
