@@ -50,7 +50,7 @@ Package distrocfg defines the standard interface that all distro config settings
 - [type RancherCommon](<#RancherCommon>)
   - [func \(d \*RancherCommon\) CleanupPaths\(\) \[\]string](<#RancherCommon.CleanupPaths>)
   - [func \(d \*RancherCommon\) ConfigureEngine\(ctx context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) error](<#RancherCommon.ConfigureEngine>)
-  - [func \(d \*RancherCommon\) DesiredFiles\(host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) \(map\[string\]DesiredFile, error\)](<#RancherCommon.DesiredFiles>)
+  - [func \(d \*RancherCommon\) DesiredFiles\(\_ context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) \(map\[string\]DesiredFile, error\)](<#RancherCommon.DesiredFiles>)
   - [func \(d \*RancherCommon\) DistroCmdf\(template string, args ...any\) string](<#RancherCommon.DistroCmdf>)
   - [func \(d \*RancherCommon\) GetClusterCIDR\(dis distro.ZarfDistro\) \[\]string](<#RancherCommon.GetClusterCIDR>)
   - [func \(d \*RancherCommon\) JoinTokenPathAgent\(\) string](<#RancherCommon.JoinTokenPathAgent>)
@@ -60,8 +60,8 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*Upstream\) AdminCredentials\(host \*cluster.ZarfHost, dataDir string\) \(AdminCredentials, error\)](<#Upstream.AdminCredentials>)
   - [func \(d \*Upstream\) Bootstrap\(\_ context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, \_ distro.ZarfDistro\) error](<#Upstream.Bootstrap>)
   - [func \(d \*Upstream\) CleanupPaths\(\) \[\]string](<#Upstream.CleanupPaths>)
-  - [func \(d \*Upstream\) ConfigureEngine\(\_ context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) error](<#Upstream.ConfigureEngine>)
-  - [func \(d \*Upstream\) DesiredFiles\(host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) \(map\[string\]DesiredFile, error\)](<#Upstream.DesiredFiles>)
+  - [func \(d \*Upstream\) ConfigureEngine\(ctx context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) error](<#Upstream.ConfigureEngine>)
+  - [func \(d \*Upstream\) DesiredFiles\(ctx context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) \(map\[string\]DesiredFile, error\)](<#Upstream.DesiredFiles>)
   - [func \(d \*Upstream\) DistroCmdf\(template string, args ...any\) string](<#Upstream.DistroCmdf>)
   - [func \(d \*Upstream\) GetClusterCIDR\(dis distro.ZarfDistro\) \[\]string](<#Upstream.GetClusterCIDR>)
   - [func \(d \*Upstream\) ImportImages\(host \*cluster.ZarfHost, path string\) error](<#Upstream.ImportImages>)
@@ -389,7 +389,7 @@ type Distro interface {
     // distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
     // pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
     // detect drift on an already-running host.
-    DesiredFiles(*cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
+    DesiredFiles(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
     // ManagedDirs returns the directories on a host cargoship prunes, so that a file in one of
     // them that DesiredFiles no longer names can be removed rather than left behind. A
     // directory cargoship shares with the engine names the files that are its own. A distro
@@ -641,7 +641,7 @@ ConfigureEngine does distro specific configuration on a host
 ### func \(\*RancherCommon\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L355>)
 
 ```go
-func (d *RancherCommon) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
+func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
 ```
 
 DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for the given host/run/dis, keyed by their full destination path. Content is identical across hosts of the same run \(no host\-varying fields are involved\), unlike config.yaml.
@@ -733,7 +733,7 @@ CleanupPaths returns the paths an uninstall removes from a host: the kubernetes 
 ### func \(\*Upstream\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L157>)
 
 ```go
-func (d *Upstream) ConfigureEngine(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
 ```
 
 ConfigureEngine writes DesiredFiles' output to host: containerd's config, crictl.yaml, registry hosts.toml, and the kubeadm\-config.yaml this host's role needs. Unlike RancherCommon.ConfigureEngine there is no already\-running guard \-\- kubeadm\-config.yaml is meant to be rewritten every run \(Bootstrap rewrites it again with the real join token right before \`kubeadm join\`\), so an unconditional overwrite is correct here, not a gap.
@@ -742,7 +742,7 @@ ConfigureEngine writes DesiredFiles' output to host: containerd's config, crictl
 ### func \(\*Upstream\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L173>)
 
 ```go
-func (d *Upstream) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
+func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
 ```
 
 DesiredFiles returns the full set of engine config files this distro would write: containerd's config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.
