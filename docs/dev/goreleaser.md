@@ -35,14 +35,9 @@ cosign verify-blob --key cosign.pub \
 
 ## Build Matrix
 
-The `builds` section compiles `linux` and `darwin` against `amd64`, `arm64`, and `riscv64`.
-
-For `amd64`, builds target specific microarchitecture levels using `goamd64` (`v2`, `v3`, `v4`). Archive names distinguish variants via `{{ .Amd64 }}` (e.g. `cargoship_Linux_x86_64_v3.tar.gz`), while the Linux package formats (`apk`, `deb`, `rpm`) select matching levels via `nfpms.goamd64`. The `v4` build is the default variant consumed by the `colonel-byte/setup-cargoship` GitHub action on supported CI runners.
-
-Four settings there matter more than they look:
+The `builds` section compiles `linux` and `darwin` against `amd64`, `arm64`, and `riscv64`. Three settings there matter more than they look:
 
 *   **`CGO_ENABLED=0`** - produces a statically linked binary. This is what lets the default image sit on `cgr.dev/chainguard/static`, which ships no libc, no shell, and no package manager; a dynamically linked binary fails there with a confusing `no such file or directory` on exec.
-*   **`goamd64` microarchitecture targets** - compiles optimized variants for modern x86-64 CPU instruction sets (`v2` baseline, `v3` AVX2/BMI, `v4` AVX-512).
 *   **`ldflags -X`** - stamps `config.CLIVersion` and `config.CLICommit`, which is what `cargoship version` prints.
 *   **`mod_timestamp: {{ .CommitTimestamp }}`** - pins file mtimes to the commit for reproducibility. `nfpms.mtime` and the image's `org.opencontainers.image.created` label use `.CommitDate` for the same reason.
 
@@ -302,7 +297,7 @@ The binary is byte-identical everywhere it ships: the release archive, the apk/d
 This means a cosign verification against the released archive transitively covers the binary shipped in the image. Verify it yourself after a snapshot run:
 
 ```sh
-sha256sum dist/cargoship_linux_amd64_v*/cargoship
+sha256sum dist/cargoship_linux_amd64_v1/cargoship
 cid=$(docker create ghcr.io/colonel-byte/cargoship:<tag>-amd64)
 docker cp "$cid:/usr/local/bin/cargoship" /tmp/from-image && docker rm "$cid"
 sha256sum /tmp/from-image
