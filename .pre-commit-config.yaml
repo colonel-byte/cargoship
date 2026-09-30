@@ -82,7 +82,7 @@ repos:
         name: generate-shell-completion
         language: system
         pass_filenames: false
-        entry: go run ./magefiles/core generate:shellCompletion
+        entry: go run ./magefiles/core generate:completion
       - id: docs-generator
         name: generate-docs
         language: system
