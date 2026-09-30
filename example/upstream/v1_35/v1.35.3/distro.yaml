@@ -25,6 +25,17 @@ spec:
   version: 1.35.3
   type: upstream
   config:
+    # Upstream ships no CNI of its own -- cargoship stays out of picking one, so the package
+    # declares its own manifest here (flannel, in this example) and cargoship kubectl-applies it
+    # from the leader once it bootstraps. See spec.config.manifests below.
+    files:
+      - source: https://raw.githubusercontent.com/flannel-io/flannel/v0.26.1/Documentation/kube-flannel.yml
+        target: /etc/kubernetes/manifests-cni/kube-flannel.yml
+        shasum: 7bc4fc42328f5a0d53b3f9a80bccaa618ec984b1e08539f5ebf66a950184fe42
+        selector:
+          profile: controller
+    manifests:
+      - /etc/kubernetes/manifests-cni/kube-flannel.yml
     os:
       files:
         # Every file this package installs is architecture specific, so each one is listed once per
@@ -211,3 +222,6 @@ spec:
         - registry.k8s.io/coredns/coredns:v1.13.1
         - registry.k8s.io/pause:3.10.1
         - registry.k8s.io/etcd:3.6.6-0
+        # flannel cni images, imported before spec.config.manifests is applied
+        - docker.io/flannel/flannel-cni-plugin:v1.5.1-flannel2
+        - docker.io/flannel/flannel:v0.26.1
