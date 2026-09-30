@@ -19,7 +19,7 @@
 }
 
 /* Every docs/schema/*.md table is wrapped in this class (see writeSchemaPropertiesTable in
- * magefiles/gen-schema-docs.go) so the Property/Type/Required/Default/Description columns land at
+ * magefiles/pkg/gen/schema/docs.go) so the Property/Type/Required/Default/Description columns land at
  * the same width on every table across every schema page, instead of each table sizing its columns
  * to its own content. */
 .schema-table table {

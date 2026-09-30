@@ -68,6 +68,14 @@ $ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose");
 
 No test runs; this is only the cleanup step the two cluster targets run before they start, exposed on its own for a run that was killed before teardown.
 
+## `Test.Unit`
+
+```console
+$ go test -count=1 $(go list ./... | grep -v '^github.com/colonel-byte/cargoship/test/')
+```
+
+Every package except the e2e suites under `test/`, which have runners of their own. The target builds the list with `go list` rather than hardcoding it, so a new package is covered the moment it exists. No binary, no Docker, no temp-dir env vars.
+
 ## `Test.Fuzz`
 
 ```console

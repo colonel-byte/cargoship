@@ -59,6 +59,7 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 
 The `Test` namespace hosts the integration and validation suites:
 
+*   `Unit` - Runs `go test` over every package except the e2e suites under `test/`, which need Docker and runners of their own. Needs no binary, cluster, or network, and is what the `unit` CI job runs.
 *   `EndToEnd` - Runs the whole e2e suite: both the cluster and non-cluster groups, including the example packages that pull ~1.5GB of engine artifacts and images. Needs Docker.
 *   `EndToEndNonCluster` - Runs the group that needs no cluster: the misc and package command groups. `-short` additionally skips the example packages, so this finishes in seconds. Mirrors the `e2e-noncluster` CI job.
 *   `EndToEndCluster` - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.
@@ -142,7 +143,7 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`build.go`:** Entrypoint for the `Build` namespace (`Build.Binary`, `Build.All`, `Build.Examples`), delegating to `magefiles/pkg/build`.
 *   **`dev.go`:** Entrypoint for the `Dev` namespace (`Dev.Clean`, `Dev.Tidy`, `Dev.Digest`, `Dev.DnfPins`, `Dev.WriteOSVOverrides`, `Dev.VerifyVendor`).
 *   **`generate.go`:** Entrypoint for the `Generate` namespace (`Generate.Document`, `Generate.Schema`, `Generate.Completion`, `Generate.EngineConfig`, `Generate.Examples`, etc.), delegating to `magefiles/pkg/gen/...`.
-*   **`test.go`:** Entrypoint for the `Test` namespace (`Test.EndToEnd`, `Test.EndToEndNonCluster`, `Test.EndToEndCluster`, `Test.EndToEndClusterStage`, `Test.EndToEndClusterUpgrade`, `Test.CleanCluster`, `Test.Fuzz`), delegating to `magefiles/pkg/testrunner`.
+*   **`test.go`:** Entrypoint for the `Test` namespace (`Test.Unit`, `Test.EndToEnd`, `Test.EndToEndNonCluster`, `Test.EndToEndCluster`, `Test.EndToEndClusterStage`, `Test.EndToEndClusterUpgrade`, `Test.CleanCluster`, `Test.Fuzz`), delegating to `magefiles/pkg/testrunner`.
 *   **`pkg/build/`:** Binary compilation logic, flag assembly, and example package builds.
 *   **`pkg/devtools/`:** Developer tooling packages, including `dnfpins` (AlmaLinux repomd XML parser and pin updater) and `osv` (OpenSSF Scorecard vendor overrides).
 *   **`pkg/gen/`:** Generator implementations: `completion/` (shell completion scripts), `docs/` (Cobra command docs and mdBook pages), `engineconfig/` (k3s/RKE2 source pins and struct codegen), `examples/` (Rancher and upstream distro examples), and `schema/` (JSON schema reflection and docs).

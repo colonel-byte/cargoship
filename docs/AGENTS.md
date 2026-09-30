@@ -36,7 +36,7 @@ Eight parts of the `docs/` tree are generated from the code and are overwritten 
 | Path                       | Generated from                                                                                                                     |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `docs/commands/`           | The Cobra command tree, rendered by `doc.GenMarkdownTreeCustom`                                                                     |
-| `docs/phases/`             | The cluster phase descriptors named in `phaseDocs()` in `magefiles/gen-docs.go`                                                     |
+| `docs/phases/`             | The cluster phase descriptors named in `phaseDocs()` in `magefiles/pkg/gen/docs/phase.go`                                                     |
 | `docs/golang/`             | Godoc comments in `pkg/`, `api/`, and `types/`, rendered by `gomarkdoc`                                                             |
 | `docs/schema/`             | The struct reflection `schemaTargets()` feeds to `Generate.Schema`, rendered by `generateSchemaDocs()` in `gen-schema-docs.go`      |
 | `docs/ansible/module_*.md` | The Ansible module action plugins parsed in `generateModuleDocs()` in `gen-docs.go`                                                 |
