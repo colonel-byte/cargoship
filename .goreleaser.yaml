@@ -44,18 +44,18 @@ builds:
       # - darwin
       # - windows
     goarch:
-      # - arm
+      - arm
       - arm64
-      # - "386"
+      - "386"
       - amd64
       # - riscv64
     goamd64:
       - v1
-      # - v2
+      - v2
       - v3
-      # - v4
+
     goarm:
-      # - "6"
+      - "6"
       - "7"
     flags:
       - -trimpath
@@ -97,7 +97,8 @@ nfpms:
       - deb
       - rpm
     goamd64:
-      - v4
+      - v1
+      - v3
     mtime: "{{ .CommitDate }}"
     contents:
       # The Ansible collection. /usr/share/ansible/collections is on ansible-core's default
@@ -182,7 +183,7 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      # - linux/386
+      - linux/386
       - linux/amd64
       - linux/arm64
     flags:
@@ -209,9 +210,9 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      # - linux/386
+      - linux/386
       - linux/amd64
-      # - linux/arm/v7
+      - linux/arm/v7
       - linux/arm64
     flags:
       - "--pull"
@@ -231,7 +232,7 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      # - linux/386
+      - linux/386
       - linux/amd64
       - linux/arm64
     flags:
