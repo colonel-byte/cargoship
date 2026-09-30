@@ -17,6 +17,8 @@ Package extract statically parses k3s/RKE2's pkg/cli/cmds source \(via go/ast\) 
 - [func ParseK3SFlagSet\(optIndex map\[string\]K3SFlagOption, mapLit \*ast.CompositeLit\) \(map\[string\]K3SFlagOption, error\)](<#ParseK3SFlagSet>)
 - [func StringListDecl\(name string, files ...\*ast.File\) \(\[\]string, bool\)](<#StringListDecl>)
 - [type Components](<#Components>)
+- [type FieldNode](<#FieldNode>)
+  - [func ExtractNestedKeys\(file \*ast.File, rootType string\) \(FieldNode, error\)](<#ExtractNestedKeys>)
 - [type Flag](<#Flag>)
   - [func ApplyK3SFlagSet\(k3sFlags \[\]Flag, flagSet map\[string\]K3SFlagOption\) \(flags \[\]Flag, unmapped \[\]string\)](<#ApplyK3SFlagSet>)
   - [func ExtractFlags\(varIndex map\[string\]\*ast.CompositeLit, file \*ast.File\) \(\[\]Flag, error\)](<#ExtractFlags>)
@@ -101,6 +103,26 @@ type Components struct {
     Ingress []string
 }
 ```
+
+<a name="FieldNode"></a>
+## type [FieldNode](<https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/nested.go#L29-L31>)
+
+FieldNode describes one field of a nested config document, recovered from a real Go struct's json tags. A nil Children means the field is a leaf: a scalar, a slice, or a map, whose contents pass through unvalidated \-\- recursion stops at the first field whose type isn't itself a named struct declared in the same file, rather than guessing the shape of a slice\-of\-struct or a type from another package.
+
+```go
+type FieldNode struct {
+    Children map[string]FieldNode
+}
+```
+
+<a name="ExtractNestedKeys"></a>
+### func [ExtractNestedKeys](<https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/nested.go#L61>)
+
+```go
+func ExtractNestedKeys(file *ast.File, rootType string) (FieldNode, error)
+```
+
+ExtractNestedKeys walks rootType's fields in file, resolving each field's json tag name and, for a field whose type is itself a named struct declared in file, recursing into it. An embedded field naming another local struct \(e.g. "APIServer" embedding "ControlPlaneComponent" with json:",inline"\) has its children merged directly into the embedding type's own node, matching how encoding/json flattens an inlined struct. An embedded field naming a type from another package \(e.g. metav1.TypeMeta\) carries no fields this walker can see, so it is skipped rather than guessed at.
 
 <a name="Flag"></a>
 ## type [Flag](<https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/extract.go#L30-L48>)
