@@ -24,6 +24,10 @@ The fix is to add the upstream checksums to the definition, not to relax this. T
 
 If some future case genuinely needs an unverifiable overridden download, it needs an explicit opt-out flag with a name that says what it gives up, and a line in the build log every time it fires. It does not need this check quietly deleted.
 
+## What the record is for
+
+Because the checksum is mandatory, `.build.fileSources` can record it next to the mirror each file came from, and every entry is then a complete claim: these bytes, from this place, matching this digest. That is only worth writing down because the refusal above guarantees the digest exists. Drop the refusal and the provenance record degrades into a list of URLs nobody can check.
+
 ## See also
 
 - `pkg/fileoverride` -- the matcher, and why it parses URLs instead of comparing string prefixes.

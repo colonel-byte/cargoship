@@ -171,14 +171,26 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	// A file that cannot be staged is fatal. It used to be logged and skipped, which meant a
 	// checksum mismatch -- the one thing standing between a mirrored download and an arbitrary
 	// binary -- cost a log line and shipped anyway.
+	//
+	// fileSources collects the files an override redirected, in staging order, which is
+	// definition order. Appending in a fixed order is what keeps --reproducible reproducible.
+	var fileSources []distro.FileSource
 	for filesIdx, file := range d.Spec.Config.Files {
-		if err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides); err != nil {
+		provenance, err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides)
+		if err != nil {
 			return nil, fmt.Errorf("unable to stage file %d (%s): %w", filesIdx, file, err)
+		}
+		if provenance != nil {
+			fileSources = append(fileSources, *provenance)
 		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		if err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides); err != nil {
+		provenance, err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides)
+		if err != nil {
 			return nil, fmt.Errorf("unable to stage os file %d (%s): %w", filesIdx, file, err)
+		}
+		if provenance != nil {
+			fileSources = append(fileSources, *provenance)
 		}
 	}
 
@@ -227,7 +239,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	}
 	d.Metadata.AggregateChecksum = checksumSha
 
-	d = recordDistroMetadata(d, opts)
+	d = recordDistroMetadata(d, opts, fileSources)
 
 	b, err := goyaml.Marshal(d)
 	if err != nil {
@@ -349,7 +361,10 @@ func checkMappings(ctx context.Context, d distro.ZarfDistro, values map[string]a
 	}
 }
 
-func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.ZarfFile, overrides []fileoverride.Override) (err error) {
+// fileGrabber stages one file into buildPath. The returned FileSource is non-nil only when an
+// override redirected the file, so the caller records what an override actually did rather than
+// only what was configured.
+func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.ZarfFile, overrides []fileoverride.Override) (provenance *distro.FileSource, err error) {
 	rel := filepath.Join(resourceType, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 	dst := filepath.Join(buildPath, rel)
 	destinationDir := filepath.Dir(dst)
@@ -370,19 +385,26 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	source := file.Source
 	match, overridden, err := fileoverride.Resolve(overrides, file.Source)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if overridden {
 		// An override points the build at bytes whoever wrote the distro definition never
 		// saw. The declared shasum is the only thing that makes that safe, so a file without
 		// one is refused rather than fetched unverified from somebody's mirror.
 		if file.Shasum == "" {
-			return fmt.Errorf("file override %s=%s applies to %s, which declares no shasum: refusing to fetch it unverified",
+			return nil, fmt.Errorf("file override %s=%s applies to %s, which declares no shasum: refusing to fetch it unverified",
 				match.Override.Source, match.Override.Target, file.Source)
 		}
 		logger.From(ctx).Info("file source overridden",
 			"declared", file.Source, "resolved", match.Resolved, "override", match.Override.Source)
 		source = match.Resolved
+		provenance = &distro.FileSource{
+			Path:     filepath.ToSlash(rel),
+			Declared: file.Source,
+			Resolved: match.Resolved,
+			Override: match.Override.Source,
+			Shasum:   file.Shasum,
+		}
 	}
 
 	if helpers.IsURL(source) {
@@ -392,11 +414,11 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			// name the definition used is the more recognizable of the two in a log line.
 			compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
 			if err != nil {
-				return fmt.Errorf(zlang.ErrFileNameExtract, file.Source, err)
+				return nil, fmt.Errorf(zlang.ErrFileNameExtract, file.Source, err)
 			}
 			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer func() {
 				err = errors.Join(err, os.RemoveAll(tmpDir))
@@ -405,18 +427,18 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 
 			// If the file is an archive, download it to the componentPath.Temp
 			if err := utils.DownloadToFileWithChecksum(ctx, source, compressedFile, file.Shasum, filepath.Base(file.Target)); err != nil {
-				return fmt.Errorf(zlang.ErrDownloading, source, err)
+				return nil, fmt.Errorf(zlang.ErrDownloading, source, err)
 			}
 			decompressOpts := archive.DecompressOpts{
 				Files: []string{file.ExtractPath},
 			}
 			err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
+				return nil, fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
 			}
 		} else {
 			if err := utils.DownloadToFileWithChecksum(ctx, source, dst, file.Shasum, filepath.Base(file.Target)); err != nil {
-				return fmt.Errorf(zlang.ErrDownloading, source, err)
+				return nil, fmt.Errorf(zlang.ErrDownloading, source, err)
 			}
 		}
 	} else {
@@ -432,11 +454,11 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			}
 			err := archive.Decompress(ctx, src, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, src, err)
+				return nil, fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, src, err)
 			}
 		} else {
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", src, err)
+				return nil, fmt.Errorf("unable to copy file %s: %w", src, err)
 			}
 		}
 	}
@@ -446,7 +468,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 		updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
 		if updatedExtractedFileOrDir != dst {
 			if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
-				return fmt.Errorf(zlang.ErrWritingFile, dst, err)
+				return nil, fmt.Errorf(zlang.ErrWritingFile, dst, err)
 			}
 		}
 	}
@@ -454,22 +476,22 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	// Abort packaging on invalid shasum (if one is specified).
 	if file.Shasum != "" {
 		if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-			return fmt.Errorf("sha mismatch for %s: %w", source, err)
+			return nil, fmt.Errorf("sha mismatch for %s: %w", source, err)
 		}
 	}
 
 	if file.Executable || helpers.IsDir(dst) {
 		err := os.Chmod(dst, helpers.ReadExecuteAllWriteUser)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		err := os.Chmod(dst, helpers.ReadAllWriteUser)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return provenance, nil
 }
 
 // buildTimestamp returns the timestamp to record as Build.Timestamp. When
@@ -494,27 +516,28 @@ func archStrings(arches api.Arches) []string {
 	return out
 }
 
-func recordDistroMetadata(distro distro.ZarfDistro, opts AssembleOptions) distro.ZarfDistro {
-	arches := distro.Metadata.Arches()
-	distro.Build.Architectures = arches
+func recordDistroMetadata(d distro.ZarfDistro, opts AssembleOptions, fileSources []distro.FileSource) distro.ZarfDistro {
+	arches := d.Metadata.Arches()
+	d.Build.Architectures = arches
 	// The scalar stays populated for a single architecture package so that readers which only know
 	// about it, such as an older cargoship, still see the architecture they expect.
 	if len(arches) == 1 {
-		distro.Build.Architecture = arches[0]
+		d.Build.Architecture = arches[0]
 	}
-	distro.Build.Timestamp = buildTimestamp(opts.Reproducible).Format(api.BuildTimestampFormat)
-	distro.Build.Version = distro.Metadata.Version
-	distro.Build.Reproducible = opts.Reproducible
+	d.Build.Timestamp = buildTimestamp(opts.Reproducible).Format(api.BuildTimestampFormat)
+	d.Build.Version = d.Metadata.Version
+	d.Build.Reproducible = opts.Reproducible
 
 	overrides := make(map[string]string, len(opts.RegistryOverrides))
 	for i := range opts.RegistryOverrides {
 		overrides[opts.RegistryOverrides[i].Source] = opts.RegistryOverrides[i].Override
 	}
 
-	distro.Build.RegistryOverrides = overrides
-	distro.Build.FileOverrides = fileoverride.ToMap(opts.FileOverrides)
+	d.Build.RegistryOverrides = overrides
+	d.Build.FileOverrides = fileoverride.ToMap(opts.FileOverrides)
+	d.Build.FileSources = fileSources
 
-	return distro
+	return d
 }
 
 func getChecksum(dirPath string) (string, string, error) {

@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/fileoverride"
 	"github.com/stretchr/testify/require"
@@ -62,12 +63,21 @@ func TestFileGrabberRemoteOverride(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
 	require.NoError(t, err)
 	require.Equal(t, grabbedPayload, string(got))
+
+	require.NotNil(t, provenance, "an overridden file must report where it actually came from")
+	require.Equal(t, distro.FileSource{
+		Path:     "files/0/k3s",
+		Declared: "https://rpm.rancher.io/public/k3s.rpm",
+		Resolved: srv.URL + "/mirror/public/k3s.rpm",
+		Override: "https://rpm.rancher.io",
+		Shasum:   payloadShasum(),
+	}, *provenance)
 }
 
 func TestFileGrabberLocalOverride(t *testing.T) {
@@ -85,12 +95,17 @@ func TestFileGrabberLocalOverride(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
 	require.NoError(t, err)
 	require.Equal(t, grabbedPayload, string(got))
+
+	require.NotNil(t, provenance)
+	require.Equal(t, filepath.Join(staged, "public", "k3s.rpm"), provenance.Resolved,
+		"a local override records the path on the build host the bytes were read from")
+	require.Equal(t, "files/0/k3s", provenance.Path)
 }
 
 // TestFileGrabberRefusesOverrideWithoutShasum covers the one case this feature must not make
@@ -107,7 +122,7 @@ func TestFileGrabberRefusesOverrideWithoutShasum(t *testing.T) {
 		Target: "/usr/local/bin/k3s",
 	}
 
-	err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
 	require.ErrorContains(t, err, "declares no shasum")
 }
 
@@ -127,7 +142,7 @@ func TestFileGrabberChecksumMismatchLeavesNothingBehind(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
+	_, err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
 	require.Error(t, err)
 
 	_, statErr := os.Stat(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
@@ -149,8 +164,9 @@ func TestFileGrabberUnmatchedSourceIsUntouched(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	err = fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
+	provenance, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, t.TempDir(), 0, file, overrides)
 	require.NoError(t, err)
+	require.Nil(t, provenance, "a file no override touched must record nothing, so packages built without overrides are unchanged")
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
 	require.NoError(t, err)
@@ -170,7 +186,7 @@ func TestFileGrabberLocalSourceStillResolvesAgainstDistroPath(t *testing.T) {
 		Shasum: payloadShasum(),
 	}
 
-	err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil)
+	_, err := fileGrabber(context.Background(), string(config.FilesDir), buildPath, distroPath, 0, file, nil)
 	require.NoError(t, err)
 
 	got, err := os.ReadFile(filepath.Join(buildPath, string(config.FilesDir), "0", "k3s"))
