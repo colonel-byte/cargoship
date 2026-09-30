@@ -119,3 +119,16 @@ type ImageImporter interface {
 	// ImportImages imports every image tarball staged under path into the engine's image store.
 	ImportImages(host *cluster.ZarfHost, path string) error
 }
+
+// Bootstrapper is implemented by a distro whose cluster formation is a one-shot command rather
+// than a service to start -- kubeadm init/join, unlike rke2/k3s's single config.yaml + systemd
+// service. InitializeControllers/InitializeWorkers call Bootstrap instead of starting the
+// service, and ask IsBootstrapped instead of checking service state, when a distro implements
+// this, the same optional-interface pattern ImageImporter uses.
+type Bootstrapper interface {
+	// IsBootstrapped reports whether host has already formed or joined the cluster, so a re-run
+	// is a no-op instead of re-running the bootstrap command.
+	IsBootstrapped(host *cluster.ZarfHost) bool
+	// Bootstrap forms the cluster (the leader) or joins it (every other host).
+	Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+}
