@@ -76,6 +76,11 @@ func (Test) EndToEndClusterUpgrade() error {
 	return testrunner.RunE2ENoBuild("3h", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
 }
 
+// Unit runs every test suite but the e2e groups, which have runners of their own.
+func (Test) Unit() error {
+	return testrunner.Unit()
+}
+
 // Fuzz replays the fuzz seed corpus.
 func (Test) Fuzz() error {
 	return testrunner.Fuzz()

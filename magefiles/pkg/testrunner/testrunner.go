@@ -68,6 +68,29 @@ func StopBootlooseContainers() error {
 	return sh.RunV("docker", append([]string{"rm", "-fv"}, strings.Fields(ids)...)...)
 }
 
+// Unit runs go test over every package except the e2e suites under test/, which need Docker
+// and runners of their own. Those are driven by Test.EndToEnd* instead.
+func Unit() error {
+	out, err := sh.Output("go", "list", "./...")
+	if err != nil {
+		return err
+	}
+
+	const e2ePrefix = "github.com/colonel-byte/cargoship/test/"
+	var pkgs []string
+	for _, pkg := range strings.Fields(out) {
+		if strings.HasPrefix(pkg, e2ePrefix) {
+			continue
+		}
+		pkgs = append(pkgs, pkg)
+	}
+	if len(pkgs) == 0 {
+		return fmt.Errorf("go list ./... returned no packages to test")
+	}
+
+	return sh.RunV("go", append([]string{"test", "-count=1"}, pkgs...)...)
+}
+
 // Fuzz replays the fuzz seed corpus under fuzz/...
 func Fuzz() error {
 	return sh.RunV("go", "test", "-count=1", "./fuzz/...")
