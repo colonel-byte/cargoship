@@ -60,6 +60,10 @@
         "^x-": {}
       },
       "properties": {
+        "file_override": {
+          "$ref": "#/$defs/FileOverrideMap",
+          "description": "maps a source URL prefix to the location cargoship downloads from\ninstead, for example {\"https://rpm.rancher.io\": \"https://mirror.example.com/rpm-rancher\"}.\nThe value may also be a local directory, for builds from pre-staged assets."
+        },
         "registry_override": {
           "$ref": "#/$defs/RegistryOverrideMap",
           "description": "maps a source registry to the registry cargoship uses instead\nwhen pulling images, for example {\"docker.io\": \"mirror.example.com\"}"
@@ -246,6 +250,33 @@
         },
         "signing_key_password": {
           "description": "the password for the private key used for signing",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "FileOverrideMap": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "maps a source URL prefix to the location cargoship downloads from instead.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "https://download.docker.com": {
+          "type": "string"
+        },
+        "https://get.k3s.io": {
+          "type": "string"
+        },
+        "https://github.com": {
+          "type": "string"
+        },
+        "https://pkgs.k8s.io": {
+          "type": "string"
+        },
+        "https://rpm.rancher.io": {
           "type": "string"
         }
       },

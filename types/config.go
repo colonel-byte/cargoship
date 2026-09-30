@@ -33,6 +33,17 @@ var CommonRegistries = []string{
 	"public.ecr.aws",
 }
 
+// CommonFileSources are suggested, non-exhaustive URL prefixes used in generated schemas as
+// autocomplete for FileOverrideMap's file_override keys, the same way CommonRegistries is used
+// for registry_override. They are the hosts a distro definition most often downloads from.
+var CommonFileSources = []string{
+	"https://rpm.rancher.io",
+	"https://github.com",
+	"https://pkgs.k8s.io",
+	"https://get.k3s.io",
+	"https://download.docker.com",
+}
+
 // DistroConfig holds the values for the `.`, or root, section of the config file
 type DistroConfig struct {
 	// CachePath is the folder where cargoship caches what it fetches: oras artifacts, and the release assets the example generation targets read
@@ -149,6 +160,10 @@ type DistroCreateOptions struct {
 	// RegistryOverride maps a source registry to the registry cargoship uses instead
 	// when pulling images, for example {"docker.io": "mirror.example.com"}
 	RegistryOverride RegistryOverrideMap `json:"registry_override,omitempty" mapstructure:"-"` // mapstructure:"-": viper always splits a map key on "." when merging its settings tree, so a domain key like "docker.io" gets silently corrupted into a nested map; read directly from the config file instead (see initViper in cmd/viper.go)
+	// FileOverride maps a source URL prefix to the location cargoship downloads from
+	// instead, for example {"https://rpm.rancher.io": "https://mirror.example.com/rpm-rancher"}.
+	// The value may also be a local directory, for builds from pre-staged assets.
+	FileOverride FileOverrideMap `json:"file_override,omitempty" mapstructure:"-"` // mapstructure:"-": same reasoning as RegistryOverride above, and more so -- a URL key carries ".", ":" and "/"
 }
 
 // DistroPublishOptions holds the values for the `.distro.publish` section of the config file
@@ -184,6 +199,22 @@ func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema) {
 	suggestions := orderedmap.New[string, *jsonschema.Schema]()
 	for _, registry := range CommonRegistries {
 		suggestions.Set(registry, &jsonschema.Schema{Type: "string"})
+	}
+	s.Properties = suggestions
+}
+
+// FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead.
+// Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the
+// config file is not restricted to the suggested keys.
+type FileOverrideMap map[string]string
+
+// JSONSchemaExtend adds CommonFileSources to the schema's properties, alongside the
+// additionalProperties the reflector already set for the map[string]string element type, so
+// the suggestions are additive and don't restrict which keys are allowed.
+func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema) {
+	suggestions := orderedmap.New[string, *jsonschema.Schema]()
+	for _, source := range CommonFileSources {
+		suggestions.Set(source, &jsonschema.Schema{Type: "string"})
 	}
 	s.Properties = suggestions
 }

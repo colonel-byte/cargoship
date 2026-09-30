@@ -96,6 +96,12 @@ $ cargoship create ./distro-defs -o ./build/
 # Pull images through an internal mirror instead of their upstream registry
 $ cargoship create ./distro-defs --registry-override docker.io=mirror.example.com
 
+# Download files through an internal mirror instead of their upstream host
+$ cargoship create ./distro-defs --file-override https://rpm.rancher.io=https://mirror.example.com/rpm-rancher
+
+# Build from files staged on disk ahead of time, with no network at all
+$ cargoship create ./distro-defs --file-override https://rpm.rancher.io=/srv/staged/rpm-rancher
+
 # Sign the package as it is built, without prompting for the key password
 $ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
 

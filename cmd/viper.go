@@ -109,37 +109,39 @@ func initViper() error {
 		log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
 	}
 
-	// RegistryOverride is mapstructure:"-" (see types.DistroConfig) and must be read
-	// directly from the config file, bypassing viper's Unmarshal above: its map keys
-	// are registry domains like "docker.io", and viper always treats "." as a
-	// nested-key delimiter when merging its settings tree, silently corrupting any
-	// such key into a nested map. Never fatal, same reasoning as the Unmarshal above.
+	// RegistryOverride and FileOverride are mapstructure:"-" (see types.DistroConfig) and must
+	// be read directly from the config file, bypassing viper's Unmarshal above: their map keys
+	// are registry domains like "docker.io" and URL prefixes like "https://rpm.rancher.io", and
+	// viper always treats "." as a nested-key delimiter when merging its settings tree, silently
+	// corrupting any such key into a nested map. Never fatal, same reasoning as the Unmarshal
+	// above.
 	if cfgPath := v.ConfigFileUsed(); cfgPath != "" {
-		overrides, err := loadRegistryOverrides(cfgPath)
+		createOpts, err := loadCreateOverrides(cfgPath)
 		if err != nil {
 			log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
 		} else {
-			resolvedConfig.DistroOpts.CreateOpts.RegistryOverride = overrides
+			resolvedConfig.DistroOpts.CreateOpts.RegistryOverride = createOpts.RegistryOverride
+			resolvedConfig.DistroOpts.CreateOpts.FileOverride = createOpts.FileOverride
 		}
 	}
 
 	return nil
 }
 
-// loadRegistryOverrides reads DistroOpts.CreateOpts.RegistryOverride directly out of
-// the config file at cfgPath. It exists because that field is mapstructure:"-" -- see
-// the comment where it's called in initViper for why viper's Unmarshal can't be trusted
-// with it.
-func loadRegistryOverrides(cfgPath string) (map[string]string, error) {
+// loadCreateOverrides reads the whole `.distro.create` section directly out of the config file
+// at cfgPath. It exists because every override map in that section is mapstructure:"-" -- see
+// the comment where it's called in initViper for why viper's Unmarshal can't be trusted with
+// them. One read covers all of them, so adding another override map needs no second pass.
+func loadCreateOverrides(cfgPath string) (types.DistroCreateOptions, error) {
 	raw, err := os.ReadFile(cfgPath)
 	if err != nil {
-		return nil, err
+		return types.DistroCreateOptions{}, err
 	}
 	var fileConfig types.DistroConfig
 	if err := goyaml.UnmarshalWithOptions(raw, &fileConfig); err != nil {
-		return nil, err
+		return types.DistroCreateOptions{}, err
 	}
-	return fileConfig.DistroOpts.CreateOpts.RegistryOverride, nil
+	return fileConfig.DistroOpts.CreateOpts, nil
 }
 
 // configPath derives a viper dot-path key for a field in types.DistroConfig by

@@ -47,9 +47,10 @@ holds the values for the `.distro.create` section of the config file
 
 <div class="schema-table">
 
-| Property            | Type                                        | Required | Default | Description                                                                                                                           |
-| ------------------- | ------------------------------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `registry_override` | [RegistryOverrideMap](#registryoverridemap) | no       |         | maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {"docker.io": "mirror.example.com"} |
+| Property            | Type                                        | Required | Default | Description                                                                                                                                                                                                                                    |
+| ------------------- | ------------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `file_override`     | [FileOverrideMap](#fileoverridemap)         | no       |         | maps a source URL prefix to the location cargoship downloads from<br>instead, for example {"https://rpm.rancher.io": "https://mirror.example.com/rpm-rancher"}.<br>The value may also be a local directory, for builds from pre-staged assets. |
+| `registry_override` | [RegistryOverrideMap](#registryoverridemap) | no       |         | maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {"docker.io": "mirror.example.com"}                                                                                                          |
 
 </div>
 
@@ -113,6 +114,22 @@ holds the values for the `.distro.publish` section of the config file
 | ---------------------- | -------- | -------- | ------- | ------------------------------------------------------------------------------------------------------ |
 | `signing_key`          | `string` | no       |         | is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package |
 | `signing_key_password` | `string` | no       |         | the password for the private key used for signing                                                      |
+
+</div>
+
+### FileOverrideMap
+
+maps a source URL prefix to the location cargoship downloads from instead.
+
+<div class="schema-table">
+
+| Property                      | Type     | Required | Default | Description |
+| ----------------------------- | -------- | -------- | ------- | ----------- |
+| `https://download.docker.com` | `string` | no       |         |             |
+| `https://get.k3s.io`          | `string` | no       |         |             |
+| `https://github.com`          | `string` | no       |         |             |
+| `https://pkgs.k8s.io`         | `string` | no       |         |             |
+| `https://rpm.rancher.io`      | `string` | no       |         |             |
 
 </div>
 

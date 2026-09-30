@@ -41,6 +41,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
+	"github.com/colonel-byte/cargoship/pkg/fileoverride"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"github.com/colonel-byte/cargoship/pkg/images"
@@ -60,9 +61,13 @@ import (
 // AssembleOptions options
 type AssembleOptions struct {
 	RegistryOverrides []images.RegistryOverride
-	OCIConcurrency    int
-	CachePath         string
-	SkipSBOM          bool
+	// FileOverrides redirect the file downloads a distro definition declares to an internal
+	// mirror or to a directory of pre-staged assets, the way RegistryOverrides redirects image
+	// pulls. See pkg/fileoverride.
+	FileOverrides  []fileoverride.Override
+	OCIConcurrency int
+	CachePath      string
+	SkipSBOM       bool
 	// Reproducible pins Build.Timestamp to config.Timestamp instead of the
 	// current time, and is recorded on Build.Reproducible, so identical package
 	// inputs produce byte-identical output.
@@ -163,16 +168,17 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
+	// A file that cannot be staged is fatal. It used to be logged and skipped, which meant a
+	// checksum mismatch -- the one thing standing between a mirrored download and an arbitrary
+	// binary -- cost a log line and shipped anyway.
 	for filesIdx, file := range d.Spec.Config.Files {
-		err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file)
-		if err != nil {
-			logger.From(ctx).Warn("got", "error", err)
+		if err := fileGrabber(ctx, string(config.FilesDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides); err != nil {
+			return nil, fmt.Errorf("unable to stage file %d (%s): %w", filesIdx, file, err)
 		}
 	}
 	for filesIdx, file := range d.Spec.Config.OS.Files {
-		err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file)
-		if err != nil {
-			logger.From(ctx).Warn("got", "error", err)
+		if err := fileGrabber(ctx, string(config.OSDir), buildPath, distroPath, filesIdx, *file, opts.FileOverrides); err != nil {
+			return nil, fmt.Errorf("unable to stage os file %d (%s): %w", filesIdx, file, err)
 		}
 	}
 
@@ -343,14 +349,47 @@ func checkMappings(ctx context.Context, d distro.ZarfDistro, values map[string]a
 	}
 }
 
-func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.ZarfFile) error {
+func fileGrabber(ctx context.Context, resourceType string, buildPath string, distroPath string, filesIdx int, file v1alpha1.ZarfFile, overrides []fileoverride.Override) (err error) {
 	rel := filepath.Join(resourceType, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 	dst := filepath.Join(buildPath, rel)
 	destinationDir := filepath.Dir(dst)
 
-	if helpers.IsURL(file.Source) {
+	// Leave nothing half-written behind. buildPath is walked later to generate the package
+	// checksums, so a file left by a failed download, a failed extraction, or a mismatched
+	// shasum would otherwise be picked up and shipped.
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, os.RemoveAll(dst))
+		}
+	}()
+
+	// Resolve any override before the branch below, because an override can turn a URL source
+	// into a local path and so change which half of this function runs. file.Source itself is
+	// left alone: it is what the definition declared, and it is what the recorded provenance
+	// and the "this came from upstream" reading of the package refer to.
+	source := file.Source
+	match, overridden, err := fileoverride.Resolve(overrides, file.Source)
+	if err != nil {
+		return err
+	}
+	if overridden {
+		// An override points the build at bytes whoever wrote the distro definition never
+		// saw. The declared shasum is the only thing that makes that safe, so a file without
+		// one is refused rather than fetched unverified from somebody's mirror.
+		if file.Shasum == "" {
+			return fmt.Errorf("file override %s=%s applies to %s, which declares no shasum: refusing to fetch it unverified",
+				match.Override.Source, match.Override.Target, file.Source)
+		}
+		logger.From(ctx).Info("file source overridden",
+			"declared", file.Source, "resolved", match.Resolved, "override", match.Override.Source)
+		source = match.Resolved
+	}
+
+	if helpers.IsURL(source) {
 		if file.ExtractPath != "" {
-			// get the compressedFileName from the source
+			// The temp name is local bookkeeping, so it comes from the declared source: a
+			// mirror is free to serve the same artifact under a different path, and the
+			// name the definition used is the more recognizable of the two in a log line.
 			compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
 			if err != nil {
 				return fmt.Errorf(zlang.ErrFileNameExtract, file.Source, err)
@@ -365,8 +404,8 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 			compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 			// If the file is an archive, download it to the componentPath.Temp
-			if err := utils.DownloadToFileWithChecksum(ctx, file.Source, compressedFile, file.Shasum, filepath.Base(file.Target)); err != nil {
-				return fmt.Errorf(zlang.ErrDownloading, file.Source, err)
+			if err := utils.DownloadToFileWithChecksum(ctx, source, compressedFile, file.Shasum, filepath.Base(file.Target)); err != nil {
+				return fmt.Errorf(zlang.ErrDownloading, source, err)
 			}
 			decompressOpts := archive.DecompressOpts{
 				Files: []string{file.ExtractPath},
@@ -376,14 +415,16 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 				return fmt.Errorf(zlang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
 			}
 		} else {
-			if err := utils.DownloadToFileWithChecksum(ctx, file.Source, dst, file.Shasum, filepath.Base(file.Target)); err != nil {
-				return fmt.Errorf(zlang.ErrDownloading, file.Source, err)
+			if err := utils.DownloadToFileWithChecksum(ctx, source, dst, file.Shasum, filepath.Base(file.Target)); err != nil {
+				return fmt.Errorf(zlang.ErrDownloading, source, err)
 			}
 		}
 	} else {
-		src := file.Source
-		if !filepath.IsAbs(file.Source) {
-			src = filepath.Join(distroPath, file.Source)
+		// A resolved local override is already absolute, so it is never re-resolved against
+		// the distro definition directory here.
+		src := source
+		if !filepath.IsAbs(source) {
+			src = filepath.Join(distroPath, source)
 		}
 		if file.ExtractPath != "" {
 			decompressOpts := archive.DecompressOpts{
@@ -413,7 +454,7 @@ func fileGrabber(ctx context.Context, resourceType string, buildPath string, dis
 	// Abort packaging on invalid shasum (if one is specified).
 	if file.Shasum != "" {
 		if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-			return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
+			return fmt.Errorf("sha mismatch for %s: %w", source, err)
 		}
 	}
 
@@ -471,6 +512,7 @@ func recordDistroMetadata(distro distro.ZarfDistro, opts AssembleOptions) distro
 	}
 
 	distro.Build.RegistryOverrides = overrides
+	distro.Build.FileOverrides = fileoverride.ToMap(opts.FileOverrides)
 
 	return distro
 }

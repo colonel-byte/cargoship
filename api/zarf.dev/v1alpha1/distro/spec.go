@@ -81,6 +81,10 @@ type ZarfDistroBuildData struct {
 	Version string `json:"version,omitempty"`
 	// RegistryOverrides maps each original registry to the registry actually used to build the package.
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
+	// FileOverrides maps each source URL prefix to the mirror or local directory files were
+	// downloaded from instead. Like RegistryOverrides, this records the overrides that were
+	// configured for the build, not which one resolved any particular file.
+	FileOverrides map[string]string `json:"fileOverrides,omitempty"`
 	// Signed indicates whether the package was signed. A nil value means the signing status was not recorded.
 	Signed *bool `json:"signed,omitempty"`
 	// Reproducible indicates Build.Timestamp was pinned to a fixed value

@@ -18,12 +18,26 @@ Package types is a little bit of a hacky way to generate the cargo\-ship\-config
 - [type DistroDeployOptions](<#DistroDeployOptions>)
 - [type DistroOptions](<#DistroOptions>)
 - [type DistroPublishOptions](<#DistroPublishOptions>)
+- [type FileOverrideMap](<#FileOverrideMap>)
+  - [func \(FileOverrideMap\) JSONSchemaExtend\(s \*jsonschema.Schema\)](<#FileOverrideMap.JSONSchemaExtend>)
 - [type RegistryOverrideMap](<#RegistryOverrideMap>)
   - [func \(RegistryOverrideMap\) JSONSchemaExtend\(s \*jsonschema.Schema\)](<#RegistryOverrideMap.JSONSchemaExtend>)
 - [type ResetOptions](<#ResetOptions>)
 
 
 ## Variables
+
+<a name="CommonFileSources"></a>CommonFileSources are suggested, non\-exhaustive URL prefixes used in generated schemas as autocomplete for FileOverrideMap's file\_override keys, the same way CommonRegistries is used for registry\_override. They are the hosts a distro definition most often downloads from.
+
+```go
+var CommonFileSources = []string{
+    "https://rpm.rancher.io",
+    "https://github.com",
+    "https://pkgs.k8s.io",
+    "https://get.k3s.io",
+    "https://download.docker.com",
+}
+```
 
 <a name="CommonRegistries"></a>CommonRegistries are suggested, non\-exhaustive registry names used in generated schemas \-\- editors with YAML/JSON schema support \(e.g. the redhat.vscode\-yaml extension\) offer them as autocomplete, for RegistryOverrideMap's registry\_override keys here and for ZarfClusterRegistrieName's registry name field in the cluster API.
 
@@ -39,7 +53,7 @@ var CommonRegistries = []string{
 ```
 
 <a name="AgeOptions"></a>
-## type [AgeOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L72-L84>)
+## type [AgeOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L83-L95>)
 
 AgeOptions holds the values for the \`.age\` section of the config file, the age alternative to the Ansible Vault password given by \-\-vault\-password\-file.
 
@@ -64,7 +78,7 @@ type AgeOptions struct {
 ```
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L169>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L184>)
 
 ApplyOptions holds the values for the \`.distro.apply\` section of the config file
 
@@ -73,7 +87,7 @@ type ApplyOptions struct{}
 ```
 
 <a name="DistroConfig"></a>
-## type [DistroConfig](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L37-L58>)
+## type [DistroConfig](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L48-L69>)
 
 DistroConfig holds the values for the \`.\`, or root, section of the config file
 
@@ -103,7 +117,7 @@ type DistroConfig struct {
 ```
 
 <a name="DistroCreateOptions"></a>
-## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L148-L152>)
+## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L159-L167>)
 
 DistroCreateOptions holds the values for the \`.distro.create\` section of the config file
 
@@ -112,11 +126,15 @@ type DistroCreateOptions struct {
     // RegistryOverride maps a source registry to the registry cargoship uses instead
     // when pulling images, for example {"docker.io": "mirror.example.com"}
     RegistryOverride RegistryOverrideMap `json:"registry_override,omitempty" mapstructure:"-"` // mapstructure:"-": viper always splits a map key on "." when merging its settings tree, so a domain key like "docker.io" gets silently corrupted into a nested map; read directly from the config file instead (see initViper in cmd/viper.go)
+    // FileOverride maps a source URL prefix to the location cargoship downloads from
+    // instead, for example {"https://rpm.rancher.io": "https://mirror.example.com/rpm-rancher"}.
+    // The value may also be a local directory, for builds from pre-staged assets.
+    FileOverride FileOverrideMap `json:"file_override,omitempty" mapstructure:"-"` // mapstructure:"-": same reasoning as RegistryOverride above, and more so -- a URL key carries ".", ":" and "/"
 }
 ```
 
 <a name="DistroDeployOptions"></a>
-## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L163-L166>)
+## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L178-L181>)
 
 DistroDeployOptions holds the values for the \`.distro.deploy\` section of the config file
 
@@ -128,7 +146,7 @@ type DistroDeployOptions struct {
 ```
 
 <a name="DistroOptions"></a>
-## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L87-L145>)
+## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L98-L156>)
 
 DistroOptions holds the values for the \`.distro\` section of the config file
 
@@ -195,7 +213,7 @@ type DistroOptions struct {
 ```
 
 <a name="DistroPublishOptions"></a>
-## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L155-L160>)
+## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L170-L175>)
 
 DistroPublishOptions holds the values for the \`.distro.publish\` section of the config file
 
@@ -208,8 +226,26 @@ type DistroPublishOptions struct {
 }
 ```
 
+<a name="FileOverrideMap"></a>
+## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L209>)
+
+FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.
+
+```go
+type FileOverrideMap map[string]string
+```
+
+<a name="FileOverrideMap.JSONSchemaExtend"></a>
+### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L214>)
+
+```go
+func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
+```
+
+JSONSchemaExtend adds CommonFileSources to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
+
 <a name="RegistryOverrideMap"></a>
-## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L178>)
+## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L193>)
 
 RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It's a named type \(rather than a bare map\[string\]string\) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.
 
@@ -218,7 +254,7 @@ type RegistryOverrideMap map[string]string
 ```
 
 <a name="RegistryOverrideMap.JSONSchemaExtend"></a>
-### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L183>)
+### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L198>)
 
 ```go
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -227,7 +263,7 @@ func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonRegistries to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L172>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L187>)
 
 ResetOptions holds the values for the \`.distro.reset\` section of the config file
 

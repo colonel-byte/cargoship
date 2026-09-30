@@ -15,7 +15,7 @@ Package assemble builds a Cargoship package on disk
 
 
 <a name="AssembleDistro"></a>
-## func [AssembleDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L137>)
+## func [AssembleDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L142>)
 
 ```go
 func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error)
@@ -24,16 +24,20 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 AssembleDistro creates the actual tarballs
 
 <a name="AssembleOptions"></a>
-## type [AssembleOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L61-L75>)
+## type [AssembleOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L62-L80>)
 
 AssembleOptions options
 
 ```go
 type AssembleOptions struct {
     RegistryOverrides []images.RegistryOverride
-    OCIConcurrency    int
-    CachePath         string
-    SkipSBOM          bool
+    // FileOverrides redirect the file downloads a distro definition declares to an internal
+    // mirror or to a directory of pre-staged assets, the way RegistryOverrides redirects image
+    // pulls. See pkg/fileoverride.
+    FileOverrides  []fileoverride.Override
+    OCIConcurrency int
+    CachePath      string
+    SkipSBOM       bool
     // Reproducible pins Build.Timestamp to config.Timestamp instead of the
     // current time, and is recorded on Build.Reproducible, so identical package
     // inputs produce byte-identical output.
