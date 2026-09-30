@@ -68,7 +68,7 @@ archives:
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64{{- if ne .Amd64 "v4" }}_{{ .Amd64 }}{{ end }}
+      {{- if eq .Arch "amd64" }}x86_64{{- if ne .Amd64 "v1" }}_{{ .Amd64 }}{{ end }}
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
@@ -173,8 +173,10 @@ dockers_v2:
     labels:
       org.opencontainers.image.version: "{{ .Version }}"
       org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
-
+      org.opencontainers.image.created: "{{ .CommitDate }}" 
+      "org.opencontainers.image.base.name": "{{ .BaseImage }}"
+      "org.opencontainers.image.base.digest": "{{ .BaseImageDigest }}"
+      "index,manifest:org.opencontainers.image.licenses": "Apache License 2.0"
   - id: cargoship-ubi
     ids:
       - packagers
