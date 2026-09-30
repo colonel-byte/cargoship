@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file holds the cache the example targets read a release's text assets from, and the
-// line splitting the cache and the network path share. The targets that render examples
-// live in their own gen-example*.go files.
+// This file holds the cache the example targets read a release's text assets from, the
+// network path that fills it, and the line splitting the two share. The targets that render
+// examples live in render.go.
 
 package examples
 
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -240,4 +242,49 @@ func splitReleaseLines(body []byte) []string {
 		}
 	}
 	return lines
+}
+
+// fetchImageList downloads one of a release's airgap image manifests and returns its
+// non-empty lines, in file order.
+func fetchImageList(repoURL, tagURL, asset string) ([]string, error) {
+	images, err := fetchReleaseLines(repoURL, tagURL, asset)
+	if err != nil {
+		return nil, err
+	}
+	if len(images) == 0 {
+		return nil, fmt.Errorf("%s/%s is empty", tagURL, asset)
+	}
+	return images, nil
+}
+
+// fetchReleaseLines returns one of a release's text assets as its non-empty lines, in file
+// order, reading the cache before it reaches for the network and recording what it fetched.
+// A release's assets do not change under a tag, so the second render of a version is free;
+// CARGOSHIP_EXAMPLES_NO_CACHE covers the case where one did change.
+func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
+	url := fmt.Sprintf("%s/releases/download/%s/%s", strings.TrimSuffix(repoURL, "/"), tagURL, asset)
+
+	cache := releaseLines()
+	if lines, ok := cache.lookup(url); ok {
+		return lines, nil
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("fetching %s: %w", url, err)
+	}
+	defer resp.Body.Close() //nolint:errcheck // body is read to completion, nothing to do with a close error
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetching %s: %s", url, resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", url, err)
+	}
+
+	lines := splitReleaseLines(body)
+	cache.store(url, lines)
+	return lines, nil
 }
