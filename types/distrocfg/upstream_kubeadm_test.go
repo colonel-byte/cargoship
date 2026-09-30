@@ -35,7 +35,10 @@ func TestBuildClusterConfigurationDefaults(t *testing.T) {
 	if cc["kubernetesVersion"] != "v1.35.3" {
 		t.Fatalf("kubernetesVersion = %v, want v1.35.3", cc["kubernetesVersion"])
 	}
-	networking, _ := cc[keyNetworking].(dig.Mapping)
+	networking, ok := cc[keyNetworking].(dig.Mapping)
+	if !ok {
+		t.Fatalf("networking = %v, want a mapping", cc[keyNetworking])
+	}
 	if networking[keyServiceSubnet] != upstreamServiceCIDR {
 		t.Fatalf("serviceSubnet = %v, want %v", networking[keyServiceSubnet], upstreamServiceCIDR)
 	}
@@ -58,7 +61,10 @@ func TestBuildClusterConfigurationPodSubnetAndCertSANs(t *testing.T) {
 
 	cc := buildClusterConfiguration(dis, run)
 
-	networking, _ := cc[keyNetworking].(dig.Mapping)
+	networking, ok := cc[keyNetworking].(dig.Mapping)
+	if !ok {
+		t.Fatalf("networking = %v, want a mapping", cc[keyNetworking])
+	}
 	if networking[keyPodSubnet] != "10.10.0.0/16" {
 		t.Fatalf("podSubnet = %v, want 10.10.0.0/16", networking[keyPodSubnet])
 	}
@@ -66,7 +72,10 @@ func TestBuildClusterConfigurationPodSubnetAndCertSANs(t *testing.T) {
 	if !ok {
 		t.Fatalf("apiServer = %v, want a mapping with certSANs", cc["apiServer"])
 	}
-	sans, _ := apiServer["certSANs"].([]string)
+	sans, ok := apiServer["certSANs"].([]string)
+	if !ok {
+		t.Fatalf("certSANs = %v, want a []string", apiServer["certSANs"])
+	}
 	if len(sans) != 1 || sans[0] != "cluster.example.com" {
 		t.Fatalf("certSANs = %v, want [cluster.example.com]", sans)
 	}
@@ -120,7 +129,10 @@ func TestBuildClusterConfigurationExtraArgsPassthrough(t *testing.T) {
 	if !ok {
 		t.Fatalf("controllerManager = %v, want a mapping", cc["controllerManager"])
 	}
-	args, _ := cm["extraArgs"].([]any)
+	args, ok := cm["extraArgs"].([]any)
+	if !ok {
+		t.Fatalf("extraArgs = %v, want a []any", cm["extraArgs"])
+	}
 	if len(args) != 1 {
 		t.Fatalf("extraArgs = %v, want 1 entry", args)
 	}
@@ -182,8 +194,14 @@ func TestBuildJoinConfigurationController(t *testing.T) {
 
 	jc := buildJoinConfiguration(host, run)
 
-	discovery, _ := jc["discovery"].(dig.Mapping)
-	bt, _ := discovery["bootstrapToken"].(dig.Mapping)
+	discovery, ok := jc["discovery"].(dig.Mapping)
+	if !ok {
+		t.Fatalf("discovery = %v, want a mapping", jc["discovery"])
+	}
+	bt, ok := discovery["bootstrapToken"].(dig.Mapping)
+	if !ok {
+		t.Fatalf("bootstrapToken = %v, want a mapping", discovery["bootstrapToken"])
+	}
 	if bt["token"] != "controller-token" {
 		t.Fatalf("bootstrapToken.token = %v, want controller-token", bt["token"])
 	}
