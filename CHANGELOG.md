@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.28.1](https://github.com/colonel-byte/cargoship/compare/v0.28.0...v0.28.1) (2026-09-30)
+
+
+### Features
+
+* **drift:** move files around to make sense ([#540](https://github.com/colonel-byte/cargoship/issues/540)) ([098ac1b](https://github.com/colonel-byte/cargoship/commit/098ac1b109ec5accc5e905e84bacf6dd5fed9880))
+* install and pin upstream kubeadm packages ([#509](https://github.com/colonel-byte/cargoship/issues/509)) ([dbe72cb](https://github.com/colonel-byte/cargoship/commit/dbe72cb9495912dc01c45732a7cf311d4e910805))
+
+
+### Documentation
+
+* **agent:** add Go test formatting rule and align repo with it ([#534](https://github.com/colonel-byte/cargoship/issues/534)) ([9d3e246](https://github.com/colonel-byte/cargoship/commit/9d3e2465d42ccca89c0f564763d5968e985dfa1e))
+
+
+### CI/CD
+
+* **examples:** include version for upstream ([#536](https://github.com/colonel-byte/cargoship/issues/536)) ([6468cbf](https://github.com/colonel-byte/cargoship/commit/6468cbf55232a57ac2a1ae6796bf8db080ca3a49))
+* **examples:** update versions ([#537](https://github.com/colonel-byte/cargoship/issues/537)) ([dd0959b](https://github.com/colonel-byte/cargoship/commit/dd0959b821ca42265dbf71f609c866f0382a1fa8))
+* **releaser:** update config to address build issues ([#539](https://github.com/colonel-byte/cargoship/issues/539)) ([10ef7cc](https://github.com/colonel-byte/cargoship/commit/10ef7ccf562f02aa3ebaff5813fb5fd873f56906))
+
+
+### Build
+
+* **deps:** bump github.com/ProtonMail/go-crypto from 1.5.1 to 1.5.2 ([#532](https://github.com/colonel-byte/cargoship/issues/532)) ([0696e8a](https://github.com/colonel-byte/cargoship/commit/0696e8a60d33827d10f0ecfd444874fc643537ed))
+* **deps:** bump the core group with 3 updates ([#533](https://github.com/colonel-byte/cargoship/issues/533)) ([11c1e7f](https://github.com/colonel-byte/cargoship/commit/11c1e7f2a829041e228bc3155fdab634fea328d1))
+* **deps:** bump the cosign group with 15 updates ([#529](https://github.com/colonel-byte/cargoship/issues/529)) ([634975a](https://github.com/colonel-byte/cargoship/commit/634975a82d3766d2b6c372f19a64d6597d07d2a6))
+* **deps:** bump the k8s group with 7 updates ([#528](https://github.com/colonel-byte/cargoship/issues/528)) ([f203186](https://github.com/colonel-byte/cargoship/commit/f203186fc286b5987174df15c2baaa8a772a69f3))
+* **deps:** bump the misc group with 19 updates ([#530](https://github.com/colonel-byte/cargoship/issues/530)) ([fd2cfca](https://github.com/colonel-byte/cargoship/commit/fd2cfcaf96666ce54561dc087d96b44f0c2ffbe3))
+
 ## [0.28.0](https://github.com/colonel-byte/cargoship/compare/v0.27.0...v0.28.0) (2026-09-27)
 
 
