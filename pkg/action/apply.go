@@ -118,6 +118,9 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.BINUploadFiles{
 				Distro: d,
 			},
+			&phase.ImportImages{
+				Distro: d,
+			},
 
 			&phase.ConfigureEngine{
 				Distro:  d,

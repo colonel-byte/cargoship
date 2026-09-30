@@ -157,7 +157,7 @@ func TestUpstreamConfigureEngineNotImplemented(t *testing.T) {
 	}
 }
 
-func TestUpstreamDesiredFilesEmpty(t *testing.T) {
+func TestUpstreamDesiredFilesRendersContainerdAndCrictl(t *testing.T) {
 	d := newTestUpstream()
 
 	files, err := d.DesiredFiles(&cluster.ZarfHost{}, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
@@ -165,16 +165,45 @@ func TestUpstreamDesiredFilesEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DesiredFiles() error = %v, want nil", err)
 	}
-	if len(files) != 0 {
-		t.Fatalf("DesiredFiles() = %v, want empty", files)
+	if _, ok := files[containerdConfigPath]; !ok {
+		t.Fatalf("DesiredFiles() = %v, want a %s entry", files, containerdConfigPath)
+	}
+	if _, ok := files[crictlConfigPath]; !ok {
+		t.Fatalf("DesiredFiles() = %v, want a %s entry", files, crictlConfigPath)
 	}
 }
 
-func TestUpstreamManagedDirsEmpty(t *testing.T) {
+func TestUpstreamDesiredFilesRendersRegistryHostsTOML(t *testing.T) {
+	d := newTestUpstream()
+	run := cluster.ZarfRuntimeMeta{
+		Registries: []cluster.ZarfClusterRegistries{
+			{
+				Name: "docker.io",
+				Proxy: &cluster.ZarfClusterRegistryProxy{
+					URL: "mirror.example.com",
+				},
+			},
+		},
+	}
+
+	files, err := d.DesiredFiles(&cluster.ZarfHost{}, run, distro.ZarfDistro{})
+
+	if err != nil {
+		t.Fatalf("DesiredFiles() error = %v, want nil", err)
+	}
+	want := containerdHostsPath("docker.io")
+	if _, ok := files[want]; !ok {
+		t.Fatalf("DesiredFiles() = %v, want a %s entry", files, want)
+	}
+}
+
+func TestUpstreamManagedDirsIncludesRegistryTLSDir(t *testing.T) {
 	d := newTestUpstream()
 
-	if got := d.ManagedDirs(); got != nil {
-		t.Fatalf("ManagedDirs() = %v, want nil", got)
+	got := d.ManagedDirs()
+	want := []ManagedDir{{Path: registryTLSDir}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ManagedDirs() = %v, want %v", got, want)
 	}
 }
 

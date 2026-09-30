@@ -17,6 +17,8 @@ package distrocfg
 import (
 	"context"
 	"fmt"
+	"io/fs"
+	"path/filepath"
 	"regexp"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
@@ -53,7 +55,10 @@ type Upstream struct {
 	Common
 }
 
-var _ Distro = (*Upstream)(nil)
+var (
+	_ Distro        = (*Upstream)(nil)
+	_ ImageImporter = (*Upstream)(nil)
+)
 
 func init() {
 	registry.RegisterDistroModule(
@@ -146,17 +151,77 @@ func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ clu
 	return fmt.Errorf("%w: kubeadm bootstrap", ErrNotImplemented)
 }
 
-// DesiredFiles returns the full set of engine config files this distro would write. Containerd's
-// config.toml and crictl.yaml land here once upstream owns the container runtime configuration;
-// until then there is honestly nothing to desire, so this returns an empty set rather than an
-// error.
-func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) (map[string]DesiredFile, error) {
-	return nil, nil
+// DesiredFiles returns the full set of engine config files this distro would write: containerd's
+// config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship
+// configures a mirror, credential, or TLS setting for.
+func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error) {
+	files := map[string]DesiredFile{}
+
+	configTOML, err := marshalTOML(buildContainerdConfig(dis))
+	if err != nil {
+		return nil, err
+	}
+	files[containerdConfigPath] = DesiredFile{Content: configTOML, Mode: modeConfigFile}
+
+	crictlYAML, err := marshalYAML(buildCrictlConfig())
+	if err != nil {
+		return nil, err
+	}
+	files[crictlConfigPath] = DesiredFile{Content: crictlYAML, Mode: modeConfigFile}
+
+	for name, hostsConfig := range buildContainerdHostsConfigs(run.Registries) {
+		hostsTOML, err := marshalTOML(hostsConfig)
+		if err != nil {
+			return nil, err
+		}
+		files[containerdHostsPath(name)] = DesiredFile{Content: hostsTOML, Mode: modeRegistries}
+	}
+
+	for path, ca := range registryCAFiles(run.Registries) {
+		files[path] = DesiredFile{Content: ca, Mode: modeConfigFile}
+	}
+
+	if path, df, ok, err := DistroReleaseDesiredFile(dis, files); err != nil {
+		return nil, err
+	} else if ok {
+		files[path] = df
+	}
+
+	return files, nil
 }
 
-// ManagedDirs returns the directories on a host cargoship prunes. Upstream manages none yet.
+// ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory
+// registryCAFiles writes to. The per-registry hosts.toml directories under containerdCertsDir are
+// not included -- ManagedDir only prunes files directly inside a directory, not ones nested a
+// level down in a registry's own subdirectory, so a removed registry's hosts.toml is left behind
+// rather than risk pruning the wrong thing.
 func (d *Upstream) ManagedDirs() []ManagedDir {
-	return nil
+	return []ManagedDir{
+		{Path: registryTLSDir},
+	}
+}
+
+// ImportImages imports every image tarball staged under path into containerd's k8s.io image
+// store. Unlike rke2/k3s, upstream's containerd has no agent watching that directory on its own,
+// so cargoship has to trigger the import itself.
+func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error {
+	if !host.FileExist(path) {
+		return nil
+	}
+
+	return fs.WalkDir(host.Sudo().FS(), path, func(p string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		cmd := fmt.Sprintf("ctr -n k8s.io images import %s", filepath.Join(path, entry.Name()))
+		if _, err := host.Sudo().ExecOutput(cmd); err != nil {
+			return fmt.Errorf("importing image tarball %s: %w", p, err)
+		}
+		return nil
+	})
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config
