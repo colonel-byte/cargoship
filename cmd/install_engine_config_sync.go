@@ -16,8 +16,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
@@ -99,45 +97,32 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 }
 
 func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
-	l := logger.From(ctx)
-
-	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
-	// what would happen is what would push someone into running the real thing to find out.
-	if !o.confirm && !o.dryRun {
-		l.Warn("please include the --confirm argument")
-		return errors.New("pass confirm argument")
+	d, err := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
+	if err != nil {
+		return err
 	}
 
 	if err := riglogger.RigLogger(ctx); err != nil {
-		l.Warn("failed to configure logger", "err", err)
 		return err
 	}
 
 	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
 	if err != nil {
-		l.Warn("failed to create manager", "err", err)
 		return err
 	}
 
-	d, err := time.ParseDuration(Timeout)
-	if err != nil {
-		l.Warn("failed to parse timeout", "err", err)
-		return err
-	}
 	manager.SetTimout(d)
 
 	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
 	// and demanding one would break every plaintext configuration that works today.
 	keyring, err := o.resolveKeyring(cmd)
 	if err != nil {
-		l.Warn("failed to resolve encryption keys", "err", err)
 		return err
 	}
 
 	// Nothing decrypts these until the engine configuration is written, which is well after every
 	// host has been connected to. Check them here, while stopping still costs nothing.
 	if err := clustercfg.VerifyRegistryAuth(manager.Config, keyring); err != nil {
-		l.Warn("failed to decrypt registry credentials", "err", err)
 		return err
 	}
 

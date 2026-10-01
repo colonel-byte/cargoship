@@ -22,7 +22,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/internal/riglogger"
@@ -105,17 +104,11 @@ func newInstallResetCommand() *cobra.Command {
 }
 
 func (o *installResetOptions) run(ctx context.Context, _ []string) error {
-	l := logger.From(ctx)
-
-	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
-	// what would happen is what would push someone into running the real thing to find out.
-	if !o.confirm && !o.dryRun {
-		l.Warn("please include the --confirm argument")
-		return errors.New("pass confirm argument")
+	if err := preflightReset(o.config, o.confirm, o.dryRun); err != nil {
+		return err
 	}
 
 	if err := riglogger.RigLogger(ctx); err != nil {
-		l.Warn("failed to configure logger", "err", err)
 		return err
 	}
 

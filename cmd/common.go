@@ -22,15 +22,19 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
 	"github.com/colonel-byte/cargoship/pkg/packager/load"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/pkg/utils"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	"github.com/spf13/cobra"
@@ -167,4 +171,88 @@ func initManager(ctx context.Context, cmd *cobra.Command, distroPath string, opt
 		ConcurrentUploads: opt.concurrency,
 		DryRun:            opt.dryRun,
 	}, nil
+}
+
+// requireConfirm enforces the --confirm gate for a command that changes the hosts it is pointed at.
+//
+// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask what would
+// happen is what would push someone into running the real thing to find out.
+func requireConfirm(confirm, dryRun bool) error {
+	if confirm || dryRun {
+		return nil
+	}
+	return fmt.Errorf("this changes every host in the cluster configuration; pass --%s to proceed, or --%s to see what it would do", InstallConfirm, InstallDryRun)
+}
+
+// checkClusterConfig reports a --config that names a file nothing can be read from, without
+// parsing it. The parse happens later, in initManager or load.ClusterDefinition, which report a
+// malformed document far better than a stat can.
+func checkClusterConfig(configPath string) error {
+	if configPath == "" {
+		return fmt.Errorf("no cluster configuration given; pass --%s", InstallConfig)
+	}
+	path, err := filepath.Abs(configPath)
+	if err != nil {
+		return fmt.Errorf("unable to resolve --%s %q: %w", InstallConfig, configPath, err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		return fmt.Errorf("unable to read the cluster configuration: %w", err)
+	}
+	return nil
+}
+
+// checkPackageSource reports a package source that cannot be fetched from. A local tarball is
+// stat'ed; a remote reference is only checked for being a shape cargoship recognises, since
+// reaching out to a registry is neither free nor something an air-gapped host can do twice.
+func checkPackageSource(source string) error {
+	if source == "" {
+		return errors.New("no package given")
+	}
+	srcType, err := utils.IdentifySource(source)
+	if err != nil {
+		return err
+	}
+	switch srcType {
+	case "tarball", "split":
+		if _, err := os.Stat(source); err != nil {
+			return fmt.Errorf("unable to read the package: %w", err)
+		}
+	}
+	return nil
+}
+
+// preflightInstall validates what an install command was given and then enforces the --confirm
+// gate, for the commands that take a package, a cluster configuration, and --timeout.
+//
+// The order is the point. The gate used to be the first thing each of these commands did, so a run
+// naming a package and a configuration that were both absent reported only the missing --confirm.
+// Supplying it reported the configuration, and fixing that reported the package: three runs to
+// learn three things that were all knowable before the first one started. Everything checked here
+// costs a stat and a string parse, so the input mistakes come out together and ahead of the gate --
+// and the gate is still cleared before the package is extracted or any host is connected to.
+//
+// The parsed --timeout comes back with it, so no caller parses it a second time.
+func preflightInstall(packageSource, configPath string, confirm, dryRun bool) (time.Duration, error) {
+	if err := checkClusterConfig(configPath); err != nil {
+		return 0, err
+	}
+	if err := checkPackageSource(packageSource); err != nil {
+		return 0, err
+	}
+	d, err := time.ParseDuration(Timeout)
+	if err != nil {
+		return 0, fmt.Errorf("unable to parse --%s %q: %w", RootTimeout, Timeout, err)
+	}
+	if err := requireConfirm(confirm, dryRun); err != nil {
+		return 0, err
+	}
+	return d, nil
+}
+
+// preflightReset is preflightInstall for reset, which loads no package and registers no --timeout.
+func preflightReset(configPath string, confirm, dryRun bool) error {
+	if err := checkClusterConfig(configPath); err != nil {
+		return err
+	}
+	return requireConfirm(confirm, dryRun)
 }

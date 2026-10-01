@@ -22,9 +22,7 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"os"
-	"time"
 
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/internal/riglogger"
@@ -93,21 +91,17 @@ func newInstallPrepareCommand() *cobra.Command {
 func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 
-	// A dry run changes nothing, so there is nothing to confirm. Requiring --confirm to ask
-	// what would happen is what would push someone into running the real thing to find out.
-	if !o.confirm && !o.dryRun {
-		l.Warn("please include the --confirm argument")
-		return errors.New("pass confirm argument")
+	d, err := preflightInstall(args[0], o.config, o.confirm, o.dryRun)
+	if err != nil {
+		return err
 	}
 
 	if err := riglogger.RigLogger(ctx); err != nil {
-		l.Warn("failed to configure logger", "err", err)
 		return err
 	}
 
 	manager, err := initManager(ctx, cmd, args[0], o.InstallCommon)
 	if err != nil {
-		l.Warn("failed to create manager", "err", err)
 		return err
 	}
 	// deletes the temp directory at the end of the apply phases
@@ -117,12 +111,6 @@ func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, arg
 			l.Warn("failed to remove", "folder", manager.TempDirectory)
 		}
 	}()
-
-	d, err := time.ParseDuration(Timeout)
-	if err != nil {
-		l.Warn("failed to parse timeout", "err", err)
-		return err
-	}
 
 	manager.SetTimout(d)
 
