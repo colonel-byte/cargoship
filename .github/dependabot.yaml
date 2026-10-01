@@ -24,36 +24,6 @@ updates:
       # open-policy-agent/opa (transitive via sigstore/cosign) still uses it.
       - dependency-name: "github.com/gobwas/glob"
         update-types: ["version-update:semver-major"]
-    groups:
-      zarf:
-        patterns:
-          - "github.com/zarf-dev/*"
-      k8s:
-        patterns:
-          - "k8s.io/*"
-          - "sigs.k8s.io/*"
-      golang:
-        patterns:
-          - "golang.org/x/*"
-          - "google.golang.org/*"
-      docker:
-        patterns:
-          - "github.com/docker/*"
-          - "github.com/moby/*"
-          - "github.com/fvbommel/sortorder"
-      cosign:
-        patterns:
-          - "github.com/aws/*"
-          - "github.com/awslabs/*"
-          - "github.com/Azure/*"
-          - "github.com/sigstore/*"
-          - "github.com/spiffe/*"
-      opentelemetry:
-        patterns:
-          - "go.opentelemetry.io/*"
-      misc:
-        patterns:
-          - "*"
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
