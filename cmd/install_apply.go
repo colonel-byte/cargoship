@@ -93,7 +93,7 @@ func newInstallApplyCommand() *cobra.Command {
 
 	o.LogFormat = val
 
-	cmd.MarkFlagRequired(InstallConfig)
+	markRequired(cmd, InstallConfig)
 
 	addBuildFlags(cmd)
 	addTimeoutFlag(cmd)

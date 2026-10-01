@@ -28,8 +28,6 @@ import (
 )
 
 const (
-	// MiscVaultKeygenOutput flag
-	MiscVaultKeygenOutput = "output"
 	// MiscVaultKeygenPublicKey flag
 	MiscVaultKeygenPublicKey = "public-key"
 )
@@ -57,7 +55,7 @@ func newVaultKeygenCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVarP(&o.output, MiscVaultKeygenOutput, "o", "", lang.CmdVaultKeygenFlagOutput)
+	cmd.Flags().StringVarP(&o.output, MiscOutput, "o", "", lang.CmdVaultKeygenFlagOutput)
 	cmd.Flags().BoolVarP(&o.publicKey, MiscVaultKeygenPublicKey, "y", false, lang.CmdVaultKeygenFlagPublicKey)
 
 	return cmd
@@ -70,14 +68,14 @@ func (o *vaultKeygenOptions) run(cmd *cobra.Command, args []string) error {
 		// needs no such care and redirects perfectly well.
 		if o.output != "" {
 			return fmt.Errorf("--%s cannot be combined with --%s: public keys are not secret, so redirect them instead",
-				MiscVaultKeygenOutput, MiscVaultKeygenPublicKey)
+				MiscOutput, MiscVaultKeygenPublicKey)
 		}
 		return o.printPublicKeys(cmd, args)
 	}
 
 	if len(args) == 1 {
 		return fmt.Errorf("%q is only read with --%s; generating a key pair takes no argument, and writes to --%s or stdout",
-			args[0], MiscVaultKeygenPublicKey, MiscVaultKeygenOutput)
+			args[0], MiscVaultKeygenPublicKey, MiscOutput)
 	}
 
 	return o.generate(cmd)

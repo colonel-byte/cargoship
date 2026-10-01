@@ -131,7 +131,7 @@ func TestModuleArgsParse(t *testing.T) {
 		{
 			module:  "engine_config_sync",
 			command: "engine-config-sync",
-			confirm: InstallEngineConfigSyncConfirm,
+			confirm: InstallConfirm,
 			dryRun:  true,
 		},
 		{
@@ -149,7 +149,7 @@ func TestModuleArgsParse(t *testing.T) {
 		{
 			module:  "reset",
 			command: "reset",
-			confirm: InstallResetConfirm,
+			confirm: InstallConfirm,
 			dryRun:  true,
 		},
 		{

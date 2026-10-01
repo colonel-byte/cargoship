@@ -25,13 +25,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	// MiscSchemaOutput flag
-	MiscSchemaOutput = "output"
-	// MiscSchemaPackage flag
-	MiscSchemaPackage = "package"
-)
-
 type schemaOptions struct {
 	packageSchemaSource
 	output string
@@ -63,8 +56,8 @@ func newSchemaCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&o.output, MiscSchemaOutput, "o", "", lang.CmdSchemaFlagOutput)
-	cmd.Flags().StringVar(&o.pkg, MiscSchemaPackage, "", lang.CmdSchemaFlagPackage)
+	cmd.Flags().StringVarP(&o.output, MiscOutput, "o", "", lang.CmdSchemaFlagOutput)
+	cmd.Flags().StringVar(&o.pkg, MiscPackage, "", lang.CmdSchemaFlagPackage)
 
 	// Only --package needs any of these, and only when it names a built package rather than a
 	// source directory. They are registered unconditionally because cobra has no way to add a
@@ -85,7 +78,7 @@ func (o *schemaOptions) run(ctx context.Context, cmd *cobra.Command, args []stri
 
 	if o.pkg != "" && kind != pkgschema.KindInventory {
 		return fmt.Errorf("--%s only applies to the %s schema: a package's values are overridden in an inventory, and %q describes a different file",
-			MiscSchemaPackage, pkgschema.KindInventory, kind)
+			MiscPackage, pkgschema.KindInventory, kind)
 	}
 
 	if o.pkg == "" {

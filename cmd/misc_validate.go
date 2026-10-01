@@ -29,8 +29,6 @@ import (
 const (
 	// MiscValidateKind flag
 	MiscValidateKind = "kind"
-	// MiscValidatePackage flag
-	MiscValidatePackage = "package"
 )
 
 type validateOptions struct {
@@ -64,7 +62,7 @@ func newValidateCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.kind, MiscValidateKind, "", lang.CmdValidateFlagKind)
-	cmd.Flags().StringVar(&o.pkg, MiscValidatePackage, "", lang.CmdValidateFlagPackage)
+	cmd.Flags().StringVar(&o.pkg, MiscPackage, "", lang.CmdValidateFlagPackage)
 
 	if err := cmd.RegisterFlagCompletionFunc(MiscValidateKind, func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return pkgschema.Kinds(), cobra.ShellCompDirectiveNoFileComp
@@ -89,7 +87,7 @@ func (o *validateOptions) run(ctx context.Context, cmd *cobra.Command, args []st
 	}
 	if o.pkg != "" && o.kind != "" && pkgschema.Kind(o.kind) != pkgschema.KindInventory {
 		return fmt.Errorf("--%s only applies to the %s schema: a package's values are overridden in an inventory, and %q describes a different file",
-			MiscValidatePackage, pkgschema.KindInventory, o.kind)
+			MiscPackage, pkgschema.KindInventory, o.kind)
 	}
 
 	// Loaded once, before the first file: --package may name an OCI reference that has to be
@@ -164,7 +162,7 @@ func (o *validateOptions) check(cmd *cobra.Command, validators map[pkgschema.Kin
 	}
 	if o.pkg != "" && kind != pkgschema.KindInventory {
 		return fmt.Errorf("%s is a %s document, and --%s only applies to the %s schema: a package's values are overridden in an inventory",
-			path, kind, MiscValidatePackage, pkgschema.KindInventory)
+			path, kind, MiscPackage, pkgschema.KindInventory)
 	}
 
 	validator, ok := validators[kind]
