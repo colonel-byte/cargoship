@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
         <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
 
 
@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e7a7822.js";
+            window.path_to_searchindex_js = "../searchindex-72a14111.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-26be0405.js"></script>
+        <script src="../toc-45b48ebe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -217,7 +217,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>The host counts the suite asserts on – <code>inventoryHostCount</code>, <code>uploadOnlyCount</code>, <code>clusterControllers</code>, <code>clusterWorkers</code> – were constants pinned to the ten-machine cluster. They are now derived from whichever config the run selected, by <code>countsFor</code>, reading the same <code>kc</code>/<code>kw</code>/<code>kwa</code> name prefixes that <code>renderClusterInventory</code> maps to roles. Writing a second set of constants for the second inventory was the alternative, and it is the arrangement where the two silently disagree after someone edits one.</p>
 <h2 id="a-volume-over-the-engines-data-directory"><a class="header" href="#a-volume-over-the-engines-data-directory">A volume over the engine’s data directory</a></h2>
 <p>Every bootloose machine now mounts an anonymous Docker volume at <code>/var/lib/rancher</code>. A volume is not part of the container’s root filesystem – Docker backs it with a directory on whatever filesystem holds <code>/var/lib/docker</code> – so containerd’s snapshotter gets a plain filesystem and mounts normally. This is the same arrangement <code>kind</code>’s node image makes with its <code>VOLUME</code> declaration, for the same reason.</p>
-<p>Anonymous rather than named, on purpose. A named volume would carry one run’s engine state into the next, and every walk in this suite assumes it starts from machines with no engine on them. The cost is that <code>docker rm -f</code> does not reap anonymous volumes, so both <code>stopBootlooseContainers</code> in <code>magefiles/test-e2e-cluster.go</code> and the workflow’s cleanup steps pass <code>-v</code>.</p>
+<p>Anonymous rather than named, on purpose. A named volume would carry one run’s engine state into the next, and every walk in this suite assumes it starts from machines with no engine on them. The cost is that <code>docker rm -f</code> does not reap anonymous volumes, so both <code>StopBootlooseContainers</code> in <code>magefiles/pkg/testrunner/testrunner.go</code> and the workflow’s cleanup steps pass <code>-v</code>.</p>
 <p>Configuring rke2 to use the <code>native</code> snapshotter instead was the alternative. It was rejected because it changes what is under test: the suite would then be proving that rke2 installs correctly in a configuration no real deployment uses, and the overlayfs snapshotter is the one that ships.</p>
 <p>This fix is unverified. It addresses the exact error in the logs and it is the standard remedy, but confirming it costs a full CI run, and the split is what makes shipping it unconfirmed reasonable – if it does not work, the stage job still covers the phases that do not depend on it.</p>
 <h2 id="two-ci-jobs-rather-than-one-matrix"><a class="header" href="#two-ci-jobs-rather-than-one-matrix">Two CI jobs rather than one matrix</a></h2>

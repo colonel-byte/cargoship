@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
         <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
 
 
@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e7a7822.js";
+            window.path_to_searchindex_js = "../searchindex-72a14111.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-26be0405.js"></script>
+        <script src="../toc-45b48ebe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,7 +185,7 @@
                         <h1 id="fix-vendor-osvyaml"><a class="header" href="#fix-vendor-osvyaml">fix-vendor-osv.yaml</a></h1>
 <p><strong>Triggers:</strong> <code>pull_request_target</code> (opened/reopened/synchronize) touching <code>vendor/**</code>, dependabot PRs only.</p>
 <p>Dependabot re-runs <code>go mod vendor</code> on every dependency bump, which deletes and recreates <code>vendor/</code> - taking the four generated <code>osv-scanner.toml</code> override files with it (see <code>check-go-mod.yaml</code>). This workflow regenerates those files from the <strong>base branch</strong> (via <code>mage dev:writeOSVOverrides</code>) and commits them back onto the dependabot branch through the git data API.</p>
-<p>Uses <code>pull_request_target</code> deliberately so the job runs against the base branch with a write-capable token, without ever checking out the PR’s own tree - avoiding the classic <code>pull_request_target</code> vulnerability of running a write-privileged job against untrusted code. Overrides are generated purely from <code>magefiles/vendor-osv.go</code>, which no dependency bump touches, so the base branch produces the exact bytes the check wants.</p>
+<p>Uses <code>pull_request_target</code> deliberately so the job runs against the base branch with a write-capable token, without ever checking out the PR’s own tree - avoiding the classic <code>pull_request_target</code> vulnerability of running a write-privileged job against untrusted code. Overrides are generated purely from <code>magefiles/pkg/devtools/osv/osv.go</code>, which no dependency bump touches, so the base branch produces the exact bytes the check wants.</p>
 <p>Only runs for <code>dependabot[bot]</code>-authored PRs, since those branches live in this repo and can be pushed to with an app token; forks can’t be pushed to, and nothing else re-vendors on a schedule.</p>
 
                     </main>

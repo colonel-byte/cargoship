@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
         <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
 
 
@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e7a7822.js";
+            window.path_to_searchindex_js = "../searchindex-72a14111.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-26be0405.js"></script>
+        <script src="../toc-45b48ebe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,7 +186,7 @@
 <p>This document explains what lives under <code>thirdparty-src/</code> and why it’s handled differently from the rest of the repository.</p>
 <h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
 <p><code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> holds raw, unmodified source files pulled from an upstream engine repo (k3s and RKE2) at an exact tag - e.g. <code>thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}</code>, pulled from k3s-io/k3s at tag <code>v1.35.3+k3s1</code>. <code>version</code> is truncated to the minor version (<code>v1_35</code>, not the full <code>v1.35.3-k3s1</code> patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. RKE2 additionally pulls <code>zz_root.go</code> and <code>zz_k3sopts.go</code> - see “RKE2’s flag composition” below. Both distros also pull the file that declares their packaged components (<code>zz_stage.go</code> for k3s, <code>zz_types.go</code> for RKE2) - see “Packaged components (<code>--disable</code>)” below. The <code>zz_</code> prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under <code>pkg/engineconfig/gen</code>.</p>
-<p>These files exist so <code>pkg/engineconfig/extract</code> can statically parse them with <code>go/ast</code> to recover the <code>urfave/cli</code> flag declarations k3s/RKE2 ships for a given version. That, in turn, lets <code>mage generate:engineConfig</code> (see <code>magefiles/gen-engine-config.go</code>) generate a typed Go struct describing the valid <code>config.yaml</code> keys for that version - see <code>docs/agent/design-config-codegen.md</code> for the full design rationale.</p>
+<p>These files exist so <code>pkg/engineconfig/extract</code> can statically parse them with <code>go/ast</code> to recover the <code>urfave/cli</code> flag declarations k3s/RKE2 ships for a given version. That, in turn, lets <code>mage generate:engineConfig</code> (see <code>magefiles/pkg/gen/engineconfig/engineconfig.go</code>) generate a typed Go struct describing the valid <code>config.yaml</code> keys for that version - see <code>docs/agent/design-config-codegen.md</code> for the full design rationale.</p>
 <h2 id="why-source-files-instead-of-a-module-dependency"><a class="header" href="#why-source-files-instead-of-a-module-dependency">Why source files instead of a module dependency</a></h2>
 <p>k3s and RKE2 are not safe to <code>go get</code>/import as library dependencies: their <code>go.mod</code> files carry <code>replace</code> directives that would leak into (and corrupt) this module’s own dependency graph (see golang/go#30354). Statically parsing their source text with <code>go/parser</code> sidesteps that entirely - the files are never compiled, never imported, and never linked into any Cargoship binary. They exist purely as text for the extractor to read.</p>
 <h2 id="why-thirdparty-src-has-its-own-gomod"><a class="header" href="#why-thirdparty-src-has-its-own-gomod">Why <code>thirdparty-src/</code> has its own <code>go.mod</code></a></h2>

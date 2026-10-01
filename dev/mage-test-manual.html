@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
         <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
 
 
@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e7a7822.js";
+            window.path_to_searchindex_js = "../searchindex-72a14111.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-26be0405.js"></script>
+        <script src="../toc-45b48ebe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,13 +183,13 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="running-the-test-targets-without-mage"><a class="header" href="#running-the-test-targets-without-mage">Running the Test Targets Without Mage</a></h1>
-<p>Every <code>mage test:*</code> target is a thin wrapper around a <code>go test</code> (or, for <code>AnsibleRequirements</code>, a plain function call) plus a little bit of setup: an environment variable, a temp directory, a container cleanup pass. This page names exactly what each target does, so you can run the same check by hand – on a box without <code>mage</code> installed, in a script, or just to see what’s actually happening behind the wrapper. For what each <em>suite</em> covers and how to extend it, see <a href="e2e-tests.html">e2e-tests</a>, <a href="e2e-phase-tests.html">e2e-phase-tests</a>, and <a href="fuzz-tests.html">fuzz-tests</a>; this page is only about the wrapper.</p>
+<p>Every <code>mage test:*</code> target is a thin wrapper around a <code>go test</code> plus a little bit of setup: an environment variable, a temp directory, a container cleanup pass. This page names exactly what each target does, so you can run the same check by hand – on a box without <code>mage</code> installed, in a script, or just to see what’s actually happening behind the wrapper. For what each <em>suite</em> covers and how to extend it, see <a href="e2e-tests.html">e2e-tests</a>, <a href="e2e-phase-tests.html">e2e-phase-tests</a>, and <a href="fuzz-tests.html">fuzz-tests</a>; this page is only about the wrapper.</p>
 <p><code>mage.md</code>’s <a href="mage.html#running-mage-directly-without-the-cli">Running Mage Directly</a> section covers the other way to skip the installed <code>mage</code> binary – <code>go run ./magefiles/core test:endToEndCluster</code> runs the exact same Go function <code>mage test:endToEndCluster</code> would, just compiled and invoked directly. The commands below go one level further: they are what that function itself runs, with mage (and <code>magefiles/core</code>) out of the picture entirely.</p>
 <h2 id="the-two-shared-helpers"><a class="header" href="#the-two-shared-helpers">The two shared helpers</a></h2>
-<p>Every <code>EndToEnd*</code> target funnels through one of two functions in <code>magefiles/test-common.go</code>:</p>
+<p>Every <code>EndToEnd*</code> target funnels through one of two functions in <code>magefiles/pkg/testrunner/testrunner.go</code>:</p>
 <ul>
-<li><strong><code>runE2E</code></strong> – builds the binary for the host’s OS/arch first (<code>go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./main.go</code>, the same flags <code>mage build:binary</code> uses), then calls <code>runE2ENoBuild</code>.</li>
-<li><strong><code>runE2ENoBuild</code></strong> – creates <code>build/tmp</code>, then runs <code>go test -timeout=&lt;T&gt; -count=1 -v &lt;pkg&gt;</code> with <code>CARGOSHIP_E2E_TMPDIR</code> and <code>TMPDIR</code> both pointed at that directory.</li>
+<li><strong><code>RunE2E</code></strong> – builds the binary for the host’s OS/arch first (<code>go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./main.go</code>, the same flags <code>mage build:binary</code> uses), then calls <code>RunE2ENoBuild</code>.</li>
+<li><strong><code>RunE2ENoBuild</code></strong> – creates <code>build/tmp</code>, then runs <code>go test -timeout=&lt;T&gt; -count=1 -v &lt;pkg&gt;</code> with <code>CARGOSHIP_E2E_TMPDIR</code> and <code>TMPDIR</code> both pointed at that directory.</li>
 </ul>
 <p>The manual commands below spell both steps out for each target, so <code>-mod=vendor</code> is included explicitly even though the mage helper relies on the repo’s <code>go env GOFLAGS</code> to add it.</p>
 <h2 id="testendtoend"><a class="header" href="#testendtoend"><code>Test.EndToEnd</code></a></h2>
@@ -226,15 +226,14 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_ST
 <pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
 </code></pre>
 <p>No test runs; this is only the cleanup step the two cluster targets run before they start, exposed on its own for a run that was killed before teardown.</p>
+<h2 id="testunit"><a class="header" href="#testunit"><code>Test.Unit</code></a></h2>
+<pre><code class="language-console">$ go test -count=1 $(go list ./... | grep -v '^github.com/colonel-byte/cargoship/test/')
+</code></pre>
+<p>Every package except the e2e suites under <code>test/</code>, which have runners of their own. The target builds the list with <code>go list</code> rather than hardcoding it, so a new package is covered the moment it exists. No binary, no Docker, no temp-dir env vars.</p>
 <h2 id="testfuzz"><a class="header" href="#testfuzz"><code>Test.Fuzz</code></a></h2>
 <pre><code class="language-console">$ go test -count=1 ./fuzz/...
 </code></pre>
 <p>No binary, no Docker, no temp-dir env vars – this replays the committed seed corpus in process, which is the whole reason it’s a separate target from the suites above.</p>
-<h2 id="testansiblerequirements"><a class="header" href="#testansiblerequirements"><code>Test.AnsibleRequirements</code></a></h2>
-<p>This one has no <code>go test</code> underneath it at all – <code>Test.AnsibleRequirements</code> in <code>magefiles/test-ansible-requirements.go</code> is a plain Go function that reads <code>ansible/colonel_byte/cargoship/requirements.yml</code>, queries the Galaxy API, and returns an error. There’s no equivalent shell pipeline to hand-roll; the only way to run it without the <code>mage</code> CLI is the <code>magefiles/core</code> entry point mage.md already documents:</p>
-<pre><code class="language-console">$ go run -mod=vendor ./magefiles/core test:ansibleRequirements
-</code></pre>
-<p>This is also exactly how <code>.github/workflows/check-ansible-requirements.yaml</code> runs it in CI.</p>
 
                     </main>
 

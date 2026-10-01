@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../../docs/css/root-2b369fa7.css">
         <link rel="stylesheet" href="../../docs/css/print-69d0807c.css">
 
 
@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-3e7a7822.js";
+            window.path_to_searchindex_js = "../../searchindex-72a14111.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-26be0405.js"></script>
+        <script src="../../toc-45b48ebe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -990,7 +990,7 @@
 <p>Title for the phase</p>
 <p><a name="DryRunBehavior"></a></p>
 <h2 id="type-dryrunbehavior"><a class="header" href="#type-dryrunbehavior">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L134">DryRunBehavior</a></a></h2>
-<p>DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the phase implements, and it is exported so magefiles/gen-docs.go can label each phase in docs/phases/&lt;name&gt;.md with the same classification Run() gates on. The docs and the gate cannot disagree, because there is only one classifier.</p>
+<p>DryRunBehavior is what a dry run does with a phase. It is derived from the interfaces the phase implements, and it is exported so magefiles/pkg/gen/docs/phase.go can label each phase in docs/phases/&lt;name&gt;.md with the same classification Run() gates on. The docs and the gate cannot disagree, because there is only one classifier.</p>
 <pre><code class="language-go">type DryRunBehavior int
 </code></pre>
 <p><a name="DryRunSkip"></a></p>

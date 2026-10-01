@@ -28,7 +28,7 @@
         <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../docs/css/root-63d1cffd.css">
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
         <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
 
 
@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-3e7a7822.js";
+            window.path_to_searchindex_js = "../searchindex-72a14111.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-26be0405.js"></script>
+        <script src="../toc-45b48ebe.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -255,7 +255,7 @@
 <p>The plugin also merges a <code>parameters</code> dict into the arguments. The role has a caller-supplied dict of parameters and no way to know which of them the chosen module takes, and the obvious way to pass it – making the task’s whole argument dict one template – is warned about by Ansible on every run and is genuinely unsafe. Merging in the plugin keeps the task’s keys literal and its values templates, and costs one parameter that the module itself never sees.</p>
 <p>The role sets <code>run_once: true</code> on every task. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It defaults <code>no_log: "{{ cargoship_no_log | bool }}"</code> with <code>cargoship_no_log: true</code> by default: a template failure or misconfiguration avoids exposing decrypted credentials and host connection parameters in CI or production logs, while still allowing operators to set <code>cargoship_no_log: false</code> for local troubleshooting. The debug task showing cargoship’s own report carries no parameters.</p>
 <h2 id="the-interface-is-documented-in-the-plugins-and-nothing-validates-against-it"><a class="header" href="#the-interface-is-documented-in-the-plugins-and-nothing-validates-against-it">The interface is documented in the plugins, and nothing validates against it</a></h2>
-<p>Each action plugin carries a <code>DOCUMENTATION</code> block naming every parameter the module takes, its type, and the flag it renders. <code>generateModuleDocs</code> in <code>magefiles/gen-docs.go</code> reads those blocks, <code>generateRoleDocs</code> reads each role’s <code>meta/argument_specs.yml</code>, and together they write <code>docs/ansible/</code>. The reference pages therefore cannot be edited into disagreement with the modules, and a parameter added to the Go struct without being documented shows up as a missing row rather than as nothing at all.</p>
+<p>Each action plugin carries a <code>DOCUMENTATION</code> block naming every parameter the module takes, its type, and the flag it renders. <code>generateModuleDocs</code> in <code>magefiles/pkg/gen/docs/ansible_module.go</code> reads those blocks, <code>generateRoleDocs</code> reads each role’s <code>meta/argument_specs.yml</code>, and together they write <code>docs/ansible/</code>. The reference pages therefore cannot be edited into disagreement with the modules, and a parameter added to the Go struct without being documented shows up as a missing row rather than as nothing at all.</p>
 <p>The blocks are inert. An action plugin’s <code>DOCUMENTATION</code> exists for <code>ansible-doc</code>, which is not run against this collection, so nothing in Ansible reads them and no rule moved into Python: there is still no <code>argument_spec</code>, and argument validation is still hand-written in Go. What keeps them honest is <code>TestActionPluginDocsMatchModuleParams</code>, which reads the Python and fails when a documented parameter has no Go field, when a Go field is undocumented, or when a documented <code>cli_flag</code> is not the flag the argument vector actually renders.</p>
 <p><code>cli_flag:</code> is ours rather than a standard Ansible documentation key. Stock <code>validate-modules</code> would flag it; it is not run either, and the parser that reads the key is the one in this repository.</p>
 <p>This narrows the first bullet below rather than reversing it. The interface is now documented in a structured place and published, which is part of what publishing the collection was going to require of it anyway. Adding an <code>argument_spec</code> that Ansible itself validates against would be the reversal, and is still declined for the reasons in “Why the binary, and not a Python wrapper around it” above: what it buys is <code>ansible-doc</code> and better-named argument errors, and a plugin that grows a rule has drifted from this decision.</p>
@@ -275,7 +275,7 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../agent/choice-ansible-collection-pins.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../agent/choice-age-encryption.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -289,7 +289,7 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../agent/choice-ansible-collection-pins.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../agent/choice-age-encryption.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
