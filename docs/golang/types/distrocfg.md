@@ -71,7 +71,7 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*Upstream\) KubectlCmdf\(host \*cluster.ZarfHost, dataDir string, s string, args ...any\) string](<#Upstream.KubectlCmdf>)
   - [func \(d \*Upstream\) ManagedDirs\(\) \[\]ManagedDir](<#Upstream.ManagedDirs>)
   - [func \(d \*Upstream\) ManifestPaths\(dis distro.ZarfDistro\) \[\]string](<#Upstream.ManifestPaths>)
-  - [func \(d \*Upstream\) PreStartUpgrade\(\_ context.Context, host \*cluster.ZarfHost, dis distro.ZarfDistro\) error](<#Upstream.PreStartUpgrade>)
+  - [func \(d \*Upstream\) PreStartUpgrade\(ctx context.Context, host \*cluster.ZarfHost, dis distro.ZarfDistro\) error](<#Upstream.PreStartUpgrade>)
   - [func \(d \*Upstream\) PreUninstallReset\(\_ context.Context, host \*cluster.ZarfHost\) error](<#Upstream.PreUninstallReset>)
   - [func \(d \*Upstream\) RunningVersion\(host \*cluster.ZarfHost\) \(string, error\)](<#Upstream.RunningVersion>)
   - [func \(d \*Upstream\) StopControllerService\(h \*cluster.ZarfHost\) error](<#Upstream.StopControllerService>)

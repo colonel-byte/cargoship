@@ -39,7 +39,7 @@ func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) 
 		"iptables -t mangle -F",
 		"iptables -X",
 	} {
-		_ = host.SudoExec(cmd)
+		_ = host.SudoExec(cmd) //nolint:errcheck // best-effort teardown; these fail on a host that never came fully up
 	}
 	return nil
 }
