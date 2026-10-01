@@ -210,6 +210,7 @@
 - [design-config-codegen](agent/design-config-codegen.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
 - [todo-pkg-action-unit-tests](agent/todo-pkg-action-unit-tests.md)
+- [todo-pkg-coci-registry-tests](agent/todo-pkg-coci-registry-tests.md)
 
 
 -----------
