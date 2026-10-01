@@ -388,7 +388,7 @@ func TestWetRunFailsOnPrepareFailure(t *testing.T) {
 	require.False(t, after.runCalled)
 }
 
-// TestClassifyDryRun pins the classifier the docs render. magefiles/gen-docs.go labels every
+// TestClassifyDryRun pins the classifier the docs render. magefiles/pkg/gen/docs/phase.go labels every
 // phase in docs/phases/apply.md and reset.md with this, and Run() gates on the same call, so a
 // label there is what the phase does rather than a second description of it.
 func TestClassifyDryRun(t *testing.T) {

@@ -1,15 +1,15 @@
 # Running the Test Targets Without Mage
 
-Every `mage test:*` target is a thin wrapper around a `go test` (or, for `AnsibleRequirements`, a plain function call) plus a little bit of setup: an environment variable, a temp directory, a container cleanup pass. This page names exactly what each target does, so you can run the same check by hand -- on a box without `mage` installed, in a script, or just to see what's actually happening behind the wrapper. For what each *suite* covers and how to extend it, see [e2e-tests](e2e-tests.md), [e2e-phase-tests](e2e-phase-tests.md), and [fuzz-tests](fuzz-tests.md); this page is only about the wrapper.
+Every `mage test:*` target is a thin wrapper around a `go test` plus a little bit of setup: an environment variable, a temp directory, a container cleanup pass. This page names exactly what each target does, so you can run the same check by hand -- on a box without `mage` installed, in a script, or just to see what's actually happening behind the wrapper. For what each *suite* covers and how to extend it, see [e2e-tests](e2e-tests.md), [e2e-phase-tests](e2e-phase-tests.md), and [fuzz-tests](fuzz-tests.md); this page is only about the wrapper.
 
 `mage.md`'s [Running Mage Directly](mage.md#running-mage-directly-without-the-cli) section covers the other way to skip the installed `mage` binary -- `go run ./magefiles/core test:endToEndCluster` runs the exact same Go function `mage test:endToEndCluster` would, just compiled and invoked directly. The commands below go one level further: they are what that function itself runs, with mage (and `magefiles/core`) out of the picture entirely.
 
 ## The two shared helpers
 
-Every `EndToEnd*` target funnels through one of two functions in `magefiles/test-common.go`:
+Every `EndToEnd*` target funnels through one of two functions in `magefiles/pkg/testrunner/testrunner.go`:
 
-*   **`runE2E`** -- builds the binary for the host's OS/arch first (`go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_<goos>_<goarch> ./main.go`, the same flags `mage build:binary` uses), then calls `runE2ENoBuild`.
-*   **`runE2ENoBuild`** -- creates `build/tmp`, then runs `go test -timeout=<T> -count=1 -v <pkg>` with `CARGOSHIP_E2E_TMPDIR` and `TMPDIR` both pointed at that directory.
+*   **`RunE2E`** -- builds the binary for the host's OS/arch first (`go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_<goos>_<goarch> ./main.go`, the same flags `mage build:binary` uses), then calls `RunE2ENoBuild`.
+*   **`RunE2ENoBuild`** -- creates `build/tmp`, then runs `go test -timeout=<T> -count=1 -v <pkg>` with `CARGOSHIP_E2E_TMPDIR` and `TMPDIR` both pointed at that directory.
 
 The manual commands below spell both steps out for each target, so `-mod=vendor` is included explicitly even though the mage helper relies on the repo's `go env GOFLAGS` to add it.
 
@@ -68,6 +68,14 @@ $ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose");
 
 No test runs; this is only the cleanup step the two cluster targets run before they start, exposed on its own for a run that was killed before teardown.
 
+## `Test.Unit`
+
+```console
+$ go test -count=1 $(go list ./... | grep -v '^github.com/colonel-byte/cargoship/test/')
+```
+
+Every package except the e2e suites under `test/`, which have runners of their own. The target builds the list with `go list` rather than hardcoding it, so a new package is covered the moment it exists. No binary, no Docker, no temp-dir env vars.
+
 ## `Test.Fuzz`
 
 ```console
@@ -75,13 +83,3 @@ $ go test -count=1 ./fuzz/...
 ```
 
 No binary, no Docker, no temp-dir env vars -- this replays the committed seed corpus in process, which is the whole reason it's a separate target from the suites above.
-
-## `Test.AnsibleRequirements`
-
-This one has no `go test` underneath it at all -- `Test.AnsibleRequirements` in `magefiles/test-ansible-requirements.go` is a plain Go function that reads `ansible/colonel_byte/cargoship/requirements.yml`, queries the Galaxy API, and returns an error. There's no equivalent shell pipeline to hand-roll; the only way to run it without the `mage` CLI is the `magefiles/core` entry point mage.md already documents:
-
-```console
-$ go run -mod=vendor ./magefiles/core test:ansibleRequirements
-```
-
-This is also exactly how `.github/workflows/check-ansible-requirements.yaml` runs it in CI.

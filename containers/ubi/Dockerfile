@@ -20,15 +20,6 @@ ARG TARGETPLATFORM
 ARG SHADOW_UTILS_VERSION="4.15.0-11.el10"
 ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
-COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
-COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
-
-RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
-  && rpm --checksig /tmp/rpms/*.rpm \
-  && rpm --install --verbose /tmp/rpms/*.rpm \
-  && rm -rf /tmp/rpms \
-  && cargoship version
-
 ARG UID=65532
 ARG GID=65532
 # hadolint ignore=DL3040
@@ -48,6 +39,15 @@ RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 \
   && microdnf remove shadow-utils -y \
   && microdnf clean all \
   && rm -rf /var/cache/yum
+
+COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
+COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
+
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
+  && rpm --checksig /tmp/rpms/*.rpm \
+  && rpm --install --verbose /tmp/rpms/*.rpm \
+  && rm -rf /tmp/rpms \
+  && cargoship version
 
 LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
