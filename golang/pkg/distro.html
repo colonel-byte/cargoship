@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-72a14111.js";
+            window.path_to_searchindex_js = "../../searchindex-8b3b0a9f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-45b48ebe.js"></script>
+        <script src="../../toc-54c4a31c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -199,7 +199,7 @@
 <li><a href="#PullOptions">type PullOptions</a></li>
 </ul>
 <p><a name="Create"></a></p>
-<h2 id="func-create"><a class="header" href="#func-create">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L60">Create</a></a></h2>
+<h2 id="func-create"><a class="header" href="#func-create">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L64">Create</a></a></h2>
 <pre><code class="language-go">func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (string, error)
 </code></pre>
 <p>Create used to create a distro package</p>
@@ -219,7 +219,7 @@
 </code></pre>
 <p>Pull takes a source URL and destination directory, fetches the Cargoship Distro package from the given sources, and returns the path to the fetched package.</p>
 <p><a name="CreateOptions"></a></p>
-<h2 id="type-createoptions"><a class="header" href="#type-createoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L38-L57">CreateOptions</a></a></h2>
+<h2 id="type-createoptions"><a class="header" href="#type-createoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L39-L61">CreateOptions</a></a></h2>
 <p>CreateOptions are the optional parameters to create</p>
 <pre><code class="language-go">type CreateOptions struct {
     OCIConcurrency int
@@ -233,6 +233,9 @@
     // inputs produce byte-identical output.
     Reproducible      bool
     RegistryOverrides []images.RegistryOverride
+    // FileOverrides redirect the file downloads a distro definition declares to an internal
+    // mirror or to a directory of pre-staged assets.
+    FileOverrides []fileoverride.Override
     // SigningKeyPath and SigningKeyPassword sign the package as part of creation
     // when set. Empty values are a no-op -- see DistroLayout.SignPackage.
     SigningKeyPath     string

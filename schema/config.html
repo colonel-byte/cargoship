@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-72a14111.js";
+            window.path_to_searchindex_js = "../searchindex-8b3b0a9f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-45b48ebe.js"></script>
+        <script src="../toc-54c4a31c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -236,6 +236,7 @@
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>file_override</code></td><td><a href="#fileoverridemap">FileOverrideMap</a></td><td>no</td><td></td><td>maps a source URL prefix to the location cargoship downloads from<br>instead, for example {“https://rpm.rancher.io”: “https://mirror.example.com/rpm-rancher”}.<br>The value may also be a local directory, for builds from pre-staged assets.</td></tr>
 <tr><td><code>registry_override</code></td><td><a href="#registryoverridemap">RegistryOverrideMap</a></td><td>no</td><td></td><td>maps a source registry to the registry cargoship uses instead<br>when pulling images, for example {“docker.io”: “mirror.example.com”}</td></tr>
 </tbody>
 </table>
@@ -309,6 +310,25 @@
 <tbody>
 <tr><td><code>signing_key</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package</td></tr>
 <tr><td><code>signing_key_password</code></td><td><code>string</code></td><td>no</td><td></td><td>the password for the private key used for signing</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="fileoverridemap"><a class="header" href="#fileoverridemap">FileOverrideMap</a></h3>
+<p>maps a source URL prefix to the location cargoship downloads from instead.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>https://download.docker.com</code></td><td><code>string</code></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>https://get.k3s.io</code></td><td><code>string</code></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>https://github.com</code></td><td><code>string</code></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>https://pkgs.k8s.io</code></td><td><code>string</code></td><td>no</td><td></td><td></td></tr>
+<tr><td><code>https://rpm.rancher.io</code></td><td><code>string</code></td><td>no</td><td></td><td></td></tr>
 </tbody>
 </table>
 </div>

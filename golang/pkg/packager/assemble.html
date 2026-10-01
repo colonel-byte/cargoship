@@ -37,10 +37,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-72a14111.js";
+            window.path_to_searchindex_js = "../../../searchindex-8b3b0a9f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-45b48ebe.js"></script>
+        <script src="../../../toc-54c4a31c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,18 +193,22 @@
 <li><a href="#AssembleOptions">type AssembleOptions</a></li>
 </ul>
 <p><a name="AssembleDistro"></a></p>
-<h2 id="func-assembledistro"><a class="header" href="#func-assembledistro">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L137">AssembleDistro</a></a></h2>
+<h2 id="func-assembledistro"><a class="header" href="#func-assembledistro">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L142">AssembleDistro</a></a></h2>
 <pre><code class="language-go">func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error)
 </code></pre>
 <p>AssembleDistro creates the actual tarballs</p>
 <p><a name="AssembleOptions"></a></p>
-<h2 id="type-assembleoptions"><a class="header" href="#type-assembleoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L61-L75">AssembleOptions</a></a></h2>
+<h2 id="type-assembleoptions"><a class="header" href="#type-assembleoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L62-L80">AssembleOptions</a></a></h2>
 <p>AssembleOptions options</p>
 <pre><code class="language-go">type AssembleOptions struct {
     RegistryOverrides []images.RegistryOverride
-    OCIConcurrency    int
-    CachePath         string
-    SkipSBOM          bool
+    // FileOverrides redirect the file downloads a distro definition declares to an internal
+    // mirror or to a directory of pre-staged assets, the way RegistryOverrides redirects image
+    // pulls. See pkg/fileoverride.
+    FileOverrides  []fileoverride.Override
+    OCIConcurrency int
+    CachePath      string
+    SkipSBOM       bool
     // Reproducible pins Build.Timestamp to config.Timestamp instead of the
     // current time, and is recorded on Build.Reproducible, so identical package
     // inputs produce byte-identical output.

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-72a14111.js";
+            window.path_to_searchindex_js = "../searchindex-8b3b0a9f.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-45b48ebe.js"></script>
+        <script src="../toc-54c4a31c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -217,6 +217,25 @@
 <tr><td><code>package</code></td><td><code>string</code></td><td>no</td><td></td><td>selects which install method receives this file: rpm, apt, or binary. One of <code>rpm</code>, <code>apt</code>, <code>binary</code>.</td></tr>
 <tr><td><code>profile</code></td><td><code>string</code></td><td>no</td><td></td><td>selects which host role receives this file: worker or controller. One of <code>worker</code>, <code>controller</code>.</td></tr>
 <tr><td><code>roles</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists the host roles this file applies to.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h3 id="filesource"><a class="header" href="#filesource">FileSource</a></h3>
+<p>records where one file in the package was actually read from, for a file whose declared source a –file-override redirected.</p>
+<div class="schema-table">
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>declared</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the source the distro definition named.</td></tr>
+<tr><td><code>override</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the Source prefix of the override that matched, which is the one that won<br>when several could have.</td></tr>
+<tr><td><code>path</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where the file was staged inside the package, for example “files/0/k3s”. It<br>identifies the entry even when several files share a declared source.</td></tr>
+<tr><td><code>resolved</code></td><td><code>string</code></td><td>yes</td><td></td><td>is where cargoship read the bytes from instead: a mirror URL, or a path on<br>the build host.</td></tr>
+<tr><td><code>shasum</code></td><td><code>string</code></td><td>yes</td><td></td><td>is the checksum the bytes were verified against. An override is refused for a<br>file that declares none, so this is never empty.</td></tr>
 </tbody>
 </table>
 </div>
@@ -410,6 +429,8 @@
 <tbody>
 <tr><td><code>architecture</code></td><td><code>string</code></td><td>no</td><td></td><td>is the CPU architecture used to build the package. Populated only when the package targets a single architecture. One of <code>amd64</code>, <code>arm64</code>, <code>riscv64</code>.</td></tr>
 <tr><td><code>architectures</code></td><td><a href="#arches">Arches</a></td><td>no</td><td></td><td>lists the CPU architectures used to build the package.</td></tr>
+<tr><td><code>fileOverrides</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps each source URL prefix to the mirror or local directory files were<br>downloaded from instead. Like RegistryOverrides, this is the configuration the build was<br>given. For what each override actually did, see FileSources.</td></tr>
+<tr><td><code>fileSources</code></td><td>array of <a href="#filesource">FileSource</a></td><td>no</td><td></td><td>records every file whose source an override redirected: what the definition<br>declared, where the bytes were read from instead, and the checksum they were verified<br>against. It is empty for a build that used no overrides, so a package built without them<br>is unchanged. Entries are in the order the files were staged, which is the order they<br>appear in the definition, so a reproducible build still produces identical output.</td></tr>
 <tr><td><code>provenanceFiles</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists files in the package that checksums.txt does not cover.<br>These are files added after cargoship generates checksums, for example signature files.<br>The signed distro.yaml authenticates this list.</td></tr>
 <tr><td><code>registryOverrides</code></td><td>map[string]<code>string</code></td><td>no</td><td></td><td>maps each original registry to the registry actually used to build the package.</td></tr>
 <tr><td><code>reproducible</code></td><td><code>boolean</code></td><td>no</td><td></td><td>indicates Build.Timestamp was pinned to a fixed value<br>(config.Timestamp) instead of the actual build time, so identical<br>package inputs produce byte-identical output.</td></tr>
