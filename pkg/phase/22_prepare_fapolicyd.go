@@ -25,6 +25,8 @@ import (
 const (
 	// FAPolicydRuleFile path on the host
 	FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
+	// FAPOLICYD name of the service for fapolicyd
+	FAPOLICYD = "fapolicyd"
 )
 
 // PrepareFapolicy installs required packages and so on on the hosts.
