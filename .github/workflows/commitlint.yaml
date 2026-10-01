@@ -10,6 +10,11 @@ on:
       - reopened
       - synchronize
       - edited
+  # Required status check, so the merge queue waits for a `title_check` result on the
+  # merge_group ref too. There is no pull request under that event -- the steps below are
+  # skipped and the job reports success, since the title was already linted on the pull
+  # request that got queued.
+  merge_group:
 
 permissions:
   contents: read
@@ -23,14 +28,17 @@ jobs:
 
     steps:
       - name: Checkout
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
+        if: github.event_name == 'pull_request'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
 
       - name: Install commitlint
+        if: github.event_name == 'pull_request'
         working-directory: .github/commitlint
         run: npm ci
 
@@ -38,6 +46,7 @@ jobs:
       # and the PR title becomes the final commit message. wagoid/commitlint-github-action
       # lints commit messages instead, so it isn't a drop-in replacement for this step.
       - name: Lint PR title
+        if: github.event_name == 'pull_request'
         working-directory: .github/commitlint
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
