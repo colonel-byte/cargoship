@@ -70,7 +70,7 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*Upstream\) KubectlCmdf\(host \*cluster.ZarfHost, dataDir string, s string, args ...any\) string](<#Upstream.KubectlCmdf>)
   - [func \(d \*Upstream\) ManagedDirs\(\) \[\]ManagedDir](<#Upstream.ManagedDirs>)
   - [func \(d \*Upstream\) ManifestPaths\(dis distro.ZarfDistro\) \[\]string](<#Upstream.ManifestPaths>)
-  - [func \(d \*Upstream\) PreStartUpgrade\(\_ context.Context, host \*cluster.ZarfHost, dis distro.ZarfDistro\) error](<#Upstream.PreStartUpgrade>)
+  - [func \(d \*Upstream\) PreStartUpgrade\(ctx context.Context, host \*cluster.ZarfHost, dis distro.ZarfDistro\) error](<#Upstream.PreStartUpgrade>)
   - [func \(d \*Upstream\) RunningVersion\(host \*cluster.ZarfHost\) \(string, error\)](<#Upstream.RunningVersion>)
   - [func \(d \*Upstream\) StopControllerService\(h \*cluster.ZarfHost\) error](<#Upstream.StopControllerService>)
   - [func \(d \*Upstream\) StopWorkerService\(h \*cluster.ZarfHost\) error](<#Upstream.StopWorkerService>)
@@ -815,10 +815,10 @@ func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string
 ManifestPaths returns the on\-host manifest paths the package declares for cargoship to kubectl apply, e.g. a CNI. Delivery of those files is Config.Files' job; this is only the list of what to apply.
 
 <a name="Upstream.PreStartUpgrade"></a>
-### func \(\*Upstream\) [PreStartUpgrade](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_upgrade.go#L53>)
+### func \(\*Upstream\) [PreStartUpgrade](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_upgrade.go#L95>)
 
 ```go
-func (d *Upstream) PreStartUpgrade(_ context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
+func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
 ```
 
 PreStartUpgrade runs kubeadm's own upgrade sequence between the shared upgrade phase's package install and service restart steps. kubeadm, unlike rke2/k3s, refuses to move the control plane forward on a plain kubelet restart \-\- it must install the new kubeadm binary and run its own upgrade command first, and the first controller runs a different command than every other node.

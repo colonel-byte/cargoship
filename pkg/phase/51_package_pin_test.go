@@ -62,7 +62,7 @@ func TestInstallAndPinPackagesForUnholdsInstallsThenHolds(t *testing.T) {
 	var order []string
 	var heldNames, unheldNames []string
 	var heldHost *cluster.ZarfHost
-	unhold := func(_ context.Context, hh *cluster.ZarfHost, names []string) error {
+	unhold := func(_ context.Context, _ *cluster.ZarfHost, names []string) error {
 		order = append(order, "unhold")
 		unheldNames = names
 		return nil
