@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-66b37848.js";
+            window.path_to_searchindex_js = "searchindex-d2aaf64c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b39b55ae.js"></script>
@@ -16244,9 +16244,10 @@ mage generate:updatePins            # refresh every line already pinned
 <p>The build runs fully offline (<code>GOPROXY=off</code>, <code>GOSUMDB=off</code>, vendored modules only) so any accidental network dependency fails loudly.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="commitlintyaml"><a class="header" href="#commitlintyaml">commitlint.yaml</a></h1>
-<p><strong>Triggers:</strong> pull requests (milestoned, opened, reopened, synchronize, edited).</p>
+<p><strong>Triggers:</strong> pull requests (milestoned, opened, reopened, synchronize, edited), merge groups.</p>
 <p>Lints the PR <strong>title</strong> - not individual commit messages - against conventional-commit rules, since release-please squash-merges PRs and the PR title becomes the final commit message on <code>main</code>. A dedicated lint action was written rather than reusing a commit-message-linting GitHub Action, because those lint the commits, not the title.</p>
 <p>The <code>milestoned</code> event type is included as a workaround: release-please doesn’t otherwise trigger pull_request workflows, so its PRs are added to a milestone specifically to fire this check.</p>
+<p><code>title_check</code> is a required status check, so the workflow also runs on <code>merge_group</code> to report one. A merge group carries no pull request and therefore no title, so every step is skipped there and the job reports success - the title was already linted on the pull request that got queued.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="dependabot-validateyaml"><a class="header" href="#dependabot-validateyaml">dependabot-validate.yaml</a></h1>
 <p><strong>Triggers:</strong> pull requests touching <code>.github/dependabot.yaml</code> or this workflow file.</p>
@@ -16264,14 +16265,15 @@ mage generate:updatePins            # refresh every line already pinned
 <p>On failure, node diagnostics (disk, memory, container logs) are collected and uploaded as an artifact, and leftover bootloose containers are always cleaned up.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="e2eyaml"><a class="header" href="#e2eyaml">e2e.yaml</a></h1>
-<p><strong>Triggers:</strong> pull requests (excluding <code>CODEOWNERS</code>-only changes).</p>
+<p><strong>Triggers:</strong> pull requests, merge groups.</p>
 <p>Three jobs, “Basic build”:</p>
 <ol>
 <li><strong>build-e2e</strong> - builds the <code>cargoship</code> binary (<code>CGO_ENABLED=0</code>, fully vendored/offline build) and uploads it as an artifact.</li>
 <li><strong>e2e-noncluster</strong> (needs build-e2e) - downloads that binary and runs the non-cluster e2e test groups (misc and package commands), which need no Docker/bootloose infrastructure. Uses <code>-short</code> to additionally skip example packages, which would otherwise pull ~1.5GB of engine artifacts and images.</li>
-<li><strong>binary-size</strong> (needs build-e2e) - compares the PR’s binary size against the latest release’s binary and posts the diff as a sticky PR comment.</li>
+<li><strong>binary-size</strong> (needs build-e2e) - compares the PR’s binary size against the latest release’s binary and posts the diff as a sticky PR comment. Pull requests only; there is no pull request to comment on in a merge group.</li>
 </ol>
 <p>The cluster-dependent e2e group is deliberately not run here - it needs Docker, provisions ten containers, and installs RKE2 on nine of them, so it lives in its own workflow, <code>e2e-cluster.yaml</code>, on its own trigger.</p>
+<p><code>build-e2e</code> and <code>e2e-noncluster</code> are required status checks, which is why the <code>merge_group</code> trigger is here and why neither trigger carries a path filter. A path-filtered required check reports nothing at all on a change that only touches the ignored paths, so the check stays pending and the pull request can never be queued. The workflow used to skip <code>CODEOWNERS</code>-only changes; it now builds those too, which costs one build in the rare case and removes the stall.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="fix-vendor-osvyaml"><a class="header" href="#fix-vendor-osvyaml">fix-vendor-osv.yaml</a></h1>
 <p><strong>Triggers:</strong> <code>pull_request_target</code> (opened/reopened/synchronize) touching <code>vendor/**</code>, dependabot PRs only.</p>

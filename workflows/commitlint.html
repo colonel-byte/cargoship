@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-66b37848.js";
+            window.path_to_searchindex_js = "../searchindex-d2aaf64c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b39b55ae.js"></script>
@@ -183,9 +183,10 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="commitlintyaml"><a class="header" href="#commitlintyaml">commitlint.yaml</a></h1>
-<p><strong>Triggers:</strong> pull requests (milestoned, opened, reopened, synchronize, edited).</p>
+<p><strong>Triggers:</strong> pull requests (milestoned, opened, reopened, synchronize, edited), merge groups.</p>
 <p>Lints the PR <strong>title</strong> - not individual commit messages - against conventional-commit rules, since release-please squash-merges PRs and the PR title becomes the final commit message on <code>main</code>. A dedicated lint action was written rather than reusing a commit-message-linting GitHub Action, because those lint the commits, not the title.</p>
 <p>The <code>milestoned</code> event type is included as a workaround: release-please doesn’t otherwise trigger pull_request workflows, so its PRs are added to a milestone specifically to fire this check.</p>
+<p><code>title_check</code> is a required status check, so the workflow also runs on <code>merge_group</code> to report one. A merge group carries no pull request and therefore no title, so every step is skipped there and the job reports success - the title was already linted on the pull request that got queued.</p>
 
                     </main>
 
