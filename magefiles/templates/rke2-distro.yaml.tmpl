@@ -65,21 +65,6 @@ spec:
       - source: .cilium.hubble.ui.ipv6
         target: .manifest.rke2-cilium.hubble.ui.frontend.server.ipv6.enabled
 {{- end }}
-  actions:
-    onCreate:
-      before:
-        - description: pull rke2 tar-ball
-          cmd: |-
-            rm -rf   target
-            mkdir -p target
-{{- range $arch := .Arches }}
-            echo https://github.com/rancher/rke2/releases/download/{{ $.TagURL }}/{{ $arch.Tarball }}
-            curl -L -o ./target/{{ $arch.Tarball }} https://github.com/rancher/rke2/releases/download/{{ $.TagURL }}/{{ $arch.Tarball }}
-{{- end }}
-      after:
-        - description: clean up after
-          cmd: |-
-            rm -rf   target
   config:
     engine:
       config:
@@ -386,10 +371,13 @@ spec:
 {{- end }}
 {{- end }}
 {{- range $arch := .Arches }}
-        - source: target/{{ $arch.Tarball }}
+        - source: {{ $arch.TarballURL }}
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
+{{- with sha256member $arch.TarballURL "bin/rke2" }}
+          shasum: {{ . }}
+{{- end }}
           selector:
             package: binary
 {{- if $.MultiArch }}
@@ -398,10 +386,13 @@ spec:
 {{- end }}
 {{- end }}
 {{- range $arch := .Arches }}
-        - source: target/{{ $arch.Tarball }}
+        - source: {{ $arch.TarballURL }}
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
+{{- with sha256member $arch.TarballURL "bin/rke2-killall.sh" }}
+          shasum: {{ . }}
+{{- end }}
           selector:
             package: binary
 {{- if $.MultiArch }}
@@ -410,10 +401,13 @@ spec:
 {{- end }}
 {{- end }}
 {{- range $arch := .Arches }}
-        - source: target/{{ $arch.Tarball }}
+        - source: {{ $arch.TarballURL }}
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
+{{- with sha256member $arch.TarballURL "bin/rke2-uninstall.sh" }}
+          shasum: {{ . }}
+{{- end }}
           selector:
             package: binary
 {{- if $.MultiArch }}
@@ -422,9 +416,12 @@ spec:
 {{- end }}
 {{- end }}
 {{- range $arch := .Arches }}
-        - source: target/{{ $arch.Tarball }}
+        - source: {{ $arch.TarballURL }}
           extractPath: lib/systemd/system/rke2-server.service
           target: /etc/systemd/system/rke2-server.service
+{{- with sha256member $arch.TarballURL "lib/systemd/system/rke2-server.service" }}
+          shasum: {{ . }}
+{{- end }}
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-server.service
           selector:
@@ -436,9 +433,12 @@ spec:
 {{- end }}
 {{- end }}
 {{- range $arch := .Arches }}
-        - source: target/{{ $arch.Tarball }}
+        - source: {{ $arch.TarballURL }}
           extractPath: lib/systemd/system/rke2-agent.service
           target: /etc/systemd/system/rke2-agent.service
+{{- with sha256member $arch.TarballURL "lib/systemd/system/rke2-agent.service" }}
+          shasum: {{ . }}
+{{- end }}
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
           selector:

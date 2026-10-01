@@ -67,11 +67,14 @@ type exampleArch struct {
 	Arch    string // amd64 -- what a file's arch selector names
 	RPMArch string // x86_64 -- what rpm.rancher.io calls the same architecture
 
-	// RKE2 installs from RPMs, plus a release tarball its binaries are extracted from.
-	CommonRPM string
-	ServerRPM string
-	AgentRPM  string
-	Tarball   string // rke2.linux-amd64.tar.gz
+	// RKE2 installs from RPMs, plus a release tarball its binaries, scripts and unit files
+	// are extracted from. The tarball is named and addressed here rather than in the
+	// templates so that the URL hashed is the same one the example carries.
+	CommonRPM  string
+	ServerRPM  string
+	AgentRPM   string
+	Tarball    string // rke2.linux-amd64.tar.gz
+	TarballURL string // https://github.com/rancher/rke2/releases/download/<tag>/<tarball>
 
 	// k3s installs a single binary, whose digest the release publishes for us.
 	BinaryURL string
