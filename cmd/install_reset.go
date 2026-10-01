@@ -43,20 +43,11 @@ const (
 	InstallResetConcurrency = "concurrency"
 	// InstallResetWorkConcurrency flag
 	InstallResetWorkConcurrency = "work-concurrency"
-	// InstallResetUpdateHost flag
-	InstallResetUpdateHost = "hosts"
-	// InstallResetUpdateFirewall flag
-	InstallResetUpdateFirewall = "firewall"
-	// InstallResetUpdateFAPolicyD flag
-	InstallResetUpdateFAPolicyD = "fapolicyd"
 )
 
 type installResetOptions struct {
 	InstallCommon
 	workerCon string
-	hosts     bool
-	firewall  bool
-	fapolicy  bool
 	distro    string
 }
 
@@ -80,9 +71,6 @@ func newInstallResetCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&o.distro, InstallResetDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagResetDistro)
 	cmd.Flags().BoolVar(&o.confirm, InstallResetConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
-	cmd.Flags().BoolVarP(&o.hosts, InstallResetUpdateHost, "H", resolvedConfig.DistroOpts.HostUpdate, lang.CmdInstallHostUpdate)
-	cmd.Flags().BoolVarP(&o.firewall, InstallResetUpdateFirewall, "F", resolvedConfig.DistroOpts.FirewallUpdate, lang.CmdInstallFirewallUpdate)
-	cmd.Flags().BoolVarP(&o.fapolicy, InstallResetUpdateFAPolicyD, "f", resolvedConfig.DistroOpts.FAPolicyd, lang.CmdInstallFapolicydUpdate)
 	cmd.Flags().StringVarP(&o.workerCon, InstallResetWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)

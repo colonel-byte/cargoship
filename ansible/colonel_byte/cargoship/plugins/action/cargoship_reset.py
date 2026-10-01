@@ -79,24 +79,6 @@ options:
     type: str
     required: false
     cli_flag: "--work-concurrency"
-  hosts:
-    description:
-      - "Whether to manage C(/etc/hosts) entries on the fleet."
-    type: bool
-    required: false
-    cli_flag: "--hosts"
-  firewall:
-    description:
-      - "Whether to manage the host firewall on the fleet."
-    type: bool
-    required: false
-    cli_flag: "--firewall"
-  fapolicyd:
-    description:
-      - "Whether to manage fapolicyd rules on the fleet."
-    type: bool
-    required: false
-    cli_flag: "--fapolicyd"
   inventory_path:
     description:
       - "Where to write the generated ZarfCluster document. A private temporary file when unset, removed after a run that succeeded."

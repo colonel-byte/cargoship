@@ -79,7 +79,7 @@ type common struct {
 	AgeRecipientFiles []string `json:"age_recipients_file"`
 }
 
-// hostUpdates are the three host preparation switches apply, prepare and reset share.
+// hostUpdates are the three host preparation switches apply and prepare share.
 //
 // They are pointers for the reason all the optional flags are: an unset parameter has to render
 // no flag at all, or the module overrules whatever the cargoship configuration file set, which is

@@ -22,7 +22,6 @@ import "context"
 // directly rather than read out of one.
 type resetParams struct {
 	common
-	hostUpdates
 
 	// Distro is the distro to remove, k3s or rke2.
 	Distro string `json:"distro"`
@@ -58,7 +57,6 @@ func buildResetArgs(p *resetParams, inventory string, control Control) []string 
 	c.flag(flagDistro, p.Distro)
 	c.intFlag(flagConcurrency, p.Concurrency)
 	c.flag(flagWorkConcurrency, p.WorkConcurrency)
-	c.updates(p.hostUpdates)
 	p.finish(c, control)
 
 	return c.args()
