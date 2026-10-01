@@ -52,6 +52,8 @@ See [`docs/dev/mage.md`](docs/dev/mage.md) for the full namespace reference (`Bu
 
 Plain Go commands work for anything mage doesn't wrap - `go build ./...`, `go vet ./...`, `go test ./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/...` - but exclude `./magefiles/...` from those, since it fails a bare build for the reason above.
 
+Never run `go test ./...` (or any of the paths above) without `-short`. Without it, the suite pulls in the full e2e tests, including the cluster suite that needs Docker + bootloose. Always pass `-short`, or use the mage targets above which scope things correctly.
+
 ## Committing changes
 
 Run `pre-commit run --all-files` before every commit and fix anything it flags. Several hooks in [`.pre-commit-config.yaml`](.pre-commit-config.yaml) rewrite files (`end-of-file-fixer`, `trailing-whitespace`, `keep-sorted`, `addlicense`, doc/schema generators) - re-stage after it runs. Don't skip hooks with `--no-verify` or `SKIP=`.
