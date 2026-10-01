@@ -102,12 +102,36 @@ When a file declares an `extractPath`, the override applies to the archive that 
 
 ## Auditing a Built Package
 
-The overrides configured for a build are recorded in the package's `distro.yaml` under `.build.fileOverrides`, alongside `.build.registryOverrides`:
+A package built with file overrides records two things in its `distro.yaml`, and the difference between them is the point.
+
+`.build.fileOverrides` is the configuration the build was given, alongside `.build.registryOverrides`:
 
 ```yaml
 build:
   fileOverrides:
     https://rpm.rancher.io: https://mirror.example.com/rpm-rancher
+    https://github.com: /srv/staged/github
 ```
 
-This records the overrides that were configured for the build, not which one resolved any particular file. Combined with the enforced checksums, it tells you how a package was built without being the thing that makes the package trustworthy -- the checksums are.
+`.build.fileSources` is what that configuration actually did -- one entry per file an override redirected:
+
+```yaml
+build:
+  fileSources:
+    - path: files/0/k3s
+      declared: https://rpm.rancher.io/public/k3s
+      resolved: https://mirror.example.com/rpm-rancher/public/k3s
+      override: https://rpm.rancher.io
+      shasum: 0a15685b072d0afcc218eceea5a93216a6accb48ff9e122bbc53c643c87b4a21
+```
+
+The configuration alone cannot answer the questions an audit actually asks. An override can be configured and match nothing -- the `https://github.com` entry above did not, since no file source started with it. And when several prefixes overlap, only the resolved entry tells you which one won for a given file. Each `fileSources` entry is self-contained: this file, from this place, verified against this digest.
+
+Two properties worth knowing:
+
+- A package built with no overrides has neither key, so it is byte-for-byte what it would have been before this feature existed.
+- Entries are written in the order the files were staged, which is the order they appear in the definition, so `--reproducible` still produces identical output.
+
+`resolved` names a path on the build host when the override pointed at a local directory, as in `/srv/staged/github` above. That discloses that much of the build host's layout to anyone who reads the package. It is recorded deliberately -- a provenance record that omits where the bytes came from is not one -- but it is worth knowing before you stage assets under a path you would rather not publish.
+
+None of this is what makes the package trustworthy. The enforced checksums are. This is the record of how it was built.

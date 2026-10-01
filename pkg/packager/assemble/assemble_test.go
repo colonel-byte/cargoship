@@ -68,7 +68,7 @@ func TestRecordDistroMetadataReproducible(t *testing.T) {
 		},
 	}
 
-	got := recordDistroMetadata(d, opts)
+	got := recordDistroMetadata(d, opts, nil)
 
 	if got.Build.Architecture != "amd64" {
 		t.Errorf("Build.Architecture = %q, want %q", got.Build.Architecture, "amd64")
@@ -124,7 +124,7 @@ func TestRecordDistroMetadataArchitectures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := recordDistroMetadata(distro.ZarfDistro{Metadata: tt.metadata}, AssembleOptions{})
+			got := recordDistroMetadata(distro.ZarfDistro{Metadata: tt.metadata}, AssembleOptions{}, nil)
 
 			if !slices.Equal(got.Build.Architectures, tt.wantArches) {
 				t.Errorf("Build.Architectures = %v, want %v", got.Build.Architectures, tt.wantArches)
@@ -174,7 +174,7 @@ func TestRecordDistroMetadataNonReproducible(t *testing.T) {
 	d.Metadata.Version = "4.5.6"
 
 	before := time.Now()
-	got := recordDistroMetadata(d, AssembleOptions{Reproducible: false})
+	got := recordDistroMetadata(d, AssembleOptions{Reproducible: false}, nil)
 	after := time.Now()
 
 	if got.Build.Reproducible {
@@ -189,6 +189,64 @@ func TestRecordDistroMetadataNonReproducible(t *testing.T) {
 	}
 }
 
+// TestRecordDistroMetadataFileSources covers the distinction the two fields exist to draw:
+// FileOverrides is the configuration the build was given, FileSources is what that
+// configuration actually did.
+func TestRecordDistroMetadataFileSources(t *testing.T) {
+	d := distro.ZarfDistro{}
+	d.Metadata.Architecture = "amd64"
+
+	sources := []distro.FileSource{
+		{
+			Path:     "files/0/k3s",
+			Declared: "https://rpm.rancher.io/k3s",
+			Resolved: "/srv/staged/k3s",
+			Override: "https://rpm.rancher.io",
+			Shasum:   "abc123",
+		},
+	}
+	opts := AssembleOptions{
+		FileOverrides: []fileoverride.Override{
+			{
+				Source:   "https://rpm.rancher.io",
+				Target:   "/srv/staged",
+				LocalDir: "/srv/staged",
+			},
+			{
+				Source: "https://github.com",
+				Target: "https://mirror.example.com/gh",
+			},
+		},
+	}
+
+	got := recordDistroMetadata(d, opts, sources)
+
+	if !reflect.DeepEqual(got.Build.FileSources, sources) {
+		t.Errorf("Build.FileSources = %+v, want %+v", got.Build.FileSources, sources)
+	}
+	// The github.com override was configured but matched nothing, which is exactly the
+	// difference between the two fields.
+	if len(got.Build.FileOverrides) != 2 {
+		t.Errorf("Build.FileOverrides = %+v, want both configured overrides", got.Build.FileOverrides)
+	}
+}
+
+// TestRecordDistroMetadataNoOverridesRecordsNoSources pins the compatibility promise: a build
+// that used no overrides writes no fileSources key, so its distro.yaml is unchanged.
+func TestRecordDistroMetadataNoOverridesRecordsNoSources(t *testing.T) {
+	d := distro.ZarfDistro{}
+	d.Metadata.Architecture = "amd64"
+
+	got := recordDistroMetadata(d, AssembleOptions{}, nil)
+
+	if got.Build.FileSources != nil {
+		t.Errorf("Build.FileSources = %+v, want nil", got.Build.FileSources)
+	}
+	if got.Build.FileOverrides != nil {
+		t.Errorf("Build.FileOverrides = %+v, want nil", got.Build.FileOverrides)
+	}
+}
+
 // TestReproducibleAssemblyIsDeterministic runs the same reproducibility guarantee
 // AssembleDistro relies on at the unit level: two calls to recordDistroMetadata with
 // Reproducible: true, for otherwise-identical input, must agree on every recorded
@@ -198,10 +256,28 @@ func TestReproducibleAssemblyIsDeterministic(t *testing.T) {
 	d.Metadata.Architecture = "amd64"
 	d.Metadata.Version = "1.0.0"
 	opts := AssembleOptions{Reproducible: true}
+	// The per-file records are a slice, so their order is part of the output a reproducible
+	// build has to reproduce. They are appended in staging order, which is definition order.
+	sources := []distro.FileSource{
+		{
+			Path:     "files/0/k3s",
+			Declared: "https://rpm.rancher.io/k3s",
+			Resolved: "https://mirror.example.com/k3s",
+			Override: "https://rpm.rancher.io",
+			Shasum:   "abc123",
+		},
+		{
+			Path:     "os/1/k3s-selinux.rpm",
+			Declared: "https://rpm.rancher.io/k3s-selinux.rpm",
+			Resolved: "https://mirror.example.com/k3s-selinux.rpm",
+			Override: "https://rpm.rancher.io",
+			Shasum:   "def456",
+		},
+	}
 
-	first := recordDistroMetadata(d, opts)
+	first := recordDistroMetadata(d, opts, sources)
 	time.Sleep(10 * time.Millisecond)
-	second := recordDistroMetadata(d, opts)
+	second := recordDistroMetadata(d, opts, sources)
 
 	if !reflect.DeepEqual(first.Build, second.Build) {
 		t.Fatalf("recordDistroMetadata not deterministic under Reproducible: true:\nfirst:  %+v\nsecond: %+v", first.Build, second.Build)

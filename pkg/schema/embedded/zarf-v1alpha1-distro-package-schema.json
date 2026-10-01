@@ -50,6 +50,43 @@
       },
       "type": "object"
     },
+    "FileSource": {
+      "additionalProperties": false,
+      "description": "records where one file in the package was actually read from, for a file whose declared source a --file-override redirected.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "declared": {
+          "description": "is the source the distro definition named.",
+          "type": "string"
+        },
+        "override": {
+          "description": "is the Source prefix of the override that matched, which is the one that won\nwhen several could have.",
+          "type": "string"
+        },
+        "path": {
+          "description": "is where the file was staged inside the package, for example \"files/0/k3s\". It\nidentifies the entry even when several files share a declared source.",
+          "type": "string"
+        },
+        "resolved": {
+          "description": "is where cargoship read the bytes from instead: a mirror URL, or a path on\nthe build host.",
+          "type": "string"
+        },
+        "shasum": {
+          "description": "is the checksum the bytes were verified against. An override is refused for a\nfile that declares none, so this is never empty.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "declared",
+        "resolved",
+        "override",
+        "shasum"
+      ],
+      "type": "object"
+    },
     "Mapping": {
       "type": "object"
     },
@@ -394,8 +431,15 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "maps each source URL prefix to the mirror or local directory files were\ndownloaded from instead. Like RegistryOverrides, this records the overrides that were\nconfigured for the build, not which one resolved any particular file.",
+          "description": "maps each source URL prefix to the mirror or local directory files were\ndownloaded from instead. Like RegistryOverrides, this is the configuration the build was\ngiven. For what each override actually did, see FileSources.",
           "type": "object"
+        },
+        "fileSources": {
+          "description": "records every file whose source an override redirected: what the definition\ndeclared, where the bytes were read from instead, and the checksum they were verified\nagainst. It is empty for a build that used no overrides, so a package built without them\nis unchanged. Entries are in the order the files were staged, which is the order they\nappear in the definition, so a reproducible build still produces identical output.",
+          "items": {
+            "$ref": "#/$defs/FileSource"
+          },
+          "type": "array"
         },
         "provenanceFiles": {
           "description": "lists files in the package that checksums.txt does not cover.\nThese are files added after cargoship generates checksums, for example signature files.\nThe signed distro.yaml authenticates this list.",

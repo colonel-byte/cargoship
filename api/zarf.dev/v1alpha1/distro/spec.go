@@ -69,6 +69,31 @@ type ZarfDistroMetadata struct {
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 }
 
+// FileSource records where one file in the package was actually read from, for a file whose
+// declared source a --file-override redirected.
+//
+// This is evidence about a build that happened, which is what separates it from
+// ZarfDistroBuildData.FileOverrides: an override can be configured and match nothing, and the
+// configuration alone cannot tell you which of several overlapping prefixes won for a given
+// file. Resolved names a path on the build host when the override pointed at a local
+// directory, so it discloses that much of the build host's layout to whoever reads the package.
+type FileSource struct {
+	// Path is where the file was staged inside the package, for example "files/0/k3s". It
+	// identifies the entry even when several files share a declared source.
+	Path string `json:"path"`
+	// Declared is the source the distro definition named.
+	Declared string `json:"declared"`
+	// Resolved is where cargoship read the bytes from instead: a mirror URL, or a path on
+	// the build host.
+	Resolved string `json:"resolved"`
+	// Override is the Source prefix of the override that matched, which is the one that won
+	// when several could have.
+	Override string `json:"override"`
+	// Shasum is the checksum the bytes were verified against. An override is refused for a
+	// file that declares none, so this is never empty.
+	Shasum string `json:"shasum"`
+}
+
 // ZarfDistroBuildData holds information recorded when the package was built.
 type ZarfDistroBuildData struct {
 	// Architecture is the CPU architecture used to build the package. Populated only when the package targets a single architecture.
@@ -82,9 +107,15 @@ type ZarfDistroBuildData struct {
 	// RegistryOverrides maps each original registry to the registry actually used to build the package.
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
 	// FileOverrides maps each source URL prefix to the mirror or local directory files were
-	// downloaded from instead. Like RegistryOverrides, this records the overrides that were
-	// configured for the build, not which one resolved any particular file.
+	// downloaded from instead. Like RegistryOverrides, this is the configuration the build was
+	// given. For what each override actually did, see FileSources.
 	FileOverrides map[string]string `json:"fileOverrides,omitempty"`
+	// FileSources records every file whose source an override redirected: what the definition
+	// declared, where the bytes were read from instead, and the checksum they were verified
+	// against. It is empty for a build that used no overrides, so a package built without them
+	// is unchanged. Entries are in the order the files were staged, which is the order they
+	// appear in the definition, so a reproducible build still produces identical output.
+	FileSources []FileSource `json:"fileSources,omitempty"`
 	// Signed indicates whether the package was signed. A nil value means the signing status was not recorded.
 	Signed *bool `json:"signed,omitempty"`
 	// Reproducible indicates Build.Timestamp was pinned to a fixed value
