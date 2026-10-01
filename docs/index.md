@@ -15,6 +15,59 @@ Cargoship bridges the gap between offline distro packaging tools and remote clus
 
 ---
 
+## Installation
+
+### Pre-built binaries
+
+Every release publishes archives for Linux, macOS, and Windows across `amd64`, `arm64`, `arm`, `386`, and `riscv64`. The archive names follow `uname`, so the one for a 64-bit Linux host is `cargoship_Linux_x86_64.tar.gz`:
+
+```bash
+VERSION=$(curl -fsSL https://api.github.com/repos/colonel-byte/cargoship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+curl -fsSLO "https://github.com/colonel-byte/cargoship/releases/download/${VERSION}/cargoship_Linux_x86_64.tar.gz"
+tar -xzf cargoship_Linux_x86_64.tar.gz cargoship
+install -m 0755 cargoship /usr/local/bin/cargoship
+```
+
+### Linux packages
+
+Releases also carry `.rpm`, `.deb`, and `.apk` packages, which install the binary along with the `colonel_byte.cargoship` Ansible collection onto ansible-core's default collection path:
+
+```bash
+sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
+```
+
+### Container images
+
+```bash
+podman run --rm ghcr.io/colonel-byte/cargoship:latest version
+```
+
+| Image                                      | Contents                                               |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `ghcr.io/colonel-byte/cargoship`           | The binary on a minimal base                           |
+| `ghcr.io/colonel-byte/cargoship-ubi`       | The binary on Red Hat UBI                              |
+| `ghcr.io/colonel-byte/cargoship-deb`       | The binary installed from the `.deb`                   |
+| `ghcr.io/colonel-byte/cargoship-ansible`   | The binary plus the Ansible collection and ansible-core |
+
+### From source
+
+Building needs Go 1.27 or newer. The repository vendors its dependencies, so a clone builds without network access:
+
+```bash
+go install github.com/colonel-byte/cargoship@latest
+```
+
+### Verifying a download
+
+Release archives and container images are signed with [Cosign](https://docs.sigstore.dev/cosign/), using the key published at [`cosign.pub`](https://github.com/colonel-byte/cargoship/blob/main/cosign.pub). Each archive ships a `.sigstore.json` bundle beside it, and every release carries a `checksums.txt`:
+
+```bash
+cosign verify-blob --key cosign.pub --bundle cargoship_Linux_x86_64.tar.gz.sigstore.json cargoship_Linux_x86_64.tar.gz
+cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:latest
+```
+
+---
+
 ## Supported Distributions
 
 Cargoship currently provides native support and integration for the following Kubernetes engines:
@@ -60,6 +113,8 @@ For example, the **`apply`** workflow comprises the following phases:
 
 Here are the standard workflows for compiling and deploying offline Kubernetes packages with Cargoship.
 
+The commands that change a host - `prepare`, `apply`, `reset`, and `engine-config-sync` - will not do so without `--confirm`. Swap it for `--dry-run` to connect to every host and run the preflight checks for real, reporting what the run would change without changing it.
+
 ### 1. Compile an Offline Package
 
 To build an offline archive containing all required files, binaries, and container images:
@@ -77,7 +132,7 @@ cargoship create ./distro-defs -o ./build/
 Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, `fapolicyd` rules, and `/etc/hosts`) across target machines using your cluster configuration inventory:
 
 ```bash
-cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 ```
 
 ### 3. Deploy or Upgrade a Cluster
@@ -85,7 +140,7 @@ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 Bootstrap a new cluster or upgrade an existing one from the compiled package:
 
 ```bash
-cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 ```
 
 ### 4. Fetch the Kubeconfig
@@ -101,7 +156,7 @@ cargoship kube-config --config ./cargoship-config.yaml
 Stop, uninstall, and completely purge the Kubernetes distro and its state from the target hosts:
 
 ```bash
-cargoship reset --config ./cargoship-config.yaml --distro rke2
+cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
 ```
 
 ### 6. Generate an Inventory from Ansible
