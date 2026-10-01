@@ -53,10 +53,10 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --config string                           Config file used to bootstrap a cluster.
       --confirm                                 Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -f, --fapolicyd                               Whether to update all the host nodes fapolicyd configuration.
-  -F, --firewall                                Whether to update all the host nodes firewall configuration.
+  -f, --fapolicyd                               Whether to update every host node's fapolicyd configuration.
+  -F, --firewall                                Whether to update every host node's firewall configuration.
   -h, --help                                    help for apply
-  -H, --hosts                                   Whether to update all the host nodes /etc/hosts file.
+  -H, --hosts                                   Whether to update every host node's /etc/hosts file.
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
@@ -68,7 +68,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
       --values stringArray                      Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
       --vault-password-file string              Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
-      --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
+      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
   -w, --work-concurrency string                 Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```

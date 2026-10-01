@@ -44,7 +44,7 @@ func (p *BINUploadFiles) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *BINUploadFiles) Explanation() string {
-	return "Catch all phase if the combination of Operating System and Distro don't have other install methods"
+	return "Catch-all phase for when the combination of Operating System and Distro has no other install method"
 }
 
 // Prepare the phase

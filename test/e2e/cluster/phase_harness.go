@@ -142,7 +142,7 @@ func newManager(
 		Writer:            os.Stdout,
 	}
 	if timeout > 0 {
-		manager.SetTimout(timeout)
+		manager.SetTimeout(timeout)
 	}
 
 	return manager, dis, nil

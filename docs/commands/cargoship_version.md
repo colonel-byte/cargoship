@@ -29,7 +29,7 @@ $ cargoship version -o json
 
 ```
   -h, --help                  help for version
-  -o, --output outputFormat   output format (yaml|json)
+  -o, --output outputFormat   Output format. Valid options are: yaml, json.
 ```
 
 ### Options inherited from parent commands

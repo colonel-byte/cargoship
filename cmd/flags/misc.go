@@ -34,7 +34,7 @@ const (
 
 func getOutputFormat() []string {
 	return []string{
-		fmt.Sprintf("%s\t%s", string(config.OutputFromatJSON), outputFormatJSONDescription),
-		fmt.Sprintf("%s\t%s", string(config.OutputFromatYAML), outputFormatYAMLDescription),
+		fmt.Sprintf("%s\t%s", string(config.OutputFormatJSON), outputFormatJSONDescription),
+		fmt.Sprintf("%s\t%s", string(config.OutputFormatYAML), outputFormatYAMLDescription),
 	}
 }

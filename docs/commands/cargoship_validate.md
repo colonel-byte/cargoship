@@ -52,7 +52,7 @@ $ cargoship validate ./inventory.yaml --package ./package.tar.zst
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-      --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
+      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
 

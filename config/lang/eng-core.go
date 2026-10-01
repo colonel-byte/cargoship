@@ -35,12 +35,12 @@ const (
 	CmdDistroPublishLong = "Pushes a built package to an OCI registry, where 'cargoship apply' and 'cargoship pull' can read it by reference instead of by path. The package is uploaded as OCI artifacts, so any registry that stores them will hold it, and --oci-concurrency sets how many layers move at once.\n\n" +
 		"The signature a package already carries is published with it. Passing --signing-key re-signs the package under a different key on the way out, which is how one built and signed in a development environment is re-signed for a production registry."
 	// CmdPackagePullShort pull short
-	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and save to the local file system"
+	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and saves it to the local filesystem"
 	// CmdPackagePullLong pull long
 	CmdPackagePullLong = "Downloads a package from an OCI registry or an https:// URL and writes it to the local filesystem as a single archive, so that it can be carried to a machine with no route to the registry it came from. An apply reads the same references directly, so pulling first is for staging rather than something an install needs.\n\n" +
 		"--shasum checks the downloaded archive against a checksum you already hold, which is the check to use when the package is to be trusted on the strength of something other than its signature."
 	// CmdPackagePullFlagShasum pull shasum flag
-	CmdPackagePullFlagShasum = "Shasum of the package to pull"
+	CmdPackagePullFlagShasum = "Shasum of the package to pull."
 	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
 	// CmdDistroApplyLong apply long
@@ -76,9 +76,9 @@ const (
 		"Registry credentials encrypted with Ansible Vault or age are decrypted here, and the keys for every one of them are checked before the first host is connected to.\n\n" +
 		"This changes every host whose configuration has drifted, so it needs --confirm. Pass --dry-run to report which nodes would be restarted without restarting one."
 	// CmdInstallFapolicydUpdate install flag fapolicyd
-	CmdInstallFapolicydUpdate = "Whether to update all the host nodes fapolicyd configuration."
+	CmdInstallFapolicydUpdate = "Whether to update every host node's fapolicyd configuration."
 	// CmdInstallFirewallUpdate install flag firewall
-	CmdInstallFirewallUpdate = "Whether to update all the host nodes firewall configuration."
+	CmdInstallFirewallUpdate = "Whether to update every host node's firewall configuration."
 	// CmdInstallFlagConcurrency install flag concurrency
 	CmdInstallFlagConcurrency = "Maximum number of hosts to configure in parallel, set to 0 for unlimited."
 	// CmdInstallFlagConfig install flag config
@@ -100,7 +100,7 @@ const (
 	// CmdInstallFlagWorkerConcurrency install flag worker concurrency
 	CmdInstallFlagWorkerConcurrency = "Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. \"25%\"), set to 0 for unlimited."
 	// CmdInstallHostUpdate install flag host
-	CmdInstallHostUpdate = "Whether to update all the host nodes /etc/hosts file."
+	CmdInstallHostUpdate = "Whether to update every host node's /etc/hosts file."
 	// CmdInstallAllowUnmanagedNodes install flag allow unmanaged nodes
 	CmdInstallAllowUnmanagedNodes = "Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone."
 	// CmdInstallLabelNodes install flag label nodes
@@ -112,19 +112,19 @@ const (
 	// CmdPackageCreateFlagFileOverride create flag file override
 	CmdPackageCreateFlagFileOverride = "Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror."
 	// CmdPackageCreateFlagOutput create flag output
-	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Zarf distro package"
+	CmdPackageCreateFlagOutput = "Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package."
 	// CmdPackageCreateFlagTag create flag tag
-	CmdPackageCreateFlagTag = "The tag or version to override the package metadata version with"
+	CmdPackageCreateFlagTag = "The tag or version to override the package metadata version with."
 	// CmdPackageFlagConcurrency deploy flag concurrency
 	CmdPackageFlagConcurrency = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	// CmdPackageFlagRetries publish flag retry
-	CmdPackageFlagRetries = "Number of retries to perform for Cargoships operations like package publishes"
+	CmdPackageFlagRetries = "Number of retries to perform for Cargoship's operations, such as package publishes."
 	// CmdVersionLong version long
 	CmdVersionLong = "Displays the version of the release that the current binary was built from."
 	// CmdVersionShort version short
 	CmdVersionShort = "Shows the version of the running binary"
-	// CmdVersionOutputFromat version flag output format
-	CmdVersionOutputFromat = "output format (yaml|json)"
+	// CmdVersionOutputFormat version flag output format
+	CmdVersionOutputFormat = "Output format. Valid options are: yaml, json."
 	// CmdSha256SumShort sha256sum short
 	CmdSha256SumShort = "Generates a SHA256SUM for the given file"
 	// CmdSha256SumFlagExtractPath flag description
@@ -218,7 +218,7 @@ const (
 	// RootGroupPackageTitle subcommand for package id
 	RootGroupPackageTitle = "Package Commands:"
 	// CmdPackageFlagVerify flag
-	CmdPackageFlagVerify = "Verify the Cargoship package signature"
+	CmdPackageFlagVerify = "Verify the Cargoship package signature."
 	// CmdPackageCreateFlagReproducible create flag reproducible
 	CmdPackageCreateFlagReproducible = "Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package."
 	// CmdSchemaShort schema short

@@ -157,7 +157,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(m \*Manager\) RetryTimeout\(ctx context.Context, f func\(ctx context.Context\) error\) error](<#Manager.RetryTimeout>)
   - [func \(m \*Manager\) Run\(ctx context.Context\) error](<#Manager.Run>)
   - [func \(m \*Manager\) SetPhases\(p Phases\)](<#Manager.SetPhases>)
-  - [func \(m \*Manager\) SetTimout\(tm time.Duration\)](<#Manager.SetTimout>)
+  - [func \(m \*Manager\) SetTimeout\(tm time.Duration\)](<#Manager.SetTimeout>)
   - [func \(m \*Manager\) Wet\(\_ fmt.Stringer, \_ string, funcs ...errorfunc\) error](<#Manager.Wet>)
 - [type ManagerDistroConfig](<#ManagerDistroConfig>)
 - [type ManifestEntry](<#ManifestEntry>)
@@ -1801,14 +1801,14 @@ func (m *Manager) SetPhases(p Phases)
 
 SetPhases sets the list of phases
 
-<a name="Manager.SetTimout"></a>
-### func \(\*Manager\) [SetTimout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433>)
+<a name="Manager.SetTimeout"></a>
+### func \(\*Manager\) [SetTimeout](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433>)
 
 ```go
-func (m *Manager) SetTimout(tm time.Duration)
+func (m *Manager) SetTimeout(tm time.Duration)
 ```
 
-SetTimout sets the timeout for the manager
+SetTimeout sets the timeout for the manager
 
 <a name="Manager.Wet"></a>
 ### func \(\*Manager\) [Wet](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L455>)

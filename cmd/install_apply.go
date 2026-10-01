@@ -125,7 +125,7 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		}
 	}()
 
-	manager.SetTimout(d)
+	manager.SetTimeout(d)
 
 	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
 	// and demanding one would break every plaintext configuration that works today.

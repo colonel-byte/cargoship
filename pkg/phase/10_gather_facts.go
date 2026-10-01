@@ -48,7 +48,7 @@ func (p *GatherFacts) Explanation() string {
 
 // ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
 func (p *GatherFacts) ReadOnly() string {
-	return "Gather facts about each host by asks for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them."
+	return "Gather facts about each host by asking for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them."
 }
 
 // Run the phase

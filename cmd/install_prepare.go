@@ -113,7 +113,7 @@ func (o *installPrepareOptions) run(ctx context.Context, cmd *cobra.Command, arg
 		}
 	}()
 
-	manager.SetTimout(d)
+	manager.SetTimeout(d)
 
 	opts := action.PrepareOptions{
 		Manager:        manager,

@@ -12,11 +12,11 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - Gathers information about the remote host, including: OS and OS version
     - Dry run: runs, reads only. Reads `/etc/os-release` and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.
 1. Acquire exclusive host lock
-    - Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other `cargoships` from doing any changes until the lock file has not been touch for over a minute
+    - Runs a background task that touches a file every 30 seconds on each remote node. This prevents other `cargoships` from making any changes until the lock file has not been touched for over a minute
     - Dry run: reported, not run
 1. Gather host facts
     - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.
-    - Dry run: runs, reads only. Gather facts about each host by asks for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.
+    - Dry run: runs, reads only. Gather facts about each host by asking for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.
 1. Validate hosts
     - Verifying that each node in the cluster has a unique name and private address, that its CPU architecture is one the package carries, and that its firewall rules are usable, 
     - Dry run: runs, reads only. Validate the hosts is the preflight itself: sudo, unique hostnames and addresses, host architecture, firewall rules and clock skew. A dry run that skipped it would check nothing.
@@ -33,7 +33,7 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - Installs container-selinux on systems that have SELinux enabled on them
     - Dry run: reported, not run
 1. Prepare hosts - Enterprise Linux support - Fapolicyd
-    - Creates the distro supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
+    - Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
     - Dry run: reported, not run
 1. Updating hosts file for clusters nodes
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
@@ -51,7 +51,7 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - If the remote node is a Debian based Operating System and the Distro package includes any files for those systems
     - Dry run: reported, not run
 1. Upload files to hosts -- Binaries
-    - Catch all phase if the combination of Operating System and Distro don't have other install methods
+    - Catch-all phase for when the combination of Operating System and Distro has no other install method
     - Dry run: reported, not run
 1. Configure engine
     - Runs distro specific operations
