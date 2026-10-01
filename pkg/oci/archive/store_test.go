@@ -17,7 +17,6 @@ package archive
 import (
 	"bytes"
 	"context"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -71,7 +70,7 @@ func TestOciArchiveStoreReaderAt(t *testing.T) {
 	t.Run("reads blob content from disk", func(t *testing.T) {
 		ra, err := s.ReaderAt(context.Background(), desc)
 		require.NoError(t, err)
-		defer func() { require.NoError(t, ra.(io.Closer).Close()) }()
+		defer func() { require.NoError(t, ra.Close()) }()
 
 		require.EqualValues(t, len(content), ra.Size())
 
