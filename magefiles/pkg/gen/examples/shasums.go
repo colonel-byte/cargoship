@@ -68,45 +68,70 @@ func (e *exampleShasum) UnmarshalJSON(data []byte) error {
 }
 
 // exampleShasums resolves a remote file's sha256, remembering what it has already hashed.
-// Entries are keyed by file name rather than URL, so the cache reads as a list of the RPMs
+// Entries are keyed by file name rather than URL, so the cache reads as a list of the files
 // the examples install; every URL an entry was ever fetched from is kept alongside it, and a
 // file name whose digest changes under a URL not already recorded is re-hashed rather than
 // trusted, since that means the filename was reused for different content.
+//
+// A file extracted out of an archive is keyed by the archive's name and the path inside it,
+// joined by memberKeySeparator -- rke2.linux-amd64.tar.gz!bin/rke2. That is a separate entry
+// from the archive itself, because they are separate files with separate digests, and a
+// definition that sets extractPath declares the member's.
 type exampleShasums struct {
 	sums  map[string]exampleShasum
 	dirty bool
+
+	// members holds the digests of every file inside an archive already streamed this run,
+	// keyed by the archive's URL and then by the path inside it. One pass over a tarball
+	// hashes all of it, so a template extracting nine files from one archive downloads it
+	// once however many of those files the committed cache is still missing. Not persisted:
+	// what is worth keeping between runs lands in sums, one entry per member asked for.
+	members map[string]map[string]string
 }
 
 // lookup finds a cached entry that url is one of the recorded URLs for.
 func (s *exampleShasums) lookup(url string) (exampleShasum, bool) {
-	e, ok := s.sums[path.Base(url)]
+	return s.lookupKey(path.Base(url), url)
+}
+
+// lookupKey is lookup against an explicit cache key, for entries not keyed by file name alone.
+func (s *exampleShasums) lookupKey(key, url string) (exampleShasum, bool) {
+	e, ok := s.sums[key]
 	return e, ok && slices.Contains(e.URLs, url)
 }
 
-// store records that url serves a file whose digest is sha256, adding url as one more known
-// location for it when the digest matches what is already cached, or replacing the entry
-// outright when it does not (the same file name serving different content under this url).
-// A no-op when url is already recorded against this digest, so a re-render that changes nothing
-// does not mark the cache dirty.
+// store records that url serves a file whose digest is sha256, under the file's own name.
 func (s *exampleShasums) store(url, sha256 string) {
-	name := path.Base(url)
-	e, ok := s.sums[name]
+	s.storeKey(path.Base(url), url, sha256)
+}
+
+// storeKey records that url serves a file whose digest is sha256, under an explicit cache key
+// -- the file's own name for a whole file, the archive's name and the path inside it for a
+// member. url is added as one more known location for the entry when the digest matches what
+// is already cached, or replaces the entry outright when it does not (the same key serving
+// different content under this url). A no-op when url is already recorded against this digest,
+// so a re-render that changes nothing does not mark the cache dirty.
+func (s *exampleShasums) storeKey(key, url, sha256 string) {
+	e, ok := s.sums[key]
 	if ok && e.SHA256 == sha256 {
 		if slices.Contains(e.URLs, url) {
 			return
 		}
 		e.URLs = append(e.URLs, url)
-		s.sums[name] = e
+		s.sums[key] = e
 		s.dirty = true
 		return
 	}
-	s.sums[name] = exampleShasum{URLs: []string{url}, SHA256: sha256}
+	s.sums[key] = exampleShasum{URLs: []string{url}, SHA256: sha256}
 	s.dirty = true
 }
 
 // loadExampleShasums reads the cache, treating a missing file as an empty one.
 func loadExampleShasums() (*exampleShasums, error) {
-	s := &exampleShasums{sums: map[string]exampleShasum{}}
+	s := &exampleShasums{
+		sums:    map[string]exampleShasum{},
+		members: map[string]map[string]string{},
+	}
 
 	data, err := os.ReadFile(exampleShasumsPath)
 	if os.IsNotExist(err) {

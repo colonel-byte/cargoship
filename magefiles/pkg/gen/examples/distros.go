@@ -139,6 +139,8 @@ var exampleDistros = []exampleDistroSpec{
 				a.ServerRPM = exampleRKE2RPM("server", v.Minor, v.RPMVersion, a.RPMArch)
 				a.AgentRPM = exampleRKE2RPM("agent", v.Minor, v.RPMVersion, a.RPMArch)
 				a.Tarball = fmt.Sprintf("rke2.linux-%s.tar.gz", a.Arch)
+				a.TarballURL = fmt.Sprintf("https://github.com/rancher/rke2/releases/download/%s/%s",
+					v.TagURL, a.Tarball)
 			}
 		},
 		// RKE2 installs from RPMs, and Rancher removes an rke2rN's RPMs once the next

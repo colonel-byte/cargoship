@@ -32,11 +32,15 @@ import (
 	"github.com/colonel-byte/cargoship/magefiles/pkg/gen/engineconfig"
 )
 
-// parseExampleTemplate parses a distro's example template, wiring in the sha256 function its
-// remote file entries are hashed with.
+// parseExampleTemplate parses a distro's example template, wiring in the functions its remote
+// file entries are hashed with: sha256 for a whole file, sha256member for one extracted out of
+// an archive.
 func parseExampleTemplate(spec exampleDistroSpec, sums *exampleShasums) (*template.Template, error) {
 	tmpl, err := template.New(filepath.Base(spec.template)).
-		Funcs(template.FuncMap{"sha256": sums.get}).
+		Funcs(template.FuncMap{
+			"sha256":       sums.get,
+			"sha256member": sums.member,
+		}).
 		ParseFiles(spec.template)
 	if err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", spec.template, err)
