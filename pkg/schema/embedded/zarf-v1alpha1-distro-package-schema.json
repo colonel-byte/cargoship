@@ -390,6 +390,13 @@
           "$ref": "#/$defs/Arches",
           "description": "lists the CPU architectures used to build the package."
         },
+        "fileOverrides": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "maps each source URL prefix to the mirror or local directory files were\ndownloaded from instead. Like RegistryOverrides, this records the overrides that were\nconfigured for the build, not which one resolved any particular file.",
+          "type": "object"
+        },
         "provenanceFiles": {
           "description": "lists files in the package that checksums.txt does not cover.\nThese are files added after cargoship generates checksums, for example signature files.\nThe signed distro.yaml authenticates this list.",
           "items": {

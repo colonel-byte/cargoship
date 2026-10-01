@@ -30,6 +30,7 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/config/lang"
 	"github.com/colonel-byte/cargoship/pkg/distro"
+	"github.com/colonel-byte/cargoship/pkg/fileoverride"
 	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/colonel-byte/cargoship/pkg/lint"
 	"github.com/spf13/cobra"
@@ -48,6 +49,7 @@ var distroOutputKey = configPath("DistroOpts", "Output")
 type packageCreateOptions struct {
 	output             string
 	registryOverrides  []string
+	fileOverrides      []string
 	ociConcurrency     int
 	confirm            bool
 	reproducible       bool
@@ -82,7 +84,14 @@ func newPackageCreateCommand() *cobra.Command {
 	}
 	slices.Sort(registryOverrideDefaults)
 
+	fileOverrideDefaults := make([]string, 0, len(resolvedConfig.DistroOpts.CreateOpts.FileOverride))
+	for source, override := range resolvedConfig.DistroOpts.CreateOpts.FileOverride {
+		fileOverrideDefaults = append(fileOverrideDefaults, source+"="+override)
+	}
+	slices.Sort(fileOverrideDefaults)
+
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, zlang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().StringSliceVar(&o.fileOverrides, "file-override", fileOverrideDefaults, lang.CmdPackageCreateFlagFileOverride)
 	cmd.Flags().StringVarP(&o.output, "output", "o", output, lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", registryOverrideDefaults, zlang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().BoolVar(&o.reproducible, "reproducible", false, lang.CmdPackageCreateFlagReproducible)
@@ -152,12 +161,19 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 	l.Debug("parsed registry overrides", "overrides", registryOverrides)
 
+	fileOverrides, err := fileoverride.Parse(o.fileOverrides)
+	if err != nil {
+		return fmt.Errorf("error parsing file override: %w", err)
+	}
+	l.Debug("parsed file overrides", "overrides", fileOverrides)
+
 	opt := distro.CreateOptions{
 		Architecture:       config.CLIArch,
 		CachePath:          cachePath,
 		IsInteractive:      !o.confirm,
 		OCIConcurrency:     o.ociConcurrency,
 		RegistryOverrides:  registryOverrides,
+		FileOverrides:      fileOverrides,
 		RemoteOptions:      defaultRemoteOptions(),
 		Reproducible:       o.reproducible,
 		SigningKeyPath:     o.signingKeyPath,

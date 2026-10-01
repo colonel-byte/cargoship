@@ -2,6 +2,8 @@
 
 This guide explains how to redirect the images Cargoship pulls when creating a package, and how to authenticate to the resulting registry at apply time using an Ansible Vault-encrypted credential.
 
+For the same idea applied to the files and OS packages a distro definition downloads over HTTP, see the [file override guide](file-override.md).
+
 ## What a Registry Override Does
 
 By default, `cargoship create` pulls images from the registries referenced in your source manifests (e.g. `docker.io`, `ghcr.io`). A registry override rewrites the registry portion of an image reference at package-create time, so images are instead pulled from a mirror -- for example an internal pull-through cache or an air-gapped registry.

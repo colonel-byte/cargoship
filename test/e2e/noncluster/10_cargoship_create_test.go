@@ -149,6 +149,32 @@ func TestCargoshipCreate(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("file override without an equals sign errors", func(t *testing.T) {
+		_, _, err := e2e.Cargoship(t, "create", minimalDistroDir, "-o", t.TempDir(),
+			"--file-override", "https://rpm.rancher.io")
+		require.Error(t, err)
+	})
+
+	t.Run("file override with an empty source errors", func(t *testing.T) {
+		_, _, err := e2e.Cargoship(t, "create", minimalDistroDir, "-o", t.TempDir(),
+			"--file-override", "=https://mirror.example.com")
+		require.Error(t, err)
+	})
+
+	t.Run("file override with a duplicate source errors", func(t *testing.T) {
+		_, _, err := e2e.Cargoship(t, "create", minimalDistroDir, "-o", t.TempDir(),
+			"--file-override", "https://rpm.rancher.io=https://a.example.com,https://rpm.rancher.io=https://b.example.com")
+		require.Error(t, err)
+	})
+
+	// A source that is not a URL could never match a file source, so it is rejected up front
+	// rather than silently doing nothing for the whole build.
+	t.Run("file override with a non-URL source errors", func(t *testing.T) {
+		_, _, err := e2e.Cargoship(t, "create", minimalDistroDir, "-o", t.TempDir(),
+			"--file-override", "rpm.rancher.io=https://mirror.example.com")
+		require.Error(t, err)
+	})
+
 	// --skip-sbom was removed because distro.Create hardcoded SkipSBOM and never read
 	// the flag. Assert it is gone rather than silently accepted again.
 	t.Run("skip-sbom is not a flag", func(t *testing.T) {

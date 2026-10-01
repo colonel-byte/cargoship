@@ -31,36 +31,63 @@ distro:
       docker.io/library: library-mirror.example.com
 `)
 
-	got, err := loadRegistryOverrides(cfgPath)
+	createOpts, err := loadCreateOverrides(cfgPath)
 	if err != nil {
-		t.Fatalf("loadRegistryOverrides failed: %v", err)
+		t.Fatalf("loadCreateOverrides failed: %v", err)
 	}
+	got := map[string]string(createOpts.RegistryOverride)
 
 	want := map[string]string{
 		"docker.io":         "mirror.example.com",
 		"docker.io/library": "library-mirror.example.com",
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("loadRegistryOverrides() = %+v, want %+v", got, want)
+		t.Fatalf("RegistryOverride = %+v, want %+v", got, want)
 	}
 }
 
-func TestLoadRegistryOverridesEmpty(t *testing.T) {
+// TestLoadCreateOverridesURLKeys is the test that proves the raw-YAML bypass earns its keep for
+// file_override: a URL key carries ".", ":" and "/", every one of which viper would mangle.
+func TestLoadCreateOverridesURLKeys(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cargoship-config.yaml")
+	writeFile(t, cfgPath, `
+distro:
+  create:
+    file_override:
+      https://rpm.rancher.io: https://mirror.example.com/rpm-rancher
+      https://github.com/rancher: /srv/staged/rancher
+`)
+
+	createOpts, err := loadCreateOverrides(cfgPath)
+	if err != nil {
+		t.Fatalf("loadCreateOverrides failed: %v", err)
+	}
+
+	want := map[string]string{
+		"https://rpm.rancher.io":     "https://mirror.example.com/rpm-rancher",
+		"https://github.com/rancher": "/srv/staged/rancher",
+	}
+	if !reflect.DeepEqual(map[string]string(createOpts.FileOverride), want) {
+		t.Fatalf("FileOverride = %+v, want %+v", createOpts.FileOverride, want)
+	}
+}
+
+func TestLoadCreateOverridesEmpty(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cargoship-config.yaml")
 	writeFile(t, cfgPath, "log_level: info\n")
 
-	got, err := loadRegistryOverrides(cfgPath)
+	createOpts, err := loadCreateOverrides(cfgPath)
 	if err != nil {
-		t.Fatalf("loadRegistryOverrides failed: %v", err)
+		t.Fatalf("loadCreateOverrides failed: %v", err)
 	}
-	if len(got) != 0 {
-		t.Fatalf("loadRegistryOverrides() = %+v, want empty", got)
+	if len(createOpts.RegistryOverride) != 0 || len(createOpts.FileOverride) != 0 {
+		t.Fatalf("loadCreateOverrides() = %+v, want empty", createOpts)
 	}
 }
 
-func TestLoadRegistryOverridesMissingFile(t *testing.T) {
-	if _, err := loadRegistryOverrides(filepath.Join(t.TempDir(), "does-not-exist.yaml")); err == nil {
-		t.Fatalf("loadRegistryOverrides() = nil error, want error")
+func TestLoadCreateOverridesMissingFile(t *testing.T) {
+	if _, err := loadCreateOverrides(filepath.Join(t.TempDir(), "does-not-exist.yaml")); err == nil {
+		t.Fatalf("loadCreateOverrides() = nil error, want error")
 	}
 }
 

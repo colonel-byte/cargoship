@@ -20,6 +20,12 @@ $ cargoship create ./distro-defs -o ./build/
 # Pull images through an internal mirror instead of their upstream registry
 $ cargoship create ./distro-defs --registry-override docker.io=mirror.example.com
 
+# Download files through an internal mirror instead of their upstream host
+$ cargoship create ./distro-defs --file-override https://rpm.rancher.io=https://mirror.example.com/rpm-rancher
+
+# Build from files staged on disk ahead of time, with no network at all
+$ cargoship create ./distro-defs --file-override https://rpm.rancher.io=/srv/staged/rpm-rancher
+
 # Sign the package as it is built, without prompting for the key password
 $ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
 
@@ -32,6 +38,7 @@ $ cargoship create ./distro-defs --reproducible
 ```
   -a, --architecture string         Architecture for OCI images and Zarf packages
   -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
+      --file-override strings       Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
   -h, --help                        help for create
       --insecure-skip-tls-verify    Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)

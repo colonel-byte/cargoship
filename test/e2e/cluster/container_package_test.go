@@ -19,6 +19,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // unsettableSysctls are the settings the example definitions ask for that a node cannot apply
@@ -47,13 +51,34 @@ var unsettableSysctls = []string{ //nolint:gochecknoglobals
 	"net.netfilter.nf_conntrack_buckets",
 }
 
+// exampleDir is the directory the shipped distro definitions live under. containerSafeDefinition
+// mirrors each definition's path below it, so a source that reaches outside its own directory
+// still resolves in the copy.
+const exampleDir = "example"
+
+// outsideSource matches a file source that climbs out of the definition's own directory. The
+// generated manifests write one source per list entry, unquoted.
+var outsideSource = regexp.MustCompile(`(?m)^\s*-?\s*source:\s*(\.\.[^\s]*)\s*$`)
+
 // containerSafeDefinition copies the distro definition at src into a directory under dst and
 // removes the settings in unsettableSysctls from the copy, returning the path to build the
 // package from. The definitions under example/ are what cargoship ships, so the walks read
 // them rather than carrying a fixture of their own, and edit the copy rather than the
 // original.
+//
+// The copy keeps the definition's path below example/ rather than flattening it to a basename.
+// The k3s definitions reach three levels up for the files they share with every other k3s
+// version -- killall.sh and the two systemd units in example/k3s/core -- so a flattened copy
+// resolves "../../../k3s/core" somewhere above dst, where nothing exists. That used to cost
+// three warnings and a package quietly missing all three files; staging failures are errors
+// now, so it costs a failed build instead. See copyOutsideSources for the other half.
 func containerSafeDefinition(src, dst string) (string, error) {
-	definition := filepath.Join(dst, filepath.Base(src))
+	rel, err := filepath.Rel(exampleDir, src)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return "", fmt.Errorf("distro definition %s is not under %s/, so its relative sources cannot be preserved", src, exampleDir)
+	}
+
+	definition := filepath.Join(dst, rel)
 	if err := os.CopyFS(definition, os.DirFS(src)); err != nil {
 		return "", fmt.Errorf("failed to copy the distro definition at %s: %w", src, err)
 	}
@@ -62,6 +87,10 @@ func containerSafeDefinition(src, dst string) (string, error) {
 	content, err := os.ReadFile(manifest) //nolint:gosec
 	if err != nil {
 		return "", fmt.Errorf("failed to read the copied distro definition: %w", err)
+	}
+
+	if err := copyOutsideSources(src, dst, definition, content); err != nil {
+		return "", err
 	}
 
 	for _, key := range unsettableSysctls {
@@ -81,4 +110,85 @@ func containerSafeDefinition(src, dst string) (string, error) {
 		return "", fmt.Errorf("failed to rewrite the copied distro definition: %w", err)
 	}
 	return definition, nil
+}
+
+// copyOutsideSources copies every file the manifest reaches for outside its own directory,
+// putting each at the same position relative to the copy as it held relative to the original.
+// os.CopyFS only walks the definition directory itself, so a shared tree alongside it --
+// example/k3s/core, which every k3s version points at -- is otherwise never copied.
+//
+// Each destination has to land inside dst. Climbing out of it would mean definition does not sit
+// as deep below dst as it did below example/, which is the bug this function exists to prevent;
+// writing the file anyway would scatter copies through the filesystem above the temp directory
+// and leave the resolved source looking fine to anyone who checked.
+//
+// A source naming a file that is not there fails here rather than at package-build time. The
+// harness is what moved the definition, so a path that no longer resolves is this function's
+// bug to report, and reporting it by name beats the build reporting a file it cannot stage.
+func copyOutsideSources(src, dst, definition string, content []byte) error {
+	copied := map[string]bool{}
+	for _, match := range outsideSource.FindAllSubmatch(content, -1) {
+		source := string(match[1])
+		if copied[source] {
+			continue
+		}
+		copied[source] = true
+
+		from := filepath.Join(src, source)
+		to := filepath.Join(definition, source)
+		rel, err := filepath.Rel(dst, to)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return fmt.Errorf("source %s in %s/distro.yaml resolves to %s, outside the copy at %s: the definition was not copied as deep below it as it sits below %s/",
+				source, src, to, dst, exampleDir)
+		}
+		if err := copyFile(from, to); err != nil {
+			return fmt.Errorf("failed to copy %s, which %s/distro.yaml reaches outside itself for: %w", from, src, err)
+		}
+	}
+	return nil
+}
+
+// copyFile copies one file, creating the directories leading to it and keeping its mode.
+func copyFile(from, to string) error {
+	info, err := os.Stat(from)
+	if err != nil {
+		return err
+	}
+	body, err := os.ReadFile(from) //nolint:gosec
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(to, body, info.Mode().Perm())
+}
+
+// TestContainerSafeDefinitionKeepsOutsideSourcesResolvable resolves every relative source in the
+// copied manifest the way fileGrabber resolves a non-URL source, so a definition that reaches
+// outside its own directory cannot quietly lose those files again.
+//
+// It is worth its own test because the failure it guards against was invisible for as long as it
+// existed: the k3s walks built a package with no killall.sh and neither systemd unit, the staging
+// errors were logged and skipped, the upload of the three missing files failed just as quietly,
+// and the suite passed throughout.
+func TestContainerSafeDefinitionKeepsOutsideSourcesResolvable(t *testing.T) {
+	for _, def := range exampleDefinitions {
+		t.Run(def.path, func(t *testing.T) {
+			// TestMain has already chdir'd to the repo root, which is what the relative
+			// paths in exampleDefinitions and exampleDir are both written against.
+			definition, err := containerSafeDefinition(def.path, t.TempDir())
+			require.NoError(t, err)
+
+			content, err := os.ReadFile(filepath.Join(definition, "distro.yaml")) //nolint:gosec
+			require.NoError(t, err)
+
+			for _, match := range outsideSource.FindAllSubmatch(content, -1) {
+				source := string(match[1])
+				resolved := filepath.Join(definition, source)
+				_, err := os.Stat(resolved)
+				require.NoError(t, err, "source %q resolves to %q, which is not in the copy", source, resolved)
+			}
+		})
+	}
 }

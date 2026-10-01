@@ -21,7 +21,7 @@ Package distro is used for creating/deploying distro package
 
 
 <a name="Create"></a>
-## func [Create](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L60>)
+## func [Create](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L64>)
 
 ```go
 func Create(ctx context.Context, distroPath string, output string, opts CreateOptions) (string, error)
@@ -57,7 +57,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 Pull takes a source URL and destination directory, fetches the Cargoship Distro package from the given sources, and returns the path to the fetched package.
 
 <a name="CreateOptions"></a>
-## type [CreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L38-L57>)
+## type [CreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/create.go#L39-L61>)
 
 CreateOptions are the optional parameters to create
 
@@ -74,6 +74,9 @@ type CreateOptions struct {
     // inputs produce byte-identical output.
     Reproducible      bool
     RegistryOverrides []images.RegistryOverride
+    // FileOverrides redirect the file downloads a distro definition declares to an internal
+    // mirror or to a directory of pre-staged assets.
+    FileOverrides []fileoverride.Override
     // SigningKeyPath and SigningKeyPassword sign the package as part of creation
     // when set. Empty values are a no-op -- see DistroLayout.SignPackage.
     SigningKeyPath     string

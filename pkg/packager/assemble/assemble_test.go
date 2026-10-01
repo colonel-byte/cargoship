@@ -27,6 +27,7 @@ import (
 	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/fileoverride"
 	"github.com/colonel-byte/cargoship/pkg/images"
 	"github.com/k0sproject/dig"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -62,6 +63,9 @@ func TestRecordDistroMetadataReproducible(t *testing.T) {
 		RegistryOverrides: []images.RegistryOverride{
 			{Source: "docker.io", Override: "registry.example.com"},
 		},
+		FileOverrides: []fileoverride.Override{
+			{Source: "https://rpm.rancher.io", Target: "https://mirror.example.com/rpm"},
+		},
 	}
 
 	got := recordDistroMetadata(d, opts)
@@ -81,6 +85,9 @@ func TestRecordDistroMetadataReproducible(t *testing.T) {
 	}
 	if want := "registry.example.com"; got.Build.RegistryOverrides["docker.io"] != want {
 		t.Errorf("Build.RegistryOverrides[docker.io] = %q, want %q", got.Build.RegistryOverrides["docker.io"], want)
+	}
+	if want := "https://mirror.example.com/rpm"; got.Build.FileOverrides["https://rpm.rancher.io"] != want {
+		t.Errorf("Build.FileOverrides[https://rpm.rancher.io] = %q, want %q", got.Build.FileOverrides["https://rpm.rancher.io"], want)
 	}
 }
 
