@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8b3b0a9f.js";
+            window.path_to_searchindex_js = "../searchindex-d674ce53.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-54c4a31c.js"></script>
@@ -186,7 +186,7 @@
 <p><strong>Triggers:</strong> pull requests, merge groups.</p>
 <p>Two independent lint jobs:</p>
 <ul>
-<li><strong>lint</strong> - runs <code>golangci-lint</code> over the Go source.</li>
+<li><strong>lint</strong> - runs <code>golangci-lint</code> over the Go source, at the version <a href="../../.pre-commit-config.yaml"><code>.pre-commit-config.yaml</code></a> pins for the hook of the same name. The action installs the latest release when it is given no version, which once left CI linting with a newer golangci-lint than any contributor ran locally, so a failure here reproduced nowhere. Reading the pinned rev keeps the two in step without adding a second pin – dependabot bumps the one in the hook config, and does not update inputs inside a workflow’s <code>with:</code> block.</li>
 <li><strong>containers</strong> - runs <code>hadolint</code> against each container Dockerfile individually (<code>ansible</code>, <code>base</code>, <code>deb</code>, <code>ubi</code>), matrix-style. Paths are listed explicitly rather than using hadolint’s recursive glob mode, which would otherwise pull in vendored Dockerfiles under <code>vendor/</code>.</li>
 </ul>
 
