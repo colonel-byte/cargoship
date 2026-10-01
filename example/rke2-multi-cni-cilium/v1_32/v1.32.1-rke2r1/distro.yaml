@@ -47,21 +47,6 @@ spec:
         target: .podSecurity.plugins[0].configuration.defaults.audit
       - source: .podSecurity.defaults.warn
         target: .podSecurity.plugins[0].configuration.defaults.warn
-  actions:
-    onCreate:
-      before:
-        - description: pull rke2 tar-ball
-          cmd: |-
-            rm -rf   target
-            mkdir -p target
-            echo https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-amd64.tar.gz
-            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-amd64.tar.gz
-            echo https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-arm64.tar.gz
-            curl -L -o ./target/rke2.linux-arm64.tar.gz https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-arm64.tar.gz
-      after:
-        - description: clean up after
-          cmd: |-
-            rm -rf   target
   config:
     engine:
       config:
@@ -279,57 +264,64 @@ spec:
             profile: worker
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
+          shasum: 34b545c556c26276dc81657f276a852dc29c5ef6320a19d5648de730d123a12c
           selector:
             package: binary
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
+          shasum: 374a21fe047b0f1b6c28d72ed14829534430b90187f71716d29cc7a41ebd6306
           selector:
             package: binary
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
+          shasum: 22acb159ce9b6fed77c29580053edd070356a626ae18211a3d06441752b6615b
           selector:
             package: binary
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
+          shasum: 22acb159ce9b6fed77c29580053edd070356a626ae18211a3d06441752b6615b
           selector:
             package: binary
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
+          shasum: 3fd40bd707aa73b3816b157dceec11b5fa27bfe5b0c9cc7bbe7f65013851cf62
           selector:
             package: binary
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
+          shasum: 3fd40bd707aa73b3816b157dceec11b5fa27bfe5b0c9cc7bbe7f65013851cf62
           selector:
             package: binary
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: lib/systemd/system/rke2-server.service
           target: /etc/systemd/system/rke2-server.service
+          shasum: caf5e4ff923c968d15494d984320b9ab4be13504fe9d37b968ca52ecd8e4ffcb
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-server.service
           selector:
@@ -337,9 +329,10 @@ spec:
             profile: controller
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: lib/systemd/system/rke2-server.service
           target: /etc/systemd/system/rke2-server.service
+          shasum: caf5e4ff923c968d15494d984320b9ab4be13504fe9d37b968ca52ecd8e4ffcb
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-server.service
           selector:
@@ -347,9 +340,10 @@ spec:
             profile: controller
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: lib/systemd/system/rke2-agent.service
           target: /etc/systemd/system/rke2-agent.service
+          shasum: ce3962d986a360e11d175de9fa8d9ae0a55cb227f41ed576e93fcbc817d8a103
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
           selector:
@@ -357,9 +351,10 @@ spec:
             profile: worker
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.32.1%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: lib/systemd/system/rke2-agent.service
           target: /etc/systemd/system/rke2-agent.service
+          shasum: ce3962d986a360e11d175de9fa8d9ae0a55cb227f41ed576e93fcbc817d8a103
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
           selector:
