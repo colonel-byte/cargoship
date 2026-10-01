@@ -4,6 +4,16 @@
 
 Apply a config file to bootstrap and upgrade a cluster
 
+### Synopsis
+
+Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted.
+
+Cargoship opens every SSH connection itself, from the machine it runs on, and nothing is installed on a target host beyond what a phase uploads.
+
+An apply never removes a node. A host deleted from the configuration leaves its node in the cluster and stops the run rather than having the difference reconciled, so that no machine is drained or uninstalled by a configuration edit alone. Pass --allow-unmanaged-nodes when the extra nodes were joined deliberately and cargoship should leave them alone.
+
+This changes every host it is pointed at, so it needs --confirm. Pass --dry-run instead to connect to every host and run the preflight checks for real, reporting what the run would change without changing it.
+
 ```
 cargoship apply [Distro Package] [flags]
 ```
@@ -41,7 +51,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
-      --confirm                                 Confirm whether if to proceed with the install
+      --confirm                                 Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -f, --fapolicyd                               Whether to update all the host nodes fapolicyd configuration.
   -F, --firewall                                Whether to update all the host nodes firewall configuration.

@@ -2,7 +2,17 @@
 
 ## cargoship create
 
-Creates a Cargoship Package from a given directory or the current director
+Creates a Cargoship Package from a given directory or the current directory
+
+### Synopsis
+
+Builds an offline distro package from a definition directory -- a distro.yaml and whatever sits beside it -- producing one compressed archive that carries everything a cluster needs: the engine's packages and binaries, the OCI images, the configuration templates, and the checksums over all of them.
+
+The archive is fat on purpose. One package holds every architecture it targets, and the host's own architecture selects what gets uploaded at apply time, so a mixed fleet installs from a single file.
+
+Everything the definition declares is fetched while this runs, which is the one step that needs a network. --registry-override and --file-override redirect those fetches to an internal mirror or to files staged on disk ahead of time, which is how a package is built where there is no route to the upstream hosts. A declared shasum is enforced either way.
+
+--signing-key signs the package as it is built. --reproducible pins the recorded build time so that identical inputs produce a byte-identical archive.
 
 ```
 cargoship create [Dir] [flags]

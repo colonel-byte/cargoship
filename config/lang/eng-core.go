@@ -23,23 +23,58 @@ package lang
 
 const (
 	// CmdDistroCreateShort create short
-	CmdDistroCreateShort = "Creates a Cargoship Package from a given directory or the current director"
+	CmdDistroCreateShort = "Creates a Cargoship Package from a given directory or the current directory"
+	// CmdDistroCreateLong create long
+	CmdDistroCreateLong = "Builds an offline distro package from a definition directory -- a distro.yaml and whatever sits beside it -- producing one compressed archive that carries everything a cluster needs: the engine's packages and binaries, the OCI images, the configuration templates, and the checksums over all of them.\n\n" +
+		"The archive is fat on purpose. One package holds every architecture it targets, and the host's own architecture selects what gets uploaded at apply time, so a mixed fleet installs from a single file.\n\n" +
+		"Everything the definition declares is fetched while this runs, which is the one step that needs a network. --registry-override and --file-override redirect those fetches to an internal mirror or to files staged on disk ahead of time, which is how a package is built where there is no route to the upstream hosts. A declared shasum is enforced either way.\n\n" +
+		"--signing-key signs the package as it is built. --reproducible pins the recorded build time so that identical inputs produce a byte-identical archive."
 	// CmdDistroPublishShort publish short
 	CmdDistroPublishShort = "Publish the Cargoship Package to an OCI registry"
+	// CmdDistroPublishLong publish long
+	CmdDistroPublishLong = "Pushes a built package to an OCI registry, where 'cargoship apply' and 'cargoship pull' can read it by reference instead of by path. The package is uploaded as OCI artifacts, so any registry that stores them will hold it, and --oci-concurrency sets how many layers move at once.\n\n" +
+		"The signature a package already carries is published with it. Passing --signing-key re-signs the package under a different key on the way out, which is how one built and signed in a development environment is re-signed for a production registry."
 	// CmdPackagePullShort pull short
 	CmdPackagePullShort = "Pulls a Cargoship package from a remote registry and save to the local file system"
+	// CmdPackagePullLong pull long
+	CmdPackagePullLong = "Downloads a package from an OCI registry or an https:// URL and writes it to the local filesystem as a single archive, so that it can be carried to a machine with no route to the registry it came from. An apply reads the same references directly, so pulling first is for staging rather than something an install needs.\n\n" +
+		"--shasum checks the downloaded archive against a checksum you already hold, which is the check to use when the package is to be trusted on the strength of something other than its signature."
 	// CmdPackagePullFlagShasum pull shasum flag
 	CmdPackagePullFlagShasum = "Shasum of the package to pull"
 	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
+	// CmdDistroApplyLong apply long
+	CmdDistroApplyLong = "Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted.\n\n" +
+		"Cargoship opens every SSH connection itself, from the machine it runs on, and nothing is installed on a target host beyond what a phase uploads.\n\n" +
+		"An apply never removes a node. A host deleted from the configuration leaves its node in the cluster and stops the run rather than having the difference reconciled, so that no machine is drained or uninstalled by a configuration edit alone. Pass --allow-unmanaged-nodes when the extra nodes were joined deliberately and cargoship should leave them alone.\n\n" +
+		"This changes every host it is pointed at, so it needs --confirm. Pass --dry-run instead to connect to every host and run the preflight checks for real, reporting what the run would change without changing it."
 	// CmdDistroPrepareShort prepare short
 	CmdDistroPrepareShort = "Prepares the nodes, including restarting the node if new kernel modules are enabled"
+	// CmdDistroPrepareLong prepare long
+	CmdDistroPrepareLong = "Brings every host the cluster configuration names up to the prerequisites the package declares, without installing the engine: environment variables and sysctl settings, container-selinux on hosts with SELinux enabled, the fapolicyd rules the distro supplies, and the kernel modules the package asks for. A host that gained a module is rebooted, because the module has to be loaded before an apply can use it.\n\n" +
+		"Running this is optional. An apply runs the same preparation phases itself, and this command exists so that the disruptive half can be done on its own schedule -- ahead of a maintenance window rather than inside it.\n\n" +
+		"--hosts, --firewall and --fapolicyd each opt into rewriting a part of the host that cargoship otherwise leaves alone.\n\n" +
+		"This changes every host it is pointed at, so it needs --confirm. Pass --dry-run to report what it would change instead."
 	// CmdDistroResetShort reset short
-	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for a engine"
+	CmdDistroResetShort = "Reset a cluster, stopping, uninstalling, and removing all data for an engine"
+	// CmdDistroResetLong reset long
+	CmdDistroResetLong = "Removes the engine and the data it wrote from every host the cluster configuration names. Each node is deleted from the cluster, drained first where that is enabled, then the engine's packages or binaries are uninstalled and the service manager is reloaded.\n\n" +
+		"This is destructive and it backs nothing up. Nothing a workload kept on a host survives it, and no command puts the cluster back: what follows a reset is an apply, which bootstraps a new one.\n\n" +
+		"--distro names the engine to remove. A reset loads no package, so it has nothing else to read the engine's identity from.\n\n" +
+		"This needs --confirm. Pass --dry-run to report every host it would reset, and what it would do to each, without touching one."
 	// CmdDistroKubeConfigShort kube-config short
 	CmdDistroKubeConfigShort = "Get the admin kube-config for a control-plane node"
+	// CmdDistroKubeConfigLong kube-config long
+	CmdDistroKubeConfigLong = "Fetches the engine's admin credentials from the first control-plane node the cluster configuration names and merges them into a kubeconfig file. The file is created when it does not exist, and an existing one keeps every other cluster it already holds.\n\n" +
+		"The server address is rewritten to the control-plane address the configuration declares, rather than the node the credentials came from, so the context keeps working when that node does not. The context is named after the cluster's metadata.name.\n\n" +
+		"This changes no host -- it connects, reads, and writes a file locally -- so it needs no --confirm. The file written to is --kubeconfig, which defaults to KUBECONFIG when that is set and to the standard location otherwise."
 	// CmdDistroEngineConfigSyncShort engine-config-sync short
 	CmdDistroEngineConfigSyncShort = "Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted"
+	// CmdDistroEngineConfigSyncLong engine-config-sync long
+	CmdDistroEngineConfigSyncLong = "Writes the engine configuration a package and a cluster configuration describe -- registry mirrors and credentials, audit policy, and pod security -- to every host the configuration names, and restarts the engine only where what is on disk no longer matches. A node whose configuration already agrees is left running untouched.\n\n" +
+		"This exists because those three settings are the ones that change without the engine version changing, and a full apply is a heavier way to deliver them. Where a restart is needed the node is drained first, and the nodes are worked through at the rate --work-concurrency allows, so a cluster stays serving while its configuration moves.\n\n" +
+		"Registry credentials encrypted with Ansible Vault or age are decrypted here, and the keys for every one of them are checked before the first host is connected to.\n\n" +
+		"This changes every host whose configuration has drifted, so it needs --confirm. Pass --dry-run to report which nodes would be restarted without restarting one."
 	// CmdInstallFapolicydUpdate install flag fapolicyd
 	CmdInstallFapolicydUpdate = "Whether to update all the host nodes fapolicyd configuration."
 	// CmdInstallFirewallUpdate install flag firewall
@@ -53,7 +88,7 @@ const (
 	// CmdInstallFlagKubeConfigDistro kube-config flag config
 	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagConfirm install flag confirm
-	CmdInstallFlagConfirm = "Confirm whether if to proceed with the install"
+	CmdInstallFlagConfirm = "Proceed with the run. Without it, a command that would change a host reports what it needs and stops."
 	// CmdInstallFlagDryRun install flag dry run
 	CmdInstallFlagDryRun = "Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm."
 	// CmdInstallFlagTimeout install flag timeout

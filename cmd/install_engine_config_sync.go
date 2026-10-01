@@ -51,6 +51,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 		Use:     "engine-config-sync [Distro Package]",
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDistroEngineConfigSyncShort,
+		Long:    lang.CmdDistroEngineConfigSyncLong,
 		Example: lang.CmdDistroEngineConfigSyncExample,
 		GroupID: lang.RootGroupInstallID,
 		PreRunE: o.preRunE,

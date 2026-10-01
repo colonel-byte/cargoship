@@ -2,7 +2,17 @@
 
 ## cargoship reset
 
-Reset a cluster, stopping, uninstalling, and removing all data for a engine
+Reset a cluster, stopping, uninstalling, and removing all data for an engine
+
+### Synopsis
+
+Removes the engine and the data it wrote from every host the cluster configuration names. Each node is deleted from the cluster, drained first where that is enabled, then the engine's packages or binaries are uninstalled and the service manager is reloaded.
+
+This is destructive and it backs nothing up. Nothing a workload kept on a host survives it, and no command puts the cluster back: what follows a reset is an apply, which bootstraps a new one.
+
+--distro names the engine to remove. A reset loads no package, so it has nothing else to read the engine's identity from.
+
+This needs --confirm. Pass --dry-run to report every host it would reset, and what it would do to each, without touching one.
 
 ```
 cargoship reset [flags]
@@ -29,7 +39,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
 ```
   -c, --concurrency int           Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string             Config file used to bootstrap a cluster.
-      --confirm                   Confirm whether if to proceed with the install
+      --confirm                   Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
       --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -f, --fapolicyd                 Whether to update all the host nodes fapolicyd configuration.

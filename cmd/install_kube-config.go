@@ -54,6 +54,7 @@ func newInstallKubeConfigCommand() *cobra.Command {
 		Use:     "kube-config",
 		Args:    cobra.ExactArgs(0),
 		Short:   lang.CmdDistroKubeConfigShort,
+		Long:    lang.CmdDistroKubeConfigLong,
 		Example: lang.CmdDistroKubeConfigExample,
 		GroupID: lang.RootGroupInstallID,
 		RunE: func(cmd *cobra.Command, args []string) error {

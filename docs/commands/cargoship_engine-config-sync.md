@@ -4,6 +4,16 @@
 
 Sync engine config (registries, audit, and pod security) to a cluster, draining and restarting the engine service on any node whose config has drifted
 
+### Synopsis
+
+Writes the engine configuration a package and a cluster configuration describe -- registry mirrors and credentials, audit policy, and pod security -- to every host the configuration names, and restarts the engine only where what is on disk no longer matches. A node whose configuration already agrees is left running untouched.
+
+This exists because those three settings are the ones that change without the engine version changing, and a full apply is a heavier way to deliver them. Where a restart is needed the node is drained first, and the nodes are worked through at the rate --work-concurrency allows, so a cluster stays serving while its configuration moves.
+
+Registry credentials encrypted with Ansible Vault or age are decrypted here, and the keys for every one of them are checked before the first host is connected to.
+
+This changes every host whose configuration has drifted, so it needs --confirm. Pass --dry-run to report which nodes would be restarted without restarting one.
+
 ```
 cargoship engine-config-sync [Distro Package] [flags]
 ```
@@ -37,7 +47,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
-      --confirm                                 Confirm whether if to proceed with the install
+      --confirm                                 Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help                                    help for engine-config-sync
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)

@@ -45,6 +45,7 @@ func newInstallPrepareCommand() *cobra.Command {
 		Use:     "prepare [Distro Package]",
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDistroPrepareShort,
+		Long:    lang.CmdDistroPrepareLong,
 		Example: lang.CmdDistroPrepareExample,
 		GroupID: lang.RootGroupInstallID,
 		PreRunE: o.preRunE,

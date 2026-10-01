@@ -4,6 +4,12 @@
 
 Publish the Cargoship Package to an OCI registry
 
+### Synopsis
+
+Pushes a built package to an OCI registry, where 'cargoship apply' and 'cargoship pull' can read it by reference instead of by path. The package is uploaded as OCI artifacts, so any registry that stores them will hold it, and --oci-concurrency sets how many layers move at once.
+
+The signature a package already carries is published with it. Passing --signing-key re-signs the package under a different key on the way out, which is how one built and signed in a development environment is re-signed for a production registry.
+
 ```
 cargoship publish [Package] [REPOSITORY] [flags]
 ```
