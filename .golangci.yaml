@@ -6,11 +6,18 @@ formatters:
   exclusions:
     paths:
       - examples$
+      # Build output, not source. See the linters block below for why it is listed.
+      - ^build/
 linters:
   default: none
   exclusions:
     paths:
       - magefiles/
+      # Build output, not source. The e2e targets point TMPDIR at build/tmp, so an
+      # interrupted run leaves a go-build tree of generated cgo behind -- and the
+      # linters walk the filesystem rather than the index, so build/.gitignore does
+      # not keep them out. Anchored: pkg/utils/build is real source.
+      - ^build/
   enable:
     - errcheck
     - errorlint
