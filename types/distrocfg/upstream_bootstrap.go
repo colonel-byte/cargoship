@@ -55,7 +55,7 @@ func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool {
 
 // Bootstrap forms the cluster on the leader with `kubeadm init`, or joins it on every other host
 // with `kubeadm join`, against the kubeadm-config.yaml ConfigureEngine already wrote to host.
-func (d *Upstream) Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error {
 	if host.Metadata.IsLeader {
 		return d.bootstrapLeader(host)
 	}
