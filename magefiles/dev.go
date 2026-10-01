@@ -21,6 +21,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/dnfpins"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/osv"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/util"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"oras.land/oras-go/v2/registry/remote"
@@ -34,7 +37,7 @@ type (
 
 // Clean removes build artifacts
 func (Dev) Clean() error {
-	return clean()
+	return util.CleanBuild()
 }
 
 // Tidy just runs the module tidy
@@ -103,7 +106,7 @@ func (Dev) Digest(ctx context.Context) error {
 // containers/ansible/Dockerfile, and .goreleaser.yaml.
 func (Dev) DnfPins(ctx context.Context) error {
 	fmt.Println("Querying AlmaLinux 10 repodata for latest package versions...")
-	pins, err := queryLatestAlmaLinuxPackages(ctx)
+	pins, err := dnfpins.QueryLatestAlmaLinuxPackages(ctx)
 	if err != nil {
 		return fmt.Errorf("querying AlmaLinux packages: %w", err)
 	}
@@ -111,20 +114,30 @@ func (Dev) DnfPins(ctx context.Context) error {
 	fmt.Printf("Discovered versions:\n  ansible-core:    %s\n  bash-completion: %s\n  shadow-utils:    %s\n",
 		pins.AnsibleCore, pins.BashCompletion, pins.ShadowUtils)
 
-	if err := updateDockerfileAnsiblePins(ansibleDockerfilePath, pins.AnsibleCore, pins.BashCompletion); err != nil {
-		return fmt.Errorf("updating %s: %w", ansibleDockerfilePath, err)
+	if err := dnfpins.UpdateDockerfileAnsiblePins(dnfpins.AnsibleDockerfilePath, pins.AnsibleCore, pins.BashCompletion); err != nil {
+		return fmt.Errorf("updating %s: %w", dnfpins.AnsibleDockerfilePath, err)
 	}
-	fmt.Printf("Updated %s\n", ansibleDockerfilePath)
+	fmt.Printf("Updated %s\n", dnfpins.AnsibleDockerfilePath)
 
-	if err := updateDockerfileUbiPins(ubiDockerfilePath, pins.ShadowUtils, pins.BashCompletion); err != nil {
-		return fmt.Errorf("updating %s: %w", ubiDockerfilePath, err)
+	if err := dnfpins.UpdateDockerfileUbiPins(dnfpins.UbiDockerfilePath, pins.ShadowUtils, pins.BashCompletion); err != nil {
+		return fmt.Errorf("updating %s: %w", dnfpins.UbiDockerfilePath, err)
 	}
-	fmt.Printf("Updated %s\n", ubiDockerfilePath)
+	fmt.Printf("Updated %s\n", dnfpins.UbiDockerfilePath)
 
-	if err := updateGoreleaserDnfPins(goreleaserConfigPath, pins); err != nil {
-		return fmt.Errorf("updating %s: %w", goreleaserConfigPath, err)
+	if err := dnfpins.UpdateGoreleaserDnfPins(dnfpins.GoreleaserConfigPath, pins); err != nil {
+		return fmt.Errorf("updating %s: %w", dnfpins.GoreleaserConfigPath, err)
 	}
-	fmt.Printf("Updated %s\n", goreleaserConfigPath)
+	fmt.Printf("Updated %s\n", dnfpins.GoreleaserConfigPath)
 
 	return nil
+}
+
+// WriteOSVOverrides writes every override into vendor/.
+func (Dev) WriteOSVOverrides() error {
+	return osv.WriteOverrides()
+}
+
+// VerifyVendor checks that vendor/ contains all required overrides and no uncovered manifests.
+func (Dev) VerifyVendor() error {
+	return osv.VerifyVendor()
 }

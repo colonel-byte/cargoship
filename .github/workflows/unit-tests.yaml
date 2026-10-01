@@ -1,0 +1,52 @@
+---
+name: Unit tests
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: unit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Everything but the two suites with runners of their own: e2e.yaml and
+      # e2e-cluster.yaml drive ./test/..., which needs Docker and the better part of an
+      # hour. See magefiles/test-unit.go for what that leaves.
+      #
+      # go run ./magefiles/core rather than mage: same target, but it builds from vendor/
+      # and needs no mage binary on the runner. See docs/AGENTS.md.
+      - name: Run unit tests
+        run: go run -mod=vendor ./magefiles/core test:unit
+        env:
+          # Everything the tests need is vendored, so make any accidental network access
+          # fail fast.
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local
+
+      # The seed corpus is a second or so and needs nothing either, so it rides along here
+      # rather than paying for a runner of its own. See docs/dev/fuzz-tests.md.
+      - name: Replay the fuzz seed corpus
+        run: go run -mod=vendor ./magefiles/core test:fuzz
+        env:
+          GOFLAGS: -mod=vendor
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOTOOLCHAIN: local

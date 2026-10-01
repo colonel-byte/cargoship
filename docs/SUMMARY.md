@@ -193,7 +193,6 @@
 
 - [ai-usage](agent/ai-usage.md)
 - [choice-age-encryption](agent/choice-age-encryption.md)
-- [choice-ansible-collection-pins](agent/choice-ansible-collection-pins.md)
 - [choice-ansible-module](agent/choice-ansible-module.md)
 - [choice-binary-artifact-opa-wasm](agent/choice-binary-artifact-opa-wasm.md)
 - [choice-e2e-stage-split](agent/choice-e2e-stage-split.md)
@@ -209,6 +208,8 @@
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
+- [todo-pkg-action-unit-tests](agent/todo-pkg-action-unit-tests.md)
+- [todo-pkg-coci-registry-tests](agent/todo-pkg-coci-registry-tests.md)
 
 
 -----------

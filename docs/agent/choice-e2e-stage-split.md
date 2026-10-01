@@ -63,7 +63,7 @@ The host counts the suite asserts on -- `inventoryHostCount`, `uploadOnlyCount`,
 
 Every bootloose machine now mounts an anonymous Docker volume at `/var/lib/rancher`. A volume is not part of the container's root filesystem -- Docker backs it with a directory on whatever filesystem holds `/var/lib/docker` -- so containerd's snapshotter gets a plain filesystem and mounts normally. This is the same arrangement `kind`'s node image makes with its `VOLUME` declaration, for the same reason.
 
-Anonymous rather than named, on purpose. A named volume would carry one run's engine state into the next, and every walk in this suite assumes it starts from machines with no engine on them. The cost is that `docker rm -f` does not reap anonymous volumes, so both `stopBootlooseContainers` in `magefiles/test-e2e-cluster.go` and the workflow's cleanup steps pass `-v`.
+Anonymous rather than named, on purpose. A named volume would carry one run's engine state into the next, and every walk in this suite assumes it starts from machines with no engine on them. The cost is that `docker rm -f` does not reap anonymous volumes, so both `StopBootlooseContainers` in `magefiles/pkg/testrunner/testrunner.go` and the workflow's cleanup steps pass `-v`.
 
 Configuring rke2 to use the `native` snapshotter instead was the alternative. It was rejected because it changes what is under test: the suite would then be proving that rke2 installs correctly in a configuration no real deployment uses, and the overlayfs snapshotter is the one that ships.
 

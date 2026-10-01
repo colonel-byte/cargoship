@@ -59,8 +59,14 @@ type namedKeyring struct {
 // one format is worth trying immediately in the other.
 func encryptKeyrings() []namedKeyring {
 	return []namedKeyring{
-		{name: "vault", ring: vaultKeyring},
-		{name: "age", ring: ageKeyring},
+		{
+			name: "vault",
+			ring: vaultKeyring,
+		},
+		{
+			name: "age",
+			ring: ageKeyring,
+		},
 	}
 }
 
@@ -76,10 +82,26 @@ type rekeyPair struct {
 // worth putting a fuzzer behind.
 func rekeyPairs() []rekeyPair {
 	return []rekeyPair{
-		{name: "vault-to-vault", from: vaultKeyring, to: rekeyVaultKeyring},
-		{name: "vault-to-age", from: vaultKeyring, to: rekeyAgeKeyring},
-		{name: "age-to-age", from: ageKeyring, to: rekeyAgeKeyring},
-		{name: "age-to-vault", from: ageKeyring, to: rekeyVaultKeyring},
+		{
+			name: "vault-to-vault",
+			from: vaultKeyring,
+			to:   rekeyVaultKeyring,
+		},
+		{
+			name: "vault-to-age",
+			from: vaultKeyring,
+			to:   rekeyAgeKeyring,
+		},
+		{
+			name: "age-to-age",
+			from: ageKeyring,
+			to:   rekeyAgeKeyring,
+		},
+		{
+			name: "age-to-vault",
+			from: ageKeyring,
+			to:   rekeyVaultKeyring,
+		},
 	}
 }
 

@@ -12,12 +12,16 @@ linters:
   default: none
   exclusions:
     paths:
-      - magefiles/
       # Build output, not source. The e2e targets point TMPDIR at build/tmp, so an
       # interrupted run leaves a go-build tree of generated cgo behind -- and the
       # linters walk the filesystem rather than the index, so build/.gitignore does
       # not keep them out. Anchored: pkg/utils/build is real source.
       - ^build/
+      # The mage target files themselves are package main behind //go:build mage, which the
+      # linter cannot build without mage's generated entry point. Everything under
+      # magefiles/pkg/ is ordinary Go and is linted like the rest of the module.
+      - magefiles/[^/]*\.go$
+      - magefiles/core/
   enable:
     - errcheck
     - errorlint

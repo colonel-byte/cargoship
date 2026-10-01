@@ -1,15 +1,20 @@
 ---
 name: Basic build
 
+# build-e2e and e2e-noncluster are required status checks, so both triggers are load-bearing
+# and neither one carries a path filter. A filtered required check never reports at all on a
+# change that only touches the ignored paths, which leaves the check pending forever: the
+# pull request cannot be queued, and a merge_group ref that did get queued would time out.
+# That is why a CODEOWNERS-only change builds here too, cheap as that case is to skip.
 on:
   pull_request:
-    paths-ignore:
-      - "CODEOWNERS"
+  merge_group:
 
 permissions:
   contents: read
 
-# Abort prior jobs in the same workflow / PR
+# Abort prior jobs in the same workflow / PR. github.ref is distinct per merge_group ref, so
+# a queued entry is never cancelled by a push to the pull request it came from.
 concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
@@ -83,8 +88,11 @@ jobs:
       - name: Test
         run: go test -mod=vendor -timeout 30m -count=1 -v -short ./test/e2e/noncluster/...
 
-  # Compare the PR binary's size against the latest released binary and comment the diff on the PR
+  # Compare the PR binary's size against the latest released binary and comment the diff on
+  # the PR. Pull requests only: there is nothing to comment on under merge_group, and the
+  # comparison was already made before the entry was queued.
   binary-size:
+    if: github.event_name == 'pull_request'
     needs: build-e2e
     runs-on: ubuntu-latest
     permissions:

@@ -20,22 +20,12 @@ ARG TARGETPLATFORM
 ARG ANSIBLE_CORE_VERSION="2.16.16-2.el10_2.1"
 ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
-COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
-COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
-COPY ansible/colonel_byte/cargoship/requirements.yml /etc/cargoship/ansible/requirements.yml
-
 # hadolint ignore=DL3040
-RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
-  && rpm --checksig /tmp/rpms/*.rpm \
-  && rpm --install --verbose /tmp/rpms/*.rpm \
-  && rm -rf /tmp/rpms \
-  && cargoship version \
-  && dnf install -y --nodocs --setopt=install_weak_deps=0 \
+RUN dnf install -y --nodocs --setopt=install_weak_deps=0 \
     ansible-core-${ANSIBLE_CORE_VERSION} \
     bash-completion-${BASH_COMPLETION_VERSION} \
   && dnf clean all \
-  && rm -rf /var/cache/yum \
-  && ansible-galaxy collection install --requirements-file /etc/cargoship/ansible/requirements.yml --collections-path /usr/share/ansible/collections/ansible_collections
+  && rm -rf /var/cache/yum
 
 ARG UID=65532
 ARG GID=65532
@@ -48,6 +38,15 @@ RUN groupadd --gid "${GID}" nonroot \
     /workspace \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /home/nonroot /workspace
+
+COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
+COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
+
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
+  && rpm --checksig /tmp/rpms/*.rpm \
+  && rpm --install --verbose /tmp/rpms/*.rpm \
+  && rm -rf /tmp/rpms \
+  && cargoship version
 
 LABEL org.opencontainers.image.title="cargoship" \
   org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection" \
