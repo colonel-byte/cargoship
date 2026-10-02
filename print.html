@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-03f54169.js";
+            window.path_to_searchindex_js = "searchindex-5cbe792e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-54c4a31c.js"></script>
@@ -4875,6 +4875,12 @@ $ cargoship version -o json
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
+<li>Import images
+<ul>
+<li>For a distro whose engine does not import uploaded image tarballs on its own, imports them into the engine’s image store</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
 <li>Configure engine
 <ul>
 <li>Runs distro specific operations</li>
@@ -6699,7 +6705,7 @@ $ cargoship version -o json
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L176">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L179">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
@@ -11793,6 +11799,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
 </ul>
 </li>
+<li><a href="#ImportImages">type ImportImages</a>
+<ul>
+<li><a href="#ImportImages.Explanation">func (p *ImportImages) Explanation() string</a></li>
+<li><a href="#ImportImages.Prepare">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ImportImages.Run">func (p *ImportImages) Run(ctx context.Context) error</a></li>
+<li><a href="#ImportImages.ShouldRun">func (p *ImportImages) ShouldRun() bool</a></li>
+<li><a href="#ImportImages.Title">func (p *ImportImages) Title() string</a></li>
+</ul>
+</li>
 <li><a href="#InitializeControllers">type InitializeControllers</a>
 <ul>
 <li><a href="#InitializeControllers.Explanation">func (p *InitializeControllers) Explanation() string</a></li>
@@ -12643,6 +12658,40 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
 </code></pre>
 <p>Wet is a shorthand for manager.Wet</p>
+<p><a name="ImportImages"></a></p>
+<h2 id="type-importimages"><a class="header" href="#type-importimages">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L29-L34">ImportImages</a></a></h2>
+<p>ImportImages imports uploaded image tarballs into a distro’s engine, for a distro whose engine does not do this on its own. rke2 and k3s’s own agents import automatically, so most applies skip this phase entirely -- ShouldRun is false unless the distro opts in.</p>
+<pre><code class="language-go">type ImportImages struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ImportImages.Explanation"></a></p>
+<h3 id="func-importimages-explanation"><a class="header" href="#func-importimages-explanation">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L42">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ImportImages.Prepare"></a></p>
+<h3 id="func-importimages-prepare"><a class="header" href="#func-importimages-prepare">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L47">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ImportImages.Run"></a></p>
+<h3 id="func-importimages-run"><a class="header" href="#func-importimages-run">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L64">Run</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ImportImages.ShouldRun"></a></p>
+<h3 id="func-importimages-shouldrun"><a class="header" href="#func-importimages-shouldrun">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L58">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when the distro needs images imported for it and there is somewhere to import them from.</p>
+<p><a name="ImportImages.Title"></a></p>
+<h3 id="func-importimages-title"><a class="header" href="#func-importimages-title">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L37">Title</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Title() string
+</code></pre>
+<p>Title for the phase</p>
 <p><a name="InitializeControllers"></a></p>
 <h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L39">InitializeControllers</a></a></h2>
 <p>InitializeControllers phase state</p>
@@ -14070,6 +14119,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </ul>
 </li>
 <li><a href="#Distro">type Distro</a></li>
+<li><a href="#ImageImporter">type ImageImporter</a></li>
 <li><a href="#K3S">type K3S</a>
 <ul>
 <li><a href="#K3S.AdminCredentials">func (d *K3S) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)</a></li>
@@ -14106,9 +14156,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Upstream.AdminCredentials">func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)</a></li>
 <li><a href="#Upstream.CleanupPaths">func (d *Upstream) CleanupPaths() []string</a></li>
 <li><a href="#Upstream.ConfigureEngine">func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error</a></li>
-<li><a href="#Upstream.DesiredFiles">func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
+<li><a href="#Upstream.DesiredFiles">func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
 <li><a href="#Upstream.DistroCmdf">func (d *Upstream) DistroCmdf(template string, args …any) string</a></li>
 <li><a href="#Upstream.GetClusterCIDR">func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string</a></li>
+<li><a href="#Upstream.ImportImages">func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error</a></li>
 <li><a href="#Upstream.JoinTokenPathAgent">func (d *Upstream) JoinTokenPathAgent() string</a></li>
 <li><a href="#Upstream.KubeconfigPath">func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string</a></li>
 <li><a href="#Upstream.KubectlCmdf">func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args …any) string</a></li>
@@ -14178,7 +14229,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var ErrNoAdminCredentials = errors.New("admin kubeconfig has no admin credentials")
 </code></pre>
 <p><a name="NodeLabelsMapToList"></a></p>
-<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L83">NodeLabelsMapToList</a></a></h2>
+<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L84">NodeLabelsMapToList</a></a></h2>
 <pre><code class="language-go">func NodeLabelsMapToList(m map[string]string) []string
 </code></pre>
 <p>NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels</p>
@@ -14207,7 +14258,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Common"></a></p>
-<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L92-L112">Common</a></a></h2>
+<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L93-L113">Common</a></a></h2>
 <p>Common for all the distro’s</p>
 <pre><code class="language-go">type Common struct {
     // Binary name of the engine binary
@@ -14232,47 +14283,47 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Common.BinaryName"></a></p>
-<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L120">BinaryName</a></a></h3>
+<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L121">BinaryName</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryName() string
 </code></pre>
 <p>BinaryName returns the engine binary name</p>
 <p><a name="Common.BinaryPath"></a></p>
-<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L115">BinaryPath</a></a></h3>
+<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L116">BinaryPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryPath() string
 </code></pre>
 <p>BinaryPath returns the full path to the engine binary</p>
 <p><a name="Common.ConfigPath"></a></p>
-<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L125">ConfigPath</a></a></h3>
+<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L126">ConfigPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) ConfigPath() string
 </code></pre>
 <p>ConfigPath returns the full path for the config directory used by the engine</p>
 <p><a name="Common.DataDirPath"></a></p>
-<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L135">DataDirPath</a></a></h3>
+<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L136">DataDirPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) DataDirPath() string
 </code></pre>
 <p>DataDirPath returns the full path for the data directory used by the engine</p>
 <p><a name="Common.GetControllerService"></a></p>
-<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L155">GetControllerService</a></a></h3>
+<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L156">GetControllerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetControllerService() string
 </code></pre>
 <p>GetControllerService returns the name of the controller service</p>
 <p><a name="Common.GetWorkerService"></a></p>
-<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L150">GetWorkerService</a></a></h3>
+<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L151">GetWorkerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetWorkerService() string
 </code></pre>
 <p>GetWorkerService returns the name of the worker service</p>
 <p><a name="Common.JoinTokenPath"></a></p>
-<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L130">JoinTokenPath</a></a></h3>
+<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L131">JoinTokenPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) JoinTokenPath() string
 </code></pre>
 <p>JoinTokenPath returns the path of the token to join the cluster</p>
 <p><a name="Common.PackageStagingDir"></a></p>
-<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L142">PackageStagingDir</a></a></h3>
+<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L143">PackageStagingDir</a></a></h3>
 <pre><code class="language-go">func (r *Common) PackageStagingDir() string
 </code></pre>
 <p>PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.</p>
 <p><a name="Common.SetPath"></a></p>
-<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L160">SetPath</a></a></h3>
+<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L161">SetPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) SetPath(key string, value string) error
 </code></pre>
 <p>SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an “ErrPathKey” error</p>
@@ -14289,7 +14340,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroReleaseDesiredFile"></a></p>
-<h3 id="func-distroreleasedesiredfile"><a class="header" href="#func-distroreleasedesiredfile">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L40">DistroReleaseDesiredFile</a></a></h3>
+<h3 id="func-distroreleasedesiredfile"><a class="header" href="#func-distroreleasedesiredfile">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L41">DistroReleaseDesiredFile</a></a></h3>
 <pre><code class="language-go">func DistroReleaseDesiredFile(dis distro.ZarfDistro, managedFiles map[string]DesiredFile) (string, DesiredFile, bool, error)
 </code></pre>
 <p>DistroReleaseDesiredFile generates the DesiredFile for the installed distro package metadata and managed files tracking.</p>
@@ -14353,6 +14404,14 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     StopControllerService(*cluster.ZarfHost) error
     // StopWorkerService stops the controller service on the host
     StopWorkerService(*cluster.ZarfHost) error
+}
+</code></pre>
+<p><a name="ImageImporter"></a></p>
+<h2 id="type-imageimporter"><a class="header" href="#type-imageimporter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L118-L121">ImageImporter</a></a></h2>
+<p>ImageImporter is implemented by a distro whose engine does not import uploaded image tarballs on its own, so cargoship must trigger the import itself. rke2 and k3s’s own agents import automatically outside cargoship’s control and do not implement this; a distro without an agent to do that -- plain kubeadm’s upstream containerd, say -- does.</p>
+<pre><code class="language-go">type ImageImporter interface {
+    // ImportImages imports every image tarball staged under path into the engine's image store.
+    ImportImages(host *cluster.ZarfHost, path string) error
 }
 </code></pre>
 <p><a name="K3S"></a></p>
@@ -14482,74 +14541,79 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>RunningVersion returns the version of the distro being ran, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream"></a></p>
-<h2 id="type-upstream"><a class="header" href="#type-upstream">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L52-L54">Upstream</a></a></h2>
+<h2 id="type-upstream"><a class="header" href="#type-upstream">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L54-L56">Upstream</a></a></h2>
 <p>Upstream distro struct. It targets a kubeadm-bootstrapped cluster: plain kubelet/kubeadm/ kubectl packages and upstream containerd, none of which share rke2/k3s’s single config.yaml or wharfie registries.yaml, so it implements Distro directly rather than embedding RancherCommon.</p>
 <pre><code class="language-go">type Upstream struct {
     Common
 }
 </code></pre>
 <p><a name="Upstream.AdminCredentials"></a></p>
-<h3 id="func-upstream-admincredentials"><a class="header" href="#func-upstream-admincredentials">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L82">AdminCredentials</a></a></h3>
+<h3 id="func-upstream-admincredentials"><a class="header" href="#func-upstream-admincredentials">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L87">AdminCredentials</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
 </code></pre>
 <p>AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.</p>
 <p><a name="Upstream.CleanupPaths"></a></p>
-<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L165">CleanupPaths</a></a></h3>
+<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L230">CleanupPaths</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) CleanupPaths() []string
 </code></pre>
 <p>CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config directory, the kubelet data directory, and the staged package directory, all of which upstream owns outright.</p>
 <p><a name="Upstream.ConfigureEngine"></a></p>
-<h3 id="func-upstream-configureengine"><a class="header" href="#func-upstream-configureengine">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L145">ConfigureEngine</a></a></h3>
+<h3 id="func-upstream-configureengine"><a class="header" href="#func-upstream-configureengine">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L150">ConfigureEngine</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error
 </code></pre>
 <p>ConfigureEngine does distro specific configuration on a host. kubeadm has no equivalent of rke2/k3s’s single config.yaml write: a controller is bootstrapped with `kubeadm init` and a worker joins with `kubeadm join`, neither of which is implemented yet.</p>
 <p><a name="Upstream.DesiredFiles"></a></p>
-<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L153">DesiredFiles</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) (map[string]DesiredFile, error)
+<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L157">DesiredFiles</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
 </code></pre>
-<p>DesiredFiles returns the full set of engine config files this distro would write. Containerd’s config.toml and crictl.yaml land here once upstream owns the container runtime configuration; until then there is honestly nothing to desire, so this returns an empty set rather than an error.</p>
+<p>DesiredFiles returns the full set of engine config files this distro would write: containerd’s config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.</p>
 <p><a name="Upstream.DistroCmdf"></a></p>
-<h3 id="func-upstream-distrocmdf"><a class="header" href="#func-upstream-distrocmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L101">DistroCmdf</a></a></h3>
+<h3 id="func-upstream-distrocmdf"><a class="header" href="#func-upstream-distrocmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L106">DistroCmdf</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) DistroCmdf(template string, args ...any) string
 </code></pre>
 <p>DistroCmdf returns a string that can be used to execute a command directly. Upstream has no single engine binary to wrap a command through -- kubeadm, kubelet, and kubectl are three separate packages -- so the template is formatted as-is.</p>
 <p><a name="Upstream.GetClusterCIDR"></a></p>
-<h3 id="func-upstream-getclustercidr"><a class="header" href="#func-upstream-getclustercidr">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L127">GetClusterCIDR</a></a></h3>
+<h3 id="func-upstream-getclustercidr"><a class="header" href="#func-upstream-getclustercidr">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L132">GetClusterCIDR</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string
 </code></pre>
 <p>GetClusterCIDR returns the known cluster CIDR blocks. kubeadm’s service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default -- that is entirely CNI dependent -- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.</p>
+<p><a name="Upstream.ImportImages"></a></p>
+<h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L207">ImportImages</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error
+</code></pre>
+<p>ImportImages imports every image tarball staged under path into containerd’s k8s.io image store. Unlike rke2/k3s, upstream’s containerd has no agent watching that directory on its own, so cargoship has to trigger the import itself.</p>
 <p><a name="Upstream.JoinTokenPathAgent"></a></p>
-<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L172">JoinTokenPathAgent</a></a></h3>
+<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L237">JoinTokenPathAgent</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) JoinTokenPathAgent() string
 </code></pre>
 <p>JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has no static agent-join-token file -- tokens are short-lived and minted on demand with `kubeadm token create` -- so there is nothing to point at yet.</p>
 <p><a name="Upstream.KubeconfigPath"></a></p>
-<h3 id="func-upstream-kubeconfigpath"><a class="header" href="#func-upstream-kubeconfigpath">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L88">KubeconfigPath</a></a></h3>
+<h3 id="func-upstream-kubeconfigpath"><a class="header" href="#func-upstream-kubeconfigpath">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L93">KubeconfigPath</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
 </code></pre>
 <p>KubeconfigPath returns the path to the admin config kubeadm writes. Unlike rke2/k3s, this path does not vary by host or data directory.</p>
 <p><a name="Upstream.KubectlCmdf"></a></p>
-<h3 id="func-upstream-kubectlcmdf"><a class="header" href="#func-upstream-kubectlcmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L94">KubectlCmdf</a></a></h3>
+<h3 id="func-upstream-kubectlcmdf"><a class="header" href="#func-upstream-kubectlcmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L99">KubectlCmdf</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
 </code></pre>
 <p>KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.</p>
 <p><a name="Upstream.ManagedDirs"></a></p>
-<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L158">ManagedDirs</a></a></h3>
+<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L198">ManagedDirs</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ManagedDirs() []ManagedDir
 </code></pre>
-<p>ManagedDirs returns the directories on a host cargoship prunes. Upstream manages none yet.</p>
+<p>ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per-registry hosts.toml directories under containerdCertsDir are not included -- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry’s own subdirectory, so a removed registry’s hosts.toml is left behind rather than risk pruning the wrong thing.</p>
 <p><a name="Upstream.RunningVersion"></a></p>
-<h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L107">RunningVersion</a></a></h3>
+<h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L112">RunningVersion</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)
 </code></pre>
 <p>RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream.StopControllerService"></a></p>
-<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L179">StopControllerService</a></a></h3>
+<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L244">StopControllerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error
 </code></pre>
 <p>StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.</p>
 <p><a name="Upstream.StopWorkerService"></a></p>
-<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L184">StopWorkerService</a></a></h3>
+<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L249">StopWorkerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error
 </code></pre>
 <p>StopWorkerService stops the worker service on the host.</p>

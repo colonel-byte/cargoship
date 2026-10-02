@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-03f54169.js";
+            window.path_to_searchindex_js = "../../searchindex-5cbe792e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-54c4a31c.js"></script>
@@ -345,6 +345,15 @@
 <li><a href="#GenericPhase.VersionGreater">func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool</a></li>
 <li><a href="#GenericPhase.VersionLess">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool</a></li>
 <li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
+</ul>
+</li>
+<li><a href="#ImportImages">type ImportImages</a>
+<ul>
+<li><a href="#ImportImages.Explanation">func (p *ImportImages) Explanation() string</a></li>
+<li><a href="#ImportImages.Prepare">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ImportImages.Run">func (p *ImportImages) Run(ctx context.Context) error</a></li>
+<li><a href="#ImportImages.ShouldRun">func (p *ImportImages) ShouldRun() bool</a></li>
+<li><a href="#ImportImages.Title">func (p *ImportImages) Title() string</a></li>
 </ul>
 </li>
 <li><a href="#InitializeControllers">type InitializeControllers</a>
@@ -1197,6 +1206,40 @@
 <pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
 </code></pre>
 <p>Wet is a shorthand for manager.Wet</p>
+<p><a name="ImportImages"></a></p>
+<h2 id="type-importimages"><a class="header" href="#type-importimages">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L29-L34">ImportImages</a></a></h2>
+<p>ImportImages imports uploaded image tarballs into a distro’s engine, for a distro whose engine does not do this on its own. rke2 and k3s’s own agents import automatically, so most applies skip this phase entirely -- ShouldRun is false unless the distro opts in.</p>
+<pre><code class="language-go">type ImportImages struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ImportImages.Explanation"></a></p>
+<h3 id="func-importimages-explanation"><a class="header" href="#func-importimages-explanation">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L42">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ImportImages.Prepare"></a></p>
+<h3 id="func-importimages-prepare"><a class="header" href="#func-importimages-prepare">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L47">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ImportImages.Run"></a></p>
+<h3 id="func-importimages-run"><a class="header" href="#func-importimages-run">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L64">Run</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ImportImages.ShouldRun"></a></p>
+<h3 id="func-importimages-shouldrun"><a class="header" href="#func-importimages-shouldrun">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L58">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when the distro needs images imported for it and there is somewhere to import them from.</p>
+<p><a name="ImportImages.Title"></a></p>
+<h3 id="func-importimages-title"><a class="header" href="#func-importimages-title">func (*ImportImages) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/63_import_images.go#L37">Title</a></a></h3>
+<pre><code class="language-go">func (p *ImportImages) Title() string
+</code></pre>
+<p>Title for the phase</p>
 <p><a name="InitializeControllers"></a></p>
 <h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L39">InitializeControllers</a></a></h2>
 <p>InitializeControllers phase state</p>
