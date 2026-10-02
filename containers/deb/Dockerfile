@@ -37,12 +37,6 @@ RUN groupadd --gid "${GID}" nonroot \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /home/nonroot /workspace
 
-LABEL org.opencontainers.image.title="cargoship" \
-  org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
-  org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
-  org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="docker.io/library/debian:13-slim"
-
 ENV HOME=/home/nonroot
 
 WORKDIR /workspace

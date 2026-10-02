@@ -97,12 +97,11 @@ The tag stays in the reference for readability; the digest is what actually reso
 docker buildx imagetools inspect cgr.dev/chainguard/static:latest --format '{{ .Manifest.Digest }}'
 ```
 
-Two conventions here exist to keep dependabot working, and both look redundant until you know why:
+One convention here exists to keep dependabot working, and it looks redundant until you know why:
 
 *   **The reference is repeated on every `FROM`** rather than hoisted into an `ARG`. Dependabot's Dockerfile parser reads literal `FROM` lines only - it has no `ARG` resolution, so `FROM ${BASE_IMAGE}` is invisible to it and the pin would never be refreshed. It is also not stage-aware, so aliasing (`FROM alpine@sha256:... AS base` then `FROM base`) is no better: the bare stage reference parses as an image and produces a spurious `base:latest` dependency.
-*   **`org.opencontainers.image.base.name` carries the tag only**, without the digest. Dependabot rewrites `FROM` lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (`3.22` → `3.23`) means updating the label by hand, which is the comment sitting above it in every one of them.
 
-`.github/workflows/check-base-image-label.yaml` catches that hand edit when it is forgotten. On any pull request touching a `Dockerfile` it compares each final `FROM`, digest stripped, against that file's `base.name`, and comments on the pull request rather than failing the job - a stale label does not break the build, and the pull request bumping the `FROM` is where the fix belongs. The comparison is literal, so the label names the registry the `FROM` actually pulls from, mirror and all, rather than the upstream image that mirror copies.
+The images carry no `LABEL` instructions of their own. Every `org.opencontainers.image.*` label, `base.name` and `base.digest` included, is set by `.goreleaser.yaml` from the `{{ .BaseImage }}` and `{{ .BaseImageDigest }}` templates goreleaser resolves at build time. That is why there is nothing here to drift and no check for it: a hand-written label could disagree with the `FROM` it describes, and a templated one cannot.
 
 One base needs more care than the others. **`cgr.dev/chainguard/static` publishes `:latest` and nothing else** on Chainguard's free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date - it eventually stops resolving, and the build fails with `manifest unknown`. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.
 
@@ -140,7 +139,7 @@ Details worth knowing before editing it:
 *   **The RPM signature is verified at build time.** `crypto/software@conlon.dev.gpg` is supplied through `extra_files`, imported into the image keyring, and checked with `rpm --checksig` before installation.
 *   **The install step must run on the target platform.** RPM unpacks an architecture-specific binary into the target root filesystem, so the install cannot be moved to a `$BUILDPLATFORM` stage. This is why the `linux/arm64` build requires QEMU.
 *   **The binary lands in `/usr/bin`** according to `nfpms.rpm.prefixes`, not `/usr/local/bin` as in the static image. The entrypoint differs accordingly; the `nonroot` account, `$HOME`, and `/workspace` layout remain compatible.
-*   **Package versions for `shadow-utils` and `bash-completion` are pinned** via Dockerfile `ARG` defaults (`SHADOW_UTILS_VERSION` and `BASH_COMPLETION_VERSION`) and explicitly passed in `.goreleaser.yaml` under `build_args` to comply with Hadolint `DL3041` and ensure reproducible image builds. Run `mage dev:dnfPins` to query the AlmaLinux repodata and refresh the pins when upstream packages roll forward.
+*   **Package versions are pinned** via Dockerfile `ARG` defaults (`BASH_COMPLETION_VERSION`, and `ANSIBLE_CORE_VERSION` for the ansible image) and explicitly passed in `.goreleaser.yaml` under `build_args` to comply with Hadolint `DL3041` and ensure reproducible image builds. Run `mage dev:dnfPins` to query the AlmaLinux repodata and refresh the pins when upstream packages roll forward. Only packages an image still installs are pinned, so dropping an install means dropping its pin from `magefiles/pkg/devtools/dnfpins` too.
 
 The AlmaLinux base is substantially larger than the static image. Recheck exact image sizes after base-image updates rather than relying on a fixed comparison.
 
