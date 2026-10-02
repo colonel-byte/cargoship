@@ -39,7 +39,7 @@ jobs:
             -ldflags="-s -w \
               -X github.com/colonel-byte/cargoship/config.CLIVersion=0.0.0 \
               -X github.com/colonel-byte/cargoship/config.CLICommit=${GITHUB_SHA::8}" \
-            -v -o cargoship main.go
+            -v -o cargoship ./cmd/cargoship
         env:
           CGO_ENABLED: 0
           # Everything the build needs is vendored, so make any accidental network

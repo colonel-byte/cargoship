@@ -28,6 +28,9 @@ import (
 )
 
 // Binary compiles a cargoship binary for the specified OS and architecture into build/.
+//
+// The source is ./cmd/cargoship rather than the root ./main.go: the root entry point is for
+// `go run .` during development and leaves out the Ansible module dispatch. See main.go.
 func Binary(oper, arch string) error {
 	bin := fmt.Sprintf("build/cargoship_%s_%s", oper, arch)
 	fmt.Println("building: " + bin)
@@ -45,7 +48,7 @@ func Binary(oper, arch string) error {
 	gc := buildutil.GCFLags()
 	ld := buildutil.LDFlags(config.UnsetCLIVersion, util.GitCommit())
 
-	goBuild := fmt.Sprintf(`go build -trimpath -gcflags=all="%s" -ldflags "%s" -o %s ./main.go`, gc, ld, bin)
+	goBuild := fmt.Sprintf(`go build -trimpath -gcflags=all="%s" -ldflags "%s" -o %s ./cmd/cargoship`, gc, ld, bin)
 	fmt.Println("executing:\n  " + goBuild)
 
 	return sh.RunWithV(env, "sh", "-c", goBuild)

@@ -8,7 +8,7 @@ It runs from a management node, not on the hosts it manages: cargoship opens the
 
 | Path                              | What lives there                                                                                                                                                                                   |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cmd/`                            | Cobra commands                                                                                                                                                                                     |
+| `cmd/`                            | Cobra commands, and a `main` package per released binary: `cmd/cargoship` is the CLI. The root `main.go` is a `go run .` convenience; see its package comment                                      |
 | `pkg/`                            | Packages usable from anywhere in the module                                                                                                                                                        |
 | `internal/`                       | Go packages private to this module - `riglogger`, `ansiblemod`, `ansibleinv`, `clustercfg`, `cfg`, `dns`, `heartbeat`, `logging`, `split`                                                          |
 | `fuzz/`                           | Fuzz targets - see [`fuzz/AGENTS.md`](fuzz/AGENTS.md)                                                                                                                                              |

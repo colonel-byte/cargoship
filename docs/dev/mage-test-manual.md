@@ -8,7 +8,7 @@ Every `mage test:*` target is a thin wrapper around a `go test` plus a little bi
 
 Every `EndToEnd*` target funnels through one of two functions in `magefiles/pkg/testrunner/testrunner.go`:
 
-*   **`RunE2E`** -- builds the binary for the host's OS/arch first (`go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_<goos>_<goarch> ./main.go`, the same flags `mage build:binary` uses), then calls `RunE2ENoBuild`.
+*   **`RunE2E`** -- builds the binary for the host's OS/arch first (`go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_<goos>_<goarch> ./cmd/cargoship`, the same flags `mage build:binary` uses), then calls `RunE2ENoBuild`.
 *   **`RunE2ENoBuild`** -- creates `build/tmp`, then runs `go test -timeout=<T> -count=1 -v <pkg>` with `CARGOSHIP_E2E_TMPDIR` and `TMPDIR` both pointed at that directory.
 
 The manual commands below spell both steps out for each target, so `-mod=vendor` is included explicitly even though the mage helper relies on the repo's `go env GOFLAGS` to add it.
@@ -17,7 +17,7 @@ The manual commands below spell both steps out for each target, so `-mod=vendor`
 
 ```console
 $ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] && docker rm -fv $ids
-$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/...
@@ -28,7 +28,7 @@ Runs both e2e groups, including the example packages that pull real engine artif
 ## `Test.EndToEndNonCluster`
 
 ```console
-$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=30m -count=1 -v -short github.com/colonel-byte/cargoship/test/e2e/noncluster/...
