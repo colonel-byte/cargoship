@@ -22,4 +22,4 @@ A parameter left unset is left unset: the module passes no flag for it, so whate
 
 Set `run_once: true`, `delegate_to`, and `no_log: true` on every direct module call. The [`cluster` role](role_cluster.md) sets all three for you. Key material is always named by a path and never given by value, because Ansible writes a module's parameters into a file on disk.
 
-The [module guide](../guides/ansible-module.md) covers installing the collection, check mode, what `changed` is worth, and the shape of the result.
+The [module guide](../../guides/ansible-module.md) covers installing the collection, check mode, what `changed` is worth, and the shape of the result.

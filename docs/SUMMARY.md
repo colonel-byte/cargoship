@@ -67,15 +67,19 @@
 
 # Ansible
 
-- [collection](ansible/collection.md)
-- [modules](ansible/modules.md)
-  - [apply](ansible/module_apply.md)
-  - [engine_config_sync](ansible/module_engine_config_sync.md)
-  - [kube_config](ansible/module_kube_config.md)
-  - [prepare](ansible/module_prepare.md)
-  - [reset](ansible/module_reset.md)
-- [roles](ansible/roles.md)
-  - [cluster](ansible/role_cluster.md)
+- [cargoship collection](ansible/cargoship/collection.md)
+- [cargoship modules](ansible/cargoship/modules.md)
+  - [apply](ansible/cargoship/module_apply.md)
+  - [engine_config_sync](ansible/cargoship/module_engine_config_sync.md)
+  - [kube_config](ansible/cargoship/module_kube_config.md)
+  - [prepare](ansible/cargoship/module_prepare.md)
+  - [reset](ansible/cargoship/module_reset.md)
+- [cargoship roles](ansible/cargoship/roles.md)
+  - [cluster](ansible/cargoship/role_cluster.md)
+- [zarf collection](ansible/zarf/collection.md)
+- [zarf modules](ansible/zarf/modules.md)
+  - [init](ansible/zarf/module_init.md)
+  - [package_deploy](ansible/zarf/module_package_deploy.md)
 
 
 -----------

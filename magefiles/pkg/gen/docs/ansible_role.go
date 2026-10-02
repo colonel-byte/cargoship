@@ -24,12 +24,12 @@ import (
 	"github.com/nao1215/markdown"
 )
 
-// generateRoleDocs writes docs/ansible/role_<role>.md for every role that documents itself.
+// generateRoleDocs writes role_<role>.md for every role of one collection that documents itself.
 //
 // Discovery is a glob, so a role added later needs no change here -- but a role without an
 // argument_specs.yml gets no page, which is why AGENTS.md asks for one first.
-func generateRoleDocs() error {
-	specs, err := filepath.Glob(filepath.Join(collectionDir, "roles", "*", "meta", "argument_specs.yml"))
+func generateRoleDocs(collection ansibleCollection) error {
+	specs, err := filepath.Glob(filepath.Join(collection.dir, "roles", "*", "meta", "argument_specs.yml"))
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func generateRoleDocs() error {
 			return fmt.Errorf("reading %s: %w", specPath, err)
 		}
 
-		defaultsPath := filepath.Join(collectionDir, "roles", role, "defaults", "main.yml")
+		defaultsPath := filepath.Join(collection.dir, "roles", role, "defaults", "main.yml")
 		rawDefaults, err := os.ReadFile(defaultsPath)
 		if err != nil {
 			return err
@@ -70,7 +70,7 @@ func generateRoleDocs() error {
 		if err != nil {
 			return err
 		}
-		if err := writeRoleDoc(role, entry, ordered); err != nil {
+		if err := writeRoleDoc(collection, role, entry, ordered); err != nil {
 			return err
 		}
 	}
@@ -121,14 +121,14 @@ func reconcileRoleDefaults(role string, documented []namedOption, defaults goyam
 	return ordered, nil
 }
 
-// writeRoleDoc renders docs/ansible/role_<role>.md.
-func writeRoleDoc(role string, entry roleEntrypoint, options []namedOption) error {
-	return writeGeneratedPage(fmt.Sprintf("role_%s.md", role), func(md *markdown.Markdown) error {
+// writeRoleDoc renders one collection's role_<role>.md.
+func writeRoleDoc(collection ansibleCollection, role string, entry roleEntrypoint, options []namedOption) error {
+	return writeGeneratedPage(collection.docsDir, fmt.Sprintf("role_%s.md", role), func(md *markdown.Markdown) error {
 		md.H2(role)
 		md.PlainText("")
 		md.PlainText(renderProse(entry.ShortDescription) + ".")
 		md.PlainText("")
-		md.PlainTextf("Include it as `%s.%s`.", collectionFQCN, role)
+		md.PlainTextf("Include it as `%s.%s`.", collection.fqcn, role)
 		md.PlainText("")
 		for _, line := range entry.Description {
 			md.PlainText(renderProse(line))

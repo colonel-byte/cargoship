@@ -54,4 +54,4 @@ For any other installation route, see [plugins/modules/README.md](plugins/module
 
 ## Documentation
 
-The full parameter reference is in the [collection reference](https://colonel-byte.github.io/cargoship/ansible/collection.html), which carries a page per module and per role. What `changed` means, and how the collection is installed from a tarball, are in the [Ansible module guide](https://colonel-byte.github.io/cargoship/guides/ansible-module.html). The host variable mapping and the group-to-role rules are in the [Ansible inventory guide](https://colonel-byte.github.io/cargoship/guides/ansible-inv.html).
+The full parameter reference is in the [collection reference](https://colonel-byte.github.io/cargoship/ansible/cargoship/collection.html), which carries a page per module and per role. What `changed` means, and how the collection is installed from a tarball, are in the [Ansible module guide](https://colonel-byte.github.io/cargoship/guides/ansible-module.html). The host variable mapping and the group-to-role rules are in the [Ansible inventory guide](https://colonel-byte.github.io/cargoship/guides/ansible-inv.html).

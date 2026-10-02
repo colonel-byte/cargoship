@@ -16,7 +16,7 @@ tags:
   - airgap
   - cluster
 repository: https://github.com/colonel-byte/cargoship
-documentation: https://colonel-byte.github.io/cargoship/ansible/collection.html
+documentation: https://colonel-byte.github.io/cargoship/ansible/cargoship/collection.html
 homepage: https://github.com/colonel-byte/cargoship
 issues: https://github.com/colonel-byte/cargoship/issues
 build_ignore:

@@ -35,13 +35,13 @@ When generating playbooks, writing tasks, or answering user queries about invoca
 
 Documentation content is maintained alongside the code rather than handwritten in `docs/ansible/`:
 
-| Component                        | Source of Truth                                                             | Generated Documentation Page      |
-| -------------------------------- | --------------------------------------------------------------------------- | --------------------------------- |
-| Roles (e.g. `cluster`)           | `roles/<role>/meta/argument_specs.yml` and `roles/<role>/defaults/main.yml` | `docs/ansible/role_<role>.md`     |
-| Modules (e.g. `cargoship_apply`) | `plugins/action/<module>.py` (`DOCUMENTATION` and `EXAMPLES` blocks)        | `docs/ansible/module_<module>.md` |
-| Collection Overview              | `docs/ansible/collection.md`                                                | `docs/ansible/collection.md`      |
-| Roles Overview                   | `docs/ansible/roles.md`                                                     | `docs/ansible/roles.md`           |
-| Modules Overview                 | `docs/ansible/modules.md`                                                   | `docs/ansible/modules.md`         |
+| Component                        | Source of Truth                                                             | Generated Documentation Page                |
+| -------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------- |
+| Roles (e.g. `cluster`)           | `roles/<role>/meta/argument_specs.yml` and `roles/<role>/defaults/main.yml` | `docs/ansible/cargoship/role_<role>.md`     |
+| Modules (e.g. `cargoship_apply`) | `plugins/action/<module>.py` (`DOCUMENTATION` and `EXAMPLES` blocks)        | `docs/ansible/cargoship/module_<module>.md` |
+| Collection Overview              | `docs/ansible/cargoship/collection.md`                                      | `docs/ansible/cargoship/collection.md`      |
+| Roles Overview                   | `docs/ansible/cargoship/roles.md`                                           | `docs/ansible/cargoship/roles.md`           |
+| Modules Overview                 | `docs/ansible/cargoship/modules.md`                                         | `docs/ansible/cargoship/modules.md`         |
 
 ## Quote every description entry
 
@@ -65,7 +65,7 @@ When modifying existing role variables or adding a new role to the collection:
 1. Define the role variables, types, defaults, choices, descriptions, and synopsis in `roles/<role>/meta/argument_specs.yml`.
    - Double-quote every `description:` entry, per the rule above.
 2. Define the corresponding default values in `roles/<role>/defaults/main.yml` (the key order in `defaults/main.yml` determines the table row order in generated documentation).
-3. Run the generator to produce `docs/ansible/role_<role>.md`:
+3. Run the generator to produce `docs/ansible/cargoship/role_<role>.md`:
 
 ```sh
 go run ./magefiles/core generate:document

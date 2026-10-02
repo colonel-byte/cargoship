@@ -168,8 +168,8 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `docs/phases/*`                                   | Auto-generated cluster phase descriptors                                                    | `Generate.Document`                                |
 | `docs/golang/*`                                   | Auto-generated Go package reference, from godoc comments in `pkg/`, `api/`, `types/`        | `Generate.Document`                                |
 | `docs/schema/*`                                   | Auto-generated schema field reference, from the same struct reflection as `schema/*.json`   | `Generate.Document`                                |
-| `docs/ansible/module_*.md`                        | Auto-generated Ansible module reference, from the action plugins                            | `Generate.Document`                                |
-| `docs/ansible/role_*.md`                          | Auto-generated Ansible role reference, from each role's `meta/argument_specs.yml`           | `Generate.Document`                                |
+| `docs/ansible/<collection>/module_*.md`           | Auto-generated Ansible module reference, from the action plugins                            | `Generate.Document`                                |
+| `docs/ansible/<collection>/role_*.md`             | Auto-generated Ansible role reference, from each role's `meta/argument_specs.yml`           | `Generate.Document`                                |
 | `docs/index.md`                                   | The root `README.md`, with its links rebased onto `docs/` for the book                      | `Generate.Document`                                |
 | `docs/security.md`                                | `.github/SECURITY.md`, with its links rebased onto `docs/` for the book                     | `Generate.Document`                                |
 | `docs/SUMMARY.md`                                 | Compiled table of contents for mdBook                                                       | `Generate.Document`                                |
