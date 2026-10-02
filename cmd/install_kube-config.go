@@ -84,10 +84,13 @@ func newInstallKubeConfigCommand() *cobra.Command {
 }
 
 func (o *installKubeConfigOptions) run(ctx context.Context, _ []string) error {
-	l := logger.From(ctx)
+	// kube-config changes no host, so there is no --confirm gate here -- only the check that
+	// the configuration it was pointed at is there to be read.
+	if err := checkClusterConfig(o.config); err != nil {
+		return err
+	}
 
 	if err := riglogger.RigLogger(ctx); err != nil {
-		l.Warn("failed to configure logger", "err", err)
 		return err
 	}
 
