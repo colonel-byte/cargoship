@@ -14,19 +14,16 @@
 
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/almalinux/10-minimal:10.2@sha256:1c0191d9bcd9fe466dd00552bb05b632ae3923709d1aef974609c347decf7243
+FROM ghcr.io/almalinux/10-base:10.2@sha256:ed618ca107e9fd47ee2a64d1d33119ef356cfaf65a338daaa3fad19b80ae5da4
 
 ARG TARGETPLATFORM
-ARG SHADOW_UTILS_VERSION="4.15.0-11.el10"
 ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
 ARG UID=65532
 ARG GID=65532
 # hadolint ignore=DL3040
-RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 \
-    shadow-utils-${SHADOW_UTILS_VERSION} \
-    bash-completion-${BASH_COMPLETION_VERSION} \
-  && microdnf clean all \
+RUN dnf install -y --nodocs --setopt=install_weak_deps=0 bash-completion-${BASH_COMPLETION_VERSION} \
+  && dnf clean all \
   && groupadd --gid "${GID}" nonroot \
   && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \
   && mkdir -p \
@@ -36,8 +33,7 @@ RUN microdnf install -y --nodocs --setopt=install_weak_deps=0 \
     /workspace \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
   && chown -R "${UID}:${GID}" /home/nonroot /workspace \
-  && microdnf remove shadow-utils -y \
-  && microdnf clean all \
+  && dnf clean all \
   && rm -rf /var/cache/yum
 
 COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/

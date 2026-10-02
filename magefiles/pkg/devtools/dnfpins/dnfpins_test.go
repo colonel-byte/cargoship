@@ -80,16 +80,15 @@ func TestUpdateDockerfileUbiPins(t *testing.T) {
 
 	initial := `FROM ghcr.io/almalinux/10-minimal:10.2
 ARG TARGETPLATFORM
-ARG SHADOW_UTILS_VERSION="old"
 ARG BASH_COMPLETION_VERSION="old"
 
-RUN microdnf install -y shadow-utils-${SHADOW_UTILS_VERSION}
+RUN microdnf install -y bash-completion-${BASH_COMPLETION_VERSION}
 `
 	if err := os.WriteFile(dfPath, []byte(initial), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := dnfpins.UpdateDockerfileUbiPins(dfPath, "4.15.0-11.el10", "2.11-16.el10"); err != nil {
+	if err := dnfpins.UpdateDockerfileUbiPins(dfPath, "2.11-16.el10"); err != nil {
 		t.Fatalf("UpdateDockerfileUbiPins failed: %v", err)
 	}
 
@@ -100,10 +99,9 @@ RUN microdnf install -y shadow-utils-${SHADOW_UTILS_VERSION}
 
 	expected := `FROM ghcr.io/almalinux/10-minimal:10.2
 ARG TARGETPLATFORM
-ARG SHADOW_UTILS_VERSION="4.15.0-11.el10"
 ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
-RUN microdnf install -y shadow-utils-${SHADOW_UTILS_VERSION}
+RUN microdnf install -y bash-completion-${BASH_COMPLETION_VERSION}
 `
 	if string(data) != expected {
 		t.Errorf("content mismatch:\ngot:\n%s\nwant:\n%s", string(data), expected)
@@ -117,7 +115,6 @@ func TestUpdateGoreleaserDnfPins(t *testing.T) {
 	initial := `dockers_v2:
   - id: cargoship-ubi
     build_args:
-      SHADOW_UTILS_VERSION: old
       BASH_COMPLETION_VERSION: old
   - id: cargoship-ansible
     build_args:
@@ -131,7 +128,6 @@ func TestUpdateGoreleaserDnfPins(t *testing.T) {
 	pins := &dnfpins.AlmaLinuxPins{
 		AnsibleCore:    "2.16.16-2.el10_2.1",
 		BashCompletion: "2.11-16.el10",
-		ShadowUtils:    "4.15.0-11.el10",
 	}
 
 	if err := dnfpins.UpdateGoreleaserDnfPins(grPath, pins); err != nil {
@@ -146,7 +142,6 @@ func TestUpdateGoreleaserDnfPins(t *testing.T) {
 	expected := `dockers_v2:
   - id: cargoship-ubi
     build_args:
-      SHADOW_UTILS_VERSION: 4.15.0-11.el10
       BASH_COMPLETION_VERSION: 2.11-16.el10
   - id: cargoship-ansible
     build_args:
@@ -156,4 +151,55 @@ func TestUpdateGoreleaserDnfPins(t *testing.T) {
 	if string(data) != expected {
 		t.Errorf("content mismatch:\ngot:\n%s\nwant:\n%s", string(data), expected)
 	}
+}
+
+// TestUpdatersMatchTheRepositoryFiles runs each updater against a copy of the file it rewrites in
+// this repository, and fails when one no longer finds what it edits.
+//
+// This is the check that was missing when the ubi image stopped installing shadow-utils: the pin
+// stayed in the updater, nothing referenced it any more, and Dev.DnfPins failed on a missing ARG
+// the first time anybody refreshed the pins. The other tests use literal fixtures, so none of them
+// could notice. Copies are edited rather than the files themselves -- the updaters write in place.
+func TestUpdatersMatchTheRepositoryFiles(t *testing.T) {
+	// Four levels up from magefiles/pkg/devtools/dnfpins.
+	const repoRoot = "../../../.."
+
+	copyIntoTemp := func(t *testing.T, path string) string {
+		t.Helper()
+		content, err := os.ReadFile(filepath.Join(repoRoot, path))
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		dest := filepath.Join(t.TempDir(), filepath.Base(path))
+		if err := os.WriteFile(dest, content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return dest
+	}
+
+	pins := &dnfpins.AlmaLinuxPins{
+		AnsibleCore:    "9.9.9-9.el10",
+		BashCompletion: "9.9.9-9.el10",
+	}
+
+	t.Run("ansible Dockerfile", func(t *testing.T) {
+		path := copyIntoTemp(t, dnfpins.AnsibleDockerfilePath)
+		if err := dnfpins.UpdateDockerfileAnsiblePins(path, pins.AnsibleCore, pins.BashCompletion); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("ubi Dockerfile", func(t *testing.T) {
+		path := copyIntoTemp(t, dnfpins.UbiDockerfilePath)
+		if err := dnfpins.UpdateDockerfileUbiPins(path, pins.BashCompletion); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("goreleaser config", func(t *testing.T) {
+		path := copyIntoTemp(t, dnfpins.GoreleaserConfigPath)
+		if err := dnfpins.UpdateGoreleaserDnfPins(path, pins); err != nil {
+			t.Error(err)
+		}
+	})
 }

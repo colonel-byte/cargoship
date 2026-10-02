@@ -2,9 +2,9 @@
 name: Test build containers
 
 # Dependabot's docker ecosystem entries in .github/dependabot.yaml bump one FROM line (or
-# package pin) per PR, and GitHub auto-labels every docker-ecosystem PR "docker". Neither
-# check-base-image-label.yaml (text diff) nor scan-lint.yaml's hadolint job (syntax only)
-# actually builds the image, so a bump that breaks the build isn't caught until release.
+# package pin) per PR, and GitHub auto-labels every docker-ecosystem PR "docker".
+# scan-lint.yaml's hadolint job checks syntax only and never builds the image, so a bump
+# that breaks the build isn't caught until release.
 #
 # These Dockerfiles are written for goreleaser's dockers_v2 pipe, not a plain `docker build`:
 # containers/ansible, containers/deb, and containers/ubi COPY nfpm-produced *.rpm/*.deb out
