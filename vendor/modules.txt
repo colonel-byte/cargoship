@@ -641,7 +641,7 @@ github.com/buildkite/agent/v3/api/proto/gen/agentedgev1connect
 github.com/buildkite/agent/v3/internal/agenthttp
 github.com/buildkite/agent/v3/logger
 github.com/buildkite/agent/v3/version
-# github.com/buildkite/go-pipeline v0.18.0
+# github.com/buildkite/go-pipeline v0.18.1
 ## explicit; go 1.25.0
 github.com/buildkite/go-pipeline
 github.com/buildkite/go-pipeline/internal/env
