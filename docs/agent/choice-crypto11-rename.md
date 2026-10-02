@@ -91,10 +91,6 @@ Neither restores automated updates, so the choice is only about which pin goes s
 
 The `replace` remains the right move the moment any of this stops being true - if cosign starts calling v1.6.x API, or if something ever sets `-tags pkcs11key`.
 
-## Re-vendoring deletes the osv-scanner overrides
-
-Recorded here because it bites anyone who tries the `replace` route. `go mod vendor` removed all four generated `osv-scanner.toml` files that [choice-osv-vendor-overrides](choice-osv-vendor-overrides.md) describes, and `Dev.VerifyVendor` fails until `go run ./magefiles/core dev:writeOSVOverrides` puts them back. That document covers the arrangement and the workflow that repairs Dependabot's own branches; the only new thing is that a hand-run `go mod vendor` needs the same follow-up.
-
 ## The rest of the log is noise, and chasing it is wasted work
 
 The failing run logged 40 `Error while fetching release date info` lines at INFO level. Exactly one of the 24,132 log lines was fatal - the `go_module_path_mismatch` above - and the rest are not this repository's problem:
