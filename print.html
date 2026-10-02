@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a6d5c96d.js";
+            window.path_to_searchindex_js = "searchindex-0d9f2e55.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-54c4a31c.js"></script>
+        <script src="toc-1ac571e6.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -16909,12 +16909,105 @@ goCommand not pinned by hash: vendor/github.com/json-iterator/go/build.sh:10
 </code></pre>
 <p>This one was cargoship’s own workflow, not vendored third-party code, so it was addressed directly rather than annotated. <code>npm install --save-dev @commitlint/{config-conventional,cli}</code> has no hash-pinned form - npm install never does - but <code>npm ci</code> against a committed lockfile counts as pinned (Scorecard’s own <code>isNpmUnpinnedDownload</code> treats <code>ci</code> as verifying all hashes). <code>.github/commitlint/</code> now holds a small <code>package.json</code> and <code>package-lock.json</code> pinning <code>@commitlint/cli</code> and <code>@commitlint/config-conventional</code>, and the workflow runs <code>npm ci</code> there instead of <code>npm install</code>. <code>.commitlintrc.yaml</code> moved into that same directory (from the repo root) because commitlint resolves an <code>extends</code> entry’s package relative to the config file’s own location, not the working directory it was invoked from - leaving the config at the repository root would have kept failing to resolve <code>@commitlint/config-conventional</code> even with <code>node_modules</code> installed one directory down. Nothing else in the repository referenced the old root-level path. <code>.github/dependabot.yaml</code> gained a matching <code>npm</code> ecosystem entry for <code>/.github/commitlint</code>, since without one nothing would keep the newly pinned versions current, and this manifest is real (installed and run in CI, unlike the vendored ones above), so it’s also a legitimate target for the Vulnerabilities check’s osv-scanner pass rather than something to annotate away.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-crypto11-is-ignored-by-dependabot-rather-than-pointed-at-its-new-home"><a class="header" href="#why-crypto11-is-ignored-by-dependabot-rather-than-pointed-at-its-new-home">Why crypto11 is ignored by Dependabot rather than pointed at its new home</a></h1>
+<p><code>github.com/ThalesIgnite/crypto11</code> is pinned at v1.2.5 and will stay there. The upstream repository has been renamed twice and every tag after v1.2.5 declares a different module path, so Dependabot cannot update it and fails its entire daily run trying. <code>.github/dependabot.yaml</code> ignores the dependency outright. This document records why the obvious fix - a <code>replace</code> directive pointing at the renamed module - was built, tested, and rejected anyway, and why the thing this dependency looks like it affects is not actually in the shipped binary.</p>
+<h2 id="what-forced-it"><a class="header" href="#what-forced-it">What forced it</a></h2>
+<p>The <a href="https://github.com/colonel-byte/cargoship/actions/runs/36991546018">Dependabot run of 2026-10-02</a> created six update pull requests and then exited 1 on a single dependency:</p>
+<pre><code>| github.com/ThalesIgnite/crypto11 | go_module_path_mismatch | {
+|                                  |                         |   "declared-path": "downloading",
+|                                  |                         |   "discovered-path": "github.com/eclipse-keypont/crypto11",
+|                                  |                         |   "go-mod": "go.mod"
+</code></pre>
+<p><code>github.com/ThalesIgnite/crypto11</code> 301-redirects to <code>github.com/eclipse-keypont/crypto11</code>, so the module proxy still answers for the old path and still serves the full tag list. What it cannot do is serve a tag whose <code>go.mod</code> agrees with the path it was requested under:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tag</th><th><code>module</code> line in its <code>go.mod</code></th></tr>
+</thead>
+<tbody>
+<tr><td>v1.2.5</td><td><code>github.com/ThalesIgnite/crypto11</code></td></tr>
+<tr><td>v1.3.0</td><td><code>github.com/ThalesGroup/crypto11</code></td></tr>
+<tr><td>v1.6.8 (latest)</td><td><code>github.com/eclipse-keypont/crypto11</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>v1.2.5 is the last tag published under the original path. Requiring anything newer under that name produces the error Dependabot reported, which reproduces in four lines in a throwaway module:</p>
+<pre><code>module declares its path as: github.com/eclipse-keypont/crypto11
+        but was required as: github.com/ThalesIgnite/crypto11
+</code></pre>
+<p>Nothing in this repository requires crypto11 directly. <code>go mod why -m</code> traces it to the signing path:</p>
+<pre><code>cmd -&gt; zarf/src/pkg/signing -&gt; cosign/cmd/cosign/cli/signcommon -&gt; cosign/pkg/cosign/pkcs11key -&gt; ThalesIgnite/crypto11
+</code></pre>
+<p><code>sigstore/cosign/v3</code> v3.1.3 is the newest release and its <code>go.mod</code> still reads <code>github.com/ThalesIgnite/crypto11 v1.2.5</code>, so there is no cosign version to move to that resolves this. The fix has to come from upstream re-importing the renamed module.</p>
+<h2 id="the-dependency-is-not-in-the-shipped-binary"><a class="header" href="#the-dependency-is-not-in-the-shipped-binary">The dependency is not in the shipped binary</a></h2>
+<p>This is the fact that decides how much any of it matters, and it is not visible from <code>go.mod</code>, where crypto11 looks like an ordinary indirect dependency.</p>
+<p>crypto11’s only consumer, <code>cosign/pkg/cosign/pkcs11key</code>, is split across two files by build tag. <code>pkcs11key.go</code> carries <code>//go:build pkcs11key</code> and imports crypto11; <code>disabled.go</code> carries <code>//go:build !pkcs11key</code> and defines the same API as stubs that return <code>errors.New("unimplemented")</code>. Nothing in <code>.github/</code>, <code>magefiles/</code>, or the goreleaser config sets that tag, so every build of cargoship - CI, release, and the e2e suite alike - compiles the stubs:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Build</th><th>crypto11 packages in the graph</th></tr>
+</thead>
+<tbody>
+<tr><td><code>go list -deps ./...</code></td><td>0</td></tr>
+<tr><td>with <code>-tags pkcs11key</code></td><td>1</td></tr>
+</tbody>
+</table>
+</div>
+<p>The release build cannot opt in even by accident. <code>.goreleaser.yaml</code> sets <code>CGO_ENABLED=0</code>, and crypto11 reaches the PKCS#11 library through <code>github.com/miekg/pkcs11</code>, which is <code>import "C"</code>. Setting the tag under the release environment does not produce a binary with hardware signing in it, it produces a compile error:</p>
+<pre><code>$ CGO_ENABLED=0 go build -tags pkcs11key ./...
+# github.com/ThalesIgnite/crypto11
+vendor/github.com/ThalesIgnite/crypto11/crypto11.go:174:14: undefined: pkcs11.Ctx
+</code></pre>
+<p>So crypto11 is a <code>go.mod</code>, <code>go.sum</code>, and <code>vendor/</code> artifact and nothing more: no tag enables it, and the release settings could not build it if one did. PKCS#11 hardware-token signing is the feature it backs, and that feature is compiled out. A stale pin here cannot reach a user, and <code>govulncheck -mode=source -tags pkcs11key ./...</code> reports no vulnerabilities either way, so this is Dependabot hygiene and not a security matter.</p>
+<p>The corollary for anyone verifying a change to this dependency: <code>go build -tags pkcs11key ./...</code> only compiles it on a host where cgo is available and enabled, which is the default on Linux with a C toolchain but is not what CI or the release build does.</p>
+<p>Note that the e2e suite does sign and verify packages for real - <code>TestCargoshipSign</code>, <code>TestCargoshipSignedRoundTrip</code>, and <code>TestCargoshipInstallVerify</code> cover 19 subtests against ephemeral cosign key pairs from <code>cosign.GenerateKeyPair</code>. That coverage is all file-based keys (<code>--signing-key &lt;path&gt;</code>), which never touch crypto11. Good signing coverage is not coverage of this dependency.</p>
+<h2 id="the-replace-directive-works-and-still-does-not-help"><a class="header" href="#the-replace-directive-works-and-still-does-not-help">The <code>replace</code> directive works, and still does not help</a></h2>
+<p>The natural fix is to send the old path at the maintained fork:</p>
+<pre><code class="language-sh">go mod edit -replace github.com/ThalesIgnite/crypto11=github.com/eclipse-keypont/crypto11@v1.6.8
+</code></pre>
+<p>This was done in full, not sketched. It resolves, and v1.6.8’s API satisfies cosign’s v1.2.5-era call sites with no shimming: <code>go mod tidy</code>, <code>go mod vendor</code>, <code>go build ./...</code>, <code>go build -tags pkcs11key ./...</code>, <code>go vet</code>, <code>go test -short</code>, <code>Dev.VerifyVendor</code>, <code>pre-commit run --all-files</code>, and <code>Test.EndToEndNonCluster</code> all passed on it. The approach is sound and it does silence the failure.</p>
+<p>It was rejected because it buys nothing over the ignore entry. Dependabot does not update replaced dependencies, by explicit design. <code>go_modules/lib/dependabot/go_modules/file_parser.rb</code> filters the dependency set before anything else runs, and <code>skip_dependency?</code> opens with:</p>
+<pre><code class="language-ruby"># Updating replaced dependencies is not supported
+return true if dependency_is_replaced(dep)
+</code></pre>
+<p>The match test treats a directive whose left side carries no version as unconditional, which is this one, so crypto11 is dropped at parse time. Upstream’s comment gives the reason: it “prevents that we change dependency versions without any impact since the actual version that is being imported is defined by the replace directive.” The replacement target does not get picked up instead - the parser only walks <code>require</code> entries, and a replace target is not one. Both names end up invisible.</p>
+<p>That leaves the two options doing the same thing by different routes:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Approach</th><th>Dependabot tracks crypto11?</th><th>Run stops failing?</th><th>Vendor churn</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ignore</code> entry</td><td>No, explicitly</td><td>Yes</td><td>None</td></tr>
+<tr><td><code>replace</code></td><td>No, silently</td><td>Yes</td><td>~800 lines</td></tr>
+</tbody>
+</table>
+</div>
+<p>Neither restores automated updates, so the choice is only about which pin goes stale and how loudly. The ignore entry states its own reasoning in a config file someone editing Dependabot behaviour will read. The <code>replace</code> skip is invisible unless you already know the parser behaviour above, and it adds a hand-maintained version pin to <code>go.mod</code> plus a vendored tree jumping four minor versions, for a package that is compiled out. Given that, the smaller and more legible change won.</p>
+<p>The <code>replace</code> remains the right move the moment any of this stops being true - if cosign starts calling v1.6.x API, or if something ever sets <code>-tags pkcs11key</code>.</p>
+<h2 id="the-rest-of-the-log-is-noise-and-chasing-it-is-wasted-work"><a class="header" href="#the-rest-of-the-log-is-noise-and-chasing-it-is-wasted-work">The rest of the log is noise, and chasing it is wasted work</a></h2>
+<p>The failing run logged 40 <code>Error while fetching release date info</code> lines at INFO level. Exactly one of the 24,132 log lines was fatal - the <code>go_module_path_mismatch</code> above - and the rest are not this repository’s problem:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Log entry</th><th>Count</th><th>Cause</th></tr>
+</thead>
+<tbody>
+<tr><td><code>invalid version: unknown revision 0.0.0-...</code></td><td>39</td><td>Dependabot’s cooldown filter drops the <code>v</code> prefix and queries <code>@0.0.0-...</code>, which can never resolve</td></tr>
+<tr><td><code>cuelabs.dev/go/oci/ociregistry: ... 403 Forbidden</code></td><td>1</td><td>That host refuses Dependabot’s egress proxy on <code>?go-get=1</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The 39 hit every pseudo-versioned module in the tree - <code>genproto</code>, <code>k8s.io/utils</code>, <code>x/telemetry</code>, <code>digitorus/pkcs7</code>, <code>masterzen/simplexml</code>, and the rest. The only consequence is that cooldown cannot be applied to those modules; Dependabot logs <code>Filtered out 0 version(s)</code> and carries on. Neither row is actionable here, and neither has anything to do with the failure.</p>
+<h2 id="when-this-entry-can-go-away"><a class="header" href="#when-this-entry-can-go-away">When this entry can go away</a></h2>
+<p>Delete the ignore entry when <code>sigstore/cosign/v3</code>’s <code>go.mod</code> requires <code>github.com/eclipse-keypont/crypto11</code> (or whatever path the project is on by then) instead of <code>github.com/ThalesIgnite/crypto11</code>. At that point the old path leaves the module graph on its own and the entry becomes a no-op. Until then, a Dependabot run that does not mention crypto11 is the entry working, not the problem having resolved itself.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half"><a class="header" href="#why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half">Why the cluster e2e suite splits into a staging half and an engine half</a></h1>
 <blockquote>
 <p>The reasoning below was written against the original ten-machine, three-controller rke2 topology (<code>mixedOS</code>). The default full walk later switched engines, to a five-machine, single-controller k3s topology (<code>k3sOS</code>) – see the e2e-cluster workflow’s header comment – because rke2’s embedded etcd raft quorum across three controllers was timing out on the hosted runner. The rke2/overlayfs and host-count specifics below are historical; the stage/engine split they justify is still exactly how the suite works today.</p>
 </blockquote>
 <p>The cluster suite (<code>test/e2e/cluster</code>) walks the apply phase list one phase at a time against a bootloose cluster, as <a href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">choice-phase-e2e-tests</a> describes. That suite is two runs rather than one: with <code>CARGOSHIP_E2E_STAGE_ONLY</code> set it provisions the smaller staging inventory and stops asserting at the boundary <code>phase/60_configure_engine.go</code> draws, and without it, it walks the full inventory end to end. This document records why, because the split looks like an arbitrary line through the middle of a test and the line was not arbitrary.</p>
-<h2 id="what-forced-it"><a class="header" href="#what-forced-it">What forced it</a></h2>
+<h2 id="what-forced-it-1"><a class="header" href="#what-forced-it-1">What forced it</a></h2>
 <p>The suite was label-gated into CI on a hosted <code>ubuntu-latest</code> runner and did not pass there. Two things were wrong, and only the first was ours.</p>
 <p><code>phase/55_files_common.go</code> marked a host as claimed from the host list rather than from what it had uploaded. An rke2 package ships no <code>.deb</code>, so the APT phase claimed all five Debian hosts, uploaded nothing to them, and registered an <code>apt-get install</code> with an empty package list – which succeeds. <code>phase/59_bin_install.go</code>, the catch-all that exists precisely for a distro that ships neither RPMs nor debs, then filtered those hosts out as already claimed, and they reached the initialize phases with no engine on them at all. That is a real product bug, it is fixed, and the local run had never caught it because the failure needs a Debian host and a package with no debs to meet.</p>
 <p>Underneath it was the blocker that is not fixable in the product. rke2 runs its own containerd, whose default snapshotter is overlayfs, and overlayfs refuses an upperdir that is itself on an overlay mount – <code>EINVAL</code>, reported as <code>"overlayfs" snapshotter cannot be enabled for "/var/lib/rancher/rke2/agent/containerd"</code>. A hosted runner’s Docker uses the <code>overlay2</code> storage driver, so every node container’s root filesystem is an overlay mount and the snapshotter has nowhere to stack. The engine never reaches ready.</p>
@@ -17066,7 +17159,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-vendor-carries-four-generated-osv-scannertoml-files"><a class="header" href="#why-vendor-carries-four-generated-osv-scannertoml-files">Why vendor/ carries four generated osv-scanner.toml files</a></h1>
 <p><code>go mod vendor</code> copies four files into <code>vendor/</code> that have nothing to do with Go: a <code>package-lock.json</code> under <code>golang.org/x/telemetry</code>, and a <code>requirements</code> file each under <code>github.com/theupdateframework/go-tuf</code>, <code>github.com/txn2/txeh</code> and <code>go.opentelemetry.io/otel</code>. Next to each of them now sits a generated <code>osv-scanner.toml</code> that tells a scanner to skip that ecosystem. This document records why those four files exist, why they are generated rather than committed by hand, and what they deliberately do not cover.</p>
-<h2 id="what-forced-it-1"><a class="header" href="#what-forced-it-1">What forced it</a></h2>
+<h2 id="what-forced-it-2"><a class="header" href="#what-forced-it-2">What forced it</a></h2>
 <p>The <a href="https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship">OpenSSF Scorecard</a> Vulnerabilities check runs osv-scanner recursively over the whole checkout and scores it in <code>checks/evaluation/vulnerabilities.go</code> as <code>MaxResultScore - numVulnsFound</code>, floored at zero. There is no severity weighting and no reachability analysis: every finding is one point, so ten findings and four hundred score the same. The check read 0 against 42 findings, and <code>vendor/</code> supplied 40 of them.</p>
 <div class="table-wrapper">
 <table>
