@@ -4,6 +4,17 @@ go.yaml.in/yaml
 YAML Support for the Go Language
 
 
+## pb33f Fork
+
+This is pb33f's maintained fork of
+[yaml/go-yaml](https://github.com/yaml/go-yaml), published as
+`github.com/pb33f/go-yaml` and versioned independently of upstream.
+
+Upstream changes are absorbed by merging upstream `main`, running
+`util/rewrite-module-path` to replace upstream's import path with this one,
+and running `go mod tidy` in each module.
+
+
 ## Introduction
 
 The `yaml` package enables [Go](https://go.dev/) programs to comfortably encode
@@ -46,7 +57,7 @@ working without breaking changes.
 All ongoing work, including new features and routine bug-fixes, will happen in
 **`v4`**.
 If you’re starting a new project or upgrading an existing one, please use the
-`go.yaml.in/yaml/v4` import path.
+`github.com/pb33f/go-yaml` import path.
 
 
 ## Compatibility
@@ -71,18 +82,18 @@ Specifically, v3 of the `yaml` package:
 
 ## Installation and Usage
 
-The import path for the package is *go.yaml.in/yaml/v4*.
+The import path for the package is *github.com/pb33f/go-yaml*.
 
 To install it, run:
 
 ```bash
-go get go.yaml.in/yaml/v4
+go get github.com/pb33f/go-yaml
 ```
 
 
 ## API Documentation
 
-See: <https://pkg.go.dev/go.yaml.in/yaml/v4>
+See: <https://pkg.go.dev/github.com/pb33f/go-yaml>
 
 
 ## API Stability
@@ -100,7 +111,7 @@ import (
 	"fmt"
 	"log"
 
-	"go.yaml.in/yaml/v4"
+	"github.com/pb33f/go-yaml"
 )
 
 var data = `
@@ -256,7 +267,7 @@ foo: &a1 bar
 You can also install it with:
 
 ```bash
-go install go.yaml.in/yaml/v4/cmd/go-yaml@latest
+go install github.com/pb33f/go-yaml/cmd/go-yaml@latest
 ```
 
 

@@ -92,6 +92,7 @@ type Emitter struct {
 	indent int // The current indentation level.
 
 	CompactSequenceIndent bool // Is '- ' is considered part of the indentation for sequence elements?
+	tabIndent             bool // Use tabs for structural indentation.
 
 	flow_level int // The current flow level.
 
@@ -167,6 +168,7 @@ func NewEmitter() Emitter {
 
 // Emit an event.
 func (emitter *Emitter) Emit(event *Event) error {
+	emitter.reclaimEvents()
 	emitter.events = append(emitter.events, *event)
 	for !emitter.needMoreEvents() {
 		event := &emitter.events[emitter.events_head]
@@ -180,6 +182,22 @@ func (emitter *Emitter) Emit(event *Event) error {
 		emitter.events_head++
 	}
 	return nil
+}
+
+// reclaimEvents makes room in a full queue by dropping the events already
+// written from its front.
+// The queue only ever holds a short lookahead, but without this it keeps a
+// slot for every event of the document until the emitter is deleted.
+func (emitter *Emitter) reclaimEvents() {
+	if emitter.events_head == 0 || len(emitter.events) < cap(emitter.events) {
+		return
+	}
+	n := copy(emitter.events, emitter.events[emitter.events_head:])
+	for i := n; i < len(emitter.events); i++ {
+		emitter.events[i] = Event{}
+	}
+	emitter.events = emitter.events[:n]
+	emitter.events_head = 0
 }
 
 // Delete an emitter object.
@@ -454,7 +472,9 @@ func (emitter *Emitter) emitDocumentStart(event *Event, first bool) error {
 			if err := emitter.writeIndicator([]byte("%YAML"), true, false, false); err != nil {
 				return err
 			}
-			if err := emitter.writeIndicator([]byte("1.1"), true, false, false); err != nil {
+			version := fmt.Sprintf("%d.%d", event.versionDirective.major,
+				event.versionDirective.minor)
+			if err := emitter.writeIndicator([]byte(version), true, false, false); err != nil {
 				return err
 			}
 			if err := emitter.writeIndent(); err != nil {
@@ -680,9 +700,9 @@ func (emitter *Emitter) emitFlowMappingKey(event *Event, first, trail bool) erro
 	}
 
 	if event.Type == MAPPING_END_EVENT {
-		if (emitter.canonical ||
-			len(emitter.HeadComment)+len(emitter.FootComment)+len(emitter.TailComment) > 0) &&
-			!first && !trail {
+		// Pending comments never require a separator here: foot comments are
+		// written after '}' and head/tail comments always start on a new line.
+		if emitter.canonical && !first && !trail {
 			if err := emitter.writeIndicator([]byte{','}, false, false, false); err != nil {
 				return err
 			}
@@ -998,6 +1018,14 @@ func (emitter *Emitter) emitSequenceStart(event *Event) error {
 	if err := emitter.processTag(); err != nil {
 		return err
 	}
+	if emitter.tabIndent && emitter.sequence_context &&
+		emitter.flow_level == 0 && !emitter.canonical &&
+		event.SequenceStyle() != FLOW_SEQUENCE_STYLE &&
+		!emitter.checkEmptySequence() && emitter.column > 0 {
+		if err := emitter.putLineBreak(); err != nil {
+			return err
+		}
+	}
 	if emitter.flow_level > 0 || emitter.canonical ||
 		event.SequenceStyle() == FLOW_SEQUENCE_STYLE ||
 		emitter.checkEmptySequence() {
@@ -1015,6 +1043,14 @@ func (emitter *Emitter) emitMappingStart(event *Event) error {
 	}
 	if err := emitter.processTag(); err != nil {
 		return err
+	}
+	if emitter.tabIndent && emitter.sequence_context &&
+		emitter.flow_level == 0 && !emitter.canonical &&
+		event.MappingStyle() != FLOW_MAPPING_STYLE &&
+		!emitter.checkEmptyMapping() && emitter.column > 0 {
+		if err := emitter.putLineBreak(); err != nil {
+			return err
+		}
 	}
 	if emitter.flow_level > 0 || emitter.canonical ||
 		event.MappingStyle() == FLOW_MAPPING_STYLE ||
@@ -1625,14 +1661,34 @@ func (emitter *Emitter) writeIndent() error {
 			return err
 		}
 	}
+	atLineStart := emitter.column == 0
 	for emitter.column < indent {
-		if err := emitter.put(' '); err != nil {
+		value := byte(' ')
+		width := 1
+		if emitter.tabIndent && atLineStart &&
+			emitter.column+emitter.BestIndent <= indent {
+			value = '\t'
+			width = emitter.BestIndent
+		}
+		if err := emitter.putIndent(value, width); err != nil {
 			return err
 		}
 	}
 	emitter.whitespace = true
 	emitter.space_above = false
 	emitter.foot_indent = -1
+	return nil
+}
+
+func (emitter *Emitter) putIndent(value byte, width int) error {
+	if emitter.buffer_pos+5 >= len(emitter.buffer) {
+		if err := emitter.flush(); err != nil {
+			return err
+		}
+	}
+	emitter.buffer[emitter.buffer_pos] = value
+	emitter.buffer_pos++
+	emitter.column += width
 	return nil
 }
 
@@ -2086,11 +2142,11 @@ func (emitter *Emitter) writeFoldedScalar(value []byte) error {
 	for i := 0; i < len(value); {
 		if isLineBreak(value, i) {
 			if !breaks && !leading_spaces && value[i] == '\n' {
-				k := 0
-				for isLineBreak(value, k) {
+				k := i
+				for k < len(value) && isLineBreak(value, k) {
 					k += width(value[k])
 				}
-				if !isBlankOrZero(value, k) {
+				if k < len(value) && !isBlankOrZero(value, k) {
 					if err := emitter.putLineBreak(); err != nil {
 						return err
 					}
