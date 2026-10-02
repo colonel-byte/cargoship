@@ -166,7 +166,6 @@
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [check-ansible-requirements](workflows/check-ansible-requirements.md)
-- [check-base-image-label](workflows/check-base-image-label.md)
 - [check-go-mod](workflows/check-go-mod.md)
 - [check-pins](workflows/check-pins.md)
 - [codeql](workflows/codeql.md)

@@ -182,7 +182,7 @@ Running various Mage tasks maintains and updates the following filesystem artifa
 | `example/shasums.json`                            | Cached sha256 of every remote file the examples hash                                        | `Generate.Examples` / `Generate.ExampleLine`       |
 | `<zarf_cache>/examples/*`                         | Cached release text assets (image lists), not committed                                     | `Generate.Examples` / `Generate.ExampleLine`       |
 | `containers/ansible/Dockerfile`                   | Base image package pins for ansible-core and bash-completion                                | `Dev.DnfPins`                                      |
-| `containers/ubi/Dockerfile`                       | Base image package pins for shadow-utils and bash-completion                                | `Dev.DnfPins`                                      |
+| `containers/ubi/Dockerfile`                       | Base image package pin for bash-completion                                                  | `Dev.DnfPins`                                      |
 | `.goreleaser.yaml`                                | Build args pinning container package versions                                               | `Dev.DnfPins`                                      |
 
 ---

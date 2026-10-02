@@ -111,15 +111,15 @@ func (Dev) DnfPins(ctx context.Context) error {
 		return fmt.Errorf("querying AlmaLinux packages: %w", err)
 	}
 
-	fmt.Printf("Discovered versions:\n  ansible-core:    %s\n  bash-completion: %s\n  shadow-utils:    %s\n",
-		pins.AnsibleCore, pins.BashCompletion, pins.ShadowUtils)
+	fmt.Printf("Discovered versions:\n  ansible-core:    %s\n  bash-completion: %s\n",
+		pins.AnsibleCore, pins.BashCompletion)
 
 	if err := dnfpins.UpdateDockerfileAnsiblePins(dnfpins.AnsibleDockerfilePath, pins.AnsibleCore, pins.BashCompletion); err != nil {
 		return fmt.Errorf("updating %s: %w", dnfpins.AnsibleDockerfilePath, err)
 	}
 	fmt.Printf("Updated %s\n", dnfpins.AnsibleDockerfilePath)
 
-	if err := dnfpins.UpdateDockerfileUbiPins(dnfpins.UbiDockerfilePath, pins.ShadowUtils, pins.BashCompletion); err != nil {
+	if err := dnfpins.UpdateDockerfileUbiPins(dnfpins.UbiDockerfilePath, pins.BashCompletion); err != nil {
 		return fmt.Errorf("updating %s: %w", dnfpins.UbiDockerfilePath, err)
 	}
 	fmt.Printf("Updated %s\n", dnfpins.UbiDockerfilePath)

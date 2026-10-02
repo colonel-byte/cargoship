@@ -181,13 +181,16 @@ func FindLatestRPM(primary *PrimaryXML, pkgName string) (*RpmPackage, error) {
 }
 
 // AlmaLinuxPins holds the newest version of each package the containers pin.
+//
+// A package belongs here only while an image installs it. shadow-utils was dropped when the ubi
+// image stopped installing it: a pin nothing consumes makes Dev.DnfPins fail looking for an ARG
+// that is not there, which is a broken task rather than a stale pin.
 type AlmaLinuxPins struct {
 	AnsibleCore    string
 	BashCompletion string
-	ShadowUtils    string
 }
 
-// QueryLatestAlmaLinuxPackages finds latest versions of ansible-core, bash-completion, and shadow-utils.
+// QueryLatestAlmaLinuxPackages finds the latest versions of ansible-core and bash-completion.
 func QueryLatestAlmaLinuxPackages(ctx context.Context) (*AlmaLinuxPins, error) {
 	client := &http.Client{Timeout: 90 * time.Second}
 
@@ -211,14 +214,8 @@ func QueryLatestAlmaLinuxPackages(ctx context.Context) (*AlmaLinuxPins, error) {
 		return nil, err
 	}
 
-	shadowPkg, err := FindLatestRPM(baseosPrimary, "shadow-utils")
-	if err != nil {
-		return nil, err
-	}
-
 	return &AlmaLinuxPins{
 		AnsibleCore:    ansiblePkg.Version.FullVersion(),
 		BashCompletion: bashPkg.Version.FullVersion(),
-		ShadowUtils:    shadowPkg.Version.FullVersion(),
 	}, nil
 }

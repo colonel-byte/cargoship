@@ -49,19 +49,13 @@ func UpdateDockerfileAnsiblePins(path, ansibleVer, bashVer string) error {
 }
 
 // UpdateDockerfileUbiPins updates the ARG lines in containers/ubi/Dockerfile.
-func UpdateDockerfileUbiPins(path, shadowVer, bashVer string) error {
+func UpdateDockerfileUbiPins(path, bashVer string) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
 	text := string(content)
-
-	reShadow := regexp.MustCompile(`(?m)^ARG SHADOW_UTILS_VERSION="[^"]*"`)
-	if !reShadow.MatchString(text) {
-		return fmt.Errorf("did not find ARG SHADOW_UTILS_VERSION in %s", path)
-	}
-	text = reShadow.ReplaceAllString(text, fmt.Sprintf(`ARG SHADOW_UTILS_VERSION="%s"`, shadowVer))
 
 	reBash := regexp.MustCompile(`(?m)^ARG BASH_COMPLETION_VERSION="[^"]*"`)
 	if !reBash.MatchString(text) {
@@ -81,12 +75,12 @@ func UpdateGoreleaserDnfPins(path string, pins *AlmaLinuxPins) error {
 
 	text := string(content)
 
-	// Replace under cargoship-ubi: SHADOW_UTILS_VERSION and BASH_COMPLETION_VERSION
-	reUbiBlock := regexp.MustCompile(`(?s)(- id: cargoship-ubi.*?build_args:.*?\n)(\s+SHADOW_UTILS_VERSION:\s*)[^\n]+(\n\s+BASH_COMPLETION_VERSION:\s*)[^\n]+`)
+	// Replace under cargoship-ubi: BASH_COMPLETION_VERSION
+	reUbiBlock := regexp.MustCompile(`(?s)(- id: cargoship-ubi.*?build_args:.*?\n)(\s+BASH_COMPLETION_VERSION:\s*)[^\n]+`)
 	if !reUbiBlock.MatchString(text) {
 		return fmt.Errorf("did not find cargoship-ubi build_args in %s", path)
 	}
-	text = reUbiBlock.ReplaceAllString(text, fmt.Sprintf("${1}${2}%s${3}%s", pins.ShadowUtils, pins.BashCompletion))
+	text = reUbiBlock.ReplaceAllString(text, fmt.Sprintf("${1}${2}%s", pins.BashCompletion))
 
 	// Replace under cargoship-ansible: ANSIBLE_CORE_VERSION and BASH_COMPLETION_VERSION
 	reAnsibleBlock := regexp.MustCompile(`(?s)(- id: cargoship-ansible.*?build_args:.*?\n)(\s+ANSIBLE_CORE_VERSION:\s*)[^\n]+(\n\s+BASH_COMPLETION_VERSION:\s*)[^\n]+`)
