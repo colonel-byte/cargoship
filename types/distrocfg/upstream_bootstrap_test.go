@@ -139,3 +139,85 @@ func TestUpstreamBootstrapJoinReadsTokenAndHashFromLeader(t *testing.T) {
 		t.Fatalf("kubeadm config = %q, want the real CA cert hash from the leader", content)
 	}
 }
+
+func TestUpstreamBootstrapJoinControllerNoLeader(t *testing.T) {
+	d := newTestUpstream()
+	host := &cluster.ZarfHost{Role: cluster.RoleController}
+
+	err := d.Bootstrap(context.Background(), host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+
+	if !errors.Is(err, ErrNoLeader) {
+		t.Fatalf("Bootstrap() error = %v, want %v", err, ErrNoLeader)
+	}
+}
+
+// TestUpstreamBootstrapAdditionalControllerFetchesCertsBeforeWriting guards the fix #288 makes: an
+// additional controller must dispatch to bootstrapJoinController, not bootstrapJoin. Before that
+// fix, a non-leader controller went through the plain worker join path and would happily write a
+// kubeadm-config.yaml with a controlPlane block missing certificateKey -- a join kubeadm rejects.
+// kubeadm init phase upload-certs (bootstrapJoinController's first exec call) is as unmockable
+// here as kubeadm join itself, so this only asserts it fails before ever reaching the write --
+// unlike the worker case above, which writes successfully before its own unmockable join call.
+func TestUpstreamBootstrapAdditionalControllerFetchesCertsBeforeWriting(t *testing.T) {
+	d := newTestUpstream()
+	leaderCfg := &fakeHost{files: map[string]string{
+		upstreamJoinTokenFile:  "controller-token.0123456789abcdef\n",
+		upstreamCACertHashFile: "sha256:abc\n",
+	}, fileExist: map[string]bool{}}
+	leader := leaderCfg.attach(&cluster.ZarfHost{Hostname: "leader-1", Metadata: cluster.ZarfHostMetadata{IsLeader: true}})
+
+	controllerCfg := &fakeHost{fileExist: map[string]bool{}}
+	controller := controllerCfg.attach(&cluster.ZarfHost{Hostname: "controller-2", Role: cluster.RoleController})
+
+	run := cluster.ZarfRuntimeMeta{Leader: leader, LoadBalancer: "lb.example.com"}
+
+	err := d.Bootstrap(context.Background(), controller, run, distro.ZarfDistro{})
+
+	if !errors.Is(err, cluster.ErrNotConnected) {
+		t.Fatalf("Bootstrap() error = %v, want %v (kubeadm init phase upload-certs is unmockable)", err, cluster.ErrNotConnected)
+	}
+	if _, ok := controllerCfg.files[kubeadmConfigPath]; ok {
+		t.Fatalf("Bootstrap() wrote %s before the upload-certs re-run could fail, want it to fail first", kubeadmConfigPath)
+	}
+}
+
+func TestParseCertificateKey(t *testing.T) {
+	tests := []struct {
+		name    string
+		out     string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "real upload-certs tail",
+			out: `[upload-certs] Storing the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace
+[upload-certs] Using certificate key:
+e6a2eb8581237ab72a4f494f30285ec12a13dd4b972954d5e5194bff2b93e33a
+`,
+			want: "e6a2eb8581237ab72a4f494f30285ec12a13dd4b972954d5e5194bff2b93e33a",
+		},
+		{
+			name:    "missing key",
+			out:     `[upload-certs] Storing the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseCertificateKey(tt.out)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("parseCertificateKey() error = nil, want an error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseCertificateKey() error = %v, want nil", err)
+			}
+			if got != tt.want {
+				t.Fatalf("parseCertificateKey() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
