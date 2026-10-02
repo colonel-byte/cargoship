@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-144eded6.js";
+            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1ac571e6.js"></script>
+        <script src="../toc-916d6312.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -244,12 +244,11 @@
 <p>The tag stays in the reference for readability; the digest is what actually resolves. Keep the digest a <strong>manifest-list (index) digest</strong>, not a per-platform one, or the <code>linux/arm64</code> build will fail to find its platform:</p>
 <pre><code class="language-sh">docker buildx imagetools inspect cgr.dev/chainguard/static:latest --format '{{ .Manifest.Digest }}'
 </code></pre>
-<p>Two conventions here exist to keep dependabot working, and both look redundant until you know why:</p>
+<p>One convention here exists to keep dependabot working, and it looks redundant until you know why:</p>
 <ul>
 <li><strong>The reference is repeated on every <code>FROM</code></strong> rather than hoisted into an <code>ARG</code>. Dependabot’s Dockerfile parser reads literal <code>FROM</code> lines only - it has no <code>ARG</code> resolution, so <code>FROM ${BASE_IMAGE}</code> is invisible to it and the pin would never be refreshed. It is also not stage-aware, so aliasing (<code>FROM alpine@sha256:... AS base</code> then <code>FROM base</code>) is no better: the bare stage reference parses as an image and produces a spurious <code>base:latest</code> dependency.</li>
-<li><strong><code>org.opencontainers.image.base.name</code> carries the tag only</strong>, without the digest. Dependabot rewrites <code>FROM</code> lines and nothing else, so a label holding the full pinned reference would silently drift out of date on the first automated digest bump. As written, digest refreshes need no edit; moving the tag itself (<code>3.22</code> → <code>3.23</code>) means updating the label by hand, which is the comment sitting above it in every one of them.</li>
 </ul>
-<p><code>.github/workflows/check-base-image-label.yaml</code> catches that hand edit when it is forgotten. On any pull request touching a <code>Dockerfile</code> it compares each final <code>FROM</code>, digest stripped, against that file’s <code>base.name</code>, and comments on the pull request rather than failing the job - a stale label does not break the build, and the pull request bumping the <code>FROM</code> is where the fix belongs. The comparison is literal, so the label names the registry the <code>FROM</code> actually pulls from, mirror and all, rather than the upstream image that mirror copies.</p>
+<p>The images carry no <code>LABEL</code> instructions of their own. Every <code>org.opencontainers.image.*</code> label, <code>base.name</code> and <code>base.digest</code> included, is set by <code>.goreleaser.yaml</code> from the <code>{{ .BaseImage }}</code> and <code>{{ .BaseImageDigest }}</code> templates goreleaser resolves at build time. That is why there is nothing here to drift and no check for it: a hand-written label could disagree with the <code>FROM</code> it describes, and a templated one cannot.</p>
 <p>One base needs more care than the others. <strong><code>cgr.dev/chainguard/static</code> publishes <code>:latest</code> and nothing else</strong> on Chainguard’s free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date - it eventually stops resolving, and the build fails with <code>manifest unknown</code>. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.</p>
 <p><code>.github/dependabot.yaml</code> tracks both directories under its <code>docker</code> ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.</p>
 <h3 id="linting"><a class="header" href="#linting">Linting</a></h3>
@@ -275,7 +274,7 @@ reason to use an RPM-based image.</p>
 <li><strong>The RPM signature is verified at build time.</strong> <code>crypto/software@conlon.dev.gpg</code> is supplied through <code>extra_files</code>, imported into the image keyring, and checked with <code>rpm --checksig</code> before installation.</li>
 <li><strong>The install step must run on the target platform.</strong> RPM unpacks an architecture-specific binary into the target root filesystem, so the install cannot be moved to a <code>$BUILDPLATFORM</code> stage. This is why the <code>linux/arm64</code> build requires QEMU.</li>
 <li><strong>The binary lands in <code>/usr/bin</code></strong> according to <code>nfpms.rpm.prefixes</code>, not <code>/usr/local/bin</code> as in the static image. The entrypoint differs accordingly; the <code>nonroot</code> account, <code>$HOME</code>, and <code>/workspace</code> layout remain compatible.</li>
-<li><strong>Package versions for <code>shadow-utils</code> and <code>bash-completion</code> are pinned</strong> via Dockerfile <code>ARG</code> defaults (<code>SHADOW_UTILS_VERSION</code> and <code>BASH_COMPLETION_VERSION</code>) and explicitly passed in <code>.goreleaser.yaml</code> under <code>build_args</code> to comply with Hadolint <code>DL3041</code> and ensure reproducible image builds. Run <code>mage dev:dnfPins</code> to query the AlmaLinux repodata and refresh the pins when upstream packages roll forward.</li>
+<li><strong>Package versions are pinned</strong> via Dockerfile <code>ARG</code> defaults (<code>BASH_COMPLETION_VERSION</code>, and <code>ANSIBLE_CORE_VERSION</code> for the ansible image) and explicitly passed in <code>.goreleaser.yaml</code> under <code>build_args</code> to comply with Hadolint <code>DL3041</code> and ensure reproducible image builds. Run <code>mage dev:dnfPins</code> to query the AlmaLinux repodata and refresh the pins when upstream packages roll forward. Only packages an image still installs are pinned, so dropping an install means dropping its pin from <code>magefiles/pkg/devtools/dnfpins</code> too.</li>
 </ul>
 <p>The AlmaLinux base is substantially larger than the static image. Recheck exact image sizes after base-image updates rather than relying on a fixed comparison.</p>
 <h3 id="debian-variant"><a class="header" href="#debian-variant">Debian Variant</a></h3>

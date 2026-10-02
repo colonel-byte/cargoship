@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-144eded6.js";
+            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1ac571e6.js"></script>
+        <script src="../toc-916d6312.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
                     <main>
                         <h1 id="test-build-containersyaml"><a class="header" href="#test-build-containersyaml">test-build-containers.yaml</a></h1>
 <p><strong>Triggers:</strong> pull requests (opened/reopened/synchronize/labeled) touching <code>containers/**</code>, <code>.goreleaser.yaml</code>, <code>.release-please-manifest.json</code>, or this workflow file - gated on the PR carrying the <code>docker</code> label.</p>
-<p>Actually builds all four container images (<code>ansible</code>, <code>base</code>, <code>deb</code>, <code>ubi</code>) via <code>goreleaser release --snapshot --clean --skip=sign,sbom</code>, closing a gap neither <code>check-base-image-label.yaml</code> (text diff only) nor <code>scan-lint.yaml</code>’s hadolint job (syntax only) covers: a Dependabot bump that breaks the actual build wasn’t otherwise caught until release.</p>
+<p>Actually builds all four container images (<code>ansible</code>, <code>base</code>, <code>deb</code>, <code>ubi</code>) via <code>goreleaser release --snapshot --clean --skip=sign,sbom</code>, closing a gap <code>scan-lint.yaml</code>’s hadolint job (syntax only) does not cover: a Dependabot bump that breaks the actual build wasn’t otherwise caught until release.</p>
 <p>These Dockerfiles are written for GoReleaser’s <code>dockers_v2</code> pipe, not a plain <code>docker build</code> - several <code>COPY</code> nfpm-produced <code>.rpm</code>/<code>.deb</code> packages and extra files that only GoReleaser stages. That pipe has no per-image build flag, so a snapshot build always builds all four images together; there’s no cheaper way to build “just the one that changed.”</p>
 <p><code>labeled</code> is included in <code>types</code> because Dependabot’s <code>docker</code> label is applied <em>after</em> the PR opens - without it, the <code>if</code> condition would be evaluated (and fail) on the <code>opened</code> event before the label exists, and nothing would re-trigger once it’s added.</p>
 <p><code>--snapshot</code> skips publish/validate/announce entirely - nothing is pushed anywhere.</p>
