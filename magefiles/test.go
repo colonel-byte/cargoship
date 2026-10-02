@@ -60,6 +60,20 @@ func (Test) EndToEndClusterStage() error {
 	return testrunner.RunE2ENoBuild("30m", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
 }
 
+// EndToEndZarf runs the zarf Ansible module suite: two k3d clusters, a real zarf, and the
+// uds-bundle's packages walked by the modules. Needs k3d, zarf, ansible-playbook and Docker.
+func (Test) EndToEndZarf() error {
+	if err := testrunner.DeleteK3dClusters(); err != nil {
+		return err
+	}
+	return testrunner.RunE2EZarf()
+}
+
+// CleanZarfClusters removes the k3d clusters left behind by an interrupted zarf module suite.
+func (Test) CleanZarfClusters() error {
+	return testrunner.DeleteK3dClusters()
+}
+
 // CleanCluster removes containers left behind by bootloose.
 func (Test) CleanCluster() error {
 	return testrunner.StopBootlooseContainers()

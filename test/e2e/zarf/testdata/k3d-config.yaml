@@ -1,0 +1,52 @@
+---
+# The k3d cluster the zarf module suite initialises.
+#
+# This is a copy of https://github.com/colonel-byte/uds-bundles/blob/main/k3d-config.yaml, kept
+# verbatim so that what the module initialises here is the cluster shape that repository already
+# deploys onto. Refresh it from there rather than editing it to suit a test.
+#
+# Two consequences of keeping it verbatim are worth knowing before reading the suite:
+#
+#   - metadata.name is "zarf", so the cluster is k3d-zarf. The suite refuses to run when a cluster
+#     of that name already exists rather than adopting -- and then deleting -- one it did not
+#     create.
+#   - k3s local-storage is disabled below, so the cluster has no StorageClass at all, and zarf's
+#     registry claims a 20Gi PVC during the seed phase. Nothing zarf does can therefore come
+#     first: `zarf init` waits on a Pending PVC until the Helm install times out. The walk on this
+#     cluster deploys the storage provider package before it initialises -- a connected deploy,
+#     which needs no registry and so no initialised cluster -- and that is the point this fixture
+#     exists to prove. The sibling k3d-config-local-storage.yaml keeps k3s's own StorageClass, and
+#     the walk there begins with init, in the order the uds-bundle lists its packages.
+#
+# Nothing here is contacted by the suite directly. k3d reads this file; the tests talk to the
+# cluster it produces.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: zarf
+servers: 1
+agents: 1
+# renovate: datasource=docker depName=docker.io/rancher/k3s versioning=regex:^v?(?<major>\d+)(\.(?<minor>\d+))?(\.(?<patch>\d+))-k3s?((?<build>\d+))$
+image: docker.io/rancher/k3s:v1.37.1-k3s1
+volumes:
+  - volume: /tmp/k3d:/var/lib/local-path-provisioner
+    nodeFilters:
+      - server:*
+      - agent:*
+options:
+  k3d:
+    disableImageVolume: false
+  k3s:
+    extraArgs:
+      - arg: "--disable=local-storage"
+        nodeFilters:
+          - server:*
+      - arg: "--disable=traefik"
+        nodeFilters:
+          - server:*
+      - arg: "--disable=traefik-crd"
+        nodeFilters:
+          - server:*
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

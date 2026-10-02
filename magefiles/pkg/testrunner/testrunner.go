@@ -54,6 +54,37 @@ func RunE2ENoBuild(timeout string, pkg string, extra ...string) error {
 	)
 }
 
+// RunE2EZarf builds the zarf Ansible module files, then runs the zarf module e2e suite.
+//
+// The timeout is generous because the suite stands up two k3d clusters and walks four zarf
+// packages across each of them; the first run also pulls the packages.
+func RunE2EZarf() error {
+	if err := build.ZarfModuleFiles(); err != nil {
+		return err
+	}
+	return RunE2ENoBuild("90m", "github.com/colonel-byte/cargoship/test/e2e/zarf/...")
+}
+
+// K3dClusters are the clusters the zarf module e2e suite creates, named in
+// test/e2e/zarf/testdata/k3d-config.yaml and k3d-config-local-storage.yaml.
+var K3dClusters = []string{"zarf", "zarf-local-storage"} //nolint:gochecknoglobals
+
+// DeleteK3dClusters removes the clusters the zarf module suite creates, for a run that was
+// interrupted before its own cleanup ran. A cluster that is not there is not an error.
+func DeleteK3dClusters() error {
+	for _, name := range K3dClusters {
+		out, err := sh.Output("k3d", "cluster", "list", name, "--no-headers")
+		if err != nil || strings.TrimSpace(out) == "" {
+			continue
+		}
+		fmt.Printf("Deleting the k3d cluster %s\n", name)
+		if err := sh.RunV("k3d", "cluster", "delete", name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // StopBootlooseContainers force-removes leftover bootloose containers.
 func StopBootlooseContainers() error {
 	ids, err := sh.Output("docker", "ps", "-aq", "--filter", "label=io.k0sproject.bootloose.owner=bootloose")
