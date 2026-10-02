@@ -23,6 +23,12 @@ updates:
       # open-policy-agent/opa (transitive via sigstore/cosign) still uses it.
       - dependency-name: "github.com/gobwas/glob"
         update-types: ["version-update:semver-major"]
+      # crypto11 is stuck at v1.2.5: the upstream repo was renamed twice, and
+      # every tag after v1.2.5 declares a different module path, so Dependabot
+      # fails the whole run with go_module_path_mismatch. Nothing newer resolves
+      # under this path until cosign re-imports the renamed module.
+      # See docs/agent/choice-crypto11-rename.md before touching this.
+      - dependency-name: "github.com/ThalesIgnite/crypto11"
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
