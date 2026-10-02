@@ -73,7 +73,7 @@ type Distro interface {
 	// distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
 	// pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
 	// detect drift on an already-running host.
-	DesiredFiles(*cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
+	DesiredFiles(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
 	// ManagedDirs returns the directories on a host cargoship prunes, so that a file in one of
 	// them that DesiredFiles no longer names can be removed rather than left behind. A
 	// directory cargoship shares with the engine names the files that are its own. A distro

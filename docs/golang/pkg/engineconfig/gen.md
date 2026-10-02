@@ -13,11 +13,13 @@ Package gen turns an extract.Manifest into a Go struct source file: one field pe
 - [Variables](<#variables>)
 - [func Generate\(opts Options\) \(\[\]byte, error\)](<#Generate>)
 - [func GenerateComponents\(opts ComponentsOptions\) \(\[\]byte, error\)](<#GenerateComponents>)
+- [func GenerateNestedKeys\(opts NestedKeysOptions\) \(\[\]byte, error\)](<#GenerateNestedKeys>)
 - [func Keys\(v any\) map\[string\]struct\{\}](<#Keys>)
 - [func UnknownAddons\(disable any, addons \[\]string\) \[\]string](<#UnknownAddons>)
 - [type ComponentsOptions](<#ComponentsOptions>)
 - [type Entry](<#Entry>)
   - [func Lookup\(distroID, version string\) \(Entry, bool\)](<#Lookup>)
+- [type NestedKeysOptions](<#NestedKeysOptions>)
 - [type Options](<#Options>)
 
 
@@ -45,6 +47,14 @@ var Registry = map[string]map[string]Entry{
         "v1_36": {Server: rke2_v1_36.ServerConfig{}, Agent: rke2_v1_36.AgentConfig{}, Addons: rke2_v1_36.Addons, CNIs: rke2_v1_36.CNIs, IngressControllers: rke2_v1_36.IngressControllers},
         "v1_37": {Server: rke2_v1_37.ServerConfig{}, Agent: rke2_v1_37.AgentConfig{}, Addons: rke2_v1_37.Addons, CNIs: rke2_v1_37.CNIs, IngressControllers: rke2_v1_37.IngressControllers},
     },
+    "upstream": {
+        "v1_32": {Server: upstream_v1_32.ClusterConfigurationKeys, Addons: upstream_v1_32.Addons, CNIs: upstream_v1_32.CNIs, IngressControllers: upstream_v1_32.IngressControllers},
+        "v1_33": {Server: upstream_v1_33.ClusterConfigurationKeys, Addons: upstream_v1_33.Addons, CNIs: upstream_v1_33.CNIs, IngressControllers: upstream_v1_33.IngressControllers},
+        "v1_34": {Server: upstream_v1_34.ClusterConfigurationKeys, Addons: upstream_v1_34.Addons, CNIs: upstream_v1_34.CNIs, IngressControllers: upstream_v1_34.IngressControllers},
+        "v1_35": {Server: upstream_v1_35.ClusterConfigurationKeys, Addons: upstream_v1_35.Addons, CNIs: upstream_v1_35.CNIs, IngressControllers: upstream_v1_35.IngressControllers},
+        "v1_36": {Server: upstream_v1_36.ClusterConfigurationKeys, Addons: upstream_v1_36.Addons, CNIs: upstream_v1_36.CNIs, IngressControllers: upstream_v1_36.IngressControllers},
+        "v1_37": {Server: upstream_v1_37.ClusterConfigurationKeys, Addons: upstream_v1_37.Addons, CNIs: upstream_v1_37.CNIs, IngressControllers: upstream_v1_37.IngressControllers},
+    },
 }
 ```
 
@@ -65,6 +75,15 @@ func GenerateComponents(opts ComponentsOptions) ([]byte, error)
 ```
 
 GenerateComponents renders and gofmt's the packaged\-component source for opts. It is always written, even when every list is empty: the generated registry references these vars in every distro/version package, so a package missing them fails to build.
+
+<a name="GenerateNestedKeys"></a>
+## func [GenerateNestedKeys](<https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/nested.go#L44>)
+
+```go
+func GenerateNestedKeys(opts NestedKeysOptions) ([]byte, error)
+```
+
+GenerateNestedKeys renders and gofmt's opts.Node as a literal extract.FieldNode value, unlike Generate \(a real Go struct consumed via reflect\): upstream's config document is genuinely nested, so what's extracted is a key tree, not a flag set, and there's no struct shape to declare \-\- the tree itself is what gets consumed at validation time.
 
 <a name="Keys"></a>
 ## func [Keys](<https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/lookup.go#L71>)
@@ -128,6 +147,22 @@ func Lookup(distroID, version string) (Entry, bool)
 ```
 
 Lookup returns the Entry registered for distroID \(e.g. "k3s", "rke2"\) and an engine version string in any format containing a dotted major.minor \(e.g. "1.35.3\-k3s1", "v1.35.3\+k3s1"\). The version is truncated to its minor release before lookup, the same way mage generate:pullEngineSource truncates upstream tags before pulling source \-\- so a single generated version covers every patch release in that minor line. Reports false if no source was ever pulled/generated for that distro/minor\-version pair.
+
+<a name="NestedKeysOptions"></a>
+## type [NestedKeysOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/nested.go#L27-L34>)
+
+NestedKeysOptions configures one generated nested\-key\-tree file.
+
+```go
+type NestedKeysOptions struct {
+    PackageName string // must already be a valid Go package identifier
+    VarName     string // exported Go identifier for the generated var
+    Distro      string
+    Version     string
+    RootType    string // the source struct this tree was extracted from, e.g. "ClusterConfiguration"
+    Node        extract.FieldNode
+}
+```
 
 <a name="Options"></a>
 ## type [Options](<https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/gen.go#L32-L36>)

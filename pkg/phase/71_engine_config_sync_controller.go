@@ -40,7 +40,7 @@ func (p *EngineConfigSyncController) Explanation() string {
 
 // Prepare the phase
 func (p *EngineConfigSyncController) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error {
-	if err := p.loadDesiredConfig(c, *d); err != nil {
+	if err := p.loadDesiredConfig(ctx, c, *d); err != nil {
 		return err
 	}
 	if err := p.prepareLeader(ctx); err != nil {

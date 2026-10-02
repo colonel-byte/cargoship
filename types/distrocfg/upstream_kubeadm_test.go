@@ -15,19 +15,22 @@
 package distrocfg
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/extract"
 	"github.com/k0sproject/dig"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBuildClusterConfigurationDefaults(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	dis.Spec.Version = "v1.35.3"
 
-	cc := buildClusterConfiguration(dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
 
 	if cc["kind"] != "ClusterConfiguration" {
 		t.Fatalf("kind = %v, want ClusterConfiguration", cc["kind"])
@@ -59,7 +62,7 @@ func TestBuildClusterConfigurationPodSubnetAndCertSANs(t *testing.T) {
 	}
 	run := cluster.ZarfRuntimeMeta{ControllerTLS: []string{"cluster.example.com"}}
 
-	cc := buildClusterConfiguration(dis, run)
+	cc := buildClusterConfiguration(context.Background(), dis, run)
 
 	networking, ok := cc[keyNetworking].(dig.Mapping)
 	if !ok {
@@ -88,7 +91,7 @@ func TestBuildClusterConfigurationAuditAndPSSMountHostPaths(t *testing.T) {
 		"podSecurity": dig.Mapping{"defaults": dig.Mapping{"enforce": "restricted"}},
 	}
 
-	cc := buildClusterConfiguration(dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
 
 	apiServer, ok := cc["apiServer"].(dig.Mapping)
 	if !ok {
@@ -123,7 +126,7 @@ func TestBuildClusterConfigurationExtraArgsPassthrough(t *testing.T) {
 		},
 	}
 
-	cc := buildClusterConfiguration(dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
 
 	cm, ok := cc["controllerManager"].(dig.Mapping)
 	if !ok {
@@ -142,7 +145,7 @@ func TestBuildClusterConfigurationImageRepository(t *testing.T) {
 	dis := distro.ZarfDistro{}
 	dis.Spec.Config.ImagesConfig.Images = []string{"registry.k8s.io/kube-apiserver:v1.35.3"}
 
-	cc := buildClusterConfiguration(dis, cluster.ZarfRuntimeMeta{})
+	cc := buildClusterConfiguration(context.Background(), dis, cluster.ZarfRuntimeMeta{})
 
 	if cc["imageRepository"] != "registry.k8s.io" {
 		t.Fatalf("imageRepository = %v, want registry.k8s.io", cc["imageRepository"])
@@ -231,4 +234,96 @@ func TestMarshalYAMLDocsConcatenatesDocuments(t *testing.T) {
 	if !strings.Contains(out, "kind: A") || !strings.Contains(out, "kind: B") {
 		t.Fatalf("marshalYAMLDocs() = %q, want both documents", out)
 	}
+}
+
+func TestValidateNestedEngineConfigKnownVersionDropsUnknownTopLevelKey(t *testing.T) {
+	ctx, buf := testLoggerContext()
+
+	cfg := dig.Mapping{
+		"imageRepository": "registry.k8s.io",
+		"totally-typod":   "value",
+	}
+
+	validateNestedEngineConfig(ctx, "1.35.8", cfg)
+
+	require.Contains(t, cfg, "imageRepository")
+	require.NotContains(t, cfg, "totally-typod")
+
+	out := buf.String()
+	require.Contains(t, out, "engine config key not recognized")
+	require.Contains(t, out, `key=totally-typod`)
+}
+
+func TestValidateNestedEngineConfigDropsUnknownNestedKey(t *testing.T) {
+	ctx, buf := testLoggerContext()
+
+	cfg := dig.Mapping{
+		"networking": dig.Mapping{
+			"podSubnet":     "10.10.0.0/16",
+			"totally-typod": "value",
+		},
+	}
+
+	validateNestedEngineConfig(ctx, "1.35.8", cfg)
+
+	networking, ok := cfg["networking"].(dig.Mapping)
+	require.True(t, ok)
+	require.Contains(t, networking, "podSubnet")
+	require.NotContains(t, networking, "totally-typod")
+
+	out := buf.String()
+	require.Contains(t, out, "engine config key not recognized")
+	require.Contains(t, out, `key=totally-typod`)
+}
+
+func TestValidateNestedEngineConfigLeavesSliceLeafUntouched(t *testing.T) {
+	ctx, _ := testLoggerContext()
+
+	cfg := dig.Mapping{
+		"apiServer": dig.Mapping{
+			"certSANs": []string{"cluster.example.com", "totally-typod"},
+		},
+	}
+
+	validateNestedEngineConfig(ctx, "1.35.8", cfg)
+
+	apiServer, ok := cfg["apiServer"].(dig.Mapping)
+	require.True(t, ok)
+	sans, ok := apiServer["certSANs"].([]string)
+	require.True(t, ok)
+	require.Equal(t, []string{"cluster.example.com", "totally-typod"}, sans)
+}
+
+func TestValidateNestedEngineConfigUnknownVersionBlindlyKeepsAllKeys(t *testing.T) {
+	ctx, buf := testLoggerContext()
+
+	cfg := dig.Mapping{"anything": "goes", "totally-typod": "value"}
+
+	validateNestedEngineConfig(ctx, "9.99.99", cfg)
+
+	require.Equal(t, dig.Mapping{"anything": "goes", "totally-typod": "value"}, cfg)
+
+	out := buf.String()
+	require.Contains(t, out, "no generated engine config schema for this distro/version")
+	require.NotContains(t, out, "engine config key not recognized")
+}
+
+func TestDropUnknownNestedKnownBranchKeepsKnownLeaf(t *testing.T) {
+	ctx, buf := testLoggerContext()
+
+	node := extract.FieldNode{Children: map[string]extract.FieldNode{
+		"networking": {Children: map[string]extract.FieldNode{
+			"podSubnet": {},
+		}},
+	}}
+	cfg := dig.Mapping{
+		"networking": dig.Mapping{"podSubnet": "10.10.0.0/16"},
+	}
+
+	dropUnknownNested(ctx, "1.35.8", cfg, node)
+
+	networking, ok := cfg["networking"].(dig.Mapping)
+	require.True(t, ok)
+	require.Equal(t, "10.10.0.0/16", networking["podSubnet"])
+	require.Empty(t, buf.String())
 }
