@@ -1799,7 +1799,7 @@ github.com/otiai10/copy
 ## explicit; go 1.18
 github.com/otiai10/mint
 github.com/otiai10/mint/mquery
-# github.com/pb33f/go-yaml v0.1.0
+# github.com/pb33f/go-yaml v0.1.1
 ## explicit; go 1.18
 github.com/pb33f/go-yaml
 github.com/pb33f/go-yaml/internal/libyaml
