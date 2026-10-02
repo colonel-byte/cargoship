@@ -1,6 +1,6 @@
 namespace: colonel_byte
 name: cargoship
-version: 0.28.2
+version: 0.29.0
 readme: README.md
 authors:
   - Allen Conlon <software@conlon.dev>
