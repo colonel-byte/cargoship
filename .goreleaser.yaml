@@ -44,16 +44,11 @@ builds:
       - darwin
       - windows
     goarch:
-      - arm
       - arm64
-      - "386"
       - amd64
       - riscv64
     goamd64:
       - v1
-    goarm:
-      - "6"
-      - "7"
     flags:
       - -trimpath
     mod_timestamp: "{{ .CommitTimestamp }}"
@@ -66,9 +61,7 @@ archives:
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
       - goos: windows
         formats:
@@ -196,7 +189,6 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      - linux/386
       - linux/amd64
       - linux/arm64
     flags:
@@ -221,9 +213,7 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      - linux/386
       - linux/amd64
-      - linux/arm/v7
       - linux/arm64
     flags:
       - "--pull"
@@ -241,7 +231,6 @@ dockers_v2:
     tags:
       - "{{ .Tag }}"
     platforms:
-      - linux/386
       - linux/amd64
       - linux/arm64
     flags:
