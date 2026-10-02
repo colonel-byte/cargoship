@@ -19,7 +19,7 @@ The suites are separate Go packages so that a group can be selected by package p
 Build the binary first. The suite looks for it at `build/cargoship_<goos>_<goarch>` and `TestMain` aborts immediately if it is missing:
 
 ```console
-$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 ```
 
 This is enough for the tests. A build without the release linker flags leaves `cargoship version` reporting the unset placeholder values, which the tests tolerate - they assert the fields are present and non-empty, not what they contain.
