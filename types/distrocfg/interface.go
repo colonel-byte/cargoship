@@ -110,3 +110,12 @@ type Distro interface {
 	// StopWorkerService stops the controller service on the host
 	StopWorkerService(*cluster.ZarfHost) error
 }
+
+// ImageImporter is implemented by a distro whose engine does not import uploaded image tarballs
+// on its own, so cargoship must trigger the import itself. rke2 and k3s's own agents import
+// automatically outside cargoship's control and do not implement this; a distro without an
+// agent to do that -- plain kubeadm's upstream containerd, say -- does.
+type ImageImporter interface {
+	// ImportImages imports every image tarball staged under path into the engine's image store.
+	ImportImages(host *cluster.ZarfHost, path string) error
+}

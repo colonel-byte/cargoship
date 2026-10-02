@@ -54,7 +54,7 @@ func NewApply(opts ApplyOptions) *Apply
 NewApply an apply action object
 
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L176>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L179>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error

@@ -53,6 +53,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Upload files to hosts -- Binaries
     - Catch all phase if the combination of Operating System and Distro don't have other install methods
     - Dry run: reported, not run
+1. Import images
+    - For a distro whose engine does not import uploaded image tarballs on its own, imports them into the engine's image store
+    - Dry run: reported, not run
 1. Configure engine
     - Runs distro specific operations
     - Dry run: reported, not run

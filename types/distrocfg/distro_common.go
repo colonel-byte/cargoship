@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/BurntSushi/toml"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/k0sproject/dig"
@@ -282,6 +283,21 @@ func marshalYAML(config dig.Mapping) ([]byte, error) {
 	}
 
 	return []byte("---\n" + buf.String()), nil
+}
+
+// marshalTOML renders a mapping as TOML. containerd's own config is TOML rather than YAML, so
+// this is the one non-YAML render path in the package -- the encoder is reflection based the
+// same way yaml.Marshal is, so a dotted table key like "io.containerd.grpc.v1.cri" is quoted
+// automatically rather than needing the manual quoting marshalRegistriesYAML does for YAML.
+func marshalTOML(config dig.Mapping) ([]byte, error) {
+	buf := bytes.Buffer{}
+	enc := toml.NewEncoder(&buf)
+
+	if err := enc.Encode(config); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 func (r *Common) writeYAML(ctx context.Context, host *cluster.ZarfHost, config dig.Mapping, path string) error {
