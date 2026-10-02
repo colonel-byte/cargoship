@@ -276,7 +276,6 @@ func fullResetParams() *resetParams {
 	concurrency := 4
 	return &resetParams{
 		common:          fullCommon(),
-		hostUpdates:     fullHostUpdates(),
 		Distro:          "rke2",
 		Concurrency:     &concurrency,
 		WorkConcurrency: "50%",

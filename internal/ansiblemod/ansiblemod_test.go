@@ -601,15 +601,20 @@ func TestPrepareRejectsKeyMaterialParameters(t *testing.T) {
 }
 
 func TestBuildResetArgs(t *testing.T) {
-	no := false
-	p := resetParams{Distro: "rke2", hostUpdates: hostUpdates{Firewall: &no}}
+	p := resetParams{Distro: "rke2"}
 	joined := strings.Join(buildResetArgs(&p, "/tmp/inventory.yaml", Control{CheckMode: true}), " ")
 
 	// Reset takes no package: the positional argument is absent and the distro is named.
 	require.True(t, strings.HasPrefix(joined, "reset --config /tmp/inventory.yaml"))
 	require.Contains(t, joined, "--distro rke2")
-	require.Contains(t, joined, "--firewall=false")
 	require.Contains(t, joined, "--dry-run")
+
+	// Reset renders none of the host preparation switches. It shares no parameter with prepare
+	// here, because reset runs no preparation phase and `cargoship reset` has no such flag to
+	// accept -- rendering one would fail the run on an unknown flag.
+	for _, flag := range []string{"--hosts", "--firewall", "--fapolicyd"} {
+		require.NotContains(t, joined, flag)
+	}
 }
 
 func TestBuildKubeConfigArgs(t *testing.T) {
