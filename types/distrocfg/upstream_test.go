@@ -299,6 +299,26 @@ func TestUpstreamJoinTokenPathAgentEmpty(t *testing.T) {
 	}
 }
 
+func TestUpstreamManifestPaths(t *testing.T) {
+	d := newTestUpstream()
+	dis := distro.ZarfDistro{}
+	dis.Spec.Config.Manifests = []string{"/etc/kubernetes/manifests/cni.yaml"}
+
+	got := d.ManifestPaths(dis)
+	want := []string{"/etc/kubernetes/manifests/cni.yaml"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ManifestPaths() = %v, want %v", got, want)
+	}
+}
+
+func TestUpstreamManifestPathsEmpty(t *testing.T) {
+	d := newTestUpstream()
+
+	if got := d.ManifestPaths(distro.ZarfDistro{}); len(got) != 0 {
+		t.Fatalf("ManifestPaths() = %v, want empty", got)
+	}
+}
+
 func TestUpstreamStopControllerService(t *testing.T) {
 	d := newTestUpstream()
 	cfg := &fakeHost{serviceRunning: true}

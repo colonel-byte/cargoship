@@ -132,3 +132,13 @@ type Bootstrapper interface {
 	// Bootstrap forms the cluster (the leader) or joins it (every other host).
 	Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
 }
+
+// ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically
+// a CNI -- that cargoship applies with kubectl once the leader is reachable, instead of rendering
+// them into a HelmChartConfig an embedded controller reconciles (rancher_common.go's
+// helmChartConfigs). Same optional-interface pattern as ImageImporter/Bootstrapper.
+type ManifestApplier interface {
+	// ManifestPaths returns the on-host paths to kubectl apply, in order. Empty when the package
+	// declares none.
+	ManifestPaths(dis distro.ZarfDistro) []string
+}
