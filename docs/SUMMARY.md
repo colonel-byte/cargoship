@@ -21,6 +21,7 @@
 - [setup-inv](guides/setup-inv.md)
 - [signing-packages](guides/signing-packages.md)
 - [vault-encryption](guides/vault-encryption.md)
+- [zarf-ansible-module](guides/zarf-ansible-module.md)
 
 
 -----------
@@ -213,6 +214,8 @@
 - [choice-removed-hosts](agent/choice-removed-hosts.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)
 - [choice-vault-library](agent/choice-vault-library.md)
+- [choice-zarf-ansible-module](agent/choice-zarf-ansible-module.md)
+- [choice-zarf-collection-removal](agent/choice-zarf-collection-removal.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
 - [todo-pkg-action-unit-tests](agent/todo-pkg-action-unit-tests.md)
