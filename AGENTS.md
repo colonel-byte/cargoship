@@ -55,6 +55,26 @@ Plain Go commands work for anything mage doesn't wrap - `go build ./...`, `go ve
 
 Never run `go test ./...` (or any of the paths above) without `-short`. Without it, the suite pulls in the full e2e tests, including the cluster suite that needs Docker + bootloose. Always pass `-short`, or use the mage targets above which scope things correctly.
 
+## Keeping `.gitattributes` in sync with the generators
+
+Everything a generator writes is marked `linguist-generated` in [`.gitattributes`](.gitattributes), which is what collapses it in a GitHub diff and keeps it out of the repository's language statistics. A generated file that is not marked shows up as hand-written work in every review, and a thousand-line regenerated page buries the twenty lines that were actually written.
+
+So a change to what a generator produces is a change to `.gitattributes` as well. That means all three of:
+
+- **a new generator, or a new output path** - add the path. `mage generate:examples` writes `values.yaml` and `values.schema.json` beside each `distro.yaml`, so all three are marked; a pattern covering only the first leaves the other two looking hand-written.
+- **a generator that writes into a new subdirectory** - widen the pattern rather than adding a sibling entry, where the directory depth is the only difference. `docs/ansible/**/module_*.md` covers a second collection's pages under `docs/ansible/<collection>/` without another line.
+- **a generator removed, or its output moved** - delete the entry. A pattern matching nothing is not an error anybody sees.
+
+Patterns are grouped by the mage target that writes them, with the target named in a comment, so the file reads as a list of what each generator owns.
+
+Hand-written files inside a generated tree stay unmarked, and there are several: `docs/ansible/<collection>/collection.md`, `modules.md` and `roles.md` are written by hand beside generated module and role pages, and `pkg/engineconfig/gen/` holds hand-written Go next to the generated `zz_*.go`. Mark the pattern the generator writes, not the directory it writes into.
+
+Check a specific file rather than reasoning about the patterns:
+
+```sh
+git check-attr linguist-generated -- docs/ansible/zarf/module_init.md
+```
+
 ## Committing changes
 
 Run `pre-commit run --all-files` before every commit and fix anything it flags. Several hooks in [`.pre-commit-config.yaml`](.pre-commit-config.yaml) rewrite files (`end-of-file-fixer`, `trailing-whitespace`, `keep-sorted`, `addlicense`, doc/schema generators) - re-stage after it runs. Don't skip hooks with `--no-verify` or `SKIP=`.
