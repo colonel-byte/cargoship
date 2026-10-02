@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/colonel-byte/cargoship/types"
 )
 
 func TestLoadRegistryOverridesDottedKeys(t *testing.T) {
@@ -88,6 +90,59 @@ func TestLoadCreateOverridesEmpty(t *testing.T) {
 func TestLoadCreateOverridesMissingFile(t *testing.T) {
 	if _, err := loadCreateOverrides(filepath.Join(t.TempDir(), "does-not-exist.yaml")); err == nil {
 		t.Fatalf("loadCreateOverrides() = nil error, want error")
+	}
+}
+
+func TestExpandHomePaths(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg := types.DistroConfig{
+		CachePath:     "~/.cargoship-cache",
+		TempDirectory: "~/staging",
+		AgeOpts: types.AgeOptions{
+			IdentityFiles:   []string{"~/.age/cargoship.key", "/etc/cargoship/ci.key"},
+			RecipientsFiles: []string{"~/.ssh/authorized_keys"},
+			Recipients:      []string{"age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"},
+		},
+		DistroOpts: types.DistroOptions{
+			KubeConfig:  "~/.kube/config",
+			Output:      "~/packages",
+			PublicKey:   "~/.cosign/cosign.pub",
+			TrustedRoot: "~/.sigstore/trusted_root.json",
+			PublishOpts: types.DistroPublishOptions{
+				// A cosign key provider rather than a file: it has no leading ~, so it
+				// must survive untouched.
+				SigningKey: "awskms:///alias/cargoship",
+			},
+		},
+	}
+
+	if err := expandHomePaths(&cfg); err != nil {
+		t.Fatalf("expandHomePaths() error = %v", err)
+	}
+
+	want := types.DistroConfig{
+		CachePath:     filepath.Join(home, ".cargoship-cache"),
+		TempDirectory: filepath.Join(home, "staging"),
+		AgeOpts: types.AgeOptions{
+			IdentityFiles:   []string{filepath.Join(home, ".age", "cargoship.key"), "/etc/cargoship/ci.key"},
+			RecipientsFiles: []string{filepath.Join(home, ".ssh", "authorized_keys")},
+			Recipients:      []string{"age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"},
+		},
+		DistroOpts: types.DistroOptions{
+			KubeConfig:  filepath.Join(home, ".kube", "config"),
+			Output:      filepath.Join(home, "packages"),
+			PublicKey:   filepath.Join(home, ".cosign", "cosign.pub"),
+			TrustedRoot: filepath.Join(home, ".sigstore", "trusted_root.json"),
+			PublishOpts: types.DistroPublishOptions{
+				SigningKey: "awskms:///alias/cargoship",
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(cfg, want) {
+		t.Errorf("expandHomePaths() = %+v, want %+v", cfg, want)
 	}
 }
 

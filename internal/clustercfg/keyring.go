@@ -23,6 +23,7 @@ import (
 
 	"filippo.io/age"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/config"
 )
 
 // AgeIdentityFileEnvVar is the environment variable checked for the path to an age identity file
@@ -152,6 +153,13 @@ func ResolveKeyring(o KeyOptions) (*Keyring, error) {
 // loadIdentities reads the private keys that decrypt, from the files given or from the environment
 // when none were. A file may hold native age identities or an SSH private key; see
 // parseIdentityFile.
+//
+// A leading ~ is expanded here rather than only where the cargoship config file is read, because a
+// path reaches this from three places and only one of them has been through a shell: a flag the
+// operator wrote unquoted (already expanded), the config file (expanded by expandHomePaths in
+// cmd/viper.go), and AgeIdentityFileEnvVar, which nothing expands. Expanding before readKeyFile
+// rather than inside it is what puts the resolved path into the errors below and into the ".pub"
+// path parseIdentityFile derives for an encrypted SSH key.
 func (k *Keyring) loadIdentities(files []string) error {
 	if len(files) == 0 {
 		if env := os.Getenv(AgeIdentityFileEnvVar); env != "" {
@@ -160,6 +168,10 @@ func (k *Keyring) loadIdentities(files []string) error {
 	}
 
 	for _, path := range files {
+		path, err := config.GetAbsHomePath(path)
+		if err != nil {
+			return fmt.Errorf("resolving the home directory in an age identity file path: %w", err)
+		}
 		contents, err := readKeyFile(path)
 		if err != nil {
 			return fmt.Errorf("reading age identity file: %w", err)
@@ -183,6 +195,10 @@ func (k *Keyring) loadIdentities(files []string) error {
 // leave the keyring with a vault password and no recipients, and EncryptFormat would then quietly
 // choose Ansible Vault -- writing the secret under a key the operator did not ask for, which is
 // the one outcome worth refusing outright.
+//
+// A leading ~ in a recipients file path is expanded for the reasons given on loadIdentities. Only
+// the file paths get it: keys is public key material, not paths, and AgeRecipientsEnvVar holds
+// keys rather than a path.
 func (k *Keyring) loadRecipients(keys, files []string) error {
 	if len(keys) == 0 && len(files) == 0 {
 		keys = strings.Fields(os.Getenv(AgeRecipientsEnvVar))
@@ -205,6 +221,10 @@ func (k *Keyring) loadRecipients(keys, files []string) error {
 	}
 
 	for _, path := range files {
+		path, err := config.GetAbsHomePath(path)
+		if err != nil {
+			return fmt.Errorf("resolving the home directory in an age recipients file path: %w", err)
+		}
 		contents, err := readKeyFile(path)
 		if err != nil {
 			return fmt.Errorf("reading age recipients file: %w", err)

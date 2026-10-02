@@ -8,10 +8,10 @@
       },
       "properties": {
         "identity_files": {
-          "description": "are paths to identity files, each holding either the age private keys that\ndecrypt registry credentials or an SSH private key. Equivalent to repeating\n--age-identity-file.",
+          "description": "are paths to identity files, each holding either the age private keys that\ndecrypt registry credentials or an SSH private key. A leading ~ is expanded to the home\ndirectory of the user running cargoship. Equivalent to repeating --age-identity-file.",
           "items": {
             "examples": [
-              "/home/operator/.age/cargoship.key",
+              "~/.age/cargoship.key",
               "/home/operator/.ssh/id_ed25519"
             ],
             "type": "string"
@@ -31,11 +31,11 @@
           "type": "array"
         },
         "recipients_files": {
-          "description": "are paths to files holding public keys, one per line, with # comments\nallowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as\nit is. Equivalent to repeating --age-recipients-file.",
+          "description": "are paths to files holding public keys, one per line, with # comments\nallowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as\nit is. A leading ~ is expanded to the home directory of the user running cargoship.\nEquivalent to repeating --age-recipients-file.",
           "items": {
             "examples": [
               "/etc/cargoship/recipients.txt",
-              "/etc/cargoship/authorized_keys"
+              "~/.ssh/authorized_keys"
             ],
             "type": "string"
           },

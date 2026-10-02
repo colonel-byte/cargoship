@@ -109,6 +109,13 @@ func initViper() error {
 		log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
 	}
 
+	// Must run after the Unmarshal above and before any flag is seeded from resolvedConfig.
+	// Never fatal, same reasoning as the Unmarshal: a home directory that cannot be resolved
+	// leaves the paths as written, which fails later naming the path the operator gave.
+	if err := expandHomePaths(&resolvedConfig); err != nil {
+		log.Warn(lang.CmdViperErrLoadingConfigFile, "error", err)
+	}
+
 	// RegistryOverride and FileOverride are mapstructure:"-" (see types.DistroConfig) and must
 	// be read directly from the config file, bypassing viper's Unmarshal above: their map keys
 	// are registry domains like "docker.io" and URL prefixes like "https://rpm.rancher.io", and
@@ -125,6 +132,48 @@ func initViper() error {
 		}
 	}
 
+	return nil
+}
+
+// expandHomePaths rewrites a leading ~ in every path-valued field of cfg into the running user's
+// home directory.
+//
+// A shell expands ~ before cargoship ever sees a flag value, which is why
+// `--age-identity-file ~/.age/cargoship.key` works. Nothing expands it in a config file or an
+// environment variable, so without this the literal "~/.age/cargoship.key" reaches os.Open and
+// fails -- a config file that names a path a shell would have found.
+//
+// Every field listed here is one cargoship opens itself. AgeOpts.Recipients is deliberately absent:
+// it holds public keys, not paths. SigningKey is present even though it may name a Cosign key
+// provider rather than a file (env://, awskms://, openbao://) -- none of those begin with ~, so
+// they pass through untouched.
+//
+// The `parsePath` calls that seed the tmpdir and cache flags in flag.go cover two of these fields
+// already; they are left in place and are a no-op once this has run.
+func expandHomePaths(cfg *types.DistroConfig) error {
+	paths := []*string{
+		&cfg.CachePath,
+		&cfg.TempDirectory,
+		&cfg.DistroOpts.KubeConfig,
+		&cfg.DistroOpts.Output,
+		&cfg.DistroOpts.PublicKey,
+		&cfg.DistroOpts.TrustedRoot,
+		&cfg.DistroOpts.PublishOpts.SigningKey,
+	}
+	for i := range cfg.AgeOpts.IdentityFiles {
+		paths = append(paths, &cfg.AgeOpts.IdentityFiles[i])
+	}
+	for i := range cfg.AgeOpts.RecipientsFiles {
+		paths = append(paths, &cfg.AgeOpts.RecipientsFiles[i])
+	}
+
+	for _, path := range paths {
+		expanded, err := config.GetAbsHomePath(*path)
+		if err != nil {
+			return err
+		}
+		*path = expanded
+	}
 	return nil
 }
 
