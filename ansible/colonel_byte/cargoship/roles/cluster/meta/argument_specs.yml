@@ -1,5 +1,5 @@
 ---
-# The role's documented interface. docs/ansible/role_cluster.md is generated from this file and
+# The role's documented interface. docs/ansible/cargoship/role_cluster.md is generated from this file and
 # from defaults/main.yml, whose key order sets the row order of the generated table -- so the
 # options below are kept in that same order.
 argument_specs:
