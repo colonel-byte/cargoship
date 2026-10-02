@@ -51,9 +51,11 @@ const (
 	RootZarfCache = "zarf-cache"
 	// RootArchitecture command flag architecture
 	RootArchitecture = "architecture"
-	// RootPlainHTTP command flag plain-http
+	// RootPlainHTTP is the config-file key behind the --plain-http flag. It is a viper key, not
+	// a flag name, which is why it is spelled in the snake_case the config file uses.
 	RootPlainHTTP = "plain_http"
-	// RootInsecureSkipTLSVerify command flag insecure-skip-tls-verify
+	// RootInsecureSkipTLSVerify is the config-file key behind the --insecure-skip-tls-verify
+	// flag, spelled as the config file spells it for the same reason as RootPlainHTTP.
 	RootInsecureSkipTLSVerify = "insecure_skip_tls_verify"
 	// loggingLevelDefault is the log level used when neither a flag, env var,
 	// config file, nor viper default resolves one.
@@ -65,6 +67,9 @@ const (
 	InstallConfig = "config"
 	// InstallConfirm flag
 	InstallConfirm = "confirm"
+	// InstallDistro flag. Named directly by the commands that load no package -- reset and
+	// kube-config -- which have nothing else to read the engine's identity from.
+	InstallDistro = "distro"
 	// InstallDryRun flag
 	InstallDryRun = "dry-run"
 	// InstallConcurrency flag
@@ -101,6 +106,8 @@ const (
 const (
 	// MiscOutput flag
 	MiscOutput = "output"
+	// MiscPackage flag
+	MiscPackage = "package"
 )
 
 var (

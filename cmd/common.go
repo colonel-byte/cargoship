@@ -256,3 +256,16 @@ func preflightReset(configPath string, confirm, dryRun bool) error {
 	}
 	return requireConfirm(confirm, dryRun)
 }
+
+// markRequired marks a flag as required, reporting a failure the way NewCargoshipCommand reports a
+// failed completion registration.
+//
+// MarkFlagRequired only fails when the named flag was never registered, which is a mistake in this
+// package rather than anything an operator did. The command builders return no error, so there is
+// nowhere to hand it: stderr is where it goes, so that a flag silently not being required shows up
+// while it is being written instead of in a run that skipped a check it was meant to make.
+func markRequired(cmd *cobra.Command, name string) {
+	if err := cmd.MarkFlagRequired(name); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to mark the %s flag required: %v\n", name, err)
+	}
+}

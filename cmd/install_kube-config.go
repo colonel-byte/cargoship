@@ -33,15 +33,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-const (
-	// InstallKubeConfig flag
-	InstallKubeConfig = "config"
-	// InstallKubeConfirm flag
-	InstallKubeConfirm = "confirm"
-	// InstallKubeDistro flag
-	InstallKubeDistro = "distro"
-)
-
 type installKubeConfigOptions struct {
 	InstallCommon
 	distro         string
@@ -63,8 +54,8 @@ func newInstallKubeConfigCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&o.config, InstallKubeConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallKubeDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagKubeConfigDistro)
+	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().StringVarP(&o.distro, InstallDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagKubeConfigDistro)
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)

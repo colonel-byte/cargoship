@@ -25,17 +25,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-const (
-	// InstallEngineConfigSyncConfig flag
-	InstallEngineConfigSyncConfig = "config"
-	// InstallEngineConfigSyncConfirm flag
-	InstallEngineConfigSyncConfirm = "confirm"
-	// InstallEngineConfigSyncConcurrency flag
-	InstallEngineConfigSyncConcurrency = "concurrency"
-	// InstallEngineConfigSyncWorkConcurrency flag
-	InstallEngineConfigSyncWorkConcurrency = "work-concurrency"
-)
-
 type installEngineConfigSyncOptions struct {
 	InstallCommon
 	workerCon        string
@@ -61,11 +50,11 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallEngineConfigSyncConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
-	cmd.Flags().StringVar(&o.config, InstallEngineConfigSyncConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().BoolVar(&o.confirm, InstallEngineConfigSyncConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
+	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
-	cmd.Flags().StringVarP(&o.workerCon, InstallEngineConfigSyncWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
@@ -89,7 +78,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 
 	o.LogFormat = val
 
-	cmd.MarkFlagRequired(InstallEngineConfigSyncConfig)
+	markRequired(cmd, InstallConfig)
 
 	addBuildFlags(cmd)
 	addTimeoutFlag(cmd)

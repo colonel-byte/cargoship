@@ -32,19 +32,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-const (
-	// InstallResetConfig flag
-	InstallResetConfig = "config"
-	// InstallResetConfirm flag
-	InstallResetConfirm = "confirm"
-	// InstallResetDistro flag
-	InstallResetDistro = "distro"
-	// InstallResetConcurrency flag
-	InstallResetConcurrency = "concurrency"
-	// InstallResetWorkConcurrency flag
-	InstallResetWorkConcurrency = "work-concurrency"
-)
-
 type installResetOptions struct {
 	InstallCommon
 	workerCon string
@@ -66,12 +53,12 @@ func newInstallResetCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&o.concurrency, InstallResetConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
-	cmd.Flags().StringVar(&o.config, InstallResetConfig, "", lang.CmdInstallFlagConfig)
-	cmd.Flags().StringVarP(&o.distro, InstallResetDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagResetDistro)
-	cmd.Flags().BoolVar(&o.confirm, InstallResetConfirm, false, lang.CmdInstallFlagConfirm)
+	cmd.Flags().IntVarP(&o.concurrency, InstallConcurrency, "c", resolvedConfig.DistroOpts.Concurrency, lang.CmdInstallFlagConcurrency)
+	cmd.Flags().StringVar(&o.config, InstallConfig, "", lang.CmdInstallFlagConfig)
+	cmd.Flags().StringVarP(&o.distro, InstallDistro, "D", resolvedConfig.DistroOpts.Type, lang.CmdInstallFlagResetDistro)
+	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
-	cmd.Flags().StringVarP(&o.workerCon, InstallResetWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -87,7 +74,7 @@ func newInstallResetCommand() *cobra.Command {
 
 	o.LogFormat = val
 
-	cmd.MarkFlagRequired(InstallResetConfig)
+	markRequired(cmd, InstallConfig)
 
 	return cmd
 }
