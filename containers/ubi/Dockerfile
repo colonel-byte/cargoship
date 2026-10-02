@@ -45,12 +45,6 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
   && rm -rf /tmp/rpms \
   && cargoship version
 
-LABEL org.opencontainers.image.title="cargoship" \
-  org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
-  org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
-  org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="ghcr.io/almalinux/10-minimal:10.2"
-
 ENV HOME=/home/nonroot
 
 WORKDIR /workspace

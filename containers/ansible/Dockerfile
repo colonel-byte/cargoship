@@ -21,9 +21,7 @@ ARG ANSIBLE_CORE_VERSION="2.16.16-2.el10_2.1"
 ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
 # hadolint ignore=DL3040
-RUN dnf install -y --nodocs --setopt=install_weak_deps=0 \
-    ansible-core-${ANSIBLE_CORE_VERSION} \
-    bash-completion-${BASH_COMPLETION_VERSION} \
+RUN dnf install -y --nodocs --setopt=install_weak_deps=0 ansible-core-${ANSIBLE_CORE_VERSION} bash-completion-${BASH_COMPLETION_VERSION} \
   && dnf clean all \
   && rm -rf /var/cache/yum
 
@@ -47,12 +45,6 @@ RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
   && rpm --install --verbose /tmp/rpms/*.rpm \
   && rm -rf /tmp/rpms \
   && cargoship version
-
-LABEL org.opencontainers.image.title="cargoship" \
-  org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection" \
-  org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
-  org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="ghcr.io/almalinux/10-base:10.2"
 
 ENV HOME=/home/nonroot
 
