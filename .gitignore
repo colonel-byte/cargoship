@@ -38,3 +38,9 @@ book/
 
 # Added for the commitlint workflow's pinned devDependencies
 .github/commitlint/node_modules/
+
+# Added for the Ansible action plugins: importing them in the working tree -- which is what
+# running a playbook against a collections path symlinked at the repository does -- leaves
+# bytecode beside the source.
+__pycache__/
+*.py[cod]
