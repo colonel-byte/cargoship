@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5cbe792e.js";
+            window.path_to_searchindex_js = "../searchindex-a6d5c96d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-54c4a31c.js"></script>
@@ -217,9 +217,9 @@
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>identity_files</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>are paths to identity files, each holding either the age private keys that<br>decrypt registry credentials or an SSH private key. Equivalent to repeating<br>–age-identity-file.</td></tr>
+<tr><td><code>identity_files</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>are paths to identity files, each holding either the age private keys that<br>decrypt registry credentials or an SSH private key. A leading ~ is expanded to the home<br>directory of the user running cargoship. Equivalent to repeating –age-identity-file.</td></tr>
 <tr><td><code>recipients</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>are the public keys registry credentials are encrypted to, each either an age<br>recipient or an SSH public key. Equivalent to repeating –age-recipient.</td></tr>
-<tr><td><code>recipients_files</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>are paths to files holding public keys, one per line, with # comments<br>allowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as<br>it is. Equivalent to repeating –age-recipients-file.</td></tr>
+<tr><td><code>recipients_files</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>are paths to files holding public keys, one per line, with # comments<br>allowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as<br>it is. A leading ~ is expanded to the home directory of the user running cargoship.<br>Equivalent to repeating –age-recipients-file.</td></tr>
 </tbody>
 </table>
 </div>
