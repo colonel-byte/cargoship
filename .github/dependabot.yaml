@@ -15,8 +15,7 @@ updates:
   - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: weekly
-      day: monday
+      interval: daily
     allow:
       - dependency-type: "all"
     ignore:
@@ -27,13 +26,7 @@ updates:
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
-      interval: weekly
-    assignees:
-      - "a1994sc"
-    groups:
-      core:
-        patterns:
-          - "*"
+      interval: daily
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
