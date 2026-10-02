@@ -59,6 +59,7 @@ type Upstream struct {
 var (
 	_ Distro        = (*Upstream)(nil)
 	_ ImageImporter = (*Upstream)(nil)
+	_ Bootstrapper  = (*Upstream)(nil)
 )
 
 func init() {
@@ -145,11 +146,22 @@ func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string {
 	return cidrs
 }
 
-// ConfigureEngine does distro specific configuration on a host. kubeadm has no equivalent of
-// rke2/k3s's single config.yaml write: a controller is bootstrapped with `kubeadm init` and a
-// worker joins with `kubeadm join`, neither of which is implemented yet.
-func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error {
-	return fmt.Errorf("%w: kubeadm bootstrap", ErrNotImplemented)
+// ConfigureEngine writes DesiredFiles' output to host: containerd's config, crictl.yaml,
+// registry hosts.toml, and the kubeadm-config.yaml this host's role needs. Unlike
+// RancherCommon.ConfigureEngine there is no already-running guard -- kubeadm-config.yaml is meant
+// to be rewritten every run (Bootstrap rewrites it again with the real join token right before
+// `kubeadm join`), so an unconditional overwrite is correct here, not a gap.
+func (d *Upstream) ConfigureEngine(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error {
+	desired, err := d.DesiredFiles(host, run, dis)
+	if err != nil {
+		return err
+	}
+	for path, file := range desired {
+		if err := host.WriteFile(path, string(file.Content), file.Mode); err != nil {
+			return fmt.Errorf("writing %s: %w", path, err)
+		}
+	}
+	return nil
 }
 
 // DesiredFiles returns the full set of engine config files this distro would write: containerd's
