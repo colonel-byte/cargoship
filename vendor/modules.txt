@@ -1823,8 +1823,8 @@ github.com/peterbourgon/diskv
 # github.com/phsym/console-slog v0.3.1
 ## explicit; go 1.21
 github.com/phsym/console-slog
-# github.com/pierrec/lz4/v4 v4.1.30
-## explicit; go 1.17
+# github.com/pierrec/lz4/v4 v4.1.31
+## explicit; go 1.22
 github.com/pierrec/lz4/v4
 github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
