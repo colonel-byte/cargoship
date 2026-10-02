@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-72125e19.js";
+            window.path_to_searchindex_js = "searchindex-144eded6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1ac571e6.js"></script>
@@ -15666,7 +15666,7 @@ test/registry.go       in-process OCI registry used by the publish/pull/sign tes
 <p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary. The <code>cluster</code> package needs Docker and takes tens of minutes, and needs no binary; everything below is about <code>noncluster</code>, and <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a> covers the cluster suite and how to extend it when a phase is added.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <p>Build the binary first. The suite looks for it at <code>build/cargoship_&lt;goos&gt;_&lt;goarch&gt;</code> and <code>TestMain</code> aborts immediately if it is missing:</p>
-<pre><code class="language-console">$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+<pre><code class="language-console">$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 </code></pre>
 <p>This is enough for the tests. A build without the release linker flags leaves <code>cargoship version</code> reporting the unset placeholder values, which the tests tolerate - they assert the fields are present and non-empty, not what they contain.</p>
 <p>The binary is <strong>not</strong> rebuilt by <code>go test</code>. After changing anything under <code>api/</code>, <code>cmd/</code>, <code>config/</code>, <code>fuzz/</code>, <code>internal/</code>, <code>pkg/</code>, or <code>types/</code>, rebuild it, or you will be testing the previous binary against the new expectations.</p>
@@ -16080,20 +16080,20 @@ sha256sum /tmp/from-image
 <h2 id="the-two-shared-helpers"><a class="header" href="#the-two-shared-helpers">The two shared helpers</a></h2>
 <p>Every <code>EndToEnd*</code> target funnels through one of two functions in <code>magefiles/pkg/testrunner/testrunner.go</code>:</p>
 <ul>
-<li><strong><code>RunE2E</code></strong> – builds the binary for the host’s OS/arch first (<code>go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./main.go</code>, the same flags <code>mage build:binary</code> uses), then calls <code>RunE2ENoBuild</code>.</li>
+<li><strong><code>RunE2E</code></strong> – builds the binary for the host’s OS/arch first (<code>go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./cmd/cargoship</code>, the same flags <code>mage build:binary</code> uses), then calls <code>RunE2ENoBuild</code>.</li>
 <li><strong><code>RunE2ENoBuild</code></strong> – creates <code>build/tmp</code>, then runs <code>go test -timeout=&lt;T&gt; -count=1 -v &lt;pkg&gt;</code> with <code>CARGOSHIP_E2E_TMPDIR</code> and <code>TMPDIR</code> both pointed at that directory.</li>
 </ul>
 <p>The manual commands below spell both steps out for each target, so <code>-mod=vendor</code> is included explicitly even though the mage helper relies on the repo’s <code>go env GOFLAGS</code> to add it.</p>
 <h2 id="testendtoend"><a class="header" href="#testendtoend"><code>Test.EndToEnd</code></a></h2>
 <pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
-$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/...
 </code></pre>
 <p>Runs both e2e groups, including the example packages that pull real engine artifacts and images. Needs Docker.</p>
 <h2 id="testendtoendnoncluster"><a class="header" href="#testendtoendnoncluster"><code>Test.EndToEndNonCluster</code></a></h2>
-<pre><code class="language-console">$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+<pre><code class="language-console">$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=30m -count=1 -v -short github.com/colonel-byte/cargoship/test/e2e/noncluster/...

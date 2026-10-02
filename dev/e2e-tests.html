@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-72125e19.js";
+            window.path_to_searchindex_js = "../searchindex-144eded6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1ac571e6.js"></script>
@@ -194,7 +194,7 @@ test/registry.go       in-process OCI registry used by the publish/pull/sign tes
 <p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary. The <code>cluster</code> package needs Docker and takes tens of minutes, and needs no binary; everything below is about <code>noncluster</code>, and <a href="e2e-phase-tests.html">e2e-phase-tests</a> covers the cluster suite and how to extend it when a phase is added.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <p>Build the binary first. The suite looks for it at <code>build/cargoship_&lt;goos&gt;_&lt;goarch&gt;</code> and <code>TestMain</code> aborts immediately if it is missing:</p>
-<pre><code class="language-console">$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" main.go
+<pre><code class="language-console">$ go build -mod=vendor -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 </code></pre>
 <p>This is enough for the tests. A build without the release linker flags leaves <code>cargoship version</code> reporting the unset placeholder values, which the tests tolerate - they assert the fields are present and non-empty, not what they contain.</p>
 <p>The binary is <strong>not</strong> rebuilt by <code>go test</code>. After changing anything under <code>api/</code>, <code>cmd/</code>, <code>config/</code>, <code>fuzz/</code>, <code>internal/</code>, <code>pkg/</code>, or <code>types/</code>, rebuild it, or you will be testing the previous binary against the new expectations.</p>
