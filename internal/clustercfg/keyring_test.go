@@ -187,6 +187,66 @@ func TestResolveKeyringFlagsBeatEnv(t *testing.T) {
 	}
 }
 
+// TestResolveKeyringExpandsHomePath covers a path that never went through a shell: one written
+// into the cargoship config file as age.identity_files, or set in AgeIdentityFileEnvVar. The
+// literal "~" used to reach os.Open, which failed on a path a shell would have found.
+func TestResolveKeyringExpandsHomePath(t *testing.T) {
+	clearKeyEnv(t)
+	id := newAgeIdentity(t)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	keyDir := filepath.Join(home, ".age")
+	if err := os.MkdirAll(keyDir, 0o700); err != nil {
+		t.Fatalf("os.MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(keyDir, "cargoship.key"), []byte(id.String()+"\n"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() error = %v", err)
+	}
+
+	recipientsPath := filepath.Join(home, "recipients.txt")
+	if err := os.WriteFile(recipientsPath, []byte(id.Recipient().String()+"\n"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() error = %v", err)
+	}
+
+	k, err := ResolveKeyring(KeyOptions{
+		AgeIdentityFiles:  []string{"~/.age/cargoship.key"},
+		AgeRecipientFiles: []string{"~/recipients.txt"},
+	})
+	if err != nil {
+		t.Fatalf("ResolveKeyring() error = %v", err)
+	}
+	if len(k.identities) != 1 {
+		t.Errorf("len(identities) = %d, want 1", len(k.identities))
+	}
+	if len(k.recipients) != 1 {
+		t.Errorf("len(recipients) = %d, want 1", len(k.recipients))
+	}
+}
+
+// TestResolveKeyringExpandsHomePathFromEnv covers AgeIdentityFileEnvVar specifically. It is read
+// by os.Getenv here rather than through viper, so the config-file expansion in cmd/viper.go does
+// not cover it.
+func TestResolveKeyringExpandsHomePathFromEnv(t *testing.T) {
+	clearKeyEnv(t)
+	id := newAgeIdentity(t)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.WriteFile(filepath.Join(home, "env-key.txt"), []byte(id.String()+"\n"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() error = %v", err)
+	}
+	t.Setenv(AgeIdentityFileEnvVar, "~/env-key.txt")
+
+	k, err := ResolveKeyring(KeyOptions{})
+	if err != nil {
+		t.Fatalf("ResolveKeyring() error = %v", err)
+	}
+	if len(k.identities) != 1 {
+		t.Errorf("len(identities) = %d, want 1", len(k.identities))
+	}
+}
+
 func TestResolveKeyringRecipientsFile(t *testing.T) {
 	clearKeyEnv(t)
 	first, second := newAgeIdentity(t), newAgeIdentity(t)

@@ -69,14 +69,21 @@ func GetAbsCachePath() (string, error) {
 	return GetAbsHomePath(CommonOptions.CachePath)
 }
 
-// GetAbsHomePath replaces ~ with the absolute path to a user's home dir
+// GetAbsHomePath replaces a leading ~ with the absolute path to the running user's home dir.
+//
+// Only a bare "~" or a "~" followed by a path separator is expanded. The "~user/..." form a shell
+// also understands is deliberately left alone: this resolves the home directory of the running user
+// and nobody else's, so expanding "~other/key" would produce "/home/me/other/key" -- a path that
+// may well exist and hold the wrong file.
 func GetAbsHomePath(path string) (string, error) {
-	if strings.HasPrefix(path, "~") {
-		homePath, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		return strings.Replace(path, "~", homePath, 1), nil
+	rest, ok := strings.CutPrefix(path, "~")
+	if !ok || (rest != "" && !os.IsPathSeparator(rest[0])) {
+		return path, nil
 	}
-	return path, nil
+
+	homePath, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(homePath, rest), nil
 }

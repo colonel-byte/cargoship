@@ -53,7 +53,7 @@ var CommonRegistries = []string{
 ```
 
 <a name="AgeOptions"></a>
-## type [AgeOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L83-L95>)
+## type [AgeOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L83-L96>)
 
 AgeOptions holds the values for the \`.age\` section of the config file, the age alternative to the Ansible Vault password given by \-\-vault\-password\-file.
 
@@ -64,21 +64,22 @@ Each is a list because age is built around encrypting to more than one key: a co
 ```go
 type AgeOptions struct {
     // IdentityFiles are paths to identity files, each holding either the age private keys that
-    // decrypt registry credentials or an SSH private key. Equivalent to repeating
-    // --age-identity-file.
-    IdentityFiles []string `json:"identity_files,omitempty" mapstructure:"identity_files" jsonschema:"example=/home/operator/.age/cargoship.key,example=/home/operator/.ssh/id_ed25519"`
+    // decrypt registry credentials or an SSH private key. A leading ~ is expanded to the home
+    // directory of the user running cargoship. Equivalent to repeating --age-identity-file.
+    IdentityFiles []string `json:"identity_files,omitempty" mapstructure:"identity_files" jsonschema:"example=~/.age/cargoship.key,example=/home/operator/.ssh/id_ed25519"`
     // Recipients are the public keys registry credentials are encrypted to, each either an age
     // recipient or an SSH public key. Equivalent to repeating --age-recipient.
     Recipients []string `json:"recipients,omitempty" mapstructure:"recipients" jsonschema:"example=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p,example=age19h0ngeasgxd5vpcfavgavma2m39cmq3a2xlhggs6u0r5rtscx5ms0gw4jh,example=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample operator@example.com"`
     // RecipientsFiles are paths to files holding public keys, one per line, with # comments
     // allowed, mixing age recipients and SSH public keys freely. An authorized_keys file works as
-    // it is. Equivalent to repeating --age-recipients-file.
-    RecipientsFiles []string `json:"recipients_files,omitempty" mapstructure:"recipients_files" jsonschema:"example=/etc/cargoship/recipients.txt,example=/etc/cargoship/authorized_keys"`
+    // it is. A leading ~ is expanded to the home directory of the user running cargoship.
+    // Equivalent to repeating --age-recipients-file.
+    RecipientsFiles []string `json:"recipients_files,omitempty" mapstructure:"recipients_files" jsonschema:"example=/etc/cargoship/recipients.txt,example=~/.ssh/authorized_keys"`
 }
 ```
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L184>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L185>)
 
 ApplyOptions holds the values for the \`.distro.apply\` section of the config file
 
@@ -117,7 +118,7 @@ type DistroConfig struct {
 ```
 
 <a name="DistroCreateOptions"></a>
-## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L159-L167>)
+## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L160-L168>)
 
 DistroCreateOptions holds the values for the \`.distro.create\` section of the config file
 
@@ -134,7 +135,7 @@ type DistroCreateOptions struct {
 ```
 
 <a name="DistroDeployOptions"></a>
-## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L178-L181>)
+## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L179-L182>)
 
 DistroDeployOptions holds the values for the \`.distro.deploy\` section of the config file
 
@@ -146,7 +147,7 @@ type DistroDeployOptions struct {
 ```
 
 <a name="DistroOptions"></a>
-## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L98-L156>)
+## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L157>)
 
 DistroOptions holds the values for the \`.distro\` section of the config file
 
@@ -213,7 +214,7 @@ type DistroOptions struct {
 ```
 
 <a name="DistroPublishOptions"></a>
-## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L170-L175>)
+## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L171-L176>)
 
 DistroPublishOptions holds the values for the \`.distro.publish\` section of the config file
 
@@ -227,7 +228,7 @@ type DistroPublishOptions struct {
 ```
 
 <a name="FileOverrideMap"></a>
-## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L209>)
+## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L210>)
 
 FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.
 
@@ -236,7 +237,7 @@ type FileOverrideMap map[string]string
 ```
 
 <a name="FileOverrideMap.JSONSchemaExtend"></a>
-### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L214>)
+### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L215>)
 
 ```go
 func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -245,7 +246,7 @@ func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonFileSources to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="RegistryOverrideMap"></a>
-## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L193>)
+## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194>)
 
 RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It's a named type \(rather than a bare map\[string\]string\) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.
 
@@ -254,7 +255,7 @@ type RegistryOverrideMap map[string]string
 ```
 
 <a name="RegistryOverrideMap.JSONSchemaExtend"></a>
-### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L198>)
+### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L199>)
 
 ```go
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -263,7 +264,7 @@ func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonRegistries to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L187>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188>)
 
 ResetOptions holds the values for the \`.distro.reset\` section of the config file
 
