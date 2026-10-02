@@ -37,7 +37,7 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-0d9f2e55.js";
+            window.path_to_searchindex_js = "../../searchindex-8f6e3a29.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../../toc-1ac571e6.js"></script>
@@ -374,14 +374,6 @@
 <li><a href="#InitializeWorkers.Title">func (p *InitializeWorkers) Title() string</a></li>
 </ul>
 </li>
-<li><a href="#InstallFapolicy">type InstallFapolicy</a>
-<ul>
-<li><a href="#InstallFapolicy.Prepare">func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
-<li><a href="#InstallFapolicy.Run">func (p *InstallFapolicy) Run(ctx context.Context) error</a></li>
-<li><a href="#InstallFapolicy.ShouldRun">func (p *InstallFapolicy) ShouldRun() bool</a></li>
-<li><a href="#InstallFapolicy.Title">func (p *InstallFapolicy) Title() string</a></li>
-</ul>
-</li>
 <li><a href="#KubeConfig">type KubeConfig</a>
 <ul>
 <li><a href="#KubeConfig.Bytes">func (p *KubeConfig) Bytes() ([]byte, error)</a></li>
@@ -421,7 +413,7 @@
 <li><a href="#Manager.RetryTimeout">func (m *Manager) RetryTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Manager.Run">func (m *Manager) Run(ctx context.Context) error</a></li>
 <li><a href="#Manager.SetPhases">func (m *Manager) SetPhases(p Phases)</a></li>
-<li><a href="#Manager.SetTimout">func (m *Manager) SetTimout(tm time.Duration)</a></li>
+<li><a href="#Manager.SetTimeout">func (m *Manager) SetTimeout(tm time.Duration)</a></li>
 <li><a href="#Manager.Wet">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs …errorfunc) error</a></li>
 </ul>
 </li>
@@ -572,6 +564,14 @@
 </li>
 </ul>
 <h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
+<p><a name="FAPolicydRuleFile"></a></p>
+<pre><code class="language-go">const (
+    // FAPolicydRuleFile path on the host
+    FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
+    // FAPOLICYD name of the service for fapolicyd
+    FAPOLICYD = "fapolicyd"
+)
+</code></pre>
 <p><a name="FIREWALLD"></a></p>
 <pre><code class="language-go">const (
     // FIREWALLD name of the service for firewalld
@@ -584,18 +584,6 @@
 <pre><code class="language-go">const (
     // ContainerSELinux package name
     ContainerSELinux = "container-selinux"
-)
-</code></pre>
-<p><a name="FAPOLICYD"></a></p>
-<pre><code class="language-go">const (
-    // FAPOLICYD name of the service for fapolicyd
-    FAPOLICYD = "fapolicyd"
-)
-</code></pre>
-<p><a name="FAPolicydRuleFile"></a></p>
-<pre><code class="language-go">const (
-    // FAPolicydRuleFile path on the host
-    FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
 )
 </code></pre>
 <p><a name="UnknownVersion"></a></p>
@@ -1310,35 +1298,6 @@
 <pre><code class="language-go">func (p *InitializeWorkers) Title() string
 </code></pre>
 <p>Title for the phase</p>
-<p><a name="InstallFapolicy"></a></p>
-<h2 id="type-installfapolicy"><a class="header" href="#type-installfapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L31-L35">InstallFapolicy</a></a></h2>
-<p>InstallFapolicy installs required packages and so on on the hosts.</p>
-<pre><code class="language-go">type InstallFapolicy struct {
-    GenericPhase
-    Enabled bool
-    // contains filtered or unexported fields
-}
-</code></pre>
-<p><a name="InstallFapolicy.Prepare"></a></p>
-<h3 id="func-installfapolicy-prepare"><a class="header" href="#func-installfapolicy-prepare">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L38">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
-</code></pre>
-<p>Prepare the phase</p>
-<p><a name="InstallFapolicy.Run"></a></p>
-<h3 id="func-installfapolicy-run"><a class="header" href="#func-installfapolicy-run">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L54">Run</a></a></h3>
-<pre><code class="language-go">func (p *InstallFapolicy) Run(ctx context.Context) error
-</code></pre>
-<p>Run the phase</p>
-<p><a name="InstallFapolicy.ShouldRun"></a></p>
-<h3 id="func-installfapolicy-shouldrun"><a class="header" href="#func-installfapolicy-shouldrun">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L59">ShouldRun</a></a></h3>
-<pre><code class="language-go">func (p *InstallFapolicy) ShouldRun() bool
-</code></pre>
-<p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
-<p><a name="InstallFapolicy.Title"></a></p>
-<h3 id="func-installfapolicy-title"><a class="header" href="#func-installfapolicy-title">func (*InstallFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L49">Title</a></a></h3>
-<pre><code class="language-go">func (p *InstallFapolicy) Title() string
-</code></pre>
-<p>Title for the phase</p>
 <p><a name="KubeConfig"></a></p>
 <h2 id="type-kubeconfig"><a class="header" href="#type-kubeconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L43-L61">KubeConfig</a></a></h2>
 <p>KubeConfig phase state</p>
@@ -1530,11 +1489,11 @@
 <pre><code class="language-go">func (m *Manager) SetPhases(p Phases)
 </code></pre>
 <p>SetPhases sets the list of phases</p>
-<p><a name="Manager.SetTimout"></a></p>
-<h3 id="func-manager-settimout"><a class="header" href="#func-manager-settimout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433">SetTimout</a></a></h3>
-<pre><code class="language-go">func (m *Manager) SetTimout(tm time.Duration)
+<p><a name="Manager.SetTimeout"></a></p>
+<h3 id="func-manager-settimeout"><a class="header" href="#func-manager-settimeout">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L433">SetTimeout</a></a></h3>
+<pre><code class="language-go">func (m *Manager) SetTimeout(tm time.Duration)
 </code></pre>
-<p>SetTimout sets the timeout for the manager</p>
+<p>SetTimeout sets the timeout for the manager</p>
 <p><a name="Manager.Wet"></a></p>
 <h3 id="func-manager-wet"><a class="header" href="#func-manager-wet">func (*Manager) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L455">Wet</a></a></h3>
 <pre><code class="language-go">func (m *Manager) Wet(_ fmt.Stringer, _ string, funcs ...errorfunc) error
@@ -1650,7 +1609,7 @@
 </code></pre>
 <p>Replace replaces the first occurrence of a phase with the given title</p>
 <p><a name="PrepareFapolicy"></a></p>
-<h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L31-L34">PrepareFapolicy</a></a></h2>
+<h2 id="type-preparefapolicy"><a class="header" href="#type-preparefapolicy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L36">PrepareFapolicy</a></a></h2>
 <p>PrepareFapolicy installs required packages and so on on the hosts.</p>
 <pre><code class="language-go">type PrepareFapolicy struct {
     GenericPhase
@@ -1658,27 +1617,27 @@
 }
 </code></pre>
 <p><a name="PrepareFapolicy.Explanation"></a></p>
-<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L53">Explanation</a></a></h3>
+<h3 id="func-preparefapolicy-explanation"><a class="header" href="#func-preparefapolicy-explanation">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L55">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="PrepareFapolicy.Prepare"></a></p>
-<h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L37">Prepare</a></a></h3>
+<h3 id="func-preparefapolicy-prepare"><a class="header" href="#func-preparefapolicy-prepare">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="PrepareFapolicy.Run"></a></p>
-<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L58">Run</a></a></h3>
+<h3 id="func-preparefapolicy-run"><a class="header" href="#func-preparefapolicy-run">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L60">Run</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="PrepareFapolicy.ShouldRun"></a></p>
-<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L63">ShouldRun</a></a></h3>
+<h3 id="func-preparefapolicy-shouldrun"><a class="header" href="#func-preparefapolicy-shouldrun">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L65">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there is a host with selinux or fapolicyd on the hosts</p>
 <p><a name="PrepareFapolicy.Title"></a></p>
-<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L48">Title</a></a></h3>
+<h3 id="func-preparefapolicy-title"><a class="header" href="#func-preparefapolicy-title">func (*PrepareFapolicy) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L50">Title</a></a></h3>
 <pre><code class="language-go">func (p *PrepareFapolicy) Title() string
 </code></pre>
 <p>Title for the phase</p>

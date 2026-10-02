@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0d9f2e55.js";
+            window.path_to_searchindex_js = "../searchindex-8f6e3a29.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1ac571e6.js"></script>
@@ -201,14 +201,14 @@
 </li>
 <li>Acquire exclusive host lock
 <ul>
-<li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
+<li>Runs a background task that touches a file every 30 seconds on each remote node. This prevents other <code>cargoships</code> from making any changes until the lock file has not been touched for over a minute</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Gather host facts
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
-<li>Dry run: runs, reads only. Gather facts about each host by asks for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.</li>
+<li>Dry run: runs, reads only. Gather facts about each host by asking for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.</li>
 </ul>
 </li>
 <li>Validate hosts

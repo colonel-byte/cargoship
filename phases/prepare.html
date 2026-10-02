@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0d9f2e55.js";
+            window.path_to_searchindex_js = "../searchindex-8f6e3a29.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1ac571e6.js"></script>
@@ -201,7 +201,7 @@
 </li>
 <li>Acquire exclusive host lock
 <ul>
-<li>Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other <code>cargoships</code> from doing any changes until the lock file has not been touch for over a minute</li>
+<li>Runs a background task that touches a file every 30 seconds on each remote node. This prevents other <code>cargoships</code> from making any changes until the lock file has not been touched for over a minute</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
@@ -219,11 +219,11 @@
 </li>
 <li>Prepare hosts - Enterprise Linux support - Fapolicyd
 <ul>
-<li>Creates the distro supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules</li>
+<li>Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
-<li>Enable the requested kernel modueles
+<li>Enable the requested kernel modules
 <ul>
 <li>Turns on the list of requested modules on the host, then reboots the box if modules are added</li>
 <li>Dry run: reported, not run</li>

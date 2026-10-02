@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-0d9f2e55.js";
+            window.path_to_searchindex_js = "../searchindex-8f6e3a29.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-1ac571e6.js"></script>
@@ -200,9 +200,6 @@
 <tr><td><code>distro</code></td><td><code>str</code></td><td>no</td><td><code>--distro</code></td><td>The distro to remove. One of <code>k3s</code>, <code>rke2</code>.</td></tr>
 <tr><td><code>concurrency</code></td><td><code>int</code></td><td>no</td><td><code>--concurrency</code></td><td>How many hosts to work on at once.</td></tr>
 <tr><td><code>work_concurrency</code></td><td><code>str</code></td><td>no</td><td><code>--work-concurrency</code></td><td>How much work to run concurrently on each host. A count or a percentage, as a string.</td></tr>
-<tr><td><code>hosts</code></td><td><code>bool</code></td><td>no</td><td><code>--hosts</code></td><td>Whether to manage <code>/etc/hosts</code> entries on the fleet.</td></tr>
-<tr><td><code>firewall</code></td><td><code>bool</code></td><td>no</td><td><code>--firewall</code></td><td>Whether to manage the host firewall on the fleet.</td></tr>
-<tr><td><code>fapolicyd</code></td><td><code>bool</code></td><td>no</td><td><code>--fapolicyd</code></td><td>Whether to manage fapolicyd rules on the fleet.</td></tr>
 <tr><td><code>inventory_path</code></td><td><code>str</code></td><td>no</td><td><code>--config</code></td><td>Where to write the generated ZarfCluster document. A private temporary file when unset, removed after a run that succeeded. A run that fails leaves the document on disk either way, because it is the first thing to look at when a failure reads like the wrong cluster.</td></tr>
 <tr><td><code>age_recipient</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Age public keys used to encrypt registry credentials written into the generated inventory document. Consumed while that document is written, so it renders no flag.</td></tr>
 <tr><td><code>age_recipients_file</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td>None</td><td>Files holding age public keys, read for the same purpose as <code>age_recipient</code>.</td></tr>

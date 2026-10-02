@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0d9f2e55.js";
+            window.path_to_searchindex_js = "searchindex-8f6e3a29.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-1ac571e6.js"></script>
@@ -195,6 +195,44 @@
 </ol>
 <p>Cargoship bridges the gap between offline distro packaging tools and remote cluster lifecycle managers, supporting OCI image and file packaging, secure publishing to OCI registries, and robust SSH orchestration.</p>
 <hr>
+<h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
+<h3 id="pre-built-binaries"><a class="header" href="#pre-built-binaries">Pre-built binaries</a></h3>
+<p>Every release publishes archives for Linux, macOS, and Windows across <code>amd64</code>, <code>arm64</code>, <code>arm</code>, <code>386</code>, and <code>riscv64</code>. The archive names follow <code>uname</code>, so the one for a 64-bit Linux host is <code>cargoship_Linux_x86_64.tar.gz</code>:</p>
+<pre><code class="language-bash">VERSION=$(curl -fsSL https://api.github.com/repos/colonel-byte/cargoship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+curl -fsSLO "https://github.com/colonel-byte/cargoship/releases/download/${VERSION}/cargoship_Linux_x86_64.tar.gz"
+tar -xzf cargoship_Linux_x86_64.tar.gz cargoship
+install -m 0755 cargoship /usr/local/bin/cargoship
+</code></pre>
+<h3 id="linux-packages"><a class="header" href="#linux-packages">Linux packages</a></h3>
+<p>Releases also carry <code>.rpm</code>, <code>.deb</code>, and <code>.apk</code> packages, which install the binary along with the <code>colonel_byte.cargoship</code> Ansible collection onto ansible-core’s default collection path:</p>
+<pre><code class="language-bash">sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
+</code></pre>
+<h3 id="container-images"><a class="header" href="#container-images">Container images</a></h3>
+<pre><code class="language-bash">podman run --rm ghcr.io/colonel-byte/cargoship:latest version
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Image</th><th>Contents</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ghcr.io/colonel-byte/cargoship</code></td><td>The binary on a minimal base</td></tr>
+<tr><td><code>ghcr.io/colonel-byte/cargoship-ubi</code></td><td>The binary on Red Hat UBI</td></tr>
+<tr><td><code>ghcr.io/colonel-byte/cargoship-deb</code></td><td>The binary installed from the <code>.deb</code></td></tr>
+<tr><td><code>ghcr.io/colonel-byte/cargoship-ansible</code></td><td>The binary plus the Ansible collection and ansible-core</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="from-source"><a class="header" href="#from-source">From source</a></h3>
+<p>Building needs Go 1.27 or newer. The repository vendors its dependencies, so a clone builds without network access:</p>
+<pre><code class="language-bash">go install github.com/colonel-byte/cargoship@latest
+</code></pre>
+<h3 id="verifying-a-download"><a class="header" href="#verifying-a-download">Verifying a download</a></h3>
+<p>Release archives and container images are signed with <a href="https://docs.sigstore.dev/cosign/">Cosign</a>, using the key published at <a href="https://github.com/colonel-byte/cargoship/blob/main/cosign.pub"><code>cosign.pub</code></a>. Each archive ships a <code>.sigstore.json</code> bundle beside it, and every release carries a <code>checksums.txt</code>:</p>
+<pre><code class="language-bash">cosign verify-blob --key cosign.pub --bundle cargoship_Linux_x86_64.tar.gz.sigstore.json cargoship_Linux_x86_64.tar.gz
+cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:latest
+</code></pre>
+<hr>
 <h2 id="supported-distributions"><a class="header" href="#supported-distributions">Supported Distributions</a></h2>
 <p>Cargoship currently provides native support and integration for the following Kubernetes engines:</p>
 <ul>
@@ -229,6 +267,7 @@
 <hr>
 <h2 id="usage-examples"><a class="header" href="#usage-examples">Usage Examples</a></h2>
 <p>Here are the standard workflows for compiling and deploying offline Kubernetes packages with Cargoship.</p>
+<p>The commands that change a host - <code>prepare</code>, <code>apply</code>, <code>reset</code>, and <code>engine-config-sync</code> - will not do so without <code>--confirm</code>. Swap it for <code>--dry-run</code> to connect to every host and run the preflight checks for real, reporting what the run would change without changing it.</p>
 <h3 id="1-compile-an-offline-package"><a class="header" href="#1-compile-an-offline-package">1. Compile an Offline Package</a></h3>
 <p>To build an offline archive containing all required files, binaries, and container images:</p>
 <pre><code class="language-bash"># Create a package from the current directory structure
@@ -239,11 +278,11 @@ cargoship create ./distro-defs -o ./build/
 </code></pre>
 <h3 id="2-prepare-target-nodes"><a class="header" href="#2-prepare-target-nodes">2. Prepare Target Nodes</a></h3>
 <p>Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, <code>fapolicyd</code> rules, and <code>/etc/hosts</code>) across target machines using your cluster configuration inventory:</p>
-<pre><code class="language-bash">cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+<pre><code class="language-bash">cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 </code></pre>
 <h3 id="3-deploy-or-upgrade-a-cluster"><a class="header" href="#3-deploy-or-upgrade-a-cluster">3. Deploy or Upgrade a Cluster</a></h3>
 <p>Bootstrap a new cluster or upgrade an existing one from the compiled package:</p>
-<pre><code class="language-bash">cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+<pre><code class="language-bash">cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 </code></pre>
 <h3 id="4-fetch-the-kubeconfig"><a class="header" href="#4-fetch-the-kubeconfig">4. Fetch the Kubeconfig</a></h3>
 <p>Retrieve the admin <code>kubeconfig</code> securely from the primary controller:</p>
@@ -251,7 +290,7 @@ cargoship create ./distro-defs -o ./build/
 </code></pre>
 <h3 id="5-uninstall-or-reset-target-nodes"><a class="header" href="#5-uninstall-or-reset-target-nodes">5. Uninstall or Reset Target Nodes</a></h3>
 <p>Stop, uninstall, and completely purge the Kubernetes distro and its state from the target hosts:</p>
-<pre><code class="language-bash">cargoship reset --config ./cargoship-config.yaml --distro rke2
+<pre><code class="language-bash">cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
 </code></pre>
 <h3 id="6-generate-an-inventory-from-ansible"><a class="header" href="#6-generate-an-inventory-from-ansible">6. Generate an Inventory from Ansible</a></h3>
 <p>Translate an Ansible inventory you already maintain into a cargoship cluster inventory, taking each host’s role from its Ansible groups:</p>
