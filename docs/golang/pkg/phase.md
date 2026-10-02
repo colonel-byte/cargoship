@@ -129,11 +129,6 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*InitializeWorkers\) Run\(ctx context.Context\) error](<#InitializeWorkers.Run>)
   - [func \(p \*InitializeWorkers\) ShouldRun\(\) bool](<#InitializeWorkers.ShouldRun>)
   - [func \(p \*InitializeWorkers\) Title\(\) string](<#InitializeWorkers.Title>)
-- [type InstallFapolicy](<#InstallFapolicy>)
-  - [func \(p \*InstallFapolicy\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InstallFapolicy.Prepare>)
-  - [func \(p \*InstallFapolicy\) Run\(ctx context.Context\) error](<#InstallFapolicy.Run>)
-  - [func \(p \*InstallFapolicy\) ShouldRun\(\) bool](<#InstallFapolicy.ShouldRun>)
-  - [func \(p \*InstallFapolicy\) Title\(\) string](<#InstallFapolicy.Title>)
 - [type KubeConfig](<#KubeConfig>)
   - [func \(p \*KubeConfig\) Bytes\(\) \(\[\]byte, error\)](<#KubeConfig.Bytes>)
   - [func \(p \*KubeConfig\) Config\(\) \*clientcmdapi.Config](<#KubeConfig.Config>)
@@ -260,6 +255,17 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
 
 ## Constants
 
+<a name="FAPolicydRuleFile"></a>
+
+```go
+const (
+    // FAPolicydRuleFile path on the host
+    FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
+    // FAPOLICYD name of the service for fapolicyd
+    FAPOLICYD = "fapolicyd"
+)
+```
+
 <a name="FIREWALLD"></a>
 
 ```go
@@ -277,24 +283,6 @@ const (
 const (
     // ContainerSELinux package name
     ContainerSELinux = "container-selinux"
-)
-```
-
-<a name="FAPOLICYD"></a>
-
-```go
-const (
-    // FAPOLICYD name of the service for fapolicyd
-    FAPOLICYD = "fapolicyd"
-)
-```
-
-<a name="FAPolicydRuleFile"></a>
-
-```go
-const (
-    // FAPolicydRuleFile path on the host
-    FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
 )
 ```
 
@@ -1509,55 +1497,6 @@ func (p *InitializeWorkers) Title() string
 
 Title for the phase
 
-<a name="InstallFapolicy"></a>
-## type [InstallFapolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L31-L35>)
-
-InstallFapolicy installs required packages and so on on the hosts.
-
-```go
-type InstallFapolicy struct {
-    GenericPhase
-    Enabled bool
-    // contains filtered or unexported fields
-}
-```
-
-<a name="InstallFapolicy.Prepare"></a>
-### func \(\*InstallFapolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L38>)
-
-```go
-func (p *InstallFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
-```
-
-Prepare the phase
-
-<a name="InstallFapolicy.Run"></a>
-### func \(\*InstallFapolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L54>)
-
-```go
-func (p *InstallFapolicy) Run(ctx context.Context) error
-```
-
-Run the phase
-
-<a name="InstallFapolicy.ShouldRun"></a>
-### func \(\*InstallFapolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L59>)
-
-```go
-func (p *InstallFapolicy) ShouldRun() bool
-```
-
-ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
-
-<a name="InstallFapolicy.Title"></a>
-### func \(\*InstallFapolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/ext_install_fapolicyd.go#L49>)
-
-```go
-func (p *InstallFapolicy) Title() string
-```
-
-Title for the phase
-
 <a name="KubeConfig"></a>
 ## type [KubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/80_kubeconfig.go#L43-L61>)
 
@@ -2057,7 +1996,7 @@ func (p *Phases) Replace(title string, phase Phase)
 Replace replaces the first occurrence of a phase with the given title
 
 <a name="PrepareFapolicy"></a>
-## type [PrepareFapolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L31-L34>)
+## type [PrepareFapolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L33-L36>)
 
 PrepareFapolicy installs required packages and so on on the hosts.
 
@@ -2069,7 +2008,7 @@ type PrepareFapolicy struct {
 ```
 
 <a name="PrepareFapolicy.Explanation"></a>
-### func \(\*PrepareFapolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L53>)
+### func \(\*PrepareFapolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L55>)
 
 ```go
 func (p *PrepareFapolicy) Explanation() string
@@ -2078,7 +2017,7 @@ func (p *PrepareFapolicy) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="PrepareFapolicy.Prepare"></a>
-### func \(\*PrepareFapolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L37>)
+### func \(\*PrepareFapolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L39>)
 
 ```go
 func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
@@ -2087,7 +2026,7 @@ func (p *PrepareFapolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _
 Prepare the phase
 
 <a name="PrepareFapolicy.Run"></a>
-### func \(\*PrepareFapolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L58>)
+### func \(\*PrepareFapolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L60>)
 
 ```go
 func (p *PrepareFapolicy) Run(ctx context.Context) error
@@ -2096,7 +2035,7 @@ func (p *PrepareFapolicy) Run(ctx context.Context) error
 Run the phase
 
 <a name="PrepareFapolicy.ShouldRun"></a>
-### func \(\*PrepareFapolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L63>)
+### func \(\*PrepareFapolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L65>)
 
 ```go
 func (p *PrepareFapolicy) ShouldRun() bool
@@ -2105,7 +2044,7 @@ func (p *PrepareFapolicy) ShouldRun() bool
 ShouldRun is true when there is a host with selinux or fapolicyd on the hosts
 
 <a name="PrepareFapolicy.Title"></a>
-### func \(\*PrepareFapolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L48>)
+### func \(\*PrepareFapolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/22_prepare_fapolicyd.go#L50>)
 
 ```go
 func (p *PrepareFapolicy) Title() string
