@@ -1,0 +1,43 @@
+# The flags `zarf package deploy` accepts, including the global flags it inherits, recorded from
+# the zarf documentation for the release this wrapper was written against.
+#
+# Source: https://docs.zarf.dev/commands/zarf_package_deploy/
+# Recorded: 2026-10-02
+#
+# TestDeployArgsAreKnownFlags holds every flag the module renders against this list. See the header
+# of zarf-init-flags.txt for why the list is recorded rather than read from zarf itself.
+#
+# One flag per line. Blank lines and lines beginning with # are ignored.
+
+architecture
+cache
+certificate-identity
+certificate-identity-regexp
+certificate-oidc-issuer
+certificate-oidc-issuer-regexp
+components
+confirm
+connected
+features
+force-conflicts
+insecure-ignore-tlog
+insecure-skip-tls-verify
+key
+log-format
+log-level
+namespace
+no-color
+oci-concurrency
+plain-http
+retries
+set-values
+set-variables
+shasum
+skip-values-schema-validation
+take-ownership
+timeout
+tmpdir
+trusted-root
+use-signed-timestamps
+values
+verify
