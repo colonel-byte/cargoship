@@ -1,0 +1,27 @@
+---
+# Initialise a cluster with a staged zarf init package.
+#
+# The play runs on the management node: zarf reaches the cluster through the kubeconfig, and
+# nothing here touches a cluster node directly. Run it with -v to see each component as zarf
+# reaches it.
+- name: Initialise a cluster with zarf
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    zarf_init_package: /srv/staging/zarf-init-amd64-v0.70.0.tar.zst
+    zarf_kubeconfig: /etc/rancher/rke2/rke2.yaml
+  tasks:
+    - name: Run zarf init
+      colonel_byte.zarf.zarf_init:
+        init_package: "{{ zarf_init_package }}"
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        timeout: 30m
+      delegate_to: localhost
+      run_once: true
+      no_log: true
+      register: zarf_init_result
+
+    - name: Report what the init package deployed
+      ansible.builtin.debug:
+        msg: "{{ zarf_init_result.zarf.componentsRan | default([]) }}"

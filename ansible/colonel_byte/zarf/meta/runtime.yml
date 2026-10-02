@@ -1,0 +1,10 @@
+---
+# Collections are loaded by ansible-core on the controller, and the action plugin here uses
+# ansible.builtin plugin APIs that settled in 2.15. There is no managed-node floor to declare:
+# nothing in this collection runs on a managed node. Zarf talks to the cluster through a
+# kubeconfig, from the node the task runs on.
+#
+# _low_level_execute_command is not covered by ansible-core's deprecation policy, which is the
+# tradeoff ZEP-0072 records for bypassing module staging. Pin and re-verify when the supported
+# ansible-core range moves.
+requires_ansible: ">=2.15.0"
