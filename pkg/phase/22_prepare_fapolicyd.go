@@ -51,7 +51,7 @@ func (p *PrepareFapolicy) Title() string {
 
 // Explanation about the current phase, used for documentation generation
 func (p *PrepareFapolicy) Explanation() string {
-	return "Creates the distro supplied FAPolicy rules to " + FAPolicydRuleFile
+	return "Writes the distro-supplied FAPolicy rules to " + FAPolicydRuleFile
 }
 
 // Run the phase

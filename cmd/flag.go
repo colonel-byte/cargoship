@@ -37,7 +37,7 @@ func registerFlagOCIConcurrency(cmd *cobra.Command, con *int) error {
 // registerFlagOutputFormat adds the output format flag to cmd, backed by format, with shell
 // completion suggestions provided by flags.RegisterOutputFormat.
 func registerFlagOutputFormat(cmd *cobra.Command, format pflag.Value) error {
-	cmd.Flags().VarP(format, MiscOutput, "o", lang.CmdVersionOutputFromat)
+	cmd.Flags().VarP(format, MiscOutput, "o", lang.CmdVersionOutputFormat)
 	return cmd.RegisterFlagCompletionFunc(MiscOutput, flags.RegisterOutputFormat)
 }
 

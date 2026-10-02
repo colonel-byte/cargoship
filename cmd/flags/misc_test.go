@@ -25,8 +25,8 @@ import (
 func TestGetOutputFormat(t *testing.T) {
 	values := getOutputFormat()
 	require.Len(t, values, 2)
-	require.Contains(t, values[0], string(config.OutputFromatJSON))
-	require.Contains(t, values[1], string(config.OutputFromatYAML))
+	require.Contains(t, values[0], string(config.OutputFormatJSON))
+	require.Contains(t, values[1], string(config.OutputFormatYAML))
 }
 
 func TestRegisterOutputFormat(t *testing.T) {

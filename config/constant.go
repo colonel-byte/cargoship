@@ -52,12 +52,12 @@ const (
 )
 
 const (
-	// OutputFromatJSON json output format
-	OutputFromatJSON = "json"
-	// OutputFromatYAML yaml output format
-	OutputFromatYAML = "yaml"
-	// OutputFromatTable table output format
-	OutputFromatTable = "table"
+	// OutputFormatJSON json output format
+	OutputFormatJSON = "json"
+	// OutputFormatYAML yaml output format
+	OutputFormatYAML = "yaml"
+	// OutputFormatTable table output format
+	OutputFormatTable = "table"
 )
 
 const (

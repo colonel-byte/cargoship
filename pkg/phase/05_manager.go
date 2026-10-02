@@ -429,8 +429,8 @@ func (m *Manager) SetPhases(p Phases) {
 	m.phases = p
 }
 
-// SetTimout sets the timeout for the manager
-func (m *Manager) SetTimout(tm time.Duration) {
+// SetTimeout sets the timeout for the manager
+func (m *Manager) SetTimeout(tm time.Duration) {
 	m.Timeout = tm
 }
 

@@ -101,7 +101,7 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		return err
 	}
 
-	manager.SetTimout(d)
+	manager.SetTimeout(d)
 
 	// Allowed to come back empty: a configuration holding no encrypted credential needs no key,
 	// and demanding one would break every plaintext configuration that works today.

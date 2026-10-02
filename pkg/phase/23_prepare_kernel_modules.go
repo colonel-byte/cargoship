@@ -32,7 +32,7 @@ type PrepareKernelModules struct {
 
 // Title for the phase
 func (p *PrepareKernelModules) Title() string {
-	return "Enable the requested kernel modueles"
+	return "Enable the requested kernel modules"
 }
 
 // Explanation about the current phase, used for documentation generation

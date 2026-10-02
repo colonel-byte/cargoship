@@ -27,7 +27,7 @@ cargoship COMMAND [flags]
 * [cargoship kube-config](./cargoship_kube-config.md)	 - Get the admin kube-config for a control-plane node
 * [cargoship prepare](./cargoship_prepare.md)	 - Prepares the nodes, including restarting the node if new kernel modules are enabled
 * [cargoship publish](./cargoship_publish.md)	 - Publish the Cargoship Package to an OCI registry
-* [cargoship pull](./cargoship_pull.md)	 - Pulls a Cargoship package from a remote registry and save to the local file system
+* [cargoship pull](./cargoship_pull.md)	 - Pulls a Cargoship package from a remote registry and saves it to the local filesystem
 * [cargoship reset](./cargoship_reset.md)	 - Reset a cluster, stopping, uninstalling, and removing all data for an engine
 * [cargoship schema](./cargoship_schema.md)	 - Writes out a JSON Schema for one of cargoship's own file formats
 * [cargoship sha256sum](./cargoship_sha256sum.md)	 - Generates a SHA256SUM for the given file
