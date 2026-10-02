@@ -40,7 +40,7 @@ This tool can be used to inspect both the internal stages and final results of
 YAML processing with the go-yaml library.
 It should be used when reporting most bugs.
 
-The `go-yaml` CLI tool uses the `go.yaml.in/yaml/v4` library to decode and
+The `go-yaml` CLI tool uses the `github.com/pb33f/go-yaml` library to decode and
 encode YAML.
 Decoding YAML is a multi-stage process that involves tokens, events, and nodes.
 The `go-yaml` CLI tool lets you see all of these intermediate stages of the
@@ -48,7 +48,7 @@ decoding process.
 This is crucial for understanding what go-yaml is doing internally.
 
 The `go-yaml` CLI tool can be built with the `make go-yaml` command or installed
-with the `go install go.yaml.in/yaml/v4/cmd/go-yaml@latest` command.
+with the `go install github.com/pb33f/go-yaml/cmd/go-yaml@latest` command.
 
 You can learn about all of its options with the `go-yaml -h` command.
 
@@ -184,7 +184,7 @@ The repository's makefile (`GNUmakefile`) provides a number of useful targets:
 If you need help, you can:
 - Open an [issue](https://github.com/yaml/go-yaml/issues) with your question
 - Start a [discussion](https://github.com/yaml/go-yaml/discussions)
-- Read through our [documentation](https://pkg.go.dev/go.yaml.in/yaml/v4)
+- Read through our [documentation](https://pkg.go.dev/github.com/pb33f/go-yaml)
 - Check the [migration guide](docs/v3-to-v4-migration.md) if upgrading from v3
 - Join our [Slack channel](https://cloud-native.slack.com/archives/C08PPAT8PS7)
 

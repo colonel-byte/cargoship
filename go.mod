@@ -27,7 +27,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/otiai10/copy v1.14.1
-	github.com/pb33f/ordered-map/v2 v2.3.1
+	github.com/pb33f/ordered-map/v2 v2.3.2
 	github.com/pterm/pterm v0.12.83
 	github.com/sigstore/cosign/v3 v3.1.3
 	github.com/sosedoff/ansible-vault-go v0.2.0
@@ -320,6 +320,7 @@ require (
 	github.com/olekukonko/tablewriter v1.1.5 // indirect
 	github.com/open-policy-agent/opa v1.21.0 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
+	github.com/pb33f/go-yaml v0.1.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -401,7 +402,6 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.59.0 // indirect

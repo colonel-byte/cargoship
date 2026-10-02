@@ -11,8 +11,8 @@
 // # Usage
 //
 //	import (
-//	    "go.yaml.in/yaml/v4"
-//	    "go.yaml.in/yaml/v4/plugin/limit"
+//	    "github.com/pb33f/go-yaml"
+//	    "github.com/pb33f/go-yaml/plugin/limit"
 //	)
 //
 //	// Default limits
@@ -37,7 +37,7 @@ package limit
 import (
 	"fmt"
 
-	"go.yaml.in/yaml/v4/internal/libyaml"
+	"github.com/pb33f/go-yaml/internal/libyaml"
 )
 
 // DepthContext is an alias for the type used in depth check callbacks.
