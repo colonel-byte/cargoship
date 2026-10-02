@@ -17,6 +17,7 @@ package phase
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
@@ -80,6 +81,9 @@ func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluste
 	logger.From(ctx).Info("detected", "host", h, "version", h.Metadata.DistroVersion)
 	if p.d != nil && p.VersionGreater(h, p.d.Spec.Version) {
 		return errors.New("will not downgrade the cluster")
+	}
+	if p.d != nil && p.VersionSkewTooGreat(h, p.d.Spec.Version) {
+		return fmt.Errorf("will not upgrade %s more than one minor version at a time", h)
 	}
 	return nil
 }
