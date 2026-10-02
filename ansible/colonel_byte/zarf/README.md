@@ -8,11 +8,11 @@ Zarf is not an SSH orchestrator. It talks to one cluster through a kubeconfig, f
 
 Each module is a compiled wrapper binary rather than a Python module:
 
-| Layer                                             | What it is                                                                                                                                                        |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Layer                                             | What it is                                                                                                                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `colonel_byte.zarf.zarf_init`                     | A wrapper binary built from `cmd/zarf/init`. It renders the `zarf init` command line, runs the installed zarf, follows the deployment, and writes one JSON object. |
-| `colonel_byte.zarf.zarf_package_deploy`           | The same, for `zarf package deploy`, built from `cmd/zarf/deploy`.                                                                                                |
-| `plugins/action/zarf_init.py`, `..._deploy.py`    | The documented parameter surfaces, and the delivery and display described below. They hold no translation rules.                                                  |
+| `colonel_byte.zarf.zarf_package_deploy`           | The same, for `zarf package deploy`, built from `cmd/zarf/deploy`.                                                                                                 |
+| `plugins/action/zarf_init.py`, `..._deploy.py`    | The documented parameter surfaces, and the delivery and display described below. They hold no translation rules.                                                   |
 | `plugins/plugin_utils/projection.py`              | Argument delivery, the heartbeat monitor thread, and result parsing. The whole of the Python in this collection.                                                   |
 
 ZEP-0072 proposes putting the module dispatch inside the `zarf` binary itself, which a proof in this repository cannot do. The wrappers are the one deliberate divergence; everything else -- `argv[0]` dispatch, the WANT_JSON intake, the stdout guard, the single JSON result, the heartbeat side channel -- is the shape the proposal describes.
