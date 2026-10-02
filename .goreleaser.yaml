@@ -23,6 +23,10 @@ before:
     # playbooks is inside the airlock, so it installs the collection from this tarball rather than
     # from Galaxy. A snapshot passes no version, because its version is not the one in galaxy.yml.
     - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}{{ else }}{{ .Version }}{{ end }}
+    # The zarf collection is the ZEP-0072 proof, and it is versioned on its own cadence rather
+    # than with the cargoship tag, so no expected version is passed. See
+    # docs/agent/choice-zarf-ansible-module.md.
+    - hack/ansible-build-collection.sh bin/ansible "" ansible/colonel_byte/zarf
 
 builds:
   - id: cargoship
@@ -53,8 +57,65 @@ builds:
       - -trimpath
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # The zarf_init Ansible module file. It is a module file rather than a CLI: it reads JSON
+  # parameters, runs the installed zarf, and writes one JSON object, so it is only ever invoked by
+  # Ansible or by an operator reproducing such a run. See docs/agent/choice-zarf-ansible-module.md.
+  #
+  # Linux only: Ansible runs the module file on the management node, and the management nodes this
+  # is for run Linux. The architectures match the cargoship build's Linux set rather than only the
+  # two the containers use, because the packages below carry a symlink to this binary and a package
+  # built for an architecture the binary was not built for would install a dangling one.
+  - id: zarf_init
+    main: ./cmd/zarf/init
+    binary: zarf_init
+    ldflags:
+      - -s
+      - -w
+    gcflags:
+      - all=-l
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
+      - amd64
+      - riscv64
+    goamd64:
+      - v1
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: zarf_package_deploy
+    main: ./cmd/zarf/deploy
+    binary: zarf_package_deploy
+    ldflags:
+      - -s
+      - -w
+    gcflags:
+      - all=-l
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
+      - amd64
+      - riscv64
+    goamd64:
+      - v1
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
-  - formats:
+  # Pinned to the cargoship binary. Without ids, every build lands in this archive, and
+  # cargoship_Linux_x86_64.tar.gz would quietly gain a second binary.
+  - id: cargoship
+    ids:
+      - cargoship
+    formats:
       - tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
@@ -66,6 +127,20 @@ archives:
       - goos: windows
         formats:
           - zip
+
+  # The module files, archived together and on their own, so a management node that already has
+  # cargoship can take the proof without taking a second copy of everything else.
+  - id: zarf_modules
+    ids:
+      - zarf_init
+      - zarf_package_deploy
+    formats:
+      - tar.gz
+    name_template: >-
+      zarf_ansible_modules_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
 
 checksum:
   name_template: "checksums.txt"
@@ -79,6 +154,13 @@ snapshot:
 nfpms:
   - id: packagers
     package_name: cargoship
+    # Every binary. /usr/bin/zarf_init and /usr/bin/zarf_package_deploy are the Ansible module
+    # files of the colonel_byte.zarf collection below; they are listed explicitly so that adding a
+    # fourth build does not silently add a fourth binary to this package.
+    ids:
+      - cargoship
+      - zarf_init
+      - zarf_package_deploy
     license: Apache 2.0
     maintainer: |-
       Allen Conlon <software@conlon.dev>
@@ -115,6 +197,21 @@ nfpms:
         type: symlink
       - src: /usr/bin/cargoship
         dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_reset
+        type: symlink
+      # The colonel_byte.zarf collection, the ZEP-0072 proof. Its action plugin invokes
+      # /usr/bin/zarf_init directly rather than staging a module file, so the symlink below is
+      # for a conventional Ansible caller that does stage one. See
+      # docs/agent/choice-zarf-ansible-module.md.
+      - src: ansible/colonel_byte/zarf
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/zarf
+        type: tree
+        file_info:
+          mode: 0755
+      - src: /usr/bin/zarf_init
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/zarf/plugins/modules/zarf_init
+        type: symlink
+      - src: /usr/bin/zarf_package_deploy
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/zarf/plugins/modules/zarf_package_deploy
         type: symlink
       # Shell completion
       - src: hack/completion/{{ .ProjectName }}.bash
@@ -299,6 +396,8 @@ release:
   extra_files:
     - glob: bin/ansible/colonel_byte-cargoship-*.tar.gz
     - glob: bin/ansible/colonel_byte-cargoship-*.tar.gz.sigstore.json
+    - glob: bin/ansible/colonel_byte-zarf-*.tar.gz
+    - glob: bin/ansible/colonel_byte-zarf-*.tar.gz.sigstore.json
   footer: |-
     ---
 
