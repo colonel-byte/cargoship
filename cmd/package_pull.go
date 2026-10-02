@@ -45,6 +45,7 @@ func newPackagePullCommand() *cobra.Command {
 		Use:     "pull [Package]",
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdPackagePullShort,
+		Long:    lang.CmdPackagePullLong,
 		Example: lang.CmdPackagePullExample,
 		GroupID: lang.RootGroupPackageID,
 		PreRunE: o.preRunE,

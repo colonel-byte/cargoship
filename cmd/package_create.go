@@ -64,6 +64,7 @@ func newPackageCreateCommand() *cobra.Command {
 		Use:     "create [Dir]",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdDistroCreateShort,
+		Long:    lang.CmdDistroCreateLong,
 		Example: lang.CmdDistroCreateExample,
 		GroupID: lang.RootGroupPackageID,
 		RunE: func(cmd *cobra.Command, args []string) error {

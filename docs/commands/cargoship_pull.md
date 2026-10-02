@@ -4,6 +4,12 @@
 
 Pulls a Cargoship package from a remote registry and save to the local file system
 
+### Synopsis
+
+Downloads a package from an OCI registry or an https:// URL and writes it to the local filesystem as a single archive, so that it can be carried to a machine with no route to the registry it came from. An apply reads the same references directly, so pulling first is for staging rather than something an install needs.
+
+--shasum checks the downloaded archive against a checksum you already hold, which is the check to use when the package is to be trusted on the strength of something other than its signature.
+
 ```
 cargoship pull [Package] [flags]
 ```

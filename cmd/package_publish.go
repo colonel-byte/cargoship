@@ -55,6 +55,7 @@ func newPackagePublishCommand() *cobra.Command {
 		Use:     "publish [Package] [REPOSITORY]",
 		Args:    cobra.ExactArgs(2),
 		Short:   lang.CmdDistroPublishShort,
+		Long:    lang.CmdDistroPublishLong,
 		Example: lang.CmdDistroPublishExample,
 		GroupID: lang.RootGroupPackageID,
 		PreRunE: o.preRunE,

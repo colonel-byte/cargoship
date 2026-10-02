@@ -4,6 +4,16 @@
 
 Prepares the nodes, including restarting the node if new kernel modules are enabled
 
+### Synopsis
+
+Brings every host the cluster configuration names up to the prerequisites the package declares, without installing the engine: environment variables and sysctl settings, container-selinux on hosts with SELinux enabled, the fapolicyd rules the distro supplies, and the kernel modules the package asks for. A host that gained a module is rebooted, because the module has to be loaded before an apply can use it.
+
+Running this is optional. An apply runs the same preparation phases itself, and this command exists so that the disruptive half can be done on its own schedule -- ahead of a maintenance window rather than inside it.
+
+--hosts, --firewall and --fapolicyd each opt into rewriting a part of the host that cargoship otherwise leaves alone.
+
+This changes every host it is pointed at, so it needs --confirm. Pass --dry-run to report what it would change instead.
+
 ```
 cargoship prepare [Distro Package] [flags]
 ```
@@ -34,7 +44,7 @@ $ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
-      --confirm                                 Confirm whether if to proceed with the install
+      --confirm                                 Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -f, --fapolicyd                               Whether to update all the host nodes fapolicyd configuration.
   -F, --firewall                                Whether to update all the host nodes firewall configuration.
