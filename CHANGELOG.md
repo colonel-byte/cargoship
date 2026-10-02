@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.29.1](https://github.com/colonel-byte/cargoship/compare/v0.29.0...v0.29.1) (2026-10-02)
+
+
+### Refactoring
+
+* **cmd:** build the released binary from cmd/cargoship ([#596](https://github.com/colonel-byte/cargoship/issues/596)) ([8127dbe](https://github.com/colonel-byte/cargoship/commit/8127dbef8fcc558170ea706eee8e18b25d37d8ef))
+* **containers:** base the ubi image on almalinux 10-base ([#593](https://github.com/colonel-byte/cargoship/issues/593)) ([e3b8574](https://github.com/colonel-byte/cargoship/commit/e3b85749acb4dd2e3f0aea547ad33b6c6d14abaa))
+* **containers:** remove labels from docker files ([#594](https://github.com/colonel-byte/cargoship/issues/594)) ([abd7476](https://github.com/colonel-byte/cargoship/commit/abd747690b23cf17949228b1bad0e050c521569e))
+
+
+### Miscellaneous
+
+* **git:** mark every generated path linguist-generated ([#597](https://github.com/colonel-byte/cargoship/issues/597)) ([6a552e4](https://github.com/colonel-byte/cargoship/commit/6a552e4fbdb02b398fa458f5478d46ed558253fc))
+
+
+### Build
+
+* **deps:** bump github.com/go-git/go-billy/v5 from 5.9.1 to 5.9.2 ([#591](https://github.com/colonel-byte/cargoship/issues/591)) ([89ae5ac](https://github.com/colonel-byte/cargoship/commit/89ae5aca7044cf3136f7603fe071cf1a8bd75398))
+
 ## [0.29.0](https://github.com/colonel-byte/cargoship/compare/v0.28.2...v0.29.0) (2026-10-02)
 
 
