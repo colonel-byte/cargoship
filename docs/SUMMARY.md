@@ -180,6 +180,7 @@
 - [publish-example](workflows/publish-example.md)
 - [refresh-examples](workflows/refresh-examples.md)
 - [release-please](workflows/release-please.md)
+- [release-tofu-provider](workflows/release-tofu-provider.md)
 - [release](workflows/release.md)
 - [scan-lint](workflows/scan-lint.md)
 - [scorecard](workflows/scorecard.md)
