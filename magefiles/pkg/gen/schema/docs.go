@@ -33,7 +33,7 @@ import (
 // GenerateDocs renders docs/schema/*.md from the reflected Go structs.
 func GenerateDocs() error {
 	for _, s := range Targets() {
-		raw, err := GenerateV1Alpha1Schema(s.SchemaStruct, s.StructPath, s.namer())
+		raw, err := GenerateV1Alpha1Schema(s.SchemaStruct, s.StructPath, s.Namer())
 		if err != nil {
 			return fmt.Errorf("unable to generate %s: %w", s.SchemaPath, err)
 		}
@@ -142,7 +142,7 @@ func writeSchemaPropertiesTable(md *markdown.Markdown, obj map[string]any) {
 			schemaPropertyType(prop),
 			isRequired,
 			def,
-			schemaPropertyDescription(prop),
+			withSensitiveNote(prop, schemaPropertyDescription(prop)),
 		})
 	}
 
@@ -195,6 +195,11 @@ func schemaPropertyAlternatives(alternatives []any) string {
 	return strings.Join(types, " or ")
 }
 
+// sensitiveNote closes the description of a property marked x-sensitive. It follows the prose
+// rather than leading it, because a description is rendered from the field's godoc with the field
+// name trimmed off the front, so it starts mid-sentence and reads badly after anything else.
+const sensitiveNote = "**Sensitive.** Treat this value as a secret: it is a credential rather than a path to one."
+
 func schemaPropertyDescription(prop map[string]any) string {
 	desc, _ := prop["description"].(string) //nolint:errcheck // zero value is the intended fallback for a key the schema does not carry
 
@@ -219,7 +224,21 @@ func schemaPropertyDescription(prop map[string]any) string {
 	}
 	note := fmt.Sprintf("One of %s.", strings.Join(quoted, ", "))
 	if desc == "" {
-		return note
+		desc = note
+	} else {
+		desc = desc + " " + note
 	}
-	return desc + " " + note
+	return desc
+}
+
+// withSensitiveNote prefixes a description with sensitiveNote when the property carries the
+// x-sensitive marker.
+func withSensitiveNote(prop map[string]any, desc string) string {
+	if sensitive, ok := prop[sensitiveKey].(bool); !ok || !sensitive {
+		return desc
+	}
+	if desc == "" {
+		return sensitiveNote
+	}
+	return desc + " " + sensitiveNote
 }

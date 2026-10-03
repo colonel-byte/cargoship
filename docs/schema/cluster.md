@@ -179,11 +179,11 @@ holds the credentials for a container registry.
 
 <div class="schema-table">
 
-| Property | Type     | Required | Default | Description                                                              |
-| -------- | -------- | -------- | ------- | ------------------------------------------------------------------------ |
-| `pass`   | `string` | no       |         | is the login secret for the remote registry.                             |
-| `token`  | `string` | no       |         | authenticates to the remote registry instead of a username and password. |
-| `user`   | `string` | no       |         | is the login name for the remote registry.                               |
+| Property | Type     | Required | Default | Description                                                                                                                                                         |
+| -------- | -------- | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pass`   | `string` | no       |         | is the login secret for the remote registry. **Sensitive.** Treat this value as a secret: it is a credential rather than a path to one.                             |
+| `token`  | `string` | no       |         | authenticates to the remote registry instead of a username and password. **Sensitive.** Treat this value as a secret: it is a credential rather than a path to one. |
+| `user`   | `string` | no       |         | is the login name for the remote registry. **Sensitive.** Treat this value as a secret: it is a credential rather than a path to one.                               |
 
 </div>
 

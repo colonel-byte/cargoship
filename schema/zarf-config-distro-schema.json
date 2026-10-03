@@ -250,7 +250,8 @@
         },
         "signing_key_password": {
           "description": "the password for the private key used for signing",
-          "type": "string"
+          "type": "string",
+          "x-sensitive": true
         }
       },
       "type": "object"
