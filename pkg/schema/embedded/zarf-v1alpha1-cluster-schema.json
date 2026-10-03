@@ -392,7 +392,8 @@
             "$ANSIBLE_VAULT;1.1;AES256...",
             "-----BEGIN AGE ENCRYPTED FILE-----..."
           ],
-          "type": "string"
+          "type": "string",
+          "x-sensitive": true
         },
         "token": {
           "description": "authenticates to the remote registry instead of a username and password.",
@@ -401,7 +402,8 @@
             "$ANSIBLE_VAULT;1.1;AES256...",
             "-----BEGIN AGE ENCRYPTED FILE-----..."
           ],
-          "type": "string"
+          "type": "string",
+          "x-sensitive": true
         },
         "user": {
           "description": "is the login name for the remote registry.",
@@ -410,7 +412,8 @@
             "$ANSIBLE_VAULT;1.1;AES256...",
             "-----BEGIN AGE ENCRYPTED FILE-----..."
           ],
-          "type": "string"
+          "type": "string",
+          "x-sensitive": true
         }
       },
       "type": "object"
