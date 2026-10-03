@@ -11,9 +11,6 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Detect host operating systems
     - Gathers information about the remote host, including: OS and OS version
     - Dry run: runs, reads only. Reads `/etc/os-release` and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.
-1. Acquire exclusive host lock
-    - Runs a background task that touches a file every 30 seconds on each remote node. This prevents other `cargoships` from making any changes until the lock file has not been touched for over a minute
-    - Dry run: reported, not run
 1. Gather host facts
     - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.
     - Dry run: runs, reads only. Gather facts about each host by asking for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.
@@ -26,6 +23,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Checking for nodes no longer in the config
     - Compares the nodes joined to the cluster against the hosts in the config and stops the apply when the cluster holds a node the config does not, since nothing later in an apply removes a node
     - Dry run: runs, reads only. Checking for removed nodes lists the nodes joined to the cluster and compares them to the config. It writes nothing, and a dry run is exactly when an operator wants to be told that a host they deleted from the config is still running.
+1. Acquire exclusive host lock
+    - Runs a background task that touches a file every 30 seconds on each remote node. This prevents other `cargoships` from making any changes until the lock file has not been touched for over a minute
+    - Dry run: reported, not run
 1. Prepare hosts
     - Updates the remote nodes; environment variables and sysctl
     - Dry run: reported, not run

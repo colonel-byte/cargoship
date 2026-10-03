@@ -36,8 +36,9 @@ import (
 type ApplyOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
-	// DisableDowngradeCheck skips the downgrade check
-	DisableDowngradeCheck bool
+	// AllowDowngrade continues when a host already runs a version newer than the package,
+	// rather than refusing the run
+	AllowDowngrade bool
 	// NoWait skips waiting for the cluster to be ready
 	NoWait bool
 	// NoDrain skips draining worker nodes
@@ -89,11 +90,11 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.Connect{},
 
 			&phase.DetectOS{},
-			lockPhase,
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
 			&phase.GatherFactsDistro{
-				Distro: d,
+				Distro:         d,
+				AllowDowngrade: opts.AllowDowngrade,
 			},
 			// Before anything is changed: an apply that is about to walk past a node the config
 			// no longer holds should say so while stopping is still free.
@@ -101,6 +102,14 @@ func NewApply(opts ApplyOptions) *Apply {
 				Distro:         d,
 				AllowUnmanaged: opts.AllowUnmanagedNodes,
 			},
+			// The lock goes after every read-only phase and before every phase that changes a
+			// host, so that the checks above report without having written to anything. It used
+			// to sit directly after DetectOS, which meant a refused downgrade or a leftover node
+			// had already put a lock file on every host in the config. Nothing between here and
+			// Connect needs the lock, and the cost of moving it is a short unlocked window during
+			// fact gathering: two concurrent runs can both gather facts, and the second then
+			// fails here instead of earlier.
+			lockPhase,
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
 			&phase.PrepareFapolicy{},

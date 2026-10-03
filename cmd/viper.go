@@ -242,6 +242,7 @@ func setDefaults() {
 	v.SetDefault(configPath("DistroOpts", "FirewallUpdate"), false)
 	v.SetDefault(configPath("DistroOpts", "LabelNodes"), false)
 	v.SetDefault(configPath("DistroOpts", "AllowUnmanagedNodes"), false)
+	v.SetDefault(configPath("DistroOpts", "AllowDowngrade"), false)
 	v.SetDefault(configPath("DistroOpts", "UpdateKubeConfig"), true)
 
 	// The keys below have no real default value beyond the Go zero value -- they're

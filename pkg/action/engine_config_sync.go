@@ -41,6 +41,9 @@ type EngineConfigSyncOptions struct {
 	// KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
 	// location when empty
 	KubeConfigPath string
+	// AllowDowngrade continues when a host already runs a version newer than the package,
+	// rather than refusing the run
+	AllowDowngrade bool
 }
 
 // EngineConfigSync state logic
@@ -73,7 +76,8 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync {
 			&phase.GatherFacts{},
 			&phase.ValidateHosts{},
 			&phase.GatherFactsDistro{
-				Distro: d,
+				Distro:         d,
+				AllowDowngrade: opts.AllowDowngrade,
 			},
 
 			&phase.EngineConfigSyncController{

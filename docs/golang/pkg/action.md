@@ -33,7 +33,7 @@ Package action are various actions used by the package
 
 
 <a name="Apply"></a>
-## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L67-L70>)
+## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L68-L71>)
 
 Apply state logic
 
@@ -45,7 +45,7 @@ type Apply struct {
 ```
 
 <a name="NewApply"></a>
-### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L73>)
+### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L74>)
 
 ```go
 func NewApply(opts ApplyOptions) *Apply
@@ -54,7 +54,7 @@ func NewApply(opts ApplyOptions) *Apply
 NewApply an apply action object
 
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L179>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error
@@ -63,7 +63,7 @@ func (a Apply) Run(ctx context.Context) error
 Run the actions
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L64>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L65>)
 
 ApplyOptions struct
 
@@ -71,8 +71,9 @@ ApplyOptions struct
 type ApplyOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // DisableDowngradeCheck skips the downgrade check
-    DisableDowngradeCheck bool
+    // AllowDowngrade continues when a host already runs a version newer than the package,
+    // rather than refusing the run
+    AllowDowngrade bool
     // NoWait skips waiting for the cluster to be ready
     NoWait bool
     // NoDrain skips draining worker nodes
@@ -100,7 +101,7 @@ type ApplyOptions struct {
 ```
 
 <a name="EngineConfigSync"></a>
-## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L47-L50>)
+## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L50-L53>)
 
 EngineConfigSync state logic
 
@@ -112,7 +113,7 @@ type EngineConfigSync struct {
 ```
 
 <a name="NewEngineConfigSync"></a>
-### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L53>)
+### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L56>)
 
 ```go
 func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync
@@ -121,7 +122,7 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync
 NewEngineConfigSync an engine\-config\-sync action object
 
 <a name="EngineConfigSync.Run"></a>
-### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L111>)
+### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L115>)
 
 ```go
 func (r EngineConfigSync) Run(ctx context.Context) error
@@ -130,7 +131,7 @@ func (r EngineConfigSync) Run(ctx context.Context) error
 Run the actions
 
 <a name="EngineConfigSyncOptions"></a>
-## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L44>)
+## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L47>)
 
 EngineConfigSyncOptions struct
 
@@ -150,6 +151,9 @@ type EngineConfigSyncOptions struct {
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // AllowDowngrade continues when a host already runs a version newer than the package,
+    // rather than refusing the run
+    AllowDowngrade bool
 }
 ```
 
@@ -199,7 +203,7 @@ type KubeConfigOptions struct {
 ```
 
 <a name="Prepare"></a>
-## type [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L50-L53>)
+## type [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L48-L51>)
 
 Prepare state logic
 
@@ -211,7 +215,7 @@ type Prepare struct {
 ```
 
 <a name="NewPrepare"></a>
-### func [NewPrepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L56>)
+### func [NewPrepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L54>)
 
 ```go
 func NewPrepare(opts PrepareOptions) *Prepare
@@ -220,7 +224,7 @@ func NewPrepare(opts PrepareOptions) *Prepare
 NewPrepare an prepare action object
 
 <a name="Prepare.Run"></a>
-### func \(Prepare\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L77>)
+### func \(Prepare\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L75>)
 
 ```go
 func (a Prepare) Run(ctx context.Context) error
@@ -229,7 +233,7 @@ func (a Prepare) Run(ctx context.Context) error
 Run the actions
 
 <a name="PrepareOptions"></a>
-## type [PrepareOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L47>)
+## type [PrepareOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L45>)
 
 PrepareOptions struct
 
@@ -237,8 +241,6 @@ PrepareOptions struct
 type PrepareOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // DisableDowngradeCheck skips the downgrade check
-    DisableDowngradeCheck bool
     // NoWait skips waiting for the cluster to be ready
     NoWait bool
     // NoDrain skips draining worker nodes
