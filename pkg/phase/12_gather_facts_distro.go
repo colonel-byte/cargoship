@@ -17,6 +17,7 @@ package phase
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
@@ -29,12 +30,21 @@ const (
 	UnknownVersion = "v0.0.0"
 )
 
+// ErrWillNotDowngrade is returned when a host already runs a version newer than the one the
+// package carries. An engine does not support moving backwards, so the run stops here rather than
+// uninstalling a newer version part way through.
+var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
+
 // GatherFactsDistro state
 type GatherFactsDistro struct {
 	GenericPhase
 	Distro distrocfg.Distro
-	hosts  cluster.ZarfHosts
-	d      *distro.ZarfDistro
+	// AllowDowngrade turns the refusal below into a warning. A downgrade is refused by default
+	// because an engine does not support being moved backwards and the data directory it leaves
+	// behind was written by the newer version, so the operator has to say that they mean it.
+	AllowDowngrade bool
+	hosts          cluster.ZarfHosts
+	d              *distro.ZarfDistro
 }
 
 // Title for the phase
@@ -79,7 +89,19 @@ func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluste
 	}
 	logger.From(ctx).Info("detected", "host", h, "version", h.Metadata.DistroVersion)
 	if p.d != nil && p.VersionGreater(h, p.d.Spec.Version) {
-		return errors.New("will not downgrade the cluster")
+		if p.AllowDowngrade {
+			logger.From(ctx).Warn(
+				"the host runs a version newer than the package, and this run was told to continue anyway",
+				"host", h,
+				"running", h.Metadata.DistroVersion,
+				"package", p.d.Spec.Version,
+			)
+			return nil
+		}
+		// Named rather than bare: the refusal is read by somebody who has to work out which host
+		// and which version, and this phase runs before anything has written to a host, so the
+		// message is the entire output of the run.
+		return fmt.Errorf("%w: %s runs %s, the package carries %s", ErrWillNotDowngrade, h, h.Metadata.DistroVersion, p.d.Spec.Version)
 	}
 	return nil
 }

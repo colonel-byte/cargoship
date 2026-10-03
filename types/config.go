@@ -120,6 +120,9 @@ type DistroOptions struct {
 	// AllowUnmanagedNodes whether an apply continues when the cluster holds a node that no host
 	// in the config accounts for
 	AllowUnmanagedNodes bool `json:"allow_unmanaged_nodes,omitempty" mapstructure:"allow_unmanaged_nodes"`
+	// AllowDowngrade whether a run continues when a host already runs an engine version newer
+	// than the one the package carries
+	AllowDowngrade bool `json:"allow_downgrade,omitempty" mapstructure:"allow_downgrade"`
 	// LabelNodes whether we will check and add the node-role.kubernetes.io/<profile> label on nodes
 	LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
 	// UpdateKubeConfig whether we will update a kubeconfig file with the admin creds for the cluster

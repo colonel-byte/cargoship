@@ -315,6 +315,12 @@ var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
 var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
 ```
 
+<a name="ErrWillNotDowngrade"></a>ErrWillNotDowngrade is returned when a host already runs a version newer than the one the package carries. An engine does not support moving backwards, so the run stops here rather than uninstalling a newer version part way through.
+
+```go
+var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
+```
+
 <a name="Force"></a>Force is used by various phases to attempt a forced installation
 
 ```go
@@ -1190,7 +1196,7 @@ func (p *GatherFacts) Title() string
 Title for the phase
 
 <a name="GatherFactsDistro"></a>
-## type [GatherFactsDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L33-L38>)
+## type [GatherFactsDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L39-L48>)
 
 GatherFactsDistro state
 
@@ -1198,12 +1204,16 @@ GatherFactsDistro state
 type GatherFactsDistro struct {
     GenericPhase
     Distro distrocfg.Distro
+    // AllowDowngrade turns the refusal below into a warning. A downgrade is refused by default
+    // because an engine does not support being moved backwards and the data directory it leaves
+    // behind was written by the newer version, so the operator has to say that they mean it.
+    AllowDowngrade bool
     // contains filtered or unexported fields
 }
 ```
 
 <a name="GatherFactsDistro.Explanation"></a>
-### func \(\*GatherFactsDistro\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L46>)
+### func \(\*GatherFactsDistro\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56>)
 
 ```go
 func (p *GatherFactsDistro) Explanation() string
@@ -1212,7 +1222,7 @@ func (p *GatherFactsDistro) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="GatherFactsDistro.Prepare"></a>
-### func \(\*GatherFactsDistro\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56>)
+### func \(\*GatherFactsDistro\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L66>)
 
 ```go
 func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
@@ -1221,7 +1231,7 @@ func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d
 Prepare the phase
 
 <a name="GatherFactsDistro.ReadOnly"></a>
-### func \(\*GatherFactsDistro\) [ReadOnly](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51>)
+### func \(\*GatherFactsDistro\) [ReadOnly](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L61>)
 
 ```go
 func (p *GatherFactsDistro) ReadOnly() string
@@ -1230,7 +1240,7 @@ func (p *GatherFactsDistro) ReadOnly() string
 ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
 
 <a name="GatherFactsDistro.Run"></a>
-### func \(\*GatherFactsDistro\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L63>)
+### func \(\*GatherFactsDistro\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L73>)
 
 ```go
 func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
@@ -1239,7 +1249,7 @@ func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
 Run the phase
 
 <a name="GatherFactsDistro.Title"></a>
-### func \(\*GatherFactsDistro\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L41>)
+### func \(\*GatherFactsDistro\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51>)
 
 ```go
 func (p *GatherFactsDistro) Title() string

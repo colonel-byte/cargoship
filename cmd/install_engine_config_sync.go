@@ -58,6 +58,7 @@ func newInstallEngineConfigSyncCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.updateKubeConfig, InstallUpdateKubeConfig, resolvedConfig.DistroOpts.UpdateKubeConfig, lang.CmdInstallUpdateKubeConfig)
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
+	cmd.Flags().BoolVar(&o.allowDowngrade, InstallAllowDowngrade, resolvedConfig.DistroOpts.AllowDowngrade, lang.CmdInstallAllowDowngrade)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
 	addAgeFlags(cmd, &o.keyFlags)
@@ -123,6 +124,7 @@ func (o *installEngineConfigSyncOptions) run(ctx context.Context, cmd *cobra.Com
 		LabelNodes:       o.labelNodes,
 		UpdateKubeConfig: o.updateKubeConfig,
 		KubeConfigPath:   o.kubeConfigPath,
+		AllowDowngrade:   o.allowDowngrade,
 	}
 
 	return action.NewEngineConfigSync(engineConfigSyncOpts).Run(ctx)

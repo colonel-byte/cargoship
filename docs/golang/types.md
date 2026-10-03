@@ -79,7 +79,7 @@ type AgeOptions struct {
 ```
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L185>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188>)
 
 ApplyOptions holds the values for the \`.distro.apply\` section of the config file
 
@@ -118,7 +118,7 @@ type DistroConfig struct {
 ```
 
 <a name="DistroCreateOptions"></a>
-## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L160-L168>)
+## type [DistroCreateOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L163-L171>)
 
 DistroCreateOptions holds the values for the \`.distro.create\` section of the config file
 
@@ -135,7 +135,7 @@ type DistroCreateOptions struct {
 ```
 
 <a name="DistroDeployOptions"></a>
-## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L179-L182>)
+## type [DistroDeployOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L182-L185>)
 
 DistroDeployOptions holds the values for the \`.distro.deploy\` section of the config file
 
@@ -147,7 +147,7 @@ type DistroDeployOptions struct {
 ```
 
 <a name="DistroOptions"></a>
-## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L157>)
+## type [DistroOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L160>)
 
 DistroOptions holds the values for the \`.distro\` section of the config file
 
@@ -176,6 +176,9 @@ type DistroOptions struct {
     // AllowUnmanagedNodes whether an apply continues when the cluster holds a node that no host
     // in the config accounts for
     AllowUnmanagedNodes bool `json:"allow_unmanaged_nodes,omitempty" mapstructure:"allow_unmanaged_nodes"`
+    // AllowDowngrade whether a run continues when a host already runs an engine version newer
+    // than the one the package carries
+    AllowDowngrade bool `json:"allow_downgrade,omitempty" mapstructure:"allow_downgrade"`
     // LabelNodes whether we will check and add the node-role.kubernetes.io/<profile> label on nodes
     LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
     // UpdateKubeConfig whether we will update a kubeconfig file with the admin creds for the cluster
@@ -214,7 +217,7 @@ type DistroOptions struct {
 ```
 
 <a name="DistroPublishOptions"></a>
-## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L171-L176>)
+## type [DistroPublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L174-L179>)
 
 DistroPublishOptions holds the values for the \`.distro.publish\` section of the config file
 
@@ -228,7 +231,7 @@ type DistroPublishOptions struct {
 ```
 
 <a name="FileOverrideMap"></a>
-## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L210>)
+## type [FileOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L213>)
 
 FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.
 
@@ -237,7 +240,7 @@ type FileOverrideMap map[string]string
 ```
 
 <a name="FileOverrideMap.JSONSchemaExtend"></a>
-### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L215>)
+### func \(FileOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L218>)
 
 ```go
 func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -246,7 +249,7 @@ func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonFileSources to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="RegistryOverrideMap"></a>
-## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194>)
+## type [RegistryOverrideMap](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L197>)
 
 RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It's a named type \(rather than a bare map\[string\]string\) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.
 
@@ -255,7 +258,7 @@ type RegistryOverrideMap map[string]string
 ```
 
 <a name="RegistryOverrideMap.JSONSchemaExtend"></a>
-### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L199>)
+### func \(RegistryOverrideMap\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L202>)
 
 ```go
 func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
@@ -264,7 +267,7 @@ func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 JSONSchemaExtend adds CommonRegistries to the schema's properties, alongside the additionalProperties the reflector already set for the map\[string\]string element type, so the suggestions are additive and don't restrict which keys are allowed.
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L191>)
 
 ResetOptions holds the values for the \`.distro.reset\` section of the config file
 
