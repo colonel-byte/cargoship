@@ -1,0 +1,89 @@
+---
+name: release-tofu-provider
+
+# The provider is a package of this module, so it ships on the CLI's tags rather than on a
+# component tag of its own: this fires on the same v* tag release.yaml does and publishes the
+# provider to ghcr.io as an OpenTofu provider mirror. It is a separate workflow rather than
+# another job in release.yaml because it shares nothing with the goreleaser run -- no signing
+# keys, no GitHub Release, no attestations -- and a failure to publish the provider should not
+# look like a failed CLI release. See docs/agent/choice-tofu-provider-layout.md.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to publish, without the leading v (e.g. 0.1.0)
+        required: true
+        type: string
+
+# Read only at the top so that a job has to ask for what it writes. See the job block below.
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # packages: write pushes the provider artifact to ghcr.io. Nothing here writes to the
+    # repository or creates a release: an OCI mirror needs no GitHub Release, no SHA256SUMS and
+    # no GPG signature, which is most of why it is the distribution path.
+    # See docs/agent/choice-tofu-provider-layout.md.
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4 # v2.0.2
+        with:
+          # --artifact-platform, which is what puts the platform property on each descriptor in
+          # the index, needs 1.3.0 or newer.
+          version: 1.3.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # github.ref_name is "v0.19.0" on a tag push, and the version the artifact carries is what
+      # is left after the v: the zip holds terraform-provider-cargoship_v<version>, so a second v
+      # would make a package no client looks for. The value reaches the target through env rather
+      # than being interpolated into the run block, so it arrives as data.
+      - name: Resolve the version
+        id: version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_VERSION}" ]; then
+            version="${INPUT_VERSION}"
+          else
+            version="${REF_NAME#v}"
+          fi
+          case "${version}" in
+            [0-9]*) ;;
+            *)
+              echo "::error::could not read a version out of '${REF_NAME}'"
+              exit 1
+              ;;
+          esac
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "publishing provider ${version}"
+
+      # go run ./magefiles/core rather than mage: same target, but it builds from the root
+      # module's vendor tree and needs no mage binary on the runner. See docs/AGENTS.md.
+      - name: Publish the provider to ghcr.io
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: go run ./magefiles/core release:tofuProvider "${VERSION}"
