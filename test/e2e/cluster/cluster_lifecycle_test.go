@@ -132,6 +132,42 @@ func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
 	s.Require().NoError(err)
 }
 
+// Test_ZZ3_ApplyDryRunConverges re-runs the apply as a dry run, now that the cluster is up, and
+// asserts it reports fewer phases than the same dry run reported over nodes with nothing on them.
+//
+// That is the claim logDryRunSummary makes: the report comes from ShouldRun filtering against
+// live state, not from the phase list. An installed cluster has no install phases left to do, so
+// a report that did not shrink would be a static roster -- which is the failure a dry run over a
+// running cluster would be read as truth.
+//
+// It needs the count the dry-run walk recorded, so it skips when that walk did not run.
+func (s *ApplyPhaseSuite) Test_ZZ3_ApplyDryRunConverges() {
+	s.requireEngine()
+	if dryRunPlannedFresh == 0 {
+		s.T().Skip("the dry-run walk did not run, so there is nothing to compare against")
+	}
+
+	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
+	defer cleanup()
+	manager.DryRun = true
+
+	ctx, sink := phase.WithResultSink(s.ctx)
+	err := action.NewApply(action.ApplyOptions{
+		Manager:          manager,
+		ModifyHosts:      true,
+		ModifyFirewall:   true,
+		WorkerConcurrent: applyWorkerConcurrent,
+		UpdateKubeConfig: true,
+		LabelNodes:       true,
+	}).Run(ctx)
+	s.Require().NoError(err)
+
+	planned := len(sink.Result().Planned)
+	s.Require().Lessf(planned, dryRunPlannedFresh,
+		"a dry run over an installed cluster reported %d phases, the same run over fresh nodes reported %d: the report is not derived from host state",
+		planned, dryRunPlannedFresh)
+}
+
 // newManager builds a package-loading manager for one of the actions above, along with the
 // cleanup that removes the package it extracted. Each action gets its own, because each CLI
 // command gets its own.
@@ -179,6 +215,51 @@ func (s *ResetSuite) SetupTest() {
 func (s *ResetSuite) TearDownTest() {
 	if s.T().Failed() {
 		s.stepFailed = true
+	}
+}
+
+// Test_0_ResetDryRunLeavesTheClusterUp runs the reset the next step runs for real, with the
+// dry-run flag set, against the cluster the three walks before it built. Reset is the most
+// destructive thing cargoship does, so "a dry run changes nothing" has to be asserted where the
+// change would be visible: the nodes are still Ready afterwards, the engine is still running on
+// every controller, and the delete phases were reported rather than run.
+//
+// It runs before Test_1_Reset because this is the only point in the suite where a live cluster
+// still exists. The complementary case -- a reset dry run with no running controller, which is
+// what found the nil-leader crash in PR #312 -- is in DryRunSuite, against nodes nothing was ever
+// installed on.
+func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
+	manager := s.newBareManager(e2e.ClusterConfigPath)
+	manager.DryRun = true
+
+	ctx, sink := phase.WithResultSink(s.ctx)
+	err := action.NewReset(action.ResetOptions{
+		Manager:          manager,
+		WorkerConcurrent: applyWorkerConcurrent,
+		NoWait:           true,
+		NoDrain:          true,
+	}).Run(ctx)
+	s.Require().NoError(err)
+
+	// The delete and uninstall phases declare no dry-run path, so a dry run has to have reported
+	// them. Finding none reported on a cluster that is up would mean the run decided there was
+	// nothing to tear down.
+	s.Require().NotEmpty(sink.Result().Planned, "a reset dry run over a live cluster reported no phases")
+
+	cs, err := e2e.KubeClient(s.T())
+	s.Require().NoError(err)
+	s.Require().NoError(test.WaitForNodesReady(context.Background(), cs, clusterNodeCount, time.Minute),
+		"a reset dry run took nodes out of the cluster")
+
+	s.Require().NoError(reconnectHosts(s.ctx, manager))
+	defer disconnectAll(manager.Config.Spec.Hosts)
+
+	dis, err := distroModule(distroID())
+	s.Require().NoError(err)
+	service := dis.GetControllerService()
+	for _, host := range manager.Config.Spec.Hosts.Controllers() {
+		s.Require().Truef(host.ServiceIsRunning(s.ctx, service),
+			"%s: a reset dry run stopped %s", host, service)
 	}
 }
 
