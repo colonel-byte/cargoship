@@ -110,10 +110,10 @@ holds the values for the `.distro.publish` section of the config file
 
 <div class="schema-table">
 
-| Property               | Type     | Required | Default | Description                                                                                            |
-| ---------------------- | -------- | -------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| `signing_key`          | `string` | no       |         | is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package |
-| `signing_key_password` | `string` | no       |         | the password for the private key used for signing                                                      |
+| Property               | Type     | Required | Default | Description                                                                                                                                  |
+| ---------------------- | -------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `signing_key`          | `string` | no       |         | is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package                                       |
+| `signing_key_password` | `string` | no       |         | the password for the private key used for signing **Sensitive.** Treat this value as a secret: it is a credential rather than a path to one. |
 
 </div>
 

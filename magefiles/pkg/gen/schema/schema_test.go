@@ -102,3 +102,68 @@ func TestGenerateSchemas(t *testing.T) {
 		assert.Equal(t, sData, eData)
 	}
 }
+
+// TestSensitivePropertiesAreMarked pins the x-sensitive marking on the properties whose value can
+// be a credential rather than a path to one. The OpenTofu provider reads this marking to decide
+// which attributes to declare sensitive, so a field losing the tag is a secret landing in tofu
+// state in plaintext, which no other test would notice.
+func TestSensitivePropertiesAreMarked(t *testing.T) {
+	t.Chdir("../../../..")
+
+	cases := []struct {
+		name       string
+		target     string
+		def        string
+		properties []string
+	}{
+		{
+			name:   "registry credentials",
+			target: "zarf-v1alpha1-cluster-schema.json",
+			def:    "ZarfClusterRegistryAuth",
+			properties: []string{
+				"pass",
+				"token",
+				"user",
+			},
+		},
+		{
+			name:   "package signing key password",
+			target: "zarf-config-distro-schema.json",
+			def:    "DistroPublishOptions",
+			properties: []string{
+				"signing_key_password",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var target schema.Target
+			for _, candidate := range schema.Targets() {
+				if candidate.SchemaPath == tc.target {
+					target = candidate
+				}
+			}
+			require.NotEmpty(t, target.SchemaPath, "no schema target named %s", tc.target)
+
+			b, err := schema.GenerateV1Alpha1Schema(target.SchemaStruct, target.StructPath, target.Namer())
+			require.NoError(t, err)
+
+			var parsed map[string]any
+			require.NoError(t, json.Unmarshal(b, &parsed))
+
+			defs, ok := parsed["$defs"].(map[string]any)
+			require.True(t, ok, "schema has no $defs")
+			def, ok := defs[tc.def].(map[string]any)
+			require.True(t, ok, "schema has no $defs.%s", tc.def)
+			props, ok := def["properties"].(map[string]any)
+			require.True(t, ok, "%s has no properties", tc.def)
+
+			for _, name := range tc.properties {
+				prop, ok := props[name].(map[string]any)
+				require.True(t, ok, "%s has no property %s", tc.def, name)
+				assert.Equal(t, true, prop["x-sensitive"], "%s.%s is not marked x-sensitive", tc.def, name)
+			}
+		})
+	}
+}
