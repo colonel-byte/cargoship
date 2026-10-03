@@ -64,6 +64,7 @@ The `Test` namespace hosts the integration and validation suites:
 *   `EndToEndNonCluster` - Runs the group that needs no cluster: the misc and package command groups. `-short` additionally skips the example packages, so this finishes in seconds. Mirrors the `e2e-noncluster` CI job.
 *   `EndToEndCluster` - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.
 *   `EndToEndClusterStage` - Runs the same suite as `EndToEndCluster`, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.
+*   `EndToEndClusterDryRun` - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with `--dry-run` against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.
 *   `CleanCluster` - Removes the containers a bootloose cluster left behind. `EndToEndCluster` does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.
 *   `Fuzz` - Replays the fuzz seed corpus (the `f.Add` values in each target plus anything committed under `fuzz/testdata/fuzz/<Target>/`). Calls the packages in process; needs no binary, cluster, or network. See [fuzz-tests](fuzz-tests.md).
 
@@ -72,6 +73,7 @@ mage test:endToEnd              # build the binary, then run both e2e groups (ne
 mage test:endToEndNonCluster    # run the misc/package command suites, no cluster needed
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
+mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
 ```
@@ -147,7 +149,7 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`build.go`:** Entrypoint for the `Build` namespace (`Build.Binary`, `Build.All`, `Build.Examples`), delegating to `magefiles/pkg/build`.
 *   **`dev.go`:** Entrypoint for the `Dev` namespace (`Dev.Clean`, `Dev.Tidy`, `Dev.Digest`, `Dev.DnfPins`, `Dev.WriteOSVOverrides`, `Dev.VerifyVendor`).
 *   **`generate.go`:** Entrypoint for the `Generate` namespace (`Generate.Document`, `Generate.Schema`, `Generate.Completion`, `Generate.EngineConfig`, `Generate.Examples`, etc.), delegating to `magefiles/pkg/gen/...`.
-*   **`test.go`:** Entrypoint for the `Test` namespace (`Test.Unit`, `Test.EndToEnd`, `Test.EndToEndNonCluster`, `Test.EndToEndCluster`, `Test.EndToEndClusterStage`, `Test.EndToEndClusterUpgrade`, `Test.CleanCluster`, `Test.Fuzz`), delegating to `magefiles/pkg/testrunner`.
+*   **`test.go`:** Entrypoint for the `Test` namespace (`Test.Unit`, `Test.EndToEnd`, `Test.EndToEndNonCluster`, `Test.EndToEndCluster`, `Test.EndToEndClusterStage`, `Test.EndToEndClusterDryRun`, `Test.EndToEndClusterUpgrade`, `Test.CleanCluster`, `Test.Fuzz`), delegating to `magefiles/pkg/testrunner`.
 *   **`pkg/build/`:** Binary compilation logic, flag assembly, and example package builds.
 *   **`pkg/devtools/`:** Developer tooling packages, including `dnfpins` (AlmaLinux repomd XML parser and pin updater) and `osv` (OpenSSF Scorecard vendor overrides).
 *   **`pkg/gen/`:** Generator implementations: `completion/` (shell completion scripts), `docs/` (Cobra command docs and mdBook pages), `engineconfig/` (k3s/RKE2 source pins and struct codegen), `examples/` (Rancher and upstream distro examples), and `schema/` (JSON schema reflection and docs).

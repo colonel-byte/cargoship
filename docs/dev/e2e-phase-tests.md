@@ -2,7 +2,7 @@
 
 The cluster suite in `test/e2e/cluster` walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to `pkg/action/apply.go` without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.
 
-One top-level test, `TestClusterPhases`, runs four walks against the same cluster in the order they work in: `apply` installs the distro, `join` starts one more machine and brings it into the running cluster, `upgrade` walks the same phases again with a newer package, and `reset` takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too -- see [Adding the join half](#adding-the-join-half) and [Adding the upgrade half](#adding-the-upgrade-half).
+One top-level test, `TestClusterPhases`, runs five walks against the same cluster in the order they work in: `dryrun` runs whole actions with `--dry-run` over nodes with nothing on them and asserts it left them that way, `apply` installs the distro, `join` starts one more machine and brings it into the running cluster, `upgrade` walks the same phases again with a newer package, and `reset` takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too -- see [Adding the join half](#adding-the-join-half) and [Adding the upgrade half](#adding-the-upgrade-half).
 
 For why the suite is built this way, see [choice-phase-e2e-tests](../agent/choice-phase-e2e-tests.md). For running the e2e suites generally, see [e2e-tests](e2e-tests.md).
 
@@ -130,6 +130,20 @@ This matters when adding a phase:
 
 `s.harness.engineWorkers()` exists for the one case where order is not obvious: a test that runs before the drop but is only meaningful for hosts that join.
 
+## The dry-run walk
+
+`DryRunSuite` (`dry_run_test.go`) is the one walk that does not step through phases, and the one whose assertions are negative. It runs `action.NewApply`, `action.NewPrepare` and `action.NewReset` whole, with `Manager.DryRun` set, and then asserts that none of the artifacts the other walks look for arrived: no upload manifest, no sysctl file, no lock file, no running engine. It runs first because "the hosts are unchanged" is only checkable before the apply walk changes them.
+
+Two things about it are easy to get wrong when extending it.
+
+The hosts are disconnected by the time a run returns, because every action ends with the disconnect phase and its dry-run path disconnects as well. A read taken after the run reports every file as absent whether it is there or not, which would make each assertion pass over a host a dry run had written to. `reconnectHosts` runs `Connect` and `DetectOS` again -- both read-only -- and the assertions go after that.
+
+The walk also asserts the positive half, which is what stops the negative half from being vacuous: the read-only phases have to have gathered their facts, so each host carries a configurer, a hostname, an architecture, and `phase.UnknownVersion` for the engine it is not running. A dry run that never connected to anything would satisfy an untouched-hosts check perfectly.
+
+A new phase needs nothing added here unless it is read-only, in which case the facts it gathers belong in `requireFactsGathered`, or it writes an artifact worth naming, in which case its absence belongs in `requireHostsUntouched` next to the path the install test asserts exists.
+
+The two reset cases are split by what they need. `reset --dry-run` against a cluster that is up is in `ResetSuite` as `Test_0`, immediately before the real reset, because that is the only point where a live cluster exists. `reset --dry-run` with no running controller is in this walk, because nodes nothing was installed on are the natural fixture for the nil-leader path PR #312 found against a live cluster.
+
 ## Adding the join half
 
 `JoinPhaseSuite` walks the same phase list a second time, against the cluster the apply walk installed and one machine larger. It carries the same package at the same version, so nothing routes to the upgrade phases and the only host with work left is the one that just appeared. It is the only coverage of apply against a cluster that already exists.
@@ -209,7 +223,8 @@ $ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
 Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:
 
 ```console
-$ mage test:endToEndCluster           # the install, join and reset walks
+$ mage test:endToEndCluster           # the dry-run, install, join and reset walks
+$ mage test:endToEndClusterDryRun     # only the dry-run walk, against the staging cluster
 $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in between
 ```
 

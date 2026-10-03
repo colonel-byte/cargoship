@@ -285,15 +285,22 @@ var (
 	kubeconfigPath string //nolint:gochecknoglobals
 )
 
-// TestClusterPhases runs the four walks in the only order they work in. The apply walk
+// TestClusterPhases runs the five walks in the only order they work in. The dry-run walk reports
+// over nodes with nothing on them and asserts it left them that way, the apply walk
 // installs the distro on the shared bootloose cluster, the join walk adds a machine to it, the
 // upgrade walk moves that cluster to a newer package, and the reset walk takes the distro back
 // off. They share one cluster and one kubeconfig, so they are subtests of one parent rather
-// than four top-level tests whose order would depend on declaration order.
+// than five top-level tests whose order would depend on declaration order.
 //
 // The join walk runs before the upgrade rather than after it so that the upgrade has to carry
 // the node that joined late as well as the nodes the install bootstrapped.
 func TestClusterPhases(t *testing.T) {
+	// The dry-run walk goes first because it is the only walk whose assertions are negative:
+	// it asserts the hosts carry nothing, which is only meaningful before the apply walk puts
+	// something on them. A failure here does not stop the install, since a dry run that wrote
+	// to a host is a bug in the dry run rather than a cluster the later walks cannot use.
+	t.Run("dryrun", func(t *testing.T) { suite.Run(t, new(DryRunSuite)) })
+
 	if !t.Run("apply", func(t *testing.T) { suite.Run(t, new(ApplyPhaseSuite)) }) {
 		t.Log("apply failed: the join, upgrade and reset walks all need the cluster it installs")
 		return
