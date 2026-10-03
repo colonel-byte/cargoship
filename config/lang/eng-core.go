@@ -44,7 +44,7 @@ const (
 	// CmdDistroApplyShort apply short
 	CmdDistroApplyShort = "Apply a config file to bootstrap and upgrade a cluster"
 	// CmdDistroApplyLong apply long
-	CmdDistroApplyLong = "Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted.\n\n" +
+	CmdDistroApplyLong = "Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted, before any phase has written to a host. Pass --allow-downgrade when the move backwards is deliberate.\n\n" +
 		"Cargoship opens every SSH connection itself, from the machine it runs on, and nothing is installed on a target host beyond what a phase uploads.\n\n" +
 		"An apply never removes a node. A host deleted from the configuration leaves its node in the cluster and stops the run rather than having the difference reconciled, so that no machine is drained or uninstalled by a configuration edit alone. Pass --allow-unmanaged-nodes when the extra nodes were joined deliberately and cargoship should leave them alone.\n\n" +
 		"This changes every host it is pointed at, so it needs --confirm. Pass --dry-run instead to connect to every host and run the preflight checks for real, reporting what the run would change without changing it."
@@ -103,6 +103,8 @@ const (
 	CmdInstallHostUpdate = "Whether to update every host node's /etc/hosts file."
 	// CmdInstallAllowUnmanagedNodes install flag allow unmanaged nodes
 	CmdInstallAllowUnmanagedNodes = "Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone."
+	// CmdInstallAllowDowngrade install flag allow downgrade
+	CmdInstallAllowDowngrade = "Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it."
 	// CmdInstallLabelNodes install flag label nodes
 	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig."
 	// CmdInstallKubeConfigPath install flag kubeconfig path

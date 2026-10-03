@@ -72,6 +72,7 @@ func newInstallApplyCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.kubeConfigPath, InstallKubeConfigPath, resolvedConfig.DistroOpts.KubeConfig, lang.CmdInstallKubeConfigPath)
 	cmd.Flags().BoolVar(&o.labelNodes, InstallLabelNodes, resolvedConfig.DistroOpts.LabelNodes, lang.CmdInstallLabelNodes)
 	cmd.Flags().BoolVar(&o.allowUnmanaged, InstallAllowUnmanagedNodes, resolvedConfig.DistroOpts.AllowUnmanagedNodes, lang.CmdInstallAllowUnmanagedNodes)
+	cmd.Flags().BoolVar(&o.allowDowngrade, InstallAllowDowngrade, resolvedConfig.DistroOpts.AllowDowngrade, lang.CmdInstallAllowDowngrade)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
 	cmd.Flags().StringVar(&o.vaultPasswordFile, InstallVaultPasswordFile, "", lang.CmdInstallFlagVaultPasswordFile)
 	cmd.Flags().StringArrayVar(&o.values, InstallValues, nil, lang.CmdInstallFlagValues)
@@ -150,6 +151,7 @@ func (o *installApplyOptions) run(ctx context.Context, cmd *cobra.Command, args 
 		ModifyFirewall:      o.firewall,
 		LabelNodes:          o.labelNodes,
 		AllowUnmanagedNodes: o.allowUnmanaged,
+		AllowDowngrade:      o.allowDowngrade,
 		UpdateKubeConfig:    o.updateKubeConfig,
 		KubeConfigPath:      o.kubeConfigPath,
 		Keyring:             keyring,

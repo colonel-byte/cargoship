@@ -32,8 +32,6 @@ import (
 type PrepareOptions struct {
 	// Manager is the phase manager
 	Manager *phase.Manager
-	// DisableDowngradeCheck skips the downgrade check
-	DisableDowngradeCheck bool
 	// NoWait skips waiting for the cluster to be ready
 	NoWait bool
 	// NoDrain skips draining worker nodes
