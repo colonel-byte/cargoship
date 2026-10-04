@@ -50,6 +50,7 @@ func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 	})
 	if len(control) > 0 {
 		p.leader = control[0]
+		p.leader.Metadata.IsLeader = true
 	} else {
 		return ErrNoControllers
 	}
@@ -60,6 +61,7 @@ func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 	})
 	logger.From(ctx).Debug("number of systems that need to be updated", "hosts", len(p.hosts))
 	p.service = p.Distro.GetControllerService()
+	p.dis = d
 
 	return nil
 }
@@ -74,6 +76,7 @@ func (p *UpgradeController) Run(ctx context.Context) error {
 		p.drainNode,
 		p.stopService,
 		p.installDistro,
+		p.preStartUpgrade,
 		p.startService,
 		p.waitForNodeReady,
 		p.uncordonNode,

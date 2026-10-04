@@ -61,6 +61,7 @@ func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d 
 	})
 	logger.From(ctx).Debug("number of systems that need to be updated", "hosts", len(p.hosts))
 	p.service = p.Distro.GetWorkerService()
+	p.dis = d
 
 	return nil
 }
@@ -75,6 +76,7 @@ func (p *UpgradeWorkers) Run(ctx context.Context) error {
 		p.drainNode,
 		p.stopService,
 		p.installDistro,
+		p.preStartUpgrade,
 		p.startService,
 		p.waitForNodeReady,
 		p.uncordonNode,

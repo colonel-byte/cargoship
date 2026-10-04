@@ -22,13 +22,15 @@ Failing is also badly timed. By the time pinning runs, `InstallPackage` has alre
 
 ## What is still fatal
 
-The tolerance is deliberately narrow, and it lives in `holdRPMPackages` rather than in the shared `installAndPinPackagesFor`, so it cannot spread to the apt path:
+The tolerance is deliberately narrow, and it lives in `holdRPMPackages` and `unholdRPMPackages` rather than in the shared `installAndPinPackagesFor`, so it cannot spread to the apt path:
 
 - A host that *has* versionlock and still fails to pin is a real error. The probe (`dnf versionlock --help`, chosen because it reads no repository metadata and touches no existing lock) is what separates "this tooling is absent" from "this tooling failed".
 - A staged file whose package name cannot be read fails the phase on either package manager. That is a property of the artifact, not of the host's pinning tooling, and `packageNames` gives up on the first file it cannot read -- so continuing would leave *every* package on the host unpinned while reporting success.
 
+## The same rule now covers the unhold
+
+The unhold this once deferred now exists. `installAndPinPackagesFor` releases the prior pin before installing, because that is what lets apt or dnf move a held package to a new version at all, and the same closure runs on every upgrade. That extends this decision rather than changing it: `unholdRPMPackages` skips a host with no versionlock plugin for the same reason `holdRPMPackages` does, and it matters more there, because unhold runs *before* the install -- `dnf versionlock delete` failing with `No such command: versionlock` would fail the phase outright on exactly the hosts this decision keeps working. A host with no plugin has nothing locked, so there is nothing to release. It skips at debug rather than warn, since `holdRPMPackages` warns about the same host later in the same phase and that warning is the one naming a real consequence.
+
 ## What would justify revisiting
 
 Staging the versionlock plugin as part of the package, so a RHEL-family host can be given the plugin before the pin instead of excused from it. That turns an unpinnable host back into a fatal error, which is the stronger behavior, and it is the only change that should reverse this.
-
-Note also that nothing unpins yet: the comment on `holdAPTPackages` defers the unhold needed before an upgrade installs a newer set to the upgrade phase, which does not exist. Until it does, the warning is the only record that a host's engine is not pinned.

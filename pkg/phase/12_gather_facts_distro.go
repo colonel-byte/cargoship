@@ -35,6 +35,10 @@ const (
 // uninstalling a newer version part way through.
 var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
 
+// ErrWillNotUpgradeVersionSkewTooGreat is returned when a package is trying to upgrade the cluster
+// more then 1 minor version at a time; v1.33.x to v1.34.x is allowed, but v1.33.x to v1.35.x is not.
+var ErrWillNotUpgradeVersionSkewTooGreat = errors.New("will not upgrade the cluster more than one minor version at a time")
+
 // GatherFactsDistro state
 type GatherFactsDistro struct {
 	GenericPhase
@@ -102,6 +106,9 @@ func (p *GatherFactsDistro) investigateHostDistro(ctx context.Context, h *cluste
 		// and which version, and this phase runs before anything has written to a host, so the
 		// message is the entire output of the run.
 		return fmt.Errorf("%w: %s runs %s, the package carries %s", ErrWillNotDowngrade, h, h.Metadata.DistroVersion, p.d.Spec.Version)
+	}
+	if p.d != nil && p.VersionSkewTooGreat(h, p.d.Spec.Version) {
+		return fmt.Errorf("%w: %s runs %s, the package carries %s", ErrWillNotUpgradeVersionSkewTooGreat, h, h.Metadata.DistroVersion, p.d.Spec.Version)
 	}
 	return nil
 }
