@@ -1,0 +1,23 @@
+namespace: colonel_byte
+name: zarf
+version: 0.0.1
+readme: README.md
+authors:
+  - Allen Conlon <software@conlon.dev>
+description: >-
+  Initialise an air-gapped cluster with zarf, driven from an Ansible playbook.
+  A proof of ZEP-0072.
+license:
+  - Apache-2.0
+tags:
+  - kubernetes
+  - zarf
+  - airgap
+  - cluster
+repository: https://github.com/colonel-byte/cargoship
+documentation: https://colonel-byte.github.io/cargoship/ansible/zarf/collection.html
+homepage: https://github.com/colonel-byte/cargoship
+issues: https://github.com/colonel-byte/cargoship/issues
+build_ignore:
+  - '*.tar.gz'
+  - AGENTS.md
