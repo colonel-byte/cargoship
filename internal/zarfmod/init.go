@@ -101,12 +101,15 @@ const EnvBinary = "ZARF_ANSIBLE_BINARY"
 type initParams struct {
 	// Binary is the zarf to run. The wrapper is a module file, not zarf.
 	Binary string `json:"zarf_binary"`
-	// InitPackage is the staged init package. Zarf init finds the package by name in its working
-	// directory, so what this parameter does is choose that directory; the file keeps the name it
-	// was published with.
+	// InitPackage is the init package to deploy: a path to a staged tarball, an oci:// reference,
+	// or an https:// URL. It is the positional argument of the command, which zarf init has taken
+	// since v0.72.0 -- see MinZarfVersion. The file needs no particular name, because nothing
+	// looks it up by name any more.
 	InitPackage string `json:"init_package"`
-	// Directory is the working directory to run in, for a layout where the init package is not
-	// what names it.
+	// Directory is the working directory to run zarf in. A relative init package is resolved
+	// against it, and so is a relative path inside an operator-supplied zarf config. Giving a
+	// directory and no package leaves zarf to find the package itself, which is its own documented
+	// search: the working directory, then the directory holding the binary, then its cache.
 	Directory string `json:"directory"`
 	// Kubeconfig is the cluster to initialise. Zarf has no --kubeconfig flag, so it is passed as
 	// KUBECONFIG in the child's environment.
@@ -183,13 +186,26 @@ func runInit(ctx context.Context, run Runner, args *Args, resp *Response) error 
 	if err != nil {
 		return err
 	}
+	source, err := initSource(&p)
+	if err != nil {
+		return err
+	}
+
+	// The version is read before the init runs, because an older zarf rejects the positional
+	// package source as a usage error about having too many arguments, which names neither the
+	// parameter nor the version that would accept it. What it finds is reported either way.
+	version, err := requireZarfVersion(ctx, run, binary(&p))
+	resp.Zarf.Version = version
+	if err != nil {
+		return err
+	}
 
 	hb := NewHeartbeat(p.StatusFile)
 	defer hb.Clear()
 	resp.Zarf.StatusFile = hb.Path()
 
 	prog := newProgress(hb, componentCount(p.Components))
-	argv := buildInitArgs(&p)
+	argv := buildInitArgs(&p, source)
 
 	resp.Zarf.Command = append([]string{binary(&p)}, redact(argv)...)
 	resp.Zarf.Directory = dir
@@ -244,18 +260,30 @@ func binary(p *initParams) string {
 	return defaultBinary
 }
 
-// workingDir is the directory zarf runs in, which is how the init package is chosen.
+// workingDir is the directory zarf runs in.
+//
+// It is no longer how the init package is chosen -- the package is the command's positional
+// argument -- so the two parameters can now be set together and mean two different things: which
+// package, and where relative paths resolve from. What is still refused is neither of them, since
+// that leaves zarf searching a working directory the module did not choose: a playbook task runs
+// wherever Ansible happens to have put the module, and an init that silently picked up a package
+// from there, or downloaded one, is worse than a task that says what it needs.
+//
+// A directory given as the init package is still honoured as a directory. Zarf would reject it as
+// a package source, and an operator who pointed at their staging directory meant the search zarf
+// does inside it.
 func workingDir(p *initParams) (string, error) {
-	if p.Directory != "" && p.InitPackage != "" {
-		return "", errors.New(`the "directory" and "init_package" parameters cannot both be set: ` +
-			`init_package chooses the directory it lives in, so setting both says two things`)
-	}
 	if p.Directory != "" {
 		return p.Directory, nil
 	}
 	if p.InitPackage == "" {
 		return "", errors.New(`one of the "init_package" or "directory" parameters is required: ` +
-			`zarf init finds the init package by name in its working directory`)
+			`without either, zarf init searches whatever directory the module was run in`)
+	}
+	if isRemoteSource(p.InitPackage) {
+		// Nothing local is being read, so there is no directory the run belongs in. Zarf resolves
+		// its cache from the environment, not from here.
+		return "", nil
 	}
 
 	info, err := os.Stat(p.InitPackage)
@@ -263,11 +291,45 @@ func workingDir(p *initParams) (string, error) {
 		return "", fmt.Errorf("unable to read the init package %s: %w", p.InitPackage, err)
 	}
 	if info.IsDir() {
-		// An operator who pointed at the staging directory meant the directory. Saying so is
-		// cheaper than a zarf that reports it cannot find an init package in a path that holds one.
 		return p.InitPackage, nil
 	}
 	return filepath.Dir(p.InitPackage), nil
+}
+
+// initSource is the package source the command is given, empty when zarf is left to search.
+//
+// A local path is passed as the absolute path it resolves to rather than relative to the working
+// directory the run is about to take. Both work, and the absolute form is what makes the reported
+// command line reproducible by hand from any directory.
+func initSource(p *initParams) (string, error) {
+	if p.InitPackage == "" {
+		return "", nil
+	}
+	if isRemoteSource(p.InitPackage) {
+		return p.InitPackage, nil
+	}
+
+	info, err := os.Stat(p.InitPackage)
+	if err != nil {
+		return "", fmt.Errorf("unable to read the init package %s: %w", p.InitPackage, err)
+	}
+	if info.IsDir() {
+		// The directory is the working directory instead; zarf searches it for a package named
+		// after its own version, which is what it does when given no source at all.
+		return "", nil
+	}
+	return filepath.Abs(p.InitPackage)
+}
+
+// isRemoteSource reports whether the package source is one zarf fetches rather than reads from
+// disk. The schemes are the ones zarf's package loader accepts.
+func isRemoteSource(source string) bool {
+	for _, scheme := range []string{"oci://", "http://", "https://"} {
+		if strings.HasPrefix(source, scheme) {
+			return true
+		}
+	}
+	return false
 }
 
 // componentCount is how many components the run will deploy, 0 when the wrapper cannot know. A
@@ -309,8 +371,14 @@ func childEnv(p *initParams, hb *Heartbeat) []string {
 }
 
 // buildInitArgs renders the parameters as the zarf command line an operator would have typed.
-func buildInitArgs(p *initParams) []string {
-	c := newCommand("init")
+func buildInitArgs(p *initParams, source string) []string {
+	// The source is zarf init's positional PACKAGE_SOURCE. Empty leaves zarf to search, which is
+	// what a directory-only invocation asks for.
+	var positional []string
+	if source != "" {
+		positional = append(positional, source)
+	}
+	c := newCommand("init", positional...)
 
 	// A module that asked for confirmation would never get it: there is no terminal on the other
 	// end. The playbook task is the confirmation.

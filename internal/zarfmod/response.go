@@ -77,6 +77,10 @@ type Detail struct {
 	// ChangedUndeclared names what did not say. It is what makes a partial signal actionable
 	// rather than a warning with nothing behind it.
 	ChangedUndeclared []string `json:"changedUndeclared,omitempty"`
+	// Version is what `zarf version` printed, when the wrapper was able to read it. The modules
+	// have a floor -- see MinZarfVersion -- so a run that failed on an older zarf has the version
+	// attached to the result rather than only in whatever zarf said.
+	Version string `json:"version,omitempty"`
 	// StatusFile is the heartbeat file the run wrote progress to, when one was asked for. It is
 	// reported so a failed run leaves a trail even if the monitor that was watching it is gone.
 	StatusFile string `json:"statusFile,omitempty"`

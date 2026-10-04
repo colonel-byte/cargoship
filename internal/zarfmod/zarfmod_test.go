@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,12 +33,30 @@ type fakeRunner struct {
 	lines    []string
 	exitCode int
 	err      error
+	// version is what `zarf version` prints. The init module reads it before it runs, so a
+	// runner that answered the real lines to both calls would have the version check parsing
+	// log output. Empty means a zarf recent enough to not be the subject of the test.
+	version string
 
 	got Invocation
+	ran []Invocation
 }
 
 func (f *fakeRunner) Run(_ context.Context, in Invocation) (Result, error) {
 	f.got = in
+	f.ran = append(f.ran, in)
+
+	if len(in.Args) > 0 && in.Args[0] == "version" {
+		version := f.version
+		if version == "" {
+			version = "v" + MinZarfVersion
+		}
+		if in.OnLine != nil {
+			in.OnLine(version)
+		}
+		return Result{}, nil
+	}
+
 	for _, line := range f.lines {
 		if in.OnLine != nil {
 			in.OnLine(line)
@@ -138,6 +157,7 @@ func TestBuildInitArgs(t *testing.T) {
 	tests := []struct {
 		name   string
 		params initParams
+		source string
 		want   []string
 	}{
 		{
@@ -145,6 +165,30 @@ func TestBuildInitArgs(t *testing.T) {
 			params: initParams{},
 			want: []string{
 				"init",
+				"--confirm",
+				"--no-color",
+				"--log-format", "json",
+			},
+		},
+		{
+			name:   "the package source leads the argument vector",
+			params: initParams{},
+			source: "/srv/staging/zarf-init-amd64-v0.86.0.tar.zst",
+			want: []string{
+				"init",
+				"/srv/staging/zarf-init-amd64-v0.86.0.tar.zst",
+				"--confirm",
+				"--no-color",
+				"--log-format", "json",
+			},
+		},
+		{
+			name:   "an oci reference is passed through as the source",
+			params: initParams{},
+			source: "oci://ghcr.io/zarf-dev/packages/init:v0.86.0",
+			want: []string{
+				"init",
+				"oci://ghcr.io/zarf-dev/packages/init:v0.86.0",
 				"--confirm",
 				"--no-color",
 				"--log-format", "json",
@@ -230,7 +274,7 @@ func TestBuildInitArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildInitArgs(&tt.params)
+			got := buildInitArgs(&tt.params, tt.source)
 			if strings.Join(got, " ") != strings.Join(tt.want, " ") {
 				t.Errorf("buildInitArgs rendered\n  %v\nwant\n  %v", got, tt.want)
 			}
@@ -289,7 +333,7 @@ func TestInitArgsAreKnownFlags(t *testing.T) {
 		SetVariables:          map[string]string{"KEY": "value"},
 	}
 
-	for _, arg := range buildInitArgs(&widest) {
+	for _, arg := range buildInitArgs(&widest, "/srv/staging/zarf-init-amd64-v0.86.0.tar.zst") {
 		name, ok := strings.CutPrefix(arg, "--")
 		if !ok {
 			continue
@@ -510,6 +554,12 @@ func TestRunInitReportsTheRun(t *testing.T) {
 	if run.got.Dir != dir {
 		t.Errorf("zarf ran in %q, want the init package's directory %q", run.got.Dir, dir)
 	}
+	if len(run.got.Args) < 2 || run.got.Args[0] != "init" || run.got.Args[1] != pkg {
+		t.Errorf("zarf was run as %v, want the init package as the positional source %q", run.got.Args, pkg)
+	}
+	if resp.Zarf.Version != "v"+MinZarfVersion {
+		t.Errorf("the reported zarf version was %q", resp.Zarf.Version)
+	}
 	if run.got.Binary != "/usr/bin/zarf" {
 		t.Errorf("zarf was run as %q", run.got.Binary)
 	}
@@ -606,4 +656,131 @@ func containsEnv(env []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// TestRunInitRefusesAnOldZarf covers the floor. Before v0.72.0 zarf init took no positional
+// argument, so passing the init package would fail as a usage error naming neither the parameter
+// nor the version that accepts it.
+func TestRunInitRefusesAnOldZarf(t *testing.T) {
+	dir := t.TempDir()
+	pkg := filepath.Join(dir, "zarf-init-amd64-v0.71.0.tar.zst")
+	if err := os.WriteFile(pkg, []byte("not really a package"), 0o600); err != nil {
+		t.Fatalf("unable to stage the test init package: %v", err)
+	}
+
+	args := argsFor(t, map[string]any{"init_package": pkg})
+	resp := &Response{Zarf: &Detail{Module: "init"}}
+	run := &fakeRunner{version: "v0.71.1"}
+
+	err := runInit(context.Background(), run, args, resp)
+	if !errors.Is(err, ErrZarfTooOld) {
+		t.Fatalf("runInit reported %v, want ErrZarfTooOld", err)
+	}
+	if !strings.Contains(err.Error(), MinZarfVersion) {
+		t.Errorf("the error did not name the version it needs: %v", err)
+	}
+	if resp.Zarf.Version != "v0.71.1" {
+		t.Errorf("the version it found was not reported: %q", resp.Zarf.Version)
+	}
+	for _, in := range run.ran {
+		if len(in.Args) > 0 && in.Args[0] == "init" {
+			t.Error("the init ran against a zarf that is too old")
+		}
+	}
+}
+
+// TestRunInitToleratesAnUnreadableVersion pins the other half of that check: the floor exists to
+// turn a confusing failure into a clear one, so a version string it cannot parse must not become a
+// refusal of its own. The run proceeds and the version comes back as whatever was printed.
+func TestRunInitToleratesAnUnreadableVersion(t *testing.T) {
+	dir := t.TempDir()
+	pkg := filepath.Join(dir, "zarf-init-amd64-dev.tar.zst")
+	if err := os.WriteFile(pkg, []byte("not really a package"), 0o600); err != nil {
+		t.Fatalf("unable to stage the test init package: %v", err)
+	}
+
+	args := argsFor(t, map[string]any{"init_package": pkg})
+	resp := &Response{Zarf: &Detail{Module: "init"}}
+	run := &fakeRunner{version: "built from source"}
+
+	if err := runInit(context.Background(), run, args, resp); err != nil {
+		t.Fatalf("runInit reported %v", err)
+	}
+	if resp.Zarf.Version != "built from source" {
+		t.Errorf("the version it found was not reported: %q", resp.Zarf.Version)
+	}
+}
+
+// TestInitSourceAndWorkingDir covers what the two parameters now mean separately: the package is
+// the command's positional source, and the directory is only where relative paths resolve from.
+// Before zarf v0.72.0 the package could only be chosen by the directory, and the two could not be
+// set together.
+func TestInitSourceAndWorkingDir(t *testing.T) {
+	dir := t.TempDir()
+	pkg := filepath.Join(dir, "zarf-init-amd64-v0.86.0.tar.zst")
+	if err := os.WriteFile(pkg, []byte("not really a package"), 0o600); err != nil {
+		t.Fatalf("unable to stage the test init package: %v", err)
+	}
+	elsewhere := t.TempDir()
+
+	cases := []struct {
+		name       string
+		params     initParams
+		wantSource string
+		wantDir    string
+	}{
+		{
+			name:       "a staged file is the source, and its directory is where zarf runs",
+			params:     initParams{InitPackage: pkg},
+			wantSource: pkg,
+			wantDir:    dir,
+		},
+		{
+			name:       "a directory is the working directory, and zarf searches it",
+			params:     initParams{InitPackage: dir},
+			wantSource: "",
+			wantDir:    dir,
+		},
+		{
+			name: "both parameters say different things now",
+			params: initParams{
+				InitPackage: pkg,
+				Directory:   elsewhere,
+			},
+			wantSource: pkg,
+			wantDir:    elsewhere,
+		},
+		{
+			name:       "a remote reference needs no working directory",
+			params:     initParams{InitPackage: "oci://ghcr.io/zarf-dev/packages/init:v0.86.0"},
+			wantSource: "oci://ghcr.io/zarf-dev/packages/init:v0.86.0",
+			wantDir:    "",
+		},
+		{
+			name:       "a directory alone leaves zarf to search it",
+			params:     initParams{Directory: dir},
+			wantSource: "",
+			wantDir:    dir,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			source, err := initSource(&tc.params)
+			if err != nil {
+				t.Fatalf("initSource reported %v", err)
+			}
+			if source != tc.wantSource {
+				t.Errorf("initSource was %q, want %q", source, tc.wantSource)
+			}
+
+			gotDir, err := workingDir(&tc.params)
+			if err != nil {
+				t.Fatalf("workingDir reported %v", err)
+			}
+			if gotDir != tc.wantDir {
+				t.Errorf("workingDir was %q, want %q", gotDir, tc.wantDir)
+			}
+		})
+	}
 }
