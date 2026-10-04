@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-466cbc8a.js";
+            window.path_to_searchindex_js = "searchindex-fa050969.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-6e82a667.js"></script>
+        <script src="toc-2420a1d0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -17542,6 +17542,68 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <h2 id="what-would-justify-revisiting-1"><a class="header" href="#what-would-justify-revisiting-1">What would justify revisiting</a></h2>
 <p>Staging the versionlock plugin as part of the package, so a RHEL-family host can be given the plugin before the pin instead of excused from it. That turns an unpinnable host back into a fatal error, which is the stronger behavior, and it is the only change that should reverse this.</p>
 <p>Note also that nothing unpins yet: the comment on <code>holdAPTPackages</code> defers the unhold needed before an upgrade installs a newer set to the upgrade phase, which does not exist. Until it does, the warning is the only record that a host’s engine is not pinned.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-oncreate-actions-go-through-zarfs-package-converter"><a class="header" href="#why-oncreate-actions-go-through-zarfs-package-converter">Why onCreate actions go through zarf’s package converter</a></h1>
+<p><code>runCreateActions</code> in <a href="#assemble"><code>pkg/packager/assemble/actions.go</code></a> hands each action to zarf, and since zarf v0.87.0 that means converting it first. The conversion is one function, <code>toAPIActionSet</code>, and it does something that looks wasteful: it wraps a single action set in a throwaway <code>ZarfPackage</code> carrying one unnamed component, runs <code>convert.PackageFromV1alpha1</code> over the whole thing, and reads the converted action set back out of <code>Components[0]</code>. This document records why that is the shape, and the behavior change it brought with it, because both look like accidents from the code alone.</p>
+<h2 id="what-forced-it-3"><a class="header" href="#what-forced-it-3">What forced it</a></h2>
+<p>zarf v0.87.0 moved its canonical action model out of <code>src/api/v1alpha1</code> and into a normalized <code>src/api</code>, and retyped the executor against it:</p>
+<pre><code class="language-go">// v0.86.0
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error
+
+// v0.87.0
+func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOptions) error
+</code></pre>
+<p>The v1alpha1 types still exist, so nothing in cargoship stopped compiling for lack of a type. What broke is the handoff: cargoship holds v1alpha1 actions and <code>Run</code> now takes <code>api.Action</code>.</p>
+<p>cargoship holds v1alpha1 actions because its own package schema embeds them. <code>ZarfDistroActions.OnCreate</code> in <a href="#distro"><code>api/zarf.dev/v1alpha1/distro/spec.go</code></a> is a <code>zarf.ZarfComponentActionSet</code>, which is what puts <code>mute</code>, <code>maxRetries</code>, <code>setVariable</code> and the rest into <code>schema/zarf-v1alpha1-distro-package-schema.json</code>. Retyping that field onto <code>api.Action</code> would convert the problem into a schema change – <code>mute</code> becomes <code>silent</code>, <code>maxRetries</code> becomes <code>retries</code>, <code>wait.cluster.condition</code> stops being a string – and every <code>distro.yaml</code> an operator has written would need rewriting. A dependency bump is not where that happens.</p>
+<p>So the conversion has to live at the call site, and it has to be the same conversion zarf performs on a package it loaded itself. Anything else means cargoship’s actions behave differently from zarf’s for the same YAML.</p>
+<h2 id="why-a-whole-package-for-one-action-set"><a class="header" href="#why-a-whole-package-for-one-action-set">Why a whole package, for one action set</a></h2>
+<p>zarf’s action converters are in <code>src/internal/api/v1alpha1</code>. <code>actionSetToGeneric</code>, <code>actionToGeneric</code> and <code>waitToGeneric</code> are exactly what is needed here and none of them are reachable: Go’s internal-package rule is enforced by the compiler, not by convention. The only exported door through that boundary is <a href="https://github.com/zarf-dev/zarf/blob/main/src/api/convert/convert.go"><code>src/api/convert</code></a>, and it converts packages.</p>
+<p>The synthetic package is therefore the price of using zarf’s mapping instead of writing a second copy of it. The alternative – a hand-rolled <code>v1alpha1</code> to <code>api</code> converter in cargoship – was rejected on how it fails rather than on how it reads. A hand-rolled converter compiles forever. When upstream adds an action field, or changes what an empty wait condition defaults to, cargoship keeps converting the old way and the action quietly runs with the old meaning. Going through <code>convert</code> fails at compile time if the function is removed or retyped, and tracks upstream silently when it is not.</p>
+<h2 id="the-field-mapping-is-not-a-rename-list"><a class="header" href="#the-field-mapping-is-not-a-rename-list">The field mapping is not a rename list</a></h2>
+<p>Three of the mappings would be easy to get wrong by hand, which is the concrete argument for not doing it by hand:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>v1alpha1 field</th><th><code>api</code> field</th><th>Not a rename because</th></tr>
+</thead>
+<tbody>
+<tr><td><code>mute</code></td><td><code>Silent</code></td><td>The sense is preserved but the word inverts in <code>ActionDefaults</code>, where <code>Mute: true</code> became <code>Silent: true</code></td></tr>
+<tr><td><code>template</code></td><td><code>EnableTemplating</code></td><td><code>*bool</code> with a false default collapses to <code>bool</code>, through <code>ShouldTemplate</code>’s opt-in semantics</td></tr>
+<tr><td><code>wait.cluster.condition</code></td><td><code>Condition.Expression</code></td><td>A string became a struct, and the converter stamps a <code>Default</code> of <code>existence</code> that the executor never reads</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>TestToAPIActionSetMapsEveryField</code> pins all of them. A field that stops crossing is not a build failure – the action still runs, just without whatever stopped crossing – so the test is the only thing standing between a dropped <code>mute</code> and a package build that starts printing a command’s output.</p>
+<h2 id="what-else-runs-because-the-door-is-a-package-level-one"><a class="header" href="#what-else-runs-because-the-door-is-a-package-level-one">What else runs, because the door is a package-level one</a></h2>
+<p><code>convert.PackageFromV1alpha1</code> calls <code>migrateDeprecated</code> before it converts anything. That is the side effect of entering through the package door, and it is load-bearing in one case and inert in the rest.</p>
+<p><strong>Inert:</strong> <code>migrateScriptsToActions</code> reads <code>component.DeprecatedScripts</code>. The synthetic component has none and cargoship’s schema has no scripts field at all, so it cannot fire.</p>
+<p><strong>Load-bearing:</strong> <code>migrateSetVariableToSetVariables</code> rewrites an action’s deprecated singular <code>setVariable</code> into the <code>setVariables</code> list, when the list is empty. Under v0.86 nothing on this path read that field: <code>runAction</code> looked only at <code>SetVariables</code>. The field is in cargoship’s schema, marked <code>deprecated</code> rather than rejected, so a <code>distro.yaml</code> could carry it and validate.</p>
+<p>What that cost, measured against <code>test/e2e/noncluster/testdata/actions/distro.yaml</code> on the commit before the bump:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to run component before action: unable to render cmd of the "read both variables back" action: template "echo '{{ .Variables.FROM_LIST }}' &gt; before-list.txt\necho '{{ .Variables.FROM_DEPRECATED }}' &gt; before-deprecated.txt\n" resolved a missing key to "&lt;no value&gt;"
+</code></pre>
+<p>Not a silently unset variable. zarf ignored the field, so the variable was never set, and cargoship’s own renderer – which errors on a missing key rather than rendering <code>&lt;no value&gt;</code> into a shell command – failed the build on the next action that read it. The three routes a variable can take to a later action, before and after:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th>v0.86</th><th>v0.87</th></tr>
+</thead>
+<tbody>
+<tr><td><code>setVariables</code> list</td><td>works</td><td>works</td></tr>
+<tr><td><code>setVariable</code>, deprecated singular</td><td>variable never set, build fails on the read</td><td>works</td></tr>
+<tr><td>A value out of the values file</td><td>works</td><td>works</td></tr>
+</tbody>
+</table>
+</div>
+<p>So the bump turns a hard failure into a working build for a definition the schema already accepted. That is the right direction, and it is still a behavior change: a package that failed to build now builds, and the file an action writes changes from nothing to a value.</p>
+<p>One thing is lost on the way in. <code>migrateDeprecated</code> returns the warnings it accumulated, including “please migrate to the list form of setVariables”, and <code>convert.PackageFromV1alpha1</code> discards them. The migration is silent. The wrapper that logs them, <code>ApplyMigrations</code>, is in the same internal package as the converters, so there is no exported way to get the warning without reimplementing the migration to produce it.</p>
+<h2 id="what-a-reversal-has-to-account-for"><a class="header" href="#what-a-reversal-has-to-account-for">What a reversal has to account for</a></h2>
+<p>Replacing <code>toAPIActionSet</code> with a direct converter is the obvious cleanup, and it costs three things that are not visible at the call site:</p>
+<ul>
+<li>the field mapping stops tracking upstream, in the silent direction described above;</li>
+<li>the deprecated <code>setVariable</code> stops working again, failing builds that work today, unless the migration is reimplemented alongside the mapping;</li>
+<li><code>TestToAPIActionSetMigratesTheDeprecatedSetVariable</code>, <code>TestRunCreateActionsHonorsTheDeprecatedSetVariable</code> and <code>TestCargoshipCreateRunsOnCreateActions</code> fail, which is intended – they exist so that the second point cannot be reverted by accident.</li>
+</ul>
+<p><code>TestRunCreateActionsDoesNotRewriteItsInput</code> covers the other direction. <code>migrateComponentActions</code> rewrites the slice it is handed in place, so <code>toAPIActionSet</code> is called with a fresh one-element slice per action rather than with the caller’s own list. Converting the whole set in one call would hand zarf’s migration the list that is written back out to <code>distro.yaml</code>, and the package would ship carrying migrations its author never made.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-sosedoffansible-vault-go-and-not-apenellago-ansible"><a class="header" href="#why-sosedoffansible-vault-go-and-not-apenellago-ansible">Why sosedoff/ansible-vault-go and not apenella/go-ansible</a></h1>
 <p>Cargoship’s Ansible Vault support (<code>cargoship vault encrypt</code>, and automatic decryption of vault-encrypted registry credentials at <code>apply</code> time) is built on <a href="https://github.com/sosedoff/ansible-vault-go"><code>github.com/sosedoff/ansible-vault-go</code></a>. <a href="https://github.com/apenella/go-ansible"><code>github.com/apenella/go-ansible</code></a> was also considered, since it’s a more widely known Go/Ansible integration, but it isn’t a fit for this use case:</p>

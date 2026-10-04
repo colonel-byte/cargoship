@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>v1_37</title>
+        <title>choice-v1alpha1-action-conversion</title>
 
 
         <!-- Custom HTML head -->
@@ -12,35 +12,35 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="../../../../../favicon-de23e50b.svg">
-        <link rel="shortcut icon" href="../../../../../favicon-8114d1fc.png">
-        <link rel="stylesheet" href="../../../../../css/variables-8adf115d.css">
-        <link rel="stylesheet" href="../../../../../css/general-e96d0476.css">
-        <link rel="stylesheet" href="../../../../../css/chrome-d279d366.css">
-        <link rel="stylesheet" href="../../../../../css/print-9e4910d8.css" media="print">
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="../../../../../fonts/fonts-9644e21d.css">
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../../../highlight-493f70e1.css">
-        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../../../tomorrow-night-4c0ae647.css">
-        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../../../ayu-highlight-3fdfc3ac.css">
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../../../../../docs/css/root-2b369fa7.css">
-        <link rel="stylesheet" href="../../../../../docs/css/print-69d0807c.css">
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
+        <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
 
 
         <!-- Provide site root and default themes to javascript -->
         <script>
-            const path_to_root = "../../../../../";
+            const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../../../searchindex-fa050969.js";
+            window.path_to_searchindex_js = "../searchindex-fa050969.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../../../toc-2420a1d0.js"></script>
+        <script src="../toc-2420a1d0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -107,7 +107,7 @@
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="../../../../../toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -142,13 +142,13 @@
                     <h1 class="menu-title"></h1>
 
                     <div class="right-buttons">
-                        <a href="../../../../../print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
                         </a>
                         <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/golang/pkg/engineconfig/gen/k3s/v1_37.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/agent/choice-v1alpha1-action-conversion.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -182,224 +182,77 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_37"><a class="header" href="#v1_37">v1_37</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_37"
+                        <h1 id="why-oncreate-actions-go-through-zarfs-package-converter"><a class="header" href="#why-oncreate-actions-go-through-zarfs-package-converter">Why onCreate actions go through zarf’s package converter</a></h1>
+<p><code>runCreateActions</code> in <a href="../golang/pkg/packager/assemble.html"><code>pkg/packager/assemble/actions.go</code></a> hands each action to zarf, and since zarf v0.87.0 that means converting it first. The conversion is one function, <code>toAPIActionSet</code>, and it does something that looks wasteful: it wraps a single action set in a throwaway <code>ZarfPackage</code> carrying one unnamed component, runs <code>convert.PackageFromV1alpha1</code> over the whole thing, and reads the converted action set back out of <code>Components[0]</code>. This document records why that is the shape, and the behavior change it brought with it, because both look like accidents from the code alone.</p>
+<h2 id="what-forced-it"><a class="header" href="#what-forced-it">What forced it</a></h2>
+<p>zarf v0.87.0 moved its canonical action model out of <code>src/api/v1alpha1</code> and into a normalized <code>src/api</code>, and retyped the executor against it:</p>
+<pre><code class="language-go">// v0.86.0
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) error
+
+// v0.87.0
+func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOptions) error
 </code></pre>
-<h2 id="index"><a class="header" href="#index">Index</a></h2>
+<p>The v1alpha1 types still exist, so nothing in cargoship stopped compiling for lack of a type. What broke is the handoff: cargoship holds v1alpha1 actions and <code>Run</code> now takes <code>api.Action</code>.</p>
+<p>cargoship holds v1alpha1 actions because its own package schema embeds them. <code>ZarfDistroActions.OnCreate</code> in <a href="../golang/api/zarf.dev/v1alpha1/distro.html"><code>api/zarf.dev/v1alpha1/distro/spec.go</code></a> is a <code>zarf.ZarfComponentActionSet</code>, which is what puts <code>mute</code>, <code>maxRetries</code>, <code>setVariable</code> and the rest into <code>schema/zarf-v1alpha1-distro-package-schema.json</code>. Retyping that field onto <code>api.Action</code> would convert the problem into a schema change – <code>mute</code> becomes <code>silent</code>, <code>maxRetries</code> becomes <code>retries</code>, <code>wait.cluster.condition</code> stops being a string – and every <code>distro.yaml</code> an operator has written would need rewriting. A dependency bump is not where that happens.</p>
+<p>So the conversion has to live at the call site, and it has to be the same conversion zarf performs on a package it loaded itself. Anything else means cargoship’s actions behave differently from zarf’s for the same YAML.</p>
+<h2 id="why-a-whole-package-for-one-action-set"><a class="header" href="#why-a-whole-package-for-one-action-set">Why a whole package, for one action set</a></h2>
+<p>zarf’s action converters are in <code>src/internal/api/v1alpha1</code>. <code>actionSetToGeneric</code>, <code>actionToGeneric</code> and <code>waitToGeneric</code> are exactly what is needed here and none of them are reachable: Go’s internal-package rule is enforced by the compiler, not by convention. The only exported door through that boundary is <a href="https://github.com/zarf-dev/zarf/blob/main/src/api/convert/convert.go"><code>src/api/convert</code></a>, and it converts packages.</p>
+<p>The synthetic package is therefore the price of using zarf’s mapping instead of writing a second copy of it. The alternative – a hand-rolled <code>v1alpha1</code> to <code>api</code> converter in cargoship – was rejected on how it fails rather than on how it reads. A hand-rolled converter compiles forever. When upstream adds an action field, or changes what an empty wait condition defaults to, cargoship keeps converting the old way and the action quietly runs with the old meaning. Going through <code>convert</code> fails at compile time if the function is removed or retyped, and tracks upstream silently when it is not.</p>
+<h2 id="the-field-mapping-is-not-a-rename-list"><a class="header" href="#the-field-mapping-is-not-a-rename-list">The field mapping is not a rename list</a></h2>
+<p>Three of the mappings would be easy to get wrong by hand, which is the concrete argument for not doing it by hand:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>v1alpha1 field</th><th><code>api</code> field</th><th>Not a rename because</th></tr>
+</thead>
+<tbody>
+<tr><td><code>mute</code></td><td><code>Silent</code></td><td>The sense is preserved but the word inverts in <code>ActionDefaults</code>, where <code>Mute: true</code> became <code>Silent: true</code></td></tr>
+<tr><td><code>template</code></td><td><code>EnableTemplating</code></td><td><code>*bool</code> with a false default collapses to <code>bool</code>, through <code>ShouldTemplate</code>’s opt-in semantics</td></tr>
+<tr><td><code>wait.cluster.condition</code></td><td><code>Condition.Expression</code></td><td>A string became a struct, and the converter stamps a <code>Default</code> of <code>existence</code> that the executor never reads</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>TestToAPIActionSetMapsEveryField</code> pins all of them. A field that stops crossing is not a build failure – the action still runs, just without whatever stopped crossing – so the test is the only thing standing between a dropped <code>mute</code> and a package build that starts printing a command’s output.</p>
+<h2 id="what-else-runs-because-the-door-is-a-package-level-one"><a class="header" href="#what-else-runs-because-the-door-is-a-package-level-one">What else runs, because the door is a package-level one</a></h2>
+<p><code>convert.PackageFromV1alpha1</code> calls <code>migrateDeprecated</code> before it converts anything. That is the side effect of entering through the package door, and it is load-bearing in one case and inert in the rest.</p>
+<p><strong>Inert:</strong> <code>migrateScriptsToActions</code> reads <code>component.DeprecatedScripts</code>. The synthetic component has none and cargoship’s schema has no scripts field at all, so it cannot fire.</p>
+<p><strong>Load-bearing:</strong> <code>migrateSetVariableToSetVariables</code> rewrites an action’s deprecated singular <code>setVariable</code> into the <code>setVariables</code> list, when the list is empty. Under v0.86 nothing on this path read that field: <code>runAction</code> looked only at <code>SetVariables</code>. The field is in cargoship’s schema, marked <code>deprecated</code> rather than rejected, so a <code>distro.yaml</code> could carry it and validate.</p>
+<p>What that cost, measured against <code>test/e2e/noncluster/testdata/actions/distro.yaml</code> on the commit before the bump:</p>
+<pre><code class="language-text">ERR failed to create distro package: unable to run component before action: unable to render cmd of the "read both variables back" action: template "echo '{{ .Variables.FROM_LIST }}' &gt; before-list.txt\necho '{{ .Variables.FROM_DEPRECATED }}' &gt; before-deprecated.txt\n" resolved a missing key to "&lt;no value&gt;"
+</code></pre>
+<p>Not a silently unset variable. zarf ignored the field, so the variable was never set, and cargoship’s own renderer – which errors on a missing key rather than rendering <code>&lt;no value&gt;</code> into a shell command – failed the build on the next action that read it. The three routes a variable can take to a later action, before and after:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Route</th><th>v0.86</th><th>v0.87</th></tr>
+</thead>
+<tbody>
+<tr><td><code>setVariables</code> list</td><td>works</td><td>works</td></tr>
+<tr><td><code>setVariable</code>, deprecated singular</td><td>variable never set, build fails on the read</td><td>works</td></tr>
+<tr><td>A value out of the values file</td><td>works</td><td>works</td></tr>
+</tbody>
+</table>
+</div>
+<p>So the bump turns a hard failure into a working build for a definition the schema already accepted. That is the right direction, and it is still a behavior change: a package that failed to build now builds, and the file an action writes changes from nothing to a value.</p>
+<p>One thing is lost on the way in. <code>migrateDeprecated</code> returns the warnings it accumulated, including “please migrate to the list form of setVariables”, and <code>convert.PackageFromV1alpha1</code> discards them. The migration is silent. The wrapper that logs them, <code>ApplyMigrations</code>, is in the same internal package as the converters, so there is no exported way to get the warning without reimplementing the migration to produce it.</p>
+<h2 id="what-a-reversal-has-to-account-for"><a class="header" href="#what-a-reversal-has-to-account-for">What a reversal has to account for</a></h2>
+<p>Replacing <code>toAPIActionSet</code> with a direct converter is the obvious cleanup, and it costs three things that are not visible at the call site:</p>
 <ul>
-<li><a href="#variables">Variables</a></li>
-<li><a href="#AgentConfig">type AgentConfig</a></li>
-<li><a href="#ServerConfig">type ServerConfig</a></li>
+<li>the field mapping stops tracking upstream, in the silent direction described above;</li>
+<li>the deprecated <code>setVariable</code> stops working again, failing builds that work today, unless the migration is reimplemented alongside the mapping;</li>
+<li><code>TestToAPIActionSetMigratesTheDeprecatedSetVariable</code>, <code>TestRunCreateActionsHonorsTheDeprecatedSetVariable</code> and <code>TestCargoshipCreateRunsOnCreateActions</code> fail, which is intended – they exist so that the second point cannot be reverted by accident.</li>
 </ul>
-<h2 id="variables"><a class="header" href="#variables">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components k3s v1_37 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons = []string{
-    "coredns",
-    "servicelb",
-    "traefik",
-    "local-storage",
-    "metrics-server",
-    "runtimes",
-}
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values k3s v1_37 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values k3s v1_37 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig"><a class="header" href="#type-agentconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_37/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
-<p>AgentConfig is the agent config.yaml key set for k3s v1_37.</p>
-<pre><code class="language-go">type AgentConfig struct {
-    Token                          string   `yaml:"token,omitempty"`
-    TokenFile                      string   `yaml:"token-file,omitempty"`
-    Server                         string   `yaml:"server,omitempty"`
-    DataDir                        string   `yaml:"data-dir,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Selinux                        bool     `yaml:"selinux,omitempty"`
-    LbServerPort                   int      `yaml:"lb-server-port,omitempty"`
-    ProtectKernelDefaults          bool     `yaml:"protect-kernel-defaults,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp              []string `yaml:"node-ip,omitempty"`
-    BindAddress         string   `yaml:"bind-address,omitempty"`
-    NodeExternalIp      []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns     []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns     []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf          string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface        string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf         string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf      string   `yaml:"flannel-cni-conf,omitempty"`
-    KubeletArg          []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg        []string `yaml:"kube-proxy-arg,omitempty"`
-    EnablePprof         bool     `yaml:"enable-pprof,omitempty"`
-    Rootless            bool     `yaml:"rootless,omitempty"`
-    Docker              bool     `yaml:"docker,omitempty"`
-    VpnAuth             string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile         string   `yaml:"vpn-auth-file,omitempty"`
-    DisableApiserverLb  bool     `yaml:"disable-apiserver-lb,omitempty"`
-}
-</code></pre>
-<p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig"><a class="header" href="#type-serverconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_37/zz_server_config.go#L29-L158">ServerConfig</a></a></h2>
-<p>ServerConfig is the server config.yaml key set for k3s v1_37.</p>
-<pre><code class="language-go">type ServerConfig struct {
-    BindAddress     string `yaml:"bind-address,omitempty"`
-    HttpsListenPort int    `yaml:"https-listen-port,omitempty"`
-    // Deprecated: hidden flag.
-    SupervisorPort int `yaml:"supervisor-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverPort int `yaml:"apiserver-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverBindAddress    string   `yaml:"apiserver-bind-address,omitempty"`
-    AdvertiseAddress        string   `yaml:"advertise-address,omitempty"`
-    AdvertisePort           int      `yaml:"advertise-port,omitempty"`
-    TlsSan                  []string `yaml:"tls-san,omitempty"`
-    TlsSanSecurity          bool     `yaml:"tls-san-security,omitempty"`
-    DataDir                 string   `yaml:"data-dir,omitempty"`
-    ClusterCidr             []string `yaml:"cluster-cidr,omitempty"`
-    ServiceCidr             []string `yaml:"service-cidr,omitempty"`
-    ServiceNodePortRange    string   `yaml:"service-node-port-range,omitempty"`
-    ClusterDns              []string `yaml:"cluster-dns,omitempty"`
-    ClusterDomain           string   `yaml:"cluster-domain,omitempty"`
-    FlannelBackend          string   `yaml:"flannel-backend,omitempty"`
-    FlannelIpv6Masq         bool     `yaml:"flannel-ipv6-masq,omitempty"`
-    FlannelExternalIp       bool     `yaml:"flannel-external-ip,omitempty"`
-    EgressSelectorMode      string   `yaml:"egress-selector-mode,omitempty"`
-    ServicelbNamespace      string   `yaml:"servicelb-namespace,omitempty"`
-    WriteKubeconfig         string   `yaml:"write-kubeconfig,omitempty"`
-    WriteKubeconfigMode     string   `yaml:"write-kubeconfig-mode,omitempty"`
-    WriteKubeconfigGroup    string   `yaml:"write-kubeconfig-group,omitempty"`
-    WriteKubeconfigName     string   `yaml:"write-kubeconfig-name,omitempty"`
-    HelmJobImage            string   `yaml:"helm-job-image,omitempty"`
-    Token                   string   `yaml:"token,omitempty"`
-    TokenFile               string   `yaml:"token-file,omitempty"`
-    AgentToken              string   `yaml:"agent-token,omitempty"`
-    AgentTokenFile          string   `yaml:"agent-token-file,omitempty"`
-    Server                  string   `yaml:"server,omitempty"`
-    ClusterInit             bool     `yaml:"cluster-init,omitempty"`
-    ClusterReset            bool     `yaml:"cluster-reset,omitempty"`
-    ClusterResetRestorePath string   `yaml:"cluster-reset-restore-path,omitempty"`
-    KubeApiserverArg        []string `yaml:"kube-apiserver-arg,omitempty"`
-    EtcdArg                 []string `yaml:"etcd-arg,omitempty"`
-    // Aliases (not separately validated here): kube-controller-arg
-    KubeControllerManagerArg []string `yaml:"kube-controller-manager-arg,omitempty"`
-    KubeSchedulerArg         []string `yaml:"kube-scheduler-arg,omitempty"`
-    HelmControllerArg        []string `yaml:"helm-controller-arg,omitempty"`
-    // Aliases (not separately validated here): kube-cloud-controller-arg
-    KubeCloudControllerManagerArg []string `yaml:"kube-cloud-controller-manager-arg,omitempty"`
-    // Deprecated: hidden flag.
-    KineTls                       bool     `yaml:"kine-tls,omitempty"`
-    DatastoreEndpoint             string   `yaml:"datastore-endpoint,omitempty"`
-    DatastoreCafile               string   `yaml:"datastore-cafile,omitempty"`
-    DatastoreCertfile             string   `yaml:"datastore-certfile,omitempty"`
-    DatastoreKeyfile              string   `yaml:"datastore-keyfile,omitempty"`
-    EtcdExposeMetrics             bool     `yaml:"etcd-expose-metrics,omitempty"`
-    EtcdDisableSnapshots          bool     `yaml:"etcd-disable-snapshots,omitempty"`
-    EtcdSnapshotName              string   `yaml:"etcd-snapshot-name,omitempty"`
-    EtcdSnapshotScheduleCron      string   `yaml:"etcd-snapshot-schedule-cron,omitempty"`
-    EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
-    EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
-    EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
-    EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
-    EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
-    EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
-    EtcdS3EndpointCa              string   `yaml:"etcd-s3-endpoint-ca,omitempty"`
-    EtcdS3SkipSslVerify           bool     `yaml:"etcd-s3-skip-ssl-verify,omitempty"`
-    EtcdS3AccessKey               string   `yaml:"etcd-s3-access-key,omitempty"`
-    EtcdS3SecretKey               string   `yaml:"etcd-s3-secret-key,omitempty"`
-    EtcdS3SessionToken            string   `yaml:"etcd-s3-session-token,omitempty"`
-    EtcdS3Bucket                  string   `yaml:"etcd-s3-bucket,omitempty"`
-    EtcdS3BucketLookupType        string   `yaml:"etcd-s3-bucket-lookup-type,omitempty"`
-    EtcdS3Region                  string   `yaml:"etcd-s3-region,omitempty"`
-    EtcdS3Folder                  string   `yaml:"etcd-s3-folder,omitempty"`
-    EtcdS3Retention               int      `yaml:"etcd-s3-retention,omitempty"`
-    EtcdS3Proxy                   string   `yaml:"etcd-s3-proxy,omitempty"`
-    EtcdS3ConfigSecret            string   `yaml:"etcd-s3-config-secret,omitempty"`
-    EtcdS3Insecure                bool     `yaml:"etcd-s3-insecure,omitempty"`
-    EtcdS3Timeout                 string   `yaml:"etcd-s3-timeout,omitempty"`
-    DefaultLocalStoragePath       string   `yaml:"default-local-storage-path,omitempty"`
-    Disable                       []string `yaml:"disable,omitempty"`
-    DisableScheduler              bool     `yaml:"disable-scheduler,omitempty"`
-    DisableCloudController        bool     `yaml:"disable-cloud-controller,omitempty"`
-    DisableKubeProxy              bool     `yaml:"disable-kube-proxy,omitempty"`
-    DisableNetworkPolicy          bool     `yaml:"disable-network-policy,omitempty"`
-    DisableHelmController         bool     `yaml:"disable-helm-controller,omitempty"`
-    // Deprecated: hidden flag.
-    DisableApiserver bool `yaml:"disable-apiserver,omitempty"`
-    // Deprecated: hidden flag.
-    DisableControllerManager bool `yaml:"disable-controller-manager,omitempty"`
-    // Deprecated: hidden flag.
-    DisableEtcd                    bool     `yaml:"disable-etcd,omitempty"`
-    EmbeddedRegistry               bool     `yaml:"embedded-registry,omitempty"`
-    SupervisorMetrics              bool     `yaml:"supervisor-metrics,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Docker                         bool     `yaml:"docker,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    SystemDefaultRegistry          string   `yaml:"system-default-registry,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry       []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp                    []string `yaml:"node-ip,omitempty"`
-    NodeExternalIp            []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns           []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns           []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf                string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface              string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf               string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf            string   `yaml:"flannel-cni-conf,omitempty"`
-    VpnAuth                   string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile               string   `yaml:"vpn-auth-file,omitempty"`
-    KubeletArg                []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg              []string `yaml:"kube-proxy-arg,omitempty"`
-    ProtectKernelDefaults     bool     `yaml:"protect-kernel-defaults,omitempty"`
-    SecretsEncryption         bool     `yaml:"secrets-encryption,omitempty"`
-    EnablePprof               bool     `yaml:"enable-pprof,omitempty"`
-    Rootless                  bool     `yaml:"rootless,omitempty"`
-    SecretsEncryptionProvider string   `yaml:"secrets-encryption-provider,omitempty"`
-    Selinux                   bool     `yaml:"selinux,omitempty"`
-    LbServerPort              int      `yaml:"lb-server-port,omitempty"`
-    // Deprecated: hidden flag.
-    DisableAgent bool `yaml:"disable-agent,omitempty"`
-}
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<p><code>TestRunCreateActionsDoesNotRewriteItsInput</code> covers the other direction. <code>migrateComponentActions</code> rewrites the slice it is handed in place, so <code>toAPIActionSet</code> is called with a fresh one-element slice per action rather than with the caller’s own list. Converting the whole set in one call would hand zarf’s migration the list that is written back out to <code>distro.yaml</code>, and the package would ship carrying migrations its author never made.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../../../golang/pkg/engineconfig/gen/k3s/v1_36.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../agent/choice-unpinnable-hosts.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../../../../../golang/pkg/engineconfig/gen/rke2/v1_31.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../agent/choice-vault-library.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -409,11 +262,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../../../golang/pkg/engineconfig/gen/k3s/v1_36.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../agent/choice-unpinnable-hosts.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../../../../../golang/pkg/engineconfig/gen/rke2/v1_31.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../agent/choice-vault-library.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
@@ -433,13 +286,13 @@
         </script>
 
 
-        <script src="../../../../../elasticlunr-ef4e11c1.min.js"></script>
-        <script src="../../../../../mark-09e88c2c.min.js"></script>
-        <script src="../../../../../searcher-09f2665d.js"></script>
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
-        <script src="../../../../../clipboard-1626706a.min.js"></script>
-        <script src="../../../../../highlight-abc7f01d.js"></script>
-        <script src="../../../../../book-609e4cb8.js"></script>
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 
