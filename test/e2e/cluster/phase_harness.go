@@ -312,6 +312,26 @@ func (h *phaseHarness) carriesFilesFor(selector string) bool {
 	return false
 }
 
+// reconnectHosts reopens the SSH connections an action closed on its way out. Every action ends
+// with the disconnect phase, and its dry-run path disconnects as well, so a host read after a run
+// reports every file as absent whether the file is there or not. Connect and DetectOS are both
+// read-only, so running them again restores what a read needs and changes nothing.
+//
+// It replaces the manager's phase list, so the manager it is given is finished with as far as
+// actions are concerned.
+func reconnectHosts(ctx context.Context, manager *phase.Manager) error {
+	manager.SetPhases(phase.Phases{&phase.Connect{}, &phase.DetectOS{}})
+	return manager.Run(ctx)
+}
+
+// disconnectAll closes the connections reconnectHosts opened, since the phase that would normally
+// do it has already run.
+func disconnectAll(hosts apicluster.ZarfHosts) {
+	for _, host := range hosts {
+		host.Disconnect()
+	}
+}
+
 // readOnHosts reads path from every host, keyed by host string, so a test can assert on the
 // same file across the whole cluster.
 func readOnHosts(hosts apicluster.ZarfHosts, path string) (map[string]string, error) {

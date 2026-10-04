@@ -60,6 +60,23 @@ func (Test) EndToEndClusterStage() error {
 	return testrunner.RunE2ENoBuild("30m", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
 }
 
+// EndToEndClusterDryRun runs only the dry-run walk, which reports over nodes with nothing on
+// them and asserts it left them that way. It starts no engine, so it runs against the smaller
+// staging cluster and is the fastest way to exercise --dry-run against real hosts.
+func (Test) EndToEndClusterDryRun() error {
+	if err := testrunner.StopBootlooseContainers(); err != nil {
+		return err
+	}
+	if err := os.Setenv("CARGOSHIP_E2E_STAGE_ONLY", "1"); err != nil {
+		return err
+	}
+	return testrunner.RunE2ENoBuild(
+		"30m",
+		"github.com/colonel-byte/cargoship/test/e2e/cluster/...",
+		"-run", "TestClusterPhases/dryrun",
+	)
+}
+
 // CleanCluster removes containers left behind by bootloose.
 func (Test) CleanCluster() error {
 	return testrunner.StopBootlooseContainers()
