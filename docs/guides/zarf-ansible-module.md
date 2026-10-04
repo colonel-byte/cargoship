@@ -45,16 +45,38 @@ A task can name a wrapper outright rather than relying on the path, which is wha
 
 Set `run_once: true` and `delegate_to` on every task. One `zarf init` initialises the whole cluster, so a play over the cluster's own inventory would otherwise initialise it once per host. Set `no_log: true` on any task carrying a credential: a binary module has no per-parameter `no_log`, so the task-level setting is what suppresses the arguments and the result.
 
-## Finding the init package
+## Naming the init package
 
-`zarf init` has no parameter naming the package. Zarf looks for a file named after its own version -- `zarf-init-<arch>-<version>.tar.zst` -- in the working directory. The module's `init_package` parameter therefore chooses that directory rather than the file: point it at the staged package (or at the directory holding it) and keep the name the package was published with.
+`init_package` is the package zarf deploys, passed as the positional package source `zarf init [ PACKAGE_SOURCE ]` takes. A path to a staged tarball under any name, an `oci://` reference, or an `https://` URL all work, and so does a directory -- which leaves zarf to search inside it the way it does when given no source at all, for a file named after zarf's own version.
 
 ```sh
 zarf package pull oci://ghcr.io/zarf-dev/packages/init:v0.85.0 --architecture amd64 \
   --output-directory /srv/staging
 ```
 
-The version has to be the version of the zarf that will deploy it, so `zarf version` on the node that runs the play is what picks the tag -- including inside the `cargoship-ansible` image, whose zarf is a pinned release of its own.
+A package pulled that way keeps the `zarf-init-<arch>-<version>.tar.zst` name, and the version has to be the version of the zarf that will deploy it: `zarf version` on the node that runs the play is what picks the tag, including inside the `cargoship-ansible` image, whose zarf is a pinned release of its own. A package built in-house is under no such constraint about its name, because nothing looks it up by name.
+
+This needs zarf **v0.72.0 or newer**, which is where `zarf init` gained that positional argument. Before it, the only way to choose a package was to run zarf in the directory holding a file named after zarf's own version, and the module did exactly that -- so an older zarf rejects the argument as a usage error naming neither the parameter nor the version that would accept it. The wrapper reads `zarf version` before it runs and fails with both versions instead, and reports what it found as `zarf.version` either way.
+
+`directory` is now a separate thing: the working directory zarf runs in, which is where a relative `init_package` and a relative path inside a `zarf_config` file resolve from. The two may be set together.
+
+```yaml
+- name: Initialise the cluster from a package built in-house
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/our-init-package.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+
+- name: Initialise the cluster from a package held in an internal registry
+  colonel_byte.zarf.zarf_init:
+    init_package: oci://registry.bubbles.test/zarf/init:v0.85.0
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+```
 
 ## The walk a cluster with no storage needs
 
@@ -165,7 +187,7 @@ The parameters themselves never reach disk on the path this collection's action 
 Both wrappers answer as the module named by the basename they were invoked under, or by `ZARF_ANSIBLE_MODULE`, and read their parameters from a JSON file named as the single argument or from stdin:
 
 ```sh
-printf '%s' '{"init_package":"/srv/staging","kubeconfig":"/etc/rancher/rke2/rke2.yaml"}' \
+printf '%s' '{"init_package":"/srv/staging/zarf-init-amd64-v0.85.0.tar.zst","kubeconfig":"/etc/rancher/rke2/rke2.yaml"}' \
   | ZARF_ANSIBLE_MODULE=init zarf_init
 ```
 
