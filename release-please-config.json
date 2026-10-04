@@ -20,7 +20,8 @@
         { "type": "build", "section": "Build" }
       ],
       "extra-files": [
-        "ansible/colonel_byte/cargoship/galaxy.yml"
+        "ansible/colonel_byte/cargoship/galaxy.yml",
+        "ansible/colonel_byte/zarf/galaxy.yml"
       ],
       "extra-label": "e2e-cluster,docker"
     }
