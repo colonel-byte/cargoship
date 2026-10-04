@@ -39,3 +39,23 @@ heading-split-level = 2
 [output.html.print]
 page-break = false
 enable     = true
+
+# The Ansible reference moved from docs/ansible/ into a directory per collection when a second
+# collection arrived, so every one of these paths was a published page. mdBook writes a tiny
+# redirecting HTML file at each key; a value is resolved relative to the key's own directory, so
+# these are all one level down rather than absolute. See docs/ansible/cargoship/collection.md and
+# the "Keeping .gitattributes in sync with the generators" neighbourhood of AGENTS.md for why the
+# move happened.
+#
+# Keep an entry for as long as anything outside this repository might still hold the old link --
+# a bookmark, an older release's galaxy.yml, a Galaxy listing. They cost one file each.
+[output.html.redirect]
+"/ansible/collection.html"                = "cargoship/collection.html"
+"/ansible/modules.html"                   = "cargoship/modules.html"
+"/ansible/roles.html"                     = "cargoship/roles.html"
+"/ansible/module_apply.html"              = "cargoship/module_apply.html"
+"/ansible/module_engine_config_sync.html" = "cargoship/module_engine_config_sync.html"
+"/ansible/module_kube_config.html"        = "cargoship/module_kube_config.html"
+"/ansible/module_prepare.html"            = "cargoship/module_prepare.html"
+"/ansible/module_reset.html"              = "cargoship/module_reset.html"
+"/ansible/role_cluster.html"              = "cargoship/role_cluster.html"

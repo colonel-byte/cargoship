@@ -25,9 +25,10 @@ import (
 	"github.com/nao1215/markdown"
 )
 
-// generateModuleDocs writes docs/ansible/module_<action>.md for every action plugin.
-func generateModuleDocs() error {
-	plugins, err := filepath.Glob(filepath.Join(collectionDir, "plugins", "action", "cargoship_*.py"))
+// generateModuleDocs writes module_<action>.md for every action plugin of one collection.
+func generateModuleDocs(collection ansibleCollection) error {
+	plugins, err := filepath.Glob(filepath.Join(collection.dir, "plugins", "action",
+		collection.modulePrefix+"*.py"))
 	if err != nil {
 		return err
 	}
@@ -62,25 +63,25 @@ func generateModuleDocs() error {
 			return fmt.Errorf(`%s: no EXAMPLES = r""" block`, pluginPath)
 		}
 
-		if err := writeModuleDoc(doc, options, string(examples[1])); err != nil {
+		if err := writeModuleDoc(collection, doc, options, string(examples[1])); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// writeModuleDoc renders docs/ansible/module_<action>.md.
-func writeModuleDoc(doc moduleDoc, options []namedOption, examples string) error {
+// writeModuleDoc renders one collection's module_<action>.md.
+func writeModuleDoc(collection ansibleCollection, doc moduleDoc, options []namedOption, examples string) error {
 	// The page is named after the action rather than the module, so that module_apply.md sits
-	// beside role_cluster.md without stuttering cargoship_ through every filename.
-	action := strings.TrimPrefix(doc.Module, "cargoship_")
+	// beside role_cluster.md without stuttering the collection's name through every filename.
+	action := strings.TrimPrefix(doc.Module, collection.modulePrefix)
 
-	return writeGeneratedPage(fmt.Sprintf("module_%s.md", action), func(md *markdown.Markdown) error {
+	return writeGeneratedPage(collection.docsDir, fmt.Sprintf("module_%s.md", action), func(md *markdown.Markdown) error {
 		md.H2(doc.Module)
 		md.PlainText("")
 		md.PlainText(renderProse(doc.ShortDescription) + ".")
 		md.PlainText("")
-		md.PlainTextf("Write it as `%s.%s`. It runs on the management node; nothing is installed on the fleet.", collectionFQCN, doc.Module)
+		md.PlainTextf("Write it as `%s.%s`. %s", collection.fqcn, doc.Module, collection.tagline)
 		md.PlainText("")
 		for _, line := range doc.Description {
 			md.PlainText(renderProse(line))

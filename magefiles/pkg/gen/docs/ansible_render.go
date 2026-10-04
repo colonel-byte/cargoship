@@ -76,6 +76,9 @@ var ansibleMarkup = []struct {
 	{regexp.MustCompile(`\bM\(([^()]*)\)`), "`$1`"},
 	{regexp.MustCompile(`\bB\(([^()]*)\)`), "**$1**"},
 	{regexp.MustCompile(`\bI\(([^()]*)\)`), "*$1*"},
+	// U() is a URL. An autolink rather than a bare one, so markdownlint does not read it as an
+	// unwrapped link, and rather than [url](url), which reads twice as long for no more meaning.
+	{regexp.MustCompile(`\bU\(([^()]*)\)`), "<$1>"},
 }
 
 // renderProse converts one documentation string into Markdown.
@@ -205,10 +208,10 @@ func paddedTable(header []string, rows [][]string) []string {
 	return out
 }
 
-// writeGeneratedPage opens a page under docs/ansible and hands it to write, with the banner that
-// says the page is generated already in place.
-func writeGeneratedPage(name string, write func(doc *markdown.Markdown) error) error {
-	path := filepath.Join(ansibleDocsDir, name)
+// writeGeneratedPage opens a page in a collection's documentation directory and hands it to write,
+// with the banner that says the page is generated already in place.
+func writeGeneratedPage(dir, name string, write func(doc *markdown.Markdown) error) error {
+	path := filepath.Join(dir, name)
 	fmt.Println(path)
 
 	f, err := os.Create(path)
