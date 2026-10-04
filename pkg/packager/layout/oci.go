@@ -34,13 +34,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/internal/cfg"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
@@ -251,7 +251,7 @@ func (d *DistroLayout) computeManifest(ctx context.Context) error {
 	annotations := AnnotationsFromMetadata(zarfPkg.Metadata)
 
 	// Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
-	t, parseErr := time.Parse(v1alpha1.BuildTimestampFormat, zarfPkg.Build.Timestamp)
+	t, parseErr := time.Parse(api.BuildTimestampFormat, zarfPkg.Build.Timestamp)
 	if parseErr != nil {
 		t = time.Time{}
 	}

@@ -39,7 +39,7 @@ func Load(ctx context.Context, source string, opts LoadOptions) (*layout.DistroL
 Load fetches, verifies, and loads a Zarf package from the specified source.
 
 <a name="Publish"></a>
-## func [Publish](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L55>)
+## func [Publish](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L58>)
 
 ```go
 func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.Reference, opts PublishOptions) (registry.Reference, error)
@@ -110,7 +110,7 @@ type LoadOptions struct {
 ```
 
 <a name="PublishOptions"></a>
-## type [PublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L39-L52>)
+## type [PublishOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L39-L55>)
 
 PublishOptions are the optional parameters to publish
 
@@ -122,9 +122,12 @@ type PublishOptions struct {
     Retries int
     // SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
     SignBlobOptions signing.SignBlobOptions
-    CachePath       string
-    IsInteractive   bool
-    Registry        *registry.Reference
+    // Keyless selects the Sigstore keyless flow, where cosign resolves the signing
+    // identity via Fulcio/OIDC instead of SignBlobOptions.Key.
+    Keyless       bool
+    CachePath     string
+    IsInteractive bool
+    Registry      *registry.Reference
     types.RemoteOptions
     // Tag is an optional tag for the OCI reference separate from the package metadata.version
     Tag string

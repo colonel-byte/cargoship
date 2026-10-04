@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	"github.com/colonel-byte/cargoship/pkg/helmvalues"
+	zarfapi "github.com/zarf-dev/zarf/src/api"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	zarf "github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -38,7 +40,7 @@ import (
 // Nothing prompts: a package build is not interactive, so an interactive variable
 // resolves to its default.
 func newVariableConfig(ctx context.Context) *variables.VariableConfig {
-	prompt := func(variable zarf.InteractiveVariable) (string, error) {
+	prompt := func(variable zarfapi.InteractiveVariable) (string, error) {
 		return variable.Default, nil
 	}
 	return variables.New("zarf", prompt, logger.From(ctx))
@@ -63,6 +65,7 @@ func newVariableConfig(ctx context.Context) *variables.VariableConfig {
 // output capture and the setValues and setVariables handling. Only the rendering
 // moves.
 func runCreateActions(ctx context.Context, basePath string, defaults zarf.ZarfComponentActionDefaults, list []zarf.ZarfComponentAction, values value.Values, varCfg *variables.VariableConfig) error {
+	defaultConfig := toAPIActionSet(zarf.ZarfComponentActionSet{Defaults: defaults}).Defaults
 	for _, action := range list {
 		if action.ShouldTemplate() {
 			rendered, err := renderAction(ctx, action, values, varCfg)
@@ -71,11 +74,38 @@ func runCreateActions(ctx context.Context, basePath string, defaults zarf.ZarfCo
 			}
 			action = rendered
 		}
-		if err := actions.Run(ctx, basePath, defaults, []zarf.ZarfComponentAction{action}, varCfg, values, template.StateAccess{}); err != nil {
+		set := toAPIActionSet(zarf.ZarfComponentActionSet{
+			Before: []zarf.ZarfComponentAction{action},
+		})
+		if err := actions.Run(ctx, basePath, set.Before, actions.RunOptions{
+			DefaultConfig:  defaultConfig,
+			VariableConfig: varCfg,
+			Values:         values,
+			StateAccess:    template.StateAccess{},
+		}); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// toAPIActionSet converts a v1alpha1 action set into the normalized api types
+// that Zarf's actions package takes as of zarf v0.87.0.
+//
+// Zarf keeps its v1alpha1-to-api action converters in an internal package, so the
+// only exported way across that boundary is a whole-package conversion.
+// cargoship's distro spec still carries the v1alpha1 action set, so the set is
+// wrapped in a throwaway package with one component and read straight back out.
+// Going through Zarf's own converter is what keeps the field mapping -- template
+// to enableTemplating, condition to a WaitCondition, mute to silent -- the same
+// one Zarf applies to a package it loaded itself.
+func toAPIActionSet(set zarf.ZarfComponentActionSet) zarfapi.ActionSet {
+	pkg := zarf.ZarfPackage{
+		Components: []zarf.ZarfComponent{
+			{Actions: zarf.ZarfComponentActions{OnCreate: set}},
+		},
+	}
+	return convert.PackageFromV1alpha1(pkg).Components[0].Actions.OnCreate
 }
 
 // renderAction returns a copy of action with its templated fields already

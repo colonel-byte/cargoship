@@ -267,7 +267,7 @@ func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string,
 	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
-	if err := distroLayout.SignPackage(ctx, signOpts); err != nil {
+	if err := distroLayout.SignPackage(ctx, layout.SignOptions{SignBlobOptions: signOpts}); err != nil {
 		return nil, err
 	}
 
