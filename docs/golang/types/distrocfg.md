@@ -55,7 +55,7 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*RancherCommon\) RunningVersion\(host \*cluster.ZarfHost\) \(string, error\)](<#RancherCommon.RunningVersion>)
 - [type Upstream](<#Upstream>)
   - [func \(d \*Upstream\) AdminCredentials\(host \*cluster.ZarfHost, dataDir string\) \(AdminCredentials, error\)](<#Upstream.AdminCredentials>)
-  - [func \(d \*Upstream\) Bootstrap\(ctx context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) error](<#Upstream.Bootstrap>)
+  - [func \(d \*Upstream\) Bootstrap\(\_ context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, \_ distro.ZarfDistro\) error](<#Upstream.Bootstrap>)
   - [func \(d \*Upstream\) CleanupPaths\(\) \[\]string](<#Upstream.CleanupPaths>)
   - [func \(d \*Upstream\) ConfigureEngine\(\_ context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) error](<#Upstream.ConfigureEngine>)
   - [func \(d \*Upstream\) DesiredFiles\(host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) \(map\[string\]DesiredFile, error\)](<#Upstream.DesiredFiles>)
@@ -672,7 +672,7 @@ AdminCredentials returns the cluster CA certificate and the admin client key pai
 ### func \(\*Upstream\) [Bootstrap](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L58>)
 
 ```go
-func (d *Upstream) Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error
 ```
 
 Bootstrap forms the cluster on the leader with \`kubeadm init\`, or joins it on every other host with \`kubeadm join\`, against the kubeadm\-config.yaml ConfigureEngine already wrote to host.
