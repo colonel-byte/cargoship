@@ -19,6 +19,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -192,6 +193,50 @@ func TestCargoshipCreate(t *testing.T) {
 		_, _, err := e2e.Cargoship(t, "create", minimalDistroDir, minimalDistroDir, "-o", t.TempDir())
 		require.Error(t, err)
 	})
+}
+
+// An onCreate action set is converted into zarf's normalized action types before zarf
+// runs it, and the conversion is where a dropped field stops being visible: the action
+// still runs, just without whatever stopped crossing. Building the fixture is the only
+// check that covers the whole path, from the YAML an author writes to what the command
+// actually sees.
+//
+// The definition is copied first because the actions write into the directory holding it.
+func TestCargoshipCreateRunsOnCreateActions(t *testing.T) {
+	distroDir := copyDistroDefinition(t, actionsDistroDir)
+	outDir := t.TempDir()
+
+	_, stderr, err := e2e.Cargoship(t, "create", distroDir, "-o", outDir)
+	require.NoError(t, err, stderr)
+	requireSinglePackage(t, outDir)
+
+	// Each file is what one action saw, so the three of them cover the three ways a
+	// variable reaches a later action. before-deprecated.txt is the one that is new: the
+	// singular setVariable was read by nothing before zarf v0.87.0, so the action that
+	// renders it failed to resolve the variable and failed the build.
+	for _, tt := range []struct {
+		file string
+		want string
+	}{
+		{
+			file: "before-list.txt",
+			want: "from-the-list",
+		},
+		{
+			file: "before-deprecated.txt",
+			want: "from-the-deprecated-field",
+		},
+		{
+			file: "after-value.txt",
+			want: "from-the-values-file",
+		},
+	} {
+		t.Run(tt.file, func(t *testing.T) {
+			got, err := os.ReadFile(filepath.Join(distroDir, tt.file))
+			require.NoError(t, err)
+			require.Equal(t, tt.want, strings.TrimSpace(string(got)))
+		})
+	}
 }
 
 // TestCargoshipCreateExample builds a real distro from example/, which downloads the rke2

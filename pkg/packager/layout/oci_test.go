@@ -16,12 +16,17 @@ package layout
 
 import (
 	"context"
+	"encoding/json"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/colonel-byte/cargoship/api"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
+	"github.com/colonel-byte/cargoship/config"
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
@@ -216,4 +221,122 @@ func TestIsPushable(t *testing.T) {
 func TestTotalSize(t *testing.T) {
 	require.EqualValues(t, 0, (&DistroLayout{}).TotalSize())
 	require.EqualValues(t, 42, (&DistroLayout{cache: &manifestCache{totalSize: 42}}).TotalSize())
+}
+
+// exampleRoot is the generated example tree, reached from this package's directory.
+const exampleRoot = "../../../example"
+
+// writeManifestablePackage lays out the smallest directory computeManifest accepts:
+// the definition it reads the metadata and the build timestamp from, and the
+// checksums file it reads before anything else. Nothing here is checksummed --
+// computeManifest hashes a file it finds no checksum for.
+func writeManifestablePackage(t *testing.T, distroYAML []byte) *DistroLayout {
+	t.Helper()
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, config.DistroYAML), distroYAML, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, config.Checksums), nil, 0o600))
+	return &DistroLayout{dirPath: dir}
+}
+
+// manifestAnnotations returns the annotations of the manifest computeManifest packed.
+func manifestAnnotations(t *testing.T, d *DistroLayout) map[string]string {
+	t.Helper()
+	require.NoError(t, d.computeManifest(t.Context()))
+	var manifest ocispec.Manifest
+	require.NoError(t, json.Unmarshal(d.cache.manifestJSON, &manifest))
+	return manifest.Annotations
+}
+
+// The created annotation is the one place a package's build timestamp is reparsed
+// rather than copied, so it is the one place the layout it was written in matters.
+// assemble writes it with api.BuildTimestampFormat; zarf v0.87.0 removed the
+// v1alpha1 constant this used to read, and a layout mismatch is not an error -- the
+// parse fails and the timestamp silently becomes the epoch.
+func TestComputeManifestCreatedAnnotation(t *testing.T) {
+	// The timestamp is written out the way assemble writes it rather than formatted
+	// with the same constant the code under test reads, so that changing the constant
+	// fails here instead of moving both sides together.
+	t.Run("a build timestamp becomes the created annotation", func(t *testing.T) {
+		d := writeManifestablePackage(t, []byte(`apiVersion: zarf.dev/v1alpha1
+kind: ZarfDistro
+metadata:
+  name: timestamped
+  version: 0.0.1
+build:
+  timestamp: Wed, 04 Mar 2026 17:55:19 +0000
+`))
+
+		got := manifestAnnotations(t, d)
+		require.Equal(t, "2026-03-04T17:55:19Z", got[ocispec.AnnotationCreated])
+	})
+
+	// The literal above is only the right wire form while assemble writes timestamps
+	// in this layout, so that is asserted rather than assumed.
+	t.Run("assemble writes a timestamp in the layout the annotation is parsed from", func(t *testing.T) {
+		built := time.Date(2026, time.March, 4, 17, 55, 19, 0, time.UTC)
+		require.Equal(t, "Wed, 04 Mar 2026 17:55:19 +0000", built.Format(api.BuildTimestampFormat))
+	})
+
+	// An unparseable timestamp has to stay a zero time rather than failing the push:
+	// a package built by an older cargoship is still pushable.
+	for _, tt := range []struct {
+		name      string
+		timestamp string
+	}{
+		{
+			name:      "absent",
+			timestamp: "",
+		},
+		{
+			name:      "written in some other layout",
+			timestamp: "2026-03-04T17:55:19Z",
+		},
+	} {
+		t.Run("a timestamp "+tt.name+" falls back to the epoch", func(t *testing.T) {
+			d := writeManifestablePackage(t, []byte(`apiVersion: zarf.dev/v1alpha1
+kind: ZarfDistro
+metadata:
+  name: untimestamped
+  version: 0.0.1
+build:
+  timestamp: `+tt.timestamp+`
+`))
+
+			got := manifestAnnotations(t, d)
+			require.Equal(t, time.Time{}.UTC().Format(OCITimestampFormat), got[ocispec.AnnotationCreated])
+		})
+	}
+}
+
+// Every definition cargoship ships has to still reach a manifest. computeManifest
+// parses the definition itself rather than reusing the loaded package, so it is
+// where a change to the parse or to the metadata annotations shows up, and the
+// examples are the only definitions that cover the full vocabulary the generators
+// emit. Nothing is downloaded: the definition is the only file in the layout.
+func TestComputeManifestForEveryGeneratedExample(t *testing.T) {
+	var definitions []string
+	err := filepath.WalkDir(exampleRoot, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && entry.Name() == config.DistroYAML {
+			definitions = append(definitions, path)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, definitions, "no example definitions under "+exampleRoot)
+
+	for _, path := range definitions {
+		t.Run(path, func(t *testing.T) {
+			distroYAML, err := os.ReadFile(path)
+			require.NoError(t, err)
+
+			got := manifestAnnotations(t, writeManifestablePackage(t, distroYAML))
+			// The title is what a registry lists the package under, and it is the one
+			// annotation every definition is required to carry.
+			require.NotEmpty(t, got[ocispec.AnnotationTitle])
+			require.NotEmpty(t, got[ocispec.AnnotationCreated])
+		})
+	}
 }

@@ -42,7 +42,12 @@ func TestCargoshipValidate(t *testing.T) {
 	t.Run("accepts a generated example and the repository config", func(t *testing.T) {
 		// The kind is read from each document, so a package definition and an inventory can be
 		// checked in one run. The config file declares no kind and needs --kind.
-		_, stderr, err := e2e.Cargoship(t, "validate", filepath.Join(valuesSchemaDistroDir, "distro.yaml"))
+		// The actions definition is here because the deprecated singular setVariable it uses
+		// is still a field the schema accepts, and a schema regeneration that dropped it
+		// would make a definition an operator can legitimately write fail validation.
+		_, stderr, err := e2e.Cargoship(t, "validate",
+			filepath.Join(valuesSchemaDistroDir, "distro.yaml"),
+			filepath.Join(actionsDistroDir, "distro.yaml"))
 		require.NoError(t, err, stderr)
 		require.Contains(t, stderr, "ok (package)")
 
