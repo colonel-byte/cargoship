@@ -8,10 +8,10 @@ That boundary is what the collection is for, and it is the whole of what the col
 
 ## What is here
 
-| Page                                        | What it covers                                                    |
-| ------------------------------------------- | ----------------------------------------------------------------- |
-| [Modules](modules.md)                       | The five execution primitives, one per fleet action.              |
-| [Roles](roles.md)                           | `cluster`, the shorter way to write the same task.                |
+| Page                                        | What it covers                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------- |
+| [Modules](modules.md)                       | The five execution primitives, one per fleet action.                 |
+| [Roles](roles.md)                           | `cluster`, the shorter way to write the same task.                   |
 | [Module guide](../../guides/ansible-module.md) | Installing the collection, check mode, and what the result means. |
 | [Inventory guide](../../guides/ansible-inv.md) | The inventory document the modules take.                          |
 
