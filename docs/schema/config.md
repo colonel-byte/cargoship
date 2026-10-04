@@ -74,6 +74,7 @@ holds the values for the `.distro` section of the config file
 
 | Property                         | Type                                          | Required | Default | Description                                                                                                                            |
 | -------------------------------- | --------------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `allow_downgrade`                | `boolean`                                     | no       |         | whether a run continues when a host already runs an engine version newer<br>than the one the package carries                           |
 | `allow_unmanaged_nodes`          | `boolean`                                     | no       |         | whether an apply continues when the cluster holds a node that no host<br>in the config accounts for                                    |
 | `apply`                          | [ApplyOptions](#applyoptions)                 | no       |         | are options used by the apply subcommand                                                                                               |
 | `certificate_identity`           | `string`                                      | no       |         | required identity claim in the signing certificate                                                                                     |

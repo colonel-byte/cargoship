@@ -50,9 +50,14 @@ type InstallCommon struct {
 	// dryRun reaches phase.Manager.DryRun. Only apply, reset, and engine-config-sync register
 	// the flag; the other commands embedding InstallCommon carry the field unset, which is the
 	// same as off.
-	dryRun    bool
-	logLevel  string
-	LogFormat string
+	dryRun bool
+	// allowDowngrade reaches GatherFactsDistro through the action options. Only apply and
+	// engine-config-sync register the flag: those are the two commands that load a package, and
+	// the refusal needs a package version to compare a host against. Reset and kube-config load
+	// none, so the check never fires for them.
+	allowDowngrade bool
+	logLevel       string
+	LogFormat      string
 	// values holds the --values files. They are merged after the cluster config's own
 	// spec.config.values, so the command line wins over the file. Commands that do not
 	// load a package never register the flag and carry the field empty.

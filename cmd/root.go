@@ -86,6 +86,8 @@ const (
 	InstallLabelNodes = "label-nodes"
 	// InstallAllowUnmanagedNodes flag
 	InstallAllowUnmanagedNodes = "allow-unmanaged-nodes"
+	// InstallAllowDowngrade flag
+	InstallAllowDowngrade = "allow-downgrade"
 	// InstallUpdateKubeConfig flag
 	InstallUpdateKubeConfig = "update-kubeconfig"
 	// InstallKubeConfigPath flag
