@@ -138,6 +138,9 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.InitializeControllers{
 				Distro: d,
 			},
+			&phase.ApplyManifests{
+				Distro: d,
+			},
 			&phase.InitializeWorkers{
 				Distro:           d,
 				WorkerConcurrent: opts.WorkerConcurrent,
