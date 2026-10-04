@@ -85,7 +85,10 @@ func TestActionPluginDocsMatchModuleParams(t *testing.T) {
 		{
 			module: "zarf_init",
 			params: &initParams{},
-			argv:   buildInitArgs(fullInitParams()),
+			// The package source is the command's positional argument rather than a flag, so it
+			// is left out here: this test reads the flags the module renders against the flags
+			// the plugin documents, and a positional argument is neither.
+			argv: buildInitArgs(fullInitParams(), ""),
 		},
 		{
 			module: "zarf_package_deploy",

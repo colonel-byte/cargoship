@@ -9,7 +9,10 @@
   connection: local
   gather_facts: false
   vars:
-    zarf_init_package: /srv/staging/zarf-init-amd64-v0.70.0.tar.zst
+    # The init package to deploy. Zarf takes it as a positional package source, so it can be a
+    # path to a staged tarball under any name, a directory for zarf to search, or an oci://
+    # reference. Override it with -e zarf_init_package=... to deploy a custom one.
+    zarf_init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
     zarf_kubeconfig: /etc/rancher/rke2/rke2.yaml
   tasks:
     - name: Run zarf init

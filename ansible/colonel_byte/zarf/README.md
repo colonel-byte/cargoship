@@ -31,6 +31,8 @@ Then make the collection visible to Ansible, by copying or symlinking this direc
 
 ## Using it
 
+`init_package` is the package zarf deploys, passed as the positional package source `zarf init` accepts: a path to a staged tarball under any name, a directory for zarf to search, or an `oci://` reference. That needs zarf v0.72.0 or newer, and the wrapper reads `zarf version` before it runs so an older one fails naming both versions rather than rejecting an argument it has never heard of.
+
 ```yaml
 - name: Initialise the cluster
   hosts: localhost

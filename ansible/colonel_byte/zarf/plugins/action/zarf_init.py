@@ -43,19 +43,21 @@ notes:
   - "Check mode reports the task as skipped. C(zarf init) has no dry run, so there is nothing honest to report instead."
   - "A parameter left unset renders no flag, so whatever zarf's own config file sets still applies. That is why C(plain_http: false) and omitting C(plain_http) differ."
   - "Credentials given as parameters are rendered as flags, which puts them in the process table for the life of the run. Put them in a zarf config file and name it with C(zarf_config) to keep them out of it."
+  - "Needs zarf v0.72.0 or newer, which is where C(zarf init) gained the positional package source this module passes C(init_package) as. The wrapper reads C(zarf version) before it runs and fails naming both versions when the zarf it found is older."
 options:
   init_package:
     description:
-      - "The staged zarf init package, such as C(/srv/staging/zarf-init-amd64-v0.85.0.tar.zst)."
-      - "Zarf finds the init package by name in its working directory, so what this parameter does is choose that directory. Keep the file under the name it was published with. A directory may be given instead of a file."
+      - "The init package to deploy, such as C(/srv/staging/zarf-init-amd64-v0.85.0.tar.zst)."
+      - "It is passed as the positional package source of C(zarf init), so the file needs no particular name and need not sit in any particular directory. An C(oci://) reference or an C(https://) URL may be given instead of a path, for a cluster whose packages come from a registry rather than from disk."
+      - "A directory may also be given, which leaves zarf to find a package inside it the way it does when given no source at all: a file named after zarf's own version."
       - "One of C(init_package) or C(directory) is required."
     type: str
     required: false
     cli_flag: None
   directory:
     description:
-      - "The working directory to run zarf in, for a layout where the init package is not what names it."
-      - "Cannot be given together with C(init_package)."
+      - "The working directory to run zarf in. A relative C(init_package), and a relative path inside a zarf config file named by C(zarf_config), are resolved against it."
+      - "May be given together with C(init_package): the package says what to deploy, and this says where relative paths resolve from."
     type: str
     required: false
     cli_flag: None
@@ -369,6 +371,22 @@ EXAMPLES = r"""
     init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
     kubeconfig: /etc/rancher/rke2/rke2.yaml
     zarf_config: /etc/zarf/zarf-config.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+
+- name: Initialise the cluster from a custom init package under a name of its own
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/our-init-package.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+
+- name: Initialise the cluster from an init package held in a registry
+  colonel_byte.zarf.zarf_init:
+    init_package: oci://registry.bubbles.test/zarf/init:v0.85.0
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
   delegate_to: localhost
   run_once: true
   no_log: true
