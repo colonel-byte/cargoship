@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2488e60a.js";
+            window.path_to_searchindex_js = "searchindex-466cbc8a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6e82a667.js"></script>
@@ -7182,7 +7182,7 @@ $ cargoship version -o json
 </code></pre>
 <p>Load fetches, verifies, and loads a Zarf package from the specified source.</p>
 <p><a name="Publish"></a></p>
-<h2 id="func-publish"><a class="header" href="#func-publish">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L55">Publish</a></a></h2>
+<h2 id="func-publish"><a class="header" href="#func-publish">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L58">Publish</a></a></h2>
 <pre><code class="language-go">func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.Reference, opts PublishOptions) (registry.Reference, error)
 </code></pre>
 <p>Publish used to publish a distro package to an oci registry</p>
@@ -7237,7 +7237,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="PublishOptions"></a></p>
-<h2 id="type-publishoptions-1"><a class="header" href="#type-publishoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L39-L52">PublishOptions</a></a></h2>
+<h2 id="type-publishoptions-1"><a class="header" href="#type-publishoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/distro/publish.go#L39-L55">PublishOptions</a></a></h2>
 <p>PublishOptions are the optional parameters to publish</p>
 <pre><code class="language-go">type PublishOptions struct {
     // OCIConcurrency configures the amount of layers to push in parallel
@@ -7246,9 +7246,12 @@ $ cargoship version -o json
     Retries int
     // SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
     SignBlobOptions signing.SignBlobOptions
-    CachePath       string
-    IsInteractive   bool
-    Registry        *registry.Reference
+    // Keyless selects the Sigstore keyless flow, where cosign resolves the signing
+    // identity via Fulcio/OIDC instead of SignBlobOptions.Key.
+    Keyless       bool
+    CachePath     string
+    IsInteractive bool
+    Registry      *registry.Reference
     types.RemoteOptions
     // Tag is an optional tag for the OCI reference separate from the package metadata.version
     Tag string
@@ -11430,7 +11433,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#DistroLayout.RenderFiles">func (d *DistroLayout) RenderFiles(ctx context.Context, values map[string]any) error</a></li>
 <li><a href="#DistroLayout.Resolve">func (d *DistroLayout) Resolve(_ context.Context, reference string) (ocispec.Descriptor, error)</a></li>
 <li><a href="#DistroLayout.SetRegistryDigest">func (d *DistroLayout) SetRegistryDigest(digest string)</a></li>
-<li><a href="#DistroLayout.SignPackage">func (d *DistroLayout) SignPackage(ctx context.Context, opts signing.SignBlobOptions) (err error)</a></li>
+<li><a href="#DistroLayout.SignPackage">func (d *DistroLayout) SignPackage(ctx context.Context, opts SignOptions) (err error)</a></li>
 <li><a href="#DistroLayout.TotalSize">func (d *DistroLayout) TotalSize() int64</a></li>
 <li><a href="#DistroLayout.Values">func (d *DistroLayout) Values(ctx context.Context, overrides …map[string]any) (map[string]any, error)</a></li>
 <li><a href="#DistroLayout.VerifyPackageSignature">func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.VerifyBlobOptions) error</a></li>
@@ -11440,6 +11443,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#DistroPath">type DistroPath</a>
 <ul>
 <li><a href="#ResolveDistroPath">func ResolveDistroPath(path string) (DistroPath, error)</a></li>
+</ul>
+</li>
+<li><a href="#SignOptions">type SignOptions</a>
+<ul>
+<li><a href="#SignOptions.ShouldSign">func (opts SignOptions) ShouldSign() bool</a></li>
 </ul>
 </li>
 <li><a href="#VerificationStrategy">type VerificationStrategy</a></li>
@@ -11608,8 +11616,8 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>SetRegistryDigest records the manifest digest as resolved from a registry. It replaces the locally-computed digest and clears the manifest cache, since the registry manifest may differ (e.g. partial OCI pulls). After this call the layout is no longer usable as an oras.ReadOnlyTarget for pushing.</p>
 <p><a name="DistroLayout.SignPackage"></a></p>
-<h3 id="func-distrolayout-signpackage"><a class="header" href="#func-distrolayout-signpackage">func (*DistroLayout) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L443">SignPackage</a></a></h3>
-<pre><code class="language-go">func (d *DistroLayout) SignPackage(ctx context.Context, opts signing.SignBlobOptions) (err error)
+<h3 id="func-distrolayout-signpackage"><a class="header" href="#func-distrolayout-signpackage">func (*DistroLayout) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L464">SignPackage</a></a></h3>
+<pre><code class="language-go">func (d *DistroLayout) SignPackage(ctx context.Context, opts SignOptions) (err error)
 </code></pre>
 <p>SignPackage signs the zarf package using cosign with the provided options. If the options do not indicate signing should be performed (no key material configured), this is a no-op and returns nil.</p>
 <p><a name="DistroLayout.TotalSize"></a></p>
@@ -11623,7 +11631,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Values returns the merged, schema-checked values the package was built with, with any overrides applied on top.</p>
 <p><a name="DistroLayout.VerifyPackageSignature"></a></p>
-<h3 id="func-distrolayout-verifypackagesignature"><a class="header" href="#func-distrolayout-verifypackagesignature">func (*DistroLayout) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L572">VerifyPackageSignature</a></a></h3>
+<h3 id="func-distrolayout-verifypackagesignature"><a class="header" href="#func-distrolayout-verifypackagesignature">func (*DistroLayout) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L593">VerifyPackageSignature</a></a></h3>
 <pre><code class="language-go">func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.VerifyBlobOptions) error
 </code></pre>
 <p>VerifyPackageSignature verifies the package signature</p>
@@ -11649,6 +11657,24 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func ResolveDistroPath(path string) (DistroPath, error)
 </code></pre>
 <p>ResolveDistroPath returns an object of DistroPath from a given path</p>
+<p><a name="SignOptions"></a></p>
+<h2 id="type-signoptions"><a class="header" href="#type-signoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L443-L451">SignOptions</a></a></h2>
+<p>SignOptions carries the cosign signing configuration plus the cargoship-side keyless flag. zarf v0.87.0 dropped signing.SignBlobOptions.Keyless and its ShouldSign method, so cargoship owns the signing gate.</p>
+<pre><code class="language-go">type SignOptions struct {
+    signing.SignBlobOptions
+
+    // Keyless gates cargoship-specific sign-side guards on top of cosign's behavior.
+    // When true, --signing-key is no longer required and ShouldSign returns true even
+    // without explicit Key/IdentityToken/SecurityKey material - cosign resolves identity
+    // via Fulcio/OIDC at sign time.
+    Keyless bool
+}
+</code></pre>
+<p><a name="SignOptions.ShouldSign"></a></p>
+<h3 id="func-signoptions-shouldsign"><a class="header" href="#func-signoptions-shouldsign">func (SignOptions) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L456">ShouldSign</a></a></h3>
+<pre><code class="language-go">func (opts SignOptions) ShouldSign() bool
+</code></pre>
+<p>ShouldSign returns true if any signing key material is configured, or if the keyless flow is selected. KeyRef is included for backward compatibility; it is synced to Key in signing.CosignSignBlobWithOptions.</p>
 <p><a name="VerificationStrategy"></a></p>
 <h2 id="type-verificationstrategy"><a class="header" href="#type-verificationstrategy">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L55">VerificationStrategy</a></a></h2>
 <p>VerificationStrategy describes a strategy for determining whether to verify a package.</p>
