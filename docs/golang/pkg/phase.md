@@ -19,6 +19,12 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*APTUploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#APTUploadFiles.Prepare>)
   - [func \(p \*APTUploadFiles\) Run\(ctx context.Context\) \(err error\)](<#APTUploadFiles.Run>)
   - [func \(p \*APTUploadFiles\) Title\(\) string](<#APTUploadFiles.Title>)
+- [type ApplyManifests](<#ApplyManifests>)
+  - [func \(p \*ApplyManifests\) Explanation\(\) string](<#ApplyManifests.Explanation>)
+  - [func \(p \*ApplyManifests\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#ApplyManifests.Prepare>)
+  - [func \(p \*ApplyManifests\) Run\(ctx context.Context\) error](<#ApplyManifests.Run>)
+  - [func \(p \*ApplyManifests\) ShouldRun\(\) bool](<#ApplyManifests.ShouldRun>)
+  - [func \(p \*ApplyManifests\) Title\(\) string](<#ApplyManifests.Title>)
 - [type BINUploadFiles](<#BINUploadFiles>)
   - [func \(p \*BINUploadFiles\) Explanation\(\) string](<#BINUploadFiles.Explanation>)
   - [func \(p \*BINUploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#BINUploadFiles.Prepare>)
@@ -403,6 +409,64 @@ Run the phase
 
 ```go
 func (p *APTUploadFiles) Title() string
+```
+
+Title for the phase
+
+<a name="ApplyManifests"></a>
+## type [ApplyManifests](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L32-L37>)
+
+ApplyManifests kubectl\-applies the raw manifests a distro's package declares \-\- typically a CNI \-\- from the leader, once it has bootstrapped and before workers are expected to join.
+
+```go
+type ApplyManifests struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+```
+
+<a name="ApplyManifests.Explanation"></a>
+### func \(\*ApplyManifests\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L55>)
+
+```go
+func (p *ApplyManifests) Explanation() string
+```
+
+Explanation about the current phase, used for documentation generation
+
+<a name="ApplyManifests.Prepare"></a>
+### func \(\*ApplyManifests\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L60>)
+
+```go
+func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+```
+
+Prepare the phase
+
+<a name="ApplyManifests.Run"></a>
+### func \(\*ApplyManifests\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L78>)
+
+```go
+func (p *ApplyManifests) Run(ctx context.Context) error
+```
+
+Run the phase
+
+<a name="ApplyManifests.ShouldRun"></a>
+### func \(\*ApplyManifests\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L73>)
+
+```go
+func (p *ApplyManifests) ShouldRun() bool
+```
+
+ShouldRun is true when there is a leader to apply from and the package declares manifests.
+
+<a name="ApplyManifests.Title"></a>
+### func \(\*ApplyManifests\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L50>)
+
+```go
+func (p *ApplyManifests) Title() string
 ```
 
 Title for the phase
