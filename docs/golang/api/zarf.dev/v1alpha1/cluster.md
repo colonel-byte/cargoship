@@ -459,11 +459,11 @@ ZarfClusterRegistryAuth holds the credentials for a container registry. Username
 ```go
 type ZarfClusterRegistryAuth struct {
     // Username is the login name for the remote registry.
-    Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
     // Password is the login secret for the remote registry.
-    Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
     // Token authenticates to the remote registry instead of a username and password.
-    Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
 }
 ```
 

@@ -35,6 +35,17 @@ const (
 	propertiesKey        = "properties"
 	patternPropertiesKey = "patternProperties"
 	yamlExtensionRegex   = "^x-"
+	// sensitiveKey marks a property whose value can be a secret in its own right -- a password,
+	// a token, a passphrase -- rather than a path to one. Set it with
+	// `jsonschema_extras:"x-sensitive=true"` on the field.
+	//
+	// It exists because "which of these values is a secret" was documented only in prose and in
+	// example ciphertext, and the OpenTofu provider needs it as data: every attribute that maps
+	// onto a sensitive property has to be marked sensitive in the provider schema, and a
+	// hand-maintained list of them in a second module is a list that goes stale. The docs
+	// renderer reads the same key, so the marking is visible to an operator reading
+	// docs/schema/ as well. See docs/agent/choice-tofu-secrets.md.
+	sensitiveKey = "x-sensitive"
 )
 
 // Where the generated schemas, their embedded copies, and their docs are written.
@@ -55,7 +66,8 @@ type Target struct {
 	DocFile      string
 }
 
-func (s Target) namer() func(string) string {
+// Namer returns the target's key namer, defaulting to lowerCamelCase.
+func (s Target) Namer() func(string) string {
 	if s.KeyNamer != nil {
 		return s.KeyNamer
 	}
@@ -105,7 +117,7 @@ func Targets() []Target {
 // GenerateSchemas creates the jsonschema files under schema/ and pkg/schema/embedded/.
 func GenerateSchemas() error {
 	for _, s := range Targets() {
-		b, err := GenerateV1Alpha1Schema(s.SchemaStruct, s.StructPath, s.namer())
+		b, err := GenerateV1Alpha1Schema(s.SchemaStruct, s.StructPath, s.Namer())
 		if err != nil {
 			return fmt.Errorf("unable to generate %s: %w", s.SchemaPath, err)
 		}

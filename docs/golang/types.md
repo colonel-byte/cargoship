@@ -223,7 +223,7 @@ type DistroPublishOptions struct {
     // SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package
     SigningKey string `json:"signing_key,omitempty" mapstructure:"signing_key" jsonschema:"example=/home/runner/.cosign/sign.key,example=env://[ENV_VAR],example=awskms://[ENDPOINT]/[ID/ALIAS/ARN],example=openbao://[KEY]"`
     // SigningKeyPassword the password for the private key used for signing
-    SigningKeyPassword string `json:"signing_key_password,omitempty" mapstructure:"signing_key_password"`
+    SigningKeyPassword string `json:"signing_key_password,omitempty" mapstructure:"signing_key_password" jsonschema_extras:"x-sensitive=true"`
 }
 ```
 
