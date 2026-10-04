@@ -22,7 +22,7 @@ Failing is also badly timed. By the time pinning runs, `InstallPackage` has alre
 
 ## What is still fatal
 
-The tolerance is deliberately narrow, and it lives in `holdRPMPackages` and `unholdRPMPackages` rather than in the shared `installAndPinPackagesFor`, so it cannot spread to the apt path:
+The tolerance is deliberately narrow, and it lives in the rpm-specific `holdRPMPackages`, `unholdRPMPackages`, and `unholdKubeadm` rather than in the shared `installAndPinPackagesFor`, so it cannot spread to the apt path:
 
 - A host that *has* versionlock and still fails to pin is a real error. The probe (`dnf versionlock --help`, chosen because it reads no repository metadata and touches no existing lock) is what separates "this tooling is absent" from "this tooling failed".
 - A staged file whose package name cannot be read fails the phase on either package manager. That is a property of the artifact, not of the host's pinning tooling, and `packageNames` gives up on the first file it cannot read -- so continuing would leave *every* package on the host unpinned while reporting success.
@@ -30,6 +30,14 @@ The tolerance is deliberately narrow, and it lives in `holdRPMPackages` and `unh
 ## The same rule now covers the unhold
 
 The unhold this once deferred now exists. `installAndPinPackagesFor` releases the prior pin before installing, because that is what lets apt or dnf move a held package to a new version at all, and the same closure runs on every upgrade. That extends this decision rather than changing it: `unholdRPMPackages` skips a host with no versionlock plugin for the same reason `holdRPMPackages` does, and it matters more there, because unhold runs *before* the install -- `dnf versionlock delete` failing with `No such command: versionlock` would fail the phase outright on exactly the hosts this decision keeps working. A host with no plugin has nothing locked, so there is nothing to release. It skips at debug rather than warn, since `holdRPMPackages` warns about the same host later in the same phase and that warning is the one naming a real consequence.
+
+## The kubeadm upgrade unholds separately
+
+`Upstream.PreStartUpgrade` installs a new kubeadm before the shared upgrade phase touches the rest of the package set, so it releases kubeadm's own pin rather than going through `installAndPinPackagesFor`. It is subject to this decision for the same reason and in the same shape: `unholdKubeadm` probes with `dnf versionlock --help` and skips at debug when the plugin is absent, leaving the apt path unconditional.
+
+It cannot reuse `pkg/phase`'s helpers, because `pkg/phase` imports `types/distrocfg` and the import cannot run the other way. The probe is therefore duplicated, and the two copies have to agree -- a change to one is a change to both.
+
+One consequence is worth naming: the probe cannot tell an absent plugin from a host that answers nothing at all, so an unreachable rpm host skips the unhold and surfaces its failure on the install that follows instead. That is the same trade `holdRPMPackages` already makes, and the phase still fails; only the message moves.
 
 ## What would justify revisiting
 
