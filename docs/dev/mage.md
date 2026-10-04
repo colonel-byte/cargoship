@@ -97,6 +97,7 @@ The `Generate` namespace handles code-generation and repository asset updates:
 *   `Document` - Automatically generates command documentation from Cobra structures, parses cluster operational phase descriptors, renders godoc comments in `pkg/`, `api/`, and `types/` into `docs/golang/` with `gomarkdoc`, renders `docs/schema/` from the same struct reflection `Schema` feeds to `schema/*.json`, renders the Ansible collection's module and role reference pages from the action plugins' `DOCUMENTATION` blocks and the roles' `meta/argument_specs.yml`, rebases `README.md` into `docs/index.md` and `.github/SECURITY.md` into `docs/security.md` for the book, and formats the mdBook `docs/SUMMARY.md` structure.
 *   `Schema` - Generates YAML-compatible JSON schemas in `schema/` from Go structs using reflection, facilitating IDE autocomplete and validation for cluster config, distro packages, and runtime configs.
 *   `Completion` - Generates shell tab completion scripts for bash, zsh, fish, and powershell into `hack/completion/`.
+*   `ZarfFlags` - Rewrites `internal/zarfmod/testdata/zarf-*-flags.txt`, the flag surface the Ansible module wrappers are held against, by parsing `zarf <command> --help` on the installed zarf. Each file records the zarf version it came from. `TestInitArgsAreKnownFlags` and `TestDeployArgsAreKnownFlags` read those files rather than the binary, so the unit tests still run on a machine with no zarf; this target is how the lists are refreshed when the zarf the collection targets moves. Needs `zarf` on `PATH`, or `CARGOSHIP_ZARF_BINARY` naming one.
 *   `PullEngineSource` - Fetches raw k3s/RKE2 source at the tags pinned in `thirdparty-src/pins.json` into `thirdparty-src/` (see [thirdparty-src](thirdparty-src.md)). Touches the network.
 *   `LatestTag <distro> <vMAJOR.MINOR>` - Resolves the newest non-RC upstream tag for that minor line, pins it in `thirdparty-src/pins.json`, and re-pulls that version's source if the pin moved. Touches the network.
 *   `UpdatePins` - Runs `LatestTag` over every minor line already pinned in `thirdparty-src/pins.json`, refreshing each to its newest patch release. Touches the network.
@@ -131,6 +132,7 @@ The `Generate` namespace handles code-generation and repository asset updates:
 mage generate:document                  # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/index.md, docs/security.md, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
 mage generate:completion                # regenerate hack/completion/ shell completion scripts (bash, zsh, fish, powershell)
+mage generate:zarfFlags                 # re-read the zarf flag lists the Ansible module tests hold
 
 mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
 mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
