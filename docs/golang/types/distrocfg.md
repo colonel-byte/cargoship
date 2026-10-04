@@ -16,6 +16,7 @@ Package distrocfg defines the standard interface that all distro config settings
 - [func RemoveStaleFiles\(h \*cluster.ZarfHost, dirs \[\]ManagedDir, desired map\[string\]DesiredFile\) error](<#RemoveStaleFiles>)
 - [func StaleFiles\(h \*cluster.ZarfHost, dirs \[\]ManagedDir, desired map\[string\]DesiredFile\) \[\]string](<#StaleFiles>)
 - [type AdminCredentials](<#AdminCredentials>)
+- [type Bootstrapper](<#Bootstrapper>)
 - [type Common](<#Common>)
   - [func \(r \*Common\) BinaryName\(\) string](<#Common.BinaryName>)
   - [func \(r \*Common\) BinaryPath\(\) string](<#Common.BinaryPath>)
@@ -54,12 +55,14 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*RancherCommon\) RunningVersion\(host \*cluster.ZarfHost\) \(string, error\)](<#RancherCommon.RunningVersion>)
 - [type Upstream](<#Upstream>)
   - [func \(d \*Upstream\) AdminCredentials\(host \*cluster.ZarfHost, dataDir string\) \(AdminCredentials, error\)](<#Upstream.AdminCredentials>)
+  - [func \(d \*Upstream\) Bootstrap\(ctx context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) error](<#Upstream.Bootstrap>)
   - [func \(d \*Upstream\) CleanupPaths\(\) \[\]string](<#Upstream.CleanupPaths>)
-  - [func \(d \*Upstream\) ConfigureEngine\(\_ context.Context, \_ \*cluster.ZarfHost, \_ cluster.ZarfRuntimeMeta, \_ distro.ZarfDistro\) error](<#Upstream.ConfigureEngine>)
+  - [func \(d \*Upstream\) ConfigureEngine\(\_ context.Context, host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) error](<#Upstream.ConfigureEngine>)
   - [func \(d \*Upstream\) DesiredFiles\(host \*cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro\) \(map\[string\]DesiredFile, error\)](<#Upstream.DesiredFiles>)
   - [func \(d \*Upstream\) DistroCmdf\(template string, args ...any\) string](<#Upstream.DistroCmdf>)
   - [func \(d \*Upstream\) GetClusterCIDR\(dis distro.ZarfDistro\) \[\]string](<#Upstream.GetClusterCIDR>)
   - [func \(d \*Upstream\) ImportImages\(host \*cluster.ZarfHost, path string\) error](<#Upstream.ImportImages>)
+  - [func \(d \*Upstream\) IsBootstrapped\(host \*cluster.ZarfHost\) bool](<#Upstream.IsBootstrapped>)
   - [func \(d \*Upstream\) JoinTokenPathAgent\(\) string](<#Upstream.JoinTokenPathAgent>)
   - [func \(d \*Upstream\) KubeconfigPath\(\_ \*cluster.ZarfHost, \_ string\) string](<#Upstream.KubeconfigPath>)
   - [func \(d \*Upstream\) KubectlCmdf\(host \*cluster.ZarfHost, dataDir string, s string, args ...any\) string](<#Upstream.KubectlCmdf>)
@@ -144,6 +147,9 @@ var (
     // ErrNotImplemented is returned by a distro module for capabilities its engine does not
     // support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
     ErrNotImplemented = errors.New("not implemented for this distro")
+    // ErrNoLeader is returned when a joining host has no leader host to fetch join material
+    // from -- the cluster has no controller, which is a config error, not a retryable one.
+    ErrNoLeader = errors.New("no leader host to join through")
 )
 ```
 
@@ -154,7 +160,7 @@ var ErrNoAdminCredentials = errors.New("admin kubeconfig has no admin credential
 ```
 
 <a name="NodeLabelsMapToList"></a>
-## func [NodeLabelsMapToList](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L84>)
+## func [NodeLabelsMapToList](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L87>)
 
 ```go
 func NodeLabelsMapToList(m map[string]string) []string
@@ -200,8 +206,23 @@ type AdminCredentials struct {
 }
 ```
 
+<a name="Bootstrapper"></a>
+## type [Bootstrapper](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L128-L134>)
+
+Bootstrapper is implemented by a distro whose cluster formation is a one\-shot command rather than a service to start \-\- kubeadm init/join, unlike rke2/k3s's single config.yaml \+ systemd service. InitializeControllers/InitializeWorkers call Bootstrap instead of starting the service, and ask IsBootstrapped instead of checking service state, when a distro implements this, the same optional\-interface pattern ImageImporter uses.
+
+```go
+type Bootstrapper interface {
+    // IsBootstrapped reports whether host has already formed or joined the cluster, so a re-run
+    // is a no-op instead of re-running the bootstrap command.
+    IsBootstrapped(host *cluster.ZarfHost) bool
+    // Bootstrap forms the cluster (the leader) or joins it (every other host).
+    Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+}
+```
+
 <a name="Common"></a>
-## type [Common](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L93-L113>)
+## type [Common](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L96-L116>)
 
 Common for all the distro's
 
@@ -230,7 +251,7 @@ type Common struct {
 ```
 
 <a name="Common.BinaryName"></a>
-### func \(\*Common\) [BinaryName](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L121>)
+### func \(\*Common\) [BinaryName](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L124>)
 
 ```go
 func (r *Common) BinaryName() string
@@ -239,7 +260,7 @@ func (r *Common) BinaryName() string
 BinaryName returns the engine binary name
 
 <a name="Common.BinaryPath"></a>
-### func \(\*Common\) [BinaryPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L116>)
+### func \(\*Common\) [BinaryPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L119>)
 
 ```go
 func (r *Common) BinaryPath() string
@@ -248,7 +269,7 @@ func (r *Common) BinaryPath() string
 BinaryPath returns the full path to the engine binary
 
 <a name="Common.ConfigPath"></a>
-### func \(\*Common\) [ConfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L126>)
+### func \(\*Common\) [ConfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129>)
 
 ```go
 func (r *Common) ConfigPath() string
@@ -257,7 +278,7 @@ func (r *Common) ConfigPath() string
 ConfigPath returns the full path for the config directory used by the engine
 
 <a name="Common.DataDirPath"></a>
-### func \(\*Common\) [DataDirPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L136>)
+### func \(\*Common\) [DataDirPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139>)
 
 ```go
 func (r *Common) DataDirPath() string
@@ -266,7 +287,7 @@ func (r *Common) DataDirPath() string
 DataDirPath returns the full path for the data directory used by the engine
 
 <a name="Common.GetControllerService"></a>
-### func \(\*Common\) [GetControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L156>)
+### func \(\*Common\) [GetControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L159>)
 
 ```go
 func (r *Common) GetControllerService() string
@@ -275,7 +296,7 @@ func (r *Common) GetControllerService() string
 GetControllerService returns the name of the controller service
 
 <a name="Common.GetWorkerService"></a>
-### func \(\*Common\) [GetWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L151>)
+### func \(\*Common\) [GetWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L154>)
 
 ```go
 func (r *Common) GetWorkerService() string
@@ -284,7 +305,7 @@ func (r *Common) GetWorkerService() string
 GetWorkerService returns the name of the worker service
 
 <a name="Common.JoinTokenPath"></a>
-### func \(\*Common\) [JoinTokenPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L131>)
+### func \(\*Common\) [JoinTokenPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134>)
 
 ```go
 func (r *Common) JoinTokenPath() string
@@ -293,7 +314,7 @@ func (r *Common) JoinTokenPath() string
 JoinTokenPath returns the path of the token to join the cluster
 
 <a name="Common.PackageStagingDir"></a>
-### func \(\*Common\) [PackageStagingDir](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L143>)
+### func \(\*Common\) [PackageStagingDir](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L146>)
 
 ```go
 func (r *Common) PackageStagingDir() string
@@ -302,7 +323,7 @@ func (r *Common) PackageStagingDir() string
 PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.
 
 <a name="Common.SetPath"></a>
-### func \(\*Common\) [SetPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L161>)
+### func \(\*Common\) [SetPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L164>)
 
 ```go
 func (r *Common) SetPath(key string, value string) error
@@ -639,7 +660,7 @@ type Upstream struct {
 ```
 
 <a name="Upstream.AdminCredentials"></a>
-### func \(\*Upstream\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L88>)
+### func \(\*Upstream\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L89>)
 
 ```go
 func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
@@ -647,8 +668,17 @@ func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (Adm
 
 AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.
 
+<a name="Upstream.Bootstrap"></a>
+### func \(\*Upstream\) [Bootstrap](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L58>)
+
+```go
+func (d *Upstream) Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+```
+
+Bootstrap forms the cluster on the leader with \`kubeadm init\`, or joins it on every other host with \`kubeadm join\`, against the kubeadm\-config.yaml ConfigureEngine already wrote to host.
+
 <a name="Upstream.CleanupPaths"></a>
-### func \(\*Upstream\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L265>)
+### func \(\*Upstream\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L277>)
 
 ```go
 func (d *Upstream) CleanupPaths() []string
@@ -657,16 +687,16 @@ func (d *Upstream) CleanupPaths() []string
 CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config directory, the kubelet data directory, and the staged package directory, all of which upstream owns outright.
 
 <a name="Upstream.ConfigureEngine"></a>
-### func \(\*Upstream\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L151>)
+### func \(\*Upstream\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L154>)
 
 ```go
-func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error
+func (d *Upstream) ConfigureEngine(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
 ```
 
-ConfigureEngine does distro specific configuration on a host. kubeadm has no equivalent of rke2/k3s's single config.yaml write: a controller is bootstrapped with \`kubeadm init\` and a worker joins with \`kubeadm join\`, neither of which is implemented yet.
+ConfigureEngine writes DesiredFiles' output to host: containerd's config, crictl.yaml, registry hosts.toml, and the kubeadm\-config.yaml this host's role needs. Unlike RancherCommon.ConfigureEngine there is no already\-running guard \-\- kubeadm\-config.yaml is meant to be rewritten every run \(Bootstrap rewrites it again with the real join token right before \`kubeadm join\`\), so an unconditional overwrite is correct here, not a gap.
 
 <a name="Upstream.DesiredFiles"></a>
-### func \(\*Upstream\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L158>)
+### func \(\*Upstream\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L170>)
 
 ```go
 func (d *Upstream) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
@@ -675,7 +705,7 @@ func (d *Upstream) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeM
 DesiredFiles returns the full set of engine config files this distro would write: containerd's config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.
 
 <a name="Upstream.DistroCmdf"></a>
-### func \(\*Upstream\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L107>)
+### func \(\*Upstream\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L108>)
 
 ```go
 func (d *Upstream) DistroCmdf(template string, args ...any) string
@@ -684,7 +714,7 @@ func (d *Upstream) DistroCmdf(template string, args ...any) string
 DistroCmdf returns a string that can be used to execute a command directly. Upstream has no single engine binary to wrap a command through \-\- kubeadm, kubelet, and kubectl are three separate packages \-\- so the template is formatted as\-is.
 
 <a name="Upstream.GetClusterCIDR"></a>
-### func \(\*Upstream\) [GetClusterCIDR](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L133>)
+### func \(\*Upstream\) [GetClusterCIDR](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L134>)
 
 ```go
 func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string
@@ -693,7 +723,7 @@ func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string
 GetClusterCIDR returns the known cluster CIDR blocks. kubeadm's service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default \-\- that is entirely CNI dependent \-\- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.
 
 <a name="Upstream.ImportImages"></a>
-### func \(\*Upstream\) [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L242>)
+### func \(\*Upstream\) [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L254>)
 
 ```go
 func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error
@@ -701,8 +731,17 @@ func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error
 
 ImportImages imports every image tarball staged under path into containerd's k8s.io image store. Unlike rke2/k3s, upstream's containerd has no agent watching that directory on its own, so cargoship has to trigger the import itself.
 
+<a name="Upstream.IsBootstrapped"></a>
+### func \(\*Upstream\) [IsBootstrapped](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L52>)
+
+```go
+func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool
+```
+
+IsBootstrapped reports whether host has already run \`kubeadm init\` or \`kubeadm join\`.
+
 <a name="Upstream.JoinTokenPathAgent"></a>
-### func \(\*Upstream\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L272>)
+### func \(\*Upstream\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L284>)
 
 ```go
 func (d *Upstream) JoinTokenPathAgent() string
@@ -711,7 +750,7 @@ func (d *Upstream) JoinTokenPathAgent() string
 JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has no static agent\-join\-token file \-\- tokens are short\-lived and minted on demand with \`kubeadm token create\` \-\- so there is nothing to point at yet.
 
 <a name="Upstream.KubeconfigPath"></a>
-### func \(\*Upstream\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L94>)
+### func \(\*Upstream\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L95>)
 
 ```go
 func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
@@ -720,7 +759,7 @@ func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
 KubeconfigPath returns the path to the admin config kubeadm writes. Unlike rke2/k3s, this path does not vary by host or data directory.
 
 <a name="Upstream.KubectlCmdf"></a>
-### func \(\*Upstream\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L100>)
+### func \(\*Upstream\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L101>)
 
 ```go
 func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
@@ -729,7 +768,7 @@ func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string,
 KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.
 
 <a name="Upstream.ManagedDirs"></a>
-### func \(\*Upstream\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L233>)
+### func \(\*Upstream\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L245>)
 
 ```go
 func (d *Upstream) ManagedDirs() []ManagedDir
@@ -738,7 +777,7 @@ func (d *Upstream) ManagedDirs() []ManagedDir
 ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per\-registry hosts.toml directories under containerdCertsDir are not included \-\- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry's own subdirectory, so a removed registry's hosts.toml is left behind rather than risk pruning the wrong thing.
 
 <a name="Upstream.RunningVersion"></a>
-### func \(\*Upstream\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L113>)
+### func \(\*Upstream\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L114>)
 
 ```go
 func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)
@@ -747,7 +786,7 @@ func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)
 RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an "ErrVersionNotDetected" error
 
 <a name="Upstream.StopControllerService"></a>
-### func \(\*Upstream\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L279>)
+### func \(\*Upstream\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L291>)
 
 ```go
 func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error
@@ -756,7 +795,7 @@ func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error
 StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.
 
 <a name="Upstream.StopWorkerService"></a>
-### func \(\*Upstream\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L284>)
+### func \(\*Upstream\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L296>)
 
 ```go
 func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error
