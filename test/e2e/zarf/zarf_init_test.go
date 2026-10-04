@@ -18,6 +18,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -116,6 +118,42 @@ func testModuleContracts(t *testing.T, cluster *cluster) {
 		defer cancel()
 		if _, err := clientset.CoreV1().Namespaces().Get(ctx, "zarf", metav1.GetOptions{}); err == nil {
 			t.Error("check mode created the zarf namespace, so something ran")
+		}
+	})
+
+	t.Run("a custom init package is deployed by path", func(t *testing.T) {
+		// Zarf's own lookup finds a package named after zarf's version in a directory it chooses.
+		// A copy under a name that lookup cannot find is what proves the module names the package
+		// rather than relying on it: the only way this run reaches a package at all is the
+		// positional source zarf init has taken since v0.72.0.
+		custom := filepath.Join(t.TempDir(), "our-init-package.tar.zst")
+		staged, err := os.ReadFile(suite.initPackage)
+		if err != nil {
+			t.Fatalf("unable to read the staged init package: %v", err)
+		}
+		if err := os.WriteFile(custom, staged, 0o600); err != nil {
+			t.Fatalf("unable to stage the renamed init package: %v", err)
+		}
+
+		// The cluster is already initialised by the walk that ran before this, so the run is a
+		// re-init: it reaches zarf, loads the package, and leaves the cluster as it found it.
+		result, out := runWrapper(t, suite.initWrapper, "init", map[string]any{
+			"init_package": custom,
+			"kubeconfig":   cluster.kubeconfig,
+			"components":   "zarf-agent",
+			"timeout":      "10m",
+		})
+		if boolField(result, "failed") {
+			t.Fatalf("the module failed against a renamed init package: %v; output %s", result, out)
+		}
+
+		detail := zarfDetail(t, result)
+		command := stringsOf(t, detail["command"])
+		if len(command) < 3 || command[1] != "init" || command[2] != custom {
+			t.Errorf("the command line was %v, want the renamed package as zarf init's positional source", command)
+		}
+		if version := stringField(detail, "version"); version == "" {
+			t.Error("the result carried no zarf version, so the floor check did not run")
 		}
 	})
 
