@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-916d6312.js"></script>
+        <script src="toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -2283,7 +2283,7 @@ ansible-vault decrypt --vault-password-file ./vault-pass.txt --output - &lt; ct.
 <h2 id="cargoship-apply"><a class="header" href="#cargoship-apply">cargoship apply</a></h2>
 <p>Apply a config file to bootstrap and upgrade a cluster</p>
 <h3 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h3>
-<p>Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted.</p>
+<p>Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted, before any phase has written to a host. Pass –allow-downgrade when the move backwards is deliberate.</p>
 <p>Cargoship opens every SSH connection itself, from the machine it runs on, and nothing is installed on a target host beyond what a phase uploads.</p>
 <p>An apply never removes a node. A host deleted from the configuration leaves its node in the cluster and stops the run rather than having the difference reconciled, so that no machine is drained or uninstalled by a configuration edit alone. Pass –allow-unmanaged-nodes when the extra nodes were joined deliberately and cargoship should leave them alone.</p>
 <p>This changes every host it is pointed at, so it needs –confirm. Pass –dry-run instead to connect to every host and run the preflight checks for real, reporting what the run would change without changing it.</p>
@@ -2309,6 +2309,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 <pre><code>      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray               A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray         Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --allow-downgrade                         Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
       --allow-unmanaged-nodes                   Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
@@ -2438,6 +2439,7 @@ $ cargoship engine-config-sync ./build/cargoship-distro-amd64.tar.zst --config .
 <pre><code>      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray               A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray         Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --allow-downgrade                         Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
@@ -3636,9 +3638,9 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>pass</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login secret for the remote registry.</td></tr>
-<tr><td><code>token</code></td><td><code>string</code></td><td>no</td><td></td><td>authenticates to the remote registry instead of a username and password.</td></tr>
-<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login name for the remote registry.</td></tr>
+<tr><td><code>pass</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login secret for the remote registry. <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
+<tr><td><code>token</code></td><td><code>string</code></td><td>no</td><td></td><td>authenticates to the remote registry instead of a username and password. <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login name for the remote registry. <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
 </tbody>
 </table>
 </div>
@@ -3947,6 +3949,7 @@ $ cargoship version -o json
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>allow_downgrade</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether a run continues when a host already runs an engine version newer<br>than the one the package carries</td></tr>
 <tr><td><code>allow_unmanaged_nodes</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether an apply continues when the cluster holds a node that no host<br>in the config accounts for</td></tr>
 <tr><td><code>apply</code></td><td><a href="#applyoptions">ApplyOptions</a></td><td>no</td><td></td><td>are options used by the apply subcommand</td></tr>
 <tr><td><code>certificate_identity</code></td><td><code>string</code></td><td>no</td><td></td><td>required identity claim in the signing certificate</td></tr>
@@ -3989,7 +3992,7 @@ $ cargoship version -o json
 </thead>
 <tbody>
 <tr><td><code>signing_key</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package</td></tr>
-<tr><td><code>signing_key_password</code></td><td><code>string</code></td><td>no</td><td></td><td>the password for the private key used for signing</td></tr>
+<tr><td><code>signing_key_password</code></td><td><code>string</code></td><td>no</td><td></td><td>the password for the private key used for signing <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
 </tbody>
 </table>
 </div>
@@ -4859,12 +4862,6 @@ $ cargoship version -o json
 <li>Dry run: runs, reads only. Reads <code>/etc/os-release</code> and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.</li>
 </ul>
 </li>
-<li>Acquire exclusive host lock
-<ul>
-<li>Runs a background task that touches a file every 30 seconds on each remote node. This prevents other <code>cargoships</code> from making any changes until the lock file has not been touched for over a minute</li>
-<li>Dry run: reported, not run</li>
-</ul>
-</li>
 <li>Gather host facts
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
@@ -4887,6 +4884,12 @@ $ cargoship version -o json
 <ul>
 <li>Compares the nodes joined to the cluster against the hosts in the config and stops the apply when the cluster holds a node the config does not, since nothing later in an apply removes a node</li>
 <li>Dry run: runs, reads only. Checking for removed nodes lists the nodes joined to the cluster and compares them to the config. It writes nothing, and a dry run is exactly when an operator wants to be told that a host they deleted from the config is still running.</li>
+</ul>
+</li>
+<li>Acquire exclusive host lock
+<ul>
+<li>Runs a background task that touches a file every 30 seconds on each remote node. This prevents other <code>cargoships</code> from making any changes until the lock file has not been touched for over a minute</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Prepare hosts
@@ -5894,11 +5897,11 @@ $ cargoship version -o json
 <p>ZarfClusterRegistryAuth holds the credentials for a container registry. Username, Password, and Token may each be given in plaintext, or encrypted in either of the two formats cargoship reads: an Ansible Vault string (the output of `ansible-vault encrypt_string`, starting with “$ANSIBLE_VAULT”), or armored age ciphertext (starting with “-----BEGIN AGE ENCRYPTED FILE-----”). Cargoship decrypts either at apply time, using the vault password given via --vault-password-file or the age identity given via --age-identity-file.</p>
 <pre><code class="language-go">type ZarfClusterRegistryAuth struct {
     // Username is the login name for the remote registry.
-    Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
     // Password is the login secret for the remote registry.
-    Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
     // Token authenticates to the remote registry instead of a username and password.
-    Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
 }
 </code></pre>
 <p><a name="ZarfClusterRegistryAuth.Validate"></a></p>
@@ -6760,7 +6763,7 @@ $ cargoship version -o json
 <li><a href="#ResetOptions">type ResetOptions</a></li>
 </ul>
 <p><a name="Apply"></a></p>
-<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L67-L70">Apply</a></a></h2>
+<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L68-L71">Apply</a></a></h2>
 <p>Apply state logic</p>
 <pre><code class="language-go">type Apply struct {
     ApplyOptions
@@ -6768,23 +6771,24 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="NewApply"></a></p>
-<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L73">NewApply</a></a></h3>
+<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L74">NewApply</a></a></h3>
 <pre><code class="language-go">func NewApply(opts ApplyOptions) *Apply
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L179">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L64">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L65">ApplyOptions</a></a></h2>
 <p>ApplyOptions struct</p>
 <pre><code class="language-go">type ApplyOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // DisableDowngradeCheck skips the downgrade check
-    DisableDowngradeCheck bool
+    // AllowDowngrade continues when a host already runs a version newer than the package,
+    // rather than refusing the run
+    AllowDowngrade bool
     // NoWait skips waiting for the cluster to be ready
     NoWait bool
     // NoDrain skips draining worker nodes
@@ -6811,7 +6815,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="EngineConfigSync"></a></p>
-<h2 id="type-engineconfigsync"><a class="header" href="#type-engineconfigsync">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L47-L50">EngineConfigSync</a></a></h2>
+<h2 id="type-engineconfigsync"><a class="header" href="#type-engineconfigsync">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L50-L53">EngineConfigSync</a></a></h2>
 <p>EngineConfigSync state logic</p>
 <pre><code class="language-go">type EngineConfigSync struct {
     EngineConfigSyncOptions
@@ -6819,17 +6823,17 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="NewEngineConfigSync"></a></p>
-<h3 id="func-newengineconfigsync"><a class="header" href="#func-newengineconfigsync">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L53">NewEngineConfigSync</a></a></h3>
+<h3 id="func-newengineconfigsync"><a class="header" href="#func-newengineconfigsync">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L56">NewEngineConfigSync</a></a></h3>
 <pre><code class="language-go">func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync
 </code></pre>
 <p>NewEngineConfigSync an engine-config-sync action object</p>
 <p><a name="EngineConfigSync.Run"></a></p>
-<h3 id="func-engineconfigsync-run"><a class="header" href="#func-engineconfigsync-run">func (EngineConfigSync) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L111">Run</a></a></h3>
+<h3 id="func-engineconfigsync-run"><a class="header" href="#func-engineconfigsync-run">func (EngineConfigSync) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L115">Run</a></a></h3>
 <pre><code class="language-go">func (r EngineConfigSync) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="EngineConfigSyncOptions"></a></p>
-<h2 id="type-engineconfigsyncoptions"><a class="header" href="#type-engineconfigsyncoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L44">EngineConfigSyncOptions</a></a></h2>
+<h2 id="type-engineconfigsyncoptions"><a class="header" href="#type-engineconfigsyncoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L47">EngineConfigSyncOptions</a></a></h2>
 <p>EngineConfigSyncOptions struct</p>
 <pre><code class="language-go">type EngineConfigSyncOptions struct {
     // Manager is the phase manager
@@ -6846,6 +6850,9 @@ $ cargoship version -o json
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // AllowDowngrade continues when a host already runs a version newer than the package,
+    // rather than refusing the run
+    AllowDowngrade bool
 }
 </code></pre>
 <p><a name="KubeConfig"></a></p>
@@ -6878,7 +6885,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="Prepare"></a></p>
-<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L50-L53">Prepare</a></a></h2>
+<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L48-L51">Prepare</a></a></h2>
 <p>Prepare state logic</p>
 <pre><code class="language-go">type Prepare struct {
     PrepareOptions
@@ -6886,23 +6893,21 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="NewPrepare"></a></p>
-<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L56">NewPrepare</a></a></h3>
+<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L54">NewPrepare</a></a></h3>
 <pre><code class="language-go">func NewPrepare(opts PrepareOptions) *Prepare
 </code></pre>
 <p>NewPrepare an prepare action object</p>
 <p><a name="Prepare.Run"></a></p>
-<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L77">Run</a></a></h3>
+<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L75">Run</a></a></h3>
 <pre><code class="language-go">func (a Prepare) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="PrepareOptions"></a></p>
-<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L47">PrepareOptions</a></a></h2>
+<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L45">PrepareOptions</a></a></h2>
 <p>PrepareOptions struct</p>
 <pre><code class="language-go">type PrepareOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // DisableDowngradeCheck skips the downgrade check
-    DisableDowngradeCheck bool
     // NoWait skips waiting for the cluster to be ready
     NoWait bool
     // NoDrain skips draining worker nodes
@@ -12122,6 +12127,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="ErrUnmanagedNodes"></a>ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for. Apply removes nothing, so continuing would report success over a machine that is still running the engine and still joined.</p>
 <pre><code class="language-go">var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
 </code></pre>
+<p><a name="ErrWillNotDowngrade"></a>ErrWillNotDowngrade is returned when a host already runs a version newer than the one the package carries. An engine does not support moving backwards, so the run stops here rather than uninstalling a newer version part way through.</p>
+<pre><code class="language-go">var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
+</code></pre>
 <p><a name="Force"></a>Force is used by various phases to attempt a forced installation</p>
 <pre><code class="language-go">var Force bool
 </code></pre>
@@ -12639,36 +12647,40 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="GatherFactsDistro"></a></p>
-<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L33-L38">GatherFactsDistro</a></a></h2>
+<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L39-L48">GatherFactsDistro</a></a></h2>
 <p>GatherFactsDistro state</p>
 <pre><code class="language-go">type GatherFactsDistro struct {
     GenericPhase
     Distro distrocfg.Distro
+    // AllowDowngrade turns the refusal below into a warning. A downgrade is refused by default
+    // because an engine does not support being moved backwards and the data directory it leaves
+    // behind was written by the newer version, so the operator has to say that they mean it.
+    AllowDowngrade bool
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="GatherFactsDistro.Explanation"></a></p>
-<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L46">Explanation</a></a></h3>
+<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="GatherFactsDistro.Prepare"></a></p>
-<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56">Prepare</a></a></h3>
+<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L66">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="GatherFactsDistro.ReadOnly"></a></p>
-<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51">ReadOnly</a></a></h3>
+<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L61">ReadOnly</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) ReadOnly() string
 </code></pre>
 <p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
 <p><a name="GatherFactsDistro.Run"></a></p>
-<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L63">Run</a></a></h3>
+<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L73">Run</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
 </code></pre>
 <p>Run the phase</p>
 <p><a name="GatherFactsDistro.Title"></a></p>
-<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L41">Title</a></a></h3>
+<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51">Title</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13965,7 +13977,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions-1"><a class="header" href="#type-applyoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L185">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions-1"><a class="header" href="#type-applyoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188">ApplyOptions</a></a></h2>
 <p>ApplyOptions holds the values for the `.distro.apply` section of the config file</p>
 <pre><code class="language-go">type ApplyOptions struct{}
 </code></pre>
@@ -13996,7 +14008,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroCreateOptions"></a></p>
-<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L160-L168">DistroCreateOptions</a></a></h2>
+<h2 id="type-distrocreateoptions"><a class="header" href="#type-distrocreateoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L163-L171">DistroCreateOptions</a></a></h2>
 <p>DistroCreateOptions holds the values for the `.distro.create` section of the config file</p>
 <pre><code class="language-go">type DistroCreateOptions struct {
     // RegistryOverride maps a source registry to the registry cargoship uses instead
@@ -14009,7 +14021,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroDeployOptions"></a></p>
-<h2 id="type-distrodeployoptions"><a class="header" href="#type-distrodeployoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L179-L182">DistroDeployOptions</a></a></h2>
+<h2 id="type-distrodeployoptions"><a class="header" href="#type-distrodeployoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L182-L185">DistroDeployOptions</a></a></h2>
 <p>DistroDeployOptions holds the values for the `.distro.deploy` section of the config file</p>
 <pre><code class="language-go">type DistroDeployOptions struct {
     // Retries how many times we will try to push a package
@@ -14017,7 +14029,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroOptions"></a></p>
-<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L157">DistroOptions</a></a></h2>
+<h2 id="type-distrooptions"><a class="header" href="#type-distrooptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L99-L160">DistroOptions</a></a></h2>
 <p>DistroOptions holds the values for the `.distro` section of the config file</p>
 <pre><code class="language-go">type DistroOptions struct {
     // CreateOpts are options used by the create subcommand
@@ -14043,6 +14055,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // AllowUnmanagedNodes whether an apply continues when the cluster holds a node that no host
     // in the config accounts for
     AllowUnmanagedNodes bool `json:"allow_unmanaged_nodes,omitempty" mapstructure:"allow_unmanaged_nodes"`
+    // AllowDowngrade whether a run continues when a host already runs an engine version newer
+    // than the one the package carries
+    AllowDowngrade bool `json:"allow_downgrade,omitempty" mapstructure:"allow_downgrade"`
     // LabelNodes whether we will check and add the node-role.kubernetes.io/&lt;profile&gt; label on nodes
     LabelNodes bool `json:"label_nodes,omitempty" mapstructure:"label_nodes" jsonschema:"default=true"`
     // UpdateKubeConfig whether we will update a kubeconfig file with the admin creds for the cluster
@@ -14080,37 +14095,37 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="DistroPublishOptions"></a></p>
-<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L171-L176">DistroPublishOptions</a></a></h2>
+<h2 id="type-distropublishoptions"><a class="header" href="#type-distropublishoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L174-L179">DistroPublishOptions</a></a></h2>
 <p>DistroPublishOptions holds the values for the `.distro.publish` section of the config file</p>
 <pre><code class="language-go">type DistroPublishOptions struct {
     // SigningKey is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package
     SigningKey string `json:"signing_key,omitempty" mapstructure:"signing_key" jsonschema:"example=/home/runner/.cosign/sign.key,example=env://[ENV_VAR],example=awskms://[ENDPOINT]/[ID/ALIAS/ARN],example=openbao://[KEY]"`
     // SigningKeyPassword the password for the private key used for signing
-    SigningKeyPassword string `json:"signing_key_password,omitempty" mapstructure:"signing_key_password"`
+    SigningKeyPassword string `json:"signing_key_password,omitempty" mapstructure:"signing_key_password" jsonschema_extras:"x-sensitive=true"`
 }
 </code></pre>
 <p><a name="FileOverrideMap"></a></p>
-<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L210">FileOverrideMap</a></a></h2>
+<h2 id="type-fileoverridemap"><a class="header" href="#type-fileoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L213">FileOverrideMap</a></a></h2>
 <p>FileOverrideMap maps a source URL prefix to the location cargoship downloads from instead. Like RegistryOverrideMap it is a named type so it can implement JSONSchemaExtend below; the config file is not restricted to the suggested keys.</p>
 <pre><code class="language-go">type FileOverrideMap map[string]string
 </code></pre>
 <p><a name="FileOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L215">JSONSchemaExtend</a></a></h3>
+<h3 id="func-fileoverridemap-jsonschemaextend"><a class="header" href="#func-fileoverridemap-jsonschemaextend">func (FileOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L218">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (FileOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonFileSources to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
 <p><a name="RegistryOverrideMap"></a></p>
-<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L194">RegistryOverrideMap</a></a></h2>
+<h2 id="type-registryoverridemap"><a class="header" href="#type-registryoverridemap">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L197">RegistryOverrideMap</a></a></h2>
 <p>RegistryOverrideMap maps a source registry to the registry cargoship uses instead. It’s a named type (rather than a bare map[string]string) solely so it can implement JSONSchemaExtend below and suggest common registries in the generated schema; the config file is not restricted to those.</p>
 <pre><code class="language-go">type RegistryOverrideMap map[string]string
 </code></pre>
 <p><a name="RegistryOverrideMap.JSONSchemaExtend"></a></p>
-<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L199">JSONSchemaExtend</a></a></h3>
+<h3 id="func-registryoverridemap-jsonschemaextend"><a class="header" href="#func-registryoverridemap-jsonschemaextend">func (RegistryOverrideMap) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L202">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (RegistryOverrideMap) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend adds CommonRegistries to the schema’s properties, alongside the additionalProperties the reflector already set for the map[string]string element type, so the suggestions are additive and don’t restrict which keys are allowed.</p>
 <p><a name="ResetOptions"></a></p>
-<h2 id="type-resetoptions-1"><a class="header" href="#type-resetoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L188">ResetOptions</a></a></h2>
+<h2 id="type-resetoptions-1"><a class="header" href="#type-resetoptions-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/config.go#L191">ResetOptions</a></a></h2>
 <p>ResetOptions holds the values for the `.distro.reset` section of the config file</p>
 <pre><code class="language-go">type ResetOptions struct{}
 </code></pre>
@@ -15456,7 +15471,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
 <p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
-<p>One top-level test, <code>TestClusterPhases</code>, runs four walks against the same cluster in the order they work in: <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, <code>upgrade</code> walks the same phases again with a newer package, and <code>reset</code> takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
+<p>One top-level test, <code>TestClusterPhases</code>, runs five walks against the same cluster in the order they work in: <code>dryrun</code> runs whole actions with <code>--dry-run</code> over nodes with nothing on them and asserts it left them that way, <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, <code>upgrade</code> walks the same phases again with a newer package, and <code>reset</code> takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
 <p>For why the suite is built this way, see <a href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">choice-phase-e2e-tests</a>. For running the e2e suites generally, see <a href="#running-the-end-to-end-tests">e2e-tests</a>.</p>
 <h2 id="one-number-per-phase"><a class="header" href="#one-number-per-phase">One number per phase</a></h2>
 <p>A phase is identified by its source file’s number, and that number is used twice:</p>
@@ -15552,6 +15567,13 @@ debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 <li><strong>Do not “fix” a phase that fails on Alpine by skipping the host in the assertion.</strong> The phases select their own hosts in <code>Prepare</code>, with no OS gate in most cases, so the phase will still have run against it and spent its retry budget there. If a phase genuinely cannot run on a host, that host must not be on the manager when the phase runs.</li>
 </ul>
 <p><code>s.harness.engineWorkers()</code> exists for the one case where order is not obvious: a test that runs before the drop but is only meaningful for hosts that join.</p>
+<h2 id="the-dry-run-walk"><a class="header" href="#the-dry-run-walk">The dry-run walk</a></h2>
+<p><code>DryRunSuite</code> (<code>dry_run_test.go</code>) is the one walk that does not step through phases, and the one whose assertions are negative. It runs <code>action.NewApply</code>, <code>action.NewPrepare</code> and <code>action.NewReset</code> whole, with <code>Manager.DryRun</code> set, and then asserts that none of the artifacts the other walks look for arrived: no upload manifest, no sysctl file, no lock file, no running engine. It runs first because “the hosts are unchanged” is only checkable before the apply walk changes them.</p>
+<p>Two things about it are easy to get wrong when extending it.</p>
+<p>The hosts are disconnected by the time a run returns, because every action ends with the disconnect phase and its dry-run path disconnects as well. A read taken after the run reports every file as absent whether it is there or not, which would make each assertion pass over a host a dry run had written to. <code>reconnectHosts</code> runs <code>Connect</code> and <code>DetectOS</code> again – both read-only – and the assertions go after that.</p>
+<p>The walk also asserts the positive half, which is what stops the negative half from being vacuous: the read-only phases have to have gathered their facts, so each host carries a configurer, a hostname, an architecture, and <code>phase.UnknownVersion</code> for the engine it is not running. A dry run that never connected to anything would satisfy an untouched-hosts check perfectly.</p>
+<p>A new phase needs nothing added here unless it is read-only, in which case the facts it gathers belong in <code>requireFactsGathered</code>, or it writes an artifact worth naming, in which case its absence belongs in <code>requireHostsUntouched</code> next to the path the install test asserts exists.</p>
+<p>The two reset cases are split by what they need. <code>reset --dry-run</code> against a cluster that is up is in <code>ResetSuite</code> as <code>Test_0</code>, immediately before the real reset, because that is the only point where a live cluster exists. <code>reset --dry-run</code> with no running controller is in this walk, because nodes nothing was installed on are the natural fixture for the nil-leader path PR #312 found against a live cluster.</p>
 <h2 id="adding-the-join-half"><a class="header" href="#adding-the-join-half">Adding the join half</a></h2>
 <p><code>JoinPhaseSuite</code> walks the same phase list a second time, against the cluster the apply walk installed and one machine larger. It carries the same package at the same version, so nothing routes to the upgrade phases and the only host with work left is the one that just appeared. It is the only coverage of apply against a cluster that already exists.</p>
 <p>So a new phase usually needs a join test as well. Which kind depends on what it does the second time:</p>
@@ -15612,7 +15634,8 @@ s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version
 <pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
 </code></pre>
 <p>Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:</p>
-<pre><code class="language-console">$ mage test:endToEndCluster           # the install, join and reset walks
+<pre><code class="language-console">$ mage test:endToEndCluster           # the dry-run, install, join and reset walks
+$ mage test:endToEndClusterDryRun     # only the dry-run walk, against the staging cluster
 $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in between
 </code></pre>
 <p><code>-short</code> skips the whole suite, and <code>CARGOSHIP_E2E_UPGRADE</code> adds the upgrade walk. <code>TestMain</code> deletes the bootloose cluster on the way out even when tests fail.</p>
@@ -16179,6 +16202,7 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <li><code>EndToEndNonCluster</code> - Runs the group that needs no cluster: the misc and package command groups. <code>-short</code> additionally skips the example packages, so this finishes in seconds. Mirrors the <code>e2e-noncluster</code> CI job.</li>
 <li><code>EndToEndCluster</code> - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
 <li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.</li>
+<li><code>EndToEndClusterDryRun</code> - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with <code>--dry-run</code> against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.</li>
 <li><code>CleanCluster</code> - Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
 <li><code>Fuzz</code> - Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="#running-the-fuzz-tests">fuzz-tests</a>.</li>
 </ul>
@@ -16186,8 +16210,18 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 mage test:endToEndNonCluster    # run the misc/package command suites, no cluster needed
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
+mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
+</code></pre>
+<h3 id="release-namespace"><a class="header" href="#release-namespace"><code>Release</code> Namespace</a></h3>
+<p>The <code>Release</code> namespace holds the release artifacts goreleaser does not build. Only the OpenTofu provider is here, because what has to be published for it is an OCI image index assembled to the shape an OpenTofu provider mirror serves rather than a release asset. See <a href="#why-the-opentofu-provider-is-a-package-of-this-module">choice-tofu-provider-layout</a>.</p>
+<ul>
+<li><code>TofuProvider</code> - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading <code>v</code>, and optionally the repository to publish to. Needs ORAS 1.3.0 or newer on <code>PATH</code>, which is what <code>--artifact-platform</code> needs.</li>
+<li><code>TofuProviderLayout</code> - The same build and assembly, stopping before the push and leaving the OCI layout under <code>build/tofu-provider/layout</code>. This is how the artifact shape is checked without a registry.</li>
+</ul>
+<pre><code class="language-sh">mage release:tofuProviderLayout 0.1.0     # build the artifact, push nothing
+mage release:tofuProvider 0.1.0           # build it and push it to the default ghcr.io repository
 </code></pre>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
@@ -16258,7 +16292,8 @@ mage generate:examples
 <li><strong><code>build.go</code>:</strong> Entrypoint for the <code>Build</code> namespace (<code>Build.Binary</code>, <code>Build.All</code>, <code>Build.Examples</code>), delegating to <code>magefiles/pkg/build</code>.</li>
 <li><strong><code>dev.go</code>:</strong> Entrypoint for the <code>Dev</code> namespace (<code>Dev.Clean</code>, <code>Dev.Tidy</code>, <code>Dev.Digest</code>, <code>Dev.DnfPins</code>, <code>Dev.WriteOSVOverrides</code>, <code>Dev.VerifyVendor</code>).</li>
 <li><strong><code>generate.go</code>:</strong> Entrypoint for the <code>Generate</code> namespace (<code>Generate.Document</code>, <code>Generate.Schema</code>, <code>Generate.Completion</code>, <code>Generate.EngineConfig</code>, <code>Generate.Examples</code>, etc.), delegating to <code>magefiles/pkg/gen/...</code>.</li>
-<li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.CleanCluster</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
+<li><strong><code>release.go</code>:</strong> Entrypoint for the <code>Release</code> namespace (<code>Release.TofuProvider</code>, <code>Release.TofuProviderLayout</code>), delegating to <code>magefiles/pkg/release</code>.</li>
+<li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterDryRun</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.CleanCluster</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
 <li><strong><code>pkg/build/</code>:</strong> Binary compilation logic, flag assembly, and example package builds.</li>
 <li><strong><code>pkg/devtools/</code>:</strong> Developer tooling packages, including <code>dnfpins</code> (AlmaLinux repomd XML parser and pin updater) and <code>osv</code> (OpenSSF Scorecard vendor overrides).</li>
 <li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), and <code>schema/</code> (JSON schema reflection and docs).</li>
@@ -16653,6 +16688,21 @@ mage generate:updatePins            # refresh every line already pinned
 <h1 id="release-pleaseyaml"><a class="header" href="#release-pleaseyaml">release-please.yaml</a></h1>
 <p><strong>Triggers:</strong> push to <code>main</code>, manual dispatch.</p>
 <p>Runs <code>googleapis/release-please-action</code> to manage version bumps, <code>CHANGELOG.md</code>, and release PRs, driven by <code>release-please-config.json</code> and <code>.release-please-manifest.json</code>. It mints a GitHub App token up front and hands it to the release-please action for every write it makes - <code>GITHUB_TOKEN</code> itself is never granted write permission.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="release-tofu-provideryaml"><a class="header" href="#release-tofu-provideryaml">release-tofu-provider.yaml</a></h1>
+<p><strong>Triggers:</strong> push of a <code>v*</code> tag, or <code>workflow_dispatch</code> with a version.</p>
+<p>Publishes the OpenTofu provider to <code>ghcr.io</code> as a provider mirror artifact. The provider is a package of this module, so it ships on the CLI’s version: this fires on the same <code>v*</code> tag <a href="#releaseyaml">release.yaml</a> does. It is a separate workflow rather than another job there because it shares nothing with the goreleaser run - no signing keys, no GitHub Release, no attestations - and a provider that failed to publish should not read as a failed CLI release.</p>
+<p>One job, <strong>publish</strong>, granted <code>packages: write</code> on top of the top-level <code>contents: read</code>. Nothing else is needed: an OCI mirror takes no GitHub Release, no <code>SHA256SUMS</code> and no GPG signature, which is most of why it is the distribution path rather than a registry listing. See <a href="#why-the-opentofu-provider-is-a-package-of-this-module">choice-tofu-provider-layout</a>.</p>
+<p>It sets up Go, installs ORAS 1.3.0 or newer, logs into <code>ghcr.io</code> with the workflow token, reads the version out of the tag with the leading <code>v</code> removed, and runs <code>go run ./magefiles/core release:tofuProvider</code>. The version reaches the target through <code>env</code> rather than being interpolated into the <code>run</code> block.</p>
+<p>That target cross-compiles the provider for each published platform, zips each binary as <code>terraform-provider-cargoship_v&lt;version&gt;</code> with a fixed entry timestamp so the same commit produces the same bytes, pushes one manifest per platform with <code>--artifact-type application/vnd.opentofu.provider-target --artifact-platform &lt;os&gt;/&lt;arch&gt;</code>, assembles an index with <code>--artifact-type application/vnd.opentofu.provider</code>, and copies the index to the repository. <code>mage release:tofuProviderLayout &lt;version&gt;</code> does everything but the copy and leaves the OCI layout under <code>build/</code>, which is how the artifact shape is checked without a registry. See <a href="#mage-tasks-and-automation">mage</a>.</p>
+<p>An operator installs the result through a <code>provider_installation</code> block in their CLI configuration:</p>
+<pre><code class="language-hcl">provider_installation {
+  oci_mirror {
+    repository_template = "ghcr.io/colonel-byte/tofu-providers/${namespace}/${type}"
+    include             = ["registry.opentofu.org/colonel-byte/*"]
+  }
+}
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="releaseyaml"><a class="header" href="#releaseyaml">release.yaml</a></h1>
 <p><strong>Triggers:</strong> push of any tag.</p>
@@ -17376,6 +17426,75 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <h2 id="what-would-justify-revisiting"><a class="header" href="#what-would-justify-revisiting">What would justify revisiting</a></h2>
 <p>Not a state file, and not inferring removal from absence. The variant that survives every argument above is a tombstone: the host stays in the config for one apply, marked for removal, so the connection details are present and current rather than remembered, and the operator is editing a file that says in the present tense which machine is to be destroyed. OpenTofu’s own <code>removed</code> block is precedent for stating a removal explicitly rather than inferring it.</p>
 <p>What that needs from the phases is exactly what #339 builds – act on this subset, use those other hosts for access – and a subset reset does both halves on the target, so the orphaned etcd member stops being a hazard. If #339 lands, the remaining work is a per-host config marker, a quorum guard before a controller is removed, and a decision on when the marker is cleaned up. This check stays either way, as the backstop for a host deleted outright rather than tombstoned.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-opentofu-provider-is-a-package-of-this-module"><a class="header" href="#why-the-opentofu-provider-is-a-package-of-this-module">Why the OpenTofu provider is a package of this module</a></h1>
+<p>The provider that <a href="https://github.com/colonel-byte/cargoship/issues/302">#302</a> scopes lives at <code>cmd/terraform-provider-cargoship</code>, in this repository and in this Go module. Two alternatives were live: its own repository, <code>colonel-byte/terraform-provider-cargoship</code>, which is the only layout the OpenTofu registry accepts; and a second Go module here at <code>tofu/provider</code>, which would let the provider carry its own tags and keep its dependencies out of the committed vendor tree. This records why neither was taken, and what would make one of them right later.</p>
+<h2 id="the-registry-constraint-and-why-it-is-not-decisive"><a class="header" href="#the-registry-constraint-and-why-it-is-not-decisive">The registry constraint, and why it is not decisive</a></h2>
+<p>The registry’s <a href="https://github.com/opentofu/registry/blob/main/.github/ISSUE_TEMPLATE/provider.yml">provider submission form</a> validates the repository against <code>{owner}/terraform-provider-{name}</code>. That is a rule about the repository name, not about a directory inside it: no tag, package path, or release layout makes a provider under <code>colonel-byte/cargoship</code> submittable. Publishing to the registry means moving the code to its own repository, and nothing short of that.</p>
+<p>Cargoship exists for airgapped clusters, which is what makes that acceptable. An operator running <code>tofu init</code> on a management node with no route to the internet resolves nothing from <code>registry.opentofu.org</code>; they reach providers through a <code>filesystem_mirror</code> or an <code>oci_mirror</code> in their CLI configuration. A listing buys discovery by connected users. It does not change what a disconnected one can install, and the disconnected one is the user this project is for.</p>
+<h2 id="why-one-module-rather-than-two"><a class="header" href="#why-one-module-rather-than-two">Why one module rather than two</a></h2>
+<p>A second module was the first answer, and the argument for it was the vendor tree. <code>vendor/</code> is committed and already 167M, because the management node is staged ahead of time and builds with <code>-mod=vendor</code>, <code>GOPROXY=off</code>. Once this package depends on <code>terraform-plugin-framework</code>, that tree grows by <strong>13 modules and about 1,222 files</strong>, and by 28 modules and about 1,998 files once <code>terraform-plugin-testing</code> arrives with the acceptance tests. Those numbers are measured rather than guessed: vendor the framework in a throwaway module and diff its <code>modules.txt</code> against this one’s 435 entries.</p>
+<p>What that argument got wrong is what it implied about the CLI. <strong>The linker never loads a package the import graph does not reach</strong>, and nothing here is reachable from <code>cmd/cargoship</code>, so the binary an operator installs is byte-for-byte the size it is now whatever this package depends on. The cost is the committed tree and the churn in it – dependabot re-vendors on every <code>gomod</code> bump, so those files land in pull requests that have nothing to do with the provider – not the artifact anybody ships.</p>
+<p>That property is a shape of the import graph rather than anything the toolchain enforces, so one import from a package the CLI already uses would undo it, and the only symptom would be a larger binary – which no check reads. <code>TestCargoshipDoesNotDependOnTheProvider</code> (<code>cmd/cargoship/deps_test.go</code>) is what turns the convention into a failure: it reads <code>go list -deps .</code> and fails on any dependency under the provider’s packages or <code>terraform-plugin</code>.</p>
+<p>Against that, a second module costs the repository in a way <code>thirdparty-src/</code> already documents: <em>“The module boundary is not honoured by every tool… Anything else added to CI that walks for go.mod files needs the same treatment”</em> (<a href="#third-party-engine-source-thirdparty-src">docs/dev/thirdparty-src.md</a>). That module is deliberately one that does not build, so every tool only had to be told to leave it alone. A provider module has to build, lint, test and release, so being skipped is its failure mode rather than its exemption: <code>check-go-mod.yaml</code> tidies the root module only, <code>go list ./...</code> does not cross a module boundary so <code>Test.Unit</code> would never see it, <code>codeql.yaml</code> names its packages explicitly, <code>scan-lint.yaml</code> lints one directory, dependabot watches one <code>gomod</code> path, and the pre-commit golangci hooks hand the root module every Go file they are given. Each of those is a small accommodation, and each is one more place where the honest failure is silence.</p>
+<p>One module also keeps the release simple. The provider ships on the CLI’s <code>v*</code> tags, so there is no component tag, no <code>separate-pull-requests</code>, no <code>exclude-paths</code>, and no second <code>.goreleaser.yaml</code> – <code>release-please-config.json</code> is untouched. The <code>colonel_byte.cargoship</code> Ansible collection already works this way, bumped in lockstep with the CLI through <code>extra-files</code> on <code>galaxy.yml</code>, so a second artifact riding the CLI’s version is the established pattern here rather than a new one.</p>
+<p>What is given up is independent versioning: a provider patch means a CLI release and the reverse, and the provider’s version is the CLI’s version. That is the cost to watch, and the first trigger for revisiting below.</p>
+<h2 id="how-it-gets-distributed-ghcrio-as-an-oci-mirror"><a class="header" href="#how-it-gets-distributed-ghcrio-as-an-oci-mirror">How it gets distributed: ghcr.io as an OCI mirror</a></h2>
+<p>The registry listing is not the only way to hand somebody a provider, and for this project it is not the best one. OpenTofu can install a provider from an <strong>OCI registry used as a provider mirror</strong>, configured in the CLI configuration:</p>
+<pre><code class="language-hcl">provider_installation {
+  oci_mirror {
+    repository_template = "ghcr.io/colonel-byte/tofu-providers/${namespace}/${type}"
+    include             = ["registry.opentofu.org/colonel-byte/*"]
+  }
+}
+</code></pre>
+<p>This matters for three reasons. The repository name is unconstrained, so <code>{owner}/terraform-provider-{name}</code> never enters into it. The artifact wants no GPG signature and no <code>SHA256SUMS</code> – an image index with <code>artifactType: application/vnd.opentofu.provider</code>, a per-platform manifest each with <code>artifactType: application/vnd.opentofu.provider-target</code> and a <code>platform</code>, and one layer of media type <code>archive/zip</code> holding the same <code>.zip</code> the registry protocol would serve – while <code>.goreleaser.yaml</code> signs with cosign, which the <a href="https://opentofu.org/docs/internals/provider-registry-protocol/">registry protocol</a> does not accept. And credentials come from the OCI ecosystem’s own locations, the ones <code>docker login</code> already writes, so an operator who can pull cargoship’s images can install its provider.</p>
+<p>It also reuses what this repository already does. <code>.goreleaser.yaml</code> pushes four image variants to ghcr.io on every release, so the registry, the authentication and the publish step all exist; the provider adds an artifact to a registry already in use rather than a new distribution channel. Tags are the version in SemVer 2.0.0 form, with <code>_</code> in place of <code>+</code> for build metadata, and ORAS 1.3.0 or newer is the tooling for assembling the index.</p>
+<p>Two limits worth stating plainly. OpenTofu does not yet support an OCI registry as the <strong>primary</strong> installation source for a provider, so a mirror is a redirection of a source address rather than a source address of its own: the configuration still names <code>registry.opentofu.org/colonel-byte/cargoship</code> (or whatever hostname is chosen), and the <code>oci_mirror</code> block is what sends the request to ghcr.io instead. And an airgapped operator still needs either a reachable internal OCI registry or a <code>filesystem_mirror</code>, exactly as they do for images today.</p>
+<p>So the publishing plan is: ghcr.io as an OCI mirror first, since it needs no listing and no second signing path, and a registry listing only if connected users turn out to want discovery. That ordering is why the GPG work stays deferred rather than being a prerequisite.</p>
+<p>The pipeline for it is <code>mage release:tofuProvider</code> (<code>magefiles/pkg/release</code>), run by <a href="#release-tofu-provideryaml"><code>release-tofu-provider.yaml</code></a> on the same <code>v*</code> tag the CLI release fires on. It is a mage target rather than another <code>builds:</code> entry in <code>.goreleaser.yaml</code> because what has to be published is not a release asset: it is an OCI image index assembled to the shape above, and goreleaser has nothing to say about composing one. Building the zips there too keeps the artifact in one place and lets them carry a fixed entry timestamp, so the same commit produces the same bytes – which <code>zip(1)</code> does not. <code>mage release:tofuProviderLayout</code> runs everything but the copy to the registry and leaves the layout under <code>build/</code>, so the artifact shape can be checked without pushing anything.</p>
+<h2 id="what-the-schema-has-to-carry-because-of-this"><a class="header" href="#what-the-schema-has-to-carry-because-of-this">What the schema has to carry because of this</a></h2>
+<p>One piece of the provider’s schema cannot wait for the provider, because an attribute that does not exist cannot be compared later. <a href="https://github.com/colonel-byte/cargoship/issues/307">#307</a> wants a lowered engine version refused at plan time rather than mid-apply, and the input that check needs is the <strong>last-known running version of each host</strong>, held as a computed per-host attribute sourced from <code>h.Metadata.DistroVersion</code> (<code>pkg/phase/12_gather_facts_distro.go</code>). With it in state, a downgrade is a plan error: no SSH, no host touched, and the operator sees it before approving anything. Without it, the provider can only forward the CLI’s refusal, which happens after a run has started.</p>
+<p>The CLI keeps its own refusal as the backstop, for the case with no state file at all, and it now fires before any phase writes to a host.</p>
+<h2 id="when-to-revisit"><a class="header" href="#when-to-revisit">When to revisit</a></h2>
+<p>Two triggers, pointing at different answers.</p>
+<p><strong>Independent versioning starts to matter</strong> – the provider needs a patch the CLI does not, or the reverse, often enough to be worth paying for. That is the second module at <code>tofu/provider</code>, with a release-please component, <code>exclude-paths</code> on the root package, <code>separate-pull-requests</code>, a <code>v*</code> narrowing on <code>release.yaml</code>’s tag trigger so a component tag cannot cut a CLI release, and the six CI accommodations listed above. Everything in this document except the package path survives that move.</p>
+<p><strong>A registry listing is actually wanted</strong>, because enough connected users resolve providers through <code>registry.opentofu.org</code> for discovery to matter. That is the separate repository, and it is the one move that cannot be undone cheaply from inside this one. It is still not a rewrite: nobody imports a provider as a library, so the package path changing breaks no consumer, and <code>git subtree split</code> carries the history across. What it adds is a GPG signing path and a goreleaser configuration the OCI mirror does not need.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="what-the-opentofu-providers-schema-may-hold-and-what-it-may-not"><a class="header" href="#what-the-opentofu-providers-schema-may-hold-and-what-it-may-not">What the OpenTofu provider’s schema may hold, and what it may not</a></h1>
+<p>A tofu state file is a record of everything a resource knows, written in plaintext. It is committed, pushed to remote backends, and readable by everyone with access to that backend. So any attribute the <code>cargoship_cluster</code> resource accepts or computes is, in practice, published to whoever can read the state - and a published schema is hard to narrow afterwards, because narrowing it breaks every configuration already using it.</p>
+<p>That makes this a decision to take before any attribute name exists, which is why it is recorded here with no provider code written yet (see <a href="#why-the-opentofu-provider-is-a-package-of-this-module">choice-tofu-provider-layout</a> for where that code will live). Four rules.</p>
+<h2 id="1-key-paths-never-key-material"><a class="header" href="#1-key-paths-never-key-material">1. Key paths, never key material</a></h2>
+<p>The resource takes the <strong>path</strong> to an SSH private key. It never takes the key itself, and there is no attribute that would accept one. A path in state names a file; key material in state is the key, distributed.</p>
+<p>Nothing has to be invented for this, because it is already the shape of the configuration: a host’s connection settings come from rig’s <code>ssh.Config</code>, which has <code>KeyPath *string</code> and no serializable password field at all, and <code>ZarfHost</code> embeds that config inline. A passphrase for an encrypted identity is resolved by callback at connection time (<code>internal/clustercfg/keyring.go</code>’s <code>sshPassphrase</code>), not read from a field. The inventory format the provider renders therefore has nowhere to put a key even if someone wanted to, and the provider schema should not add one.</p>
+<p>The cost is real and accepted: a key path is only meaningful on the machine running tofu, so a provider configuration is not portable between operators without each of them staging the key at the same path or overriding the path themselves. That is the ordinary situation for an airgapped management node, and it is better than the alternative.</p>
+<h2 id="2-the-vault-password-comes-from-the-environment"><a class="header" href="#2-the-vault-password-comes-from-the-environment">2. The vault password comes from the environment</a></h2>
+<p>There is no <code>vault_password</code> attribute, and no <code>age_identity</code> attribute carrying an identity. The provider resolves them the way the CLI already does, through <code>internal/clustercfg.ResolveVaultPassword</code> and the <code>Keyring</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>What</th><th>Where it comes from</th></tr>
+</thead>
+<tbody>
+<tr><td>Vault password</td><td><code>CARGOSHIP_VAULT_PASSWORD</code>, then <code>ANSIBLE_VAULT_PASSWORD</code>, or a password file by path</td></tr>
+<tr><td>Age identity</td><td><code>CARGOSHIP_AGE_IDENTITY_FILE</code>, or an identity file by path</td></tr>
+<tr><td>Age recipients</td><td><code>CARGOSHIP_AGE_RECIPIENTS</code>, or a recipients file by path</td></tr>
+</tbody>
+</table>
+</div>
+<p>Reusing that resolution rather than adding attributes has a second benefit beyond keeping state clean: the precedence is defined in one place, so a password that works for <code>cargoship install apply</code> works for <code>tofu apply</code> without being configured twice.</p>
+<p>Encrypted values in the cluster configuration are unaffected. A vault or age ciphertext in a registry credential is already safe to hold in state in the sense that matters - it is ciphertext - and the key that opens it is what this rule keeps out.</p>
+<h2 id="3-everything-that-can-carry-a-secret-is-marked-sensitive-and-the-marking-is-data"><a class="header" href="#3-everything-that-can-carry-a-secret-is-marked-sensitive-and-the-marking-is-data">3. Everything that can carry a secret is marked sensitive, and the marking is data</a></h2>
+<p>Some values can still be a credential, because the configuration format permits plaintext: <code>ZarfClusterRegistryAuth</code>’s <code>user</code>, <code>pass</code> and <code>token</code> each accept plaintext as well as the two ciphertext formats, and <code>signing_key_password</code> in the cargoship configuration file is a password outright. Every provider attribute that maps onto one of those is declared <code>Sensitive: true</code>.</p>
+<p>Which values those are was documented only in prose and in example ciphertext, which is not something a second module can read. So the schema generator now carries the marking as data: <code>jsonschema_extras:"x-sensitive=true"</code> on the field puts <code>"x-sensitive": true</code> on the property in <code>schema/*.json</code>, and the docs renderer leads that property’s description with <strong>Sensitive.</strong> in <code>docs/schema/</code>. <code>TestSensitivePropertiesAreMarked</code> pins the set, because a field losing the tag is a secret landing in state in plaintext and nothing else in the test suite would notice.</p>
+<p>The provider reads the marking from the generated schema rather than keeping its own list. A hand-maintained list in another module is a list that goes stale, and the failure is silent.</p>
+<p>Marking an attribute sensitive keeps it out of plan output and logs. It does <strong>not</strong> keep it out of state - nothing does - which is what the next rule is about.</p>
+<h2 id="4-the-kubeconfig-is-opt-in-not-a-default-output"><a class="header" href="#4-the-kubeconfig-is-opt-in-not-a-default-output">4. The kubeconfig is opt-in, not a default output</a></h2>
+<p><code>KubeConfig.Bytes()</code> (<code>pkg/phase/80_kubeconfig.go</code>) returns a kubeconfig whose embedded client certificate is cluster-admin. It exists because <a href="https://github.com/colonel-byte/cargoship/issues/305">#305</a> separated building the config from writing it, so a caller can have the value without touching the operator’s <code>~/.kube/config</code>.</p>
+<p>Exposing it as a computed attribute means cluster-admin credentials in every state file, marked sensitive or not. So the provider does not expose it unless asked: an explicit input turns the output on, which maps onto <code>Write: false</code> plus a <code>Bytes()</code> read, and the attribute is sensitive when it is populated.</p>
+<p>The default is the useful one in practice. An operator who wants a kubeconfig on the management node already has <code>cargoship install kube-config</code>, which writes the file and merges it, and the phase’s <code>Write</code>/<code>Path</code> fields are exactly that path. Pulling admin credentials through tofu state to get a file on the same machine is the expensive way to do it.</p>
+<h2 id="what-this-does-not-decide"><a class="header" href="#what-this-does-not-decide">What this does not decide</a></h2>
+<p>Whether a removed host can be reconciled from the provider’s state. It cannot, for reasons that are about staleness rather than secrets, and <a href="#why-apply-refuses-a-removed-host-instead-of-reconciling-it">choice-removed-hosts</a> records them - but it is worth noting the two decisions reinforce each other. A removal path driven from state would need the removed host’s SSH credentials to have survived in that state, so building one would settle this document’s first rule the wrong way, by making it impossible to honour.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-a-missing-dnf-versionlock-plugin-warns-instead-of-failing-the-install"><a class="header" href="#why-a-missing-dnf-versionlock-plugin-warns-instead-of-failing-the-install">Why a missing dnf versionlock plugin warns instead of failing the install</a></h1>
 <p>After installing the engine packages, cargoship pins them at the installed version so a host-level package manager update cannot move the engine out from under it (<code>pkg/phase/51_package_pin.go</code>). On Debian-family hosts that is <code>apt-mark hold</code>; on RHEL-family hosts it is <code>dnf versionlock add</code>. The two are not equally available, and that asymmetry is the whole of this decision.</p>

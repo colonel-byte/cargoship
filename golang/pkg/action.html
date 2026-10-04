@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-916d6312.js"></script>
+        <script src="../../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -226,7 +226,7 @@
 <li><a href="#ResetOptions">type ResetOptions</a></li>
 </ul>
 <p><a name="Apply"></a></p>
-<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L67-L70">Apply</a></a></h2>
+<h2 id="type-apply"><a class="header" href="#type-apply">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L68-L71">Apply</a></a></h2>
 <p>Apply state logic</p>
 <pre><code class="language-go">type Apply struct {
     ApplyOptions
@@ -234,23 +234,24 @@
 }
 </code></pre>
 <p><a name="NewApply"></a></p>
-<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L73">NewApply</a></a></h3>
+<h3 id="func-newapply"><a class="header" href="#func-newapply">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L74">NewApply</a></a></h3>
 <pre><code class="language-go">func NewApply(opts ApplyOptions) *Apply
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L179">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="ApplyOptions"></a></p>
-<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L64">ApplyOptions</a></a></h2>
+<h2 id="type-applyoptions"><a class="header" href="#type-applyoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L65">ApplyOptions</a></a></h2>
 <p>ApplyOptions struct</p>
 <pre><code class="language-go">type ApplyOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // DisableDowngradeCheck skips the downgrade check
-    DisableDowngradeCheck bool
+    // AllowDowngrade continues when a host already runs a version newer than the package,
+    // rather than refusing the run
+    AllowDowngrade bool
     // NoWait skips waiting for the cluster to be ready
     NoWait bool
     // NoDrain skips draining worker nodes
@@ -277,7 +278,7 @@
 }
 </code></pre>
 <p><a name="EngineConfigSync"></a></p>
-<h2 id="type-engineconfigsync"><a class="header" href="#type-engineconfigsync">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L47-L50">EngineConfigSync</a></a></h2>
+<h2 id="type-engineconfigsync"><a class="header" href="#type-engineconfigsync">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L50-L53">EngineConfigSync</a></a></h2>
 <p>EngineConfigSync state logic</p>
 <pre><code class="language-go">type EngineConfigSync struct {
     EngineConfigSyncOptions
@@ -285,17 +286,17 @@
 }
 </code></pre>
 <p><a name="NewEngineConfigSync"></a></p>
-<h3 id="func-newengineconfigsync"><a class="header" href="#func-newengineconfigsync">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L53">NewEngineConfigSync</a></a></h3>
+<h3 id="func-newengineconfigsync"><a class="header" href="#func-newengineconfigsync">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L56">NewEngineConfigSync</a></a></h3>
 <pre><code class="language-go">func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync
 </code></pre>
 <p>NewEngineConfigSync an engine-config-sync action object</p>
 <p><a name="EngineConfigSync.Run"></a></p>
-<h3 id="func-engineconfigsync-run"><a class="header" href="#func-engineconfigsync-run">func (EngineConfigSync) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L111">Run</a></a></h3>
+<h3 id="func-engineconfigsync-run"><a class="header" href="#func-engineconfigsync-run">func (EngineConfigSync) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L115">Run</a></a></h3>
 <pre><code class="language-go">func (r EngineConfigSync) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="EngineConfigSyncOptions"></a></p>
-<h2 id="type-engineconfigsyncoptions"><a class="header" href="#type-engineconfigsyncoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L44">EngineConfigSyncOptions</a></a></h2>
+<h2 id="type-engineconfigsyncoptions"><a class="header" href="#type-engineconfigsyncoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L47">EngineConfigSyncOptions</a></a></h2>
 <p>EngineConfigSyncOptions struct</p>
 <pre><code class="language-go">type EngineConfigSyncOptions struct {
     // Manager is the phase manager
@@ -312,6 +313,9 @@
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // AllowDowngrade continues when a host already runs a version newer than the package,
+    // rather than refusing the run
+    AllowDowngrade bool
 }
 </code></pre>
 <p><a name="KubeConfig"></a></p>
@@ -344,7 +348,7 @@
 }
 </code></pre>
 <p><a name="Prepare"></a></p>
-<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L50-L53">Prepare</a></a></h2>
+<h2 id="type-prepare"><a class="header" href="#type-prepare">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L48-L51">Prepare</a></a></h2>
 <p>Prepare state logic</p>
 <pre><code class="language-go">type Prepare struct {
     PrepareOptions
@@ -352,23 +356,21 @@
 }
 </code></pre>
 <p><a name="NewPrepare"></a></p>
-<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L56">NewPrepare</a></a></h3>
+<h3 id="func-newprepare"><a class="header" href="#func-newprepare">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L54">NewPrepare</a></a></h3>
 <pre><code class="language-go">func NewPrepare(opts PrepareOptions) *Prepare
 </code></pre>
 <p>NewPrepare an prepare action object</p>
 <p><a name="Prepare.Run"></a></p>
-<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L77">Run</a></a></h3>
+<h3 id="func-prepare-run"><a class="header" href="#func-prepare-run">func (Prepare) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L75">Run</a></a></h3>
 <pre><code class="language-go">func (a Prepare) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
 <p><a name="PrepareOptions"></a></p>
-<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L47">PrepareOptions</a></a></h2>
+<h2 id="type-prepareoptions"><a class="header" href="#type-prepareoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L32-L45">PrepareOptions</a></a></h2>
 <p>PrepareOptions struct</p>
 <pre><code class="language-go">type PrepareOptions struct {
     // Manager is the phase manager
     Manager *phase.Manager
-    // DisableDowngradeCheck skips the downgrade check
-    DisableDowngradeCheck bool
     // NoWait skips waiting for the cluster to be ready
     NoWait bool
     // NoDrain skips draining worker nodes

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-916d6312.js"></script>
+        <script src="../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,7 +186,7 @@
 <h2 id="cargoship-apply"><a class="header" href="#cargoship-apply">cargoship apply</a></h2>
 <p>Apply a config file to bootstrap and upgrade a cluster</p>
 <h3 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h3>
-<p>Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted.</p>
+<p>Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted, before any phase has written to a host. Pass –allow-downgrade when the move backwards is deliberate.</p>
 <p>Cargoship opens every SSH connection itself, from the machine it runs on, and nothing is installed on a target host beyond what a phase uploads.</p>
 <p>An apply never removes a node. A host deleted from the configuration leaves its node in the cluster and stops the run rather than having the difference reconciled, so that no machine is drained or uninstalled by a configuration edit alone. Pass –allow-unmanaged-nodes when the extra nodes were joined deliberately and cargoship should leave them alone.</p>
 <p>This changes every host it is pointed at, so it needs –confirm. Pass –dry-run instead to connect to every host and run the preflight checks for real, reporting what the run would change without changing it.</p>
@@ -212,6 +212,7 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 <pre><code>      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
       --age-recipient stringArray               A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
       --age-recipients-file stringArray         Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --allow-downgrade                         Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
       --allow-unmanaged-nodes                   Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main

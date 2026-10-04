@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-916d6312.js"></script>
+        <script src="../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -199,12 +199,6 @@
 <li>Dry run: runs, reads only. Reads <code>/etc/os-release</code> and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.</li>
 </ul>
 </li>
-<li>Acquire exclusive host lock
-<ul>
-<li>Runs a background task that touches a file every 30 seconds on each remote node. This prevents other <code>cargoships</code> from making any changes until the lock file has not been touched for over a minute</li>
-<li>Dry run: reported, not run</li>
-</ul>
-</li>
 <li>Gather host facts
 <ul>
 <li>Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.</li>
@@ -227,6 +221,12 @@
 <ul>
 <li>Compares the nodes joined to the cluster against the hosts in the config and stops the apply when the cluster holds a node the config does not, since nothing later in an apply removes a node</li>
 <li>Dry run: runs, reads only. Checking for removed nodes lists the nodes joined to the cluster and compares them to the config. It writes nothing, and a dry run is exactly when an operator wants to be told that a host they deleted from the config is still running.</li>
+</ul>
+</li>
+<li>Acquire exclusive host lock
+<ul>
+<li>Runs a background task that touches a file every 30 seconds on each remote node. This prevents other <code>cargoships</code> from making any changes until the lock file has not been touched for over a minute</li>
+<li>Dry run: reported, not run</li>
 </ul>
 </li>
 <li>Prepare hosts

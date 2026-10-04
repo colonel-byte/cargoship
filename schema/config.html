@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-916d6312.js"></script>
+        <script src="../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -267,6 +267,7 @@
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>allow_downgrade</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether a run continues when a host already runs an engine version newer<br>than the one the package carries</td></tr>
 <tr><td><code>allow_unmanaged_nodes</code></td><td><code>boolean</code></td><td>no</td><td></td><td>whether an apply continues when the cluster holds a node that no host<br>in the config accounts for</td></tr>
 <tr><td><code>apply</code></td><td><a href="#applyoptions">ApplyOptions</a></td><td>no</td><td></td><td>are options used by the apply subcommand</td></tr>
 <tr><td><code>certificate_identity</code></td><td><code>string</code></td><td>no</td><td></td><td>required identity claim in the signing certificate</td></tr>
@@ -309,7 +310,7 @@
 </thead>
 <tbody>
 <tr><td><code>signing_key</code></td><td><code>string</code></td><td>no</td><td></td><td>is the path to the private key, a Cosign-supported key provider, used to sign, or re-sign, the package</td></tr>
-<tr><td><code>signing_key_password</code></td><td><code>string</code></td><td>no</td><td></td><td>the password for the private key used for signing</td></tr>
+<tr><td><code>signing_key_password</code></td><td><code>string</code></td><td>no</td><td></td><td>the password for the private key used for signing <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
 </tbody>
 </table>
 </div>

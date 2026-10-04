@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-916d6312.js"></script>
+        <script src="../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
                     <main>
                         <h1 id="adding-an-e2e-test-for-a-new-apply-phase"><a class="header" href="#adding-an-e2e-test-for-a-new-apply-phase">Adding an E2E Test for a New Apply Phase</a></h1>
 <p>The cluster suite in <code>test/e2e/cluster</code> walks the apply phase list one phase at a time against a live bootloose cluster and asserts what each phase left on the hosts. Adding a phase to <code>pkg/action/apply.go</code> without adding a test here leaves a gap that nothing else covers, so this page is the checklist for closing it.</p>
-<p>One top-level test, <code>TestClusterPhases</code>, runs four walks against the same cluster in the order they work in: <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, <code>upgrade</code> walks the same phases again with a newer package, and <code>reset</code> takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
+<p>One top-level test, <code>TestClusterPhases</code>, runs five walks against the same cluster in the order they work in: <code>dryrun</code> runs whole actions with <code>--dry-run</code> over nodes with nothing on them and asserts it left them that way, <code>apply</code> installs the distro, <code>join</code> starts one more machine and brings it into the running cluster, <code>upgrade</code> walks the same phases again with a newer package, and <code>reset</code> takes the distro back off. A new phase needs a test in the apply walk, and usually one in the join and upgrade walks too – see <a href="#adding-the-join-half">Adding the join half</a> and <a href="#adding-the-upgrade-half">Adding the upgrade half</a>.</p>
 <p>For why the suite is built this way, see <a href="../agent/choice-phase-e2e-tests.html">choice-phase-e2e-tests</a>. For running the e2e suites generally, see <a href="e2e-tests.html">e2e-tests</a>.</p>
 <h2 id="one-number-per-phase"><a class="header" href="#one-number-per-phase">One number per phase</a></h2>
 <p>A phase is identified by its source file’s number, and that number is used twice:</p>
@@ -280,6 +280,13 @@ debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
 <li><strong>Do not “fix” a phase that fails on Alpine by skipping the host in the assertion.</strong> The phases select their own hosts in <code>Prepare</code>, with no OS gate in most cases, so the phase will still have run against it and spent its retry budget there. If a phase genuinely cannot run on a host, that host must not be on the manager when the phase runs.</li>
 </ul>
 <p><code>s.harness.engineWorkers()</code> exists for the one case where order is not obvious: a test that runs before the drop but is only meaningful for hosts that join.</p>
+<h2 id="the-dry-run-walk"><a class="header" href="#the-dry-run-walk">The dry-run walk</a></h2>
+<p><code>DryRunSuite</code> (<code>dry_run_test.go</code>) is the one walk that does not step through phases, and the one whose assertions are negative. It runs <code>action.NewApply</code>, <code>action.NewPrepare</code> and <code>action.NewReset</code> whole, with <code>Manager.DryRun</code> set, and then asserts that none of the artifacts the other walks look for arrived: no upload manifest, no sysctl file, no lock file, no running engine. It runs first because “the hosts are unchanged” is only checkable before the apply walk changes them.</p>
+<p>Two things about it are easy to get wrong when extending it.</p>
+<p>The hosts are disconnected by the time a run returns, because every action ends with the disconnect phase and its dry-run path disconnects as well. A read taken after the run reports every file as absent whether it is there or not, which would make each assertion pass over a host a dry run had written to. <code>reconnectHosts</code> runs <code>Connect</code> and <code>DetectOS</code> again – both read-only – and the assertions go after that.</p>
+<p>The walk also asserts the positive half, which is what stops the negative half from being vacuous: the read-only phases have to have gathered their facts, so each host carries a configurer, a hostname, an architecture, and <code>phase.UnknownVersion</code> for the engine it is not running. A dry run that never connected to anything would satisfy an untouched-hosts check perfectly.</p>
+<p>A new phase needs nothing added here unless it is read-only, in which case the facts it gathers belong in <code>requireFactsGathered</code>, or it writes an artifact worth naming, in which case its absence belongs in <code>requireHostsUntouched</code> next to the path the install test asserts exists.</p>
+<p>The two reset cases are split by what they need. <code>reset --dry-run</code> against a cluster that is up is in <code>ResetSuite</code> as <code>Test_0</code>, immediately before the real reset, because that is the only point where a live cluster exists. <code>reset --dry-run</code> with no running controller is in this walk, because nodes nothing was installed on are the natural fixture for the nil-leader path PR #312 found against a live cluster.</p>
 <h2 id="adding-the-join-half"><a class="header" href="#adding-the-join-half">Adding the join half</a></h2>
 <p><code>JoinPhaseSuite</code> walks the same phase list a second time, against the cluster the apply walk installed and one machine larger. It carries the same package at the same version, so nothing routes to the upgrade phases and the only host with work left is the one that just appeared. It is the only coverage of apply against a cluster that already exists.</p>
 <p>So a new phase usually needs a join test as well. Which kind depends on what it does the second time:</p>
@@ -340,7 +347,8 @@ s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version
 <pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=105m ./test/e2e/cluster/...
 </code></pre>
 <p>Or through mage, which also clears leftover containers from a run that was killed before teardown. Unlike the other e2e mage targets, it builds nothing first:</p>
-<pre><code class="language-console">$ mage test:endToEndCluster           # the install, join and reset walks
+<pre><code class="language-console">$ mage test:endToEndCluster           # the dry-run, install, join and reset walks
+$ mage test:endToEndClusterDryRun     # only the dry-run walk, against the staging cluster
 $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in between
 </code></pre>
 <p><code>-short</code> skips the whole suite, and <code>CARGOSHIP_E2E_UPGRADE</code> adds the upgrade walk. <code>TestMain</code> deletes the bootloose cluster on the way out even when tests fail.</p>

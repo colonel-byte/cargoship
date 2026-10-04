@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-916d6312.js"></script>
+        <script src="../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -399,9 +399,9 @@
 <tr><th>Property</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>pass</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login secret for the remote registry.</td></tr>
-<tr><td><code>token</code></td><td><code>string</code></td><td>no</td><td></td><td>authenticates to the remote registry instead of a username and password.</td></tr>
-<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login name for the remote registry.</td></tr>
+<tr><td><code>pass</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login secret for the remote registry. <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
+<tr><td><code>token</code></td><td><code>string</code></td><td>no</td><td></td><td>authenticates to the remote registry instead of a username and password. <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
+<tr><td><code>user</code></td><td><code>string</code></td><td>no</td><td></td><td>is the login name for the remote registry. <strong>Sensitive.</strong> Treat this value as a secret: it is a credential rather than a path to one.</td></tr>
 </tbody>
 </table>
 </div>

@@ -37,10 +37,10 @@
             const path_to_root = "../../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../../../../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../../toc-916d6312.js"></script>
+        <script src="../../../../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -561,11 +561,11 @@
 <p>ZarfClusterRegistryAuth holds the credentials for a container registry. Username, Password, and Token may each be given in plaintext, or encrypted in either of the two formats cargoship reads: an Ansible Vault string (the output of `ansible-vault encrypt_string`, starting with “$ANSIBLE_VAULT”), or armored age ciphertext (starting with “-----BEGIN AGE ENCRYPTED FILE-----”). Cargoship decrypts either at apply time, using the vault password given via --vault-password-file or the age identity given via --age-identity-file.</p>
 <pre><code class="language-go">type ZarfClusterRegistryAuth struct {
     // Username is the login name for the remote registry.
-    Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Username string `json:"user,omitempty" jsonschema:"example=myuser,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
     // Password is the login secret for the remote registry.
-    Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Password string `json:"pass,omitempty" jsonschema:"example=hunter2,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
     // Token authenticates to the remote registry instead of a username and password.
-    Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..."`
+    Token string `json:"token,omitempty" jsonschema:"example=abc123,example=$ANSIBLE_VAULT;1.1;AES256...,example=-----BEGIN AGE ENCRYPTED FILE-----..." jsonschema_extras:"x-sensitive=true"`
 }
 </code></pre>
 <p><a name="ZarfClusterRegistryAuth.Validate"></a></p>

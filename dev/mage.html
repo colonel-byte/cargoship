@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-916d6312.js"></script>
+        <script src="../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -235,6 +235,7 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <li><code>EndToEndNonCluster</code> - Runs the group that needs no cluster: the misc and package command groups. <code>-short</code> additionally skips the example packages, so this finishes in seconds. Mirrors the <code>e2e-noncluster</code> CI job.</li>
 <li><code>EndToEndCluster</code> - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
 <li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.</li>
+<li><code>EndToEndClusterDryRun</code> - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with <code>--dry-run</code> against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.</li>
 <li><code>CleanCluster</code> - Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
 <li><code>Fuzz</code> - Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="fuzz-tests.html">fuzz-tests</a>.</li>
 </ul>
@@ -242,8 +243,18 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 mage test:endToEndNonCluster    # run the misc/package command suites, no cluster needed
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
+mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
+</code></pre>
+<h3 id="release-namespace"><a class="header" href="#release-namespace"><code>Release</code> Namespace</a></h3>
+<p>The <code>Release</code> namespace holds the release artifacts goreleaser does not build. Only the OpenTofu provider is here, because what has to be published for it is an OCI image index assembled to the shape an OpenTofu provider mirror serves rather than a release asset. See <a href="../agent/choice-tofu-provider-layout.html">choice-tofu-provider-layout</a>.</p>
+<ul>
+<li><code>TofuProvider</code> - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading <code>v</code>, and optionally the repository to publish to. Needs ORAS 1.3.0 or newer on <code>PATH</code>, which is what <code>--artifact-platform</code> needs.</li>
+<li><code>TofuProviderLayout</code> - The same build and assembly, stopping before the push and leaving the OCI layout under <code>build/tofu-provider/layout</code>. This is how the artifact shape is checked without a registry.</li>
+</ul>
+<pre><code class="language-sh">mage release:tofuProviderLayout 0.1.0     # build the artifact, push nothing
+mage release:tofuProvider 0.1.0           # build it and push it to the default ghcr.io repository
 </code></pre>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
 <p>The <code>Generate</code> namespace handles code-generation and repository asset updates:</p>
@@ -314,7 +325,8 @@ mage generate:examples
 <li><strong><code>build.go</code>:</strong> Entrypoint for the <code>Build</code> namespace (<code>Build.Binary</code>, <code>Build.All</code>, <code>Build.Examples</code>), delegating to <code>magefiles/pkg/build</code>.</li>
 <li><strong><code>dev.go</code>:</strong> Entrypoint for the <code>Dev</code> namespace (<code>Dev.Clean</code>, <code>Dev.Tidy</code>, <code>Dev.Digest</code>, <code>Dev.DnfPins</code>, <code>Dev.WriteOSVOverrides</code>, <code>Dev.VerifyVendor</code>).</li>
 <li><strong><code>generate.go</code>:</strong> Entrypoint for the <code>Generate</code> namespace (<code>Generate.Document</code>, <code>Generate.Schema</code>, <code>Generate.Completion</code>, <code>Generate.EngineConfig</code>, <code>Generate.Examples</code>, etc.), delegating to <code>magefiles/pkg/gen/...</code>.</li>
-<li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.CleanCluster</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
+<li><strong><code>release.go</code>:</strong> Entrypoint for the <code>Release</code> namespace (<code>Release.TofuProvider</code>, <code>Release.TofuProviderLayout</code>), delegating to <code>magefiles/pkg/release</code>.</li>
+<li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterDryRun</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.CleanCluster</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
 <li><strong><code>pkg/build/</code>:</strong> Binary compilation logic, flag assembly, and example package builds.</li>
 <li><strong><code>pkg/devtools/</code>:</strong> Developer tooling packages, including <code>dnfpins</code> (AlmaLinux repomd XML parser and pin updater) and <code>osv</code> (OpenSSF Scorecard vendor overrides).</li>
 <li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), and <code>schema/</code> (JSON schema reflection and docs).</li>

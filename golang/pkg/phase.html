@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-71749fe4.js";
+            window.path_to_searchindex_js = "../../searchindex-2488e60a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-916d6312.js"></script>
+        <script src="../../toc-6e82a667.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -602,6 +602,9 @@
 <p><a name="ErrUnmanagedNodes"></a>ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for. Apply removes nothing, so continuing would report success over a machine that is still running the engine and still joined.</p>
 <pre><code class="language-go">var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
 </code></pre>
+<p><a name="ErrWillNotDowngrade"></a>ErrWillNotDowngrade is returned when a host already runs a version newer than the one the package carries. An engine does not support moving backwards, so the run stops here rather than uninstalling a newer version part way through.</p>
+<pre><code class="language-go">var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
+</code></pre>
 <p><a name="Force"></a>Force is used by various phases to attempt a forced installation</p>
 <pre><code class="language-go">var Force bool
 </code></pre>
@@ -1119,36 +1122,40 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="GatherFactsDistro"></a></p>
-<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L33-L38">GatherFactsDistro</a></a></h2>
+<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L39-L48">GatherFactsDistro</a></a></h2>
 <p>GatherFactsDistro state</p>
 <pre><code class="language-go">type GatherFactsDistro struct {
     GenericPhase
     Distro distrocfg.Distro
+    // AllowDowngrade turns the refusal below into a warning. A downgrade is refused by default
+    // because an engine does not support being moved backwards and the data directory it leaves
+    // behind was written by the newer version, so the operator has to say that they mean it.
+    AllowDowngrade bool
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="GatherFactsDistro.Explanation"></a></p>
-<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L46">Explanation</a></a></h3>
+<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="GatherFactsDistro.Prepare"></a></p>
-<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56">Prepare</a></a></h3>
+<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L66">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="GatherFactsDistro.ReadOnly"></a></p>
-<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51">ReadOnly</a></a></h3>
+<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L61">ReadOnly</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) ReadOnly() string
 </code></pre>
 <p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
 <p><a name="GatherFactsDistro.Run"></a></p>
-<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L63">Run</a></a></h3>
+<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L73">Run</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
 </code></pre>
 <p>Run the phase</p>
 <p><a name="GatherFactsDistro.Title"></a></p>
-<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L41">Title</a></a></h3>
+<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51">Title</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Title() string
 </code></pre>
 <p>Title for the phase</p>
