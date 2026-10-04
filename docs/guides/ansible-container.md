@@ -4,9 +4,11 @@ The `cargoship-ansible` image is a management node in a container: `ansible-core
 
 For the modules themselves -- their parameters and what `changed` means -- see [ansible-module](ansible-module.md), and for the inventory they translate, [ansible-inv](ansible-inv.md). Nothing about either changes inside the container.
 
+<!-- x-release-please-start-version -->
 ```sh
-podman pull ghcr.io/colonel-byte/cargoship-ansible:0.26.2
+podman pull ghcr.io/colonel-byte/cargoship-ansible:0.29.0
 ```
+<!-- x-release-please-end-version -->
 
 The image has no `ENTRYPOINT`, because a run legitimately reaches for `ansible-playbook`, `ansible-inventory`, `ansible-galaxy` or `cargoship` itself; name the command you want. The collection is installed to `/usr/share/ansible/collections`, which is already on ansible-core's default collections path, so `ansible-playbook` resolves `colonel_byte.cargoship.cargoship_apply` with no configuration. `HOME` is `/home/nonroot`, the working directory is `/workspace`, and the process runs as UID and GID 65532.
 
@@ -30,10 +32,66 @@ An apply leaves `update_kubeconfig` on by default, which merges the cluster's ad
 
 Everything under `/home/nonroot` is already created and owned by 65532 in the image, so a run with none of the optional mounts works -- it just starts cold each time and keeps nothing. The cache is the one worth adding first, and it has a section of its own below.
 
+## Reaching a Cluster on the Same Host
+
+The same rule catches addresses, not just paths, and a local k3d cluster is where it bites first. `k3d kubeconfig get zarf` writes `server: https://0.0.0.0:41609`, naming the port k3d published on the host; `0.0.0.0` inside the container is the container's own network namespace, where nothing is listening. The first `colonel_byte.zarf` task then fails on a connection refused that reads like a cluster that is down, and the cluster is fine -- see [zarf-ansible-module](zarf-ansible-module.md) for the modules themselves.
+
+Two addresses do reach it, and the serving certificate is what limits it to two. k3d starts k3s with `--tls-san 0.0.0.0` and `--tls-san k3d-zarf-serverlb`, on top of k3s's own `127.0.0.1` and `localhost`, so a name the certificate does not carry -- `host.docker.internal`, or the bridge gateway address -- fails verification even once it routes.
+
+Joining the cluster's own network is the arrangement to prefer. Rewrite the server to the load balancer's name inside that network:
+
+```sh
+k3d kubeconfig get zarf \
+  | sed 's|https://0.0.0.0:41609|https://k3d-zarf-serverlb:6443|' > kubeconfig.yaml
+chmod 0644 kubeconfig.yaml
+```
+
+Then attach the container to that network and mount what it wrote:
+
+<!-- x-release-please-start-version -->
+```sh
+docker run --rm \
+  --network k3d-zarf \
+  -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
+  -e KUBECONFIG=/home/nonroot/.kube/config \
+  -v "$PWD":/workspace:ro,z \
+  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  ansible-playbook init.yaml
+```
+<!-- x-release-please-end-version -->
+
+Rewriting k3d's own output rather than hand-writing a kubeconfig keeps the embedded CA and client certificate intact. `docker` is deliberate here: the k3d network is docker's, and rootless podman cannot attach to it. The load balancer's name resolves inside that network for as long as the cluster exists, so this survives a `k3d cluster stop && k3d cluster start` that republishes the API on a different host port.
+
+Reaching the published port instead means host networking, since that port is bound on the host:
+
+```sh
+k3d kubeconfig get zarf \
+  | sed 's|https://0.0.0.0:41609|https://127.0.0.1:41609|' > kubeconfig.yaml
+chmod 0644 kubeconfig.yaml
+```
+
+<!-- x-release-please-start-version -->
+```sh
+docker run --rm \
+  --network host \
+  -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
+  -e KUBECONFIG=/home/nonroot/.kube/config \
+  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  zarf tools kubectl get nodes
+```
+<!-- x-release-please-end-version -->
+
+It is the shorter way to a one-off check, and it costs the container's network namespace, which a run that also opens SSH connections to a fleet should not give up lightly. The port is whatever `docker port k3d-zarf-serverlb 6443` reports, and it is reassigned every time the cluster is recreated. `zarf tools kubectl` is the smoke test to reach for because the image has no `kubectl` of its own.
+
+Either way the kubeconfig is mounted read-only -- zarf reads it and writes nothing back -- and it has to be readable by UID 65532, which is what the `chmod 0644` on the copy is for. A mounted *directory* has to be traversable by that UID too, so a playbook tree under a `0700` directory arrives as a `/workspace` the container cannot open, and `ansible-playbook` reports a playbook it could not find rather than a permission error.
+
+None of this applies to a real fleet. A cluster cargoship installed is reached over the network like any other host, and `cargoship_kube_config` -- or an apply's `update_kubeconfig`, above -- is what puts its credentials where a later task can find them.
+
 ## The Package Mount Is Read-Only Because Nothing Writes to It
 
 A distro package is the one input large enough that copying it into an image, or into the container's writable layer, is a real cost -- it carries every image and file the cluster installs. It is also read-only by nature: `cargoship apply` reads the package and writes to the fleet, never back into the artifact. Mounting it `:ro` costs nothing and turns a whole class of mistake, a run that mutates the staging directory every other run depends on, into an error at the moment it is attempted.
 
+<!-- x-release-please-start-version -->
 ```sh
 podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
@@ -42,9 +100,10 @@ podman run --rm \
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
+<!-- x-release-please-end-version -->
 
 On a host with SELinux enforcing -- Fedora, RHEL, and anything derived from them -- a volume needs a label option or the container cannot read it. Use `z`, the shared label, for anything the host or another container also uses, which is all of the above. `Z` relabels the content privately to one container, and applying it to a shared staging directory takes that directory away from every other reader on the host, including the next container. Docker takes the same options; it is the label, not the runtime, that decides this.
 
@@ -52,15 +111,17 @@ On a host with SELinux enforcing -- Fedora, RHEL, and anything derived from them
 
 The cache is where cargoship keeps what it fetches -- OCI artifacts it pulls, and the release assets the example generation reads -- under `~/.cargoship-cache`, which is `/home/nonroot/.cargoship-cache` in the container. It is the only mount in this guide that exists purely to make the *next* run faster, and the only one that is worthless read-only: a cache that cannot be written to is a cache that is empty on every run, and a read-only mount turns what would be a slow run into a failed write.
 
+<!-- x-release-please-start-version -->
 ```sh
 podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
+<!-- x-release-please-end-version -->
 
 `rw` is the default for a bind mount and is written out here only to say that it is meant: the package above it is `ro` on purpose, and the pair reads as a decision rather than an omission. Create the directory on the host first -- `mkdir -p ~/.cargoship-cache` -- because a bind mount whose source does not exist is created by the runtime as an empty directory owned by root, which the container cannot then write to.
 
@@ -68,15 +129,17 @@ The same UID rule as everywhere else decides whether the write succeeds, and the
 
 A named volume avoids the question entirely, and is the better arrangement on a dedicated staging host where nobody needs to read the cache from outside:
 
+<!-- x-release-please-start-version -->
 ```sh
 podman volume create cargoship-cache
 podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
+<!-- x-release-please-end-version -->
 
 A new named volume is populated from the image path it is mounted over, ownership included, so it arrives owned by 65532 with no mapping, no `chown` and no SELinux label option to choose. It survives `--rm`, and `podman volume rm cargoship-cache` is how you discard it deliberately.
 
@@ -102,6 +165,7 @@ Setting `SSH_KNOWN_HOSTS=/dev/null` disables host key verification entirely. It 
 
 Cargoship reads `SSH_AUTH_SOCK` and offers the agent's keys, so an agent on the host serves a run in the container once its socket is mounted and the variable points at it.
 
+<!-- x-release-please-start-version -->
 ```sh
 podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
@@ -109,9 +173,10 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
+<!-- x-release-please-end-version -->
 
 An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.
 

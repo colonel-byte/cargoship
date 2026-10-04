@@ -6,10 +6,10 @@ This guide covers what the two modules are, how to install them, the two-module 
 
 ## The two modules
 
-| Module                                         | Command it renders   | What it is for                                                                       |
-| ---------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------ |
-| `colonel_byte.zarf.zarf_init`                  | `zarf init`          | Initialise a cluster: the injector, the seed registry, the registry, the agent       |
-| `colonel_byte.zarf.zarf_package_deploy`        | `zarf package deploy`| Put a package on a cluster, from a path, an `oci://` reference, or an `https://` URL |
+| Module                                  | Command it renders   | What it is for                                                                       |
+| --------------------------------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| `colonel_byte.zarf.zarf_init`           | `zarf init`          | Initialise a cluster: the injector, the seed registry, the registry, the agent       |
+| `colonel_byte.zarf.zarf_package_deploy` | `zarf package deploy`| Put a package on a cluster, from a path, an `oci://` reference, or an `https://` URL |
 
 Both run on the node the task is delegated to, not on the cluster's nodes. Zarf reaches the cluster through a kubeconfig, so there is no inventory to project and nothing to copy to a managed node: a task supplies a kubeconfig, a package, and the parameters the zarf command takes.
 

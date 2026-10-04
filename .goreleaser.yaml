@@ -22,11 +22,11 @@ before:
     # The Ansible collection is a release artifact of its own: the management node that runs the
     # playbooks is inside the airlock, so it installs the collection from this tarball rather than
     # from Galaxy. A snapshot passes no version, because its version is not the one in galaxy.yml.
-    - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}{{ else }}{{ .Version }}{{ end }}
+    - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}""{{ else }}{{ .Version }}{{ end }}
     # The zarf collection is the ZEP-0072 proof, and it is versioned on its own cadence rather
     # than with the cargoship tag, so no expected version is passed. See
     # docs/agent/choice-zarf-ansible-module.md.
-    - hack/ansible-build-collection.sh bin/ansible "" ansible/colonel_byte/zarf
+    - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}""{{ else }}{{ .Version }}{{ end }} ansible/colonel_byte/zarf
 
 builds:
   - id: cargoship
