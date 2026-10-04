@@ -78,6 +78,9 @@ var (
 	// ErrNotImplemented is returned by a distro module for capabilities its engine does not
 	// support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
 	ErrNotImplemented = errors.New("not implemented for this distro")
+	// ErrNoLeader is returned when a joining host has no leader host to fetch join material
+	// from -- the cluster has no controller, which is a config error, not a retryable one.
+	ErrNoLeader = errors.New("no leader host to join through")
 )
 
 // NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels
