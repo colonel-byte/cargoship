@@ -207,6 +207,7 @@
 - [choice-phase-e2e-tests](agent/choice-phase-e2e-tests.md)
 - [choice-preferred-firewall](agent/choice-preferred-firewall.md)
 - [choice-removed-hosts](agent/choice-removed-hosts.md)
+- [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
