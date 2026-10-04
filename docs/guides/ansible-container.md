@@ -6,7 +6,7 @@ For the modules themselves -- their parameters and what `changed` means -- see [
 
 <!-- x-release-please-start-version -->
 ```sh
-podman pull ghcr.io/colonel-byte/cargoship-ansible:0.29.0
+podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.29.0
 ```
 <!-- x-release-please-end-version -->
 
@@ -41,9 +41,9 @@ Two addresses do reach it, and the serving certificate is what limits it to two.
 Joining the cluster's own network is the arrangement to prefer. Rewrite the server to the load balancer's name inside that network:
 
 ```sh
-k3d kubeconfig get zarf \
-  | sed 's|https://0.0.0.0:41609|https://k3d-zarf-serverlb:6443|' > kubeconfig.yaml
-chmod 0644 kubeconfig.yaml
+mkdir -p build/tmp
+k3d kubeconfig get zarf | sed -E 's|https://0.0.0.0:[0-9]{5}|https://k3d-zarf-serverlb:6443|' > build/tmp/zarf-config.yaml
+chmod 0644 build/tmp/zarf-config.yaml
 ```
 
 Then attach the container to that network and mount what it wrote:
@@ -52,10 +52,10 @@ Then attach the container to that network and mount what it wrote:
 ```sh
 docker run --rm \
   --network k3d-zarf \
-  -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
+  -v "$PWD/build/tmp/zarf-config.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook init.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -76,7 +76,7 @@ docker run --rm \
   --network host \
   -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
-  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   zarf tools kubectl get nodes
 ```
 <!-- x-release-please-end-version -->
@@ -100,7 +100,7 @@ podman run --rm \
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -118,7 +118,7 @@ podman run --rm \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -136,7 +136,7 @@ podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -173,7 +173,7 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->
