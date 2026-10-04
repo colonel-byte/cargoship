@@ -99,6 +99,10 @@ func runCreateActions(ctx context.Context, basePath string, defaults zarf.ZarfCo
 // Going through Zarf's own converter is what keeps the field mapping -- template
 // to enableTemplating, condition to a WaitCondition, mute to silent -- the same
 // one Zarf applies to a package it loaded itself.
+//
+// It also runs Zarf's package migrations, which is why a deprecated singular
+// setVariable works here. See docs/agent/choice-v1alpha1-action-conversion.md
+// before replacing this with a direct converter.
 func toAPIActionSet(set zarf.ZarfComponentActionSet) zarfapi.ActionSet {
 	pkg := zarf.ZarfPackage{
 		Components: []zarf.ZarfComponent{

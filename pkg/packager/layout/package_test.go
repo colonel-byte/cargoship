@@ -25,6 +25,7 @@ import (
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/helpers"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 )
 
 func TestDigest(t *testing.T) {
@@ -193,4 +194,67 @@ func TestValues(t *testing.T) {
 	values, err := d.Values(context.Background())
 	require.NoError(t, err)
 	require.Empty(t, values)
+}
+
+// A SignPackage call whose options carry no key material is a no-op, so the gate
+// deciding that is the difference between an unsigned package and a failed build.
+// Zarf owned this check until v0.87.0 removed SignBlobOptions.ShouldSign along
+// with its Keyless field; the keyless row is the one that cannot be recovered
+// from the cosign options alone, since --keyless is mutually exclusive with
+// --signing-key and every other keyless flag defaults to empty.
+func TestSignOptionsShouldSign(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		opts SignOptions
+		want bool
+	}{
+		{
+			name: "nothing configured",
+			opts: SignOptions{},
+			want: false,
+		},
+		{
+			name: "signing key path",
+			opts: SignOptions{
+				SignBlobOptions: signing.SignBlobOptions{Key: "cosign.key"},
+			},
+			want: true,
+		},
+		{
+			name: "deprecated key reference",
+			opts: SignOptions{
+				SignBlobOptions: signing.SignBlobOptions{KeyRef: "cosign.key"}, //nolint:staticcheck // the deprecated field is what this row covers
+			},
+			want: true,
+		},
+		{
+			name: "fulcio identity token",
+			opts: func() SignOptions {
+				var o SignOptions
+				o.Fulcio.IdentityToken = "a-token"
+				return o
+			}(),
+			want: true,
+		},
+		{
+			name: "hardware security key",
+			opts: func() SignOptions {
+				var o SignOptions
+				o.SecurityKey.Use = true
+				return o
+			}(),
+			want: true,
+		},
+		{
+			name: "keyless with no other material",
+			opts: SignOptions{
+				Keyless: true,
+			},
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, tt.opts.ShouldSign())
+		})
+	}
 }

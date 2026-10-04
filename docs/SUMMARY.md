@@ -211,6 +211,7 @@
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)
+- [choice-v1alpha1-action-conversion](agent/choice-v1alpha1-action-conversion.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)

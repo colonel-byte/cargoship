@@ -152,3 +152,27 @@ func vaultValueAt(t *testing.T, doc, header string) string {
 	require.True(t, strings.HasPrefix(value, "$ANSIBLE_VAULT"), "value at %q is not ciphertext: %q", header, value)
 	return value
 }
+
+// actionsDistroDir is testdata/minimal with an onCreate action set, for the tests that
+// need actions to have actually run.
+const actionsDistroDir = "test/e2e/noncluster/testdata/actions"
+
+// copyDistroDefinition copies a definition directory into a fresh t.TempDir() and returns
+// the copy, so a build whose actions write beside the definition leaves the checked-in
+// fixture alone. Only the files directly in src are copied, which is all any of these
+// definitions carry.
+func copyDistroDefinition(t *testing.T, src string) string {
+	t.Helper()
+
+	dst := t.TempDir()
+	entries, err := os.ReadDir(src)
+	require.NoError(t, err)
+	for _, entry := range entries {
+		require.False(t, entry.IsDir(), "%s holds a subdirectory, which this helper does not copy", src)
+		data, err := os.ReadFile(filepath.Join(src, entry.Name()))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(dst, entry.Name()), data, 0o600))
+	}
+
+	return dst
+}

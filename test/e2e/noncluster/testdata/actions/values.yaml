@@ -1,0 +1,4 @@
+---
+# The value the onCreate after action renders. It is here rather than inline in distro.yaml
+# because a package's values are a file the package carries; see testdata/values-schema.
+greeting: from-the-values-file

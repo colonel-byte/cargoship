@@ -1,0 +1,71 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# testdata/minimal with an onCreate action set bolted on, covering the three ways a
+# variable reaches the action after it: the setVariables list, the deprecated singular
+# setVariable, and a value rendered out of spec.config.values. Like minimal it carries no
+# images and no files, so "cargoship create" assembles it in milliseconds.
+#
+# The actions exist because cargoship converts this set into zarf's normalized action
+# types before zarf runs it, and a field that stops crossing that boundary is not a build
+# failure -- the action runs without it. Every action here writes what it saw into the
+# directory holding this file, which is why the test copies the directory into a temp dir
+# before building it.
+#
+# Nothing here is contacted or downloaded. The actions only run echo.
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfDistro
+metadata:
+  name: e2e-actions
+  version: 0.0.1
+  architecture: amd64
+spec:
+  type: rke2
+  version: 1.35.0-rke2r1
+  actions:
+    onCreate:
+      # The defaults apply to every action in the set that does not override them. maxRetries
+      # was renamed on the way across, so an action set that silently stopped retrying is the
+      # failure this pins.
+      defaults:
+        maxRetries: 1
+        maxTotalSeconds: 60
+      before:
+        - description: name a variable through the setVariables list
+          cmd: echo from-the-list
+          setVariables:
+            - name: FROM_LIST
+        - description: name a variable through the deprecated singular field
+          cmd: echo from-the-deprecated-field
+          setVariable: FROM_DEPRECATED
+        - description: read both variables back
+          template: true
+          cmd: |
+            echo '{{ .Variables.FROM_LIST }}' > before-list.txt
+            echo '{{ .Variables.FROM_DEPRECATED }}' > before-deprecated.txt
+      after:
+        - description: read a packaged value back
+          template: true
+          cmd: echo '{{ .Values.greeting }}' > after-value.txt
+  values:
+    files:
+      - values.yaml
+  config:
+    engine:
+      config:
+        cluster-cidr: 10.42.0.0/16
+        cluster-domain: cluster.local
