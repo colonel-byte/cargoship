@@ -193,7 +193,6 @@ func (o *packageSignOptions) run(ctx context.Context, cmd *cobra.Command, args [
 	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 	signOpts.Overwrite = o.overwrite
-	signOpts.Keyless = o.keyless
 	signOpts.Fulcio.IdentityToken = o.identityToken
 	signOpts.Fulcio.URL = o.fulcioURL
 	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
@@ -233,7 +232,7 @@ func (o *packageSignOptions) run(ctx context.Context, cmd *cobra.Command, args [
 		return err
 	}
 
-	if err := distroLayout.SignPackage(ctx, signOpts); err != nil {
+	if err := distroLayout.SignPackage(ctx, layout.SignOptions{SignBlobOptions: signOpts, Keyless: o.keyless}); err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 

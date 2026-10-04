@@ -437,10 +437,31 @@ func (d *DistroLayout) IsSigned() bool {
 	return false
 }
 
+// SignOptions carries the cosign signing configuration plus the cargoship-side
+// keyless flag. zarf v0.87.0 dropped signing.SignBlobOptions.Keyless and its
+// ShouldSign method, so cargoship owns the signing gate.
+type SignOptions struct {
+	signing.SignBlobOptions
+
+	// Keyless gates cargoship-specific sign-side guards on top of cosign's behavior.
+	// When true, --signing-key is no longer required and ShouldSign returns true even
+	// without explicit Key/IdentityToken/SecurityKey material - cosign resolves identity
+	// via Fulcio/OIDC at sign time.
+	Keyless bool
+}
+
+// ShouldSign returns true if any signing key material is configured, or if the
+// keyless flow is selected. KeyRef is included for backward compatibility; it is
+// synced to Key in signing.CosignSignBlobWithOptions.
+func (opts SignOptions) ShouldSign() bool {
+	return opts.Key != "" || opts.KeyRef != "" || //nolint:staticcheck // KeyRef is deprecated upstream but still honored here
+		opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use || opts.Keyless
+}
+
 // SignPackage signs the zarf package using cosign with the provided options.
 // If the options do not indicate signing should be performed (no key material configured),
 // this is a no-op and returns nil.
-func (d *DistroLayout) SignPackage(ctx context.Context, opts signing.SignBlobOptions) (err error) {
+func (d *DistroLayout) SignPackage(ctx context.Context, opts SignOptions) (err error) {
 	// This function updates in-memory state (Signed, ProvenanceFiles, VersionRequirements),
 	// writes a signed zarf.yaml to a temp file, then renames the temp files into place.
 	// A defer rolls back in-memory state on any error; disk state is restored best-effort
@@ -530,7 +551,7 @@ func (d *DistroLayout) SignPackage(ctx context.Context, opts signing.SignBlobOpt
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpDistroYAMLPath, "bundle", tmpBundlePath)
-	if _, err = signing.CosignSignBlobWithOptions(ctx, tmpDistroYAMLPath, signOpts); err != nil {
+	if _, err = signing.CosignSignBlobWithOptions(ctx, tmpDistroYAMLPath, signOpts.SignBlobOptions); err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 

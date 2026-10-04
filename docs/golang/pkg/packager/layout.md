@@ -39,13 +39,15 @@ Package layout is used to defining the distro package files
   - [func \(d \*DistroLayout\) RenderFiles\(ctx context.Context, values map\[string\]any\) error](<#DistroLayout.RenderFiles>)
   - [func \(d \*DistroLayout\) Resolve\(\_ context.Context, reference string\) \(ocispec.Descriptor, error\)](<#DistroLayout.Resolve>)
   - [func \(d \*DistroLayout\) SetRegistryDigest\(digest string\)](<#DistroLayout.SetRegistryDigest>)
-  - [func \(d \*DistroLayout\) SignPackage\(ctx context.Context, opts signing.SignBlobOptions\) \(err error\)](<#DistroLayout.SignPackage>)
+  - [func \(d \*DistroLayout\) SignPackage\(ctx context.Context, opts SignOptions\) \(err error\)](<#DistroLayout.SignPackage>)
   - [func \(d \*DistroLayout\) TotalSize\(\) int64](<#DistroLayout.TotalSize>)
   - [func \(d \*DistroLayout\) Values\(ctx context.Context, overrides ...map\[string\]any\) \(map\[string\]any, error\)](<#DistroLayout.Values>)
   - [func \(d \*DistroLayout\) VerifyPackageSignature\(ctx context.Context, opts signing.VerifyBlobOptions\) error](<#DistroLayout.VerifyPackageSignature>)
 - [type DistroLayoutOptions](<#DistroLayoutOptions>)
 - [type DistroPath](<#DistroPath>)
   - [func ResolveDistroPath\(path string\) \(DistroPath, error\)](<#ResolveDistroPath>)
+- [type SignOptions](<#SignOptions>)
+  - [func \(opts SignOptions\) ShouldSign\(\) bool](<#SignOptions.ShouldSign>)
 - [type VerificationStrategy](<#VerificationStrategy>)
 
 
@@ -334,10 +336,10 @@ func (d *DistroLayout) SetRegistryDigest(digest string)
 SetRegistryDigest records the manifest digest as resolved from a registry. It replaces the locally\-computed digest and clears the manifest cache, since the registry manifest may differ \(e.g. partial OCI pulls\). After this call the layout is no longer usable as an oras.ReadOnlyTarget for pushing.
 
 <a name="DistroLayout.SignPackage"></a>
-### func \(\*DistroLayout\) [SignPackage](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L443>)
+### func \(\*DistroLayout\) [SignPackage](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L464>)
 
 ```go
-func (d *DistroLayout) SignPackage(ctx context.Context, opts signing.SignBlobOptions) (err error)
+func (d *DistroLayout) SignPackage(ctx context.Context, opts SignOptions) (err error)
 ```
 
 SignPackage signs the zarf package using cosign with the provided options. If the options do not indicate signing should be performed \(no key material configured\), this is a no\-op and returns nil.
@@ -361,7 +363,7 @@ func (d *DistroLayout) Values(ctx context.Context, overrides ...map[string]any) 
 Values returns the merged, schema\-checked values the package was built with, with any overrides applied on top.
 
 <a name="DistroLayout.VerifyPackageSignature"></a>
-### func \(\*DistroLayout\) [VerifyPackageSignature](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L572>)
+### func \(\*DistroLayout\) [VerifyPackageSignature](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L593>)
 
 ```go
 func (d *DistroLayout) VerifyPackageSignature(ctx context.Context, opts signing.VerifyBlobOptions) error
@@ -402,6 +404,32 @@ func ResolveDistroPath(path string) (DistroPath, error)
 ```
 
 ResolveDistroPath returns an object of DistroPath from a given path
+
+<a name="SignOptions"></a>
+## type [SignOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L443-L451>)
+
+SignOptions carries the cosign signing configuration plus the cargoship\-side keyless flag. zarf v0.87.0 dropped signing.SignBlobOptions.Keyless and its ShouldSign method, so cargoship owns the signing gate.
+
+```go
+type SignOptions struct {
+    signing.SignBlobOptions
+
+    // Keyless gates cargoship-specific sign-side guards on top of cosign's behavior.
+    // When true, --signing-key is no longer required and ShouldSign returns true even
+    // without explicit Key/IdentityToken/SecurityKey material - cosign resolves identity
+    // via Fulcio/OIDC at sign time.
+    Keyless bool
+}
+```
+
+<a name="SignOptions.ShouldSign"></a>
+### func \(SignOptions\) [ShouldSign](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/package.go#L456>)
+
+```go
+func (opts SignOptions) ShouldSign() bool
+```
+
+ShouldSign returns true if any signing key material is configured, or if the keyless flow is selected. KeyRef is included for backward compatibility; it is synced to Key in signing.CosignSignBlobWithOptions.
 
 <a name="VerificationStrategy"></a>
 ## type [VerificationStrategy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/layout/common.go#L55>)

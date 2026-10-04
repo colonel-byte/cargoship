@@ -28,4 +28,7 @@ example/*/**/values.yaml linguist-generated
 example/*/**/values.schema.json linguist-generated
 example/shasums.json linguist-generated
 
+# mage dev:vendor
+vendor/**/osv-scanner.toml linguist-generated
+
 thirdparty-src/** linguist-vendored

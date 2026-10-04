@@ -43,9 +43,12 @@ type PublishOptions struct {
 	Retries int
 	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
 	SignBlobOptions signing.SignBlobOptions
-	CachePath       string
-	IsInteractive   bool
-	Registry        *registry.Reference
+	// Keyless selects the Sigstore keyless flow, where cosign resolves the signing
+	// identity via Fulcio/OIDC instead of SignBlobOptions.Key.
+	Keyless       bool
+	CachePath     string
+	IsInteractive bool
+	Registry      *registry.Reference
 	types.RemoteOptions
 	// Tag is an optional tag for the OCI reference separate from the package metadata.version
 	Tag string
@@ -74,7 +77,7 @@ func Publish(ctx context.Context, disLayout *layout.DistroLayout, dst registry.R
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	if err := disLayout.SignPackage(ctx, opts.SignBlobOptions); err != nil {
+	if err := disLayout.SignPackage(ctx, layout.SignOptions{SignBlobOptions: opts.SignBlobOptions, Keyless: opts.Keyless}); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
 	}
 

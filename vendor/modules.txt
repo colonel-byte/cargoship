@@ -2258,22 +2258,30 @@ github.com/yashtewari/glob-intersection
 # github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 ## explicit; go 1.17
 github.com/youmark/pkcs8
-# github.com/zarf-dev/zarf v0.86.0
+# github.com/zarf-dev/zarf v0.87.0
 ## explicit; go 1.26.6
+github.com/zarf-dev/zarf/src/api
+github.com/zarf-dev/zarf/src/api/convert
 github.com/zarf-dev/zarf/src/api/v1alpha1
+github.com/zarf-dev/zarf/src/api/v1beta1
 github.com/zarf-dev/zarf/src/config
 github.com/zarf-dev/zarf/src/config/lang
+github.com/zarf-dev/zarf/src/internal/api/v1alpha1
+github.com/zarf-dev/zarf/src/internal/api/v1beta1
 github.com/zarf-dev/zarf/src/internal/dns
+github.com/zarf-dev/zarf/src/internal/git
 github.com/zarf-dev/zarf/src/internal/gitea
 github.com/zarf-dev/zarf/src/internal/healthchecks
 github.com/zarf-dev/zarf/src/internal/packager/template
 github.com/zarf-dev/zarf/src/pkg/archive
 github.com/zarf-dev/zarf/src/pkg/cluster
 github.com/zarf-dev/zarf/src/pkg/feature
+github.com/zarf-dev/zarf/src/pkg/helpers
 github.com/zarf-dev/zarf/src/pkg/images
 github.com/zarf-dev/zarf/src/pkg/interactive
 github.com/zarf-dev/zarf/src/pkg/logger
 github.com/zarf-dev/zarf/src/pkg/message
+github.com/zarf-dev/zarf/src/pkg/oci/cache
 github.com/zarf-dev/zarf/src/pkg/ocischeme
 github.com/zarf-dev/zarf/src/pkg/packager/actions
 github.com/zarf-dev/zarf/src/pkg/pki
