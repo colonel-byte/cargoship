@@ -1,0 +1,52 @@
+{
+  "zarfAppliance": false,
+  "distro": "k3s",
+  "storageClass": "local-path",
+  "ipFamily": "ipv4",
+  "agentInfo": {
+    "tls": {
+      "ca": "UFVCTElDLUNB",
+      "cert": "UFVCTElDLUNFUlQ=",
+      "key": "RklYVFVSRS1BR0VOVC1QUklWQVRFLUtFWQ=="
+    },
+    "tlsUserProvided": false,
+    "mutationPolicy": "all"
+  },
+  "agentTLS": {
+    "ca": "UFVCTElDLUNB",
+    "cert": "UFVCTElDLUNFUlQ=",
+    "key": "RklYVFVSRS1BR0VOVC1QUklWQVRFLUtFWQ=="
+  },
+  "agentTLSUserProvided": false,
+  "agentMutationPolicy": "all",
+  "injectorInfo": {
+    "injectorImage": "ghcr.io/zarf-dev/zarf/injector:v0.85.0",
+    "payLoadConfigMapAmount": 3,
+    "payLoadShaSum": "0000000000000000000000000000000000000000000000000000000000000000",
+    "port": 5001
+  },
+  "gitServer": {
+    "pushUsername": "zarf-git-user",
+    "pushPassword": "FIXTURE-GIT-PUSH-PASSWORD",
+    "pullUsername": "zarf-git-read-user",
+    "pullPassword": "FIXTURE-GIT-PULL-PASSWORD",
+    "address": "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+  },
+  "registryInfo": {
+    "pushUsername": "zarf-push",
+    "pushPassword": "FIXTURE-REGISTRY-PUSH-PASSWORD",
+    "pullUsername": "zarf-pull",
+    "pullPassword": "FIXTURE-REGISTRY-PULL-PASSWORD",
+    "address": "127.0.0.1:31999",
+    "nodePort": 31999,
+    "port": 31999,
+    "secret": "FIXTURE-REGISTRY-SEED-SECRET",
+    "registryMode": "proxy",
+    "mtlsStrategy": "none"
+  },
+  "artifactServer": {
+    "pushUsername": "zarf-git-user",
+    "pushPassword": "FIXTURE-ARTIFACT-PUSH-TOKEN",
+    "address": "http://zarf-gitea-http.zarf.svc.cluster.local:3000/api/packages/zarf-git-user"
+  }
+}

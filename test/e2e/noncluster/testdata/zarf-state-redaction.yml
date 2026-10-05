@@ -1,0 +1,135 @@
+---
+# What colonel_byte.zarf.zarf_state_info returns, and what it withholds.
+#
+# The zarf-state Secret holds eight credentials: the registry push, pull and seed secrets, the git
+# server push and pull passwords, the artifact server token, and the agent webhook's TLS private
+# key. The module removes them unless include_credentials is set, and this play is what holds that
+# true. See docs/agent/choice-zarf-info-modules.md.
+#
+# zarf_binary is the stub beside this file rather than a real zarf, so the play needs no cluster.
+# The state it serves is testdata/zarf-state.json, a copy of the shape zarf v0.85.0 writes with
+# every credential replaced by a FIXTURE- placeholder.
+#
+# Nothing here is contacted.
+- name: zarf_state_info withholds the credentials in the zarf-state Secret
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    # The eight paths the module is expected to withhold, named rather than counted: a count passes
+    # when the wrong eight were removed.
+    expected_redacted:
+      - agentInfo.tls.key
+      - agentTLS.key
+      - artifactServer.pushPassword
+      - gitServer.pullPassword
+      - gitServer.pushPassword
+      - registryInfo.pullPassword
+      - registryInfo.pushPassword
+      - registryInfo.secret
+
+  tasks:
+    - name: Read the state with the default parameters
+      colonel_byte.zarf.zarf_state_info:
+        zarf_binary: "{{ lookup('env', 'CARGOSHIP_E2E_ZARF_STUB') }}"
+      register: redacted_result
+
+    - name: Every credential is withheld, and the module says which
+      ansible.builtin.assert:
+        that:
+          - redacted_result.redacted == expected_redacted
+          - "'pushPassword' not in redacted_result.state.registryInfo"
+          - "'pullPassword' not in redacted_result.state.registryInfo"
+          - "'secret' not in redacted_result.state.registryInfo"
+          - "'pushPassword' not in redacted_result.state.gitServer"
+          - "'pullPassword' not in redacted_result.state.gitServer"
+          - "'pushPassword' not in redacted_result.state.artifactServer"
+          - "'key' not in redacted_result.state.agentInfo.tls"
+          - "'key' not in redacted_result.state.agentTLS"
+        success_msg: ASSERTED the credentials are withheld
+        fail_msg: a credential survived the default redaction
+
+    - name: No FIXTURE- placeholder appears anywhere in the redacted state
+      # The assertions above name the paths zarf writes today. This one catches a credential under
+      # a path nobody thought of, which is the case the leaf-name matching exists for.
+      ansible.builtin.assert:
+        that:
+          - "'FIXTURE-REGISTRY-PUSH-PASSWORD' not in (redacted_result.state | to_json)"
+          - "'FIXTURE-REGISTRY-PULL-PASSWORD' not in (redacted_result.state | to_json)"
+          - "'FIXTURE-REGISTRY-SEED-SECRET' not in (redacted_result.state | to_json)"
+          - "'FIXTURE-GIT-PUSH-PASSWORD' not in (redacted_result.state | to_json)"
+          - "'FIXTURE-GIT-PULL-PASSWORD' not in (redacted_result.state | to_json)"
+          - "'FIXTURE-ARTIFACT-PUSH-TOKEN' not in (redacted_result.state | to_json)"
+          - "'RklYVFVSRS1BR0VOVC1QUklWQVRFLUtFWQ==' not in (redacted_result.state | to_json)"
+        success_msg: ASSERTED no credential value survives anywhere in the document
+        fail_msg: a credential value is still somewhere in the returned state
+
+    - name: Everything that is not a credential survives
+      # Redaction that removed the fields an operator calls this module for would pass every
+      # assertion above.
+      ansible.builtin.assert:
+        that:
+          - redacted_result.state.distro == 'k3s'
+          - redacted_result.state.storageClass == 'local-path'
+          - redacted_result.state.ipFamily == 'ipv4'
+          - redacted_result.state.zarfAppliance == false
+          - redacted_result.state.registryInfo.address == '127.0.0.1:31999'
+          - redacted_result.state.registryInfo.port == 31999
+          - redacted_result.state.registryInfo.registryMode == 'proxy'
+          - redacted_result.state.registryInfo.mtlsStrategy == 'none'
+          - redacted_result.state.registryInfo.pushUsername == 'zarf-push'
+          - redacted_result.state.registryInfo.pullUsername == 'zarf-pull'
+          - redacted_result.state.gitServer.address == 'http://zarf-gitea-http.zarf.svc.cluster.local:3000'
+          - redacted_result.state.gitServer.pushUsername == 'zarf-git-user'
+          - redacted_result.state.artifactServer.pushUsername == 'zarf-git-user'
+          - redacted_result.state.agentInfo.mutationPolicy == 'all'
+          - redacted_result.state.agentMutationPolicy == 'all'
+          - redacted_result.state.injectorInfo.port == 5001
+          - redacted_result.state.injectorInfo.payLoadConfigMapAmount == 3
+        success_msg: ASSERTED the state is otherwise intact
+
+    - name: The agent's public certificate and CA survive
+      # They are matched by no credential name and are a reason to call the module: templating the
+      # CA into a trust bundle needs it.
+      ansible.builtin.assert:
+        that:
+          - redacted_result.state.agentInfo.tls.ca == 'UFVCTElDLUNB'
+          - redacted_result.state.agentInfo.tls.cert == 'UFVCTElDLUNFUlQ='
+        success_msg: ASSERTED the public half of the agent PKI survives
+
+    - name: Read the state with include_credentials
+      colonel_byte.zarf.zarf_state_info:
+        zarf_binary: "{{ lookup('env', 'CARGOSHIP_E2E_ZARF_STUB') }}"
+        include_credentials: true
+      register: full_result
+
+    - name: Opting in returns every credential and withholds nothing
+      ansible.builtin.assert:
+        that:
+          - full_result.redacted == []
+          - full_result.state.registryInfo.pushPassword == 'FIXTURE-REGISTRY-PUSH-PASSWORD'
+          - full_result.state.registryInfo.pullPassword == 'FIXTURE-REGISTRY-PULL-PASSWORD'
+          - full_result.state.registryInfo.secret == 'FIXTURE-REGISTRY-SEED-SECRET'
+          - full_result.state.gitServer.pushPassword == 'FIXTURE-GIT-PUSH-PASSWORD'
+          - full_result.state.gitServer.pullPassword == 'FIXTURE-GIT-PULL-PASSWORD'
+          - full_result.state.artifactServer.pushPassword == 'FIXTURE-ARTIFACT-PUSH-TOKEN'
+          - full_result.state.agentInfo.tls.key == 'RklYVFVSRS1BR0VOVC1QUklWQVRFLUtFWQ=='
+        success_msg: ASSERTED include_credentials returns the whole state
+        fail_msg: include_credentials did not return the credentials
+
+    - name: The state role withholds the credentials too
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.state
+      vars:
+        zarf_binary: "{{ lookup('env', 'CARGOSHIP_E2E_ZARF_STUB') }}"
+
+    - name: The zarf_state fact carries no credential
+      ansible.builtin.assert:
+        that:
+          - zarf_state_redacted == expected_redacted
+          - "'pushPassword' not in zarf_state.registryInfo"
+          - "'key' not in zarf_state.agentInfo.tls"
+          - zarf_state.registryInfo.registryMode == 'proxy'
+        success_msg: ASSERTED the state role sets a redacted fact
+        fail_msg: the state role set a fact holding a credential

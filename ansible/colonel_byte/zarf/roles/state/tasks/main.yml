@@ -4,11 +4,15 @@
     kubeconfig: "{{ zarf_kubeconfig | default(omit) if (zarf_kubeconfig | length > 0) else omit }}"
     zarf_binary: "{{ zarf_binary }}"
     namespace: "{{ zarf_namespace }}"
+    include_credentials: "{{ zarf_include_credentials | bool }}"
   delegate_to: "{{ zarf_delegate_to }}"
   run_once: true
+  no_log: "{{ zarf_no_log | bool }}"
   register: _zarf_state_fetch
 
 - name: Set zarf_state fact
   ansible.builtin.set_fact:
     zarf_state: "{{ _zarf_state_fetch.state }}"
+    zarf_state_redacted: "{{ _zarf_state_fetch.redacted }}"
   run_once: true
+  no_log: "{{ zarf_no_log | bool }}"

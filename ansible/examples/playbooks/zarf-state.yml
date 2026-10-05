@@ -6,13 +6,19 @@
 # The play runs on the management node: zarf connects to the cluster through the kubeconfig,
 # and nothing here connects to a cluster node directly.
 #
-# It demonstrates both roles provided by `colonel_byte.zarf`:
+# It demonstrates two of the three roles provided by `colonel_byte.zarf`:
 #   - `colonel_byte.zarf.state`: queries the `zarf-state` Secret, decodes it, and sets `zarf_state`
 #   - `colonel_byte.zarf.packages`: queries deployed packages via `zarf package list` and sets `zarf_packages`
 #
 # It also demonstrates calling the underlying module primitives directly:
 #   - `colonel_byte.zarf.zarf_state_info`
 #   - `colonel_byte.zarf.zarf_package_info`
+#
+# The `zarf-state` Secret holds the registry, git and artifact server credentials and the agent's
+# TLS private key. Neither the role nor the module returns them unless asked: the paths withheld
+# come back in `zarf_state_redacted` and in the module's `redacted`. Nothing below asks for them.
+# A play that does needs `no_log: true` on every task that touches the result, `set_fact`
+# included -- see docs/agent/choice-zarf-info-modules.md.
 - name: Fetch and inspect Zarf cluster state and packages
   hosts: localhost
   connection: local
@@ -38,6 +44,10 @@
           registryMode: "{{ zarf_state.registryInfo.registryMode | default('unknown') }}"
           registryAddress: "{{ zarf_state.registryInfo.address | default('unknown') }}"
           gitServerAddress: "{{ zarf_state.gitServer.address | default('unknown') }}"
+
+    - name: Report which paths the role withheld
+      ansible.builtin.debug:
+        var: zarf_state_redacted
 
     - name: Load deployed zarf packages using the packages role
       ansible.builtin.include_role:
@@ -68,4 +78,5 @@
       ansible.builtin.debug:
         msg:
           agentMutationPolicy: "{{ direct_state_result.state.agentMutationPolicy }}"
+          withheld: "{{ direct_state_result.redacted }}"
           packageCount: "{{ direct_packages_result.packages | length }}"

@@ -10,17 +10,23 @@ Retrieves the `zarf-state` Secret from the cluster via `zarf tools kubectl` and 
 
 Runs on the node the task is delegated to (typically localhost), reaching the cluster through a kubeconfig.
 
+The Secret holds the registry, git and artifact server credentials and the agent's TLS private key, so by default they are removed from `state` and the paths that were removed are returned in `redacted`. Set `include_credentials: true` to get them.
+
 ### Parameters
 
-| Parameter     | Type   | Required | Flag | Description                                                                                  |
-| ------------- | ------ | -------- | ---- | -------------------------------------------------------------------------------------------- |
-| `kubeconfig`  | `path` | no       | None | Path to the kubeconfig file used to reach the cluster.                                       |
-| `zarf_binary` | `path` | no       | None | Path to the `zarf` CLI binary on the delegated host. When omitted, `zarf` on `PATH` is used. |
-| `namespace`   | `str`  | no       | None | The namespace holding the `zarf-state` Secret.                                               |
+| Parameter             | Type   | Required | Flag | Description                                                                                                                                                                                        |
+| --------------------- | ------ | -------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kubeconfig`          | `path` | no       | None | Path to the kubeconfig file used to reach the cluster.                                                                                                                                             |
+| `zarf_binary`         | `path` | no       | None | Path to the `zarf` CLI binary on the delegated host. When omitted, `zarf` on `PATH` is used.                                                                                                       |
+| `namespace`           | `str`  | no       | None | The namespace holding the `zarf-state` Secret.                                                                                                                                                     |
+| `include_credentials` | `bool` | no       | None | Whether to return the credentials the `zarf-state` Secret holds. Left unset, they are removed from `state` and named in `redacted`. A run that sets it censors its own task output. See the notes. |
 
 ### Notes
 
 - Set `run_once: true` and `delegate_to: localhost` on the task.
+- The returned `state` is redacted unless `include_credentials` is set, because zarf writes eight secrets into that one Secret: the registry push, pull and seed secrets, the git server push and pull passwords, the artifact server token, and the agent webhook's TLS private key.
+- A run with `include_credentials: true` censors its own task output, as though `no_log: true` had been set on the task. The registered variable still holds the real state; it is the display that is suppressed. Note that a later task which templates the state - `set_fact` in particular - prints what this one hid, so it needs `no_log: true` of its own.
+- The module runs in check mode and reports `changed: false`, because reading state changes nothing.
 
 ### Example
 
@@ -35,4 +41,16 @@ Runs on the node the task is delegated to (typically localhost), reaching the cl
 - name: Display registry mode
   ansible.builtin.debug:
     msg: "{{ zarf_state_result.state.registryInfo.registryMode }}"
+
+- name: Report which paths were withheld
+  ansible.builtin.debug:
+    var: zarf_state_result.redacted
+
+- name: Read the registry push credentials to log in with them
+  colonel_byte.zarf.zarf_state_info:
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+    include_credentials: true
+  delegate_to: localhost
+  run_once: true
+  register: zarf_state_credentials
 ```

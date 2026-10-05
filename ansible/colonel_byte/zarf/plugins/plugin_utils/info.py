@@ -106,7 +106,7 @@ class ZarfInfoActionBase(ActionBase):
         # A read-only module changes nothing, which is also why no subclass answers check mode:
         # running during a check-mode play is the honest thing for it to do.
         result["changed"] = False
-        self.interpret(result, stdout)
+        self.interpret(result, stdout, args)
         return result
 
     def _run_zarf(self, argv, kubeconfig):
@@ -132,6 +132,6 @@ class ZarfInfoActionBase(ActionBase):
         """Return the zarf command line to run, unquoted and without its environment."""
         raise NotImplementedError
 
-    def interpret(self, result, stdout):
+    def interpret(self, result, stdout, params):
         """Put what the command printed into the module's result."""
         raise NotImplementedError
