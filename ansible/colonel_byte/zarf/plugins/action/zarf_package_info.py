@@ -14,20 +14,23 @@
 
 """Action plugin for the zarf_package_info module.
 
-Lists all packages deployed to the cluster using `zarf package list`.
+It lists the packages deployed to the cluster. The plumbing is in ZarfInfoActionBase; see
+plugins/plugin_utils/info.py and docs/agent/choice-zarf-info-modules.md.
 """
+
 
 from __future__ import absolute_import, division, print_function
 
-import json
-import os
-import shlex
-import shutil
-
-from ansible.errors import AnsibleActionFail
-from ansible.plugins.action import ActionBase
-
 __metaclass__ = type
+
+import json
+
+from ansible_collections.colonel_byte.zarf.plugins.plugin_utils.info import (
+    ZarfInfoActionBase,
+)
+
+# The cli_flag key on each option is a cargoship extension, not a standard Ansible doc key. Here it
+# is held against command_parts below by internal/zarfmod/infoplugins_test.go.
 
 DOCUMENTATION = r"""
 module: zarf_package_info
@@ -69,74 +72,47 @@ EXAMPLES = r"""
     msg: "{{ zarf_packages_result.packages | map(attribute='package') | list }}"
 """
 
+def command_parts(params):
+    """Return the zarf command line this module runs.
 
-class ActionModule(ActionBase):
-    """Action plugin that queries installed zarf packages."""
+    A plain function of the parameters, and the only place a flag is named, so that
+    internal/zarfmod/infoplugins_test.go can read the flags the module renders out of the source
+    and hold them against the documented cli_flag values.
+    """
+    return [
+        params["zarf_binary"],
+        "package",
+        "list",
+        "--output-format",
+        "json",
+        # Colour codes in the stream would reach json.loads as syntax.
+        "--no-color",
+    ]
 
-    def run(self, tmp=None, task_vars=None):
-        if task_vars is None:
-            task_vars = {}
 
-        result = super(ActionModule, self).run(tmp, task_vars)
-        del tmp
+class ActionModule(ZarfInfoActionBase):
+    """Action plugin that lists the packages deployed to a cluster."""
 
-        kubeconfig = self._task.args.get('kubeconfig')
-        zarf_binary = self._task.args.get('zarf_binary', 'zarf')
 
-        # Check if zarf binary exists or is on PATH
-        resolved_bin = zarf_binary
-        if os.path.sep not in zarf_binary:
-            found = shutil.which(zarf_binary)
-            if found:
-                resolved_bin = found
+    def zarf_argv(self, params):
+        return command_parts(params)
 
-        cmd_parts = []
-        if kubeconfig:
-            cmd_parts.extend(["env", "KUBECONFIG=%s" % shlex.quote(str(kubeconfig))])
-
-        cmd_parts.extend([
-            shlex.quote(resolved_bin),
-            'package',
-            'list',
-            '--output-format',
-            'json',
-        ])
-
-        res = self._low_level_execute_command(
-            cmd=' '.join(cmd_parts),
-            executable='/bin/sh',
-        )
-
-        rc = res.get('rc', 0)
-        stdout = res.get('stdout', '').strip()
-        stderr = res.get('stderr', '').strip()
-
-        if rc != 0:
-            result['failed'] = True
-            result['msg'] = (
-                "Failed to list zarf packages: %s"
-                % (stderr or stdout)
-            )
-            result['rc'] = rc
-            result['stderr'] = stderr
-            return result
-
+    def interpret(self, result, stdout):
+        stdout = stdout.strip()
         packages = []
         if stdout:
             try:
                 parsed = json.loads(stdout)
-                if isinstance(parsed, list):
-                    packages = parsed
-                elif parsed is None:
-                    packages = []
-                else:
-                    packages = [parsed]
-            except Exception as exc:
-                result['failed'] = True
-                result['msg'] = "Failed to parse zarf package list output as JSON: %s" % exc
-                return result
+            except ValueError as exc:
+                result["failed"] = True
+                result["msg"] = "unable to parse the package list as JSON: %s" % exc
+                result["module_stdout"] = stdout
+                return
+            # zarf prints a list, and null for a cluster with no packages deployed.
+            if isinstance(parsed, list):
+                packages = parsed
+            elif parsed is not None:
+                packages = [parsed]
 
-        result['changed'] = False
-        result['packages'] = packages
-        result['msg'] = "Retrieved %d installed zarf package(s)" % len(packages)
-        return result
+        result["packages"] = packages
+        result["msg"] = "retrieved %d deployed zarf package(s)" % len(packages)

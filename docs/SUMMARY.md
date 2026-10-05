@@ -233,6 +233,7 @@
 - [choice-vault-library](agent/choice-vault-library.md)
 - [choice-zarf-ansible-module](agent/choice-zarf-ansible-module.md)
 - [choice-zarf-collection-removal](agent/choice-zarf-collection-removal.md)
+- [choice-zarf-info-modules](agent/choice-zarf-info-modules.md)
 - [design-config-codegen](agent/design-config-codegen.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
 - [todo-pkg-action-unit-tests](agent/todo-pkg-action-unit-tests.md)
