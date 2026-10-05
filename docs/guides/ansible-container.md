@@ -66,7 +66,7 @@ Reaching the published port instead means host networking, since that port is bo
 
 ```sh
 k3d kubeconfig get zarf \
-  | sed 's|https://0.0.0.0:41609|https://127.0.0.1:41609|' > kubeconfig.yaml
+  | sed 's|https://0.0.0.0:[0-9]{5}|https://127.0.0.1:41609|' > kubeconfig.yaml
 chmod 0644 kubeconfig.yaml
 ```
 
