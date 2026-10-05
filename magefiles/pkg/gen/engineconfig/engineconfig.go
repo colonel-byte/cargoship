@@ -94,16 +94,25 @@ func GenerateEngineConfig() error {
 
 			var written map[string]bool
 			var genErr error
-			if distro == "rke2" {
+			switch distro {
+			case "rke2":
 				written, genErr = generateRKE2ConfigVersion(version)
-			} else {
+			case "upstream":
+				written, genErr = generateUpstreamConfigVersion(version)
+			default:
 				written, genErr = generateEngineConfigVersion(distro, version)
 			}
 			if genErr != nil {
 				return fmt.Errorf("%s %s: %w", distro, version, genErr)
 			}
 
-			if written["server"] && written["agent"] {
+			// Only register a distro/version once every target it declares was
+			// generated -- Registry entries are looked up by consumers (types/distrocfg)
+			// that assume that. Upstream only ever produces one artifact (no separate
+			// agent target -- see docs/agent/design-config-codegen.md), so it only needs
+			// "server".
+			ready := written["server"] && (distro == "upstream" || written["agent"])
+			if ready {
 				regEntries = append(regEntries, registryEntry{
 					Distro: distro,
 					Pkg:    invalidPackageChars.ReplaceAllString(version, "_"),

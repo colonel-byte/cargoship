@@ -100,19 +100,19 @@ func (p *EngineConfigSyncHosts) prepareLeader(ctx context.Context) error {
 	return nil
 }
 
-func (p *EngineConfigSyncHosts) loadDesiredConfig(c *cluster.ZarfCluster, dis distro.ZarfDistro) error {
+func (p *EngineConfigSyncHosts) loadDesiredConfig(ctx context.Context, c *cluster.ZarfCluster, dis distro.ZarfDistro) error {
 	if err := clustercfg.DecryptRegistryAuth(c, p.Keyring); err != nil {
 		return err
 	}
 	run := cluster.ZarfRuntimeMeta{Registries: c.Spec.Config.Registries}
 
-	desired, err := p.Distro.DesiredFiles(&cluster.ZarfHost{}, run, dis)
+	desired, err := p.Distro.DesiredFiles(ctx, &cluster.ZarfHost{}, run, dis)
 	if err != nil {
 		return err
 	}
 	p.desired = desired
 
-	controllerDesired, err := p.Distro.DesiredFiles(&cluster.ZarfHost{Role: cluster.RoleController}, run, dis)
+	controllerDesired, err := p.Distro.DesiredFiles(ctx, &cluster.ZarfHost{Role: cluster.RoleController}, run, dis)
 	if err != nil {
 		return err
 	}
