@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5fe1a38c.js";
+            window.path_to_searchindex_js = "../searchindex-604d2687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-fd7f4d60.js"></script>
@@ -186,7 +186,7 @@
 <p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and both the <code>colonel_byte.cargoship</code> and <code>colonel_byte.zarf</code> collections, plus a <code>zarf</code> binary copied from the signed <code>ghcr.io/zarf-dev/zarf/agent</code> image. The zarf collection’s modules run that binary, so without it every task in that collection would fail on a command it cannot find; see <a href="zarf-ansible-module.html">zarf-ansible-module</a>. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
 <p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="ansible-module.html">ansible-module</a>, and for the inventory they translate, <a href="ansible-inv.html">ansible-inv</a>. Nothing about either changes inside the container.</p>
 <!-- x-release-please-start-version -->
-<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.29.0
+<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.30.0
 </code></pre>
 <!-- x-release-please-end-version -->
 <p>The image has no <code>ENTRYPOINT</code>, because a run legitimately reaches for <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code> or <code>cargoship</code> itself; name the command you want. The collection is installed to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path, so <code>ansible-playbook</code> resolves <code>colonel_byte.cargoship.cargoship_apply</code> with no configuration. <code>HOME</code> is <code>/home/nonroot</code>, the working directory is <code>/workspace</code>, and the process runs as UID and GID 65532.</p>
@@ -226,7 +226,7 @@ chmod 0644 build/tmp/zarf-config.yaml
   -v "$PWD/build/tmp/zarf-config.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
   ansible-playbook init.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -240,7 +240,7 @@ chmod 0644 kubeconfig.yaml
   --network host \
   -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
   zarf tools kubectl get nodes
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -257,7 +257,7 @@ chmod 0644 kubeconfig.yaml
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -270,7 +270,7 @@ chmod 0644 kubeconfig.yaml
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -283,7 +283,7 @@ podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->
@@ -306,7 +306,7 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
 <!-- x-release-please-end-version -->

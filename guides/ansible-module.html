@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5fe1a38c.js";
+            window.path_to_searchindex_js = "../searchindex-604d2687.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-fd7f4d60.js"></script>
@@ -208,9 +208,9 @@
 <p>Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.</p>
 <!-- x-release-please-start-version -->
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
-  --bundle colonel_byte-cargoship-0.29.0.tar.gz.sigstore.json \
-  colonel_byte-cargoship-0.29.0.tar.gz
-ansible-galaxy collection install colonel_byte-cargoship-0.29.0.tar.gz
+  --bundle colonel_byte-cargoship-0.30.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.30.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.30.0.tar.gz
 ./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
 </code></pre>
 <!-- x-release-please-end-version -->
