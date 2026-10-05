@@ -1,0 +1,4 @@
+---
+cargoship_profile: worker
+cargoship_node_labels:
+  adrp.xyz/purpose-worker: "true"

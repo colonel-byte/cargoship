@@ -20,7 +20,7 @@ import (
 	"github.com/magefile/mage/mage"
 
 	// anonymous import is needed to load the distro configurers
-	_ "github.com/colonel-byte/cargoship/src/types/distrocfg"
+	_ "github.com/colonel-byte/cargoship/types/distrocfg"
 )
 
 func main() {

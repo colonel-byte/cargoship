@@ -17,3 +17,41 @@
 :root {
   --content-max-width: 80%;
 }
+
+/* Every docs/schema/*.md table is wrapped in this class (see writeSchemaPropertiesTable in
+ * magefiles/pkg/gen/schema/docs.go) so the Property/Type/Required/Default/Description columns land at
+ * the same width on every table across every schema page, instead of each table sizing its columns
+ * to its own content. */
+.schema-table table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.schema-table th:nth-child(1),
+.schema-table td:nth-child(1) {
+  width: 10%;
+}
+
+.schema-table th:nth-child(2),
+.schema-table td:nth-child(2) {
+  width: 10%;
+}
+
+.schema-table th:nth-child(3),
+.schema-table td:nth-child(3) {
+  width: 5%;
+}
+
+.schema-table th:nth-child(4),
+.schema-table td:nth-child(4) {
+  width: 10%;
+}
+
+.schema-table th:nth-child(5),
+.schema-table td:nth-child(5) {
+  width: 65%;
+}
+
+.schema-table td {
+  overflow-wrap: break-word;
+}

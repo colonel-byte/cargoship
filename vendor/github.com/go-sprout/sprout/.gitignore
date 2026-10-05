@@ -1,0 +1,8 @@
+.env
+.vscode/
+.idea/
+
+vendor/
+/.glide
+
+coverage.out

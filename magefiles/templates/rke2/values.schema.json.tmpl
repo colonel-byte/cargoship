@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "rancher-rke2-{{ .Name }} values",
+  "description": "Generated in magefiles/templates/rke2/values.schema.json.tmpl.",
+  "type": "object",
+  "properties": {
+{{- if eq .CNI "cilium" }}
+    "cilium": {
+      "type": "object",
+      "properties": {
+        "encryption": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Encrypt pod-to-pod traffic with WireGuard."
+            }
+          },
+          "additionalProperties": false
+        },
+        "l2announcements": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Announce LoadBalancer addresses over ARP."
+            }
+          },
+          "additionalProperties": false
+        },
+        "hubble": {
+          "type": "object",
+          "properties": {
+            "ui": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Run the Hubble UI and its relay."
+                },
+                "ipv6": {
+                  "type": "boolean",
+                  "description": "Serve the Hubble UI frontend over IPv6."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+{{- end }}
+    "addons": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "type": "array",
+          "description": "The bundled charts rke2 is told not to install. Replaces the package's own list rather than adding to it. The components rke2 {{ .Minor }} packages are offered as suggestions, not as the whole vocabulary: any rke2- chart is accepted, including ones the engine bundles without advertising them under --disable, and cargoship warns when it configures a node with a name this build does not package.",
+          "items": {
+            "type": "string",
+            "pattern": "^rke2-[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "examples": [
+{{- range $i, $addon := .Addons }}{{ if $i }},{{ end }}
+              {{ printf "%q" $addon }}
+{{- end }}
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "podSecurity": {
+      "type": "object",
+      "properties": {
+        "defaults": {
+          "type": "object",
+          "properties": {
+            "enforce": {
+              "type": "string",
+              "enum": ["privileged", "baseline", "restricted"]
+            },
+            "audit": {
+              "type": "string",
+              "enum": ["privileged", "baseline", "restricted"]
+            },
+            "warn": {
+              "type": "string",
+              "enum": ["privileged", "baseline", "restricted"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

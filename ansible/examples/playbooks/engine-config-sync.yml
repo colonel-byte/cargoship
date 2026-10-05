@@ -1,0 +1,49 @@
+---
+# Converge engine configuration across a fleet that is already installed.
+#
+#   ansible-playbook -i ../inventories/fleet engine-config-sync.yml
+#   ansible-playbook -i ../inventories/fleet engine-config-sync.yml --check
+#
+# This is the most Ansible-shaped thing cargoship does, and the one to run on a schedule: it
+# rewrites registry configuration, node labels, and the engine's own configuration where they have
+# drifted, and does nothing where they have not. It does not touch the hosts themselves, so it
+# takes none of the three host switches.
+#
+# It is also the run whose `changed` is worth acting on. The engine configuration phases report
+# whether they changed anything; most other phases do not yet, so an ordinary apply reads
+# `changedSignal: partial`. Gate a handler on the result rather than on `changed` when the phase
+# you care about is in `changedUndeclared`.
+- name: Converge engine configuration
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Synchronise engine configuration across the fleet
+      ansible.builtin.include_role:
+        name: colonel_byte.cargoship.cluster
+      vars:
+        cargoship_action: engine_config_sync
+        cargoship_package: /srv/staging/rke2-1.31.tar.zst
+        cargoship_cluster:
+          name: bubbles
+          loadbalancer: bubbles-kc.test.com
+        cargoship_args:
+          vault_password_file: /srv/staging/vault-pass
+          timeout: 20m
+        cargoship_show_result: true
+
+    # cargoship_result is registered by the role, and survives the include. Under --check,
+    # `changed` means a real run would change something.
+    - name: Record what the run reported
+      ansible.builtin.copy:
+        content: "{{ cargoship_result.cargoship | to_nice_json }}\n"
+        dest: /srv/staging/last-sync.json
+        mode: "0600"
+      when: not ansible_check_mode
+
+    - name: Say which phases ran
+      ansible.builtin.debug:
+        msg: >-
+          {{ cargoship_result.cargoship.phasesRan | join(', ') }}
+          ({{ cargoship_result.cargoship.changedSignal }})

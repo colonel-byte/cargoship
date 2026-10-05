@@ -19,50 +19,111 @@ version: 2
 
 before:
   hooks:
-    - go mod tidy
-    - go generate ./...
+    # The Ansible collection is a release artifact of its own: the management node that runs the
+    # playbooks is inside the airlock, so it installs the collection from this tarball rather than
+    # from Galaxy. A snapshot passes no version, because its version is not the one in galaxy.yml.
+    - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}""{{ else }}{{ .Version }}{{ end }} ansible/colonel_byte/cargoship
+    # The zarf collection is the ZEP-0072 proof, and it is versioned on its own cadence rather
+    # than with the cargoship tag, so no expected version is passed. See
+    # docs/agent/choice-zarf-ansible-module.md.
+    - hack/ansible-build-collection.sh bin/ansible {{ if .IsSnapshot }}""{{ else }}{{ .Version }}{{ end }} ansible/colonel_byte/zarf
 
 builds:
   - id: cargoship
-    main: ./.
+    main: ./cmd/cargoship
     binary: cargoship
     ldflags:
       - -s
       - -w
-      - -X github.com/colonel-byte/cargoship/src/config.CLIVersion={{ .Version }}
-      - -X github.com/colonel-byte/cargoship/src/config.CLICommit={{ .ShortCommit }}
+      - -X github.com/colonel-byte/cargoship/config.CLIVersion={{ .Version }}
+      - -X github.com/colonel-byte/cargoship/config.CLICommit={{ .ShortCommit }}
+    # Keep in step with pkg/utils/build.GCFLags(); -B and -C were removed
+    # deliberately -- see docs/dev/build-flags.md.
     gcflags:
-      - all=-l -B -C
+      - all=-l
     env:
       - CGO_ENABLED=0
     goos:
       - linux
       - darwin
+      - windows
     goarch:
       - arm64
       - amd64
       - riscv64
     goamd64:
       - v1
-    goarm:
-      - "6"
-      - "7"
     flags:
       - -trimpath
     mod_timestamp: "{{ .CommitTimestamp }}"
 
-  # Identical to the build above, but compiled against Go's native FIPS 140-3
-  # crypto module. See docs/dev/fips-build.md.
+  # The zarf_init Ansible module file. It is a module file rather than a CLI: it reads JSON
+  # parameters, runs the installed zarf, and writes one JSON object, so it is only ever invoked by
+  # Ansible or by an operator reproducing such a run. See docs/agent/choice-zarf-ansible-module.md.
+  #
+  # Linux only: Ansible runs the module file on the management node, and the management nodes this
+  # is for run Linux. The architectures match the cargoship build's Linux set rather than only the
+  # two the containers use, because the packages below carry a symlink to this binary and a package
+  # built for an architecture the binary was not built for would install a dangling one.
+  - id: zarf_init
+    main: ./cmd/zarf/init
+    binary: zarf_init
+    ldflags:
+      - -s
+      - -w
+    gcflags:
+      - all=-l
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
+      - amd64
+      - riscv64
+    goamd64:
+      - v1
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: zarf_package_deploy
+    main: ./cmd/zarf/deploy
+    binary: zarf_package_deploy
+    ldflags:
+      - -s
+      - -w
+    gcflags:
+      - all=-l
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - arm64
+      - amd64
+      - riscv64
+    goamd64:
+      - v1
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  # Identical to the cargoship build above, but compiled against Go's native FIPS 140-3
+  # crypto module. Everything except `env` has to stay in step with that entry, so that
+  # the two differ in crypto and nothing else. See docs/dev/fips-build.md.
   - id: cargoship-fips
-    main: ./.
+    main: ./cmd/cargoship
     binary: cargoship
     ldflags:
       - -s
       - -w
-      - -X github.com/colonel-byte/cargoship/src/config.CLIVersion={{ .Version }}
-      - -X github.com/colonel-byte/cargoship/src/config.CLICommit={{ .ShortCommit }}
+      - -X github.com/colonel-byte/cargoship/config.CLIVersion={{ .Version }}
+      - -X github.com/colonel-byte/cargoship/config.CLICommit={{ .ShortCommit }}
+    # Keep in step with pkg/utils/build.GCFLags(); -B and -C were removed
+    # deliberately -- see docs/dev/build-flags.md.
     gcflags:
-      - all=-l -B -C
+      - all=-l
     env:
       - CGO_ENABLED=0
       - GOFIPS140=latest
@@ -75,14 +136,13 @@ builds:
       - riscv64
     goamd64:
       - v1
-    goarm:
-      - "6"
-      - "7"
     flags:
       - -trimpath
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
+  # Pinned to the cargoship binary. Without ids, every build lands in this archive, and
+  # cargoship_Linux_x86_64.tar.gz would quietly gain a second binary.
   - id: cargoship
     ids:
       - cargoship
@@ -93,9 +153,7 @@ archives:
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
       - goos: windows
         formats:
@@ -118,6 +176,20 @@ archives:
         formats:
           - zip
 
+  # The module files, archived together and on their own, so a management node that already has
+  # cargoship can take the proof without taking a second copy of everything else.
+  - id: zarf_modules
+    ids:
+      - zarf_init
+      - zarf_package_deploy
+    formats:
+      - tar.gz
+    name_template: >-
+      zarf_ansible_modules_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+
 checksum:
   name_template: "checksums.txt"
 
@@ -129,9 +201,14 @@ snapshot:
 
 nfpms:
   - id: packagers
+    package_name: cargoship
+    # Every binary. /usr/bin/zarf_init and /usr/bin/zarf_package_deploy are the Ansible module
+    # files of the colonel_byte.zarf collection below; they are listed explicitly so that adding a
+    # fourth build does not silently add a fourth binary to this package.
     ids:
       - cargoship
-    package_name: cargoship
+      - zarf_init
+      - zarf_package_deploy
     license: Apache 2.0
     maintainer: |-
       Allen Conlon <software@conlon.dev>
@@ -146,6 +223,61 @@ nfpms:
       - cargoship
     conflicts:
       - cargoship-fips
+    contents:
+      # The Ansible collection. /usr/share/ansible/collections is on ansible-core's default
+      # collections path, so installing the package is all a management node needs.
+      - src: ansible/colonel_byte/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship
+        type: tree
+        # Explicit, and not a tidiness preference.
+        file_info:
+          mode: 0755
+      # The module files. There is no Python module behind any of them: the binary answers
+      # Ansible when it is invoked under a cargoship_ name. See
+      # docs/agent/choice-ansible-module.md.
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_apply
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_engine_config_sync
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_kube_config
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_prepare
+        type: symlink
+      - src: /usr/bin/cargoship
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/cargoship/plugins/modules/cargoship_reset
+        type: symlink
+      # The colonel_byte.zarf collection, the ZEP-0072 proof. Its action plugin invokes
+      # /usr/bin/zarf_init directly rather than staging a module file, so the symlink below is
+      # for a conventional Ansible caller that does stage one. See
+      # docs/agent/choice-zarf-ansible-module.md.
+      - src: ansible/colonel_byte/zarf
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/zarf
+        type: tree
+        file_info:
+          mode: 0755
+      - src: /usr/bin/zarf_init
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/zarf/plugins/modules/zarf_init
+        type: symlink
+      - src: /usr/bin/zarf_package_deploy
+        dst: /usr/share/ansible/collections/ansible_collections/colonel_byte/zarf/plugins/modules/zarf_package_deploy
+        type: symlink
+      # Shell completion
+      - src: hack/completion/{{ .ProjectName }}.bash
+        dst: /etc/bash_completion.d/{{ .ProjectName }}
+        file_info:
+          mode: 0644
+      - src: hack/completion/{{ .ProjectName }}.fish
+        dst: /usr/share/fish/vendor_completions.d/{{ .ProjectName }}.fish
+        file_info:
+          mode: 0644
+      - src: hack/completion/{{ .ProjectName }}.zsh
+        dst: /usr/local/share/zsh/site-functions/_{{ .ProjectName }}
+        file_info:
+          mode: 0644
     rpm:
       compression: gzip
       prefixes:
@@ -158,7 +290,7 @@ nfpms:
         key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
     apk:
       signature:
-        key_file: '{{ if ne (index .Env "GPG_KEY_PATH") "" }}{{ .Env.GPG_KEY_PATH }}{{ else }}{{ end }}'
+        key_file: '{{ if ne (index .Env "APK_RSA_KEY_PATH") "" }}{{ .Env.APK_RSA_KEY_PATH }}{{ else }}{{ end }}'
 
   - id: packagers-fips
     ids:
@@ -213,9 +345,27 @@ dockers_v2:
     flags:
       - "--pull"
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
+      <<: &labels
+        "org.opencontainers.image.description": |-
+          Airgapped Kubernetes distribution packaging and deployment
+        "org.opencontainers.image.version": |-
+          {{ .Version }}
+        "org.opencontainers.image.revision": |-
+          {{ .FullCommit }}
+        "org.opencontainers.image.created": |-
+          {{ .CommitDate }}
+        "org.opencontainers.image.base.name": |-
+          {{ .BaseImage }}
+        "org.opencontainers.image.base.digest": |-
+          {{ .BaseImageDigest }}
+        "index,manifest:org.opencontainers.image.source": |-
+          https://github.com/colonel-byte/cargoship
+        "index,manifest:org.opencontainers.image.title": |-
+          cargoship
+        "index,manifest:org.opencontainers.image.licenses": |-
+          Apache-2.0
+        "index,manifest:org.opencontainers.image.description": |-
+          Airgapped Kubernetes distribution packaging and deployment
       # Stated on both variants on purpose: absent would be ambiguous between a
       # non-FIPS image and one built before the variant existed.
       io.github.colonel-byte.cargoship.fips140: "false"
@@ -235,31 +385,77 @@ dockers_v2:
     flags:
       - "--pull"
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
+      <<: *labels
       io.github.colonel-byte.cargoship.fips140: "true"
 
   - id: cargoship-ubi
-    # Pulls in the nfpms artifacts instead of the raw binary: containers/ubi/Dockerfile
-    # installs the .rpm so the package is registered in the image's rpmdb.
     ids:
       - packagers
     dockerfile: containers/ubi/Dockerfile
     images:
-      - "ghcr.io/colonel-byte/cargoship"
+      - "ghcr.io/colonel-byte/cargoship-ubi"
     tags:
-      - "{{ .Tag }}-ubi"
+      - "{{ .Tag }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    flags:
+      - "--pull"
+    build_args:
+      BASH_COMPLETION_VERSION: 2.11-16.el10
+    labels:
+      <<: *labels
+    extra_files:
+      - crypto/software@conlon.dev.gpg
+
+  - id: cargoship-deb
+    # Pulls in the nfpms artifacts instead of the raw binary: containers/deb/Dockerfile
+    # dpkg-installs the .deb so the package is registered in the image's dpkg database.
+    # It is also the only thing in the pipeline that installs the .deb at all.
+    ids:
+      - packagers
+    dockerfile: containers/deb/Dockerfile
+    images:
+      - "ghcr.io/colonel-byte/cargoship-deb"
+    tags:
+      - "{{ .Tag }}"
     platforms:
       - linux/amd64
       - linux/arm64
     flags:
       - "--pull"
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
+      <<: *labels
       io.github.colonel-byte.cargoship.fips140: "false"
+    extra_files:
+      - crypto/software@conlon.dev.gpg
+
+  - id: cargoship-ansible
+    ids:
+      - packagers
+    dockerfile: containers/ansible/Dockerfile
+    images:
+      - "ghcr.io/colonel-byte/cargoship-ansible"
+    tags:
+      - "{{ .Tag }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    flags:
+      - "--pull"
+    build_args:
+      ANSIBLE_CORE_VERSION: 2.16.16-2.el10_2.1
+      BASH_COMPLETION_VERSION: 2.11-16.el10
+    labels:
+      "org.opencontainers.image.description": |-
+        Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection
+      "index,manifest:org.opencontainers.image.description": |-
+        Airgapped Kubernetes distribution packaging and deployment, with the Ansible collection
+      <<: *labels
+      io.github.colonel-byte.cargoship.fips140: "false"
+    extra_files:
+      - crypto/software@conlon.dev.gpg
+      - ansible/colonel_byte/cargoship/requirements.yml
 
   - id: cargoship-ubi-fips
     # Installs the `cargoship-fips` rpm. It conflicts with `cargoship` at the package
@@ -276,15 +472,19 @@ dockers_v2:
       - linux/arm64
     flags:
       - "--pull"
+    build_args:
+      BASH_COMPLETION_VERSION: 2.11-16.el10
     labels:
-      org.opencontainers.image.version: "{{ .Version }}"
-      org.opencontainers.image.revision: "{{ .FullCommit }}"
-      org.opencontainers.image.created: "{{ .CommitDate }}"
+      <<: *labels
       io.github.colonel-byte.cargoship.fips140: "true"
+    extra_files:
+      - crypto/software@conlon.dev.gpg
 
-# Use the auto-generated changelog github provides
 changelog:
-  use: github-native
+  sort: asc
+
+docker_digest:
+  name_template: "digest.txt"
 
 signs:
   - id: checksum
@@ -326,6 +526,30 @@ release:
     name: cargoship
   name_template: "v{{ .Version }}"
   mode: append
+  # The collection tarball and its signature are built by the before hook above rather than by a
+  # build, so they reach the release this way. They carry their own cosign bundle because the
+  # checksums file covers artifacts the pipeline built itself.
+  extra_files:
+    - glob: bin/ansible/colonel_byte-cargoship-*.tar.gz
+    - glob: bin/ansible/colonel_byte-cargoship-*.tar.gz.sigstore.json
+    - glob: bin/ansible/colonel_byte-zarf-*.tar.gz
+    - glob: bin/ansible/colonel_byte-zarf-*.tar.gz.sigstore.json
   footer: |-
     ---
-    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+    ### Verify release artifacts with Cosign
+
+    Release archives and container images are signed with [Cosign](https://docs.sigstore.dev/cosign/).
+
+    Find the public key at [`cosign.pub`](https://raw.githubusercontent.com/colonel-byte/cargoship/refs/tags/{{ .Tag }}/cosign.pub)
+
+    Verify a binary archive:
+
+    ```console
+    cosign verify-blob --key cosign.pub --bundle cargoship_Linux_x86_64.tar.gz.sigstore.json cargoship_Linux_x86_64.tar.gz
+    ```
+
+    Verify a image tag:
+    ```console
+    cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:{{ .Tag }}
+    ```

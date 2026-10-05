@@ -1,0 +1,677 @@
+// Copyright 2023 k0sctl authors
+// Copyright 2026 colonel-byte
+//
+// This file contains code derived from k0sctl:
+// https://github.com/k0sproject/k0sctl
+//
+// Modifications Copyright 2026 colonel-byte.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package cluster
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"maps"
+	gos "os"
+	"slices"
+	"strconv"
+	"time"
+
+	"github.com/colonel-byte/cargoship/internal/riglogger"
+	"github.com/colonel-byte/cargoship/types/os"
+	rig "github.com/k0sproject/rig/v2"
+	"github.com/k0sproject/rig/v2/cmd"
+	rigos "github.com/k0sproject/rig/v2/os"
+	"github.com/k0sproject/rig/v2/protocol/ssh"
+	"github.com/k0sproject/rig/v2/remotefs"
+	"github.com/k0sproject/rig/v2/sshconfig"
+)
+
+const (
+	// RoleController marks a host as a control-plane node.
+	RoleController = "controller"
+	// RoleControllerWorker marks a host as both a control-plane node and a worker node.
+	RoleControllerWorker = "controller+worker"
+	// RoleSingle marks a host as a single-node cluster: both control plane and worker on one host.
+	RoleSingle = "single"
+	// RoleWorker marks a host as a worker node.
+	RoleWorker = "worker"
+	// RoleError is a sentinel value returned when a role or service lookup fails.
+	RoleError = "error"
+)
+
+// ErrCommandFailed is returned when a command fails
+var ErrCommandFailed = errors.New("command failed")
+
+// ZarfHost is a remote connection to a node
+type ZarfHost struct {
+	// ClientWithConfig embeds rig's client type. It gives ZarfHost multi-protocol connectivity to a remote host.
+	rig.ClientWithConfig `json:",inline"`
+	// fs, when set, replaces the filesystem the host's file operations act through. See SetFS.
+	fs remotefs.FS
+	// services, when set, replaces the init system the host's service operations act through.
+	// See SetServices.
+	services HostServices
+	// Environment maps environment variables cargoship sets on the host.
+	Environment map[string]string `json:"environment,omitempty"`
+	// Files lists files cargoship uploads to the host.
+	Files []ZarfClusterFiles `json:"files,omitempty"`
+	// Hostname overrides the discovered name of the node.
+	Hostname string `json:"hostname,omitempty"`
+	// PrivateAddress overrides the discovered private address of the node.
+	PrivateAddress string `json:"privateAddress,omitempty"`
+	// PrivateInterface overrides the discovered private interface of the node.
+	PrivateInterface string `json:"privateInterface,omitempty"`
+	// Profile selects a profile by name from the cluster config's Profiles map.
+	Profile string `json:"profile,omitempty"`
+	// Role sets the node role when cargoship adds this host to the cluster. It must be controller or worker.
+	Role string `json:"role" jsonschema:"required,enum=controller,enum=worker"`
+	// Host holds the host-level configuration overrides for this node.
+	Host ZarfHostConfig `json:"host,omitempty"`
+	// Engine holds the node label and taint overrides for this node.
+	Engine ZarfHostEngine `json:"engine,omitempty"`
+	// Configurer is the per-host operations implementation cargoship uses to manage this host.
+	Configurer os.Configurer `json:"-"`
+	// OSRelease caches the detected (or fallback-resolved) OS release for this host.
+	OSRelease *rigos.Release `json:"-"`
+	// Metadata holds values cargoship discovers about this host at runtime.
+	Metadata ZarfHostMetadata `json:"-"`
+}
+
+// UnmarshalYAML decodes a host document into both ZarfHost's own fields and the embedded rig
+// client's connection configuration.
+//
+// rig.ClientWithConfig implements UnmarshalYAML itself, and since it is embedded anonymously that
+// method is promoted onto *ZarfHost. Left alone, goccy/go-yaml would treat *ZarfHost as an
+// InterfaceUnmarshaler and call the promoted method for the whole host document -- which decodes
+// only ClientWithConfig's own fields and silently leaves every field ZarfHost declares (Hostname,
+// Role, Profile, ...) zeroed. Decoding into a shadow type with no embedded ClientWithConfig avoids
+// triggering that promoted method, and a second explicit decode through ClientWithConfig's own
+// UnmarshalYAML fills in the connection config the same way it always did.
+func (h *ZarfHost) UnmarshalYAML(unmarshal func(any) error) error {
+	type hostFields struct {
+		Environment      map[string]string  `json:"environment,omitempty"`
+		Files            []ZarfClusterFiles `json:"files,omitempty"`
+		Hostname         string             `json:"hostname,omitempty"`
+		PrivateAddress   string             `json:"privateAddress,omitempty"`
+		PrivateInterface string             `json:"privateInterface,omitempty"`
+		Profile          string             `json:"profile,omitempty"`
+		Role             string             `json:"role"`
+		Host             ZarfHostConfig     `json:"host,omitempty"`
+		Engine           ZarfHostEngine     `json:"engine,omitempty"`
+	}
+
+	var fields hostFields
+	if err := unmarshal(&fields); err != nil {
+		return err
+	}
+
+	if err := h.ClientWithConfig.UnmarshalYAML(unmarshal); err != nil {
+		return err
+	}
+
+	h.Environment = fields.Environment
+	h.Files = fields.Files
+	h.Hostname = fields.Hostname
+	h.PrivateAddress = fields.PrivateAddress
+	h.PrivateInterface = fields.PrivateInterface
+	h.Profile = fields.Profile
+	h.Role = fields.Role
+	h.Host = fields.Host
+	h.Engine = fields.Engine
+	return nil
+}
+
+// ZarfHostConfig defines the configuration for a specific host, including
+// firewall policies and the ports cargoship opens on the node.
+type ZarfHostConfig struct {
+	// Firewall holds the backend-neutral firewall rules cargoship renders onto whichever
+	// firewall the node runs, firewalld, ufw, or nftables.
+	Firewall ZarfFirewallConfig `json:"firewall,omitempty"`
+	// Policy maps a policy name to a firewalld policy that allows traffic from one interface to another.
+	// It is firewalld-only; prefer forward rules under `firewall.rules` for new configuration.
+	Policy map[string]ZarfFirewallPolicyConfig `json:"policy,omitempty"`
+	// Ports lists the ports and protocols cargoship opens on the node.
+	Ports []ZarfHostPort `json:"ports,omitempty" xml:"port"`
+}
+
+// Merge copies Policy and Ports from update into c, for whichever of those fields are empty in
+// c, and unions update's firewall rules into c's.
+func (c *ZarfHostConfig) Merge(update ZarfHostConfig) {
+	c.Firewall.Merge(update.Firewall)
+	if len(c.Policy) == 0 && len(update.Policy) > 0 {
+		c.Policy = make(map[string]ZarfFirewallPolicyConfig)
+		maps.Copy(c.Policy, update.Policy)
+	}
+	if len(c.Ports) == 0 && len(update.Ports) > 0 {
+		for _, p := range update.Ports {
+			if slices.Contains(c.Ports, p) {
+				continue
+			}
+			c.Ports = append(c.Ports, p)
+		}
+	}
+}
+
+// ZarfHostEngine defines configuration options for node-level metadata,
+// specifically Kubernetes node labels and taints applied to a cluster host.
+type ZarfHostEngine struct {
+	// NodeLabels maps Kubernetes node label keys to their values.
+	NodeLabels map[string]string `json:"labels,omitempty"`
+	// NodeTaints lists the Kubernetes node taints cargoship applies to the node.
+	NodeTaints []string `json:"taints,omitempty"`
+}
+
+// Merge copies NodeLabels and NodeTaints from update into c, for whichever of those fields are empty in c.
+func (c *ZarfHostEngine) Merge(update ZarfHostEngine) {
+	if len(c.NodeLabels) == 0 && len(update.NodeLabels) > 0 {
+		c.NodeLabels = make(map[string]string)
+		maps.Copy(c.NodeLabels, update.NodeLabels)
+	}
+	if len(c.NodeTaints) == 0 && len(update.NodeTaints) > 0 {
+		for _, p := range update.NodeTaints {
+			if slices.Contains(c.NodeTaints, p) {
+				continue
+			}
+			c.NodeTaints = append(c.NodeTaints, p)
+		}
+	}
+}
+
+// ZarfHostPort is a port cargoship opens on the public side of the firewall.
+type ZarfHostPort struct {
+	// Protocol is the type of allowed traffic.
+	Protocol string `json:"protocol" xml:"protocol,attr" jsonschema:"enum=tcp,enum=udp"`
+	// Port is the port number, or port range, cargoship opens.
+	Port string `json:"port" xml:"port,attr" jsonschema:"oneof_type=string;integer"`
+}
+
+// ZarfFirewallPolicyConfig configures a firewalld policy that opens ports from one zone to another.
+type ZarfFirewallPolicyConfig struct {
+	// XMLName sets the element name cargoship uses when it marshals this policy to firewalld XML.
+	XMLName xml.Name `xml:"policy" json:"-"`
+	// Short is a human-readable description of the policy.
+	Short string `xml:"short,omitempty" json:"-"`
+	// Target is the action taken on traffic that matches the policy.
+	Target string `xml:"target,attr,omitempty" json:"target" jsonschema:"enum=CONTINUE,enum=ACCEPT,enum=REJECT,enum=DROP"`
+	// Ingress is the zone the policy allows traffic from.
+	Ingress ZarfFirewallZone `xml:"ingress-zone"`
+	// Egress is the zone the policy allows traffic to.
+	Egress ZarfFirewallZone `xml:"egress-zone"`
+	// Ports lists the ports this policy allows.
+	Ports []ZarfFirewallPort `xml:"port,omitempty" json:"ports,omitempty"`
+}
+
+// ZarfFirewallZone is the name of either the ingress or egress zone for a policy.
+type ZarfFirewallZone struct {
+	// Name identifies the firewalld zone.
+	Name string `xml:"name,attr" jsonschema:"example=trusted,example=public"`
+}
+
+// ZarfFirewallPort defines a port allowed through the firewalld policy.
+type ZarfFirewallPort struct {
+	// Protocol is the type of allowed traffic.
+	Protocol string `xml:"protocol,attr" json:"protocol" jsonschema:"enum=tcp,enum=udp,enum=sctp,enum=dccp"`
+	// Port is the port number, or port range, cargoship opens.
+	Port string `xml:"port,attr" json:"port" jsonschema:"oneof_type=string;integer"`
+}
+
+// ZarfHostMetadata holds values cargoship discovers about a host at runtime.
+type ZarfHostMetadata struct {
+	// Arch is the CPU architecture detected on the host.
+	Arch string
+	// BinaryTempFile lists temporary paths on the host cargoship uses to stage the engine binary during install.
+	BinaryTempFile []string
+	// DistroVersion is the version of the distro engine detected on the host.
+	DistroVersion string
+	// EngineUploaded indicates whether cargoship has already uploaded the distro engine binary to the host.
+	EngineUploaded bool
+	// ExistingConfig is the engine configuration currently present on the host.
+	ExistingConfig string
+	// Hostname is the hostname the host reports.
+	Hostname string
+	// Install is the function cargoship calls to install the distro engine on the host.
+	Install func(context.Context, *ZarfHost) error
+	// Installed indicates whether a distro engine is already installed on the host.
+	Installed bool
+	// IsLeader indicates whether this host is the cluster's control-plane leader.
+	IsLeader bool
+	// MachineID identifies the node to the distro engine.
+	MachineID string
+	// ModulesAdded indicates whether cargoship added a new kernel module to the host.
+	ModulesAdded bool
+	// NeedsUpgrade indicates whether the host needs the distro engine upgraded.
+	NeedsUpgrade bool
+	// NewConfig is the engine configuration cargoship will write to the host.
+	NewConfig string
+	// Ready indicates whether the distro service is up and running.
+	Ready bool
+	// UploadedFiles lists "category\tpath" entries cargoship uploaded to this host during the
+	// current run. It is used to detect files a previous version left behind that the current
+	// upload no longer produces, e.g. an engine binary renamed by a version bump.
+	UploadedFiles []string
+}
+
+func init() {
+	// rig v2's sshconfig.expandToken has no case for %l or %k, even though both are declared
+	// valid ControlPath tokens (and %C expands %l internally) -- so any ssh_config with one of
+	// those in ControlPath makes Finalize error out and abort the entire config, not just that
+	// field. WithNoFinalize skips Finalize altogether rather than patching the missing cases,
+	// which also means every field's token/tilde/env expansion is skipped globally for the life
+	// of the process -- e.g. ControlPath ~/.ssh/%r@%h:%p keeps its literal ~ and %r/%h/%p rather
+	// than resolving them. Remove this once upstream implements %l/%k, or replace it with a
+	// scoped patch if losing expansion elsewhere turns out to matter.
+	if p, err := sshconfig.NewParser(nil, sshconfig.WithNoFinalize()); err == nil {
+		ssh.ConfigParser = p
+	}
+}
+
+// Connect establishes the connection to the host, injecting cargoship's
+// configured logger so that rig's internal logging is routed through the
+// same logger as the rest of the run. rig v2 has no global logger setter;
+// the logger is injected per-client via rig.WithLogger, which is only
+// honored at client construction (the first Connect call) or via
+// ClientWithConfig.Connect's own options -- see riglogger.RigLogger.
+func (h *ZarfHost) Connect(ctx context.Context) error {
+	return h.ClientWithConfig.Connect(ctx, rig.WithLogger(riglogger.Logger()))
+}
+
+// String returns the connection string. Safe to call before Connect.
+func (h *ZarfHost) String() string {
+	if h.Client != nil {
+		return h.Client.String()
+	}
+	return h.ConnectionConfig.String()
+}
+
+// requireConfigurer returns the resolved configurer for h, or an error if none has been resolved yet.
+func (h *ZarfHost) requireConfigurer() (os.Configurer, error) {
+	if h.Configurer == nil {
+		return nil, fmt.Errorf("%s: host configurer is not resolved", h)
+	}
+	return h.Configurer, nil
+}
+
+// Dir returns the directory name for the given path using the remote filesystem.
+func (h *ZarfHost) Dir(path string) (string, error) {
+	return h.FS().Dir(path), nil
+}
+
+// OSKind returns the host OS kind via the resolved configurer.
+func (h *ZarfHost) OSKind() (string, error) {
+	cfg, err := h.requireConfigurer()
+	if err != nil {
+		return "", err
+	}
+	return cfg.OSKind(), nil
+}
+
+// Arch returns the host architecture, caching the result in metadata
+func (h *ZarfHost) Arch() (string, error) {
+	if h.Metadata.Arch != "" {
+		return h.Metadata.Arch, nil
+	}
+	release, err := h.OS()
+	if err != nil {
+		return "", fmt.Errorf("failed to detect host architecture: %w", err)
+	}
+	arch, err := release.Arch()
+	if err != nil {
+		return "", fmt.Errorf("failed to detect host architecture: %w", err)
+	}
+	h.Metadata.Arch = arch
+	return arch, nil
+}
+
+// Touch updates file modification timestamps, creating the file if needed. Always runs with privilege escalation.
+func (h *ZarfHost) Touch(path string, modTime time.Time) error {
+	return h.sudoFS().Touch(path, modTime)
+}
+
+// DeleteFile removes a file from the host. Always runs with privilege escalation.
+func (h *ZarfHost) DeleteFile(path string) error {
+	return h.sudoFS().Remove(path)
+}
+
+// ErrNotConnected is returned by host operations that need a live connection on a host that
+// has never been set up or connected.
+var ErrNotConnected = errors.New("host is not connected")
+
+// HostServices is the init system surface a host exposes. A real host satisfies it through its
+// rig connection; SetServices substitutes another implementation, which is how the distro
+// modules and phases are exercised without a machine to run against.
+type HostServices interface {
+	ServiceIsRunning(ctx context.Context, name string) bool
+	StartService(ctx context.Context, name string) error
+	StopService(ctx context.Context, name string) error
+	RestartService(ctx context.Context, name string) error
+	EnableService(ctx context.Context, name string) error
+}
+
+// SetFS substitutes the filesystem this host's file operations act through, in place of the
+// one its rig connection provides.
+func (h *ZarfHost) SetFS(fs remotefs.FS) {
+	h.fs = fs
+}
+
+// SetServices substitutes the init system this host's service operations act through, in place
+// of the one its rig connection provides.
+func (h *ZarfHost) SetServices(services HostServices) {
+	h.services = services
+}
+
+// connected reports whether this host has a rig client to reach through. A host whose client
+// was never set up -- an inventory entry the run never connected to, or one built in a test --
+// has a nil embedded client, and reaching through it panics rather than failing, so every
+// operation that would do so checks here first.
+func (h *ZarfHost) connected() bool {
+	return h != nil && h.Client != nil
+}
+
+// notConnectedFS is a filesystem whose every operation fails with ErrNotConnected. It is what
+// an unconnected host's FS is, so that a caller gets an error back rather than a panic.
+func notConnectedFS() remotefs.FS {
+	return remotefs.NewPosixFS(cmd.NewErrorExecutor(ErrNotConnected))
+}
+
+// FS returns the host's filesystem. It shadows the promoted rig client method so that a host
+// with a substituted filesystem uses that one, and an unconnected host returns a filesystem
+// that fails rather than one that panics.
+func (h *ZarfHost) FS() remotefs.FS {
+	if h != nil && h.fs != nil {
+		return h.fs
+	}
+	if !h.connected() {
+		return notConnectedFS()
+	}
+	return h.Client.FS()
+}
+
+// sudoFS is FS escalated. A substituted filesystem is used as-is: what it stands in for is the
+// whole of the host's file access, privileged or not.
+func (h *ZarfHost) sudoFS() remotefs.FS {
+	if h != nil && h.fs != nil {
+		return h.fs
+	}
+	if !h.connected() {
+		return notConnectedFS()
+	}
+	return h.Sudo().FS()
+}
+
+// Exec runs a command on the host. It shadows the promoted rig client method so that an
+// unconnected host returns an error rather than panicking.
+func (h *ZarfHost) Exec(command string, opts ...cmd.ExecOption) error {
+	if !h.connected() {
+		return ErrNotConnected
+	}
+	return h.Client.Exec(command, opts...)
+}
+
+// ExecOutput runs a command on the host and returns its output. It shadows the promoted rig
+// client method so that an unconnected host returns an error rather than panicking.
+func (h *ZarfHost) ExecOutput(command string, opts ...cmd.ExecOption) (string, error) {
+	if !h.connected() {
+		return "", ErrNotConnected
+	}
+	return h.Client.ExecOutput(command, opts...)
+}
+
+// SudoExec runs a command on the host with privilege escalation. Like Exec, it returns an
+// error rather than panicking on a host that was never connected.
+func (h *ZarfHost) SudoExec(command string, opts ...cmd.ExecOption) error {
+	if !h.connected() {
+		return ErrNotConnected
+	}
+	return h.Sudo().Exec(command, opts...)
+}
+
+// SudoExecOutput runs a command on the host with privilege escalation and returns its output.
+// Like ExecOutput, it returns an error rather than panicking on a host that was never connected.
+func (h *ZarfHost) SudoExecOutput(command string, opts ...cmd.ExecOption) (string, error) {
+	if !h.connected() {
+		return "", ErrNotConnected
+	}
+	return h.Sudo().ExecOutput(command, opts...)
+}
+
+// sudoService returns the named service on the host, escalated. Init system operations require
+// privilege escalation, matching the v0.x Configurer service behavior.
+func (h *ZarfHost) sudoService(name string) (*rig.Service, error) {
+	if !h.connected() {
+		return nil, ErrNotConnected
+	}
+	return h.Sudo().Service(name)
+}
+
+// ServiceIsRunning returns true if the named service is running on the host.
+func (h *ZarfHost) ServiceIsRunning(ctx context.Context, name string) bool {
+	if h != nil && h.services != nil {
+		return h.services.ServiceIsRunning(ctx, name)
+	}
+	svc, err := h.sudoService(name)
+	if err != nil {
+		return false
+	}
+	return svc.IsRunning(ctx)
+}
+
+// StartService starts the named service on the host.
+func (h *ZarfHost) StartService(ctx context.Context, name string) error {
+	if h != nil && h.services != nil {
+		return h.services.StartService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
+	if err != nil {
+		return err
+	}
+	return svc.Start(ctx)
+}
+
+// StopService stops the named service on the host.
+func (h *ZarfHost) StopService(ctx context.Context, name string) error {
+	if h != nil && h.services != nil {
+		return h.services.StopService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
+	if err != nil {
+		return err
+	}
+	return svc.Stop(ctx)
+}
+
+// RestartService restarts the named service on the host.
+func (h *ZarfHost) RestartService(ctx context.Context, name string) error {
+	if h != nil && h.services != nil {
+		return h.services.RestartService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
+	if err != nil {
+		return err
+	}
+	return svc.Restart(ctx)
+}
+
+// EnableService enables the named service on the host.
+func (h *ZarfHost) EnableService(ctx context.Context, name string) error {
+	if h != nil && h.services != nil {
+		return h.services.EnableService(ctx, name)
+	}
+	svc, err := h.sudoService(name)
+	if err != nil {
+		return err
+	}
+	return svc.Enable(ctx)
+}
+
+// KubeRole returns the Kubernetes role for this host. It maps controller+worker and single to controller.
+func (h *ZarfHost) KubeRole() string {
+	switch h.Role {
+	case RoleControllerWorker, RoleSingle:
+		return RoleController
+	default:
+		return h.Role
+	}
+}
+
+// IsController returns true for the controller, controller+worker, and single roles.
+func (h *ZarfHost) IsController() bool {
+	return h.Role == RoleController || h.Role == RoleControllerWorker || h.Role == RoleSingle
+}
+
+// Address returns the address rig is connected to for this host, or the empty string for a host
+// that has not gone through Setup or Connect yet.
+//
+// The promoted rig.Client.Address panics on a host in that state: ClientWithConfig defers creating
+// its embedded *Client until Setup or Connect runs, so a host built directly (as tests do, or as a
+// host removed from the config and never dialed this run) has a nil Client, and Address
+// dereferences it unconditionally.
+func (h *ZarfHost) Address() string {
+	if h.Client == nil {
+		return ""
+	}
+	return h.Client.Address()
+}
+
+// ServiceName returns the name of the distro service that runs on this host.
+func (h *ZarfHost) ServiceName() string {
+	switch h.Role {
+	case RoleController, RoleControllerWorker, RoleSingle:
+		val, err := h.Configurer.GetDistroService(RoleController)
+		if err != nil {
+			return RoleError
+		}
+		return val
+	default:
+		val, err := h.Configurer.GetDistroService(RoleWorker)
+		if err != nil {
+			return RoleError
+		}
+		return val
+	}
+}
+
+// ResolveConfigurer detects the host OS version and assigns the matching configurer to Configurer.
+func (h *ZarfHost) ResolveConfigurer() error {
+	if h.OSRelease == nil {
+		release, err := h.OS()
+		if err != nil {
+			return fmt.Errorf("OS detection failed: %w", err)
+		}
+		h.OSRelease = release
+	}
+
+	bf, ok := os.ResolveOSModule(h.OSRelease)
+	if !ok {
+		return fmt.Errorf("unsupported OS: %s", h.OSRelease.ID)
+	}
+
+	c, ok := bf().(os.Configurer)
+	if !ok {
+		return fmt.Errorf("unsupported OS: %s", h.OSRelease.ID)
+	}
+
+	h.Configurer = c
+
+	return nil
+}
+
+// FileChanged compares the local file at lpath to the remote file at rpath by sha256 checksum.
+// It returns true if the checksums differ or if either checksum cannot be computed.
+func (h *ZarfHost) FileChanged(lpath, rpath string) bool {
+	file, err := gos.Open(lpath)
+	if err != nil {
+		return true
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			riglogger.Logger().Warn("failed to close local file", "path", lpath, "error", err)
+		}
+	}()
+	lsha := sha256.New()
+	if _, err = io.Copy(lsha, file); err != nil {
+		return true
+	}
+	rsha, err := h.sudoFS().Sha256(rpath)
+	if err != nil {
+		return true
+	}
+
+	sum := fmt.Sprintf("%x", lsha.Sum(nil))
+	if sum != rsha {
+		riglogger.Logger().Debug("file sha256 differs", "host", h, "path", lpath, "local", sum, "remote", rsha)
+		return true
+	}
+
+	return false
+}
+
+// parseFileMode parses an octal permission string (e.g. "0600") into a fs.FileMode.
+func parseFileMode(permissions string) (fs.FileMode, error) {
+	mode, err := strconv.ParseUint(permissions, 8, 32)
+	if err != nil {
+		return 0, fmt.Errorf("invalid file mode %q: %w", permissions, err)
+	}
+	return fs.FileMode(mode), nil
+}
+
+// WriteFile writes data to path on the host. Do not use this for large files. Always runs with privilege escalation.
+func (h *ZarfHost) WriteFile(path string, data string, permissions string) error {
+	mode, err := parseFileMode(permissions)
+	if err != nil {
+		return err
+	}
+	return h.sudoFS().WriteFile(path, []byte(data), mode)
+}
+
+// ReadFile returns the contents of path on the host, or an error if the file does not exist. Always runs with privilege escalation.
+func (h *ZarfHost) ReadFile(path string) (string, error) {
+	data, err := h.sudoFS().ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// Stat returns file information for path on the host. Always runs with privilege escalation,
+// matching the rest of this host's file operations.
+func (h *ZarfHost) Stat(path string) (fs.FileInfo, error) {
+	return h.sudoFS().Stat(path)
+}
+
+// FileExist returns true if path exists on the host. Always runs with privilege escalation, matching the
+// behavior of the v0.x Configurer.FileExist implementation this replaces.
+func (h *ZarfHost) FileExist(path string) bool {
+	return h.sudoFS().FileExist(path)
+}
+
+// CheckHTTPStatus requests url and returns an error if the response status is not one of expected.
+func (h *ZarfHost) CheckHTTPStatus(ctx context.Context, url string, expected ...int) error {
+	status, err := remotefs.HTTPStatusInsecure(ctx, h.FS(), url)
+	if err != nil {
+		return err
+	}
+
+	if slices.Contains(expected, status) {
+		return nil
+	}
+
+	return fmt.Errorf("expected response code %d but received %d", expected, status)
+}

@@ -1,0 +1,50 @@
+---
+# A cargoship run driven from an ordinary Ansible inventory.
+#
+# The play runs on the management node. It never connects to the fleet: the inventory below
+# describes the fleet, and cargoship opens every SSH connection itself from this one node.
+#
+#   ansible-playbook -i fleet.ini colonel_byte.cargoship.example
+#
+# where fleet.ini is an ordinary inventory:
+#
+#   [controller]
+#   kc01 ansible_host=10.1.2.3 cargoship_hostname=distro-kc01
+#   kc02 ansible_host=10.1.2.4 cargoship_hostname=distro-kc02
+#
+#   [worker]
+#   kw01 ansible_host=10.1.2.5 cargoship_hostname=distro-kw01
+#
+# The first host of the first controller group bootstraps the cluster. Host order is load-bearing.
+- name: Converge a cargoship cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Install the cluster
+      ansible.builtin.include_role:
+        name: colonel_byte.cargoship.cluster
+      vars:
+        cargoship_action: apply
+        cargoship_package: /srv/staging/rke2-1.31.tar.zst
+        cargoship_inventory_path: /srv/staging/generated-inventory.yaml
+        cargoship_cluster:
+          name: bubbles
+          loadbalancer: bubbles-kc.test.com
+        cargoship_args:
+          vault_password_file: /srv/staging/vault-pass
+          timeout: 45m
+        cargoship_show_result: true
+
+    - name: Converge engine configuration on every subsequent run
+      ansible.builtin.include_role:
+        name: colonel_byte.cargoship.cluster
+      vars:
+        cargoship_action: engine_config_sync
+        cargoship_package: /srv/staging/rke2-1.31.tar.zst
+        cargoship_cluster:
+          name: bubbles
+          loadbalancer: bubbles-kc.test.com
+        cargoship_args:
+          vault_password_file: /srv/staging/vault-pass

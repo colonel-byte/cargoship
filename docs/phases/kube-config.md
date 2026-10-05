@@ -4,7 +4,7 @@
 1. Detect host operating systems
     - Gathers information about the remote host, including: OS and OS version
 1. Acquire exclusive host lock
-    - Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other `cargoships` from doing any changes until the lock file has not been touch for over a minute
+    - Runs a background task that touches a file every 30 seconds on each remote node. This prevents other `cargoships` from making any changes until the lock file has not been touched for over a minute
 1. Gather host facts
     - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.
 1. Updating kubeconfig file with the current cluster

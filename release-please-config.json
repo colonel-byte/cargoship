@@ -19,8 +19,13 @@
         { "type": "ci", "section": "CI/CD" },
         { "type": "build", "section": "Build" }
       ],
-      "extra-files": [],
-      "extra-label": "e2e-cluster"
+      "extra-files": [
+        "ansible/colonel_byte/cargoship/galaxy.yml",
+        "ansible/colonel_byte/zarf/galaxy.yml",
+        "docs/guides/ansible-container.md",
+        "docs/guides/ansible-module.md"
+      ],
+      "extra-label": "e2e-cluster,docker"
     }
   },
   "release-type": "go",

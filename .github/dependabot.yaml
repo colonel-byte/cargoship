@@ -1,11 +1,21 @@
 ---
 version: 2
+registries:
+  docker-hub:
+    type: docker-registry
+    url: registry.hub.docker.com
+    username: ${{ secrets.DOCKER_HUB_USER }}
+    password: ${{ secrets.DOCKER_HUB_TOKEN }}
+  registry1:
+    type: docker-registry
+    url: registry1.dso.mil
+    username: ${{ secrets.REGISTRY1_USER }}
+    password: ${{ secrets.REGISTRY1_TOKEN }}
 updates:
   - package-ecosystem: gomod
     directory: "/"
     schedule:
-      interval: weekly
-      day: monday
+      interval: daily
     allow:
       - dependency-type: "all"
     ignore:
@@ -13,56 +23,16 @@ updates:
       # open-policy-agent/opa (transitive via sigstore/cosign) still uses it.
       - dependency-name: "github.com/gobwas/glob"
         update-types: ["version-update:semver-major"]
-    groups:
-      zarf:
-        patterns:
-          - "github.com/zarf-dev/*"
-      k8s:
-        patterns:
-          - "k8s.io/*"
-          - "sigs.k8s.io/*"
-      golang:
-        patterns:
-          - "golang.org/x/*"
-          - "google.golang.org/*"
-      docker:
-        patterns:
-          - "github.com/docker/*"
-          - "github.com/moby/*"
-          - "github.com/fvbommel/sortorder"
-      cosign:
-        patterns:
-          - "github.com/aws/*"
-          - "github.com/awslabs/*"
-          - "github.com/Azure/*"
-          - "github.com/sigstore/*"
-          - "github.com/spiffe/*"
-      opentelemetry:
-        patterns:
-          - "go.opentelemetry.io/*"
-      misc:
-        patterns:
-          - "*"
+      # crypto11 is stuck at v1.2.5: the upstream repo was renamed twice, and
+      # every tag after v1.2.5 declares a different module path, so Dependabot
+      # fails the whole run with go_module_path_mismatch. Nothing newer resolves
+      # under this path until cosign re-imports the renamed module.
+      # See docs/agent/choice-crypto11-rename.md before touching this.
+      - dependency-name: "github.com/ThalesIgnite/crypto11"
   - package-ecosystem: pre-commit
     directory: "/"
     schedule:
-      interval: weekly
-    assignees:
-      - "a1994sc"
-    groups:
-      core:
-        patterns:
-          - "*"
-  - package-ecosystem: docker
-    directories:
-      - "/containers/base"
-      - "/containers/ubi"
-    schedule:
       interval: daily
-    groups:
-      core:
-        patterns:
-          - "*"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
@@ -71,3 +41,42 @@ updates:
       core:
         patterns:
           - "*"
+  - package-ecosystem: npm
+    directory: "/.github/commitlint"
+    schedule:
+      interval: weekly
+    groups:
+      commitlint:
+        patterns:
+          - "*"
+  # One entry per directory, ungrouped: Dependabot appends "in the <name> group
+  # across N directories" to PR titles when `directories` and `groups` are set,
+  # pushing the title past commitlint's 100-char header-max-length.
+  - package-ecosystem: docker
+    directory: "/containers/ansible"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1
+  - package-ecosystem: docker
+    directory: "/containers/base"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1
+  - package-ecosystem: docker
+    directory: "/containers/deb"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1
+  - package-ecosystem: docker
+    directory: "/containers/ubi"
+    schedule:
+      interval: daily
+    registries:
+      - docker-hub
+      - registry1

@@ -4,6 +4,16 @@
 
 Apply a config file to bootstrap and upgrade a cluster
 
+### Synopsis
+
+Bootstraps a cluster from a package and a cluster configuration, or upgrades one that is already running, by stepping through the apply phases against every host the configuration names. One command does both: the engine version already on each host is what tells an upgrade apart from an install, and a downgrade is refused rather than attempted, before any phase has written to a host. Pass --allow-downgrade when the move backwards is deliberate.
+
+Cargoship opens every SSH connection itself, from the machine it runs on, and nothing is installed on a target host beyond what a phase uploads.
+
+An apply never removes a node. A host deleted from the configuration leaves its node in the cluster and stops the run rather than having the difference reconciled, so that no machine is drained or uninstalled by a configuration edit alone. Pass --allow-unmanaged-nodes when the extra nodes were joined deliberately and cargoship should leave them alone.
+
+This changes every host it is pointed at, so it needs --confirm. Pass --dry-run instead to connect to every host and run the preflight checks for real, reporting what the run would change without changing it.
+
 ```
 cargoship apply [Distro Package] [flags]
 ```
@@ -30,6 +40,10 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 ### Options
 
 ```
+      --age-identity-file stringArray           Path to an age identity file holding the private keys that decrypt registry credentials, or to an SSH private key such as ~/.ssh/id_ed25519. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.identity_files in the cargoship config file, or as a single path in CARGOSHIP_AGE_IDENTITY_FILE.
+      --age-recipient stringArray               A public key to encrypt registry credentials to: either an age recipient such as age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p, or an SSH public key such as 'ssh-ed25519 AAAAC3Nza...'. Repeatable; also settable as age.recipients in the cargoship config file, or space-separated in CARGOSHIP_AGE_RECIPIENTS. Giving any recipient makes cargoship write age ciphertext instead of Ansible Vault.
+      --age-recipients-file stringArray         Path to a file holding public keys, one per line, which may mix age recipients and SSH public keys; an authorized_keys file works as it is. A leading ~ is expanded to your home directory wherever the path comes from. Repeatable; also settable as age.recipients_files in the cargoship config file.
+      --allow-downgrade                         Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it.
       --allow-unmanaged-nodes                   Continue when the cluster holds a node that no host in the config accounts for. An apply never removes a node, so by default one left behind by a host deleted from the config stops the run. Set this when the extra nodes were joined deliberately and cargoship should leave them alone.
   -a, --architecture string                     Architecture for OCI images and Zarf packages
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
@@ -38,23 +52,24 @@ $ cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
       --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
   -c, --concurrency int                         Maximum number of hosts to configure in parallel, set to 0 for unlimited. (default 30)
       --config string                           Config file used to bootstrap a cluster.
-      --confirm                                 Confirm whether if to proceed with the install
+      --confirm                                 Proceed with the run. Without it, a command that would change a host reports what it needs and stops.
       --dry-run                                 Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
-  -f, --fapolicyd                               Whether to update all the host nodes fapolicyd configuration.
-  -F, --firewall                                Whether to update all the host nodes firewall configuration.
+  -f, --fapolicyd                               Whether to update every host node's fapolicyd configuration.
+  -F, --firewall                                Whether to update every host node's firewall configuration.
   -h, --help                                    help for apply
-  -H, --hosts                                   Whether to update all the host nodes /etc/hosts file.
+  -H, --hosts                                   Whether to update every host node's /etc/hosts file.
       --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
   -k, --key string                              Path to public key file for validating signed packages
       --kubeconfig string                       Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config.
-      --label-nodes                             Whether to check and add the node-role.kubernetes.io/<profile> label on cluster nodes. Requires --update-kubeconfig.
-      --timeout string                          Set the timeout for how long functions will last.
+      --label-nodes                             Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig.
+      --timeout string                          Set the timeout for how long functions will last. (default "60m")
       --tmpdir string                           Specify the temporary directory to use for intermediate files (default "/tmp")
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --update-kubeconfig                       Whether to write the admin creds for this cluster to a kubeconfig file at all. (default true)
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --values stringArray                      Path to a YAML values file overriding the values the package ships with. May be given more than once, with a later file winning over an earlier one, and all of them winning over the values in the cluster config file.
       --vault-password-file string              Path to a file containing the Ansible Vault password used to decrypt vault-encrypted registry credentials. Falls back to the CARGOSHIP_VAULT_PASSWORD, then ANSIBLE_VAULT_PASSWORD, environment variable.
-      --verify verifyMode                       Verify the Cargoship package signature (default if-possible)
+      --verify verifyMode                       Verify the Cargoship package signature. (default if-possible)
   -w, --work-concurrency string                 Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
       --zarf-cache string                       Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```

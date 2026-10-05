@@ -1,0 +1,115 @@
+---
+# The uds-bundle's four packages, in its order, driven by the two zarf modules.
+#
+# It is modeled on
+# https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-local-path/uds-bundle.yaml,
+# which lists the init package and the local-path storage provider twice each, alternating. A
+# bundle deploys all four as packages; this playbook keeps the alternation and runs the two init
+# halves through M(colonel_byte.zarf.zarf_init) instead, because the init half is what the module
+# exists for -- `zarf init` sets up the cluster's state and the seed registry, and a deploy of the
+# init package would prove the deploy module twice rather than the pair.
+#
+# The cluster this runs on is k3d-config-local-storage.yaml, which keeps k3s's StorageClass. That
+# is what lets init come first and so lets the bundle's own order be followed. The sibling
+# provider-first.yml runs the same four steps on a cluster with no StorageClass, where the provider
+# has to be deployed before anything can be initialised.
+#
+# Registry proxy mode is used throughout. Zarf's nodeport mode publishes the registry on a node
+# port the push then goes through, and on k3d that push is slow enough to time out and be retried;
+# the proxy mode daemonset takes the push on a host port instead.
+- name: Walk the uds-bundle's packages in its own order
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    zarf_init_components: "" # every required component; the standard init package has no optional ones to pick
+  tasks:
+    # Package 1 of the bundle: the init package.
+    - name: Initialise the cluster
+      colonel_byte.zarf.zarf_init:
+        wrapper_binary: "{{ zarf_init_wrapper }}"
+        init_package: "{{ zarf_init_package }}"
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_init
+
+    - name: Record what the initialisation reported
+      ansible.builtin.copy:
+        content: "{{ step_init | to_json }}"
+        dest: "{{ zarf_result_dir }}/1-init.json"
+        mode: "0600"
+
+    # Package 2 of the bundle: the local-path storage provider, deployed through the registry the
+    # initialisation just stood up.
+    #
+    # take_ownership and force_conflicts are needed here and not in provider-first.yml: this
+    # cluster keeps k3s's own local-storage, so a StorageClass named local-path already exists.
+    # Helm refuses to adopt an object it did not create without the first, and server-side apply
+    # then refuses the annotations k3s's own deploy controller owns without the second. A cluster
+    # that already has a storage provider is the case an operator meets both parameters in.
+    - name: Deploy the storage provider
+      colonel_byte.zarf.zarf_package_deploy:
+        wrapper_binary: "{{ zarf_deploy_wrapper }}"
+        package: "{{ zarf_storage_package }}"
+        components: local-path-images,local-path-chart
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        take_ownership: true
+        force_conflicts: true
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_storage
+
+    - name: Record what the storage provider deploy reported
+      ansible.builtin.copy:
+        content: "{{ step_storage | to_json }}"
+        dest: "{{ zarf_result_dir }}/2-storage.json"
+        mode: "0600"
+
+    # Package 3 of the bundle: the init package again. On a cluster that is already initialised
+    # this is the reconcile a second bundle deploy performs, and it is why the module needs
+    # take_ownership: the Helm releases it meets are the ones step 1 created.
+    - name: Initialise the cluster again
+      colonel_byte.zarf.zarf_init:
+        wrapper_binary: "{{ zarf_init_wrapper }}"
+        init_package: "{{ zarf_init_package }}"
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        take_ownership: true
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_reinit
+
+    - name: Record what the second initialisation reported
+      ansible.builtin.copy:
+        content: "{{ step_reinit | to_json }}"
+        dest: "{{ zarf_result_dir }}/3-reinit.json"
+        mode: "0600"
+
+    # Package 4 of the bundle: the storage provider again.
+    - name: Deploy the storage provider again
+      colonel_byte.zarf.zarf_package_deploy:
+        wrapper_binary: "{{ zarf_deploy_wrapper }}"
+        package: "{{ zarf_storage_package }}"
+        components: local-path-images,local-path-chart
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        take_ownership: true
+        force_conflicts: true
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_restorage
+
+    - name: Record what the second storage provider deploy reported
+      ansible.builtin.copy:
+        content: "{{ step_restorage | to_json }}"
+        dest: "{{ zarf_result_dir }}/4-restorage.json"
+        mode: "0600"

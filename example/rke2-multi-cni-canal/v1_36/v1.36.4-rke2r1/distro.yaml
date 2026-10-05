@@ -27,21 +27,26 @@ metadata:
 spec:
   type: rke2
   version: 1.36.4-rke2r1
-  actions:
-    onCreate:
-      before:
-        - description: pull rke2 tar-ball
-          cmd: |-
-            rm -rf   target
-            mkdir -p target
-            echo https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
-            curl -L -o ./target/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
-            echo https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
-            curl -L -o ./target/rke2.linux-arm64.tar.gz https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
-      after:
-        - description: clean up after
-          cmd: |-
-            rm -rf   target
+  # The values a cluster may override in its inventory file, under spec.config.values,
+  # or on the command line with --values. Every flavor exposes the bundled charts rke2
+  # installs; the cilium flavors also expose the chart's own settings, so the same
+  # package installs with or without encryption, hubble ui, and the rest, without being
+  # rebuilt.
+  values:
+    files:
+      - values.yaml
+    schema: values.schema.json
+    mappings:
+      # A mapping copies the value as it stands, list included, so the charts a cluster
+      # names under addons.disabled become the engine's own disable list.
+      - source: .addons.disabled
+        target: .config.disable
+      - source: .podSecurity.defaults.enforce
+        target: .podSecurity.plugins[0].configuration.defaults.enforce
+      - source: .podSecurity.defaults.audit
+        target: .podSecurity.plugins[0].configuration.defaults.audit
+      - source: .podSecurity.defaults.warn
+        target: .podSecurity.plugins[0].configuration.defaults.warn
   config:
     engine:
       config:
@@ -50,8 +55,8 @@ spec:
         cni:
           - canal
         disable-cloud-controller: true
-        disable:
-          - rke2-ingress-nginx
+        # There is no disable list here: .addons.disabled supplies it, and this package's
+        # own values.yaml carries the entry that used to be written in this file.
         embedded-registry: false
         etcd-arg:
           - "quota-backend-bytes=8589934592" # 8GB
@@ -108,6 +113,13 @@ spec:
                   - rook-ceph
                   - zarf
     os:
+      env:
+        CRI_CONFIG_FILE: |-
+          /var/lib/rancher/rke2/agent/etc/crictl.yaml
+        KUBECONFIG: |-
+          /etc/rancher/rke2/rke2.yaml
+        RKE2_CONFIG_FILE: |-
+          /etc/rancher/rke2/config.yaml
       sysctl:
         # Istio related sysctl overrides
         "fs.inotify.max_user_watches": 11048576
@@ -195,57 +207,64 @@ spec:
             profile: worker
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
+          shasum: aa7eea8ec905b89ec9a91443cbe96ddb6cd0fc7d15e422380e192b011e4e130b
           selector:
             package: binary
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: bin/rke2
           target: /usr/local/bin/rke2
           executable: true
+          shasum: dab87297e3d10659b90900118828a9dc3486175b54f810585f1ca37dfa743739
           selector:
             package: binary
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
+          shasum: 9421aee23c59e3851d4391630be86144435e1a20ace93accb6f304e8b575daea
           selector:
             package: binary
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: bin/rke2-killall.sh
           target: /usr/local/bin/rke2-killall.sh
           executable: true
+          shasum: 9421aee23c59e3851d4391630be86144435e1a20ace93accb6f304e8b575daea
           selector:
             package: binary
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
+          shasum: df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a
           selector:
             package: binary
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: bin/rke2-uninstall.sh
           target: /usr/local/bin/rke2-uninstall.sh
           executable: true
+          shasum: df5aca86703b867bf647554043d648bf893c8e1c1d760fa23f286351be97cd6a
           selector:
             package: binary
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: lib/systemd/system/rke2-server.service
           target: /etc/systemd/system/rke2-server.service
+          shasum: 30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-server.service
           selector:
@@ -253,9 +272,10 @@ spec:
             profile: controller
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: lib/systemd/system/rke2-server.service
           target: /etc/systemd/system/rke2-server.service
+          shasum: 30cb868bfbc40d69b3c3b7553493c50c17538f3a550c89ff2300d13bb66a61b1
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-server.service
           selector:
@@ -263,9 +283,10 @@ spec:
             profile: controller
             arch:
               - arm64
-        - source: target/rke2.linux-amd64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-amd64.tar.gz
           extractPath: lib/systemd/system/rke2-agent.service
           target: /etc/systemd/system/rke2-agent.service
+          shasum: 7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
           selector:
@@ -273,9 +294,10 @@ spec:
             profile: worker
             arch:
               - amd64
-        - source: target/rke2.linux-arm64.tar.gz
+        - source: https://github.com/rancher/rke2/releases/download/v1.36.4%2Brke2r1/rke2.linux-arm64.tar.gz
           extractPath: lib/systemd/system/rke2-agent.service
           target: /etc/systemd/system/rke2-agent.service
+          shasum: 7c574199fc688205f313c451255fffcc139b8092326de8c706d50e2d3058c608
           symlinks:
             - /etc/systemd/system/multi-user.target.wants/rke2-agent.service
           selector:

@@ -11,9 +11,9 @@ All build inputs (dependencies, `go.sum` checksums) are already vendored into `/
 *   `GOSUMDB=off` — disables checksum database lookups.
 *   `GOTOOLCHAIN=local` — disables Go's automatic toolchain download/switch, which would otherwise fetch a newer toolchain over the network if `go.mod` requests one.
 
-This is not true container-level network isolation (Dagger's SDK doesn't currently expose a way to disable network access for a container or `WithExec` step); it's a Go-toolchain-level guarantee that the build itself can't depend on the network, which is the part that actually matters for reproducibility.
+This is not true container-level network isolation; it's a Go-toolchain-level guarantee that the build itself can't depend on the network, which is the part that actually matters for reproducibility.
 
-Applied in `.dagger/build-local.go` on the Dagger builder container, unconditionally for every `BuildLocal` invocation.
+Applied in the CI build steps in `.github/workflows/`, unconditionally.
 
 ## FIPS 140-3 Crypto Module
 
@@ -31,12 +31,12 @@ This was chosen over the older, Google-internal `GOEXPERIMENT=boringcrypto` mech
 *   It's explicitly documented upstream as unsupported outside Google, with no compatibility guarantees between Go versions.
 *   `GOFIPS140` is native (no cgo, no C toolchain needed, no prebuilt platform-specific blob), works identically across every OS/arch Cargoship targets, and is the path Go's own documentation now recommends.
 
-`GOFIPS140=latest` is set unconditionally (not behind a flag or opt-in target) in both development build paths, and in the FIPS half of the release build:
+`GOFIPS140=latest` is set unconditionally (not behind a flag or opt-in target) in the development build path, and in the FIPS half of the release build:
 
 | Build path | File | Notes |
 | :--- | :--- | :--- |
-| Dev-box host build | `magefiles/utils.go` (`hostBuildLocal`) | Set alongside `GOOS`/`GOARCH` in the build's env map. |
-| Dagger container build | `.dagger/build-local.go` (`BuildLocal`) | Set on the builder container, same as the network-isolation env vars above. |
+| Dev-box host build | `magefiles/pkg/build/build.go` (`Binary`) | Set alongside `GOOS`/`GOARCH` in the build's env map. |
+| CI e2e build | `.github/workflows/e2e.yaml` | Set alongside the network-isolation env vars above. |
 | Release build | `.goreleaser.yaml` (`cargoship-fips` build) | Set alongside the existing `CGO_ENABLED=0`. |
 
 ### Release artifacts: FIPS and non-FIPS
@@ -50,14 +50,16 @@ Releases ship every OS/arch target twice, from two GoReleaser build definitions 
 
 Both install the binary as `cargoship`, so the two packages declare `provides: cargoship` and conflict with each other — only one can be installed at a time. Use the verification steps below to confirm which variant an artifact is.
 
-Container images are paired the same way. Each of the two image flavours ([static and UBI](goreleaser.md#container-images)) ships in both crypto variants, so a release publishes four manifests on `ghcr.io/colonel-byte/cargoship`:
+Container images are paired the same way for two of the four image flavours. The static and UBI images ([see the goreleaser doc](goreleaser.md#container-images)) ship in both crypto variants; the `cargoship-deb` and `cargoship-ansible` images are stock-crypto only. So a release publishes these four manifests on `ghcr.io/colonel-byte/cargoship`:
 
 | Variant | Static image | UBI image |
 | :--- | :--- | :--- |
 | Stock crypto | `:<tag>`, `:latest` | `:<tag>-ubi` |
 | FIPS 140-3 | `:<tag>-fips`, `:latest-fips` | `:<tag>-ubi-fips` |
 
-The two halves of a pair share one Dockerfile and differ only in which build artifact GoReleaser feeds them — the FIPS binary installs under the same name and path, so entrypoint, user, `$HOME`, and `/workspace` are identical across all four. Picking the FIPS variant is a pure tag swap.
+The two halves of a pair share one Dockerfile and differ only in which build artifact GoReleaser feeds them - the FIPS binary installs under the same name and path, so entrypoint, user, `$HOME`, and `/workspace` are identical across all four. Picking the FIPS variant is a pure tag swap.
+
+One packaging difference does survive the swap: the `cargoship-fips` rpm carries the binary only, while the stock `cargoship` rpm also lays down the `colonel_byte.cargoship` and `colonel_byte.zarf` Ansible collections and the shell completions. The FIPS UBI image therefore has no collections installed.
 
 ### Verifying a binary was built with FIPS 140-3 enabled
 
@@ -100,7 +102,7 @@ $ docker image inspect ghcr.io/colonel-byte/cargoship:<tag>-fips \
 true
 ```
 
-Set from `.goreleaser.yaml` on all four images, `"true"` on the FIPS pair and `"false"` on the stock pair. It is stated on both sides on purpose: a missing label is ambiguous between a stock image and one built before the variants existed, so treat absence as "unknown", not "no".
+Set from `.goreleaser.yaml` on all six images, `"true"` on the two FIPS entries and `"false"` on the four stock ones. It is stated on both sides on purpose: a missing label is ambiguous between a stock image and one built before the variants existed, so treat absence as "unknown", not "no".
 
 Being a label, it records what the release config *claimed*, not what the binary *is*. It is a routing signal for scanners and admission policy; use checks 2–4 when you need the actual property.
 

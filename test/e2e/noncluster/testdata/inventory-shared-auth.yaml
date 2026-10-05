@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# The smallest inventory that shares a credential: one robot account written under an anchor, and a
+# second registry that reaches the same account through an alias. A shared value is one value
+# however many registries name it, so the file commands encrypt it once and report one count for it
+# rather than one per registry, and the alias is still an alias afterwards.
+#
+# Nothing here is contacted. The tests only read this file and rewrite copies of it.
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: shared-auth
+spec:
+  config:
+    loadbalancer: example.cargoship.local
+    registries:
+      - name: docker.io
+        auth: &auth
+          user: robot
+          pass: hunter2
+      - name: test.io
+        auth: *auth
+  hosts:
+    - hostname: node1
+      role: controller

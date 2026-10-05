@@ -1,0 +1,95 @@
+---
+# The same four packages as bundle-order.yml, on a cluster that has no StorageClass.
+#
+# The cluster is the one k3d-config.yaml describes: the uds-bundles k3d config, verbatim, which
+# disables k3s local-storage. Zarf's registry claims a 20Gi PVC during the seed phase, so on that
+# cluster `zarf init` cannot come first -- it waits on a Pending PVC until the Helm install times
+# out. What can come first is a connected deploy of the storage provider: C(connected: true) tells
+# zarf not to push the package's images, so the deploy needs no registry, and so needs no
+# initialised cluster. The StorageClass it installs is what the initialisation then claims against.
+#
+# That is the one thing this walk proves that bundle-order.yml cannot, and it is the reason the
+# verbatim config is kept as a fixture rather than edited to suit the test.
+- name: Deploy the storage provider before initialising
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Deploy the storage provider onto the uninitialised cluster
+      colonel_byte.zarf.zarf_package_deploy:
+        wrapper_binary: "{{ zarf_deploy_wrapper }}"
+        package: "{{ zarf_storage_package }}"
+        components: local-path-images,local-path-chart
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        # Nothing has a registry to push to yet, and the cluster can reach the provider's images
+        # itself. This is what makes the deploy possible before the initialisation.
+        connected: true
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_storage
+
+    - name: Record what the connected deploy reported
+      ansible.builtin.copy:
+        content: "{{ step_storage | to_json }}"
+        dest: "{{ zarf_result_dir }}/1-storage.json"
+        mode: "0600"
+
+    - name: Initialise the cluster
+      colonel_byte.zarf.zarf_init:
+        wrapper_binary: "{{ zarf_init_wrapper }}"
+        init_package: "{{ zarf_init_package }}"
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_init
+
+    - name: Record what the initialisation reported
+      ansible.builtin.copy:
+        content: "{{ step_init | to_json }}"
+        dest: "{{ zarf_result_dir }}/2-init.json"
+        mode: "0600"
+
+    # The bundle's third and fourth packages: the provider again, now pushed through the registry
+    # the initialisation stood up, and then the init package again.
+    - name: Deploy the storage provider through the initialised registry
+      colonel_byte.zarf.zarf_package_deploy:
+        wrapper_binary: "{{ zarf_deploy_wrapper }}"
+        package: "{{ zarf_storage_package }}"
+        components: local-path-images,local-path-chart
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        take_ownership: true
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_restorage
+
+    - name: Record what the second deploy reported
+      ansible.builtin.copy:
+        content: "{{ step_restorage | to_json }}"
+        dest: "{{ zarf_result_dir }}/3-restorage.json"
+        mode: "0600"
+
+    - name: Initialise the cluster again
+      colonel_byte.zarf.zarf_init:
+        wrapper_binary: "{{ zarf_init_wrapper }}"
+        init_package: "{{ zarf_init_package }}"
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        take_ownership: true
+        timeout: "{{ zarf_timeout | default('15m') }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_reinit
+
+    - name: Record what the second initialisation reported
+      ansible.builtin.copy:
+        content: "{{ step_reinit | to_json }}"
+        dest: "{{ zarf_result_dir }}/4-reinit.json"
+        mode: "0600"

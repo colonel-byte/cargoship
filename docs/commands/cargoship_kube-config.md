@@ -4,6 +4,14 @@
 
 Get the admin kube-config for a control-plane node
 
+### Synopsis
+
+Fetches the engine's admin credentials from the first control-plane node the cluster configuration names and merges them into a kubeconfig file. The file is created when it does not exist, and an existing one keeps every other cluster it already holds.
+
+The server address is rewritten to the control-plane address the configuration declares, rather than the node the credentials came from, so the context keeps working when that node does not. The context is named after the cluster's metadata.name.
+
+This changes no host -- it connects, reads, and writes a file locally -- so it needs no --confirm. The file written to is --kubeconfig, which defaults to KUBECONFIG when that is set and to the standard location otherwise.
+
 ```
 cargoship kube-config [flags]
 ```

@@ -21,6 +21,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/dnfpins"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/osv"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/util"
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"oras.land/oras-go/v2/registry/remote"
@@ -34,7 +37,7 @@ type (
 
 // Clean removes build artifacts
 func (Dev) Clean() error {
-	return clean()
+	return util.CleanBuild()
 }
 
 // Tidy just runs the module tidy
@@ -47,7 +50,9 @@ func (Dev) Tidy() error {
 	)
 }
 
-// Vendor just runs the module vendor
+// Vendor runs the module vendor and then writes the osv-scanner overrides back into the tree it
+// just recreated. See magefiles/vendor-osv.go for what those are and why they cannot live
+// anywhere else; Dev.VerifyVendor is the check that they are still there.
 func (d Dev) Vendor() error {
 	if err := d.Tidy(); err != nil {
 		return err
@@ -55,11 +60,15 @@ func (d Dev) Vendor() error {
 
 	fmt.Println("Running vendor")
 
-	return sh.RunV(
+	if err := sh.RunV(
 		"go",
 		"mod",
 		"vendor",
-	)
+	); err != nil {
+		return err
+	}
+
+	return d.WriteOSVOverrides()
 }
 
 // Digest simple returns the digest of an image, mostly for testing
@@ -90,4 +99,45 @@ func (Dev) Digest(ctx context.Context) error {
 	fmt.Print(desc.Digest)
 
 	return nil
+}
+
+// DnfPins queries the AlmaLinux 10 RPM repodata over HTTP and updates the pinned
+// versions of packages installed via dnf/microdnf in containers/ubi/Dockerfile,
+// containers/ansible/Dockerfile, and .goreleaser.yaml.
+func (Dev) DnfPins(ctx context.Context) error {
+	fmt.Println("Querying AlmaLinux 10 repodata for latest package versions...")
+	pins, err := dnfpins.QueryLatestAlmaLinuxPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("querying AlmaLinux packages: %w", err)
+	}
+
+	fmt.Printf("Discovered versions:\n  ansible-core:    %s\n  bash-completion: %s\n",
+		pins.AnsibleCore, pins.BashCompletion)
+
+	if err := dnfpins.UpdateDockerfileAnsiblePins(dnfpins.AnsibleDockerfilePath, pins.AnsibleCore, pins.BashCompletion); err != nil {
+		return fmt.Errorf("updating %s: %w", dnfpins.AnsibleDockerfilePath, err)
+	}
+	fmt.Printf("Updated %s\n", dnfpins.AnsibleDockerfilePath)
+
+	if err := dnfpins.UpdateDockerfileUbiPins(dnfpins.UbiDockerfilePath, pins.BashCompletion); err != nil {
+		return fmt.Errorf("updating %s: %w", dnfpins.UbiDockerfilePath, err)
+	}
+	fmt.Printf("Updated %s\n", dnfpins.UbiDockerfilePath)
+
+	if err := dnfpins.UpdateGoreleaserDnfPins(dnfpins.GoreleaserConfigPath, pins); err != nil {
+		return fmt.Errorf("updating %s: %w", dnfpins.GoreleaserConfigPath, err)
+	}
+	fmt.Printf("Updated %s\n", dnfpins.GoreleaserConfigPath)
+
+	return nil
+}
+
+// WriteOSVOverrides writes every override into vendor/.
+func (Dev) WriteOSVOverrides() error {
+	return osv.WriteOverrides()
+}
+
+// VerifyVendor checks that vendor/ contains all required overrides and no uncovered manifests.
+func (Dev) VerifyVendor() error {
+	return osv.VerifyVendor()
 }

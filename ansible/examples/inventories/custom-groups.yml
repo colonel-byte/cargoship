@@ -1,0 +1,41 @@
+---
+# An inventory whose groups are not named controller and worker, and which carries hosts that have
+# nothing to do with Kubernetes.
+#
+# Two things follow, and both are shown in playbooks/modules-direct.yml:
+#
+#   - The role mapping has to be stated. roleGroups maps each cargoship role onto the groups that
+#     carry it, and a role may take more than one group.
+#   - db01 is in none of the mapped groups, so it is left out of the generated inventory. That is
+#     the rule, not an accident: a play's inventory legitimately holds hosts that are not part of
+#     the cluster.
+#
+# A host in groups mapped to two different roles is an error naming the host and both groups.
+# There is no precedence rule, because picking a role silently would install a cluster nobody
+# asked for.
+all:
+  children:
+    k8s_masters:
+      hosts:
+        kc01:
+          ansible_host: 10.1.2.3
+        kc02:
+          ansible_host: 10.1.2.4
+    k8s_workers:
+      hosts:
+        kw01:
+          ansible_host: 10.1.2.10
+        kw02:
+          ansible_host: 10.1.2.11
+    k8s_infra:
+      hosts:
+        ki01:
+          ansible_host: 10.1.2.20
+          cargoship_profile: infra
+    databases:
+      hosts:
+        db01:
+          ansible_host: 10.1.2.90
+  vars:
+    ansible_user: root
+    ansible_ssh_private_key_file: /srv/staging/keys/fleet_ed25519

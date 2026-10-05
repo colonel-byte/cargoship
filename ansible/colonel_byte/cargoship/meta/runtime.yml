@@ -1,0 +1,5 @@
+---
+# Collections are loaded by ansible-core on the controller, and the action plugins here use
+# ansible.builtin plugin APIs that settled in 2.15. There is no managed-node floor to declare:
+# nothing in this collection runs on a managed node.
+requires_ansible: ">=2.15.0"

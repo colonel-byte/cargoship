@@ -1,0 +1,22 @@
+---
+# A host reached through a jump host. Cargoship does not parse ansible_ssh_common_args, so an
+# inventory that reaches this node through a bastion for Ansible's own sake has to say so again
+# here. The shape is the same SSH block as a host's own.
+cargoship_bastion:
+  address: 10.0.0.1
+  user: jump
+  port: 22
+  keyPath: /srv/staging/keys/bastion_ed25519
+
+# A per-host override of the group's port.
+ansible_port: 2222
+
+# A profile the cluster defines, selected by one host rather than by a group. It has to be one of
+# the profiles in the playbook's cluster block.
+cargoship_profile: infra
+
+# Labels and taints set on a host replace the group's rather than adding to them.
+cargoship_node_labels:
+  adrp.xyz/purpose-infra: "true"
+cargoship_node_taints:
+  - adrp.xyz/infra=true:NoSchedule

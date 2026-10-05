@@ -1,0 +1,201 @@
+// Copyright 2023 k0sctl authors
+// Copyright 2026 colonel-byte
+//
+// This file contains code derived from k0sctl:
+// https://github.com/k0sproject/k0sctl
+//
+// Modifications Copyright 2026 colonel-byte.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package phase
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"sync"
+	"time"
+
+	"github.com/colonel-byte/cargoship/api"
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/types/os"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+)
+
+// ValidateHosts performs remote OS detection
+type ValidateHosts struct {
+	GenericPhase
+	hncount          map[string]int
+	privateaddrcount map[string]int
+}
+
+// Title for the phase
+func (p *ValidateHosts) Title() string {
+	return "Validate hosts"
+}
+
+// Explanation about the current phase, used for documentation generation
+func (p *ValidateHosts) Explanation() string {
+	return "Verifying that each node in the cluster has a unique name and private address, that its CPU architecture is one the package carries, and that its firewall rules are usable, "
+}
+
+// ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
+func (p *ValidateHosts) ReadOnly() string {
+	return "Validate the hosts is the preflight itself: sudo, unique hostnames and addresses, host architecture, firewall rules and clock skew. A dry run that skipped it would check nothing."
+}
+
+// Run the phase
+func (p *ValidateHosts) Run(ctx context.Context) error {
+	p.hncount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
+	p.privateaddrcount = make(map[string]int, len(p.manager.Config.Spec.Hosts))
+
+	for _, h := range p.manager.Config.Spec.Hosts {
+		p.hncount[h.Metadata.Hostname]++
+		if h.PrivateAddress != "" {
+			p.privateaddrcount[h.PrivateAddress]++
+		}
+	}
+
+	err := p.parallelDo(
+		ctx,
+		p.manager.Config.Spec.Hosts,
+		p.validateUniqueHostname,
+		p.validateUniquePrivateAddress,
+		p.validateSudo,
+		p.validateConfigurer,
+		p.validateFirewallRules,
+		p.validateHostArch,
+	)
+	if err != nil {
+		return err
+	}
+
+	return p.validateClockSkew(ctx)
+}
+
+func (p *ValidateHosts) validateUniqueHostname(_ context.Context, h *cluster.ZarfHost) error {
+	if p.hncount[h.Metadata.Hostname] > 1 {
+		return fmt.Errorf("hostname is not unique: %s", h.Metadata.Hostname)
+	}
+
+	return nil
+}
+
+func (p *ValidateHosts) validateUniquePrivateAddress(_ context.Context, h *cluster.ZarfHost) error {
+	if p.privateaddrcount[h.PrivateAddress] > 1 {
+		return fmt.Errorf("privateAddress %q is not unique: %s", h.PrivateAddress, h.Metadata.Hostname)
+	}
+
+	return nil
+}
+
+func (p *ValidateHosts) validateSudo(ctx context.Context, h *cluster.ZarfHost) error {
+	return h.CheckSudo(ctx)
+}
+
+func (p *ValidateHosts) validateFirewallRules(_ context.Context, h *cluster.ZarfHost) error {
+	if err := h.Host.Firewall.Validate(); err != nil {
+		return fmt.Errorf("%s: %w", h, err)
+	}
+
+	return nil
+}
+
+// validateHostArch rejects a host whose CPU is not one the package carries.
+//
+// This runs here rather than at upload time because the upload phases modify hosts as they go: by
+// the time a host went looking for a tarball the package never built, other hosts would already
+// have been written to.
+//
+// A flow that carries no package at all is left alone: reset builds its manager without one, and
+// there is nothing to check a host against. Neither is a package that records no build architecture.
+// Nothing cargoship assembles is missing that metadata, so such a package predates it, and refusing
+// to apply it would be a regression rather than a useful check.
+func (p *ValidateHosts) validateHostArch(_ context.Context, h *cluster.ZarfHost) error {
+	if p.manager.Distro == nil {
+		return nil
+	}
+
+	carried := p.manager.Distro.Build.Arches()
+	if len(carried) == 0 {
+		return nil
+	}
+
+	arch, err := hostArch(h)
+	if err != nil {
+		return err
+	}
+
+	if !slices.Contains(carried, arch) {
+		return fmt.Errorf("%s: host architecture %s is not carried by this package, which carries %s",
+			h, arch, api.FormatArches(carried))
+	}
+
+	return nil
+}
+
+func (p *ValidateHosts) validateConfigurer(_ context.Context, h *cluster.ZarfHost) error {
+	validator, ok := h.Configurer.(os.HostValidator)
+	if !ok {
+		return nil
+	}
+
+	return validator.ValidateHost(h)
+}
+
+const maxSkew = 30 * time.Second
+
+func (p *ValidateHosts) validateClockSkew(ctx context.Context) error {
+	logger.From(ctx).Info("validating clock skew")
+	skews := make(map[*cluster.ZarfHost]time.Duration, len(p.manager.Config.Spec.Hosts))
+	var skewValues []time.Duration
+	var mu sync.Mutex
+
+	// Collect skews relative to local time
+	err := p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+		remote, err := h.FS().SystemTime()
+		if err != nil {
+			return fmt.Errorf("failed to get time from %s: %w", h, err)
+		}
+		skew := time.Now().UTC().Sub(remote).Round(time.Second)
+		mu.Lock()
+		skews[h] = skew
+		skewValues = append(skewValues, skew)
+		mu.Unlock()
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Sort skews to find the median
+	slices.Sort(skewValues)
+	median := skewValues[len(skewValues)/2]
+
+	// Check if any skew exceeds the maxSkew relative to the median
+	var foundExceeding int
+	for h, skew := range skews {
+		deviation := (skew - median).Abs()
+		if deviation > maxSkew {
+			logger.From(ctx).Error(fmt.Sprintf("clock skew exceeds the maximum of %.0f seconds", maxSkew.Seconds()), "host", h, "skew", deviation.Seconds())
+			foundExceeding++
+		}
+	}
+
+	if foundExceeding > 0 {
+		return fmt.Errorf("clock skew exceeds the maximum on %d hosts", foundExceeding)
+	}
+
+	return nil
+}

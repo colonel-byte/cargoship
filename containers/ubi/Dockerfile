@@ -14,23 +14,17 @@
 
 # syntax=docker/dockerfile:1
 
-# The base image is pinned by digest, and repeated on each FROM rather than
-# hoisted into an ARG: dependabot's Dockerfile parser only reads literal FROM
-# lines and cannot resolve a reference that arrives through a build arg. Keep
-# every FROM in this file on the same digest.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:186a94b76e386782f576c9c49813b16dceb2ba63102af5a28405dcefec2806d0
+FROM ghcr.io/almalinux/10-base:10.2@sha256:ed618ca107e9fd47ee2a64d1d33119ef356cfaf65a338daaa3fad19b80ae5da4
 
 ARG TARGETPLATFORM
-
-COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
-
-RUN rpm --install --verbose /tmp/rpms/*.rpm \
-  && rm -rf /tmp/rpms \
-  && cargoship version
+ARG BASH_COMPLETION_VERSION="2.11-16.el10"
 
 ARG UID=65532
 ARG GID=65532
-RUN groupadd --gid "${GID}" nonroot \
+# hadolint ignore=DL3040
+RUN dnf install -y --nodocs --setopt=install_weak_deps=0 bash-completion-${BASH_COMPLETION_VERSION} \
+  && dnf clean all \
+  && groupadd --gid "${GID}" nonroot \
   && useradd --uid "${UID}" --gid "${GID}" --home-dir /home/nonroot --create-home nonroot \
   && mkdir -p \
     /home/nonroot/.cargoship-cache \
@@ -38,15 +32,18 @@ RUN groupadd --gid "${GID}" nonroot \
     /home/nonroot/.ssh \
     /workspace \
   && chmod 0700 /home/nonroot /home/nonroot/.ssh \
-  && chown -R "${UID}:${GID}" /home/nonroot /workspace
+  && chown -R "${UID}:${GID}" /home/nonroot /workspace \
+  && dnf clean all \
+  && rm -rf /var/cache/yum
 
-# base.name carries the tag only, not the digest, so that a dependabot digest
-# refresh needs no edit here. Update it by hand when the FROM tag itself moves.
-LABEL org.opencontainers.image.title="cargoship" \
-  org.opencontainers.image.description="Airgapped Kubernetes distribution packaging and deployment" \
-  org.opencontainers.image.source="https://github.com/colonel-byte/cargoship" \
-  org.opencontainers.image.licenses="Apache-2.0" \
-  org.opencontainers.image.base.name="registry.access.redhat.com/ubi9/ubi-minimal:9.8"
+COPY ${TARGETPLATFORM}/*.rpm /tmp/rpms/
+COPY crypto/software@conlon.dev.gpg /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte
+
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-colonel-byte \
+  && rpm --checksig /tmp/rpms/*.rpm \
+  && rpm --install --verbose /tmp/rpms/*.rpm \
+  && rm -rf /tmp/rpms \
+  && cargoship version
 
 ENV HOME=/home/nonroot
 

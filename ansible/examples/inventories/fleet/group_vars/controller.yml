@@ -1,0 +1,12 @@
+---
+# A host with no cargoship_profile takes one named for its role, so these three would be
+# `controller` without this. The profile is named `control` here to match the profiles the
+# playbook defines in its cluster block; a profile a host selects has to be one the cluster
+# defines.
+cargoship_profile: control
+
+# Labels set here apply to every host in the group. A host that sets cargoship_node_labels of its
+# own replaces this rather than adding to it: Ansible merges variables between levels only when
+# hash_behaviour says so, and the default is replace.
+cargoship_node_labels:
+  adrp.xyz/purpose-control: "true"

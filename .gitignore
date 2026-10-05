@@ -21,6 +21,12 @@ dist
 cluster-key
 cluster-key.pub
 
+# Package signing keys. hack/gen-signing-keys.sh writes to a directory you name, so the
+# private halves have no business here -- these patterns are the backstop for naming that
+# directory badly. The public halves are published deliberately, under crypto/.
+cargoship-signing.asc
+*.rsa
+
 # Added for goreleaser:
 dist/
 
@@ -29,3 +35,12 @@ book/
 
 # Added for go mod vendor
 !/vendor/
+
+# Added for the commitlint workflow's pinned devDependencies
+.github/commitlint/node_modules/
+
+# Added for the Ansible action plugins: importing them in the working tree -- which is what
+# running a playbook against a collections path symlinked at the repository does -- leaves
+# bytecode beside the source.
+__pycache__/
+*.py[cod]

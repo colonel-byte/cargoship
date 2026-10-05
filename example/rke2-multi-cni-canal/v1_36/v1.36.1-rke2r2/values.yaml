@@ -1,0 +1,25 @@
+---
+# This file is generated in magefiles/templates/rke2/values.yaml.tmpl.
+
+# The values this package is built with. A cluster overrides any of them in its
+# inventory file under spec.config.values, and cargoship checks the result
+# against values.schema.json before it installs anything.
+
+# yaml-language-server: $schema=values.schema.json
+addons:
+  # The bundled charts rke2 is told not to install. Setting this in an inventory
+  # replaces the whole list rather than adding to it, so name every chart the
+  # cluster wants left out, including the ones listed here.
+  #
+  # values.schema.json carries the charts rke2 1.36 packages, extracted
+  # from the engine's source, and an editor offers them here as completions. That
+  # list is the engine's own --disable help text, which does not name every chart
+  # the build bundles, so any rke2- chart is accepted rather than only those --
+  # cargoship warns when it configures a node with one this build does not package.
+  disabled:
+    - rke2-ingress-nginx
+podSecurity:
+  defaults:
+    enforce: restricted
+    audit: restricted
+    warn: restricted

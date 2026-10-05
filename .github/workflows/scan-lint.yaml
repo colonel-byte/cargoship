@@ -15,8 +15,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The action installs the latest release when it is given no version, so CI ran 2.14.0
+      # against a tree whose hooks pinned 2.13.2 -- a lint failure that reproduced nowhere
+      # locally. The version is read from .pre-commit-config.yaml rather than written here as
+      # well: dependabot's pre-commit ecosystem bumps that rev, and its github-actions
+      # ecosystem updates `uses:` references, not inputs inside a `with:` block. A second pin
+      # here would be one nothing keeps in step with the first.
+      - name: Read the golangci-lint version the hooks pin
+        id: pinned
+        run: |
+          set -euo pipefail
+          version="$(
+            awk '
+              $0 ~ /^[[:space:]]*-[[:space:]]+repo:[[:space:]]*https:\/\/github\.com\/golangci\/golangci-lint$/ { found = 1; next }
+              # Leaving the block without having seen a rev is a malformed config, not a
+              # licence to report the next repo pin as golangci-lint back.
+              found && $0 ~ /^[[:space:]]*-[[:space:]]+repo:/ { exit }
+              found && $1 == "rev:" { print $2; exit }
+            ' .pre-commit-config.yaml
+          )"
+          if [ -z "$version" ]; then
+            echo "no golangci-lint rev found in .pre-commit-config.yaml" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "pinned golangci-lint $version"
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: ${{ steps.pinned.outputs.version }}
 
   # One job per image variant. hadolint takes a single path, and its action's
   # `recursive` mode globs from the repo root, which would drag in the vendored
@@ -27,7 +55,9 @@ jobs:
       fail-fast: false
       matrix:
         dockerfile:
+          - containers/ansible/Dockerfile
           - containers/base/Dockerfile
+          - containers/deb/Dockerfile
           - containers/ubi/Dockerfile
     steps:
       - name: Checkout

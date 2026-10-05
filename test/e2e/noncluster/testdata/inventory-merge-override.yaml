@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# A block of shared settings merged into two registries, one of which writes its own account beside
+# the merge. YAML allows that and gives the key written in the mapping precedence over the merged
+# one; the decoder cargoship reads with refuses the document instead, reading a merged key and a key
+# of the same name as the same key written twice.
+#
+# So this is a file an operator writes and an apply then rejects -- and both accounts in it are still
+# credentials. The vault commands resolve the merge in the order YAML gives it, so neither account is
+# reached twice and neither is left behind in the clear.
+#
+# Nothing here is contacted. The tests only read this file and rewrite copies of it.
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: merge-override
+spec:
+  config:
+    loadbalancer: lb.example.com
+    registries:
+      - name: shared.test.local
+        <<: &shared-auth
+          auth:
+            user: shared-user
+            pass: shared-pass
+      - name: own.test.local
+        <<: *shared-auth
+        auth:
+          user: own-user
+          pass: own-pass
+  hosts:
+    - hostname: node1
+      role: controller

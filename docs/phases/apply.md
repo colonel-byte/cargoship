@@ -11,12 +11,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Detect host operating systems
     - Gathers information about the remote host, including: OS and OS version
     - Dry run: runs, reads only. Reads `/etc/os-release` and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running.
-1. Acquire exclusive host lock
-    - Runs a background task that will touch a file every 30 seconds on each remote node, this prevents other `cargoships` from doing any changes until the lock file has not been touch for over a minute
-    - Dry run: reported, not run
 1. Gather host facts
     - Gathers network related information about the remote host, including: Hostname, Private Address, Private Interface. Will also update the hosts based off the profile if configured in the config file.
-    - Dry run: runs, reads only. Gather facts about each host by asks for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.
+    - Dry run: runs, reads only. Gather facts about each host by asking for its hostname, private interface and private address. All three are reads, and the rest of the run decides what it would do from them.
 1. Validate hosts
     - Verifying that each node in the cluster has a unique name and private address, that its CPU architecture is one the package carries, and that its firewall rules are usable, 
     - Dry run: runs, reads only. Validate the hosts is the preflight itself: sudo, unique hostnames and addresses, host architecture, firewall rules and clock skew. A dry run that skipped it would check nothing.
@@ -26,6 +23,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Checking for nodes no longer in the config
     - Compares the nodes joined to the cluster against the hosts in the config and stops the apply when the cluster holds a node the config does not, since nothing later in an apply removes a node
     - Dry run: runs, reads only. Checking for removed nodes lists the nodes joined to the cluster and compares them to the config. It writes nothing, and a dry run is exactly when an operator wants to be told that a host they deleted from the config is still running.
+1. Acquire exclusive host lock
+    - Runs a background task that touches a file every 30 seconds on each remote node. This prevents other `cargoships` from making any changes until the lock file has not been touched for over a minute
+    - Dry run: reported, not run
 1. Prepare hosts
     - Updates the remote nodes; environment variables and sysctl
     - Dry run: reported, not run
@@ -33,7 +33,7 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - Installs container-selinux on systems that have SELinux enabled on them
     - Dry run: reported, not run
 1. Prepare hosts - Enterprise Linux support - Fapolicyd
-    - Creates the distro supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
+    - Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
     - Dry run: reported, not run
 1. Updating hosts file for clusters nodes
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
@@ -51,13 +51,19 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - If the remote node is a Debian based Operating System and the Distro package includes any files for those systems
     - Dry run: reported, not run
 1. Upload files to hosts -- Binaries
-    - Catch all phase if the combination of Operating System and Distro don't have other install methods
+    - Catch-all phase for when the combination of Operating System and Distro has no other install method
+    - Dry run: reported, not run
+1. Import images
+    - For a distro whose engine does not import uploaded image tarballs on its own, imports them into the engine's image store
     - Dry run: reported, not run
 1. Configure engine
     - Runs distro specific operations
     - Dry run: reported, not run
 1. Initialize Controller
     - If the remote node does not have a running controller service, and is a controller, install the engine and start each service sequentially
+    - Dry run: reported, not run
+1. Apply manifests
+    - For a distro whose package declares raw manifests -- a CNI, typically -- kubectl applies each one from the leader
     - Dry run: reported, not run
 1. Initialize Worker
     - If the remote node does not have a running worker service, and is not a controller, install the engine and start each service by the set concurrency limit
@@ -69,7 +75,7 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
     - If the remote node is a worker and is running an older version of the engine, drain the node, stop the service, upgrade the engine, start the service, and uncordon the node by the set concurrency limit
     - Dry run: reported, not run
 1. Sync Registry Config Controller
-    - If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially
+    - If the remote node is a controller and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node sequentially. Chart values are written in place instead, since the engine reconciles them without a restart
     - Dry run: reported, not run
 1. Sync Registry Config Worker
     - If the remote node is a worker and its engine config (registries/audit/pss) has drifted from the desired state, drain the node, stop the service, write the new config, start the service, and uncordon the node by the set concurrency limit

@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "rancher-k3s-multi values",
+  "description": "Generated in magefiles/templates/k3s/values.schema.json.tmpl.",
+  "type": "object",
+  "properties": {
+    "addons": {
+      "type": "object",
+      "properties": {
+        "disabled": {
+          "type": "array",
+          "description": "The bundled charts k3s is told not to install. Replaces the package's own list rather than adding to it. The components k3s 1.34 packages are offered as suggestions, not as the whole vocabulary: a chart the engine bundles without advertising it under --disable is accepted too, and cargoship warns when it configures a node with a name this build does not package.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+            "examples": [
+              "coredns",
+              "servicelb",
+              "traefik",
+              "local-storage",
+              "metrics-server",
+              "runtimes"
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

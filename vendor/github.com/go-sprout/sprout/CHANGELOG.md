@@ -1,0 +1,391 @@
+# Changelog
+
+## Release v1.1.2: Sprout Keeps Its Promise 🛡️ (2026-09-16)
+
+> 🌿 No more panics, we meant it!
+
+A patch release closing three panics left in the `strings` registry, where a negative count or an out of range offset could still take the whole render down.
+
+### 🐛 **Bug Fixes**
+- **`repeat` and `indent` Negative Count**: A negative count was passed straight to `strings.Repeat`, which panics. It is now clamped to zero, so `repeat -1` returns `""` and `indent -1` leaves the value unindented. `nindent` is fixed along the way. See [PR #200](https://github.com/go-sprout/sprout/pull/200).
+- **`ellipsis` Offset in Runes**: The early return sliced by byte while `offset` is a rune index, cutting multi-byte characters in half and panicking when the offset exceeded the string length. It now slices by rune and returns `""` past the end. See [PR #199](https://github.com/go-sprout/sprout/pull/199).
+
+### 🔒 **Security & Dependencies**
+- **Updated golang.org/x/crypto**: Bumped from v0.55.0 to v0.57.0. See [#201](https://github.com/go-sprout/sprout/pull/201).
+- **Updated stretchr/testify**: Bumped from v1.11.1 to v1.12.1. See [#198](https://github.com/go-sprout/sprout/pull/198).
+
+---
+
+### 🎉 **Welcome New Contributors!**
+
+We're excited to welcome [@hdimer](https://github.com/hdimer) and [@NotAFlightRisk](https://github.com/NotAFlightRisk) to the Sprout community with their first contributions! Thank you for hunting down these panics.
+
+---
+
+### 📝 **Notes**
+
+Templates are a drop-in replacement for v1.1.1. Calls that used to panic now return a value instead.
+
+**Full Changelog**: https://github.com/go-sprout/sprout/compare/v1.1.1...v1.1.2
+
+## Release v1.1.1: Sprout Hardening 🔧 (2026-08-21)
+
+> 🌿 Sanding down the rough edges of v1.1.0!
+
+A patch release fixing a broken `derivePassword`, a data race in `shuffle`, a division by zero in `div`, and a hermetic guarantee broken by the v1.1.0 additions.
+
+### 🐛 **Bug Fixes**
+- **`derivePassword` Returned Empty**: The counter was typed `uint32`, so `text/template` passed an `int` and the call panicked, silently swallowed by the `SafeCall` wrapper. The counter is now an `int`. This resolves [#157](https://github.com/go-sprout/sprout/issues/157). See [PR #197](https://github.com/go-sprout/sprout/pull/197).
+- **Concurrency Safe `shuffle`**: `shuffle` used a package-global `math/rand.Source`, racing when templates render in parallel. It now uses the concurrency safe `math/rand.Shuffle`. This resolves [#195](https://github.com/go-sprout/sprout/issues/195). See [PR #196](https://github.com/go-sprout/sprout/pull/196).
+- **`div` Division by Zero**: A zero divisor returned a bogus integer instead of failing, because the float division was cast after the fact. It now returns `cannot divide by zero`. See [PR #194](https://github.com/go-sprout/sprout/pull/194).
+- **Hermetic Map Leaks**: `dateAgo`, `uuidv7`, `randInt` and the `expandEnv` alias were missing from the non-hermetic exclusion list, so `HermeticTxtFuncMap` and `HermeticHtmlFuncMap` still exposed them. They are now excluded, and a test keeps the list exhaustive. See [PR #193](https://github.com/go-sprout/sprout/pull/193).
+
+### 🔒 **Security & Dependencies**
+- **Updated go.yaml.in/yaml/v3**: Bumped from v3.0.4 to v3.0.5. See [#188](https://github.com/go-sprout/sprout/pull/188).
+- **CI Maintenance**: Bumped `actions/setup-go` from 5 to 7 and `arduino/setup-task` from 2 to 3. See [#189](https://github.com/go-sprout/sprout/pull/189) and [#190](https://github.com/go-sprout/sprout/pull/190).
+
+### 📚 **Documentation**
+- **Migration Guide Typos**: Two typos corrected in the [migration from Sprig](https://docs.atom.codes/sprout/migration-from-sprig) guide. See [PR #192](https://github.com/go-sprout/sprout/pull/192).
+
+---
+
+### 📝 **Notes**
+
+Templates are a drop-in replacement for v1.1.0, with one visible change: `div` now errors on a zero divisor instead of returning an arbitrary value. Go callers of `CryptoRegistry.DerivePassword` must note its `counter` parameter changed from `uint32` to `int`.
+
+**Full Changelog**: https://github.com/go-sprout/sprout/compare/v1.1.0...v1.1.1
+
+## Release v1.1.0: Sprout Grows Up 🌳 (2026-08-16)
+
+> 🌿 A cleaner contract, a softer landing from Sprig!
+
+This minor release completes the signature cleanup started in v1.0, introduces the pipeline-friendly `regex` registry, adds 14 new functions, and turns `sprigin` into a genuinely full drop-in replacement for Sprig with directional migration warnings.
+
+### ⚠️ **Breaking Changes**
+
+**The Sprig argument order is no longer tolerated by Sprout itself.**
+
+Up to v1.0.x, calling these functions with the Sprig argument order still worked in Sprout: the old order was detected, silently reordered, and a deprecation warning was logged. That tolerance was announced for removal in v1.1 and **is now removed**. Ten functions fail instead of warning:
+
+`get`, `set`, `unset`, `hasKey`, `pick`, `omit`, `append`, `prepend`, `slice`, `without`
+
+```go
+{{ append $list "value" }}
+// v1.0.x: [a value]   + "the signature of `append` has changed" warning
+// v1.1.0: error, cannot append on type string, the list must be the last argument
+```
+
+The fix is the pipe syntax, `{{ $list = $list | append "value" }}`. See the [migration guide](https://docs.atom.codes/sprout/migration-from-sprig) for the full table. **`sprigin` is not affected**: it still accepts both orders and warns only on the legacy one, so it remains the safe landing zone while you update your templates.
+
+**Removed from the public Go API:**
+- The `github.com/go-sprout/sprout/deprecated` package, which held `SignatureWarn` and `ErrArgsCount`. The equivalent now lives in `sprigin`, where the compatibility logic belongs.
+- `MapsRegistry.SprigDig`, superseded by the `sprigin` compatibility layer.
+- `MapsRegistry.Get`, `Set`, `Unset`, `HasKey`, `SlicesRegistry.Append` and `Prepend` no longer take `(args ...any)`, they use their real typed signatures.
+
+### ✨ **New Features**
+- **New `regex` Registry**: A pipeline-friendly replacement for `regexp`, where the main parameter is always the last argument. Same 11 function names, only `regexFindAll`, `regexSplit`, `regexReplaceAll` and `regexReplaceAllLiteral` change their argument order. Both registries expose the same names and are therefore mutually exclusive. `regexp` is now deprecated and will be removed in v1.2. This resolves [#147](https://github.com/go-sprout/sprout/issues/147). See [PR #185](https://github.com/go-sprout/sprout/pull/185).
+- **UUID Functions**: `uuidv7` (time-ordered), `uuidv5` and `uuidv3` (deterministic, namespace based), plus `uuidNil`, `isUUID`, `uuidVersion` and `uuidTime` to inspect existing UUIDs. No new dependency. This resolves part of [#155](https://github.com/go-sprout/sprout/issues/155). See [PR #186](https://github.com/go-sprout/sprout/pull/186).
+- **Unix Timestamp Conversions**: `toUnixMilli`, `toUnixMicro`, `fromUnix`, `fromUnixMilli`, `fromUnixMicro`, and `toUnix` as an alias of `unixEpoch`. This resolves [#130](https://github.com/go-sprout/sprout/issues/130). See [PR #184](https://github.com/go-sprout/sprout/pull/184).
+- **String Escaping**: `escape` and `unescape` to prepare strings for functions interpreting escape sequences, such as `dig`. See [PR #171](https://github.com/go-sprout/sprout/pull/171).
+- **Custom Logger for Sprigin**: `sprigin.WithLogger()` and the `*With()` func map builders let you route migration warnings wherever you want. See [PR #170](https://github.com/go-sprout/sprout/pull/170).
+
+### 🛠️ **Enhancements**
+- **Sprigin Accepts Both Signatures**: Eleven functions (`dig`, `get`, `set`, `unset`, `hasKey`, `pick`, `omit`, `append`, `prepend`, `slice`, `without`) detect the signature in use, run correctly either way, and warn only when the legacy Sprig order is detected. Templates already written in Sprout style stay silent.
+- **Clearer Migration Warnings**: `append` and `prepend` now show the assignment in their message, `{{ $list = $list | append "value" }}`, since the call alone never accumulates in a `range`. This resolves the confusion reported in [#180](https://github.com/go-sprout/sprout/issues/180). See [PR #187](https://github.com/go-sprout/sprout/pull/187).
+- **Ambiguous Calls Get Their Own Message**: When both arguments match the two signatures, for instance appending a list to a list, the call can no longer be disambiguated. Sprigin keeps the Sprig behavior and now says so, instead of asking you to migrate to the signature you may already use.
+- **Actionable Errors in Sprout**: `append` and `prepend` now report `cannot append on type string, the list must be the last argument`, pointing at the expected position rather than only the type.
+- **Informational Notices for `regexp`**: The registry deprecation is surfaced as an `info` notice at render time, and as Go `Deprecated:` markers on the package and `NewRegistry`. Choosing a registry is the library author's call, so the compiler-level marker is the one that matters, and template rendering stays quiet.
+
+### 🐛 **Bug Fixes**
+- **Sprigin Stack Overflow**: The backward compatibility layer recursed indefinitely when both arguments of `append` or `prepend` were lists, crashing the process. See [PR #164](https://github.com/go-sprout/sprout/pull/164).
+- **Sprig `dig` Key Splitting**: The compatibility `dig` no longer splits keys on dots, matching Sprig. This resolves [#159](https://github.com/go-sprout/sprout/issues/159). See [PR #160](https://github.com/go-sprout/sprout/pull/160).
+- **Literal Dots in `dig` Keys**: Native `dig` can now address keys containing dots, using the new `escape` function. See [PR #171](https://github.com/go-sprout/sprout/pull/171).
+- **Sprig Compatibility Coverage**: A fuzzing based compatibility suite of 2053 cases was added to keep `sprigin` aligned with Sprig. See [PR #165](https://github.com/go-sprout/sprout/pull/165).
+
+### 🔒 **Security & Dependencies**
+- **Updated golang.org/x/crypto**: Bumped from v0.46.0 to v0.55.0 across multiple updates. See [#169](https://github.com/go-sprout/sprout/pull/169), [#173](https://github.com/go-sprout/sprout/pull/173) and [#176](https://github.com/go-sprout/sprout/pull/176).
+- **Updated golang.org/x/text**: Bumped from v0.32.0 to v0.41.0. See [#167](https://github.com/go-sprout/sprout/pull/167), [#172](https://github.com/go-sprout/sprout/pull/172) and [#174](https://github.com/go-sprout/sprout/pull/174).
+- **CI Maintenance**: Bumped `actions/checkout` and `codecov-action`, and restricted the test matrix to supported Go versions. See [#158](https://github.com/go-sprout/sprout/pull/158), [#175](https://github.com/go-sprout/sprout/pull/175), [#181](https://github.com/go-sprout/sprout/pull/181) and [#182](https://github.com/go-sprout/sprout/pull/182).
+
+### 📚 **Documentation**
+- **New `regex` Registry Page**: Full documentation with a migration table from `regexp`, and a deprecation banner on the `regexp` page.
+- **Signature Migration**: The migration guide now states explicitly that the Sprig argument order was tolerated in v1.0.x and is refused from v1.1.0, and the `append` / `prepend` examples carry the assignment.
+- **List Accumulation**: The `slices` registry page documents that list functions return a new list, with a `range` example, a frequent source of confusion.
+- **Benchmarks and Links**: Benchmarks updated to reflect the current function set, and broken links fixed. See [#166](https://github.com/go-sprout/sprout/pull/166), [#156](https://github.com/go-sprout/sprout/pull/156) and [#178](https://github.com/go-sprout/sprout/pull/178).
+
+---
+
+### 📝 **Notes**
+
+**Upgrading from v1.0.x**: if your templates use the Sprig argument order, either update them to the pipe syntax, or switch your imports to `sprigin` first. Sprigin accepts both orders and points at the Sprout equivalent for every legacy call, letting you and your end users migrate on your own clock.
+
+**Deprecation timeline**: the `regexp` registry stays available and functional through v1.1, and is removed in v1.2 along with the switch of the `all` and `hermetic` groups to `regex`. To opt in today, register `regex` before the group: its functions take precedence.
+
+**Full Changelog**: https://github.com/go-sprout/sprout/compare/v1.0.3...v1.1.0
+
+## Release v1.0.3: Sprout Compatibility 🔧 (2025-12-26)
+
+> 🌿 Restoring Harmony with Sprig!
+
+This patch release focuses on restoring backward compatibility for the `dig` function in the sprigin compatibility layer, ensuring a seamless migration experience for users transitioning from Sprig.
+
+### 🐛 **Bug Fixes**
+- **Restored Sprig `dig` Signature**: Fixed the `dig` function in the sprigin compatibility layer to use Sprig's original signature `{{ dig "key" "default" $dict }}` instead of Sprout's native syntax. This resolves [#152](https://github.com/go-sprout/sprout/issues/152). See [PR #153](https://github.com/go-sprout/sprout/pull/153).
+
+### 🛠️ **Enhancements**
+- **New Pesticide Helper**: Added `RunTestCasesWithFuncs` to the pesticide package, enabling testing with custom FuncMaps for sprigin compatibility functions.
+- **Deprecation Notice for `dig`**: When using sprigin, the `dig` function now logs a deprecation warning encouraging migration to Sprout's native syntax `{{ $dict | dig "key" | default "default" }}`.
+
+### 🔒 **Security & Dependencies**
+- **Updated golang.org/x/crypto**: Bumped from v0.41.0 to v0.42.0. See [#143](https://github.com/go-sprout/sprout/pull/143).
+- **Updated github.com/spf13/cast**: Upgraded from v1.9.2 to v1.10.0. See [#144](https://github.com/go-sprout/sprout/pull/144).
+- **Migrated YAML Library**: Moved to a maintained YAML library for better long-term support. See [#145](https://github.com/go-sprout/sprout/pull/145).
+- **Monthly Dependencies Update**: Regular maintenance update for all dependencies. See [#154](https://github.com/go-sprout/sprout/pull/154).
+
+### 📚 **Documentation**
+- **Updated Migration Guide**: The `dig` function section in the migration documentation now clearly explains the signature difference between Sprig and Sprout.
+
+---
+
+### 📝 **Notes**
+
+If you're using `sprigin.FuncMap()` for backward compatibility with Sprig templates, the `dig` function will now work as expected with Sprig's signature. A deprecation warning will be logged to encourage migration to Sprout's native syntax.
+
+**Full Changelog**: https://github.com/go-sprout/sprout/compare/v1.0.2...v1.0.3
+
+## Release v1.0.2: Sprout Refresh 🔄 (2025-08-28)
+
+> 🛡️ Staying Fresh and Secure!
+
+This patch release continues our commitment to keeping Sprout secure and up-to-date with the latest dependency updates from the Go ecosystem.
+
+### 🔒 **Security & Dependencies**
+- **Updated golang.org/x/crypto**: Bumped from v0.39.0 to v0.41.0 across multiple updates, ensuring the latest security patches and cryptographic improvements. See [#133](https://github.com/go-sprout/sprout/pull/133) and [#135](https://github.com/go-sprout/sprout/pull/135).
+- **Updated golang.org/x/text**: Upgraded from v0.26.0 to v0.28.0 for enhanced Unicode support and text processing capabilities. See [#132](https://github.com/go-sprout/sprout/pull/132) and [#134](https://github.com/go-sprout/sprout/pull/134).
+
+---
+
+### 📝 **Notes**
+
+This maintenance release ensures Sprout continues to benefit from the latest security patches and performance improvements in the Go ecosystem. These dependency updates provide enhanced cryptographic functions and improved text processing without introducing any breaking changes.
+
+**Full Changelog**: https://github.com/go-sprout/sprout/compare/v1.0.1...v1.0.2
+
+## Release v1.0.1: Sprout Maintenance 🛠️ (2025-06-11)
+
+> 🌿 Keeping the Garden Tidy and Secure!
+
+This patch release focuses on maintaining Sprout's health with critical dependency updates and documentation improvements. We're committed to keeping Sprout secure and up-to-date for all our users.
+
+### 🔒 **Security & Dependencies**
+- **Updated golang.org/x/crypto**: Bumped from v0.32.0 to v0.39.0 across multiple updates, ensuring the latest security patches and improvements. See [#124](https://github.com/go-sprout/sprout/pull/124).
+- **Updated golang.org/x/text**: Upgraded from v0.21.0 to v0.24.0 for better Unicode support and text processing capabilities. See [#119](https://github.com/go-sprout/sprout/pull/119).
+- **Updated dario.cat/mergo**: Bumped from v1.0.1 to v1.0.2 for improved merging functionality. See [PR #125](https://github.com/go-sprout/sprout/pull/125).
+- **Updated github.com/spf13/cast**: Upgraded from v1.7.1 to v1.8.0 for enhanced type conversion capabilities. See [PR #121](https://github.com/go-sprout/sprout/pull/121).
+
+### 🛠️ **Maintenance & Tooling**
+- **Migrated to golangci-lint v2**: Updated our linting infrastructure for better code quality checks. Thanks to [@mrueg](https://github.com/mrueg) for this contribution! See [PR #117](https://github.com/go-sprout/sprout/pull/117).
+- **CI/CD Improvements**: Updated multiple GitHub Actions to their latest versions:
+  - codecov/codecov-action: v5.1.2 → v5.4.3 (PRs [#110](https://github.com/go-sprout/sprout/pull/110), [#114](https://github.com/go-sprout/sprout/pull/114), [#120](https://github.com/go-sprout/sprout/pull/120), [#127](https://github.com/go-sprout/sprout/pull/127))
+  - golangci/golangci-lint-action: v7 → v8 (PR [#122](https://github.com/go-sprout/sprout/pull/122))
+
+### 📚 **Documentation**
+- **Fixed Registry Code Example**: Corrected the code example in our registry documentation to ensure developers have accurate implementation guidance. Thanks to [@sagikazarmark](https://github.com/sagikazarmark) for spotting and fixing this! See [PR #126](https://github.com/go-sprout/sprout/pull/126).
+
+---
+
+### 🎉 **Welcome New Contributors!**
+
+We're excited to welcome [@sagikazarmark](https://github.com/sagikazarmark) to the Sprout community with their first contribution! Thank you for helping us improve our documentation.
+
+---
+
+### 📝 **Notes**
+
+This maintenance release ensures Sprout remains secure and compatible with the latest Go ecosystem updates. While there are no new features in this release, these dependency updates include important security patches and performance improvements that benefit all Sprout users.
+
+**Full Changelog**: https://github.com/go-sprout/sprout/compare/v1.0.0...v1.0.1
+
+## Release v1.0.0: Sprout Genesis 🌱 (2025-01-16)
+
+> 🌱 A New Era of Functionality, Flexibility, and Performance!
+
+We’re thrilled to announce the **v1.0.0-rc1** release of **Sprout**, marking a significant step forward in our mission to create the most powerful and flexible templating library for Go developers. This release introduces major features, critical fixes, and exciting new tools to help you build more efficient and secure templates.
+
+_This section's comparisons are based on Sprig v3.2.3. If you're totally new, welcome! Go ahead with [Getting started](https://docs.atom.codes/sprout/introduction/getting-started)_
+
+### 🚀 **New Core Features**
+- **Migration to Function Handler**: All functions have been migrated under a unified function handler to streamline function management. [Documentation](https://docs.atom.codes/sprout/features/loader-system-registry).
+- **Registry System (Loader)**: Introduced a new registry system for modular function management, supporting easier extension and organization of functions. [Documentation](https://docs.atom.codes/sprout/features/loader-system-registry).
+- **Safe Functions**: New safe versions of functions that follow Go's template standards, providing flexible error handling options. [Documentation](https://docs.atom.codes/sprout/features/safe-functions).
+- **Function Notices**: Added real-time notices when specific functions are called to warn or inform users of critical behavior. [Documentation](https://docs.atom.codes/sprout/features/function-notices).
+- **Function Aliases**: Added function aliases to ensure smooth transition and backward compatibility. [Documentation](https://docs.atom.codes/sprout/features/function-aliases).
+
+### 🔄 **Backward Compatibility**
+- **Reimport Functions from Sprig**: Maintained backward compatibility by reimporting core functions from Sprig. [Documentation](https://docs.atom.codes/sprout/migration-from-sprig).
+- **Backward Compatibility Documentation**: Updated docs to ensure seamless migration and backward compatibility. [Documentation](https://docs.atom.codes/sprout/migration-from-sprig).
+
+### 🛠 **Enhancements and Fixes**
+- **Optimized Memory Footprint**: Performance improvements were made to reduce memory usage across the board. [Benchmarks](https://github.com/go-sprout/sprout/tree/main/benchmarks).
+- **Fixed CamelCase Logic**: Updated CamelCase and PascalCase transformation logic to handle edge cases better. [Documentation](https://docs.atom.codes/sprout/migration-from-sprig#tocamelcase-topascalcase)
+- **Never more panics**: Rework functions how cause panics on template engines to ensure a better stability. [Documentation](https://docs.atom.codes/sprout/migration-from-sprig#panicking-functions).
+
+### 🌐 **New Utilities**
+- **Batch of New Functions**: Introduced a wide range of functions for slices, regex manipulations, and conversions, expanding Sprout's toolkit significantly. See [PR 70](https://github.com/go-sprout/sprout/pull/70).
+- **Network Registry**: New functions for handling IP, CIDR, and MAC address manipulations in templates. See [PR 71](https://github.com/go-sprout/sprout/pull/71).
+- **SHA512 Checksums**: Added `sha512sum` to the checksum registry with useful notices for end-users. See [PR 59](https://github.com/go-sprout/sprout/pull/59).
+- **New Struct Method `hasField`**: Added a method for checking struct fields dynamically. See [PR 61](https://github.com/go-sprout/sprout/pull/61).
+- **String Capitalization Functions**: New string capitalization functions with full Unicode and Latin rune support. See [PR 62](https://github.com/go-sprout/sprout/pull/62).
+- **`toDuration` Conversion Function**: A new utility to simplify time conversions across templates. See [PR 27](https://github.com/go-sprout/sprout/pull/27).
+
+### 📚 **Documentation**
+- **Fancy and complete documentation**: Create a fancy and complete documentation, ensuring they are up-to-date and aligned with Sprout’s growth. [Documentation](https://sprout.atom.codes)
+
+---
+
+### 🏆 **A Special Thanks to Our Contributors**
+
+A heartfelt thank you to everyone who contributed to this v1.0.0 journey, particularly [@42atomys](https://github.com/42atomys), whose tireless work and commitment have made this release possible. Special thanks to [@mbezhanov](https://github.com/mbezhanov), [@andig](https://github.com/andig), [@ccoVeille](https://github.com/ccoVeille) for their valuable contributions and to [@caarlos0](https://github.com/caarlos0) for the support in making decisions and for being the second maintainer of the Sprout organization.
+
+---
+
+### 🔮 **Looking Ahead**
+
+This release candidate is a crucial step towards the official v1.0.0 release. We encourage you to test the new features, provide feedback, and help us fine-tune the final version. We’re incredibly excited for what’s to come and can’t wait to see how Sprout will evolve with your help!
+
+Let’s continue growing Sprout together and make this library the best tool for Go developers everywhere!
+
+## Release v0.6.0: Sprout Evolution 🌱 (2024-09-16)
+
+> 💡 Cultivating Precision, One Function at a Time!
+
+### 🚀 New Features
+- **Function Call Notices**: Added notifications to inform or warn end-users when functions are called. See [PR 58](https://github.com/go-sprout/sprout/pull/58).
+- **Safe Functions Compliance**: Aligned safe functions with Go template standards and Sprout conventions. See [PR 65](https://github.com/go-sprout/sprout/pull/65).
+- **SHA512 Checksum in Registry**: Introduced `sha512sum` to the checksum registry, complete with informative notices. See [PR 59](https://github.com/go-sprout/sprout/pull/59).
+- **`hasField` for Structs**: A new `hasField` method to check fields in structs is now available. See [PR 61](https://github.com/go-sprout/sprout/pull/61).
+- **String Capitalization Functions**: Added new functions to capitalize strings, fully supporting Unicode and Latin runes. See [PR 62](https://github.com/go-sprout/sprout/pull/62) and [PR 63](https://github.com/go-sprout/sprout/pull/63).
+
+### 🛠 Fixes & Improvements
+- **Dropped v0.1 Error Handling**: Removed legacy error handling until a safe/must decision is finalized in the RFC. See [PR 52](https://github.com/go-sprout/sprout/pull/52).
+- **Documentation Updates**: Added function signatures to the conventions, making it easier to understand their usage. See [PR 64](https://github.com/go-sprout/sprout/pull/64).
+
+### 🐛 Bug Fixes
+- **Unicode Capitalization Fix**: Resolved issues with string capitalization involving Unicode and Latin runes. See [PR 63](https://github.com/go-sprout/sprout/pull/63).
+- **Release Candidate Fixes**: Addressed problems with v0.6.0-rc.1 to ensure stability and performance. See [PR 68](https://github.com/go-sprout/sprout/pull/68).
+
+*Read more about notices on [official documentation](https://sprout.atom.codes/features/function-notices).*
+
+*Read more about safe functions on [official documentation](https://sprout.atom.codes/features/safe-functions).*
+
+
+## Release v0.5.1: Sprout Growth 🌿 (2024-09-15)
+
+> 💡 Cultivating Code, Growing Solutions!
+
+### ⚡ Performance Improvements
+- **Memory Footprint Reduction**: Reduced overall memory footprint for better performance. See (@42atomys) [PR 56](https://github.com/go-sprout/sprout/pull/56).
+
+### 🐛 Bug Fixes
+- **Default Logger Initialization**: Fixed an issue where the default logger had a bad initialization. See (@42atomys) [PR 48](https://github.com/go-sprout/sprout/pull/48).
+- **Logger Accessibility**: Resolved a problem where loggers were not accessible due to duplicated pointers. See (@42atomys) [PR 50](https://github.com/go-sprout/sprout/pull/50).
+- **Sprigin CamelCase Consistency**: Ensured that `sprigin` camelcase returns are consistent. See (@42atomys) [PR 55](https://github.com/go-sprout/sprout/pull/55).
+
+### 🛠️ Chores
+- **Go Task Integration**: Replaced Makefile with Go Task for better task management. See (@42atomys) [PR 54](https://github.com/go-sprout/sprout/pull/54).
+
+## Release v0.5.0: Sprout Growth 🌿 (2024-08-15)
+
+> 💡 Nurturing Ideas, Harvesting Innovation!
+
+### 🌟 Major Feature: Registry System Unleashed!
+- **Revamped Architecture**: Introducing the powerful registry system (aka loader). This refactor modularizes all methods into separate registries. See (@42atomys) [PR 46](https://github.com/go-sprout/sprout/pull/46)
+- **Handler & Registry Interfaces**: New interfaces with clear rules to streamline function management.
+- **Seamless Migration**: All functions are now in registries, with backward compatibility via `FuncsMap` in `springin` [See Transitioning from Sprig](https://github.com/go-sprout/sprout?tab=readme-ov-file#transitioning-from-sprig).
+
+*Read more about the registry system in the [official documentation](https://sprout.atom.codes/features/loader-system-registry).*
+
+### 📚 Fully Documented
+- **In-Depth Docs**: Detailed documentation and a handy glossary are now available. Explore more [sprout.atom.codes](https://sprout.atom.codes).
+- **README**: Updated the documentation and README to reflect all recent changes. Check out the latest [README.md](https://raw.githubusercontent.com/go-sprout/sprout/main/README.md).
+
+### 🐛 Bug Fixes
+- **`toDuration` Doc Update**: Added a practical example showing how to convert durations to seconds using `toDuration`. This is based on real test cases to make time formatting easier. See (@cbandy) [PR 44](https://github.com/go-sprout/sprout/pull/44).
+
+
+## Release v0.4.1: Sprout Blossom 🌸 (2024-06-17)
+
+> 💡 Cultivating Innovation, One Sprig at a Time!
+
+### 🚀 Features
+- **Reducing YAML Dependencies Footprint**: Improved project efficiency by reducing dependencies. See (@andig) [PR 38](https://github.com/go-sprout/sprout/pull/38).
+  
+### 🐛 Bugs fixes
+- **Timezone Leak Fix in `toDate` Method**: Resolved an issue affecting date calculations. See (@42atomys) [PR 42](https://github.com/go-sprout/sprout/pull/42).
+- **Backward Compatibility Documentation**: Added documentation for ensuring seamless upgrades. See (@42atomys) [PR 43](https://github.com/go-sprout/sprout/pull/43).
+
+## Release v0.4.0: Sprout Blossom 🌸 (2024-05-16)
+
+> 💡 Cultivating code is something beautiful.
+
+### 🚀 Features
+- **Enhanced Conversions Group**: New functions (`toBool`, `toUint`, `toUint64`) and comprehensive documentation have been added to the conversions group, broadening our library's functionality and making it more user-friendly. See (@42atomys) [PR 33](https://github.com/go-sprout/sprout/pull/33).
+- **YAML Functions Unleashed**: Implementing YAML functions (`fromYaml`, `toYaml`. `mustFromYaml`, `mustToYaml`) inspired by Helm's robust toolset, we've extended our configuration management capabilities. See (@42atomys) [PR 36](https://github.com/go-sprout/sprout/pull/36).
+
+### 🛠 Fixes from sprig issues
+- **Merge Function Improvement**: The merge function has been tweaked to preserve the zero value in destination structs, ensuring more predictable and accurate data handling. See (@42atomys) [PR 34](https://github.com/go-sprout/sprout/pull/34).
+- **String Transformation Logic Update**: Corrected the logic for transforming strings to CamelCase and PascalCase to avoid previous inconsistencies and errors. See (@42atomys) [PR 35](https://github.com/go-sprout/sprout/pull/35).
+
+
+## Release v0.3.0: Moved Farm 🌾 (2024-05-09)
+
+> 💡 Sprouting New Possibilities in Every Release!
+
+> [!IMPORTANT]
+> The project has moved to a new GitHub home [**github.com/go-sprout/sprout**](https://github.com/go-sprout/sprout) !
+
+### 🚀 Features
+- **Unified Function Management**: All functions are now neatly organized under the new FunctionHandler, streamlining how functionalities are handled within the library. This consolidation is crucial for enhancing library operations and future development. See (@42atomys) [PR 14](https://github.com/go-sprout/sprout/pull/14).
+- **Introducing `toDuration` Conversion**: A new utility function, `toDuration`, has been added to simplify time conversions across various formats, enhancing our toolkit's versatility. See (@42atomys) [PR 27](https://github.com/go-sprout/sprout/pull/27).
+
+### 🛠 Documentation and Community
+- **Project's New Home**: The project has moved to a new GitHub home, centralizing where updates and community interactions will take place. Visit us at: [Sprout on GitHub](https://github.com/go-sprout/sprout).
+- **Community Files Update**: All community-related files have been refreshed to better support our growing community of developers and contributors. See (@42atomys) [PR 12](https://github.com/go-sprout/sprout/pull/12).
+
+## Release v0.2.0: Garden Genesis 🌱 (2024-04-03)
+
+> 💡 Cultivating Innovation, One Sprig at a Time!
+
+### 🚀 Features
+- **Creating the Root of the Sprout**: Sprouts are now an evolution of Sprig with a standalone function handler. See (@42atomys) [PR 2](https://github.com/go-sprout/sprout/pull/2).
+- **Allowing Function Aliasing**: Enables developers to use aliases for their templates. In Sprout, this feature is used for backward compatibility with Sprig. See (@42atomys) [PR 3](https://github.com/go-sprout/sprout/pull/3). 
+  - Full documentation available here: https://docs.atom.codes/sprout/function-aliases
+
+### 🛠 Chore
+- **Documentation Available**: Documentation can be found at https://docs.atom.codes/sprout.
+- **README Refactor**: The README has been updated to reflect the project's vision and its future. See (@42atomys) [PR 4](https://github.com/go-sprout/sprout/pull/4).
+
+
+## Release v0.1.0: New Seed 🌱 (2024-03-29)
+
+We are excited to announce the release of Sprout v0.1, a modern and evolved variant of the [Masterminds/sprig](https://github.com/Masterminds/sprig) library, specifically reimagined and redesigned for contemporary Go development environments. Our mission with Sprout is to reignite the innovation that made Sprig an indispensable tool for Go developers, providing a robust set of functions and helpers that enhance productivity and code clarity.
+
+### Vision and Goals
+Our vision for Sprout is to not only match but exceed the functionality and reliability that made Sprig a cornerstone in many Go projects. We aim to bring Sprout into the modern Go ecosystem, ensuring compatibility with the latest versions of Go and introducing a stream of new features and improvements that reflect the needs and requests of the community. We recognize the importance of maintaining a vibrant and up-to-date toolset for developers and commit to an active development cycle for Sprout.
+
+### What's New in v0.1
+Sprout v0.1 is designed to align seamlessly with Sprig v3.2.3, providing a familiar yet enhanced experience for developers transitioning from Sprig. 
+
+Key features and enhancements include:
+**Enhanced Compatibility**: Sprout is fully compatible with modern Go versions, starting with Go 1.19 and above, addressing the compatibility issues faced by Sprig users in newer Go environments.
+**New Functions and Improvements**: We will introduce additional functions and enhancements to existing ones, carefully designed to increase productivity and simplify common coding tasks in Go.
+**Performance Optimizations**: Sprout includes significant performance improvements, making your applications faster and more efficient.
+**Community-Driven Development**: Sprout is committed to being a community-focused project, welcoming contributions, and suggestions from developers to shape the future of the library.
+
+### Future Directions
+Looking ahead, Sprout will continue to evolve with the Go ecosystem. Our roadmap includes the integration of more features and utilities, drawing from the feedback and needs of our growing community of users. We aim to foster a vibrant ecosystem around Sprout, encouraging contributions, and collaboration to ensure that Sprout remains at the forefront of Go development tools.
+
+### Getting Started with Sprout
+To start using Sprout in your Go projects, please visit our GitHub repository at [Sprout's GitHub Page](https://github.com/go-sprout/sprout). You'll find comprehensive documentation, installation instructions, and examples to help you get started.
+
+We are thrilled to embark on this journey with you, the Go developer community, and look forward to seeing the incredible applications you will build with Sprout. Thank you for your support, and welcome to Sprout v0.1!

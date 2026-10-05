@@ -1,0 +1,72 @@
+// Copyright 2023 k0sctl authors
+// Copyright 2026 colonel-byte
+//
+// This file contains code derived from k0sctl:
+// https://github.com/k0sproject/k0sctl
+//
+// Modifications Copyright 2026 colonel-byte.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package phase
+
+import (
+	"context"
+
+	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+)
+
+// DetectOS performs remote OS detection
+type DetectOS struct {
+	GenericPhase
+}
+
+// Title for the phase
+func (p *DetectOS) Title() string {
+	return "Detect host operating systems"
+}
+
+// Explanation about the current phase, used for documentation generation
+func (p *DetectOS) Explanation() string {
+	return "Gathers information about the remote host, including: OS and OS version"
+}
+
+// ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
+func (p *DetectOS) ReadOnly() string {
+	return "Reads `/etc/os-release` and the kernel to pick a configurer for the host. Reporting what each host runs is half of what makes a dry run worth running."
+}
+
+// Run the phase
+func (p *DetectOS) Run(ctx context.Context) error {
+	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(_ context.Context, h *cluster.ZarfHost) error {
+		l := logger.From(ctx)
+
+		if err := h.ResolveConfigurer(); err != nil {
+			if h.OSRelease != nil && len(h.OSRelease.IDLike) > 0 {
+				l.Debug("trying to find a fallback OS support module", "host", h, "osVersion", h.OSRelease.String(), "like", h.OSRelease.IDLike)
+				for _, id := range h.OSRelease.IDLike {
+					h.OSRelease.ID = id
+					if err := h.ResolveConfigurer(); err == nil {
+						l.Warn("OS support fallback", "host", h, "id", id, "osVersion", h.OSRelease.String())
+						return nil
+					}
+				}
+			}
+			return err
+		}
+		l.Info("running", "host", h, "os", h.OSRelease.String())
+
+		return nil
+	})
+}

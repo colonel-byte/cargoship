@@ -1,6 +1,6 @@
 # Why apply refuses a removed host instead of reconciling it
 
-Deleting a host block from a cargoship config does not remove that machine from the cluster. Apply detects the leftover node and stops (`src/pkg/phase/13_detect_removed_hosts.go`); it does not drain it, delete it, or uninstall its engine. Reconciling the removal was the obvious alternative, and it is what every other declarative tool in this space does, so the choice needs an argument.
+Deleting a host block from a cargoship config does not remove that machine from the cluster. Apply detects the leftover node and stops (`pkg/phase/13_detect_removed_hosts.go`); it does not drain it, delete it, or uninstall its engine. Reconciling the removal was the obvious alternative, and it is what every other declarative tool in this space does, so the choice needs an argument.
 
 ## Apply cannot finish the job
 

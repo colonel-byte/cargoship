@@ -1,0 +1,33 @@
+package sudo
+
+import (
+	"fmt"
+
+	"github.com/k0sproject/rig/v2/cmd"
+	"github.com/k0sproject/rig/v2/plumbing"
+)
+
+// Because the "sudo providers" actually just return a decorator
+
+// Provider provides a unified interface to interact with different
+// sudo methods. It ensures that a suitable sudo runner is lazily initialized
+// and made available for privileged command execution.
+type Provider struct {
+	lazy *plumbing.LazyService[cmd.Runner, cmd.Runner]
+}
+
+// SudoRunner returns a cmd.Runner with a sudo decorator or an error if the
+// decorator could not be initialized.
+func (p *Provider) SudoRunner() (cmd.Runner, error) {
+	runner, err := p.lazy.Get()
+	if err != nil {
+		return nil, fmt.Errorf("get sudo runner: %w", err)
+	}
+	return runner, nil
+}
+
+// NewSudoProvider creates a new instance of Provider with the provided RunnerProvider
+// function and runner.
+func NewSudoProvider(get RunnerProvider, runner cmd.Runner) *Provider {
+	return &Provider{plumbing.NewLazyService(get, runner)}
+}

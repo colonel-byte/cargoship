@@ -1,0 +1,10 @@
+output: "{{.Dir}}/README.md"
+header: |-
+  [![Go Report Card](https://goreportcard.com/badge/github.com/princjef/termdiff)](https://goreportcard.com/report/github.com/princjef/termdiff)
+  [![GitHub Actions](https://github.com/princjef/termdiff/workflows/Test/badge.svg)](https://github.com/princjef/termdiff/actions?query=workflow%3ATest+branch%3Amaster)
+  [![Go Reference](https://pkg.go.dev/badge/github.com/princjef/termdiff.svg)](https://pkg.go.dev/github.com/princjef/termdiff)
+  [![codecov](https://codecov.io/gh/princjef/termdiff/branch/master/graph/badge.svg?token=171XNH5XLT)](https://codecov.io/gh/princjef/termdiff)
+repository:
+  url: https://github.com/princjef/termdiff
+  defaultBranch: main
+  path: /

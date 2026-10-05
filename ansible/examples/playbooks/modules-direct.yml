@@ -1,0 +1,62 @@
+---
+# The same work without the role, against an inventory whose groups are named something else.
+#
+#   ansible-playbook -i ../inventories/custom-groups.yml modules-direct.yml
+#
+# Two things are worth taking from this file. The first is what the role does for you: run_once,
+# delegate_to, no_log, and the assembly of the `inventory` parameter are all spelled out below.
+# The second is the shape of a play that runs over the fleet's own inventory rather than
+# localhost -- `hosts: all` with run_once and delegate_to. Ansible still connects to nothing: the
+# task runs once, on the management node.
+#
+# run_once is not optional here. Cargoship converges the whole fleet in one run, so without it
+# this play would run a full cluster convergence once per host in the inventory.
+- name: Converge a fleet whose groups are named something else
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Converge engine configuration
+      colonel_byte.cargoship.cargoship_engine_config_sync:
+        package: /srv/staging/rke2-1.31.tar.zst
+        inventory_path: /srv/staging/generated-inventory.yaml
+        inventory:
+          # groups and hostvars are filled in by the collection's action plugin from the play's own
+          # variables, so a task that says nothing about them gets Ansible's resolved inventory.
+          # They are written out here to show what the module receives. An inventory the playbook
+          # supplies itself wins, which is how a play converges a fleet it is not running against.
+          groups: "{{ groups }}"
+          hostvars: "{{ hostvars }}"
+
+          # The default mapping is the group named `controller` and the group named `worker`.
+          # This inventory names neither, so the mapping has to be stated. A role may take more
+          # than one group; only controller and worker exist, and naming any other role is an
+          # error. db01 is in none of these groups and is left out of the cluster entirely.
+          roleGroups:
+            controller:
+              - k8s_masters
+            worker:
+              - k8s_workers
+              - k8s_infra
+
+          cluster:
+            name: bubbles
+            loadbalancer: bubbles-kc.test.com
+            profiles:
+              infra:
+                engine:
+                  taints:
+                    - adrp.xyz/infra=true:NoSchedule
+        vault_password_file: /srv/staging/vault-pass
+        timeout: 20m
+      delegate_to: localhost
+      run_once: true
+      # A binary module has no per-parameter no_log, so the task-level setting is what suppresses
+      # the arguments and the result. The arguments name every host in the fleet.
+      no_log: true
+      register: cargoship_result
+
+    - name: Report what cargoship did
+      ansible.builtin.debug:
+        var: cargoship_result.cargoship
+      run_once: true

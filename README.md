@@ -1,4 +1,8 @@
 # Cargoship
+[![Latest Release](https://img.shields.io/github/v/release/colonel-byte/cargoship)](https://github.com/colonel-byte/cargoship/releases)
+[![Go version](https://img.shields.io/github/go-mod/go-version/colonel-byte/cargoship?filename=go.mod)](https://go.dev/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/colonel-byte/cargoship/release.yaml)](https://github.com/colonel-byte/cargoship/actions/workflows/release.yaml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/colonel-byte/cargoship/badge)](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship)
 
 Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages. It is designed to simplify two core workflows:
 
@@ -6,6 +10,59 @@ Cargoship is a Go-based CLI for building, distributing, and applying offline Kub
 2.  **Cluster Lifecycle Management:** Bootstrapping, upgrading, and managing the cluster on target hosts over SSH using the packaged distribution.
 
 Cargoship bridges the gap between offline distro packaging tools and remote cluster lifecycle managers, supporting OCI image and file packaging, secure publishing to OCI registries, and robust SSH orchestration.
+
+---
+
+## Installation
+
+### Pre-built binaries
+
+Every release publishes archives for Linux, macOS, and Windows across `amd64`, `arm64`, `arm`, `386`, and `riscv64`. The archive names follow `uname`, so the one for a 64-bit Linux host is `cargoship_Linux_x86_64.tar.gz`:
+
+```bash
+VERSION=$(curl -fsSL https://api.github.com/repos/colonel-byte/cargoship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+curl -fsSLO "https://github.com/colonel-byte/cargoship/releases/download/${VERSION}/cargoship_Linux_x86_64.tar.gz"
+tar -xzf cargoship_Linux_x86_64.tar.gz cargoship
+install -m 0755 cargoship /usr/local/bin/cargoship
+```
+
+### Linux packages
+
+Releases also carry `.rpm`, `.deb`, and `.apk` packages, which install the binary along with the `colonel_byte.cargoship` Ansible collection onto ansible-core's default collection path:
+
+```bash
+sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
+```
+
+### Container images
+
+```bash
+podman run --rm ghcr.io/colonel-byte/cargoship:latest version
+```
+
+| Image                                      | Contents                                               |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `ghcr.io/colonel-byte/cargoship`           | The binary on a minimal base                           |
+| `ghcr.io/colonel-byte/cargoship-ubi`       | The binary on Red Hat UBI                              |
+| `ghcr.io/colonel-byte/cargoship-deb`       | The binary installed from the `.deb`                   |
+| `ghcr.io/colonel-byte/cargoship-ansible`   | The binary plus the Ansible collection and ansible-core |
+
+### From source
+
+Building needs Go 1.27 or newer. The repository vendors its dependencies, so a clone builds without network access:
+
+```bash
+go install github.com/colonel-byte/cargoship@latest
+```
+
+### Verifying a download
+
+Release archives and container images are signed with [Cosign](https://docs.sigstore.dev/cosign/), using the key published at [`cosign.pub`](https://github.com/colonel-byte/cargoship/blob/main/cosign.pub). Each archive ships a `.sigstore.json` bundle beside it, and every release carries a `checksums.txt`:
+
+```bash
+cosign verify-blob --key cosign.pub --bundle cargoship_Linux_x86_64.tar.gz.sigstore.json cargoship_Linux_x86_64.tar.gz
+cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:latest
+```
 
 ---
 
@@ -54,6 +111,8 @@ For example, the **`apply`** workflow comprises the following phases:
 
 Here are the standard workflows for compiling and deploying offline Kubernetes packages with Cargoship.
 
+The commands that change a host - `prepare`, `apply`, `reset`, and `engine-config-sync` - will not do so without `--confirm`. Swap it for `--dry-run` to connect to every host and run the preflight checks for real, reporting what the run would change without changing it.
+
 ### 1. Compile an Offline Package
 
 To build an offline archive containing all required files, binaries, and container images:
@@ -71,7 +130,7 @@ cargoship create ./distro-defs -o ./build/
 Verify and configure OS-level prerequisites (such as kernel modules, firewall ports, `fapolicyd` rules, and `/etc/hosts`) across target machines using your cluster configuration inventory:
 
 ```bash
-cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 ```
 
 ### 3. Deploy or Upgrade a Cluster
@@ -79,7 +138,7 @@ cargoship prepare ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-co
 Bootstrap a new cluster or upgrade an existing one from the compiled package:
 
 ```bash
-cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml
+cargoship apply ./build/cargoship-distro-amd64.tar.zst --config ./cargoship-config.yaml --confirm
 ```
 
 ### 4. Fetch the Kubeconfig
@@ -95,8 +154,26 @@ cargoship kube-config --config ./cargoship-config.yaml
 Stop, uninstall, and completely purge the Kubernetes distro and its state from the target hosts:
 
 ```bash
-cargoship reset --config ./cargoship-config.yaml --distro rke2
+cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm
 ```
+
+### 6. Generate an Inventory from Ansible
+
+Translate an Ansible inventory you already maintain into a cargoship cluster inventory, taking each host's role from its Ansible groups:
+
+```bash
+cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
+```
+
+---
+
+## Ansible Integration
+
+Cargoship also ships as an Ansible collection, `colonel_byte.cargoship`, so the workflows above run as ordinary playbook tasks: `cargoship_apply`, `cargoship_prepare`, `cargoship_reset`, `cargoship_kube_config`, and `cargoship_engine_config_sync`, plus a `cluster` role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.
+
+*   [Running Cargoship as an Ansible Module](./docs/guides/ansible-module.md) - the modules, their parameters, check mode, and what `changed` means.
+*   [Generating an Inventory from Ansible](./docs/guides/ansible-inv.md) - the group and host-variable translation, usable with or without the modules.
+*   [The Ansible Container Image](./docs/guides/ansible-container.md) - `ghcr.io/colonel-byte/cargoship-ansible`, which carries the binary and the collection together.
 
 ---
 
@@ -110,13 +187,13 @@ Cargoship relies on strongly-typed YAML definitions to govern its operations:
 
 The corresponding JSON schemas are automatically generated from Go structs into `schema/`. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion.
 
-An inventory authoring guide is available in [docs/guides/setup-inv.md](./docs/guides/setup-inv.md).
+An inventory authoring guide is available in [Setting up an inventory](./docs/guides/setup-inv.md).
 
 ---
 
 ## Development and Build Workflows
 
-Task automation is built using **Mage**, with **Dagger** acting as the containerized execution engine.
+Task automation is built using **Mage**, which drives builds, tests and code generation with the host Go toolchain.
 
 ### Mage Automation
 
@@ -125,12 +202,12 @@ Mage handles tasks including local compilation, e2e test execution, schema updat
 *   `build/cargoship_*` (Release binaries)
 *   `docs/commands/*` (Cobra command references)
 *   `docs/phases/*` (Orchestration phase explanations)
+*   `docs/golang/*` (Go package reference, from godoc comments)
+*   `docs/schema/*` (Schema field reference, from the same struct reflection as `schema/*.json`)
+*   `docs/ansible/<collection>/module_*.md` and `docs/ansible/<collection>/role_*.md` (Ansible collection reference)
+*   `docs/index.md` and `docs/security.md` (this file and `.github/SECURITY.md`, with their links rewritten for the book)
 *   `docs/SUMMARY.md` (mdBook layout manifest)
 *   `schema/*.json` (YAML validations)
-
-### Dagger Builds
-
-Dagger coordinates hermetic, multi-platform compilation inside containerized Go environments. It ensures that compiled binaries are reproducible and decoupled from the developer's local compiler version.
 
 ### Continuous Integration (CI) and Releases
 
@@ -142,5 +219,5 @@ GitHub Actions workflows run lint checks, dependency validation, cross-compilati
 
 Cargoship draws major design and engineering inspiration from:
 
-*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) — For elegant SSH-based multi-node orchestration and configuration patterns.
-*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) — For air-gapped image and file packaging and offline-first design.
+*   [k0sproject/k0sctl](https://github.com/k0sproject/k0sctl) - For elegant SSH-based multi-node orchestration and configuration patterns.
+*   [zarf-dev/zarf](https://github.com/zarf-dev/zarf) - For air-gapped image and file packaging and offline-first design.

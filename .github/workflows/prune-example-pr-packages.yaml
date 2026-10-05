@@ -37,13 +37,10 @@ on:
         type: boolean
         default: false
 
-# packages: write is what authorizes the delete. The pull request runs publish these
-# packages with GITHUB_TOKEN, which makes this repository their admin by default, so no
-# personal access token is needed. pull-requests: read is for asking which pull requests
-# carry the publish-example label.
+# pull-requests: read is for asking which pull requests carry the publish-example label.
+# The delete itself needs packages: write, which the job asks for.
 permissions:
   contents: read
-  packages: write
   pull-requests: read
 
 concurrency:
@@ -58,6 +55,14 @@ jobs:
   # one package this will not find is one whose pull request had the label taken off after a
   # run had already published; delete that one by hand.
   prune-stale:
+    # packages: write is what authorizes the delete. The pull request runs publish these
+    # packages with GITHUB_TOKEN, which makes this repository their admin by default, so no
+    # personal access token is needed. The reads are restated because a job-level block
+    # replaces the top-level one rather than adding to it.
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -118,8 +123,9 @@ jobs:
               # slashes have to be percent encoded.
               encoded=${package//\//%2F}
 
-              # A flavor this pull request never published has no package, which is the normal
-              # case: a run publishes one flavor out of the eight.
+              # A flavor this pull request never published has no package, which is the
+              # normal case: a pull request run publishes one flavor out of the five, since
+              # its job is to exercise the workflow rather than to refresh the reference.
               if ! gh api "/orgs/$OWNER/packages/container/$encoded" >/dev/null 2>&1; then
                 continue
               fi

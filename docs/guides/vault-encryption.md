@@ -2,24 +2,26 @@
 
 This guide explains how Cargoship encrypts registry credentials in a cluster configuration with Ansible Vault, and how to read them back out. It covers the four fields Cargoship decrypts, the `cargoship vault` commands, and the password-rotation workflow.
 
+Ansible Vault is one of two formats Cargoship reads. The other is [age](https://github.com/FiloSottile/age), which encrypts to a set of public keys instead of a shared password -- see [age-encryption](age-encryption.md). The same commands write both, one configuration can hold both, and `vault rekey` moves a configuration from one to the other. Everything below describes the Ansible Vault side.
+
 ## What Cargoship Decrypts
 
 A cluster configuration holds registry credentials in plain sight. Encrypting them lets you commit the file.
 
 Cargoship decrypts exactly four fields per registry, and only these four:
 
-| Path | What it holds |
-| --- | --- |
-| `.spec.config.registries[N].auth.user` | Registry username |
-| `.spec.config.registries[N].auth.pass` | Registry password |
-| `.spec.config.registries[N].auth.token` | Registry token |
-| `.spec.config.registries[N].tls.ca` | Inline CA certificate |
+| Path                                    | What it holds         |
+| --------------------------------------- | --------------------- |
+| `.spec.config.registries[N].auth.user`  | Registry username     |
+| `.spec.config.registries[N].auth.pass`  | Registry password     |
+| `.spec.config.registries[N].auth.token` | Registry token        |
+| `.spec.config.registries[N].tls.ca`     | Inline CA certificate |
 
 Decryption happens during an apply, when Cargoship writes the engine's registry configuration. A field that does not carry the `$ANSIBLE_VAULT` header is passed through untouched, so a configuration can mix encrypted and plaintext values freely.
 
 A CA certificate is public and does not need encrypting. Cargoship accepts an encrypted one anyway, so that a document can be vaulted as a whole without the parts that did not have to be causing a failure.
 
-Encrypting any other field produces a document Cargoship can load but never unwraps: the ciphertext reaches the host verbatim, as if that were the literal value. `vault encrypt-path` warns when you ask for such a path, but does not refuse — see [Encrypting a Value Already in a File](#encrypting-a-value-already-in-a-file).
+Encrypting any other field produces a document Cargoship can load but never unwraps: the ciphertext reaches the host verbatim, as if that were the literal value. `vault encrypt-path` warns when you ask for such a path, but does not refuse - see [Encrypting a Value Already in a File](#encrypting-a-value-already-in-a-file).
 
 ## Supplying the Password
 
@@ -193,7 +195,15 @@ A field that is absent, empty, or encrypted already is skipped rather than treat
 
 This is what makes the ordinary credential rotation easy. Paste the new registry password into the file in the clear, leave the vaulted username alone, and run `encrypt-file`: it picks up the one value you changed and does not re-wrap the rest. Because Ansible Vault salts every encryption, re-wrapping them would change every one of those lines in the diff for no reason.
 
-`--dry-run` prints the resulting document to stdout and leaves the file alone. `--force` re-encrypts values that are ciphertext already, wrapping them a second time -- which is almost never what you want, since an apply unwraps only one layer.
+A credential encrypted with [age](age-encryption.md) is skipped too, since this command never moves a value between the two formats. That skip is reported rather than passed over in silence:
+
+```
+WRN left this credential as it was: it is age-encrypted, and encrypt-file does not move a
+    credential between formats; run 'cargoship vault rekey' with an age identity and the new
+    vault password to move it onto Ansible Vault  file=./cluster.yaml path=$.spec.config.registries[0].auth.pass
+```
+
+`--dry-run` prints the resulting document to stdout and leaves the file alone; warnings go to stderr, so the document it prints stays clean. `--force` re-encrypts values that are ciphertext already, wrapping them a second time -- which is almost never what you want, since an apply unwraps only one layer.
 
 ### Decrypting a Whole Configuration
 
@@ -249,7 +259,7 @@ Merge keys work the same way. A registry that merges a shared block reads whatev
 
 A merge can add keys to a block but never override one the anchor already sets -- YAML forbids the same key twice in a mapping, and the configuration fails to load before cargoship sees it -- so put in a shared block only what every user of it wants, and write what differs beside the merge.
 
-`src/test/e2e/noncluster/testdata/inventory-anchors.yaml` is a complete inventory built this way, kept as a worked example and exercised by the end-to-end suite.
+`test/e2e/noncluster/testdata/inventory-anchors.yaml` is a complete inventory built this way, kept as a worked example and exercised by the end-to-end suite.
 
 ## Rotating the Vault Password
 

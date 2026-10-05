@@ -1,0 +1,42 @@
+---
+# The k3d cluster the bundle-order walk runs on: this one has a StorageClass of its own.
+#
+# It is the sibling of k3d-config.yaml and differs from it in exactly one way: k3s local-storage is
+# not disabled, so the cluster comes up with the local-path StorageClass k3s ships. That is what
+# lets a walk begin with `zarf init` -- zarf's registry claims a 20Gi PVC during the seed phase, so
+# on a cluster with no StorageClass nothing zarf does can come first. See the header of
+# k3d-config.yaml for the walk that cluster takes instead.
+#
+# Everything else is the same, including the k3s image pin, the one server and one agent, the
+# /tmp/k3d volume, and the disabled traefik. The name differs so that both clusters can exist at
+# once.
+#
+# Nothing here is contacted by the suite directly. k3d reads this file; the tests talk to the
+# cluster it produces.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: zarf-local-storage
+servers: 1
+agents: 1
+# renovate: datasource=docker depName=docker.io/rancher/k3s versioning=regex:^v?(?<major>\d+)(\.(?<minor>\d+))?(\.(?<patch>\d+))-k3s?((?<build>\d+))$
+image: docker.io/rancher/k3s:v1.37.1-k3s1
+volumes:
+  - volume: /tmp/k3d:/var/lib/local-path-provisioner
+    nodeFilters:
+      - server:*
+      - agent:*
+options:
+  k3d:
+    disableImageVolume: false
+  k3s:
+    extraArgs:
+      - arg: "--disable=traefik"
+        nodeFilters:
+          - server:*
+      - arg: "--disable=traefik-crd"
+        nodeFilters:
+          - server:*
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

@@ -1,0 +1,12 @@
+/coverage.txt
+/gomarkdoc
+/bin/
+README-test.md
+
+# editor and IDE paraphernalia
+.vscode/*
+.idea
+*.iml
+*.swp
+*.swo
+*~

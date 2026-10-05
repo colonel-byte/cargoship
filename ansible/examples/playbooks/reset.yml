@@ -1,0 +1,46 @@
+---
+# Remove the cluster from the fleet.
+#
+#   ansible-playbook -i ../inventories/fleet reset.yml -e reset_confirmed=bubbles
+#
+# There is no package here: the distro to remove is named directly, because the thing being
+# removed is what is on the nodes rather than what is in an artifact.
+#
+# The guard below is not ceremony. A module cannot ask for confirmation -- there is no terminal on
+# the other end, and the task itself is the confirmation -- so the only thing standing between a
+# mistyped inventory and a destroyed cluster is a check the playbook makes. Naming the cluster on
+# the command line means the name has to be typed by whoever runs it.
+- name: Remove the cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    cluster_name: bubbles
+    reset_confirmed: ""
+
+  tasks:
+    - name: Check that the cluster to remove was named
+      ansible.builtin.assert:
+        that:
+          - reset_confirmed == cluster_name
+        fail_msg: >-
+          This removes the {{ cluster_name }} cluster from every host in the inventory.
+          Re-run with -e reset_confirmed={{ cluster_name }} if that is what you meant.
+
+    - name: Reset the fleet
+      ansible.builtin.include_role:
+        name: colonel_byte.cargoship.cluster
+      vars:
+        cargoship_action: reset
+        cargoship_cluster:
+          name: "{{ cluster_name }}"
+          loadbalancer: bubbles-kc.test.com
+        cargoship_args:
+          distro: rke2
+
+          # Undo the host changes the install made. Left unset they are left alone, which is what
+          # you want when the nodes are going to be rebuilt anyway.
+          hosts: true
+          firewall: true
+        cargoship_show_result: true

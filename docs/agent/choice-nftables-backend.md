@@ -1,6 +1,6 @@
 # Why the nftables backend shells out to `nft` and owns a single table
 
-Cargoship's firewall support (`cargoship apply --firewall`) renders a backend-neutral `firewall.Plan` onto whichever firewall a node runs. `firewalld` and `ufw` cover Enterprise Linux and Debian-family hosts that use a front end. The `nftables` backend (`src/pkg/firewall/nftables.go`) covers the rest: Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all. Several design choices there are not obvious from the code, and each had an alternative that was considered and rejected.
+Cargoship's firewall support (`cargoship apply --firewall`) renders a backend-neutral `firewall.Plan` onto whichever firewall a node runs. `firewalld` and `ufw` cover Enterprise Linux and Debian-family hosts that use a front end. The `nftables` backend (`pkg/firewall/nftables.go`) covers the rest: Debian and Arch nodes configured by hand, and the minimal or immutable images such as CoreOS and Flatcar that ship no firewall front end at all. Several design choices there are not obvious from the code, and each had an alternative that was considered and rejected.
 
 ## Shelling out to `nft` rather than talking netlink
 
@@ -34,7 +34,7 @@ There is a consequence worth stating plainly, because it makes the nftables back
 
 ## Detecting on the service or a conf file, not on a non-empty ruleset
 
-`Detect` requires `nft` to exist, and then either the `nftables` service to be running or one of `/etc/nftables.conf` and `/etc/sysconfig/nftables.conf` to be present. Probing both paths rather than branching on the distro type keeps the check independent of `src/types/os`, since the split is Debian/Arch/Alpine versus Enterprise Linux/SUSE and does not line up with anything else cargoship distinguishes hosts by.
+`Detect` requires `nft` to exist, and then either the `nftables` service to be running or one of `/etc/nftables.conf` and `/etc/sysconfig/nftables.conf` to be present. Probing both paths rather than branching on the distro type keeps the check independent of `types/os`, since the split is Debian/Arch/Alpine versus Enterprise Linux/SUSE and does not line up with anything else cargoship distinguishes hosts by.
 
 The tempting alternative -- treat a non-empty ruleset as evidence of a host firewall -- was rejected because it is true on every node of a running cluster. Kube-proxy and the CNI populate the ruleset on hosts whose operator never configured a firewall at all, and claiming those hosts would mean applying rules where the inventory's author expected none.
 
@@ -42,7 +42,7 @@ The gap that leaves is real and deliberate: a CoreOS or Flatcar node with `nft` 
 
 ## Matching last
 
-The backend order in `src/pkg/firewall/firewall.go` is firewalld, ufw, nftables. firewalld and ufw are both front ends onto nftables, so a host running either would satisfy the nftables `Detect` as well. The front end is the one an operator expects cargoship to configure -- rules written underneath it would be invisible to `firewall-cmd` and `ufw status`, and a front-end reload could tear them out. Putting nftables last makes it the fallback it is meant to be.
+The backend order in `pkg/firewall/firewall.go` is firewalld, ufw, nftables. firewalld and ufw are both front ends onto nftables, so a host running either would satisfy the nftables `Detect` as well. The front end is the one an operator expects cargoship to configure -- rules written underneath it would be invisible to `firewall-cmd` and `ufw status`, and a front-end reload could tear them out. Putting nftables last makes it the fallback it is meant to be.
 
 ## Persisting with an `include` line
 

@@ -2,7 +2,17 @@
 
 ## cargoship create
 
-Creates a Cargoship Package from a given directory or the current director
+Creates a Cargoship Package from a given directory or the current directory
+
+### Synopsis
+
+Builds an offline distro package from a definition directory -- a distro.yaml and whatever sits beside it -- producing one compressed archive that carries everything a cluster needs: the engine's packages and binaries, the OCI images, the configuration templates, and the checksums over all of them.
+
+The archive is fat on purpose. One package holds every architecture it targets, and the host's own architecture selects what gets uploaded at apply time, so a mixed fleet installs from a single file.
+
+Everything the definition declares is fetched while this runs, which is the one step that needs a network. --registry-override and --file-override redirect those fetches to an internal mirror or to files staged on disk ahead of time, which is how a package is built where there is no route to the upstream hosts. A declared shasum is enforced either way.
+
+--signing-key signs the package as it is built. --reproducible pins the recorded build time so that identical inputs produce a byte-identical archive.
 
 ```
 cargoship create [Dir] [flags]
@@ -20,6 +30,12 @@ $ cargoship create ./distro-defs -o ./build/
 # Pull images through an internal mirror instead of their upstream registry
 $ cargoship create ./distro-defs --registry-override docker.io=mirror.example.com
 
+# Download files through an internal mirror instead of their upstream host
+$ cargoship create ./distro-defs --file-override https://rpm.rancher.io=https://mirror.example.com/rpm-rancher
+
+# Build from files staged on disk ahead of time, with no network at all
+$ cargoship create ./distro-defs --file-override https://rpm.rancher.io=/srv/staged/rpm-rancher
+
 # Sign the package as it is built, without prompting for the key password
 $ cargoship create ./distro-defs --signing-key ./private-key.pem --confirm
 
@@ -32,15 +48,17 @@ $ cargoship create ./distro-defs --reproducible
 ```
   -a, --architecture string         Architecture for OCI images and Zarf packages
   -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
+      --file-override strings       Redirect the file downloads a distro definition declares, as SOURCE=TARGET pairs where SOURCE is a URL prefix and TARGET is either a replacement URL prefix or a local directory of pre-staged files. Repeatable, and comma-separated values are accepted. When several sources match, the longest wins. The declared shasum is still enforced, and a file with no shasum is refused rather than fetched unverified from a mirror.
   -h, --help                        help for create
       --insecure-skip-tls-verify    Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf distro package (default ".")
+  -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Cargoship distro package. (default ".")
       --plain-http                  Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
       --reproducible                Pin the recorded package build time to a fixed value instead of the current time, so identical inputs produce a byte-identical package.
       --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string     Password to the private key used for signing packages
+      --tag string                  The tag or version to override the package metadata version with.
       --tmpdir string               Specify the temporary directory to use for intermediate files (default "/tmp")
       --zarf-cache string           Specify the location of the Zarf cache directory (default "$HOME/.cache/cargoship")
 ```
