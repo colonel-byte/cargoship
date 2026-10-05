@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: Allen Conlon
+  description: Inspect a Zarf package definition and expose structured metadata facts
+  license: Apache-2.0
+  min_ansible_version: "2.15.0"
+dependencies: []

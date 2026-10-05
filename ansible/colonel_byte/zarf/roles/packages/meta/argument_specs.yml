@@ -1,0 +1,24 @@
+---
+# The role's documented interface.
+argument_specs:
+  main:
+    short_description: List all Zarf packages deployed to a cluster into an Ansible fact
+    description:
+      - "Queries the cluster via C(zarf package list) and sets the resulting package list as the C(zarf_packages) fact."
+      - "Every task carries C(run_once: true) and delegates to C(zarf_delegate_to)."
+    options:
+      zarf_kubeconfig:
+        type: str
+        default: ""
+        description:
+          - "Path to the kubeconfig file used to reach the cluster. Left empty, uses default kubeconfig."
+      zarf_delegate_to:
+        type: str
+        default: localhost
+        description:
+          - "The node on which to execute the zarf package list query."
+      zarf_binary:
+        type: str
+        default: zarf
+        description:
+          - "Path to the C(zarf) binary on the delegated host."

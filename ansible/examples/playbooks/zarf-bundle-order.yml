@@ -1,0 +1,209 @@
+---
+# Deploy or converge the rook-ceph-init uds-bundle packages with drift detection and
+# automatic separation between day-1 bootstrapping and day-2 maintenance/upgrades.
+#
+# It is modeled on
+# https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-ceph/uds-bundle.yaml.
+#
+# Target package names, versions, and flavors are inspected directly from the staged
+# package definitions via the `colonel_byte.zarf.package_inspect` role.
+#
+# Two paths are supported automatically:
+#
+# Path 1: Initial Bootstrap (Cluster has not been initialised yet, installed_init_version == '')
+#   - Step 1: zarf-init with seed components (zarf-injector, zarf-seed-registry)
+#   - Step 2: csi-rook-ceph with seed charts (operator-images, cluster-images, operator-seed-chart, cluster-seed-chart, registry-bucket)
+#   - Step 3: zarf-init with full cluster components (zarf-registry, zarf-agent, git-server)
+#   - Step 4: csi-rook-ceph with full charts (operator-images, cluster-images, operator-chart, cluster-chart, registry-bucket)
+#
+# Path 2: Day-2 Convergence & Upgrade (Cluster is already initialised, installed_init_version != '')
+#   - Seed phases are skipped completely.
+#   - If zarf-init drifts: runs zarf_init with full components (zarf-injector, zarf-registry, zarf-agent, git-server)
+#   - If csi-rook-ceph drifts: runs zarf_package_deploy with full charts (operator-images, cluster-images, operator-chart, cluster-chart, registry-bucket)
+- name: Converge rook-ceph-init uds-bundle packages with drift detection
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    zarf_kubeconfig: /etc/rancher/rke2/rke2.yaml
+    zarf_init_package: /srv/staging/zarf-init-amd64-v0.87.0-rook.tar.zst
+    zarf_storage_package: /srv/staging/zarf-package-csi-rook-ceph-amd64-v1.20.7-upstream.tar.zst
+    zarf_public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+    zarf_timeout: 15m
+
+  tasks:
+    # Inspect target package definitions directly
+    - name: Inspect target init package definition
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.package_inspect
+      vars:
+        zarf_package: "{{ zarf_init_package }}"
+        zarf_public_key: "{{ zarf_public_key }}"
+
+    - name: Record target init package attributes
+      ansible.builtin.set_fact:
+        # Note: zarf init package is tracked on cluster under 'init'
+        zarf_init_package_name: init
+        zarf_init_target_version: "{{ zarf_package_version }}"
+        zarf_init_flavor: "{{ zarf_package_flavor }}"
+      run_once: true
+
+    - name: Inspect target storage package definition
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.package_inspect
+      vars:
+        zarf_package: "{{ zarf_storage_package }}"
+        zarf_public_key: "{{ zarf_public_key }}"
+
+    - name: Record target storage package attributes
+      ansible.builtin.set_fact:
+        zarf_storage_package_name: "{{ zarf_package_name }}"
+        zarf_storage_target_version: "{{ zarf_package_version }}"
+        zarf_storage_flavor: "{{ zarf_package_flavor }}"
+      run_once: true
+
+    # Query currently installed packages on the cluster
+    - name: Query installed Zarf packages on the cluster
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.packages
+      vars:
+        zarf_kubeconfig: "{{ zarf_kubeconfig }}"
+
+    - name: Determine current installed package versions and bootstrap state
+      ansible.builtin.set_fact:
+        installed_init_version: "{{ (zarf_packages | selectattr('package', 'equalto', zarf_init_package_name) | map(attribute='version') | list | first) | default('') }}"
+        installed_storage_version: "{{ (zarf_packages | selectattr('package', 'equalto', zarf_storage_package_name) | map(attribute='version') | list | first) | default('') }}"
+      run_once: true
+
+    - name: Determine execution mode
+      ansible.builtin.set_fact:
+        is_bootstrap: "{{ installed_init_version | length == 0 }}"
+        init_drift: "{{ installed_init_version != zarf_init_target_version }}"
+        storage_drift: "{{ installed_storage_version != zarf_storage_target_version }}"
+      run_once: true
+
+    - name: Report status and execution path
+      ansible.builtin.debug:
+        msg:
+          mode: "{{ 'Bootstrap (Initial Setup)' if is_bootstrap else 'Maintenance / Convergence' }}"
+          init:
+            name: "{{ zarf_init_package_name }}"
+            installed: "{{ installed_init_version | default('none', true) }}"
+            target: "{{ zarf_init_target_version }}"
+            flavor: "{{ zarf_init_flavor }}"
+            drift: "{{ init_drift }}"
+          storage:
+            name: "{{ zarf_storage_package_name }}"
+            installed: "{{ installed_storage_version | default('none', true) }}"
+            target: "{{ zarf_storage_target_version }}"
+            flavor: "{{ zarf_storage_flavor }}"
+            drift: "{{ storage_drift }}"
+
+    # =========================================================================
+    # Path 1: Initial Bootstrap (Run only once on a fresh cluster)
+    # =========================================================================
+
+    - name: "[Bootstrap] Step 1: Initialise seed registry and injector"
+      colonel_byte.zarf.zarf_init:
+        init_package: "{{ zarf_init_package }}"
+        components: zarf-injector,zarf-seed-registry
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      when: is_bootstrap
+
+    - name: "[Bootstrap] Step 2: Deploy rook-ceph seed charts"
+      colonel_byte.zarf.zarf_package_deploy:
+        package: "{{ zarf_storage_package }}"
+        components: operator-images,cluster-images,operator-seed-chart,cluster-seed-chart,registry-bucket
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        take_ownership: true
+        force_conflicts: true
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      when: is_bootstrap
+
+    - name: "[Bootstrap] Step 3: Initialise cluster registry, agent, and git server"
+      colonel_byte.zarf.zarf_init:
+        init_package: "{{ zarf_init_package }}"
+        components: zarf-registry,zarf-agent,git-server
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        take_ownership: true
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      when: is_bootstrap
+
+    - name: "[Bootstrap] Step 4: Deploy full rook-ceph charts"
+      colonel_byte.zarf.zarf_package_deploy:
+        package: "{{ zarf_storage_package }}"
+        components: operator-images,cluster-images,operator-chart,cluster-chart,registry-bucket
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        take_ownership: true
+        force_conflicts: true
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      when: is_bootstrap
+
+    # =========================================================================
+    # Path 2: Day-2 Convergence & Upgrade (Cluster already initialised)
+    # =========================================================================
+
+    - name: "[Day-2] Re-converge / upgrade zarf-init"
+      colonel_byte.zarf.zarf_init:
+        init_package: "{{ zarf_init_package }}"
+        components: zarf-injector,zarf-registry,zarf-agent,git-server
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        take_ownership: true
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      when:
+        - not is_bootstrap
+        - init_drift
+
+    - name: "[Day-2] Re-converge / upgrade rook-ceph storage provider"
+      colonel_byte.zarf.zarf_package_deploy:
+        package: "{{ zarf_storage_package }}"
+        components: operator-images,cluster-images,operator-chart,cluster-chart,registry-bucket
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        take_ownership: true
+        force_conflicts: true
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      when:
+        - not is_bootstrap
+        - storage_drift
+
+    # =========================================================================
+    # Post-run State Verification (Runs if any changes occurred)
+    # =========================================================================
+
+    - name: Load and verify final cluster state
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.state
+      vars:
+        zarf_kubeconfig: "{{ zarf_kubeconfig }}"
+      when: is_bootstrap or init_drift or storage_drift
+
+    - name: Report post-convergence cluster state
+      ansible.builtin.debug:
+        msg:
+          distro: "{{ zarf_state.distro | default('unknown') }}"
+          storageClass: "{{ zarf_state.storageClass | default('none') }}"
+          registryMode: "{{ zarf_state.registryInfo.registryMode | default('unknown') }}"
+      when: zarf_state is defined

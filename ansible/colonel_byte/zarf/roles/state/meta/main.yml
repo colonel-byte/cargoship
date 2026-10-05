@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: Allen Conlon
+  description: Fetch and parse the Zarf state secret from a cluster into the zarf_state fact
+  license: Apache-2.0
+  min_ansible_version: "2.15.0"
+dependencies: []

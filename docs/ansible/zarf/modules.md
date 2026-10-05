@@ -6,6 +6,9 @@ Two modules ship, one per zarf command a convergence run needs. Package creation
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [`zarf_init`](module_init.md)                            | Initialises a cluster: the injector, the seed registry, the registry, the agent. |
 | [`zarf_package_deploy`](module_package_deploy.md)        | Puts a package on a cluster, from a path, an `oci://` reference, or an `https://` URL. |
+| [`zarf_package_info`](module_package_info.md)            | Queries installed packages via `zarf package list`. |
+| [`zarf_package_inspect`](module_package_inspect.md)      | Inspects and parses the YAML definition of a Zarf package. |
+| [`zarf_state_info`](module_state_info.md)                | Retrieves and parses the cluster's `zarf-state` Secret via `zarf tools kubectl`. |
 
 ## The surfaces differ because the commands do
 

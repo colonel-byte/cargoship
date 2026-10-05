@@ -1,0 +1,13 @@
+---
+- name: Query installed zarf packages
+  colonel_byte.zarf.zarf_package_info:
+    kubeconfig: "{{ zarf_kubeconfig | default(omit) if (zarf_kubeconfig | length > 0) else omit }}"
+    zarf_binary: "{{ zarf_binary }}"
+  delegate_to: "{{ zarf_delegate_to }}"
+  run_once: true
+  register: _zarf_packages_fetch
+
+- name: Set zarf_packages fact
+  ansible.builtin.set_fact:
+    zarf_packages: "{{ _zarf_packages_fetch.packages }}"
+  run_once: true
