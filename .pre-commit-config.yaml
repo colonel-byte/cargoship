@@ -66,6 +66,20 @@ repos:
       - id: golangci-lint-config-verify
         language_version: "1.27.0"
         exclude: vendor/.*
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      # Errors only, and deliberately not the formatter. All of this repository's Python is Ansible
+      # action plugins, written against ansible-core's plugin API: a style rule would have opinions
+      # about that API, and a formatter would rewrite files whose shape is dictated by it. What is
+      # wanted is the class of mistake nothing else here catches -- an unused import, a name that
+      # does not exist, an assignment nothing reads -- which is pyflakes (F) plus ruff's syntax and
+      # IO errors (E9).
+      - id: ruff-check
+        args:
+          - --select=F,E9
+          - --target-version=py39
+        exclude: vendor/.*
   - repo: https://github.com/hadolint/hadolint
     rev: v2.15.1
     hooks:
