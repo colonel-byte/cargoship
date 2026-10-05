@@ -1,12 +1,12 @@
 namespace: colonel_byte
 name: zarf
-version: 0.0.1
+version: 0.30.0
 readme: README.md
 authors:
   - Allen Conlon <software@conlon.dev>
 description: >-
-  Initialise an air-gapped cluster with zarf, driven from an Ansible playbook.
-  A proof of ZEP-0072.
+  Initialise an air-gapped cluster with zarf, driven from an Ansible playbook. A
+  proof of ZEP-0072.
 license:
   - Apache-2.0
 tags:

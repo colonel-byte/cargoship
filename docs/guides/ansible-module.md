@@ -37,9 +37,9 @@ Installing from a tarball or a checkout instead, install the collection, then po
 <!-- x-release-please-start-version -->
 ```sh
 cosign verify-blob --key cosign.pub \
-  --bundle colonel_byte-cargoship-0.29.0.tar.gz.sigstore.json \
-  colonel_byte-cargoship-0.29.0.tar.gz
-ansible-galaxy collection install colonel_byte-cargoship-0.29.0.tar.gz
+  --bundle colonel_byte-cargoship-0.30.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.30.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.30.0.tar.gz
 ./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
 ```
 <!-- x-release-please-end-version -->
