@@ -1,0 +1,123 @@
+---
+# What colonel_byte.zarf.zarf_package_inspect reports, and when it refuses.
+#
+# The package is built from testdata/zarf-inspect-fixture/zarf.yaml by the Go test, which passes its
+# path as zarf_package. It is a real tarball inspected by a real zarf, so this play needs no stub --
+# a package on disk is a complete input, and only deploying one needs a cluster.
+#
+# The package is unsigned, which is what makes the verify cases testable: zarf's own default is
+# if-possible, so an unsigned package inspects cleanly unless something says otherwise. See
+# docs/agent/choice-zarf-ansible-module.md for why --verify has to be rendered as one word.
+#
+# Nothing here is contacted.
+- name: zarf_package_inspect parses a definition and honours verify
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Inspect the package with no verify parameter
+      colonel_byte.zarf.zarf_package_inspect:
+        package: "{{ zarf_package }}"
+        zarf_binary: "{{ zarf_binary }}"
+      register: plain
+
+    - name: An unsigned package inspects with verify unset, and the definition comes back parsed
+      # That the task above succeeded is itself the assertion about verify: the module is a
+      # passthrough for the parameter, so leaving it unset leaves zarf's own if-possible default
+      # alone, and if-possible accepts a package with no signature. The role is where the policy
+      # lives, and the two role cases below are what hold the two apart.
+      ansible.builtin.assert:
+        that:
+          - plain is not failed
+          - plain.changed is false
+          - plain.package_name == 'inspect-fixture'
+          - plain.package_version == '1.2.3'
+          - plain.definition.kind == 'ZarfPackageConfig'
+          - plain.definition.metadata.name == 'inspect-fixture'
+          - (plain.definition.components | map(attribute='name') | list) == ['a-file']
+          - plain.definition.build.architecture | length > 0
+          - plain.package_flavor == ''
+        success_msg: ASSERTED an unsigned package inspects with verify unset, and parses
+        fail_msg: the inspected definition is not the fixture that was built
+
+    - name: Inspect the package with verify never
+      colonel_byte.zarf.zarf_package_inspect:
+        package: "{{ zarf_package }}"
+        zarf_binary: "{{ zarf_binary }}"
+        verify: never
+      register: never
+
+    - name: verify never accepts it too
+      ansible.builtin.assert:
+        that:
+          - never.package_name == 'inspect-fixture'
+          - never.definition == plain.definition
+        success_msg: ASSERTED verify never accepts an unsigned package
+        fail_msg: verify never did not accept the unsigned package
+
+    - name: Inspect the package with verify always
+      colonel_byte.zarf.zarf_package_inspect:
+        package: "{{ zarf_package }}"
+        zarf_binary: "{{ zarf_binary }}"
+        verify: always
+      register: always
+      ignore_errors: true
+
+    - name: verify always refuses an unsigned package, and says why
+      # The flag reached zarf and zarf acted on it. A module that rendered "--verify always" as two
+      # words would fail here too, but with zarf rejecting the command for a surplus positional
+      # argument rather than with this message -- which is why the message is part of the assertion.
+      ansible.builtin.assert:
+        that:
+          - always is failed
+          - "'--verify=always' in always.msg"
+          - "'package is not signed' in always.msg"
+        success_msg: ASSERTED verify always refuses an unsigned package
+        fail_msg: verify always did not refuse the unsigned package for the expected reason
+
+    - name: The package_inspect role with no key leaves verification alone
+      # inspect_public_key is deliberately not named here. The key is passed into this play under
+      # that name rather than as zarf_public_key, because an extra-var called zarf_public_key would
+      # be the highest-precedence value of that name and would reach this include too -- making the
+      # role require a signature in the one case that is meant to show it not requiring one.
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.package_inspect
+      vars:
+        zarf_package: "{{ zarf_package }}"
+
+    - name: The role set every fact its page documents
+      ansible.builtin.assert:
+        that:
+          - zarf_package_name == 'inspect-fixture'
+          - zarf_package_version == '1.2.3'
+          - zarf_package_flavor == ''
+          - zarf_package_definition == plain.definition
+        success_msg: ASSERTED the package_inspect role sets the facts it documents
+        fail_msg: the package_inspect role did not set the facts its reference page documents
+
+    - name: The package_inspect role with a key requires a signature
+      # The role is stricter than the module on purpose: naming a key and then accepting an
+      # unsigned package is the opposite of what naming the key asked for. The failure is rescued
+      # rather than ignored, because the task that fails is inside the role.
+      block:
+        - name: Include the role with a public key and no zarf_verify
+          ansible.builtin.include_role:
+            name: colonel_byte.zarf.package_inspect
+          vars:
+            zarf_package: "{{ zarf_package }}"
+            zarf_public_key: "{{ inspect_public_key }}"
+
+        - name: The role should not have got this far
+          ansible.builtin.fail:
+            msg: >-
+              the package_inspect role accepted an unsigned package while zarf_public_key named a
+              key, so the role's implied verify=always is not being applied
+      rescue:
+        - name: The role refused it for the right reason
+          ansible.builtin.assert:
+            that:
+              - "'--verify=always' in ansible_failed_result.msg"
+              - "'not signed' in ansible_failed_result.msg"
+            success_msg: ASSERTED a key with no zarf_verify requires a signature
+            fail_msg: the role failed, but not because it required a signature

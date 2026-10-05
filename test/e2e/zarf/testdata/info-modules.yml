@@ -1,0 +1,212 @@
+---
+# The three read-only modules and the three roles that wrap them, against a cluster the walk has
+# already initialised.
+#
+# They are run after a walk rather than on a cluster of their own, because what they read is what a
+# walk produced: `zarf package list` answers with the packages it deployed, and the zarf-state
+# Secret exists because `zarf init` wrote it. A cluster nothing had touched would exercise the
+# failure paths only.
+#
+# The redaction in zarf_state_info is held against a recorded state by
+# test/e2e/noncluster/17_zarf_state_redaction_test.go, which needs no cluster. What is left for here
+# is that the redaction holds over a state zarf actually wrote, whose field set is zarf's rather
+# than a fixture's, and that the two package modules reach a real cluster at all.
+#
+# Assertions live in this file rather than in Go wherever they are about the returned data: the Go
+# side counts the tasks that reported passing and reads the recorded results. Every assert task
+# says ASSERTED on success, which is what that count reads.
+- name: Read a cluster with the read-only zarf modules
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    # The walk deployed both. The init package is tracked on the cluster under the name "init"
+    # rather than under its own metadata name.
+    expected_packages:
+      - init
+      - csi-local-path-provider
+
+    # The credentials zarf v0.85.0 writes into the zarf-state Secret, by the path each sits at.
+    # Named rather than counted: a count passes when the wrong ones were withheld.
+    expected_redacted:
+      - agentInfo.tls.key
+      - agentTLS.key
+      - artifactServer.pushPassword
+      - gitServer.pullPassword
+      - gitServer.pushPassword
+      - registryInfo.pullPassword
+      - registryInfo.pushPassword
+      - registryInfo.secret
+
+  tasks:
+    # ---------------------------------------------------------------- zarf_package_info
+    - name: List the packages the walk deployed
+      colonel_byte.zarf.zarf_package_info:
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        zarf_binary: "{{ zarf_binary }}"
+      delegate_to: localhost
+      run_once: true
+      register: listed
+
+    - name: Record what the package list reported
+      ansible.builtin.copy:
+        content: "{{ listed | to_json }}"
+        dest: "{{ zarf_result_dir }}/info-packages.json"
+        mode: "0600"
+
+    - name: Both deployed packages are listed, with a version apiece
+      ansible.builtin.assert:
+        that:
+          - listed.changed is false
+          - (listed.packages | map(attribute='package') | list | sort) == (expected_packages | sort)
+          - listed.packages | rejectattr('version', 'defined') | list | length == 0
+          - listed.packages | selectattr('version', 'equalto', '') | list | length == 0
+        success_msg: ASSERTED zarf_package_info lists what the walk deployed
+        fail_msg: the package list is not the two packages the walk deployed
+
+    # ---------------------------------------------------------------- zarf_package_inspect
+    - name: Inspect the staged storage package, requiring its signature
+      colonel_byte.zarf.zarf_package_inspect:
+        package: "{{ zarf_storage_package }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        zarf_binary: "{{ zarf_binary }}"
+      delegate_to: localhost
+      run_once: true
+      register: inspected_file
+
+    - name: The signed package inspects under verify=always
+      # The deploy steps of both walks already pass verify: always for this package, so a failure
+      # here is the flag being rendered wrongly rather than the package being unsigned. --verify
+      # takes its value with an "=" or not at all; see docs/agent/choice-zarf-ansible-module.md.
+      ansible.builtin.assert:
+        that:
+          - inspected_file.package_name == 'csi-local-path-provider'
+          - inspected_file.package_version | length > 0
+          - inspected_file.definition.kind == 'ZarfPackageConfig'
+          - inspected_file.definition.components | length > 0
+        success_msg: ASSERTED zarf_package_inspect verifies and parses a signed tarball
+        fail_msg: the signed storage package did not inspect under verify=always
+
+    - name: Inspect the package the cluster has deployed, by name
+      # The other source zarf package inspect takes: not a file but a package the cluster holds,
+      # read back out of it through the kubeconfig.
+      colonel_byte.zarf.zarf_package_inspect:
+        package: csi-local-path-provider
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        zarf_binary: "{{ zarf_binary }}"
+      delegate_to: localhost
+      run_once: true
+      register: inspected_cluster
+
+    - name: Record both inspections
+      ansible.builtin.copy:
+        content: "{{ {'file': inspected_file, 'cluster': inspected_cluster} | to_json }}"
+        dest: "{{ zarf_result_dir }}/info-inspect.json"
+        mode: "0600"
+
+    - name: The deployed package inspects to the same definition as the tarball
+      ansible.builtin.assert:
+        that:
+          - inspected_cluster.package_name == inspected_file.package_name
+          - inspected_cluster.package_version == inspected_file.package_version
+          - (inspected_cluster.definition.components | map(attribute='name') | list)
+            == (inspected_file.definition.components | map(attribute='name') | list)
+        success_msg: ASSERTED zarf_package_inspect reads a deployed package through the kubeconfig
+        fail_msg: the deployed package inspected to something other than the tarball it came from
+
+    # ---------------------------------------------------------------- zarf_state_info
+    - name: Read the state zarf wrote
+      colonel_byte.zarf.zarf_state_info:
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        zarf_binary: "{{ zarf_binary }}"
+      delegate_to: localhost
+      run_once: true
+      register: state_result
+
+    - name: Record the redacted state
+      # Recording the redacted result and not the full one: this file lands in a temporary
+      # directory the Go suite reads, and a credential has no business being written to it.
+      ansible.builtin.copy:
+        content: "{{ state_result | to_json }}"
+        dest: "{{ zarf_result_dir }}/info-state.json"
+        mode: "0600"
+
+    - name: The state zarf wrote carries exactly the credentials the module withholds
+      # The fixture-based test asserts this over a recorded document. This asserts it over the real
+      # one, which is the case that catches a zarf release adding a credential under a new name.
+      ansible.builtin.assert:
+        that:
+          - state_result.redacted == expected_redacted
+          - "'pushPassword' not in state_result.state.registryInfo"
+          - "'secret' not in state_result.state.registryInfo"
+          - "'key' not in state_result.state.agentInfo.tls"
+        success_msg: ASSERTED zarf_state_info withholds the credentials in a real zarf-state
+        fail_msg: the real zarf-state carries a credential the module did not withhold
+
+    - name: The state is the state of the cluster the walk built
+      ansible.builtin.assert:
+        that:
+          - state_result.state.registryInfo.registryMode == 'proxy'
+          - state_result.state.distro | length > 0
+          - state_result.state.storageClass | length > 0
+          - state_result.state.agentInfo.tls.ca | length > 0
+          - state_result.state.agentInfo.tls.cert | length > 0
+        success_msg: ASSERTED the redacted state still describes the cluster
+        fail_msg: the redacted state lost something the cluster needs to be described by
+
+    - name: Read the state again, asking for the credentials
+      colonel_byte.zarf.zarf_state_info:
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        zarf_binary: "{{ zarf_binary }}"
+        include_credentials: true
+      delegate_to: localhost
+      run_once: true
+      register: full_state
+
+    - name: Opting in returns the credentials zarf generated
+      # Not recorded anywhere: the assertion is that they are non-empty, which needs no transcript.
+      no_log: true
+      ansible.builtin.assert:
+        that:
+          - full_state.redacted == []
+          - full_state.state.registryInfo.pushPassword | length > 0
+          - full_state.state.registryInfo.pullPassword | length > 0
+          - full_state.state.registryInfo.secret | length > 0
+          - full_state.state.gitServer.pushPassword | length > 0
+          - full_state.state.agentInfo.tls.key | length > 0
+        success_msg: ASSERTED include_credentials returns what zarf generated
+        fail_msg: include_credentials did not return the credentials zarf wrote
+
+    # ---------------------------------------------------------------- the roles
+    - name: Load the packages fact through the packages role
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.packages
+
+    - name: Load the state fact through the state role
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.state
+
+    - name: Inspect the storage package through the package_inspect role
+      # No zarf_verify, with a key named: the role requires a signature where the module would have
+      # accepted an unsigned package. The package is signed, so this succeeds -- and the sibling
+      # assertion that an unsigned package fails lives in the unit-level tests, because provoking
+      # it here would mean shipping an unsigned package into this suite.
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.package_inspect
+      vars:
+        zarf_package: "{{ zarf_storage_package }}"
+
+    - name: Every role set the facts its page documents
+      ansible.builtin.assert:
+        that:
+          - (zarf_packages | map(attribute='package') | list | sort) == (expected_packages | sort)
+          - zarf_state_redacted == expected_redacted
+          - "'pushPassword' not in zarf_state.registryInfo"
+          - zarf_state.registryInfo.registryMode == 'proxy'
+          - zarf_package_name == 'csi-local-path-provider'
+          - zarf_package_version == inspected_file.package_version
+          - zarf_package_definition.kind == 'ZarfPackageConfig'
+        success_msg: ASSERTED the three roles set the facts they document
+        fail_msg: a role did not set the facts its reference page documents

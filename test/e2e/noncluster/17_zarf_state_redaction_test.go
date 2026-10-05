@@ -18,7 +18,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,25 +32,12 @@ const (
 	zarfStub               = "test/e2e/noncluster/testdata/zarf-state-stub.sh"
 )
 
-// stateInfoPlugin is the plugin under test. This test reads it without parsing it, and that is the
-// whole reason: Go's test cache keys on the files the test process opens, and everything this test
-// actually exercises is opened by the ansible-playbook child instead. Without reading them here, an
-// edit to the plugin or the playbook leaves a passing result cached -- which is exactly the shape of
-// mistake that gets a credential leak marked as fixed.
+// stateInfoPlugin is the plugin under test, read before the playbook runs. See zarfPlaybookEnv for
+// why reading it matters.
 const stateInfoPlugin = "ansible/colonel_byte/zarf/plugins/action/zarf_state_info.py"
 
-// The environment the stub and the playbook agree on: which state to serve, and where the stub is.
-const (
-	envStateFixture = "CARGOSHIP_E2E_ZARF_STATE"
-	envZarfStub     = "CARGOSHIP_E2E_ZARF_STUB"
-)
-
-// assertedPrefix is what every assert task in the playbook says when it passes. Counting them is
-// what catches a playbook whose tasks stopped running -- a renamed fact or a skipped block leaves
-// every remaining assertion passing, and `failed=0` alone would call that a success. How many to
-// expect is read out of the playbook rather than written here, so that adding an assertion to the
-// playbook does not quietly stop the count from meaning anything.
-const assertedPrefix = "ASSERTED "
+// envStateFixture names the state document the stub zarf serves.
+const envStateFixture = "CARGOSHIP_E2E_ZARF_STATE"
 
 // fixtureCredentialPrefix marks every credential value in the state fixture, so that this test can
 // ask the fixture what to look for instead of keeping a second copy of the list.
@@ -71,71 +57,26 @@ const fixtureCredentialPrefix = "FIXTURE-"
 // else -- the decode, the redaction, the self-censoring result, and the role that wraps it. See
 // docs/agent/choice-zarf-info-modules.md.
 func TestZarfStateInfoWithholdsCredentials(t *testing.T) {
-	ansible, err := exec.LookPath("ansible-playbook")
-	if err != nil {
-		t.Skip("ansible-playbook is not on PATH: the redaction lives in an action plugin, which " +
-			"only Ansible can run")
-	}
+	env := zarfPlaybookEnv(t, []string{stateInfoPlugin, infoBasePlugin})
+	stub := env.executable(t, zarfStub)
 
-	root, err := os.Getwd()
+	fixture, err := os.ReadFile(filepath.Join(env.root, stateFixture))
 	require.NoError(t, err)
-
-	// The layout Ansible insists on and the repository does not have: a collections path holding
-	// an ansible_collections directory, whose children are the namespaces.
-	collections := t.TempDir()
-	require.NoError(t, os.Symlink(
-		filepath.Join(root, "ansible"),
-		filepath.Join(collections, "ansible_collections"),
-	))
-
-	// Read before running, so the cache sees them. See stateInfoPlugin above.
-	playbook, err := os.ReadFile(filepath.Join(root, stateRedactionPlaybook))
-	require.NoError(t, err)
-	fixture, err := os.ReadFile(filepath.Join(root, stateFixture))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(root, stateInfoPlugin))
-	require.NoError(t, err)
-
-	expectedAssertions := strings.Count(string(playbook), "success_msg: "+assertedPrefix)
-	require.NotZero(t, expectedAssertions, "the playbook holds no assertions")
-
 	credentials := fixtureCredentials(t, fixture)
 	require.NotEmpty(t, credentials, "the state fixture holds no %s value", fixtureCredentialPrefix)
 
-	stub := filepath.Join(root, zarfStub)
-	info, err := os.Stat(stub)
-	require.NoError(t, err, "the stub zarf is missing")
-	require.NotZero(t, info.Mode()&0o111, "the stub zarf is not executable")
-
-	cmd := exec.Command(ansible, //nolint:gosec // the path is from LookPath and this test's constants
-		"-i", "localhost,",
-		filepath.Join(root, stateRedactionPlaybook),
-	)
-	cmd.Dir = root
-	cmd.Env = append(os.Environ(),
-		"ANSIBLE_COLLECTIONS_PATH="+collections,
-		envStateFixture+"="+filepath.Join(root, stateFixture),
-		envZarfStub+"="+stub,
-		// The playbook asserts on what the module returned, and a localhost fact gather is both
-		// slow and irrelevant to that.
-		"ANSIBLE_GATHERING=explicit",
-	)
-
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, "the playbook failed:\n%s", out)
-
-	asserted := strings.Count(string(out), assertedPrefix)
-	require.Equal(t, expectedAssertions, asserted,
-		"%d of the playbook's %d assert tasks reported passing, so some of them did not run:\n%s",
-		asserted, expectedAssertions, out)
+	out := runZarfPlaybook(t, env, stateRedactionPlaybook, []string{
+		envZarfStub + "=" + stub,
+		envStateFixture + "=" + filepath.Join(env.root, stateFixture),
+	}, nil)
 
 	// The credentials must not be in the output of a run that did not ask for them. The playbook
 	// asserts that too, but it asserts over the dictionary it was given; this reads the transcript
 	// an operator or a CI log would keep. The run with include_credentials is in the same
 	// transcript, which is what makes this an assertion about the self-censoring result as well.
 	for _, credential := range credentials {
-		require.NotContains(t, string(out), credential,
-			"the credential at %s reached the playbook's own output", credential)
+		require.NotContains(t, out, credential,
+			"the credential %s reached the playbook's own output", credential)
 	}
 }
 

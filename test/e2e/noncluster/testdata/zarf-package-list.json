@@ -1,0 +1,24 @@
+[
+  {
+    "package": "init",
+    "namespaceOverride": "",
+    "version": "v0.85.0",
+    "connectivity": "airgap",
+    "components": [
+      "zarf-injector",
+      "zarf-seed-registry",
+      "zarf-registry",
+      "zarf-agent"
+    ]
+  },
+  {
+    "package": "csi-local-path-provider",
+    "namespaceOverride": "",
+    "version": "0.0.37-upstream",
+    "connectivity": "connected",
+    "components": [
+      "local-path-images",
+      "local-path-chart"
+    ]
+  }
+]

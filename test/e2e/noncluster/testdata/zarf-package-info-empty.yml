@@ -1,0 +1,29 @@
+---
+# What colonel_byte.zarf.zarf_package_info returns for a cluster with no packages deployed.
+#
+# `zarf package list --output-format json` marshals a nil slice in that case, so what it prints is
+# the four characters `null` rather than `[]` -- see packageListInfo and its loop in zarf's
+# src/cmd/package.go. The module has a branch for it, and a branch with no test is a branch that
+# breaks the first time somebody simplifies the decode.
+#
+# Nothing here is contacted.
+- name: zarf_package_info reads null as no packages
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Read the package list of an empty cluster
+      colonel_byte.zarf.zarf_package_info:
+        zarf_binary: "{{ lookup('env', 'CARGOSHIP_E2E_ZARF_STUB') }}"
+      register: listed
+
+    - name: An empty cluster is an empty list, not a failure and not a null
+      ansible.builtin.assert:
+        that:
+          - listed is not failed
+          - listed.changed is false
+          - listed.packages == []
+          - "'0 deployed' in listed.msg"
+        success_msg: ASSERTED null decodes to an empty package list
+        fail_msg: a cluster with no packages did not come back as an empty list
