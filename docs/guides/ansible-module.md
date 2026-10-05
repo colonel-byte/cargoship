@@ -2,7 +2,7 @@
 
 Cargoship runs inside a playbook as an Ansible module. The cargoship binary *is* the module: it is installed as a set of symlinks named `cargoship_<action>`, and a symlink's name selects the action. There is no separate module package and nothing to install on the managed nodes.
 
-The inventory a module takes is the one described in [Generating an Inventory from Ansible](ansible-inv.md) -- Ansible's resolved `groups` and `hostvars`, plus a `cluster` block -- and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, how a task is written, and what its result means. The parameter reference for each module and for the `cluster` role is generated from the collection and lives in [the collection reference](../ansible/collection.md).
+The inventory a module takes is the one described in [Generating an Inventory from Ansible](ansible-inv.md) -- Ansible's resolved `groups` and `hostvars`, plus a `cluster` block -- and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, how a task is written, and what its result means. The parameter reference for each module and for the `cluster` role is generated from the collection and lives in [the collection reference](../ansible/cargoship/collection.md).
 
 Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Every task runs on one management node outside the cluster -- the node the package and images were staged onto -- and cargoship opens every SSH connection itself from there. See [choice-ansible-module](../agent/choice-ansible-module.md) for why the work is split that way.
 
@@ -58,7 +58,7 @@ When defining `profiles` inside `cargoship_cluster` in YAML, note type constrain
 
 `inventory` takes the document described in [Generating an Inventory from Ansible](ansible-inv.md), `groups` and `hostvars` included. Everything else maps onto a flag of the command the module runs.
 
-The parameter reference lives with the modules rather than here, so that it cannot drift from what the binary accepts: [`cargoship_apply`](../ansible/module_apply.md), [`cargoship_prepare`](../ansible/module_prepare.md), [`cargoship_engine_config_sync`](../ansible/module_engine_config_sync.md), [`cargoship_reset`](../ansible/module_reset.md), and [`cargoship_kube_config`](../ansible/module_kube_config.md). Each page lists every parameter the module takes, its type, and the flag it renders. [Modules](../ansible/modules.md) is the index, and covers why the surfaces differ from one another.
+The parameter reference lives with the modules rather than here, so that it cannot drift from what the binary accepts: [`cargoship_apply`](../ansible/cargoship/module_apply.md), [`cargoship_prepare`](../ansible/cargoship/module_prepare.md), [`cargoship_engine_config_sync`](../ansible/cargoship/module_engine_config_sync.md), [`cargoship_reset`](../ansible/cargoship/module_reset.md), and [`cargoship_kube_config`](../ansible/cargoship/module_kube_config.md). Each page lists every parameter the module takes, its type, and the flag it renders. [Modules](../ansible/cargoship/modules.md) is the index, and covers why the surfaces differ from one another.
 
 Of the five, `cargoship_engine_config_sync` is the most Ansible-shaped thing cargoship does: it converges configuration across a fleet that is already installed.
 
@@ -91,7 +91,7 @@ The role is the shorter way to write the same task. It picks the module from `ca
       timeout: 45m
 ```
 
-Every variable the role takes, with its default, is on [role_cluster](../ansible/role_cluster.md). Anything the role does not name a variable for goes in `cargoship_args`, which is passed to the chosen module verbatim.
+Every variable the role takes, with its default, is on [role_cluster](../ansible/cargoship/role_cluster.md). Anything the role does not name a variable for goes in `cargoship_args`, which is passed to the chosen module verbatim.
 
 Every task in the role carries `run_once: true`. Cargoship converges the whole fleet in one run, so a play over the fleet's own inventory would otherwise run a full convergence once per host. It defaults `cargoship_no_log: true` to protect decrypted credentials and fleet inventories from terminal and CI logs, which is why `cargoship_show_result` exists: the debug task prints cargoship's sanitized report without exposing secrets.
 

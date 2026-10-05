@@ -24,7 +24,7 @@ __metaclass__ = type
 
 # The cli_flag key on each option is a cargoship extension, not a standard Ansible doc key. It is
 # read by generateModuleDocs in magefiles/gen-docs.go to build the parameter-to-flag table on
-# docs/ansible/module_*.md, and is None for a parameter that renders no flag: one that is the
+# docs/ansible/cargoship/module_*.md, and is None for a parameter that renders no flag: one that is the
 # command's positional argument, or one consumed before the command line is built. Stock
 # ansible-doc and validate-modules are not run against this collection; see
 # docs/agent/choice-ansible-module.md.
