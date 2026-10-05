@@ -285,6 +285,23 @@ func marshalYAML(config dig.Mapping) ([]byte, error) {
 	return []byte("---\n" + buf.String()), nil
 }
 
+// marshalYAMLDocs renders each mapping as its own YAML document and concatenates them, for a
+// file a reader expects multiple documents in -- kubeadm's --config takes one file holding
+// ClusterConfiguration/InitConfiguration or JoinConfiguration alongside a KubeletConfiguration.
+// marshalYAML already prefixes each document with "---\n", so concatenating its output per
+// mapping is already valid multi-document YAML, no extra separator needed here.
+func marshalYAMLDocs(docs ...dig.Mapping) ([]byte, error) {
+	buf := bytes.Buffer{}
+	for _, doc := range docs {
+		b, err := marshalYAML(doc)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(b)
+	}
+	return buf.Bytes(), nil
+}
+
 // marshalTOML renders a mapping as TOML. containerd's own config is TOML rather than YAML, so
 // this is the one non-YAML render path in the package -- the encoder is reflection based the
 // same way yaml.Marshal is, so a dotted table key like "io.containerd.grpc.v1.cri" is quoted
