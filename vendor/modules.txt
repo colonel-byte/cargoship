@@ -1662,11 +1662,13 @@ github.com/monochromegane/go-gitignore
 # github.com/morikuni/aec v1.1.0
 ## explicit; go 1.21
 github.com/morikuni/aec
-# github.com/mozillazg/docker-credential-acr-helper v0.4.0
-## explicit; go 1.18
-github.com/mozillazg/docker-credential-acr-helper/pkg/acr
+# github.com/mozillazg/docker-credential-acr-helper v0.4.1
+## explicit; go 1.25.0
 github.com/mozillazg/docker-credential-acr-helper/pkg/credhelper
 github.com/mozillazg/docker-credential-acr-helper/pkg/version
+# github.com/mozillazg/docker-credential-acr-helper/pkg/acr v0.2.2
+## explicit; go 1.25.0
+github.com/mozillazg/docker-credential-acr-helper/pkg/acr
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
@@ -1823,6 +1825,9 @@ github.com/peterbourgon/diskv
 # github.com/phsym/console-slog v0.3.1
 ## explicit; go 1.21
 github.com/phsym/console-slog
+# github.com/phuslu/lru v1.0.18
+## explicit; go 1.18
+github.com/phuslu/lru
 # github.com/pierrec/lz4/v4 v4.1.31
 ## explicit; go 1.22
 github.com/pierrec/lz4/v4
