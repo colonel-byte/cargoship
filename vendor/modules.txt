@@ -1326,7 +1326,7 @@ github.com/hashicorp/vault/api/cliconfig
 github.com/hashicorp/vault/api/tokenhelper
 # github.com/hinshun/vt10x v0.0.0-20220301184237-5011da428d02
 ## explicit; go 1.14
-# github.com/huandu/xstrings v1.6.1
+# github.com/huandu/xstrings v1.6.2
 ## explicit; go 1.12
 github.com/huandu/xstrings
 # github.com/in-toto/attestation v1.2.0
