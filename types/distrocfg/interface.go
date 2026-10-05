@@ -142,6 +142,15 @@ type PreStartUpgrader interface {
 	PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
 }
 
+// PreUninstallResetter is implemented by a distro that must tear down its own cluster membership
+// before its packages are removed -- kubeadm reset, unlike rke2/k3s where uninstalling the package
+// is the whole story. UninstallEngine calls it, when implemented, before resolving package names
+// and removing them. Same optional-interface pattern as PreStartUpgrader.
+type PreUninstallResetter interface {
+	// PreUninstallReset runs before packages are resolved and removed.
+	PreUninstallReset(ctx context.Context, host *cluster.ZarfHost) error
+}
+
 // ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically
 // a CNI -- that cargoship applies with kubectl once the leader is reachable, instead of rendering
 // them into a HelmChartConfig an embedded controller reconciles (rancher_common.go's
