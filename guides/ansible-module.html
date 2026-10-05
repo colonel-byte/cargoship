@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fa050969.js";
+            window.path_to_searchindex_js = "../searchindex-fa6591ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-2420a1d0.js"></script>
+        <script src="../toc-ec789240.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
                     <main>
                         <h1 id="running-cargoship-as-an-ansible-module"><a class="header" href="#running-cargoship-as-an-ansible-module">Running Cargoship as an Ansible Module</a></h1>
 <p>Cargoship runs inside a playbook as an Ansible module. The cargoship binary <em>is</em> the module: it is installed as a set of symlinks named <code>cargoship_&lt;action&gt;</code>, and a symlink’s name selects the action. There is no separate module package and nothing to install on the managed nodes.</p>
-<p>The inventory a module takes is the one described in <a href="ansible-inv.html">Generating an Inventory from Ansible</a> – Ansible’s resolved <code>groups</code> and <code>hostvars</code>, plus a <code>cluster</code> block – and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, how a task is written, and what its result means. The parameter reference for each module and for the <code>cluster</code> role is generated from the collection and lives in <a href="../ansible/collection.html">the collection reference</a>.</p>
+<p>The inventory a module takes is the one described in <a href="ansible-inv.html">Generating an Inventory from Ansible</a> – Ansible’s resolved <code>groups</code> and <code>hostvars</code>, plus a <code>cluster</code> block – and the group mapping and host variables documented there apply here unchanged. This guide covers the modules themselves: how the collection is installed, how a task is written, and what its result means. The parameter reference for each module and for the <code>cluster</code> role is generated from the collection and lives in <a href="../ansible/cargoship/collection.html">the collection reference</a>.</p>
 <p>Ansible supplies the inventory and nothing else. It does not connect to the fleet, gather facts on it, or run a task per host. Every task runs on one management node outside the cluster – the node the package and images were staged onto – and cargoship opens every SSH connection itself from there. See <a href="../agent/choice-ansible-module.html">choice-ansible-module</a> for why the work is split that way.</p>
 <p>Five modules ship, one per fleet action: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_engine_config_sync</code>, <code>cargoship_reset</code>, and <code>cargoship_kube_config</code>. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run.</p>
 <p>Working inventories and a playbook for each of the five are in <a href="https://github.com/colonel-byte/cargoship/tree/main/ansible/examples">ansible/examples</a>, along with a script that translates an inventory without running a play.</p>
@@ -206,12 +206,14 @@
 <h2 id="installing-the-collection"><a class="header" href="#installing-the-collection">Installing the collection</a></h2>
 <p>The modules live in the <code>colonel_byte.cargoship</code> collection. The RPM and deb packages install it to <code>/usr/share/ansible/collections</code>, which is on ansible-core’s default collections path, so on a management node that installed cargoship from a package there is nothing further to do.</p>
 <p>Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
-  --bundle colonel_byte-cargoship-0.25.0.tar.gz.sigstore.json \
-  colonel_byte-cargoship-0.25.0.tar.gz
-ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
+  --bundle colonel_byte-cargoship-0.29.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.29.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.29.0.tar.gz
 ./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>From a checkout, build the tarball first with <code>hack/ansible-build-collection.sh ./bin/ansible</code>, which is the same script the release pipeline runs.</p>
 <p>That last step is not optional and has no equivalent in Galaxy’s own packaging. Ansible resolves a task name to a module <em>file</em>, so each action needs a file named after it; the files are symlinks to the one cargoship binary, which is what the packages create and what the script creates by hand. A collection installed without them fails with the module not being found.</p>
 <p>The collection carries one action plugin per module. It runs inside <code>ansible-playbook</code>, on the interpreter Ansible is already running on, and does one thing: copy <code>groups</code> and <code>hostvars</code> into the module’s <code>inventory</code> parameter so you do not have to. Nothing is installed on the fleet, and running cargoship by hand still needs no Python.</p>
@@ -220,7 +222,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
 <p>When defining <code>profiles</code> inside <code>cargoship_cluster</code> in YAML, note type constraints: <code>concurrency</code> (e.g. <code>"1"</code>, <code>"50%"</code>) and port definitions (<code>ports[].port</code>, e.g. <code>"6443"</code>) are unmarshaled as strings by the underlying schema. Quote numeric strings in YAML to prevent JSON numeric unmarshaling failures.</p>
 <h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
 <p><code>inventory</code> takes the document described in <a href="ansible-inv.html">Generating an Inventory from Ansible</a>, <code>groups</code> and <code>hostvars</code> included. Everything else maps onto a flag of the command the module runs.</p>
-<p>The parameter reference lives with the modules rather than here, so that it cannot drift from what the binary accepts: <a href="../ansible/module_apply.html"><code>cargoship_apply</code></a>, <a href="../ansible/module_prepare.html"><code>cargoship_prepare</code></a>, <a href="../ansible/module_engine_config_sync.html"><code>cargoship_engine_config_sync</code></a>, <a href="../ansible/module_reset.html"><code>cargoship_reset</code></a>, and <a href="../ansible/module_kube_config.html"><code>cargoship_kube_config</code></a>. Each page lists every parameter the module takes, its type, and the flag it renders. <a href="../ansible/modules.html">Modules</a> is the index, and covers why the surfaces differ from one another.</p>
+<p>The parameter reference lives with the modules rather than here, so that it cannot drift from what the binary accepts: <a href="../ansible/cargoship/module_apply.html"><code>cargoship_apply</code></a>, <a href="../ansible/cargoship/module_prepare.html"><code>cargoship_prepare</code></a>, <a href="../ansible/cargoship/module_engine_config_sync.html"><code>cargoship_engine_config_sync</code></a>, <a href="../ansible/cargoship/module_reset.html"><code>cargoship_reset</code></a>, and <a href="../ansible/cargoship/module_kube_config.html"><code>cargoship_kube_config</code></a>. Each page lists every parameter the module takes, its type, and the flag it renders. <a href="../ansible/cargoship/modules.html">Modules</a> is the index, and covers why the surfaces differ from one another.</p>
 <p>Of the five, <code>cargoship_engine_config_sync</code> is the most Ansible-shaped thing cargoship does: it converges configuration across a fleet that is already installed.</p>
 <p>A parameter the module does not know is an error naming it. A parameter left unset is left unset: the module passes no flag for it, so whatever your cargoship configuration file sets still applies. That is why <code>label_nodes: false</code> and omitting <code>label_nodes</code> are different.</p>
 <h2 id="signature-verification"><a class="header" href="#signature-verification">Signature verification</a></h2>
@@ -242,7 +244,7 @@ ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
       vault_password_file: /srv/staging/vault-pass
       timeout: 45m
 </code></pre>
-<p>Every variable the role takes, with its default, is on <a href="../ansible/role_cluster.html">role_cluster</a>. Anything the role does not name a variable for goes in <code>cargoship_args</code>, which is passed to the chosen module verbatim.</p>
+<p>Every variable the role takes, with its default, is on <a href="../ansible/cargoship/role_cluster.html">role_cluster</a>. Anything the role does not name a variable for goes in <code>cargoship_args</code>, which is passed to the chosen module verbatim.</p>
 <p>Every task in the role carries <code>run_once: true</code>. Cargoship converges the whole fleet in one run, so a play over the fleet’s own inventory would otherwise run a full convergence once per host. It defaults <code>cargoship_no_log: true</code> to protect decrypted credentials and fleet inventories from terminal and CI logs, which is why <code>cargoship_show_result</code> exists: the debug task prints cargoship’s sanitized report without exposing secrets.</p>
 <h2 id="check-mode-and-changed"><a class="header" href="#check-mode-and-changed">Check mode and changed</a></h2>
 <p><code>--check</code> runs cargoship’s dry run. Phases opt into it one at a time – a phase that has not said how it behaves under a dry run is reported and not run – so a check-mode task connects, detects, gathers facts, and validates the hosts, and reports the rest as phases it would have run.</p>

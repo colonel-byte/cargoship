@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fa050969.js";
+            window.path_to_searchindex_js = "../searchindex-fa6591ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-2420a1d0.js"></script>
+        <script src="../toc-ec789240.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,10 +183,12 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="running-the-collection-from-the-container"><a class="header" href="#running-the-collection-from-the-container">Running the Collection from the Container</a></h1>
-<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
+<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and both the <code>colonel_byte.cargoship</code> and <code>colonel_byte.zarf</code> collections, plus a <code>zarf</code> binary copied from the signed <code>ghcr.io/zarf-dev/zarf/agent</code> image. The zarf collection’s modules run that binary, so without it every task in that collection would fail on a command it cannot find; see <a href="zarf-ansible-module.html">zarf-ansible-module</a>. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
 <p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="ansible-module.html">ansible-module</a>, and for the inventory they translate, <a href="ansible-inv.html">ansible-inv</a>. Nothing about either changes inside the container.</p>
-<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:0.26.2
+<!-- x-release-please-start-version -->
+<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.29.0
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>The image has no <code>ENTRYPOINT</code>, because a run legitimately reaches for <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code> or <code>cargoship</code> itself; name the command you want. The collection is installed to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path, so <code>ansible-playbook</code> resolves <code>colonel_byte.cargoship.cargoship_apply</code> with no configuration. <code>HOME</code> is <code>/home/nonroot</code>, the working directory is <code>/workspace</code>, and the process runs as UID and GID 65532.</p>
 <p>The image carries cargoship and the collection, and nothing for talking to the cluster afterwards. <code>kubernetes.core</code> is present because the base carries the full ansible distribution, but the Python client its modules import is not, so a <code>k8s</code> task fails at import time; there is no <code>helm</code> or <code>kubectl</code> either. A play that converges the cluster and then applies manifests to it needs an image of your own, built <code>FROM</code> this one with those added.</p>
 <h2 id="every-path-in-a-playbook-is-a-path-inside-the-container"><a class="header" href="#every-path-in-a-playbook-is-a-path-inside-the-container">Every Path in a Playbook Is a Path Inside the Container</a></h2>
@@ -209,8 +211,45 @@
 </div>
 <p>An apply leaves <code>update_kubeconfig</code> on by default, which merges the cluster’s admin credentials into <code>KUBECONFIG</code> when it is set and <code>~/.kube/config</code> otherwise – inside the container, a file under <code>/home/nonroot</code> that goes away with the container. Mount a kubeconfig, name one with the <code>kubeconfig</code> parameter, or pass <code>update_kubeconfig: false</code> and fetch it deliberately with <code>cargoship_kube_config</code>; what you should not do is leave the default and wonder where the credentials went.</p>
 <p>Everything under <code>/home/nonroot</code> is already created and owned by 65532 in the image, so a run with none of the optional mounts works – it just starts cold each time and keeps nothing. The cache is the one worth adding first, and it has a section of its own below.</p>
+<h2 id="reaching-a-cluster-on-the-same-host"><a class="header" href="#reaching-a-cluster-on-the-same-host">Reaching a Cluster on the Same Host</a></h2>
+<p>The same rule catches addresses, not just paths, and a local k3d cluster is where it bites first. <code>k3d kubeconfig get zarf</code> writes <code>server: https://0.0.0.0:41609</code>, naming the port k3d published on the host; <code>0.0.0.0</code> inside the container is the container’s own network namespace, where nothing is listening. The first <code>colonel_byte.zarf</code> task then fails on a connection refused that reads like a cluster that is down, and the cluster is fine – see <a href="zarf-ansible-module.html">zarf-ansible-module</a> for the modules themselves.</p>
+<p>Two addresses do reach it, and the serving certificate is what limits it to two. k3d starts k3s with <code>--tls-san 0.0.0.0</code> and <code>--tls-san k3d-zarf-serverlb</code>, on top of k3s’s own <code>127.0.0.1</code> and <code>localhost</code>, so a name the certificate does not carry – <code>host.docker.internal</code>, or the bridge gateway address – fails verification even once it routes.</p>
+<p>Joining the cluster’s own network is the arrangement to prefer. Rewrite the server to the load balancer’s name inside that network:</p>
+<pre><code class="language-sh">mkdir -p build/tmp
+k3d kubeconfig get zarf | sed -E 's|https://0.0.0.0:[0-9]{5}|https://k3d-zarf-serverlb:6443|' &gt; build/tmp/zarf-config.yaml
+chmod 0644 build/tmp/zarf-config.yaml
+</code></pre>
+<p>Then attach the container to that network and mount what it wrote:</p>
+<!-- x-release-please-start-version -->
+<pre><code class="language-sh">docker run --rm \
+  --network k3d-zarf \
+  -v "$PWD/build/tmp/zarf-config.yaml":/home/nonroot/.kube/config:ro,z \
+  -e KUBECONFIG=/home/nonroot/.kube/config \
+  -v "$PWD":/workspace:ro,z \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ansible-playbook init.yaml
+</code></pre>
+<!-- x-release-please-end-version -->
+<p>Rewriting k3d’s own output rather than hand-writing a kubeconfig keeps the embedded CA and client certificate intact. <code>docker</code> is deliberate here: the k3d network is docker’s, and rootless podman cannot attach to it. The load balancer’s name resolves inside that network for as long as the cluster exists, so this survives a <code>k3d cluster stop &amp;&amp; k3d cluster start</code> that republishes the API on a different host port.</p>
+<p>Reaching the published port instead means host networking, since that port is bound on the host:</p>
+<pre><code class="language-sh">k3d kubeconfig get zarf | sed 's|https://0.0.0.0:|https://127.0.0.1:|' &gt; kubeconfig.yaml
+chmod 0644 kubeconfig.yaml
+</code></pre>
+<!-- x-release-please-start-version -->
+<pre><code class="language-sh">docker run --rm \
+  --network host \
+  -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
+  -e KUBECONFIG=/home/nonroot/.kube/config \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  zarf tools kubectl get nodes
+</code></pre>
+<!-- x-release-please-end-version -->
+<p>It is the shorter way to a one-off check, and it costs the container’s network namespace, which a run that also opens SSH connections to a fleet should not give up lightly. The port is whatever <code>docker port k3d-zarf-serverlb 6443</code> reports, and it is reassigned every time the cluster is recreated. <code>zarf tools kubectl</code> is the smoke test to reach for because the image has no <code>kubectl</code> of its own.</p>
+<p>Either way the kubeconfig is mounted read-only – zarf reads it and writes nothing back – and it has to be readable by UID 65532, which is what the <code>chmod 0644</code> on the copy is for. A mounted <em>directory</em> has to be traversable by that UID too, so a playbook tree under a <code>0700</code> directory arrives as a <code>/workspace</code> the container cannot open, and <code>ansible-playbook</code> reports a playbook it could not find rather than a permission error.</p>
+<p>None of this applies to a real fleet. A cluster cargoship installed is reached over the network like any other host, and <code>cargoship_kube_config</code> – or an apply’s <code>update_kubeconfig</code>, above – is what puts its credentials where a later task can find them.</p>
 <h2 id="the-package-mount-is-read-only-because-nothing-writes-to-it"><a class="header" href="#the-package-mount-is-read-only-because-nothing-writes-to-it">The Package Mount Is Read-Only Because Nothing Writes to It</a></h2>
 <p>A distro package is the one input large enough that copying it into an image, or into the container’s writable layer, is a real cost – it carries every image and file the cluster installs. It is also read-only by nature: <code>cargoship apply</code> reads the package and writes to the fleet, never back into the artifact. Mounting it <code>:ro</code> costs nothing and turns a whole class of mistake, a run that mutates the staging directory every other run depends on, into an error at the moment it is attempted.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
   -v /srv/staging:/srv/staging:ro,z \
@@ -218,31 +257,36 @@
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>On a host with SELinux enforcing – Fedora, RHEL, and anything derived from them – a volume needs a label option or the container cannot read it. Use <code>z</code>, the shared label, for anything the host or another container also uses, which is all of the above. <code>Z</code> relabels the content privately to one container, and applying it to a shared staging directory takes that directory away from every other reader on the host, including the next container. Docker takes the same options; it is the label, not the runtime, that decides this.</p>
 <h2 id="mounting-the-cache-read-write"><a class="header" href="#mounting-the-cache-read-write">Mounting the Cache Read-Write</a></h2>
 <p>The cache is where cargoship keeps what it fetches – OCI artifacts it pulls, and the release assets the example generation reads – under <code>~/.cargoship-cache</code>, which is <code>/home/nonroot/.cargoship-cache</code> in the container. It is the only mount in this guide that exists purely to make the <em>next</em> run faster, and the only one that is worthless read-only: a cache that cannot be written to is a cache that is empty on every run, and a read-only mount turns what would be a slow run into a failed write.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p><code>rw</code> is the default for a bind mount and is written out here only to say that it is meant: the package above it is <code>ro</code> on purpose, and the pair reads as a decision rather than an omission. Create the directory on the host first – <code>mkdir -p ~/.cargoship-cache</code> – because a bind mount whose source does not exist is created by the runtime as an empty directory owned by root, which the container cannot then write to.</p>
 <p>The same UID rule as everywhere else decides whether the write succeeds, and there are three ways to satisfy it. <code>--userns=keep-id:uid=65532,gid=65532</code> maps your host UID onto the one the container runs as, which is the right answer when the cache lives in your home directory and you want to look at it afterwards. <code>chown -R 65532:65532 ~/.cargoship-cache</code> is the right answer under Docker or rootful Podman, where there is no mapping to arrange. Podman’s <code>:U</code> option – <code>-v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z,U</code> – recursively chowns the source to the container’s user for you, which is convenient and also permanent, so do not point it at a directory anything else on the host owns.</p>
 <p>A named volume avoids the question entirely, and is the better arrangement on a dedicated staging host where nobody needs to read the cache from outside:</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman volume create cargoship-cache
 podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>A new named volume is populated from the image path it is mounted over, ownership included, so it arrives owned by 65532 with no mapping, no <code>chown</code> and no SELinux label option to choose. It survives <code>--rm</code>, and <code>podman volume rm cargoship-cache</code> is how you discard it deliberately.</p>
 <p>To put the cache somewhere other than the default path, set it in the environment as <code>DISTRO_ZARF_CACHE</code>, or as <code>zarf_cache</code> in a cargoship configuration file – the modules take no parameter for it, so a playbook cannot pass it per task. The <code>--zarf-cache</code> flag does the same thing for a <code>cargoship</code> command run directly in the container – it is named for zarf’s cache, which is what it is, and it takes cargoship’s path. The default printed in <code>docs/commands</code> is the one this repository’s own <code>cargoship-config.yaml</code> sets, not the built-in <code>~/.cargoship-cache</code> a container resolves, since viper searches the working directory for a configuration file and a checkout has one.</p>
 <h2 id="the-uid-is-what-actually-breaks-first"><a class="header" href="#the-uid-is-what-actually-breaks-first">The UID Is What Actually Breaks First</a></h2>
@@ -255,15 +299,17 @@ podman run --rm \
 <p>Setting <code>SSH_KNOWN_HOSTS=/dev/null</code> disables host key verification entirely. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.</p>
 <h2 id="ssh-agents-work-with-the-socket-mounted"><a class="header" href="#ssh-agents-work-with-the-socket-mounted">SSH Agents Work, With the Socket Mounted</a></h2>
 <p>Cargoship reads <code>SSH_AUTH_SOCK</code> and offers the agent’s keys, so an agent on the host serves a run in the container once its socket is mounted and the variable points at it.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
   -v "$SSH_AUTH_SOCK":/run/ssh-agent.sock:z \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.</p>
 <h2 id="encrypting-the-generated-inventory-on-disk"><a class="header" href="#encrypting-the-generated-inventory-on-disk">Encrypting the Generated Inventory on Disk</a></h2>
 <p>When <code>inventory_path</code> is set to keep the generated ZarfCluster document across runs, that file normally holds decrypted registry passwords in plaintext with <code>0600</code> permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:</p>

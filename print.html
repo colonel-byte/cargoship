@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fa050969.js";
+            window.path_to_searchindex_js = "searchindex-fa6591ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2420a1d0.js"></script>
+        <script src="toc-ec789240.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -323,7 +323,7 @@ cargoship create ./distro-defs -o ./build/
 <li><code>docs/phases/*</code> (Orchestration phase explanations)</li>
 <li><code>docs/golang/*</code> (Go package reference, from godoc comments)</li>
 <li><code>docs/schema/*</code> (Schema field reference, from the same struct reflection as <code>schema/*.json</code>)</li>
-<li><code>docs/ansible/module_*.md</code> and <code>docs/ansible/role_*.md</code> (Ansible collection reference)</li>
+<li><code>docs/ansible/&lt;collection&gt;/module_*.md</code> and <code>docs/ansible/&lt;collection&gt;/role_*.md</code> (Ansible collection reference)</li>
 <li><code>docs/index.md</code> and <code>docs/security.md</code> (this file and <code>.github/SECURITY.md</code>, with their links rewritten for the book)</li>
 <li><code>docs/SUMMARY.md</code> (mdBook layout manifest)</li>
 <li><code>schema/*.json</code> (YAML validations)</li>
@@ -692,10 +692,12 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="running-the-collection-from-the-container"><a class="header" href="#running-the-collection-from-the-container">Running the Collection from the Container</a></h1>
-<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and the <code>colonel_byte.cargoship</code> collection. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
+<p>The <code>cargoship-ansible</code> image is a management node in a container: <code>ansible-core</code> on an AlmaLinux 10 base, plus the signed cargoship RPM, which carries the binary and both the <code>colonel_byte.cargoship</code> and <code>colonel_byte.zarf</code> collections, plus a <code>zarf</code> binary copied from the signed <code>ghcr.io/zarf-dev/zarf/agent</code> image. The zarf collection’s modules run that binary, so without it every task in that collection would fail on a command it cannot find; see <a href="#driving-zarf-from-ansible">zarf-ansible-module</a>. It exists so that a fleet can be converged from a playbook without staging Ansible, the collection and the binary onto a VM by hand. This guide covers what has to be mounted into it, why the package mount is read-only, and the two things that break a run before it reaches the fleet: the UID the container runs as, and host key checking.</p>
 <p>For the modules themselves – their parameters and what <code>changed</code> means – see <a href="#running-cargoship-as-an-ansible-module">ansible-module</a>, and for the inventory they translate, <a href="#generating-an-inventory-from-ansible">ansible-inv</a>. Nothing about either changes inside the container.</p>
-<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:0.26.2
+<!-- x-release-please-start-version -->
+<pre><code class="language-sh">podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.29.0
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>The image has no <code>ENTRYPOINT</code>, because a run legitimately reaches for <code>ansible-playbook</code>, <code>ansible-inventory</code>, <code>ansible-galaxy</code> or <code>cargoship</code> itself; name the command you want. The collection is installed to <code>/usr/share/ansible/collections</code>, which is already on ansible-core’s default collections path, so <code>ansible-playbook</code> resolves <code>colonel_byte.cargoship.cargoship_apply</code> with no configuration. <code>HOME</code> is <code>/home/nonroot</code>, the working directory is <code>/workspace</code>, and the process runs as UID and GID 65532.</p>
 <p>The image carries cargoship and the collection, and nothing for talking to the cluster afterwards. <code>kubernetes.core</code> is present because the base carries the full ansible distribution, but the Python client its modules import is not, so a <code>k8s</code> task fails at import time; there is no <code>helm</code> or <code>kubectl</code> either. A play that converges the cluster and then applies manifests to it needs an image of your own, built <code>FROM</code> this one with those added.</p>
 <h2 id="every-path-in-a-playbook-is-a-path-inside-the-container"><a class="header" href="#every-path-in-a-playbook-is-a-path-inside-the-container">Every Path in a Playbook Is a Path Inside the Container</a></h2>
@@ -718,8 +720,45 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
 </div>
 <p>An apply leaves <code>update_kubeconfig</code> on by default, which merges the cluster’s admin credentials into <code>KUBECONFIG</code> when it is set and <code>~/.kube/config</code> otherwise – inside the container, a file under <code>/home/nonroot</code> that goes away with the container. Mount a kubeconfig, name one with the <code>kubeconfig</code> parameter, or pass <code>update_kubeconfig: false</code> and fetch it deliberately with <code>cargoship_kube_config</code>; what you should not do is leave the default and wonder where the credentials went.</p>
 <p>Everything under <code>/home/nonroot</code> is already created and owned by 65532 in the image, so a run with none of the optional mounts works – it just starts cold each time and keeps nothing. The cache is the one worth adding first, and it has a section of its own below.</p>
+<h2 id="reaching-a-cluster-on-the-same-host"><a class="header" href="#reaching-a-cluster-on-the-same-host">Reaching a Cluster on the Same Host</a></h2>
+<p>The same rule catches addresses, not just paths, and a local k3d cluster is where it bites first. <code>k3d kubeconfig get zarf</code> writes <code>server: https://0.0.0.0:41609</code>, naming the port k3d published on the host; <code>0.0.0.0</code> inside the container is the container’s own network namespace, where nothing is listening. The first <code>colonel_byte.zarf</code> task then fails on a connection refused that reads like a cluster that is down, and the cluster is fine – see <a href="#driving-zarf-from-ansible">zarf-ansible-module</a> for the modules themselves.</p>
+<p>Two addresses do reach it, and the serving certificate is what limits it to two. k3d starts k3s with <code>--tls-san 0.0.0.0</code> and <code>--tls-san k3d-zarf-serverlb</code>, on top of k3s’s own <code>127.0.0.1</code> and <code>localhost</code>, so a name the certificate does not carry – <code>host.docker.internal</code>, or the bridge gateway address – fails verification even once it routes.</p>
+<p>Joining the cluster’s own network is the arrangement to prefer. Rewrite the server to the load balancer’s name inside that network:</p>
+<pre><code class="language-sh">mkdir -p build/tmp
+k3d kubeconfig get zarf | sed -E 's|https://0.0.0.0:[0-9]{5}|https://k3d-zarf-serverlb:6443|' &gt; build/tmp/zarf-config.yaml
+chmod 0644 build/tmp/zarf-config.yaml
+</code></pre>
+<p>Then attach the container to that network and mount what it wrote:</p>
+<!-- x-release-please-start-version -->
+<pre><code class="language-sh">docker run --rm \
+  --network k3d-zarf \
+  -v "$PWD/build/tmp/zarf-config.yaml":/home/nonroot/.kube/config:ro,z \
+  -e KUBECONFIG=/home/nonroot/.kube/config \
+  -v "$PWD":/workspace:ro,z \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  ansible-playbook init.yaml
+</code></pre>
+<!-- x-release-please-end-version -->
+<p>Rewriting k3d’s own output rather than hand-writing a kubeconfig keeps the embedded CA and client certificate intact. <code>docker</code> is deliberate here: the k3d network is docker’s, and rootless podman cannot attach to it. The load balancer’s name resolves inside that network for as long as the cluster exists, so this survives a <code>k3d cluster stop &amp;&amp; k3d cluster start</code> that republishes the API on a different host port.</p>
+<p>Reaching the published port instead means host networking, since that port is bound on the host:</p>
+<pre><code class="language-sh">k3d kubeconfig get zarf | sed 's|https://0.0.0.0:|https://127.0.0.1:|' &gt; kubeconfig.yaml
+chmod 0644 kubeconfig.yaml
+</code></pre>
+<!-- x-release-please-start-version -->
+<pre><code class="language-sh">docker run --rm \
+  --network host \
+  -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
+  -e KUBECONFIG=/home/nonroot/.kube/config \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
+  zarf tools kubectl get nodes
+</code></pre>
+<!-- x-release-please-end-version -->
+<p>It is the shorter way to a one-off check, and it costs the container’s network namespace, which a run that also opens SSH connections to a fleet should not give up lightly. The port is whatever <code>docker port k3d-zarf-serverlb 6443</code> reports, and it is reassigned every time the cluster is recreated. <code>zarf tools kubectl</code> is the smoke test to reach for because the image has no <code>kubectl</code> of its own.</p>
+<p>Either way the kubeconfig is mounted read-only – zarf reads it and writes nothing back – and it has to be readable by UID 65532, which is what the <code>chmod 0644</code> on the copy is for. A mounted <em>directory</em> has to be traversable by that UID too, so a playbook tree under a <code>0700</code> directory arrives as a <code>/workspace</code> the container cannot open, and <code>ansible-playbook</code> reports a playbook it could not find rather than a permission error.</p>
+<p>None of this applies to a real fleet. A cluster cargoship installed is reached over the network like any other host, and <code>cargoship_kube_config</code> – or an apply’s <code>update_kubeconfig</code>, above – is what puts its credentials where a later task can find them.</p>
 <h2 id="the-package-mount-is-read-only-because-nothing-writes-to-it"><a class="header" href="#the-package-mount-is-read-only-because-nothing-writes-to-it">The Package Mount Is Read-Only Because Nothing Writes to It</a></h2>
 <p>A distro package is the one input large enough that copying it into an image, or into the container’s writable layer, is a real cost – it carries every image and file the cluster installs. It is also read-only by nature: <code>cargoship apply</code> reads the package and writes to the fleet, never back into the artifact. Mounting it <code>:ro</code> costs nothing and turns a whole class of mistake, a run that mutates the staging directory every other run depends on, into an error at the moment it is attempted.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
   -v /srv/staging:/srv/staging:ro,z \
@@ -727,31 +766,36 @@ cargoship vault decrypt --age-identity-file ~/.age/cargoship.key &lt; ct.txt
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>On a host with SELinux enforcing – Fedora, RHEL, and anything derived from them – a volume needs a label option or the container cannot read it. Use <code>z</code>, the shared label, for anything the host or another container also uses, which is all of the above. <code>Z</code> relabels the content privately to one container, and applying it to a shared staging directory takes that directory away from every other reader on the host, including the next container. Docker takes the same options; it is the label, not the runtime, that decides this.</p>
 <h2 id="mounting-the-cache-read-write"><a class="header" href="#mounting-the-cache-read-write">Mounting the Cache Read-Write</a></h2>
 <p>The cache is where cargoship keeps what it fetches – OCI artifacts it pulls, and the release assets the example generation reads – under <code>~/.cargoship-cache</code>, which is <code>/home/nonroot/.cargoship-cache</code> in the container. It is the only mount in this guide that exists purely to make the <em>next</em> run faster, and the only one that is worthless read-only: a cache that cannot be written to is a cache that is empty on every run, and a read-only mount turns what would be a slow run into a failed write.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p><code>rw</code> is the default for a bind mount and is written out here only to say that it is meant: the package above it is <code>ro</code> on purpose, and the pair reads as a decision rather than an omission. Create the directory on the host first – <code>mkdir -p ~/.cargoship-cache</code> – because a bind mount whose source does not exist is created by the runtime as an empty directory owned by root, which the container cannot then write to.</p>
 <p>The same UID rule as everywhere else decides whether the write succeeds, and there are three ways to satisfy it. <code>--userns=keep-id:uid=65532,gid=65532</code> maps your host UID onto the one the container runs as, which is the right answer when the cache lives in your home directory and you want to look at it afterwards. <code>chown -R 65532:65532 ~/.cargoship-cache</code> is the right answer under Docker or rootful Podman, where there is no mapping to arrange. Podman’s <code>:U</code> option – <code>-v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z,U</code> – recursively chowns the source to the container’s user for you, which is convenient and also permanent, so do not point it at a directory anything else on the host owns.</p>
 <p>A named volume avoids the question entirely, and is the better arrangement on a dedicated staging host where nobody needs to read the cache from outside:</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman volume create cargoship-cache
 podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>A new named volume is populated from the image path it is mounted over, ownership included, so it arrives owned by 65532 with no mapping, no <code>chown</code> and no SELinux label option to choose. It survives <code>--rm</code>, and <code>podman volume rm cargoship-cache</code> is how you discard it deliberately.</p>
 <p>To put the cache somewhere other than the default path, set it in the environment as <code>DISTRO_ZARF_CACHE</code>, or as <code>zarf_cache</code> in a cargoship configuration file – the modules take no parameter for it, so a playbook cannot pass it per task. The <code>--zarf-cache</code> flag does the same thing for a <code>cargoship</code> command run directly in the container – it is named for zarf’s cache, which is what it is, and it takes cargoship’s path. The default printed in <code>docs/commands</code> is the one this repository’s own <code>cargoship-config.yaml</code> sets, not the built-in <code>~/.cargoship-cache</code> a container resolves, since viper searches the working directory for a configuration file and a checkout has one.</p>
 <h2 id="the-uid-is-what-actually-breaks-first"><a class="header" href="#the-uid-is-what-actually-breaks-first">The UID Is What Actually Breaks First</a></h2>
@@ -764,15 +808,17 @@ podman run --rm \
 <p>Setting <code>SSH_KNOWN_HOSTS=/dev/null</code> disables host key verification entirely. It is useful for a lab and is not a workaround for the paragraph above: a management node that accepts any host key accepts a machine standing in for a controller.</p>
 <h2 id="ssh-agents-work-with-the-socket-mounted"><a class="header" href="#ssh-agents-work-with-the-socket-mounted">SSH Agents Work, With the Socket Mounted</a></h2>
 <p>Cargoship reads <code>SSH_AUTH_SOCK</code> and offers the agent’s keys, so an agent on the host serves a run in the container once its socket is mounted and the variable points at it.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">podman run --rm \
   --userns=keep-id:uid=65532,gid=65532 \
   -v "$SSH_AUTH_SOCK":/run/ssh-agent.sock:z \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:0.26.2 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.29.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>An agent is the better arrangement when the key is protected by a passphrase, since nothing has to hold the passphrase inside the container, and it leaves no key file to mount read-only and forget about. It is worse when the run is unattended, because an agent is a session that has to be unlocked by somebody; a key file with a dedicated fleet key is the right answer there.</p>
 <h2 id="encrypting-the-generated-inventory-on-disk"><a class="header" href="#encrypting-the-generated-inventory-on-disk">Encrypting the Generated Inventory on Disk</a></h2>
 <p>When <code>inventory_path</code> is set to keep the generated ZarfCluster document across runs, that file normally holds decrypted registry passwords in plaintext with <code>0600</code> permissions. To prevent plaintext credentials from remaining on the host staging filesystem, pass age recipients to the role or CLI:</p>
@@ -931,12 +977,14 @@ cargoship apply ./package.tar.zst --config ./inventory.yaml --confirm
 <h2 id="installing-the-collection"><a class="header" href="#installing-the-collection">Installing the collection</a></h2>
 <p>The modules live in the <code>colonel_byte.cargoship</code> collection. The RPM and deb packages install it to <code>/usr/share/ansible/collections</code>, which is on ansible-core’s default collections path, so on a management node that installed cargoship from a package there is nothing further to do.</p>
 <p>Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.</p>
+<!-- x-release-please-start-version -->
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
-  --bundle colonel_byte-cargoship-0.25.0.tar.gz.sigstore.json \
-  colonel_byte-cargoship-0.25.0.tar.gz
-ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
+  --bundle colonel_byte-cargoship-0.29.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.29.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.29.0.tar.gz
 ./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
 </code></pre>
+<!-- x-release-please-end-version -->
 <p>From a checkout, build the tarball first with <code>hack/ansible-build-collection.sh ./bin/ansible</code>, which is the same script the release pipeline runs.</p>
 <p>That last step is not optional and has no equivalent in Galaxy’s own packaging. Ansible resolves a task name to a module <em>file</em>, so each action needs a file named after it; the files are symlinks to the one cargoship binary, which is what the packages create and what the script creates by hand. A collection installed without them fails with the module not being found.</p>
 <p>The collection carries one action plugin per module. It runs inside <code>ansible-playbook</code>, on the interpreter Ansible is already running on, and does one thing: copy <code>groups</code> and <code>hostvars</code> into the module’s <code>inventory</code> parameter so you do not have to. Nothing is installed on the fleet, and running cargoship by hand still needs no Python.</p>
@@ -2245,6 +2293,152 @@ ansible-vault decrypt --vault-password-file ./vault-pass.txt --output - &lt; ct.
 <li>A failed command never touches the file. The rewrite goes to a temporary file alongside the original and is renamed over it, so an interruption cannot leave a half-written configuration.</li>
 <li>The file’s mode is preserved across a rewrite.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="driving-zarf-from-ansible"><a class="header" href="#driving-zarf-from-ansible">Driving zarf from Ansible</a></h1>
+<p>The <code>colonel_byte.zarf</code> collection initialises a cluster with zarf and deploys zarf packages onto it from a playbook. It is a proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes native Ansible module support for zarf, built here because the pattern it proposes is the one <code>colonel_byte.cargoship</code> already runs. See <a href="#running-cargoship-as-an-ansible-module">ansible-module</a> for that collection, whose shape this one copies.</p>
+<p>This guide covers what the two modules are, how to install them, the two-module walk that a cluster with no storage provider needs, and what the result holds. The full parameter set of each module, and the zarf flag each parameter renders, is on its reference page: <a href="#init"><code>zarf_init</code></a> and <a href="#package_deploy"><code>zarf_package_deploy</code></a>, both generated from the collection. For why the modules are separate wrapper binaries rather than the <code>zarf</code> binary itself, see <a href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">choice-zarf-ansible-module</a>.</p>
+<h2 id="the-two-modules"><a class="header" href="#the-two-modules">The two modules</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Module</th><th>Command it renders</th><th>What it is for</th></tr>
+</thead>
+<tbody>
+<tr><td><code>colonel_byte.zarf.zarf_init</code></td><td><code>zarf init</code></td><td>Initialise a cluster: the injector, the seed registry, the registry, the agent</td></tr>
+<tr><td><code>colonel_byte.zarf.zarf_package_deploy</code></td><td><code>zarf package deploy</code></td><td>Put a package on a cluster, from a path, an <code>oci://</code> reference, or an <code>https://</code> URL</td></tr>
+</tbody>
+</table>
+</div>
+<p>Both run on the node the task is delegated to, not on the cluster’s nodes. Zarf reaches the cluster through a kubeconfig, so there is no inventory to project and nothing to copy to a managed node: a task supplies a kubeconfig, a package, and the parameters the zarf command takes.</p>
+<p>Neither module is a Python module. Each is a compiled wrapper binary that renders the zarf command line from the task’s parameters, runs the <strong>installed</strong> zarf, follows the deployment component by component, and writes one JSON object back. The zarf that does the work is the one on the node’s path, which is what keeps the module and the tool in step.</p>
+<h2 id="installing"><a class="header" href="#installing">Installing</a></h2>
+<p>The cargoship <code>.rpm</code>, <code>.deb</code>, and <code>.apk</code> install the collection to <code>/usr/share/ansible/collections/ansible_collections/colonel_byte/zarf/</code> – on Ansible’s default collections path – along with <code>/usr/bin/zarf_init</code> and <code>/usr/bin/zarf_package_deploy</code> and the module symlinks that point at them. Installing the package is all a management node needs, beyond a zarf of its own.</p>
+<p>From a checkout, build the module files and put them on the path:</p>
+<pre><code class="language-sh">go run ./magefiles/core test:endToEndZarf   # builds both, then runs the e2e suite
+# or just the binaries:
+go build -o build/zarf_init ./cmd/zarf/init
+go build -o build/zarf_package_deploy ./cmd/zarf/deploy
+</code></pre>
+<p>The <code>cargoship-ansible</code> container image carries all of it already – <code>ansible-core</code>, both collections, both module files, and a <code>zarf</code> binary copied from zarf’s own signed agent image – so a run from that image needs nothing installed. See <a href="#running-the-collection-from-the-container">ansible-container</a>.</p>
+<p>A task can name a wrapper outright rather than relying on the path, which is what the e2e suite does:</p>
+<pre><code class="language-yaml">- name: Initialise the cluster
+  colonel_byte.zarf.zarf_init:
+    wrapper_binary: /home/operator/cargoship/build/zarf_init
+    init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+</code></pre>
+<p>Set <code>run_once: true</code> and <code>delegate_to</code> on every task. One <code>zarf init</code> initialises the whole cluster, so a play over the cluster’s own inventory would otherwise initialise it once per host. Set <code>no_log: true</code> on any task carrying a credential: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
+<h2 id="naming-the-init-package"><a class="header" href="#naming-the-init-package">Naming the init package</a></h2>
+<p><code>init_package</code> is the package zarf deploys, passed as the positional package source <code>zarf init [ PACKAGE_SOURCE ]</code> takes. A path to a staged tarball under any name, an <code>oci://</code> reference, or an <code>https://</code> URL all work, and so does a directory – which leaves zarf to search inside it the way it does when given no source at all, for a file named after zarf’s own version.</p>
+<pre><code class="language-sh">zarf package pull oci://ghcr.io/zarf-dev/packages/init:v0.85.0 --architecture amd64 \
+  --output-directory /srv/staging
+</code></pre>
+<p>A package pulled that way keeps the <code>zarf-init-&lt;arch&gt;-&lt;version&gt;.tar.zst</code> name, and the version has to be the version of the zarf that will deploy it: <code>zarf version</code> on the node that runs the play is what picks the tag, including inside the <code>cargoship-ansible</code> image, whose zarf is a pinned release of its own. A package built in-house is under no such constraint about its name, because nothing looks it up by name.</p>
+<p>This needs zarf <strong>v0.72.0 or newer</strong>, which is where <code>zarf init</code> gained that positional argument. Before it, the only way to choose a package was to run zarf in the directory holding a file named after zarf’s own version, and the module did exactly that – so an older zarf rejects the argument as a usage error naming neither the parameter nor the version that would accept it. The wrapper reads <code>zarf version</code> before it runs and fails with both versions instead, and reports what it found as <code>zarf.version</code> either way.</p>
+<p><code>directory</code> is now a separate thing: the working directory zarf runs in, which is where a relative <code>init_package</code> and a relative path inside a <code>zarf_config</code> file resolve from. The two may be set together.</p>
+<pre><code class="language-yaml">- name: Initialise the cluster from a package built in-house
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/our-init-package.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+
+- name: Initialise the cluster from a package held in an internal registry
+  colonel_byte.zarf.zarf_init:
+    init_package: oci://registry.bubbles.test/zarf/init:v0.85.0
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+</code></pre>
+<h2 id="the-walk-a-cluster-with-no-storage-needs"><a class="header" href="#the-walk-a-cluster-with-no-storage-needs">The walk a cluster with no storage needs</a></h2>
+<p>A cluster whose distribution ships no storage provider cannot be initialised in one task, and the reason is worth knowing before a playbook is written: zarf’s registry claims a 20Gi <code>PersistentVolumeClaim</code> during the seed phase. With no <code>StorageClass</code> to satisfy it the claim stays <code>Pending</code> and the Helm install times out. Disabling the claim does not help – the registry chart then renders no storage configuration at all and the container exits.</p>
+<p>What does work is deploying a storage provider first, with <code>connected: true</code>. A connected deploy does not push the package’s images, so it needs no registry, and so needs no initialised cluster. That is the one zarf operation available on a cluster nothing has touched, and it is why this collection has a deploy module as well as an init one:</p>
+<pre><code class="language-yaml">- name: Deploy the storage provider onto the uninitialised cluster
+  colonel_byte.zarf.zarf_package_deploy:
+    package: oci://ghcr.io/colonel-byte/zarf/csi-local-path-provider:0.0.37-upstream
+    components: local-path-images,local-path-chart
+    kubeconfig: "{{ zarf_kubeconfig }}"
+    public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+    verify: always
+    connected: true
+  delegate_to: localhost
+  run_once: true
+
+- name: Initialise the cluster
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
+    kubeconfig: "{{ zarf_kubeconfig }}"
+    registry_mode: proxy
+  delegate_to: localhost
+  run_once: true
+</code></pre>
+<p>This is the shape the <a href="https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-local-path/uds-bundle.yaml"><code>init-local-path</code> uds-bundle</a> carries, which lists the init package and the storage provider twice each and alternates between them. <code>test/e2e/zarf/testdata/provider-first.yml</code> and <code>bundle-order.yml</code> are that bundle written as playbooks, and both are run by <code>mage test:endToEndZarf</code>.</p>
+<p>Two parameters earn their keep on the second pass over an already-provisioned cluster:</p>
+<ul>
+<li><code>take_ownership: true</code> lets zarf adopt objects it did not create. A cluster that already has a <code>local-path</code> <code>StorageClass</code> – k3s ships one – makes Helm refuse the provider package without it.</li>
+<li><code>force_conflicts: true</code> lets server-side apply overwrite fields another controller owns, which is the next thing that refuses after ownership is settled.</li>
+</ul>
+<h3 id="registry-proxy-mode"><a class="header" href="#registry-proxy-mode">Registry proxy mode</a></h3>
+<p><code>registry_mode: proxy</code> is worth preferring on a small or local cluster. Zarf’s default nodeport mode publishes the registry on a Kubernetes NodePort and pushes every image through it; on a k3d cluster that push is slow enough to time out and be retried, which adds minutes to an initialisation. Proxy mode puts a DaemonSet on a host port instead. The mode zarf settled on is recorded in <code>registryInfo.registryMode</code> inside the <code>zarf-state</code> secret.</p>
+<h2 id="what-the-result-holds"><a class="header" href="#what-the-result-holds">What the result holds</a></h2>
+<pre><code class="language-json">{
+  "changed": true,
+  "msg": "initialised the cluster",
+  "zarf": {
+    "module": "init",
+    "command": ["zarf", "init", "--confirm", "--no-color", "--log-format", "json", "--registry-mode", "proxy"],
+    "directory": "/srv/staging",
+    "componentsRan": ["zarf-injector", "zarf-seed-registry", "zarf-registry", "zarf-agent"],
+    "changedSignal": "partial",
+    "changedUndeclared": ["zarf-injector", "zarf-seed-registry", "zarf-registry", "zarf-agent"],
+    "statusFile": "/tmp/zarf-status-m56nictp.json"
+  }
+}
+</code></pre>
+<p><code>componentsRan</code> is what a playbook has in place of per-component tasks, and <code>command</code> is the command line to reproduce the run by hand – with credential values replaced, so it is safe to print.</p>
+<p><code>changedSignal</code> is <code>partial</code> for every successful run, and that is honest rather than unfinished. Zarf reports which components it deployed and does not report whether any of them found the cluster already as it wanted, so the modules report <code>changed: true</code> and name every component as undeclared. A module <strong>inside</strong> zarf, with access to the deployer, is what could report <code>complete</code>.</p>
+<h3 id="live-progress-1"><a class="header" href="#live-progress-1">Live progress</a></h3>
+<p>Zarf deployments take minutes, and an Ansible task prints nothing until it returns. The wrapper writes each component boundary to a status file and the action plugin displays it, so a play run with <code>-v</code> reports progress as it happens:</p>
+<pre><code class="language-console">[zarf] component 1/4: zarf-injector [running]
+[zarf] component 2/4: zarf-seed-registry [running]
+[zarf] component 3/4: zarf-registry [running]
+</code></pre>
+<p>The count on the left is only known when the task names <code>components</code>; otherwise the display reports <code>component 3</code> rather than <code>component 3/4</code>, which is what an honest unknown looks like. The monitor polls twice a second, so a component that finishes and is replaced inside that window shows its <code>[running]</code> line and not its <code>[done]</code> line.</p>
+<h2 id="check-mode-and-failures"><a class="header" href="#check-mode-and-failures">Check mode and failures</a></h2>
+<p>Check mode reports the task as <strong>skipped</strong>. Neither <code>zarf init</code> nor <code>zarf package deploy</code> has a dry run, and running anyway during a <code>--check</code> play is the one thing check mode must not do.</p>
+<p>A failure is reported inside the result, with the process still exiting 0, so Ansible shows the module’s message rather than its own <code>MODULE FAILURE</code> diagnosis. Zarf’s own output goes to stderr, where Ansible captures it as <code>module_stderr</code>: standard output carries the one JSON object and nothing else.</p>
+<pre><code class="language-yaml">- name: Deploy a package
+  colonel_byte.zarf.zarf_package_deploy:
+    package: /srv/staging/zarf-package-monitoring-amd64.tar.zst
+    kubeconfig: "{{ zarf_kubeconfig }}"
+  register: deploy
+  failed_when: deploy.failed
+</code></pre>
+<h2 id="credentials"><a class="header" href="#credentials">Credentials</a></h2>
+<p>Parameters carrying credentials – the registry and git push and pull passwords, the registry secret – are rendered as flags, which puts them in the process table for the life of the run. Keep them out of it by putting them in a zarf config file and naming it with <code>zarf_config</code>, which the module passes as <code>ZARF_CONFIG</code>:</p>
+<pre><code class="language-yaml">- name: Initialise with credentials zarf reads from its own config file
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
+    kubeconfig: "{{ zarf_kubeconfig }}"
+    zarf_config: /etc/zarf/zarf-config.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+</code></pre>
+<p>The parameters themselves never reach disk on the path this collection’s action plugins take: they are piped to the wrapper on stdin. A connection that cannot carry data on stdin – SSH without pipelining – falls back to a <code>0600</code> arguments file in a <code>0700</code> directory, removed when the task ends. Both are conventions ZEP-0072 weighs; the wrapper reads either.</p>
+<h2 id="reproducing-a-module-run-by-hand"><a class="header" href="#reproducing-a-module-run-by-hand">Reproducing a module run by hand</a></h2>
+<p>Both wrappers answer as the module named by the basename they were invoked under, or by <code>ZARF_ANSIBLE_MODULE</code>, and read their parameters from a JSON file named as the single argument or from stdin:</p>
+<pre><code class="language-sh">printf '%s' '{"init_package":"/srv/staging/zarf-init-amd64-v0.85.0.tar.zst","kubeconfig":"/etc/rancher/rke2/rke2.yaml"}' \
+  | ZARF_ANSIBLE_MODULE=init zarf_init
+</code></pre>
+<p>This is the invocation the action plugin makes, so it is the one to reach for when a task fails and the question is whether the module or the playbook is wrong.</p>
+<h2 id="testing"><a class="header" href="#testing">Testing</a></h2>
+<p><code>mage test:endToEndZarf</code> builds both wrappers and runs the e2e suite, which stands up two k3d clusters – one with a storage provider and one without – and walks the uds-bundle’s four packages across each. It needs <code>k3d</code>, <code>zarf</code>, <code>ansible-playbook</code>, Docker, and the network to pull the packages once; each test skips with a reason when one is missing. <code>mage test:cleanZarfClusters</code> removes the clusters a killed run left behind.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="cargoship-3"><a href="#cargoship-3" class="header">cargoship</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
@@ -4489,6 +4683,8 @@ $ cargoship version -o json
 <h2 id="reference-pages-are-generated"><a class="header" href="#reference-pages-are-generated">Reference pages are generated</a></h2>
 <p>Every <code>module_*.md</code> and <code>role_*.md</code> page here is generated from the collection itself – a role’s interface from its <code>meta/argument_specs.yml</code>, a module’s from the <code>DOCUMENTATION</code> and <code>EXAMPLES</code> blocks in its action plugin – by <code>mage generate:document</code>. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.</p>
 <p>This page, <a href="#modules">modules.md</a>, and <a href="#roles">roles.md</a> are written by hand. See <code>ansible/colonel_byte/cargoship/AGENTS.md</code> for the contract.</p>
+<h2 id="the-other-collection-here"><a class="header" href="#the-other-collection-here">The other collection here</a></h2>
+<p><a href="#the-colonel_bytezarf-collection"><code>colonel_byte.zarf</code></a> drives zarf from a playbook, and is generated by the same generators from the same kind of <code>DOCUMENTATION</code> blocks. It is a proof of concept rather than part of cargoship; nothing in this collection depends on it.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="modules"><a class="header" href="#modules">Modules</a></h1>
 <p>Five modules ship, one per fleet action. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run.</p>
@@ -4843,6 +5039,253 @@ $ cargoship version -o json
 </tbody>
 </table>
 </div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="the-colonel_bytezarf-collection"><a class="header" href="#the-colonel_bytezarf-collection">The <code>colonel_byte.zarf</code> collection</a></h1>
+<p>Zarf runs inside a playbook as an Ansible collection: <code>zarf init</code> initialises a cluster and <code>zarf package deploy</code> puts a package on it, both driven from the node the task is delegated to. The modules are compiled wrapper binaries named <code>zarf_&lt;action&gt;</code>, and the name selects the action. There is no Python module behind either, and nothing is installed on the cluster’s nodes.</p>
+<p>This collection is a proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes this pattern for zarf itself, built here because the pattern it copies is the one <a href="#the-colonel_bytecargoship-collection"><code>colonel_byte.cargoship</code></a> already runs. It is expected to be removed once that proposal is resolved – see <a href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">choice-zarf-collection-removal</a>.</p>
+<p>Zarf is not an SSH orchestrator. It reaches one cluster through a kubeconfig, so Ansible supplies no inventory here: a task supplies a kubeconfig, a package, and the parameters the zarf command takes. The zarf that does the work is the one on the node’s path, which is what keeps the module and the tool in step.</p>
+<h2 id="what-is-here-1"><a class="header" href="#what-is-here-1">What is here</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Page</th><th>What it covers</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="#modules-1">Modules</a></td><td>The two actions: initialising a cluster, and deploying a package onto it.</td></tr>
+<tr><td><a href="#driving-zarf-from-ansible">Module guide</a></td><td>Installing the modules, the two-module walk, check mode, and the result.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="which-to-reach-for-2"><a class="header" href="#which-to-reach-for-2">Which to reach for</a></h2>
+<p>There is no role here, and no module picks the other’s work up. A playbook writes the action it wants: <code>zarf_init</code> for the cluster itself, <code>zarf_package_deploy</code> for anything deployed onto it afterwards.</p>
+<p>The two are usually written together rather than separately. A cluster whose distribution ships no storage provider cannot be initialised until one is deployed – zarf’s registry claims a volume during the seed phase – and a package cannot normally be deployed until the cluster is initialised. The way out is a connected deploy, which pushes no images and so needs no registry; the <a href="#driving-zarf-from-ansible">module guide</a> covers the ordering.</p>
+<h2 id="reference-pages-are-generated-1"><a class="header" href="#reference-pages-are-generated-1">Reference pages are generated</a></h2>
+<p>Every <code>module_*.md</code> page here is generated from the collection itself – the <code>DOCUMENTATION</code> and <code>EXAMPLES</code> blocks in each action plugin – by <code>mage generate:document</code>. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.</p>
+<p>This page and <a href="#modules-1">modules.md</a> are written by hand. The generators are shared with the cargoship collection, so the contract in <code>ansible/colonel_byte/cargoship/AGENTS.md</code> applies here too: every option declares a <code>type</code>, a <code>description</code>, and a <code>cli_flag</code>, and every <code>description</code> entry is double-quoted.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="modules-1"><a class="header" href="#modules-1">Modules</a></h1>
+<p>Two modules ship, one per zarf command a convergence run needs. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run – and neither is package removal, which nothing here has needed yet.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Module</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="#init"><code>zarf_init</code></a></td><td>Initialises a cluster: the injector, the seed registry, the registry, the agent.</td></tr>
+<tr><td><a href="#package_deploy"><code>zarf_package_deploy</code></a></td><td>Puts a package on a cluster, from a path, an <code>oci://</code> reference, or an <code>https://</code> URL.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="the-surfaces-differ-because-the-commands-do-1"><a class="header" href="#the-surfaces-differ-because-the-commands-do-1">The surfaces differ because the commands do</a></h2>
+<p><code>zarf init</code> configures the registry and git server the cluster will use, so it takes the registry and git parameters and no package. <code>zarf package deploy</code> names a package outright and takes none of that configuration, but takes <code>connected</code>, <code>namespace</code> and <code>shasum</code>, which only a deploy has. A parameter offered to the wrong module is an error naming it, rather than a flag quietly dropped.</p>
+<p>Each module’s page lists its full parameter set and the flag each parameter renders. A parameter that renders no flag is listed as <code>None</code>: it is either the command’s positional argument, something passed to zarf in its environment, or something the action plugin consumes before the command line is built.</p>
+<h2 id="what-every-task-needs-1"><a class="header" href="#what-every-task-needs-1">What every task needs</a></h2>
+<p>A parameter left unset is left unset: the module passes no flag for it, so whatever zarf’s own configuration file sets still applies. That is why <code>plain_http: false</code> and omitting <code>plain_http</code> are different.</p>
+<p>Set <code>run_once: true</code> and <code>delegate_to</code> on every task. One <code>zarf init</code> initialises the whole cluster and one deploy puts the package on all of it, so a play over the cluster’s own inventory would otherwise do the work once per host. Set <code>no_log: true</code> on any task carrying a credential: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
+<p>Credentials given as parameters are rendered as flags, which puts them in the process table for the life of the run. <code>zarf_config</code> names a zarf configuration file instead, which zarf reads them from.</p>
+<h2 id="what-the-result-says"><a class="header" href="#what-the-result-says">What the result says</a></h2>
+<p>Both modules report <code>changed: true</code> with <code>changedSignal: partial</code> on every successful run, and name every component they deployed in <code>changedUndeclared</code>. Zarf reports which components ran and not whether any of them found the cluster already as it wanted, so <code>partial</code> is the honest answer rather than an unfinished one.</p>
+<p>Check mode reports the task as skipped. Neither command has a dry run.</p>
+<p>The <a href="#driving-zarf-from-ansible">module guide</a> covers installing the modules, the ordering a cluster with no storage provider needs, the live progress display, and the shape of the result.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="init"><a href="#init" class="header">init</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="zarf_init"><a class="header" href="#zarf_init">zarf_init</a></h2>
+<p>Initialise a cluster with a staged zarf init package.</p>
+<p>Write it as <code>colonel_byte.zarf.zarf_init</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Runs <code>zarf init</code> against the cluster a kubeconfig names, and follows the init package’s deployment component by component.</p>
+<p>The module is a small wrapper binary, not zarf. It renders the <code>zarf init</code> command line from these parameters, runs the installed zarf, reads the component boundaries back out of zarf’s log stream, and reports one JSON result.</p>
+<p>This is a proof of ZEP-0072 (<a href="https://github.com/zarf-dev/proposals/pull/73">https://github.com/zarf-dev/proposals/pull/73</a>), which proposes putting this dispatch inside the zarf binary itself.</p>
+<h3 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Flag</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>init_package</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The init package to deploy, such as <code>/srv/staging/zarf-init-amd64-v0.85.0.tar.zst</code>. It is passed as the positional package source of <code>zarf init</code>, so the file needs no particular name and need not sit in any particular directory. An <code>oci://</code> reference or an <code>https://</code> URL may be given instead of a path, for a cluster whose packages come from a registry rather than from disk. A directory may also be given, which leaves zarf to find a package inside it the way it does when given no source at all: a file named after zarf’s own version. One of <code>init_package</code> or <code>directory</code> is required.</td></tr>
+<tr><td><code>directory</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The working directory to run zarf in. A relative <code>init_package</code>, and a relative path inside a zarf config file named by <code>zarf_config</code>, are resolved against it. May be given together with <code>init_package</code>: the package says what to deploy, and this says where relative paths resolve from.</td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The kubeconfig of the cluster to initialise. Zarf has no <code>--kubeconfig</code> flag, so it is passed as <code>KUBECONFIG</code> in zarf’s environment.</td></tr>
+<tr><td><code>zarf_config</code></td><td><code>str</code></td><td>no</td><td>None</td><td>A zarf config file, passed as <code>ZARF_CONFIG</code>. It is how a playbook keeps registry and git credentials out of the argument vector: zarf reads them from the file, so they never reach the process table.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The zarf to run. Resolved on the path of the node the task runs on when unset.</td></tr>
+<tr><td><code>wrapper_binary</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The module wrapper to run, resolved on the path when it holds no separator. The action plugin consumes this parameter; the wrapper never sees it.</td></tr>
+<tr><td><code>status_file</code></td><td><code>str</code></td><td>no</td><td>None</td><td>Where the wrapper writes live component progress. The action plugin creates a private temporary file and overrides this, so a task has no reason to set it. It is here for a run reproduced by hand.</td></tr>
+<tr><td><code>parameters</code></td><td><code>dict</code></td><td>no</td><td>None</td><td>Further module parameters, merged into the ones given directly. It is how a role passes a caller-supplied set without templating a whole task’s arguments. A parameter given both directly and inside <code>parameters</code> is an error naming it. The action plugin consumes this key; the wrapper never sees it.</td></tr>
+<tr><td><code>components</code></td><td><code>str</code></td><td>no</td><td><code>--components</code></td><td>Which init components to deploy, as a comma-separated list. It is also what lets the progress display report <code>component 2/4</code> rather than <code>component 2</code>: the wrapper cannot otherwise know how many components the package holds.</td></tr>
+<tr><td><code>storage_class</code></td><td><code>str</code></td><td>no</td><td><code>--storage-class</code></td><td>The storage class the init package’s persistent volumes are created with.</td></tr>
+<tr><td><code>registry_url</code></td><td><code>str</code></td><td>no</td><td><code>--registry-url</code></td><td>The URL of an external registry to use instead of the one the init package deploys.</td></tr>
+<tr><td><code>registry_mode</code></td><td><code>str</code></td><td>no</td><td><code>--registry-mode</code></td><td>How zarf uses the registry.</td></tr>
+<tr><td><code>registry_port</code></td><td><code>int</code></td><td>no</td><td><code>--registry-port</code></td><td>The node port the internal registry is published on.</td></tr>
+<tr><td><code>registry_secret</code></td><td><code>str</code></td><td>no</td><td><code>--registry-secret</code></td><td>The secret zarf derives registry credentials from.</td></tr>
+<tr><td><code>registry_push_username</code></td><td><code>str</code></td><td>no</td><td><code>--registry-push-username</code></td><td>The username zarf pushes images with.</td></tr>
+<tr><td><code>registry_push_password</code></td><td><code>str</code></td><td>no</td><td><code>--registry-push-password</code></td><td>The password zarf pushes images with.</td></tr>
+<tr><td><code>registry_pull_username</code></td><td><code>str</code></td><td>no</td><td><code>--registry-pull-username</code></td><td>The username the cluster pulls images with.</td></tr>
+<tr><td><code>registry_pull_password</code></td><td><code>str</code></td><td>no</td><td><code>--registry-pull-password</code></td><td>The password the cluster pulls images with.</td></tr>
+<tr><td><code>git_url</code></td><td><code>str</code></td><td>no</td><td><code>--git-url</code></td><td>The URL of an external git server to use instead of the one the init package deploys.</td></tr>
+<tr><td><code>git_push_username</code></td><td><code>str</code></td><td>no</td><td><code>--git-push-username</code></td><td>The username zarf pushes repositories with.</td></tr>
+<tr><td><code>git_push_password</code></td><td><code>str</code></td><td>no</td><td><code>--git-push-password</code></td><td>The password zarf pushes repositories with.</td></tr>
+<tr><td><code>git_pull_username</code></td><td><code>str</code></td><td>no</td><td><code>--git-pull-username</code></td><td>The username the cluster pulls repositories with.</td></tr>
+<tr><td><code>git_pull_password</code></td><td><code>str</code></td><td>no</td><td><code>--git-pull-password</code></td><td>The password the cluster pulls repositories with.</td></tr>
+<tr><td><code>injector_image</code></td><td><code>str</code></td><td>no</td><td><code>--injector-image</code></td><td>The image the zarf injector runs.</td></tr>
+<tr><td><code>injector_port</code></td><td><code>int</code></td><td>no</td><td><code>--injector-port</code></td><td>The port the zarf injector listens on.</td></tr>
+<tr><td><code>agent_mutation_policy</code></td><td><code>str</code></td><td>no</td><td><code>--agent-mutation-policy</code></td><td>Which resources the zarf agent mutates.</td></tr>
+<tr><td><code>agent_tls_ca</code></td><td><code>str</code></td><td>no</td><td><code>--agent-tls-ca</code></td><td>The certificate authority the zarf agent’s serving certificate is issued by.</td></tr>
+<tr><td><code>agent_tls_cert</code></td><td><code>str</code></td><td>no</td><td><code>--agent-tls-cert</code></td><td>The zarf agent’s serving certificate.</td></tr>
+<tr><td><code>agent_tls_key</code></td><td><code>str</code></td><td>no</td><td><code>--agent-tls-key</code></td><td>The private key of the zarf agent’s serving certificate.</td></tr>
+<tr><td><code>take_ownership</code></td><td><code>bool</code></td><td>no</td><td><code>--take-ownership</code></td><td>Whether zarf takes ownership of resources an earlier install created.</td></tr>
+<tr><td><code>force_conflicts</code></td><td><code>bool</code></td><td>no</td><td><code>--force-conflicts</code></td><td>Whether zarf forces apply conflicts.</td></tr>
+<tr><td><code>skip_values_schema_validation</code></td><td><code>bool</code></td><td>no</td><td><code>--skip-values-schema-validation</code></td><td>Whether zarf skips validating values files against their schema.</td></tr>
+<tr><td><code>insecure_skip_tls_verify</code></td><td><code>bool</code></td><td>no</td><td><code>--insecure-skip-tls-verify</code></td><td>Whether zarf skips verifying TLS certificates it connects to.</td></tr>
+<tr><td><code>plain_http</code></td><td><code>bool</code></td><td>no</td><td><code>--plain-http</code></td><td>Whether zarf talks to registries over plain HTTP.</td></tr>
+<tr><td><code>retries</code></td><td><code>int</code></td><td>no</td><td><code>--retries</code></td><td>How many times zarf retries a failed operation.</td></tr>
+<tr><td><code>oci_concurrency</code></td><td><code>int</code></td><td>no</td><td><code>--oci-concurrency</code></td><td>How many OCI operations zarf runs at once.</td></tr>
+<tr><td><code>architecture</code></td><td><code>str</code></td><td>no</td><td><code>--architecture</code></td><td>The architecture of the package being deployed.</td></tr>
+<tr><td><code>cache</code></td><td><code>str</code></td><td>no</td><td><code>--cache</code></td><td>Zarf’s cache directory.</td></tr>
+<tr><td><code>tmpdir</code></td><td><code>str</code></td><td>no</td><td><code>--tmpdir</code></td><td>The directory zarf unpacks the init package into.</td></tr>
+<tr><td><code>timeout</code></td><td><code>str</code></td><td>no</td><td><code>--timeout</code></td><td>How long zarf waits for a Helm operation, as a Go duration such as <code>30m</code>.</td></tr>
+<tr><td><code>public_key</code></td><td><code>str</code></td><td>no</td><td><code>--key</code></td><td>The public key the init package’s signature is verified against.</td></tr>
+<tr><td><code>verify</code></td><td><code>str</code></td><td>no</td><td><code>--verify</code></td><td>When to verify the init package’s signature. One of <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
+<tr><td><code>values</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td><code>--values</code></td><td>Values files to apply, one flag per entry.</td></tr>
+<tr><td><code>set_values</code></td><td><code>dict</code></td><td>no</td><td><code>--set-values</code></td><td>Values to set, as a mapping. Rendered one flag per entry, sorted, so the same parameters always render the same command line.</td></tr>
+<tr><td><code>set_variables</code></td><td><code>dict</code></td><td>no</td><td><code>--set-variables</code></td><td>Zarf variables to set, as a mapping.</td></tr>
+<tr><td><code>log_level</code></td><td><code>str</code></td><td>no</td><td><code>--log-level</code></td><td>Zarf’s log level.</td></tr>
+<tr><td><code>log_format</code></td><td><code>str</code></td><td>no</td><td><code>--log-format</code></td><td>Zarf’s log format. Defaults to <code>json</code>, which is the format the component progress is read out of. Overriding it costs the progress display its component names, and changes nothing else about the run.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="notes-7"><a class="header" href="#notes-7">Notes</a></h3>
+<ul>
+<li>Set <code>run_once: true</code> and <code>delegate_to</code> on the task. One zarf init initialises the whole cluster, so a play over the cluster’s own inventory would otherwise initialise it once per host.</li>
+<li>Set <code>no_log: true</code> on the task. A binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</li>
+<li>Check mode reports the task as skipped. <code>zarf init</code> has no dry run, so there is nothing honest to report instead.</li>
+<li>A parameter left unset renders no flag, so whatever zarf’s own config file sets still applies. That is why <code>plain_http: false</code> and omitting <code>plain_http</code> differ.</li>
+<li>Credentials given as parameters are rendered as flags, which puts them in the process table for the life of the run. Put them in a zarf config file and name it with <code>zarf_config</code> to keep them out of it.</li>
+<li>Needs zarf v0.72.0 or newer, which is where <code>zarf init</code> gained the positional package source this module passes <code>init_package</code> as. The wrapper reads <code>zarf version</code> before it runs and fails naming both versions when the zarf it found is older.</li>
+</ul>
+<h3 id="example-5"><a class="header" href="#example-5">Example</a></h3>
+<pre><code class="language-yaml">- name: Initialise the cluster
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+    storage_class: local-path
+    components: zarf-registry,zarf-agent
+    timeout: 30m
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+  register: init_result
+
+- name: Report which components the init package deployed
+  ansible.builtin.debug:
+    var: init_result.zarf.componentsRan
+
+- name: Initialise the cluster with credentials zarf reads from its own config file
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+    zarf_config: /etc/zarf/zarf-config.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+
+- name: Initialise the cluster from a custom init package under a name of its own
+  colonel_byte.zarf.zarf_init:
+    init_package: /srv/staging/our-init-package.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+
+- name: Initialise the cluster from an init package held in a registry
+  colonel_byte.zarf.zarf_init:
+    init_package: oci://registry.bubbles.test/zarf/init:v0.85.0
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="package_deploy"><a href="#package_deploy" class="header">package_deploy</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="zarf_package_deploy"><a class="header" href="#zarf_package_deploy">zarf_package_deploy</a></h2>
+<p>Deploy a zarf package onto an initialised cluster.</p>
+<p>Write it as <code>colonel_byte.zarf.zarf_package_deploy</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Runs <code>zarf package deploy</code> against the cluster a kubeconfig names, and follows the deployment component by component.</p>
+<p>The module is a small wrapper binary, not zarf. It renders the command line from these parameters, runs the installed zarf, reads the component boundaries back out of zarf’s log stream, and reports one JSON result.</p>
+<p>It is the companion of <code>colonel_byte.zarf.zarf_init</code>. A cluster whose init package has no StorageClass to claim cannot finish initialising until a storage provider is deployed, and the provider cannot be deployed until the cluster is initialised far enough to hold it, so a playbook alternates between the two.</p>
+<h3 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Flag</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>package</code></td><td><code>str</code></td><td>yes</td><td>None</td><td>The package to deploy: a path to a tarball, an <code>oci://</code> reference, or an <code>https://</code> URL. A relative path is resolved against the working directory the module was invoked from unless <code>directory</code> names one, because that directory belongs to Ansible rather than to the operator. The positional argument of the command, so it renders no flag.</td></tr>
+<tr><td><code>directory</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The working directory to run zarf in. A relative <code>package</code> is resolved against it.</td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The kubeconfig of the cluster to deploy onto. Zarf has no <code>--kubeconfig</code> flag, so it is passed as <code>KUBECONFIG</code> in zarf’s environment.</td></tr>
+<tr><td><code>zarf_config</code></td><td><code>str</code></td><td>no</td><td>None</td><td>A zarf config file, passed as <code>ZARF_CONFIG</code>. It is how a playbook keeps credentials out of the argument vector.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The zarf to run. Resolved on the path of the node the task runs on when unset.</td></tr>
+<tr><td><code>wrapper_binary</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The module wrapper to run, resolved on the path when it holds no separator. The action plugin consumes this parameter; the wrapper never sees it.</td></tr>
+<tr><td><code>status_file</code></td><td><code>str</code></td><td>no</td><td>None</td><td>Where the wrapper writes live component progress. The action plugin creates a private temporary file and overrides this.</td></tr>
+<tr><td><code>parameters</code></td><td><code>dict</code></td><td>no</td><td>None</td><td>Further module parameters, merged into the ones given directly. A parameter given both directly and inside <code>parameters</code> is an error naming it. The action plugin consumes this key; the wrapper never sees it.</td></tr>
+<tr><td><code>components</code></td><td><code>str</code></td><td>no</td><td><code>--components</code></td><td>Which components to deploy, as a comma-separated list. It is also what lets the progress display report <code>component 2/4</code> rather than <code>component 2</code>: the wrapper cannot otherwise know how many components the package holds.</td></tr>
+<tr><td><code>namespace</code></td><td><code>str</code></td><td>no</td><td><code>--namespace</code></td><td>Deploy into this namespace instead of the one the package names. Alpha in zarf.</td></tr>
+<tr><td><code>shasum</code></td><td><code>str</code></td><td>no</td><td><code>--shasum</code></td><td>The SHA256 checksum of a package fetched over <code>https://</code>.</td></tr>
+<tr><td><code>connected</code></td><td><code>bool</code></td><td>no</td><td><code>--connected</code></td><td>Whether to deploy without pushing the package’s images and repositories, for a cluster that can already reach them.</td></tr>
+<tr><td><code>take_ownership</code></td><td><code>bool</code></td><td>no</td><td><code>--take-ownership</code></td><td>Whether zarf adopts Kubernetes resources that already exist.</td></tr>
+<tr><td><code>force_conflicts</code></td><td><code>bool</code></td><td>no</td><td><code>--force-conflicts</code></td><td>Whether zarf forces Helm ownership during server-side apply.</td></tr>
+<tr><td><code>skip_values_schema_validation</code></td><td><code>bool</code></td><td>no</td><td><code>--skip-values-schema-validation</code></td><td>Whether zarf skips validating values files against their schema.</td></tr>
+<tr><td><code>insecure_skip_tls_verify</code></td><td><code>bool</code></td><td>no</td><td><code>--insecure-skip-tls-verify</code></td><td>Whether zarf skips verifying TLS certificates it connects to.</td></tr>
+<tr><td><code>plain_http</code></td><td><code>bool</code></td><td>no</td><td><code>--plain-http</code></td><td>Whether zarf talks to OCI registries over plain HTTP.</td></tr>
+<tr><td><code>retries</code></td><td><code>int</code></td><td>no</td><td><code>--retries</code></td><td>How many times zarf retries a failed operation.</td></tr>
+<tr><td><code>oci_concurrency</code></td><td><code>int</code></td><td>no</td><td><code>--oci-concurrency</code></td><td>How many OCI operations zarf runs at once.</td></tr>
+<tr><td><code>architecture</code></td><td><code>str</code></td><td>no</td><td><code>--architecture</code></td><td>The architecture of the package being deployed.</td></tr>
+<tr><td><code>cache</code></td><td><code>str</code></td><td>no</td><td><code>--cache</code></td><td>Zarf’s cache directory.</td></tr>
+<tr><td><code>tmpdir</code></td><td><code>str</code></td><td>no</td><td><code>--tmpdir</code></td><td>The directory zarf unpacks the package into.</td></tr>
+<tr><td><code>timeout</code></td><td><code>str</code></td><td>no</td><td><code>--timeout</code></td><td>How long zarf waits for a Helm operation or health check, as a Go duration such as <code>15m</code>.</td></tr>
+<tr><td><code>public_key</code></td><td><code>str</code></td><td>no</td><td><code>--key</code></td><td>The public key the package signature is verified against.</td></tr>
+<tr><td><code>verify</code></td><td><code>str</code></td><td>no</td><td><code>--verify</code></td><td>When to verify the package signature. One of <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
+<tr><td><code>values</code></td><td><code>list</code> of <code>str</code></td><td>no</td><td><code>--values</code></td><td>Values files to apply, one flag per entry.</td></tr>
+<tr><td><code>set_values</code></td><td><code>dict</code></td><td>no</td><td><code>--set-values</code></td><td>Values to set, as a mapping. Rendered one flag per entry, sorted, so the same parameters always render the same command line.</td></tr>
+<tr><td><code>set_variables</code></td><td><code>dict</code></td><td>no</td><td><code>--set-variables</code></td><td>Zarf variables to set, as a mapping.</td></tr>
+<tr><td><code>log_level</code></td><td><code>str</code></td><td>no</td><td><code>--log-level</code></td><td>Zarf’s log level.</td></tr>
+<tr><td><code>log_format</code></td><td><code>str</code></td><td>no</td><td><code>--log-format</code></td><td>Zarf’s log format. Defaults to <code>json</code>, which is the format the component progress is read out of.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="notes-8"><a class="header" href="#notes-8">Notes</a></h3>
+<ul>
+<li>Set <code>run_once: true</code> and <code>delegate_to</code> on the task. One deploy puts the package on the whole cluster, so a play over the cluster’s own inventory would otherwise deploy it once per host.</li>
+<li>Set <code>no_log: true</code> on the task when any parameter carries a credential. A binary module has no per-parameter <code>no_log</code>.</li>
+<li>Check mode reports the task as skipped. <code>zarf package deploy</code> has no dry run, so there is nothing honest to report instead.</li>
+<li>A parameter left unset renders no flag, so whatever zarf’s own config file sets still applies.</li>
+</ul>
+<h3 id="example-6"><a class="header" href="#example-6">Example</a></h3>
+<pre><code class="language-yaml">- name: Deploy a storage provider so the registry has a StorageClass to claim
+  colonel_byte.zarf.zarf_package_deploy:
+    package: oci://ghcr.io/colonel-byte/zarf/csi-local-path-provider:0.0.37-upstream
+    components: local-path-images,local-path-chart
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+    public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+    verify: always
+  delegate_to: localhost
+  run_once: true
+
+- name: Deploy a staged package
+  colonel_byte.zarf.zarf_package_deploy:
+    package: /srv/staging/zarf-package-monitoring-amd64.tar.zst
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+    set_variables:
+      DOMAIN: bubbles.test
+  delegate_to: localhost
+  run_once: true
+  no_log: true
+  register: deploy_result
+
+- name: Report which components the package deployed
+  ansible.builtin.debug:
+    var: deploy_result.zarf.componentsRan
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="apply-2"><a href="#apply-2" class="header">apply</a></h1>
 <h2 id="apply-phases"><a class="header" href="#apply-phases">apply phases</a></h2>
@@ -15708,6 +16151,7 @@ $ docker exec -it &lt;container&gt; sh
 <h2 id="layout-1"><a class="header" href="#layout-1">Layout</a></h2>
 <pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
 test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
+test/e2e/zarf/         the colonel_byte.zarf collection: two k3d clusters, a real zarf, the uds-bundle's packages walked by the modules
 test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
 test/registry.go       in-process OCI registry used by the publish/pull/sign tests
@@ -15964,7 +16408,7 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <p>The static image copies the binary directly; this image installs the same RPM produced by the <code>nfpms</code> section.</p>
 <pre><code class="language-sh">$ docker run --rm --entrypoint rpm \
   ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt; -q cargoship
-cargoship-0.21.1-1.x86_64
+cargoship-&lt;version&gt;-1.x86_64
 </code></pre>
 <p><code>rpm -V cargoship</code> and <code>rpm -ql cargoship</code> work as well, which is the main
 reason to use an RPM-based image.</p>
@@ -16229,6 +16673,8 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <li><code>EndToEndCluster</code> - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
 <li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.</li>
 <li><code>EndToEndClusterDryRun</code> - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with <code>--dry-run</code> against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.</li>
+<li><code>EndToEndZarf</code> - Runs the zarf Ansible module suite: two k3d clusters – one with a storage provider, one without – and the <a href="https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-local-path/uds-bundle.yaml"><code>init-local-path</code> uds-bundle</a>’s four packages walked across each by <code>colonel_byte.zarf</code>. It builds both module wrapper binaries first. Needs <code>k3d</code>, a <code>zarf</code> on PATH, <code>ansible-playbook</code>, Docker, and the network to pull the packages the first time; every test skips with a reason when one is missing. See <a href="#driving-zarf-from-ansible">zarf-ansible-module</a>.</li>
+<li><code>CleanZarfClusters</code> - Removes the k3d clusters <code>EndToEndZarf</code> creates. That target does this before it runs; use this one for a run that was killed partway through.</li>
 <li><code>CleanCluster</code> - Removes the containers a bootloose cluster left behind. <code>EndToEndCluster</code> does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.</li>
 <li><code>Fuzz</code> - Replays the fuzz seed corpus (the <code>f.Add</code> values in each target plus anything committed under <code>fuzz/testdata/fuzz/&lt;Target&gt;/</code>). Calls the packages in process; needs no binary, cluster, or network. See <a href="#running-the-fuzz-tests">fuzz-tests</a>.</li>
 </ul>
@@ -16237,6 +16683,8 @@ mage test:endToEndNonCluster    # run the misc/package command suites, no cluste
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
 mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
+mage test:endToEndZarf          # run the zarf Ansible module suite (needs k3d, zarf, ansible-playbook)
+mage test:cleanZarfClusters     # remove the k3d clusters left behind by a killed zarf run
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run
 mage test:fuzz                  # replay the fuzz seed corpus
 </code></pre>
@@ -16260,6 +16708,9 @@ mage release:tofuProvider 0.1.0           # build it and push it to the default 
 </li>
 <li>
 <p><code>Completion</code> - Generates shell tab completion scripts for bash, zsh, fish, and powershell into <code>hack/completion/</code>.</p>
+</li>
+<li>
+<p><code>ZarfFlags</code> - Rewrites <code>internal/zarfmod/testdata/zarf-*-flags.txt</code>, the flag surface the Ansible module wrappers are held against, by parsing <code>zarf &lt;command&gt; --help</code> on the installed zarf. Each file records the zarf version it came from. <code>TestInitArgsAreKnownFlags</code> and <code>TestDeployArgsAreKnownFlags</code> read those files rather than the binary, so the unit tests still run on a machine with no zarf; this target is how the lists are refreshed when the zarf the collection targets moves. Needs <code>zarf</code> on <code>PATH</code>, or <code>CARGOSHIP_ZARF_BINARY</code> naming one.</p>
 </li>
 <li>
 <p><code>PullEngineSource</code> - Fetches raw k3s/RKE2 source at the tags pinned in <code>thirdparty-src/pins.json</code> into <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>). Touches the network.</p>
@@ -16294,6 +16745,7 @@ mage release:tofuProvider 0.1.0           # build it and push it to the default 
 <pre><code class="language-sh">mage generate:document                  # regenerate docs/commands, docs/phases, docs/golang, docs/schema, docs/ansible, docs/index.md, docs/security.md, and docs/SUMMARY.md
 mage generate:schema                    # regenerate schema/*.json from the Go API types
 mage generate:completion                # regenerate hack/completion/ shell completion scripts (bash, zsh, fish, powershell)
+mage generate:zarfFlags                 # re-read the zarf flag lists the Ansible module tests hold
 
 mage generate:pullEngineSource          # re-pull every tag already pinned in thirdparty-src/pins.json
 mage generate:latestTag rke2 v1.36      # pin rke2's newest v1.36.x, and pull it if the pin moved
@@ -16341,8 +16793,8 @@ mage generate:examples
 <tr><td style="text-align: left"><code>docs/phases/*</code></td><td style="text-align: left">Auto-generated cluster phase descriptors</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/golang/*</code></td><td style="text-align: left">Auto-generated Go package reference, from godoc comments in <code>pkg/</code>, <code>api/</code>, <code>types/</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/schema/*</code></td><td style="text-align: left">Auto-generated schema field reference, from the same struct reflection as <code>schema/*.json</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
-<tr><td style="text-align: left"><code>docs/ansible/module_*.md</code></td><td style="text-align: left">Auto-generated Ansible module reference, from the action plugins</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
-<tr><td style="text-align: left"><code>docs/ansible/role_*.md</code></td><td style="text-align: left">Auto-generated Ansible role reference, from each role’s <code>meta/argument_specs.yml</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/ansible/&lt;collection&gt;/module_*.md</code></td><td style="text-align: left">Auto-generated Ansible module reference, from the action plugins</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
+<tr><td style="text-align: left"><code>docs/ansible/&lt;collection&gt;/role_*.md</code></td><td style="text-align: left">Auto-generated Ansible role reference, from each role’s <code>meta/argument_specs.yml</code></td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/index.md</code></td><td style="text-align: left">The root <code>README.md</code>, with its links rebased onto <code>docs/</code> for the book</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/security.md</code></td><td style="text-align: left"><code>.github/SECURITY.md</code>, with its links rebased onto <code>docs/</code> for the book</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
 <tr><td style="text-align: left"><code>docs/SUMMARY.md</code></td><td style="text-align: left">Compiled table of contents for mdBook</td><td style="text-align: left"><code>Generate.Document</code></td></tr>
@@ -17613,6 +18065,79 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 <li><strong>Wrong shape of library.</strong> <code>go-ansible</code>’s primary purpose is wrapping <code>ansible-playbook</code>/<code>ansible</code>/<code>ansible-galaxy</code> CLI execution as subprocesses. Cargoship needs neither Ansible nor Python installed on the machine running <code>apply</code> or <code>vault encrypt</code> – <code>sosedoff/ansible-vault-go</code> is a native Go implementation of the vault cipher, so encrypting and decrypting single string values stays a pure in-process operation, consistent with Cargoship shipping as a single static binary.</li>
 </ul>
 <p>Net effect: switching would add a heavier, partially-redundant dependency, lose decrypt support outright, and reimplement functionality <code>sosedoff/ansible-vault-go</code> already provides directly.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself"><a class="header" href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">Why the zarf Ansible modules are wrapper binaries rather than zarf itself</a></h1>
+<p><a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a> proposes native Ansible module support for zarf: the <code>zarf</code> binary dispatches on <code>argv[0]</code>, so a <code>zarf_init</code> symlink to <code>/usr/bin/zarf</code> is an Ansible module, with a thin Python action plugin alongside it. That is the design <code>colonel_byte.cargoship</code> already runs, and <a href="#why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node">choice-ansible-module</a> is the record of why.</p>
+<p>This repository holds a proof of that proposal for <code>zarf init</code> and <code>zarf package deploy</code>: the collection in <code>ansible/colonel_byte/zarf/</code>, the module logic in <code>internal/zarfmod/</code>, and the module files built from <code>cmd/zarf/init/</code> and <code>cmd/zarf/deploy/</code>. It is a proof of concept and is meant to be removed once the proposal is resolved – see <a href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">choice-zarf-collection-removal</a>. The proof diverges from the proposal in exactly one place, and that divergence is the point of this note.</p>
+<h2 id="the-divergence-the-modules-are-not-the-zarf-binary"><a class="header" href="#the-divergence-the-modules-are-not-the-zarf-binary">The divergence: the modules are not the zarf binary</a></h2>
+<p>A proof built here cannot put dispatch inside zarf, because zarf is not built here. So each module file is a separate, small binary that renders the zarf command line, runs the installed zarf as a child process, follows the deployment, and reports one JSON result. Three things follow from that, and all three are costs the real implementation would not pay.</p>
+<p><strong>The flag surface is a copy rather than a reference.</strong> Cargoship’s modules render flags that are checked against the live cobra command by <code>TestModuleArgsParse</code>. The wrapper has no command tree to check against, so <code>internal/zarfmod/init.go</code> spells the flags out and <code>TestInitArgsAreKnownFlags</code> holds them against <code>internal/zarfmod/testdata/zarf-init-flags.txt</code>, a recorded list. That test catches a flag the module renders and the recorded zarf does not accept; it cannot catch a zarf release that renamed one without the list being refreshed. Inside zarf, this whole mechanism collapses into reading the real command.</p>
+<p><strong>Component progress is read out of a log stream.</strong> ZEP-0072 has the deployer emit heartbeats, where the component list and the phase boundaries are already known. The wrapper has neither, so <code>internal/zarfmod/progress.go</code> reads component boundaries back out of zarf’s log output – which is why the module renders <code>--log-format json</code> by default, and why the total component count is reported as <code>0</code> (an honest unknown) unless the operator named <code>--components</code>. This is the first file to delete if dispatch ever moves into zarf.</p>
+<p><strong><code>changedSignal</code> can never be <code>complete</code>.</strong> Zarf reports which components it deployed, not whether a component found the cluster already in the state it wanted. A wrapper reading that stream cannot know more than the stream says, so a successful run reports <code>changed: true</code>, <code>changedSignal: partial</code>, and every component named in <code>changedUndeclared</code>. The proposal’s <code>complete</code> signal needs the deployer, not the log.</p>
+<h2 id="what-the-proof-does-keep"><a class="header" href="#what-the-proof-does-keep">What the proof does keep</a></h2>
+<p>Everything else in the proposal is implemented as described: <code>argv[0]</code> dispatch with a <code>ZARF_ANSIBLE_MODULE</code> override, the WANT_JSON arguments file, the stdout guard that duplicates fd 1 and points <code>os.Stdout</code> at stderr, exit 0 with failure reported inside the JSON, check mode answered as <code>skipped</code> because <code>zarf init</code> has no dry run, and the heartbeat status file with a polling monitor thread in the action plugin.</p>
+<p>Two of the proposal’s open questions are answered here rather than deferred, because a proof has to pick something:</p>
+<ul>
+<li><strong>Argument delivery.</strong> Both options are implemented. The action plugin pipes the parameters on stdin when the connection can carry them, which is the proposal’s leaning and keeps registry and git credentials off disk; it falls back to a <code>0600</code> file in a <code>0700</code> directory when the connection cannot, which is the proposal’s Option A. The wrapper reads both, so the fallback is a different wire and not a different contract.</li>
+<li><strong>Process cancellation.</strong> The wrapper cancels its context on the first signal, which kills the zarf child, and exits on the second. That is the proposal’s leaning – a partial initialisation a later run reconciles beats one still mutating a cluster nobody is watching – without the in-flight rollback the proposal leaves open.</li>
+</ul>
+<h2 id="why-there-are-two-modules"><a class="header" href="#why-there-are-two-modules">Why there are two modules</a></h2>
+<p><code>zarf init</code> alone cannot be proved against a cluster whose distribution ships no storage provider, and that is not a quirk of the test environment – it is the case the <a href="https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-local-path/uds-bundle.yaml"><code>init-local-path</code> uds-bundle</a> exists to handle. Zarf’s registry claims a 20Gi PVC during the seed phase. With no <code>StorageClass</code> the claim stays <code>Pending</code> until the Helm install times out, and disabling the claim does not help: the registry chart then renders no storage configuration at all and the container exits with <code>no storage configuration provided</code>. Both were measured rather than reasoned about, on a k3d cluster from that repository’s own config.</p>
+<p>What does work is deploying the storage provider package first with <code>--connected</code>, which pushes no images and so needs no registry, and so needs no initialised cluster. That makes <code>zarf package deploy</code> a prerequisite of <code>zarf init</code> rather than a follow-on, which is why the proof carries both actions and why <code>test/e2e/zarf</code> walks them in both orders – the bundle’s own order on a cluster that has k3s’s StorageClass, and provider-first on one that has none.</p>
+<p>Two findings from that suite are worth keeping even if everything else here goes away:</p>
+<ul>
+<li><strong><code>--verify</code> must be rendered as <code>--verify=always</code>.</strong> It is a flag with a no-argument default, so pflag reads it the way it reads a boolean: the space form leaves <code>always</code> as a positional argument and zarf rejects the command for having one too many. <code>command.valueFlag</code> exists for exactly this, and <code>--registry-mode</code> does not need it.</li>
+<li><strong>Registry proxy mode is what makes a local cluster usable.</strong> Zarf’s default nodeport mode pushes every image through a Kubernetes NodePort, and on k3d that push times out and retries for minutes. <code>registry_mode: proxy</code> puts a DaemonSet on a host port instead and the same initialisation finishes in about a minute.</li>
+</ul>
+<h2 id="what-the-proof-does-not-wire-up"><a class="header" href="#what-the-proof-does-not-wire-up">What the proof does not wire up</a></h2>
+<p>The reference pages are generated the same way the cargoship collection’s are: <code>ansibleCollections</code> in <code>magefiles/pkg/gen/docs/ansible.go</code> lists both collections, and this one’s pages land under <code>docs/ansible/zarf/</code> because the hand-written overviews that introduce them cannot share a filename with the cargoship collection’s. The drift between a Go parameter struct and its Python <code>DOCUMENTATION</code> block is held by <code>internal/zarfmod/plugindocs_test.go</code>, which is the zarf side of <code>internal/ansiblemod/plugindocs_test.go</code>.</p>
+<p>The end-to-end suite runs against two k3d clusters. One is <a href="https://github.com/colonel-byte/uds-bundles/blob/main/k3d-config.yaml"><code>k3d-config.yaml</code> in colonel-byte/uds-bundles</a>, copied verbatim, so that what the modules initialise is the cluster shape that repository already deploys onto; the other is the same file with k3s local-storage left enabled, which is what lets a walk begin with init. Both fixtures carry headers saying which walk they serve and why.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed"><a class="header" href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">The zarf collection is a proof of concept, and is meant to be removed</a></h1>
+<p><code>ansible/colonel_byte/zarf</code>, <code>internal/zarfmod</code>, <code>cmd/zarf/</code>, and <code>test/e2e/zarf</code> exist to prove <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes native Ansible module support for zarf. They are not part of what cargoship does. Cargoship builds and installs offline Kubernetes distro packages and runs a cluster lifecycle over SSH; nothing in that needs a zarf module, and no cargoship command calls into any of this.</p>
+<p>They live here because the pattern the proposal describes is the one <code>colonel_byte.cargoship</code> already runs – see <a href="#why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node">choice-ansible-module</a> – so the cheapest place to find out whether the pattern holds for zarf was beside the implementation it copies. That was the whole reason, and it expires.</p>
+<p>This note exists so that whoever removes it does not have to work out whether it was load-bearing first.</p>
+<h2 id="when-to-remove-it"><a class="header" href="#when-to-remove-it">When to remove it</a></h2>
+<p>Any one of these is enough:</p>
+<ul>
+<li><strong>ZEP-0072 is accepted and implemented in zarf.</strong> Then the real thing exists, dispatch lives inside the <code>zarf</code> binary, and keeping wrappers that shell out to zarf means maintaining a worse copy of a shipped feature.</li>
+<li><strong>ZEP-0072 is rejected, or lands somewhere else.</strong> The maintainers’ own feedback on the pull request raised an isolated experimental repository and a plugin architecture as alternatives. If either is where this goes, the proof belongs in that repository rather than this one.</li>
+<li><strong>It stops being maintained here.</strong> The flag surfaces are recorded lists rather than reads of zarf’s command tree (see <a href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">choice-zarf-ansible-module</a>), and the e2e suite pulls packages from two registries. The first time a zarf release breaks it and nobody is willing to refresh it, delete it rather than skip it.</li>
+</ul>
+<p>Nothing about cargoship’s own roadmap forces the removal, and nothing breaks while it stays. It is dead weight rather than a hazard: a release artifact administrators carry through an airlock and never install, and a test suite with prerequisites most contributors do not have.</p>
+<h2 id="what-to-remove"><a class="header" href="#what-to-remove">What to remove</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Path</th><th>What it is</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ansible/colonel_byte/zarf/</code></td><td>The collection: action plugins, the shared projection module, the example playbook</td></tr>
+<tr><td><code>internal/zarfmod/</code></td><td>Dispatch, the WANT_JSON intake, the response, the stdout guard, the heartbeat</td></tr>
+<tr><td><code>cmd/zarf/init/</code>, <code>cmd/zarf/deploy/</code></td><td>The two module file entry points</td></tr>
+<tr><td><code>test/e2e/zarf/</code></td><td>The k3d suite, both k3d configs, both playbooks, the package signing key</td></tr>
+<tr><td><code>docs/guides/zarf-ansible-module.md</code></td><td>The user guide</td></tr>
+<tr><td><code>docs/agent/choice-zarf-ansible-module.md</code>, this file</td><td>The decision records</td></tr>
+</tbody>
+</table>
+</div>
+<p>And these edits, each of which is the only thing in its file that mentions zarf-the-tool:</p>
+<ul>
+<li><code>.goreleaser.yaml</code>: the <code>zarf_init</code> and <code>zarf_package_deploy</code> builds, the <code>zarf_modules</code> archive, the second <code>before</code> hook, the collection tree and two module symlinks under <code>nfpms[0].contents</code>, the two <code>bin/ansible/colonel_byte-zarf-*</code> globs under <code>release.extra_files</code>, and the two wrapper ids in <code>nfpms[0].ids</code>. Leave the <code>ids: [cargoship]</code> on the first archive: it is right either way, and without it the cargoship archive silently absorbs whatever builds exist.</li>
+<li><code>containers/ansible/Dockerfile</code>: the <code>zarf</code> build stage, the <code>COPY --from=zarf</code> line, the <code>zarf version</code> check, the <code>/home/nonroot/.zarf-cache</code> directory, the <code>SHELL</code> line, and the whole smoke-check <code>RUN</code> block after it. The <code>cargoship version</code> check stays, and so does <code>/home/nonroot/.zarf</code> – cargoship’s own cache paths predate this. Dropping the stage takes about 200MB off the image.</li>
+<li><code>magefiles/pkg/build/zarfmodules.go</code>, and in <code>magefiles/pkg/testrunner/testrunner.go</code> the <code>RunE2EZarf</code>, <code>K3dClusters</code> and <code>DeleteK3dClusters</code> functions, and in <code>magefiles/test.go</code> the <code>EndToEndZarf</code> and <code>CleanZarfClusters</code> targets.</li>
+<li><code>hack/ansible-build-collection.sh</code>: the third positional argument and the namespace/name lookup can stay – they are a generalisation that costs nothing and the cargoship path does not care – or revert to the hardcoded collection. Do not leave the script accepting a collection directory that no longer exists while the before hook still names it.</li>
+<li><code>docs/dev/mage.md</code>, <code>docs/dev/e2e-tests.md</code>, <code>docs/workflows/test-build-containers.md</code>, <code>AGENTS.md</code>’s layout table, and <code>.gitignore</code>’s <code>__pycache__</code> entry. The <code>.gitignore</code> entry should <strong>stay</strong>: it is right for the cargoship collection on its own.</li>
+</ul>
+<p>Then <code>go run ./magefiles/core generate:document</code>, which rewrites <code>docs/SUMMARY.md</code>, and <code>pre-commit run --all-files</code>.</p>
+<h2 id="what-not-to-take-with-it"><a class="header" href="#what-not-to-take-with-it">What not to take with it</a></h2>
+<ul>
+<li><strong><code>internal/ansiblemod</code> and <code>ansible/colonel_byte/cargoship</code>.</strong> The zarf side is modeled on them and shares no code with them. Nothing in <code>internal/zarfmod</code> is imported by anything outside itself and <code>cmd/zarf/</code>, and nothing in the cargoship collection refers to the zarf one.</li>
+<li><strong><code>internal/heartbeat</code>.</strong> It predates this work, is used by the cargoship phases, and the zarf side deliberately writes its own rather than reusing it.</li>
+<li><strong>The <code>zarf-dev/zarf</code> dependency in <code>go.mod</code>.</strong> Cargoship depends on zarf as a library for package formats, architecture detection and OCI handling, and has since long before this. Removing the collection does not make it unused; <code>go mod tidy</code> will tell the truth about that on its own.</li>
+</ul>
+<h2 id="why-this-is-a-record-rather-than-a-todo"><a class="header" href="#why-this-is-a-record-rather-than-a-todo">Why this is a record rather than a TODO</a></h2>
+<p>The removal is a decision somebody should make deliberately, with the proposal’s outcome in hand, not a chore to be swept up by whoever next tidies the repository. A <code>todo-</code> note would invite the second reading. What makes it safe to remove on short notice is the list above, and what makes it safe to leave is that none of it is reachable from cargoship’s own code paths.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="design-versioned-config-struct-generation-for-k3s--rke2"><a class="header" href="#design-versioned-config-struct-generation-for-k3s--rke2">Design: Versioned Config Struct Generation for k3s / RKE2</a></h1>
 <h2 id="goal"><a class="header" href="#goal">Goal</a></h2>

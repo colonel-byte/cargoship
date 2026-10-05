@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fa050969.js";
+            window.path_to_searchindex_js = "../searchindex-fa6591ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-2420a1d0.js"></script>
+        <script src="../toc-ec789240.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -187,6 +187,7 @@
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
 <pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
 test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
+test/e2e/zarf/         the colonel_byte.zarf collection: two k3d clusters, a real zarf, the uds-bundle's packages walked by the modules
 test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
 test/registry.go       in-process OCI registry used by the publish/pull/sign tests

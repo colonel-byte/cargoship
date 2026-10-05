@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fa050969.js";
+            window.path_to_searchindex_js = "../searchindex-fa6591ef.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-2420a1d0.js"></script>
+        <script src="../toc-ec789240.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -264,7 +264,7 @@
 <p>The static image copies the binary directly; this image installs the same RPM produced by the <code>nfpms</code> section.</p>
 <pre><code class="language-sh">$ docker run --rm --entrypoint rpm \
   ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt; -q cargoship
-cargoship-0.21.1-1.x86_64
+cargoship-&lt;version&gt;-1.x86_64
 </code></pre>
 <p><code>rpm -V cargoship</code> and <code>rpm -ql cargoship</code> work as well, which is the main
 reason to use an RPM-based image.</p>
