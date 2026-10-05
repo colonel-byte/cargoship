@@ -133,6 +133,15 @@ type Bootstrapper interface {
 	Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
 }
 
+// PreStartUpgrader is implemented by a distro whose upgrade needs a step between the new package
+// install and the service restart -- kubeadm upgrade, unlike rke2/k3s where a plain restart on the
+// new binary is enough. UpgradeHosts calls it, when implemented, right after installDistro and
+// before startService. Same optional-interface pattern as Bootstrapper.
+type PreStartUpgrader interface {
+	// PreStartUpgrade runs after the new packages are staged but before the service restarts.
+	PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
+}
+
 // ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically
 // a CNI -- that cargoship applies with kubectl once the leader is reachable, instead of rendering
 // them into a HelmChartConfig an embedded controller reconciles (rancher_common.go's

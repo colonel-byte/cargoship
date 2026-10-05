@@ -198,6 +198,25 @@ func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bo
 	return con.Check(v)
 }
 
+// VersionSkewTooGreat reports whether host's running version is more than one minor version
+// behind target. kubeadm's own upgrade path refuses to skip a minor version, and a two-minor jump
+// fails partway through the control plane rather than up front, so this catches it before a real
+// run starts one. UnknownVersion (no engine detected yet, a fresh install) never counts as skew.
+func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool {
+	if host.Metadata.DistroVersion == UnknownVersion {
+		return false
+	}
+	cur, err := semver.NewVersion(strings.ReplaceAll(host.Metadata.DistroVersion, "+", "-"))
+	if err != nil {
+		return false
+	}
+	tgt, err := semver.NewVersion(strings.ReplaceAll(target, "+", "-"))
+	if err != nil {
+		return false
+	}
+	return tgt.Major() != cur.Major() || tgt.Minor()-cur.Minor() > 1
+}
+
 func (p *GenericPhase) tickerHelper(ctx context.Context, msg string, interval time.Duration) (context.CancelFunc, error) {
 	ticker := time.NewTicker(interval)
 	start := time.Now()

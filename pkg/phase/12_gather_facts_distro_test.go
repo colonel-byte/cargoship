@@ -65,42 +65,95 @@ func TestInvestigateHostDistroDowngrade(t *testing.T) {
 		allowDowngrade bool
 		wantErr        bool
 		wantVersion    string
+		wantedErr      error
 	}{
 		{
-			name:        "host runs a newer version",
+			name:        "host runs a newer version rancher",
 			running:     "v1.34.1+k3s1",
 			packaged:    "v1.33.4+k3s1",
 			wantErr:     true,
 			wantVersion: "v1.34.1+k3s1",
 		},
 		{
-			name:        "host runs the packaged version",
+			name:        "host runs a newer version upstream",
+			running:     "v1.34.1",
+			packaged:    "v1.34.0",
+			wantErr:     true,
+			wantVersion: "v1.34.1",
+		},
+		{
+			name:        "host runs the packaged version rancher",
 			running:     "v1.33.4+k3s1",
 			packaged:    "v1.33.4+k3s1",
 			wantErr:     false,
 			wantVersion: "v1.33.4+k3s1",
 		},
 		{
-			name:        "host runs an older version",
+			name:        "host runs the packaged version upstream",
+			running:     "v1.33.4",
+			packaged:    "v1.33.4",
+			wantErr:     false,
+			wantVersion: "v1.33.4",
+		},
+		{
+			name:        "host runs an older version rancher",
 			running:     "v1.33.4+k3s1",
 			packaged:    "v1.34.1+k3s1",
 			wantErr:     false,
 			wantVersion: "v1.33.4+k3s1",
 		},
 		{
-			name:        "host runs nothing",
+			name:        "host runs an older version upstream",
+			running:     "v1.33.4",
+			packaged:    "v1.34.1",
+			wantErr:     false,
+			wantVersion: "v1.33.4",
+		},
+		{
+			name:        "host runs nothing rancher",
 			running:     "",
 			packaged:    "v1.33.4+k3s1",
 			wantErr:     false,
 			wantVersion: UnknownVersion,
 		},
 		{
-			name:           "newer version allowed explicitly",
+			name:        "host runs nothing upstream",
+			running:     "",
+			packaged:    "v1.33.4",
+			wantErr:     false,
+			wantVersion: UnknownVersion,
+		},
+		{
+			name:           "newer version allowed explicitly rancher",
 			running:        "v1.34.1+k3s1",
 			packaged:       "v1.33.4+k3s1",
 			allowDowngrade: true,
 			wantErr:        false,
 			wantVersion:    "v1.34.1+k3s1",
+		},
+		{
+			name:           "newer version allowed explicitly upstream",
+			running:        "v1.34.1",
+			packaged:       "v1.33.4",
+			allowDowngrade: true,
+			wantErr:        false,
+			wantVersion:    "v1.34.1",
+		},
+		{
+			name:        "newer version more than 1 minor version rancher",
+			running:     "v1.33.0+rke2r1",
+			packaged:    "v1.35.0+rke2r1",
+			wantErr:     true,
+			wantedErr:   ErrWillNotUpgradeVersionSkewTooGreat,
+			wantVersion: "v1.33.0+rke2r1",
+		},
+		{
+			name:        "newer version more than 1 minor version upstream",
+			running:     "v1.33.0",
+			packaged:    "v1.35.0",
+			wantErr:     true,
+			wantedErr:   ErrWillNotUpgradeVersionSkewTooGreat,
+			wantVersion: "v1.33.0",
 		},
 	}
 
@@ -116,7 +169,11 @@ func TestInvestigateHostDistroDowngrade(t *testing.T) {
 			err := p.investigateHostDistro(context.Background(), h)
 
 			if tc.wantErr {
-				require.ErrorIs(t, err, ErrWillNotDowngrade)
+				if tc.wantedErr != nil {
+					require.ErrorIs(t, err, tc.wantedErr)
+				} else {
+					require.ErrorIs(t, err, ErrWillNotDowngrade)
+				}
 				// The message is the whole output of a run that stops here, so it has to name
 				// which host and which two versions, not only that something was refused.
 				require.Contains(t, err.Error(), "10.0.0.11")

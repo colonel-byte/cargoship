@@ -57,10 +57,11 @@ type Upstream struct {
 }
 
 var (
-	_ Distro          = (*Upstream)(nil)
-	_ ImageImporter   = (*Upstream)(nil)
-	_ Bootstrapper    = (*Upstream)(nil)
-	_ ManifestApplier = (*Upstream)(nil)
+	_ Distro           = (*Upstream)(nil)
+	_ ImageImporter    = (*Upstream)(nil)
+	_ Bootstrapper     = (*Upstream)(nil)
+	_ ManifestApplier  = (*Upstream)(nil)
+	_ PreStartUpgrader = (*Upstream)(nil)
 )
 
 func init() {

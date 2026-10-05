@@ -116,6 +116,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*GenericPhase\) SetManager\(m \*Manager\)](<#GenericPhase.SetManager>)
   - [func \(p \*GenericPhase\) VersionGreater\(host \*cluster.ZarfHost, version string\) bool](<#GenericPhase.VersionGreater>)
   - [func \(p \*GenericPhase\) VersionLess\(host \*cluster.ZarfHost, version string\) bool](<#GenericPhase.VersionLess>)
+  - [func \(p \*GenericPhase\) VersionSkewTooGreat\(host \*cluster.ZarfHost, target string\) bool](<#GenericPhase.VersionSkewTooGreat>)
   - [func \(p \*GenericPhase\) Wet\(host fmt.Stringer, msg string, funcs ...errorfunc\) error](<#GenericPhase.Wet>)
 - [type ImportImages](<#ImportImages>)
   - [func \(p \*ImportImages\) Explanation\(\) string](<#ImportImages.Explanation>)
@@ -325,6 +326,12 @@ var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not:
 
 ```go
 var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
+```
+
+<a name="ErrWillNotUpgradeVersionSkewTooGreat"></a>ErrWillNotUpgradeVersionSkewTooGreat is returned when a package is trying to upgrade the cluster more then 1 minor version at a time; v1.33.x to v1.34.x is allowed, but v1.33.x to v1.35.x is not.
+
+```go
+var ErrWillNotUpgradeVersionSkewTooGreat = errors.New("will not upgrade the cluster more than one minor version at a time")
 ```
 
 <a name="Force"></a>Force is used by various phases to attempt a forced installation
@@ -1260,7 +1267,7 @@ func (p *GatherFacts) Title() string
 Title for the phase
 
 <a name="GatherFactsDistro"></a>
-## type [GatherFactsDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L39-L48>)
+## type [GatherFactsDistro](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L43-L52>)
 
 GatherFactsDistro state
 
@@ -1277,7 +1284,7 @@ type GatherFactsDistro struct {
 ```
 
 <a name="GatherFactsDistro.Explanation"></a>
-### func \(\*GatherFactsDistro\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56>)
+### func \(\*GatherFactsDistro\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L60>)
 
 ```go
 func (p *GatherFactsDistro) Explanation() string
@@ -1286,7 +1293,7 @@ func (p *GatherFactsDistro) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="GatherFactsDistro.Prepare"></a>
-### func \(\*GatherFactsDistro\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L66>)
+### func \(\*GatherFactsDistro\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L70>)
 
 ```go
 func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
@@ -1295,7 +1302,7 @@ func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d
 Prepare the phase
 
 <a name="GatherFactsDistro.ReadOnly"></a>
-### func \(\*GatherFactsDistro\) [ReadOnly](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L61>)
+### func \(\*GatherFactsDistro\) [ReadOnly](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L65>)
 
 ```go
 func (p *GatherFactsDistro) ReadOnly() string
@@ -1304,7 +1311,7 @@ func (p *GatherFactsDistro) ReadOnly() string
 ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.
 
 <a name="GatherFactsDistro.Run"></a>
-### func \(\*GatherFactsDistro\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L73>)
+### func \(\*GatherFactsDistro\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L77>)
 
 ```go
 func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
@@ -1313,7 +1320,7 @@ func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
 Run the phase
 
 <a name="GatherFactsDistro.Title"></a>
-### func \(\*GatherFactsDistro\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51>)
+### func \(\*GatherFactsDistro\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L55>)
 
 ```go
 func (p *GatherFactsDistro) Title() string
@@ -1385,6 +1392,15 @@ func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool
 ```
 
 VersionLess if host version is less then the distro version
+
+<a name="GenericPhase.VersionSkewTooGreat"></a>
+### func \(\*GenericPhase\) [VersionSkewTooGreat](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L205>)
+
+```go
+func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool
+```
+
+VersionSkewTooGreat reports whether host's running version is more than one minor version behind target. kubeadm's own upgrade path refuses to skip a minor version, and a two\-minor jump fails partway through the control plane rather than up front, so this catches it before a real run starts one. UnknownVersion \(no engine detected yet, a fresh install\) never counts as skew.
 
 <a name="GenericPhase.Wet"></a>
 ### func \(\*GenericPhase\) [Wet](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L171>)
@@ -2562,7 +2578,7 @@ func (p *UpgradeController) Prepare(ctx context.Context, _ *cluster.ZarfCluster,
 Prepare the phase
 
 <a name="UpgradeController.Run"></a>
-### func \(\*UpgradeController\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L68>)
+### func \(\*UpgradeController\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L70>)
 
 ```go
 func (p *UpgradeController) Run(ctx context.Context) error
@@ -2580,7 +2596,7 @@ func (p *UpgradeController) Title() string
 Title for the phase
 
 <a name="UpgradeHosts"></a>
-## type [UpgradeHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L36-L42>)
+## type [UpgradeHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L37-L44>)
 
 UpgradeHosts phase state
 
@@ -2593,7 +2609,7 @@ type UpgradeHosts struct {
 ```
 
 <a name="UpgradeHosts.ShouldRun"></a>
-### func \(\*UpgradeHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L45>)
+### func \(\*UpgradeHosts\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L47>)
 
 ```go
 func (p *UpgradeHosts) ShouldRun() bool
@@ -2632,7 +2648,7 @@ func (p *UpgradeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, d 
 Prepare the phase
 
 <a name="UpgradeWorkers.Run"></a>
-### func \(\*UpgradeWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L69>)
+### func \(\*UpgradeWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L70>)
 
 ```go
 func (p *UpgradeWorkers) Run(ctx context.Context) error
