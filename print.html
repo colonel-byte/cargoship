@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fa6591ef.js";
+            window.path_to_searchindex_js = "searchindex-5fe1a38c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ec789240.js"></script>
+        <script src="toc-fd7f4d60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -4507,6 +4507,7 @@ $ cargoship version -o json
 <tr><td><code>engine</code></td><td>object</td><td>no</td><td></td><td>holds configuration passed through to the distro engine.</td></tr>
 <tr><td><code>files</code></td><td><a href="#zarffiles">ZarfFiles</a></td><td>no</td><td></td><td>lists files that cargoship writes to every host, no matter which install method it uses.</td></tr>
 <tr><td><code>imageConfig</code></td><td><a href="#zarfdistroimageconfig">ZarfDistroImageConfig</a></td><td>no</td><td></td><td>holds settings for the images bundled with the package.</td></tr>
+<tr><td><code>manifests</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists on-host paths – each one the Target of a Files entry – that cargoship<br>kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by<br>Files; this is only the marker that says “and apply this one,” e.g. for a CNI a package<br>declares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.</td></tr>
 <tr><td><code>os</code></td><td><a href="#zarfdistroos">ZarfDistroOS</a></td><td>no</td><td></td><td>holds settings applied to the host operating system.</td></tr>
 </tbody>
 </table>
@@ -5404,6 +5405,12 @@ $ cargoship version -o json
 <li>Initialize Controller
 <ul>
 <li>If the remote node does not have a running controller service, and is a controller, install the engine and start each service sequentially</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
+<li>Apply manifests
+<ul>
+<li>For a distro whose package declares raw manifests – a CNI, typically – kubectl applies each one from the leader</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
@@ -6965,12 +6972,12 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistro.Arches"></a></p>
-<h3 id="func-zarfdistro-arches"><a class="header" href="#func-zarfdistro-arches">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L310">Arches</a></a></h3>
+<h3 id="func-zarfdistro-arches"><a class="header" href="#func-zarfdistro-arches">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L315">Arches</a></a></h3>
 <pre><code class="language-go">func (distro ZarfDistro) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.</p>
 <p><a name="ZarfDistro.IsSBOMAble"></a></p>
-<h3 id="func-zarfdistro-issbomable"><a class="header" href="#func-zarfdistro-issbomable">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L318">IsSBOMAble</a></a></h3>
+<h3 id="func-zarfdistro-issbomable"><a class="header" href="#func-zarfdistro-issbomable">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L323">IsSBOMAble</a></a></h3>
 <pre><code class="language-go">func (distro ZarfDistro) IsSBOMAble() bool
 </code></pre>
 <p>IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.</p>
@@ -7019,12 +7026,12 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistroBuildData.Arches"></a></p>
-<h3 id="func-zarfdistrobuilddata-arches"><a class="header" href="#func-zarfdistrobuilddata-arches">func (ZarfDistroBuildData) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L297">Arches</a></a></h3>
+<h3 id="func-zarfdistrobuilddata-arches"><a class="header" href="#func-zarfdistrobuilddata-arches">func (ZarfDistroBuildData) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L302">Arches</a></a></h3>
 <pre><code class="language-go">func (b ZarfDistroBuildData) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package was built for. It prefers Architectures and falls back to the single Architecture field.</p>
 <p><a name="ZarfDistroConfig"></a></p>
-<h2 id="type-zarfdistroconfig"><a class="header" href="#type-zarfdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L178-L187">ZarfDistroConfig</a></a></h2>
+<h2 id="type-zarfdistroconfig"><a class="header" href="#type-zarfdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L178-L192">ZarfDistroConfig</a></a></h2>
 <p>ZarfDistroConfig holds the configuration for the distro engine.</p>
 <pre><code class="language-go">type ZarfDistroConfig struct {
     // Files lists files that cargoship writes to every host, no matter which install method it uses.
@@ -7035,15 +7042,20 @@ $ cargoship version -o json
     OS  ZarfDistroOS `json:"os,omitempty"`
     // Engine holds configuration passed through to the distro engine.
     Engine dig.Mapping `json:"engine,omitempty"`
+    // Manifests lists on-host paths -- each one the Target of a Files entry -- that cargoship
+    // kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by
+    // Files; this is only the marker that says "and apply this one," e.g. for a CNI a package
+    // declares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.
+    Manifests []string `json:"manifests,omitempty"`
 }
 </code></pre>
 <p><a name="ZarfDistroConfig.JSONSchemaExtend"></a></p>
-<h3 id="func-zarfdistroconfig-jsonschemaextend"><a class="header" href="#func-zarfdistroconfig-jsonschemaextend">func (ZarfDistroConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L193">JSONSchemaExtend</a></a></h3>
+<h3 id="func-zarfdistroconfig-jsonschemaextend"><a class="header" href="#func-zarfdistroconfig-jsonschemaextend">func (ZarfDistroConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L198">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend pins down the shape of the engine’s manifest section, whose values are Helm values written into a HelmChartConfig: either a YAML string or a mapping cargoship serializes to YAML for the chart. Engine is otherwise a free-form mapping handed to the distro engine, so the section list stays open and every other section keeps validating as it did.</p>
 <p><a name="ZarfDistroImageConfig"></a></p>
-<h2 id="type-zarfdistroimageconfig"><a class="header" href="#type-zarfdistroimageconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L228-L235">ZarfDistroImageConfig</a></a></h2>
+<h2 id="type-zarfdistroimageconfig"><a class="header" href="#type-zarfdistroimageconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L233-L240">ZarfDistroImageConfig</a></a></h2>
 <p>ZarfDistroImageConfig holds settings for the images cargoship writes to a host.</p>
 <pre><code class="language-go">type ZarfDistroImageConfig struct {
     // Compression sets the compression format for the image tarballs.
@@ -7055,7 +7067,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistroImageConfig.TarballSuffix"></a></p>
-<h3 id="func-zarfdistroimageconfig-tarballsuffix"><a class="header" href="#func-zarfdistroimageconfig-tarballsuffix">func (ZarfDistroImageConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L241">TarballSuffix</a></a></h3>
+<h3 id="func-zarfdistroimageconfig-tarballsuffix"><a class="header" href="#func-zarfdistroimageconfig-tarballsuffix">func (ZarfDistroImageConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L246">TarballSuffix</a></a></h3>
 <pre><code class="language-go">func (c ZarfDistroImageConfig) TarballSuffix() (string, error)
 </code></pre>
 <p>TarballSuffix returns the file suffix image tarballs get for the configured compression format. The suffixes match the archive extensions a host imports, so a compressed tarball is still picked up. An unset format means no compression. It returns an error for a format cargoship cannot write.</p>
@@ -7092,12 +7104,12 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistroMetadata.Arches"></a></p>
-<h3 id="func-zarfdistrometadata-arches"><a class="header" href="#func-zarfdistrometadata-arches">func (ZarfDistroMetadata) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L285">Arches</a></a></h3>
+<h3 id="func-zarfdistrometadata-arches"><a class="header" href="#func-zarfdistrometadata-arches">func (ZarfDistroMetadata) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L290">Arches</a></a></h3>
 <pre><code class="language-go">func (m ZarfDistroMetadata) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package targets. It prefers Architectures and falls back to the single Architecture field, so callers never have to know which one the package set.</p>
 <p><a name="ZarfDistroOS"></a></p>
-<h2 id="type-zarfdistroos"><a class="header" href="#type-zarfdistroos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L255-L266">ZarfDistroOS</a></a></h2>
+<h2 id="type-zarfdistroos"><a class="header" href="#type-zarfdistroos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L260-L271">ZarfDistroOS</a></a></h2>
 <p>ZarfDistroOS holds settings applied to a host.</p>
 <pre><code class="language-go">type ZarfDistroOS struct {
     // Sysctl maps sysctl keys to the values cargoship applies to a host.
@@ -7113,7 +7125,7 @@ $ cargoship version -o json
 }
 </code></pre>
 <p><a name="ZarfDistroOS.JSONSchemaExtend"></a></p>
-<h3 id="func-zarfdistroos-jsonschemaextend"><a class="header" href="#func-zarfdistroos-jsonschemaextend">func (ZarfDistroOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L270">JSONSchemaExtend</a></a></h3>
+<h3 id="func-zarfdistroos-jsonschemaextend"><a class="header" href="#func-zarfdistroos-jsonschemaextend">func (ZarfDistroOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L275">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend widens sysctl values to accept numbers alongside strings, so unquoted numeric values in YAML validate.</p>
@@ -7219,7 +7231,7 @@ $ cargoship version -o json
 </code></pre>
 <p>NewApply an apply action object</p>
 <p><a name="Apply.Run"></a></p>
-<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L188">Run</a></a></h3>
+<h3 id="func-apply-run"><a class="header" href="#func-apply-run">func (Apply) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L191">Run</a></a></h3>
 <pre><code class="language-go">func (a Apply) Run(ctx context.Context) error
 </code></pre>
 <p>Run the actions</p>
@@ -7736,6 +7748,11 @@ $ cargoship version -o json
 <li><a href="#ParseK3SFlagSet">func ParseK3SFlagSet(optIndex map[string]K3SFlagOption, mapLit *ast.CompositeLit) (map[string]K3SFlagOption, error)</a></li>
 <li><a href="#StringListDecl">func StringListDecl(name string, files …*ast.File) ([]string, bool)</a></li>
 <li><a href="#Components">type Components</a></li>
+<li><a href="#FieldNode">type FieldNode</a>
+<ul>
+<li><a href="#ExtractNestedKeys">func ExtractNestedKeys(file *ast.File, rootType string) (FieldNode, error)</a></li>
+</ul>
+</li>
 <li><a href="#Flag">type Flag</a>
 <ul>
 <li><a href="#ApplyK3SFlagSet">func ApplyK3SFlagSet(k3sFlags []Flag, flagSet map[string]K3SFlagOption) (flags []Flag, unmapped []string)</a></li>
@@ -7792,6 +7809,18 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     Ingress []string
 }
 </code></pre>
+<p><a name="FieldNode"></a></p>
+<h2 id="type-fieldnode"><a class="header" href="#type-fieldnode">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/nested.go#L29-L31">FieldNode</a></a></h2>
+<p>FieldNode describes one field of a nested config document, recovered from a real Go struct’s json tags. A nil Children means the field is a leaf: a scalar, a slice, or a map, whose contents pass through unvalidated -- recursion stops at the first field whose type isn’t itself a named struct declared in the same file, rather than guessing the shape of a slice-of-struct or a type from another package.</p>
+<pre><code class="language-go">type FieldNode struct {
+    Children map[string]FieldNode
+}
+</code></pre>
+<p><a name="ExtractNestedKeys"></a></p>
+<h3 id="func-extractnestedkeys"><a class="header" href="#func-extractnestedkeys">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/nested.go#L61">ExtractNestedKeys</a></a></h3>
+<pre><code class="language-go">func ExtractNestedKeys(file *ast.File, rootType string) (FieldNode, error)
+</code></pre>
+<p>ExtractNestedKeys walks rootType’s fields in file, resolving each field’s json tag name and, for a field whose type is itself a named struct declared in file, recursing into it. An embedded field naming another local struct (e.g. “APIServer” embedding “ControlPlaneComponent” with json:“,inline”) has its children merged directly into the embedding type’s own node, matching how encoding/json flattens an inlined struct. An embedded field naming a type from another package (e.g. metav1.TypeMeta) carries no fields this walker can see, so it is skipped rather than guessed at.</p>
 <p><a name="Flag"></a></p>
 <h2 id="type-flag"><a class="header" href="#type-flag">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/extract.go#L30-L48">Flag</a></a></h2>
 <p>Flag is one urfave/cli flag recovered from a []cli.Flag{…} literal.</p>
@@ -7854,6 +7883,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#variables-4">Variables</a></li>
 <li><a href="#Generate">func Generate(opts Options) ([]byte, error)</a></li>
 <li><a href="#GenerateComponents">func GenerateComponents(opts ComponentsOptions) ([]byte, error)</a></li>
+<li><a href="#GenerateNestedKeys">func GenerateNestedKeys(opts NestedKeysOptions) ([]byte, error)</a></li>
 <li><a href="#Keys">func Keys(v any) map[string]struct{}</a></li>
 <li><a href="#UnknownAddons">func UnknownAddons(disable any, addons []string) []string</a></li>
 <li><a href="#ComponentsOptions">type ComponentsOptions</a></li>
@@ -7862,6 +7892,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Lookup">func Lookup(distroID, version string) (Entry, bool)</a></li>
 </ul>
 </li>
+<li><a href="#NestedKeysOptions">type NestedKeysOptions</a></li>
 <li><a href="#Options">type Options</a></li>
 </ul>
 <h2 id="variables-4"><a class="header" href="#variables-4">Variables</a></h2>
@@ -7885,6 +7916,14 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
         "v1_36": {Server: rke2_v1_36.ServerConfig{}, Agent: rke2_v1_36.AgentConfig{}, Addons: rke2_v1_36.Addons, CNIs: rke2_v1_36.CNIs, IngressControllers: rke2_v1_36.IngressControllers},
         "v1_37": {Server: rke2_v1_37.ServerConfig{}, Agent: rke2_v1_37.AgentConfig{}, Addons: rke2_v1_37.Addons, CNIs: rke2_v1_37.CNIs, IngressControllers: rke2_v1_37.IngressControllers},
     },
+    "upstream": {
+        "v1_32": {Server: upstream_v1_32.ClusterConfigurationKeys, Addons: upstream_v1_32.Addons, CNIs: upstream_v1_32.CNIs, IngressControllers: upstream_v1_32.IngressControllers},
+        "v1_33": {Server: upstream_v1_33.ClusterConfigurationKeys, Addons: upstream_v1_33.Addons, CNIs: upstream_v1_33.CNIs, IngressControllers: upstream_v1_33.IngressControllers},
+        "v1_34": {Server: upstream_v1_34.ClusterConfigurationKeys, Addons: upstream_v1_34.Addons, CNIs: upstream_v1_34.CNIs, IngressControllers: upstream_v1_34.IngressControllers},
+        "v1_35": {Server: upstream_v1_35.ClusterConfigurationKeys, Addons: upstream_v1_35.Addons, CNIs: upstream_v1_35.CNIs, IngressControllers: upstream_v1_35.IngressControllers},
+        "v1_36": {Server: upstream_v1_36.ClusterConfigurationKeys, Addons: upstream_v1_36.Addons, CNIs: upstream_v1_36.CNIs, IngressControllers: upstream_v1_36.IngressControllers},
+        "v1_37": {Server: upstream_v1_37.ClusterConfigurationKeys, Addons: upstream_v1_37.Addons, CNIs: upstream_v1_37.CNIs, IngressControllers: upstream_v1_37.IngressControllers},
+    },
 }
 </code></pre>
 <p><a name="Generate"></a></p>
@@ -7897,6 +7936,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func GenerateComponents(opts ComponentsOptions) ([]byte, error)
 </code></pre>
 <p>GenerateComponents renders and gofmt’s the packaged-component source for opts. It is always written, even when every list is empty: the generated registry references these vars in every distro/version package, so a package missing them fails to build.</p>
+<p><a name="GenerateNestedKeys"></a></p>
+<h2 id="func-generatenestedkeys"><a class="header" href="#func-generatenestedkeys">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/nested.go#L44">GenerateNestedKeys</a></a></h2>
+<pre><code class="language-go">func GenerateNestedKeys(opts NestedKeysOptions) ([]byte, error)
+</code></pre>
+<p>GenerateNestedKeys renders and gofmt’s opts.Node as a literal extract.FieldNode value, unlike Generate (a real Go struct consumed via reflect): upstream’s config document is genuinely nested, so what’s extracted is a key tree, not a flag set, and there’s no struct shape to declare -- the tree itself is what gets consumed at validation time.</p>
 <p><a name="Keys"></a></p>
 <h2 id="func-keys"><a class="header" href="#func-keys">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/lookup.go#L71">Keys</a></a></h2>
 <pre><code class="language-go">func Keys(v any) map[string]struct{}
@@ -7939,6 +7983,18 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func Lookup(distroID, version string) (Entry, bool)
 </code></pre>
 <p>Lookup returns the Entry registered for distroID (e.g. “k3s”, “rke2”) and an engine version string in any format containing a dotted major.minor (e.g. “1.35.3-k3s1”, “v1.35.3+k3s1”). The version is truncated to its minor release before lookup, the same way mage generate:pullEngineSource truncates upstream tags before pulling source -- so a single generated version covers every patch release in that minor line. Reports false if no source was ever pulled/generated for that distro/minor-version pair.</p>
+<p><a name="NestedKeysOptions"></a></p>
+<h2 id="type-nestedkeysoptions"><a class="header" href="#type-nestedkeysoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/nested.go#L27-L34">NestedKeysOptions</a></a></h2>
+<p>NestedKeysOptions configures one generated nested-key-tree file.</p>
+<pre><code class="language-go">type NestedKeysOptions struct {
+    PackageName string // must already be a valid Go package identifier
+    VarName     string // exported Go identifier for the generated var
+    Distro      string
+    Version     string
+    RootType    string // the source struct this tree was extracted from, e.g. "ClusterConfiguration"
+    Node        extract.FieldNode
+}
+</code></pre>
 <p><a name="Options"></a></p>
 <h2 id="type-options"><a class="header" href="#type-options">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/gen.go#L32-L36">Options</a></a></h2>
 <p>Options configures one generated struct file.</p>
@@ -10913,12 +10969,483 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
 <div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="v1_32-2"><a class="header" href="#v1_32-2">v1_32</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_32"
+</code></pre>
+<h2 id="index-24"><a class="header" href="#index-24">Index</a></h2>
+<ul>
+<li><a href="#variables-19">Variables</a></li>
+</ul>
+<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
+<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_32 accepts in `disable:`.</p>
+<pre><code class="language-go">var Addons []string
+</code></pre>
+<p><a name="CNIs"></a>CNIs is the set of values upstream v1_32 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
+<pre><code class="language-go">var CNIs []string
+</code></pre>
+<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_32.</p>
+<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
+    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "certSANs":     extract.FieldNode{},
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "caCertificateValidityPeriod": extract.FieldNode{},
+    "certificateValidityPeriod":   extract.FieldNode{},
+    "certificatesDir":             extract.FieldNode{},
+    "clusterName":                 extract.FieldNode{},
+    "controlPlaneEndpoint":        extract.FieldNode{},
+    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled":        extract.FieldNode{},
+        "imageRepository": extract.FieldNode{},
+        "imageTag":        extract.FieldNode{},
+    }},
+    "encryptionAlgorithm": extract.FieldNode{},
+    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "caFile":    extract.FieldNode{},
+            "certFile":  extract.FieldNode{},
+            "endpoints": extract.FieldNode{},
+            "keyFile":   extract.FieldNode{},
+        }},
+        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "dataDir":         extract.FieldNode{},
+            "extraArgs":       extract.FieldNode{},
+            "extraEnvs":       extract.FieldNode{},
+            "imageRepository": extract.FieldNode{},
+            "imageTag":        extract.FieldNode{},
+            "peerCertSANs":    extract.FieldNode{},
+            "serverCertSANs":  extract.FieldNode{},
+        }},
+    }},
+    "featureGates":      extract.FieldNode{},
+    "imageRepository":   extract.FieldNode{},
+    "kubernetesVersion": extract.FieldNode{},
+    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "dnsDomain":     extract.FieldNode{},
+        "podSubnet":     extract.FieldNode{},
+        "serviceSubnet": extract.FieldNode{},
+    }},
+    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled": extract.FieldNode{},
+    }},
+    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+}}
+</code></pre>
+<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_32 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
+<pre><code class="language-go">var IngressControllers []string
+</code></pre>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="v1_33-2"><a class="header" href="#v1_33-2">v1_33</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_33"
+</code></pre>
+<h2 id="index-25"><a class="header" href="#index-25">Index</a></h2>
+<ul>
+<li><a href="#variables-20">Variables</a></li>
+</ul>
+<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
+<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_33 accepts in `disable:`.</p>
+<pre><code class="language-go">var Addons []string
+</code></pre>
+<p><a name="CNIs"></a>CNIs is the set of values upstream v1_33 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
+<pre><code class="language-go">var CNIs []string
+</code></pre>
+<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_33.</p>
+<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
+    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "certSANs":     extract.FieldNode{},
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "caCertificateValidityPeriod": extract.FieldNode{},
+    "certificateValidityPeriod":   extract.FieldNode{},
+    "certificatesDir":             extract.FieldNode{},
+    "clusterName":                 extract.FieldNode{},
+    "controlPlaneEndpoint":        extract.FieldNode{},
+    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled":        extract.FieldNode{},
+        "imageRepository": extract.FieldNode{},
+        "imageTag":        extract.FieldNode{},
+    }},
+    "encryptionAlgorithm": extract.FieldNode{},
+    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "caFile":    extract.FieldNode{},
+            "certFile":  extract.FieldNode{},
+            "endpoints": extract.FieldNode{},
+            "keyFile":   extract.FieldNode{},
+        }},
+        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "dataDir":         extract.FieldNode{},
+            "extraArgs":       extract.FieldNode{},
+            "extraEnvs":       extract.FieldNode{},
+            "imageRepository": extract.FieldNode{},
+            "imageTag":        extract.FieldNode{},
+            "peerCertSANs":    extract.FieldNode{},
+            "serverCertSANs":  extract.FieldNode{},
+        }},
+    }},
+    "featureGates":      extract.FieldNode{},
+    "imageRepository":   extract.FieldNode{},
+    "kubernetesVersion": extract.FieldNode{},
+    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "dnsDomain":     extract.FieldNode{},
+        "podSubnet":     extract.FieldNode{},
+        "serviceSubnet": extract.FieldNode{},
+    }},
+    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled": extract.FieldNode{},
+    }},
+    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+}}
+</code></pre>
+<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_33 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
+<pre><code class="language-go">var IngressControllers []string
+</code></pre>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="v1_34-2"><a class="header" href="#v1_34-2">v1_34</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_34"
+</code></pre>
+<h2 id="index-26"><a class="header" href="#index-26">Index</a></h2>
+<ul>
+<li><a href="#variables-21">Variables</a></li>
+</ul>
+<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
+<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_34 accepts in `disable:`.</p>
+<pre><code class="language-go">var Addons []string
+</code></pre>
+<p><a name="CNIs"></a>CNIs is the set of values upstream v1_34 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
+<pre><code class="language-go">var CNIs []string
+</code></pre>
+<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_34.</p>
+<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
+    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "certSANs":     extract.FieldNode{},
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "caCertificateValidityPeriod": extract.FieldNode{},
+    "certificateValidityPeriod":   extract.FieldNode{},
+    "certificatesDir":             extract.FieldNode{},
+    "clusterName":                 extract.FieldNode{},
+    "controlPlaneEndpoint":        extract.FieldNode{},
+    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled":        extract.FieldNode{},
+        "imageRepository": extract.FieldNode{},
+        "imageTag":        extract.FieldNode{},
+    }},
+    "encryptionAlgorithm": extract.FieldNode{},
+    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "caFile":    extract.FieldNode{},
+            "certFile":  extract.FieldNode{},
+            "endpoints": extract.FieldNode{},
+            "keyFile":   extract.FieldNode{},
+        }},
+        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "dataDir":         extract.FieldNode{},
+            "extraArgs":       extract.FieldNode{},
+            "extraEnvs":       extract.FieldNode{},
+            "imageRepository": extract.FieldNode{},
+            "imageTag":        extract.FieldNode{},
+            "peerCertSANs":    extract.FieldNode{},
+            "serverCertSANs":  extract.FieldNode{},
+        }},
+    }},
+    "featureGates":      extract.FieldNode{},
+    "imageRepository":   extract.FieldNode{},
+    "kubernetesVersion": extract.FieldNode{},
+    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "dnsDomain":     extract.FieldNode{},
+        "podSubnet":     extract.FieldNode{},
+        "serviceSubnet": extract.FieldNode{},
+    }},
+    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled": extract.FieldNode{},
+    }},
+    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+}}
+</code></pre>
+<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_34 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
+<pre><code class="language-go">var IngressControllers []string
+</code></pre>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="v1_35-2"><a class="header" href="#v1_35-2">v1_35</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_35"
+</code></pre>
+<h2 id="index-27"><a class="header" href="#index-27">Index</a></h2>
+<ul>
+<li><a href="#variables-22">Variables</a></li>
+</ul>
+<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
+<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_35 accepts in `disable:`.</p>
+<pre><code class="language-go">var Addons []string
+</code></pre>
+<p><a name="CNIs"></a>CNIs is the set of values upstream v1_35 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
+<pre><code class="language-go">var CNIs []string
+</code></pre>
+<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_35.</p>
+<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
+    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "certSANs":     extract.FieldNode{},
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "caCertificateValidityPeriod": extract.FieldNode{},
+    "certificateValidityPeriod":   extract.FieldNode{},
+    "certificatesDir":             extract.FieldNode{},
+    "clusterName":                 extract.FieldNode{},
+    "controlPlaneEndpoint":        extract.FieldNode{},
+    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled":        extract.FieldNode{},
+        "imageRepository": extract.FieldNode{},
+        "imageTag":        extract.FieldNode{},
+    }},
+    "encryptionAlgorithm": extract.FieldNode{},
+    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "caFile":        extract.FieldNode{},
+            "certFile":      extract.FieldNode{},
+            "endpoints":     extract.FieldNode{},
+            "httpEndpoints": extract.FieldNode{},
+            "keyFile":       extract.FieldNode{},
+        }},
+        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "dataDir":         extract.FieldNode{},
+            "extraArgs":       extract.FieldNode{},
+            "extraEnvs":       extract.FieldNode{},
+            "imageRepository": extract.FieldNode{},
+            "imageTag":        extract.FieldNode{},
+            "peerCertSANs":    extract.FieldNode{},
+            "serverCertSANs":  extract.FieldNode{},
+        }},
+    }},
+    "featureGates":      extract.FieldNode{},
+    "imageRepository":   extract.FieldNode{},
+    "kubernetesVersion": extract.FieldNode{},
+    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "dnsDomain":     extract.FieldNode{},
+        "podSubnet":     extract.FieldNode{},
+        "serviceSubnet": extract.FieldNode{},
+    }},
+    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled": extract.FieldNode{},
+    }},
+    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+}}
+</code></pre>
+<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_35 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
+<pre><code class="language-go">var IngressControllers []string
+</code></pre>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="v1_36-2"><a class="header" href="#v1_36-2">v1_36</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_36"
+</code></pre>
+<h2 id="index-28"><a class="header" href="#index-28">Index</a></h2>
+<ul>
+<li><a href="#variables-23">Variables</a></li>
+</ul>
+<h2 id="variables-23"><a class="header" href="#variables-23">Variables</a></h2>
+<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_36 accepts in `disable:`.</p>
+<pre><code class="language-go">var Addons []string
+</code></pre>
+<p><a name="CNIs"></a>CNIs is the set of values upstream v1_36 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
+<pre><code class="language-go">var CNIs []string
+</code></pre>
+<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_36.</p>
+<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
+    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "certSANs":     extract.FieldNode{},
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "caCertificateValidityPeriod": extract.FieldNode{},
+    "certificateValidityPeriod":   extract.FieldNode{},
+    "certificatesDir":             extract.FieldNode{},
+    "clusterName":                 extract.FieldNode{},
+    "controlPlaneEndpoint":        extract.FieldNode{},
+    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled":        extract.FieldNode{},
+        "imageRepository": extract.FieldNode{},
+        "imageTag":        extract.FieldNode{},
+    }},
+    "encryptionAlgorithm": extract.FieldNode{},
+    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "caFile":        extract.FieldNode{},
+            "certFile":      extract.FieldNode{},
+            "endpoints":     extract.FieldNode{},
+            "httpEndpoints": extract.FieldNode{},
+            "keyFile":       extract.FieldNode{},
+        }},
+        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "dataDir":         extract.FieldNode{},
+            "extraArgs":       extract.FieldNode{},
+            "extraEnvs":       extract.FieldNode{},
+            "imageRepository": extract.FieldNode{},
+            "imageTag":        extract.FieldNode{},
+            "peerCertSANs":    extract.FieldNode{},
+            "serverCertSANs":  extract.FieldNode{},
+        }},
+    }},
+    "featureGates":      extract.FieldNode{},
+    "imageRepository":   extract.FieldNode{},
+    "kubernetesVersion": extract.FieldNode{},
+    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "dnsDomain":     extract.FieldNode{},
+        "podSubnet":     extract.FieldNode{},
+        "serviceSubnet": extract.FieldNode{},
+    }},
+    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled": extract.FieldNode{},
+    }},
+    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+}}
+</code></pre>
+<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_36 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
+<pre><code class="language-go">var IngressControllers []string
+</code></pre>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
+<h1 id="v1_37-2"><a class="header" href="#v1_37-2">v1_37</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_37"
+</code></pre>
+<h2 id="index-29"><a class="header" href="#index-29">Index</a></h2>
+<ul>
+<li><a href="#variables-24">Variables</a></li>
+</ul>
+<h2 id="variables-24"><a class="header" href="#variables-24">Variables</a></h2>
+<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_37 accepts in `disable:`.</p>
+<pre><code class="language-go">var Addons []string
+</code></pre>
+<p><a name="CNIs"></a>CNIs is the set of values upstream v1_37 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
+<pre><code class="language-go">var CNIs []string
+</code></pre>
+<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_37.</p>
+<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
+    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "certSANs":     extract.FieldNode{},
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "caCertificateValidityPeriod": extract.FieldNode{},
+    "certificateValidityPeriod":   extract.FieldNode{},
+    "certificatesDir":             extract.FieldNode{},
+    "clusterName":                 extract.FieldNode{},
+    "controlPlaneEndpoint":        extract.FieldNode{},
+    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled":        extract.FieldNode{},
+        "imageRepository": extract.FieldNode{},
+        "imageTag":        extract.FieldNode{},
+    }},
+    "encryptionAlgorithm": extract.FieldNode{},
+    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "caFile":        extract.FieldNode{},
+            "certFile":      extract.FieldNode{},
+            "endpoints":     extract.FieldNode{},
+            "httpEndpoints": extract.FieldNode{},
+            "keyFile":       extract.FieldNode{},
+        }},
+        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
+            "dataDir":         extract.FieldNode{},
+            "extraArgs":       extract.FieldNode{},
+            "extraEnvs":       extract.FieldNode{},
+            "imageRepository": extract.FieldNode{},
+            "imageTag":        extract.FieldNode{},
+            "peerCertSANs":    extract.FieldNode{},
+            "serverCertSANs":  extract.FieldNode{},
+        }},
+    }},
+    "featureGates":      extract.FieldNode{},
+    "imageRepository":   extract.FieldNode{},
+    "kubernetesVersion": extract.FieldNode{},
+    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "dnsDomain":     extract.FieldNode{},
+        "podSubnet":     extract.FieldNode{},
+        "serviceSubnet": extract.FieldNode{},
+    }},
+    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "disabled": extract.FieldNode{},
+    }},
+    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
+        "extraArgs":    extract.FieldNode{},
+        "extraEnvs":    extract.FieldNode{},
+        "extraVolumes": extract.FieldNode{},
+    }},
+}}
+</code></pre>
+<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_37 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
+<pre><code class="language-go">var IngressControllers []string
+</code></pre>
+<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
 <h1 id="fileoverride"><a class="header" href="#fileoverride">fileoverride</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/fileoverride"
 </code></pre>
 <p>Package fileoverride redirects the file downloads a distro definition declares to an internal mirror or to a directory of pre-staged assets, the way images.RegistryOverride redirects image pulls.</p>
 <p>It differs from the registry case in one way worth knowing. A registry override matches on a raw string prefix, which is survivable for a registry reference but not for a URL: an override for “https://github.com” would otherwise also capture “https://github.com.example.invalid/…”. Matching here is done on the parsed URL, and the prefix has to end on a path-segment boundary.</p>
-<h2 id="index-24"><a class="header" href="#index-24">Index</a></h2>
+<h2 id="index-30"><a class="header" href="#index-30">Index</a></h2>
 <ul>
 <li><a href="#ToMap">func ToMap(overrides []Override) map[string]string</a></li>
 <li><a href="#Match">type Match</a>
@@ -10988,7 +11515,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Package firewall renders cargoship’s backend-neutral firewall configuration onto whichever host firewall a node runs.</p>
 <p>A Plan describes what the cluster needs open on one node: the addresses of its peers, the pod and service CIDRs, the ports from the inventory’s `.host.ports`, and the rules from the inventory’s `.host.firewall.rules`. A Backend translates that Plan into one firewall’s own dialect and applies it. Backends are matched to a node by the node’s OS and by Detect, so a single inventory can target a mix of firewalld, ufw, and nftables hosts.</p>
-<h2 id="index-25"><a class="header" href="#index-25">Index</a></h2>
+<h2 id="index-31"><a class="header" href="#index-31">Index</a></h2>
 <ul>
 <li><a href="#constants-5">Constants</a></li>
 <li><a href="#NftSplitFamilies">func NftSplitFamilies(addrs []string) (v4 []string, v6 []string)</a></li>
@@ -11212,7 +11739,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package helmvalues renders Helm-style value templates and reads and writes the nested interface values those templates draw on.</p>
 <p>Values are addressed by ZEP-0021 value paths: a leading dot followed by dot-separated keys, with list indices written after a key, as in .servers[0].port. A lone “.” names the root.</p>
 <p>Scalar typing follows Helm’s strvals package rather than Go’s own parsing rules, so a value that travels through cargoship lands in a chart as the same type it would have landed as under plain `helm --set`.</p>
-<h2 id="index-26"><a class="header" href="#index-26">Index</a></h2>
+<h2 id="index-32"><a class="header" href="#index-32">Index</a></h2>
 <ul>
 <li><a href="#ApplyMapping">func ApplyMapping(dst map[string]any, values map[string]any, source string, target string) (bool, error)</a></li>
 <li><a href="#EvaluateValuesTemplates">func EvaluateValuesTemplates(v any, data any, opts …Option) (any, error)</a></li>
@@ -11360,7 +11887,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/helpers"
 </code></pre>
 <p>Package helpers are a sub-section of function from defense-unicorn pkg helpers package</p>
-<h2 id="index-27"><a class="header" href="#index-27">Index</a></h2>
+<h2 id="index-33"><a class="header" href="#index-33">Index</a></h2>
 <ul>
 <li><a href="#constants-6">Constants</a></li>
 <li><a href="#CreateDirectory">func CreateDirectory(path string, mode os.FileMode) error</a></li>
@@ -11481,7 +12008,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/images"
 </code></pre>
 <p>Package images is functionality related to interacting with oci images. This also stems from zarf-dev/zarf</p>
-<h2 id="index-28"><a class="header" href="#index-28">Index</a></h2>
+<h2 id="index-34"><a class="header" href="#index-34">Index</a></h2>
 <ul>
 <li><a href="#constants-7">Constants</a></li>
 <li><a href="#Ping">func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) (err error)</a></li>
@@ -11617,7 +12144,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/lint"
 </code></pre>
 <p>Package lint contains functions for verifying yaml files are valid</p>
-<h2 id="index-29"><a class="header" href="#index-29">Index</a></h2>
+<h2 id="index-35"><a class="header" href="#index-35">Index</a></h2>
 <ul>
 <li><a href="#constants-8">Constants</a></li>
 <li><a href="#LintError">type LintError</a>
@@ -11686,7 +12213,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/node"
 </code></pre>
 <p>Package node is used for status related functions</p>
-<h2 id="index-30"><a class="header" href="#index-30">Index</a></h2>
+<h2 id="index-36"><a class="header" href="#index-36">Index</a></h2>
 <ul>
 <li><a href="#RetryFunc">type RetryFunc</a>
 <ul>
@@ -11722,7 +12249,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/oci/archive"
 </code></pre>
 <p>Package archive implements the Archive interface for the OCI archive store.</p>
-<h2 id="index-31"><a class="header" href="#index-31">Index</a></h2>
+<h2 id="index-37"><a class="header" href="#index-37">Index</a></h2>
 <ul>
 <li><a href="#OciArchiveStore">type OciArchiveStore</a>
 <ul>
@@ -11757,10 +12284,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/oci/platform"
 </code></pre>
 <p>Package platform defines canonical CPU architecture identifiers and validation helpers used by cargoship when targeting specific platforms in OCI workflows.</p>
-<h2 id="index-32"><a class="header" href="#index-32">Index</a></h2>
+<h2 id="index-38"><a class="header" href="#index-38">Index</a></h2>
 <ul>
 <li><a href="#constants-9">Constants</a></li>
-<li><a href="#variables-19">Variables</a></li>
+<li><a href="#variables-25">Variables</a></li>
 <li><a href="#ValidateArch">func ValidateArch(format Arch) error</a></li>
 <li><a href="#Arch">type Arch</a></li>
 </ul>
@@ -11775,7 +12302,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     ArchRISCV = api.ArchRISCV
 )
 </code></pre>
-<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
+<h2 id="variables-25"><a class="header" href="#variables-25">Variables</a></h2>
 <p><a name="ErrUnknownArch"></a></p>
 <pre><code class="language-go">var (
     // ErrUnknownArch is returned when a Arch is not one of the supported architectures.
@@ -11799,18 +12326,18 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/packager/assemble"
 </code></pre>
 <p>Package assemble builds a Cargoship package on disk</p>
-<h2 id="index-33"><a class="header" href="#index-33">Index</a></h2>
+<h2 id="index-39"><a class="header" href="#index-39">Index</a></h2>
 <ul>
 <li><a href="#AssembleDistro">func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error)</a></li>
 <li><a href="#AssembleOptions">type AssembleOptions</a></li>
 </ul>
 <p><a name="AssembleDistro"></a></p>
-<h2 id="func-assembledistro"><a class="header" href="#func-assembledistro">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L142">AssembleDistro</a></a></h2>
+<h2 id="func-assembledistro"><a class="header" href="#func-assembledistro">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L176">AssembleDistro</a></a></h2>
 <pre><code class="language-go">func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error)
 </code></pre>
 <p>AssembleDistro creates the actual tarballs</p>
 <p><a name="AssembleOptions"></a></p>
-<h2 id="type-assembleoptions"><a class="header" href="#type-assembleoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L62-L80">AssembleOptions</a></a></h2>
+<h2 id="type-assembleoptions"><a class="header" href="#type-assembleoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/packager/assemble/assemble.go#L63-L81">AssembleOptions</a></a></h2>
 <p>AssembleOptions options</p>
 <pre><code class="language-go">type AssembleOptions struct {
     RegistryOverrides []images.RegistryOverride
@@ -11838,10 +12365,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/packager/layout"
 </code></pre>
 <p>Package layout is used to defining the distro package files</p>
-<h2 id="index-34"><a class="header" href="#index-34">Index</a></h2>
+<h2 id="index-40"><a class="header" href="#index-40">Index</a></h2>
 <ul>
 <li><a href="#constants-10">Constants</a></li>
-<li><a href="#variables-20">Variables</a></li>
+<li><a href="#variables-26">Variables</a></li>
 <li><a href="#AnnotationsFromMetadata">func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string</a></li>
 <li><a href="#IsCleanPath">func IsCleanPath(s string) bool</a></li>
 <li><a href="#IsContainedPath">func IsContainedPath(s string) bool</a></li>
@@ -11906,7 +12433,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     OCITimestampFormat = time.RFC3339
 )
 </code></pre>
-<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
+<h2 id="variables-26"><a class="header" href="#variables-26">Variables</a></h2>
 <p><a name="ErrNoVerificationMaterial"></a>ErrNoVerificationMaterial is returned when there is nothing to verify against. VerifyIfPossible tolerates this; all other verification errors are always fatal.</p>
 <pre><code class="language-go">var ErrNoVerificationMaterial = errors.New("no verification material available")
 </code></pre>
@@ -12141,7 +12668,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/packager/load"
 </code></pre>
 <p>Package load for loading a given package</p>
-<h2 id="index-35"><a class="header" href="#index-35">Index</a></h2>
+<h2 id="index-41"><a class="header" href="#index-41">Index</a></h2>
 <ul>
 <li><a href="#ClusterDefinition">func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error)</a></li>
 <li><a href="#DistroDefinition">func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error)</a></li>
@@ -12181,10 +12708,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/phase"
 </code></pre>
 <p>Package phase is all the various phases used for bootstrapping a cluster. The phase files are named in a rough order used during an install; - 0x are for preconnection resources, along with ssh-ing into the node - 1x are used to gather information about the nodes in the cluster - 2x are for modifying host services, like firewalls, host files, and enabling kernel level modules - 5x are for staging files for the distro engine, e.i. rpm’s, apt’s, or binary files - 6x are for starting the engine or for upgrading an existing install - 8x are for resetting the engine from the nodes - 9x are last minute things and finally disconnecting from a node - ext are files that are currently not used but may be incorporated later</p>
-<h2 id="index-36"><a class="header" href="#index-36">Index</a></h2>
+<h2 id="index-42"><a class="header" href="#index-42">Index</a></h2>
 <ul>
 <li><a href="#constants-11">Constants</a></li>
-<li><a href="#variables-21">Variables</a></li>
+<li><a href="#variables-27">Variables</a></li>
 <li><a href="#DryRunNote">func DryRunNote(p Phase) string</a></li>
 <li><a href="#Titles">func Titles(results []PhaseResult) []string</a></li>
 <li><a href="#APTUploadFiles">type APTUploadFiles</a>
@@ -12193,6 +12720,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#APTUploadFiles.Prepare">func (p *APTUploadFiles) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
 <li><a href="#APTUploadFiles.Run">func (p *APTUploadFiles) Run(ctx context.Context) (err error)</a></li>
 <li><a href="#APTUploadFiles.Title">func (p *APTUploadFiles) Title() string</a></li>
+</ul>
+</li>
+<li><a href="#ApplyManifests">type ApplyManifests</a>
+<ul>
+<li><a href="#ApplyManifests.Explanation">func (p *ApplyManifests) Explanation() string</a></li>
+<li><a href="#ApplyManifests.Prepare">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ApplyManifests.Run">func (p *ApplyManifests) Run(ctx context.Context) error</a></li>
+<li><a href="#ApplyManifests.ShouldRun">func (p *ApplyManifests) ShouldRun() bool</a></li>
+<li><a href="#ApplyManifests.Title">func (p *ApplyManifests) Title() string</a></li>
 </ul>
 </li>
 <li><a href="#BINUploadFiles">type BINUploadFiles</a>
@@ -12338,6 +12874,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#GenericPhase.SetManager">func (p *GenericPhase) SetManager(m *Manager)</a></li>
 <li><a href="#GenericPhase.VersionGreater">func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool</a></li>
 <li><a href="#GenericPhase.VersionLess">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool</a></li>
+<li><a href="#GenericPhase.VersionSkewTooGreat">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool</a></li>
 <li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
 </ul>
 </li>
@@ -12353,7 +12890,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#InitializeControllers">type InitializeControllers</a>
 <ul>
 <li><a href="#InitializeControllers.Explanation">func (p *InitializeControllers) Explanation() string</a></li>
-<li><a href="#InitializeControllers.Prepare">func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeControllers.Prepare">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
 <li><a href="#InitializeControllers.Run">func (p *InitializeControllers) Run(ctx context.Context) error</a></li>
 <li><a href="#InitializeControllers.ShouldRun">func (p *InitializeControllers) ShouldRun() bool</a></li>
 <li><a href="#InitializeControllers.Title">func (p *InitializeControllers) Title() string</a></li>
@@ -12362,7 +12899,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#InitializeWorkers">type InitializeWorkers</a>
 <ul>
 <li><a href="#InitializeWorkers.Explanation">func (p *InitializeWorkers) Explanation() string</a></li>
-<li><a href="#InitializeWorkers.Prepare">func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeWorkers.Prepare">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
 <li><a href="#InitializeWorkers.Run">func (p *InitializeWorkers) Run(ctx context.Context) error</a></li>
 <li><a href="#InitializeWorkers.ShouldRun">func (p *InitializeWorkers) ShouldRun() bool</a></li>
 <li><a href="#InitializeWorkers.Title">func (p *InitializeWorkers) Title() string</a></li>
@@ -12586,7 +13123,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     UnknownVersion = "v0.0.0"
 )
 </code></pre>
-<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
+<h2 id="variables-27"><a class="header" href="#variables-27">Variables</a></h2>
 <p><a name="ErrNoControllers"></a>ErrNoControllers an error for when no controllers are running</p>
 <pre><code class="language-go">var ErrNoControllers = errors.New("no controllers are running")
 </code></pre>
@@ -12598,6 +13135,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p><a name="ErrWillNotDowngrade"></a>ErrWillNotDowngrade is returned when a host already runs a version newer than the one the package carries. An engine does not support moving backwards, so the run stops here rather than uninstalling a newer version part way through.</p>
 <pre><code class="language-go">var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
+</code></pre>
+<p><a name="ErrWillNotUpgradeVersionSkewTooGreat"></a>ErrWillNotUpgradeVersionSkewTooGreat is returned when a package is trying to upgrade the cluster more then 1 minor version at a time; v1.33.x to v1.34.x is allowed, but v1.33.x to v1.35.x is not.</p>
+<pre><code class="language-go">var ErrWillNotUpgradeVersionSkewTooGreat = errors.New("will not upgrade the cluster more than one minor version at a time")
 </code></pre>
 <p><a name="Force"></a>Force is used by various phases to attempt a forced installation</p>
 <pre><code class="language-go">var Force bool
@@ -12646,6 +13186,40 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="APTUploadFiles.Title"></a></p>
 <h3 id="func-aptuploadfiles-title"><a class="header" href="#func-aptuploadfiles-title">func (*APTUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L33">Title</a></a></h3>
 <pre><code class="language-go">func (p *APTUploadFiles) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="ApplyManifests"></a></p>
+<h2 id="type-applymanifests"><a class="header" href="#type-applymanifests">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L32-L37">ApplyManifests</a></a></h2>
+<p>ApplyManifests kubectl-applies the raw manifests a distro’s package declares -- typically a CNI -- from the leader, once it has bootstrapped and before workers are expected to join.</p>
+<pre><code class="language-go">type ApplyManifests struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ApplyManifests.Explanation"></a></p>
+<h3 id="func-applymanifests-explanation"><a class="header" href="#func-applymanifests-explanation">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L55">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ApplyManifests.Prepare"></a></p>
+<h3 id="func-applymanifests-prepare"><a class="header" href="#func-applymanifests-prepare">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L60">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ApplyManifests.Run"></a></p>
+<h3 id="func-applymanifests-run"><a class="header" href="#func-applymanifests-run">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L78">Run</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ApplyManifests.ShouldRun"></a></p>
+<h3 id="func-applymanifests-shouldrun"><a class="header" href="#func-applymanifests-shouldrun">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L73">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there is a leader to apply from and the package declares manifests.</p>
+<p><a name="ApplyManifests.Title"></a></p>
+<h3 id="func-applymanifests-title"><a class="header" href="#func-applymanifests-title">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L50">Title</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="BINUploadFiles"></a></p>
@@ -13116,7 +13690,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="GatherFactsDistro"></a></p>
-<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L39-L48">GatherFactsDistro</a></a></h2>
+<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L43-L52">GatherFactsDistro</a></a></h2>
 <p>GatherFactsDistro state</p>
 <pre><code class="language-go">type GatherFactsDistro struct {
     GenericPhase
@@ -13129,27 +13703,27 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="GatherFactsDistro.Explanation"></a></p>
-<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56">Explanation</a></a></h3>
+<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L60">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="GatherFactsDistro.Prepare"></a></p>
-<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L66">Prepare</a></a></h3>
+<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L70">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="GatherFactsDistro.ReadOnly"></a></p>
-<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L61">ReadOnly</a></a></h3>
+<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L65">ReadOnly</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) ReadOnly() string
 </code></pre>
 <p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
 <p><a name="GatherFactsDistro.Run"></a></p>
-<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L73">Run</a></a></h3>
+<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L77">Run</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
 </code></pre>
 <p>Run the phase</p>
 <p><a name="GatherFactsDistro.Title"></a></p>
-<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51">Title</a></a></h3>
+<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L55">Title</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13190,6 +13764,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool
 </code></pre>
 <p>VersionLess if host version is less then the distro version</p>
+<p><a name="GenericPhase.VersionSkewTooGreat"></a></p>
+<h3 id="func-genericphase-versionskewtoogreat"><a class="header" href="#func-genericphase-versionskewtoogreat">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L205">VersionSkewTooGreat</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool
+</code></pre>
+<p>VersionSkewTooGreat reports whether host’s running version is more than one minor version behind target. kubeadm’s own upgrade path refuses to skip a minor version, and a two-minor jump fails partway through the control plane rather than up front, so this catches it before a real run starts one. UnknownVersion (no engine detected yet, a fresh install) never counts as skew.</p>
 <p><a name="GenericPhase.Wet"></a></p>
 <h3 id="func-genericphase-wet"><a class="header" href="#func-genericphase-wet">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L171">Wet</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
@@ -13230,7 +13809,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="InitializeControllers"></a></p>
-<h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L39">InitializeControllers</a></a></h2>
+<h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L40">InitializeControllers</a></a></h2>
 <p>InitializeControllers phase state</p>
 <pre><code class="language-go">type InitializeControllers struct {
     GenericPhase
@@ -13239,32 +13818,32 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="InitializeControllers.Explanation"></a></p>
-<h3 id="func-initializecontrollers-explanation"><a class="header" href="#func-initializecontrollers-explanation">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L58">Explanation</a></a></h3>
+<h3 id="func-initializecontrollers-explanation"><a class="header" href="#func-initializecontrollers-explanation">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L82">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeControllers.Prepare"></a></p>
-<h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L42">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L59">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeControllers.Run"></a></p>
-<h3 id="func-initializecontrollers-run"><a class="header" href="#func-initializecontrollers-run">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L63">Run</a></a></h3>
+<h3 id="func-initializecontrollers-run"><a class="header" href="#func-initializecontrollers-run">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L87">Run</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="InitializeControllers.ShouldRun"></a></p>
-<h3 id="func-initializecontrollers-shouldrun"><a class="header" href="#func-initializecontrollers-shouldrun">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L85">ShouldRun</a></a></h3>
+<h3 id="func-initializecontrollers-shouldrun"><a class="header" href="#func-initializecontrollers-shouldrun">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L121">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
 <p><a name="InitializeControllers.Title"></a></p>
-<h3 id="func-initializecontrollers-title"><a class="header" href="#func-initializecontrollers-title">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L53">Title</a></a></h3>
+<h3 id="func-initializecontrollers-title"><a class="header" href="#func-initializecontrollers-title">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L77">Title</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="InitializeWorkers"></a></p>
-<h2 id="type-initializeworkers"><a class="header" href="#type-initializeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L40">InitializeWorkers</a></a></h2>
+<h2 id="type-initializeworkers"><a class="header" href="#type-initializeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L41">InitializeWorkers</a></a></h2>
 <p>InitializeWorkers phase state</p>
 <pre><code class="language-go">type InitializeWorkers struct {
     GenericPhase
@@ -13275,27 +13854,27 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="InitializeWorkers.Explanation"></a></p>
-<h3 id="func-initializeworkers-explanation"><a class="header" href="#func-initializeworkers-explanation">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L48">Explanation</a></a></h3>
+<h3 id="func-initializeworkers-explanation"><a class="header" href="#func-initializeworkers-explanation">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L64">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeWorkers.Prepare"></a></p>
-<h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L53">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L69">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeWorkers.Run"></a></p>
-<h3 id="func-initializeworkers-run"><a class="header" href="#func-initializeworkers-run">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L68">Run</a></a></h3>
+<h3 id="func-initializeworkers-run"><a class="header" href="#func-initializeworkers-run">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L91">Run</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="InitializeWorkers.ShouldRun"></a></p>
-<h3 id="func-initializeworkers-shouldrun"><a class="header" href="#func-initializeworkers-shouldrun">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L63">ShouldRun</a></a></h3>
+<h3 id="func-initializeworkers-shouldrun"><a class="header" href="#func-initializeworkers-shouldrun">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L86">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
 <p><a name="InitializeWorkers.Title"></a></p>
-<h3 id="func-initializeworkers-title"><a class="header" href="#func-initializeworkers-title">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L43">Title</a></a></h3>
+<h3 id="func-initializeworkers-title"><a class="header" href="#func-initializeworkers-title">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L59">Title</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -13901,7 +14480,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UpgradeController.Run"></a></p>
-<h3 id="func-upgradecontroller-run"><a class="header" href="#func-upgradecontroller-run">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L68">Run</a></a></h3>
+<h3 id="func-upgradecontroller-run"><a class="header" href="#func-upgradecontroller-run">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L70">Run</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeController) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -13911,7 +14490,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UpgradeHosts"></a></p>
-<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L36-L42">UpgradeHosts</a></a></h2>
+<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L37-L44">UpgradeHosts</a></a></h2>
 <p>UpgradeHosts phase state</p>
 <pre><code class="language-go">type UpgradeHosts struct {
     GenericPhase
@@ -13920,7 +14499,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="UpgradeHosts.ShouldRun"></a></p>
-<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L45">ShouldRun</a></a></h3>
+<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L47">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
@@ -13943,7 +14522,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UpgradeWorkers.Run"></a></p>
-<h3 id="func-upgradeworkers-run"><a class="header" href="#func-upgradeworkers-run">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L69">Run</a></a></h3>
+<h3 id="func-upgradeworkers-run"><a class="header" href="#func-upgradeworkers-run">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L70">Run</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -14047,15 +14626,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/retry"
 </code></pre>
 <p>Package retry provides simple retry wrappers for functions that return an error</p>
-<h2 id="index-37"><a class="header" href="#index-37">Index</a></h2>
+<h2 id="index-43"><a class="header" href="#index-43">Index</a></h2>
 <ul>
-<li><a href="#variables-22">Variables</a></li>
+<li><a href="#variables-28">Variables</a></li>
 <li><a href="#Context">func Context(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Timeout">func Timeout(ctx context.Context, timeout time.Duration, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Times">func Times(ctx context.Context, times int, f func(context.Context) error) error</a></li>
 <li><a href="#WithDefaultTimeout">func WithDefaultTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 </ul>
-<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
+<h2 id="variables-28"><a class="header" href="#variables-28">Variables</a></h2>
 <p><a name="DefaultTimeout"></a></p>
 <pre><code class="language-go">var (
     // DefaultTimeout is a default timeout for retry operations
@@ -14092,7 +14671,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/schema"
 </code></pre>
 <p>Package schema serves the JSON Schema documents cargoship generates for its own file formats, out of the binary rather than over the network. The documents under embedded/ are byte-identical copies of the repository’s schema/ directory, written by the same `mage generate:schema` target; go:embed cannot reach outside its own package directory, which is why the copy exists at all.</p>
-<h2 id="index-38"><a class="header" href="#index-38">Index</a></h2>
+<h2 id="index-44"><a class="header" href="#index-44">Index</a></h2>
 <ul>
 <li><a href="#ComposeInventory">func ComposeInventory(values helmvalues.Schema, note string) (map[string]any, error)</a></li>
 <li><a href="#Decode">func Decode(b []byte) (any, error)</a></li>
@@ -14219,7 +14798,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Package utils is for commonly used functions.</p>
 <p>Package utils is for commonly used functions</p>
-<h2 id="index-39"><a class="header" href="#index-39">Index</a></h2>
+<h2 id="index-45"><a class="header" href="#index-45">Index</a></h2>
 <ul>
 <li><a href="#constants-12">Constants</a></li>
 <li><a href="#CreateDirectory">func CreateDirectory(path string, mode os.FileMode) error</a></li>
@@ -14356,7 +14935,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/utils/build"
 </code></pre>
 <p>Package build is the build flag logic shared across mage and the CLI</p>
-<h2 id="index-40"><a class="header" href="#index-40">Index</a></h2>
+<h2 id="index-46"><a class="header" href="#index-46">Index</a></h2>
 <ul>
 <li><a href="#GCFLags">func GCFLags() string</a></li>
 <li><a href="#LDFlags">func LDFlags(version string, commit string) string</a></li>
@@ -14383,9 +14962,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types"
 </code></pre>
 <p>Package types is a little bit of a hacky way to generate the cargo-ship-config jsonschema</p>
-<h2 id="index-41"><a class="header" href="#index-41">Index</a></h2>
+<h2 id="index-47"><a class="header" href="#index-47">Index</a></h2>
 <ul>
-<li><a href="#variables-23">Variables</a></li>
+<li><a href="#variables-29">Variables</a></li>
 <li><a href="#AgeOptions">type AgeOptions</a></li>
 <li><a href="#ApplyOptions">type ApplyOptions</a></li>
 <li><a href="#DistroConfig">type DistroConfig</a></li>
@@ -14405,7 +14984,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#ResetOptions">type ResetOptions</a></li>
 </ul>
-<h2 id="variables-23"><a class="header" href="#variables-23">Variables</a></h2>
+<h2 id="variables-29"><a class="header" href="#variables-29">Variables</a></h2>
 <p><a name="CommonFileSources"></a>CommonFileSources are suggested, non-exhaustive URL prefixes used in generated schemas as autocomplete for FileOverrideMap’s file_override keys, the same way CommonRegistries is used for registry_override. They are the hosts a distro definition most often downloads from.</p>
 <pre><code class="language-go">var CommonFileSources = []string{
     "https://rpm.rancher.io",
@@ -14604,14 +15183,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/distrocfg"
 </code></pre>
 <p>Package distrocfg defines the standard interface that all distro config settings</p>
-<h2 id="index-42"><a class="header" href="#index-42">Index</a></h2>
+<h2 id="index-48"><a class="header" href="#index-48">Index</a></h2>
 <ul>
 <li><a href="#constants-13">Constants</a></li>
-<li><a href="#variables-24">Variables</a></li>
+<li><a href="#variables-30">Variables</a></li>
 <li><a href="#NodeLabelsMapToList">func NodeLabelsMapToList(m map[string]string) []string</a></li>
 <li><a href="#RemoveStaleFiles">func RemoveStaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) error</a></li>
 <li><a href="#StaleFiles">func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) []string</a></li>
 <li><a href="#AdminCredentials">type AdminCredentials</a></li>
+<li><a href="#Bootstrapper">type Bootstrapper</a></li>
 <li><a href="#Common">type Common</a>
 <ul>
 <li><a href="#Common.BinaryName">func (r *Common) BinaryName() string</a></li>
@@ -14642,6 +15222,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </ul>
 </li>
 <li><a href="#ManagedDir">type ManagedDir</a></li>
+<li><a href="#ManifestApplier">type ManifestApplier</a></li>
+<li><a href="#PreStartUpgrader">type PreStartUpgrader</a></li>
+<li><a href="#PreUninstallResetter">type PreUninstallResetter</a></li>
 <li><a href="#RKE2">type RKE2</a>
 <ul>
 <li><a href="#RKE2.AdminCredentials">func (d *RKE2) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)</a></li>
@@ -14655,7 +15238,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <ul>
 <li><a href="#RancherCommon.CleanupPaths">func (d *RancherCommon) CleanupPaths() []string</a></li>
 <li><a href="#RancherCommon.ConfigureEngine">func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error</a></li>
-<li><a href="#RancherCommon.DesiredFiles">func (d *RancherCommon) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
+<li><a href="#RancherCommon.DesiredFiles">func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
 <li><a href="#RancherCommon.DistroCmdf">func (d *RancherCommon) DistroCmdf(template string, args …any) string</a></li>
 <li><a href="#RancherCommon.GetClusterCIDR">func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string</a></li>
 <li><a href="#RancherCommon.JoinTokenPathAgent">func (d *RancherCommon) JoinTokenPathAgent() string</a></li>
@@ -14666,16 +15249,21 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#Upstream">type Upstream</a>
 <ul>
 <li><a href="#Upstream.AdminCredentials">func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)</a></li>
+<li><a href="#Upstream.Bootstrap">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error</a></li>
 <li><a href="#Upstream.CleanupPaths">func (d *Upstream) CleanupPaths() []string</a></li>
-<li><a href="#Upstream.ConfigureEngine">func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error</a></li>
-<li><a href="#Upstream.DesiredFiles">func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
+<li><a href="#Upstream.ConfigureEngine">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error</a></li>
+<li><a href="#Upstream.DesiredFiles">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)</a></li>
 <li><a href="#Upstream.DistroCmdf">func (d *Upstream) DistroCmdf(template string, args …any) string</a></li>
 <li><a href="#Upstream.GetClusterCIDR">func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string</a></li>
 <li><a href="#Upstream.ImportImages">func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error</a></li>
+<li><a href="#Upstream.IsBootstrapped">func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool</a></li>
 <li><a href="#Upstream.JoinTokenPathAgent">func (d *Upstream) JoinTokenPathAgent() string</a></li>
 <li><a href="#Upstream.KubeconfigPath">func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string</a></li>
 <li><a href="#Upstream.KubectlCmdf">func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args …any) string</a></li>
 <li><a href="#Upstream.ManagedDirs">func (d *Upstream) ManagedDirs() []ManagedDir</a></li>
+<li><a href="#Upstream.ManifestPaths">func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string</a></li>
+<li><a href="#Upstream.PreStartUpgrade">func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error</a></li>
+<li><a href="#Upstream.PreUninstallReset">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) error</a></li>
 <li><a href="#Upstream.RunningVersion">func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)</a></li>
 <li><a href="#Upstream.StopControllerService">func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error</a></li>
 <li><a href="#Upstream.StopWorkerService">func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error</a></li>
@@ -14725,7 +15313,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="StateDir"></a>StateDir is where cargoship records state files describing the applied distro package.</p>
 <pre><code class="language-go">const StateDir = "/etc/cargoship"
 </code></pre>
-<h2 id="variables-24"><a class="header" href="#variables-24">Variables</a></h2>
+<h2 id="variables-30"><a class="header" href="#variables-30">Variables</a></h2>
 <p><a name="ErrVersionNotDetected"></a></p>
 <pre><code class="language-go">var (
     // ErrVersionNotDetected if a version is not detected
@@ -14735,13 +15323,16 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // ErrNotImplemented is returned by a distro module for capabilities its engine does not
     // support yet, so a caller sees a clear "not implemented" failure instead of a silent no-op.
     ErrNotImplemented = errors.New("not implemented for this distro")
+    // ErrNoLeader is returned when a joining host has no leader host to fetch join material
+    // from -- the cluster has no controller, which is a config error, not a retryable one.
+    ErrNoLeader = errors.New("no leader host to join through")
 )
 </code></pre>
 <p><a name="ErrNoAdminCredentials"></a>ErrNoAdminCredentials if the admin kubeconfig on the host does not carry a usable CA certificate and admin client key pair</p>
 <pre><code class="language-go">var ErrNoAdminCredentials = errors.New("admin kubeconfig has no admin credentials")
 </code></pre>
 <p><a name="NodeLabelsMapToList"></a></p>
-<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L84">NodeLabelsMapToList</a></a></h2>
+<h2 id="func-nodelabelsmaptolist"><a class="header" href="#func-nodelabelsmaptolist">func <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L87">NodeLabelsMapToList</a></a></h2>
 <pre><code class="language-go">func NodeLabelsMapToList(m map[string]string) []string
 </code></pre>
 <p>NodeLabelsMapToList takes a map and returns a string array for used by Kubernetes labels</p>
@@ -14769,8 +15360,19 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     ClientKey []byte
 }
 </code></pre>
+<p><a name="Bootstrapper"></a></p>
+<h2 id="type-bootstrapper"><a class="header" href="#type-bootstrapper">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L128-L134">Bootstrapper</a></a></h2>
+<p>Bootstrapper is implemented by a distro whose cluster formation is a one-shot command rather than a service to start -- kubeadm init/join, unlike rke2/k3s’s single config.yaml + systemd service. InitializeControllers/InitializeWorkers call Bootstrap instead of starting the service, and ask IsBootstrapped instead of checking service state, when a distro implements this, the same optional-interface pattern ImageImporter uses.</p>
+<pre><code class="language-go">type Bootstrapper interface {
+    // IsBootstrapped reports whether host has already formed or joined the cluster, so a re-run
+    // is a no-op instead of re-running the bootstrap command.
+    IsBootstrapped(host *cluster.ZarfHost) bool
+    // Bootstrap forms the cluster (the leader) or joins it (every other host).
+    Bootstrap(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
+}
+</code></pre>
 <p><a name="Common"></a></p>
-<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L93-L113">Common</a></a></h2>
+<h2 id="type-common"><a class="header" href="#type-common">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L96-L116">Common</a></a></h2>
 <p>Common for all the distro’s</p>
 <pre><code class="language-go">type Common struct {
     // Binary name of the engine binary
@@ -14795,47 +15397,47 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="Common.BinaryName"></a></p>
-<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L121">BinaryName</a></a></h3>
+<h3 id="func-common-binaryname"><a class="header" href="#func-common-binaryname">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L124">BinaryName</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryName() string
 </code></pre>
 <p>BinaryName returns the engine binary name</p>
 <p><a name="Common.BinaryPath"></a></p>
-<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L116">BinaryPath</a></a></h3>
+<h3 id="func-common-binarypath"><a class="header" href="#func-common-binarypath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L119">BinaryPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) BinaryPath() string
 </code></pre>
 <p>BinaryPath returns the full path to the engine binary</p>
 <p><a name="Common.ConfigPath"></a></p>
-<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L126">ConfigPath</a></a></h3>
+<h3 id="func-common-configpath"><a class="header" href="#func-common-configpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L129">ConfigPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) ConfigPath() string
 </code></pre>
 <p>ConfigPath returns the full path for the config directory used by the engine</p>
 <p><a name="Common.DataDirPath"></a></p>
-<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L136">DataDirPath</a></a></h3>
+<h3 id="func-common-datadirpath"><a class="header" href="#func-common-datadirpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L139">DataDirPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) DataDirPath() string
 </code></pre>
 <p>DataDirPath returns the full path for the data directory used by the engine</p>
 <p><a name="Common.GetControllerService"></a></p>
-<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L156">GetControllerService</a></a></h3>
+<h3 id="func-common-getcontrollerservice"><a class="header" href="#func-common-getcontrollerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L159">GetControllerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetControllerService() string
 </code></pre>
 <p>GetControllerService returns the name of the controller service</p>
 <p><a name="Common.GetWorkerService"></a></p>
-<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L151">GetWorkerService</a></a></h3>
+<h3 id="func-common-getworkerservice"><a class="header" href="#func-common-getworkerservice">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L154">GetWorkerService</a></a></h3>
 <pre><code class="language-go">func (r *Common) GetWorkerService() string
 </code></pre>
 <p>GetWorkerService returns the name of the worker service</p>
 <p><a name="Common.JoinTokenPath"></a></p>
-<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L131">JoinTokenPath</a></a></h3>
+<h3 id="func-common-jointokenpath"><a class="header" href="#func-common-jointokenpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L134">JoinTokenPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) JoinTokenPath() string
 </code></pre>
 <p>JoinTokenPath returns the path of the token to join the cluster</p>
 <p><a name="Common.PackageStagingDir"></a></p>
-<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L143">PackageStagingDir</a></a></h3>
+<h3 id="func-common-packagestagingdir"><a class="header" href="#func-common-packagestagingdir">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L146">PackageStagingDir</a></a></h3>
 <pre><code class="language-go">func (r *Common) PackageStagingDir() string
 </code></pre>
 <p>PackageStagingDir returns the directory staged .rpm/.deb package files are uploaded to. It falls back to DataDirPath when PackageDir is unset, so a distro that never stages package files does not need to set it.</p>
 <p><a name="Common.SetPath"></a></p>
-<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L161">SetPath</a></a></h3>
+<h3 id="func-common-setpath"><a class="header" href="#func-common-setpath">func (*Common) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/distro_common.go#L164">SetPath</a></a></h3>
 <pre><code class="language-go">func (r *Common) SetPath(key string, value string) error
 </code></pre>
 <p>SetPath takes in a key value pair to change how the distro values are configured, if a key is not valid it will throw an “ErrPathKey” error</p>
@@ -14880,7 +15482,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     // distro would write for the given host/run/dis state -- e.g. registries.yaml, audit.yaml,
     // pss.yaml -- used both to pre-seed a fresh host and, by the engine-config-sync phases, to
     // detect drift on an already-running host.
-    DesiredFiles(*cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
+    DesiredFiles(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) (map[string]DesiredFile, error)
     // ManagedDirs returns the directories on a host cargoship prunes, so that a file in one of
     // them that DesiredFiles no longer names can be removed rather than left behind. A
     // directory cargoship shares with the engine names the files that are its own. A distro
@@ -14973,6 +15575,31 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     Glob string
 }
 </code></pre>
+<p><a name="ManifestApplier"></a></p>
+<h2 id="type-manifestapplier"><a class="header" href="#type-manifestapplier">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L158-L162">ManifestApplier</a></a></h2>
+<p>ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically a CNI -- that cargoship applies with kubectl once the leader is reachable, instead of rendering them into a HelmChartConfig an embedded controller reconciles (rancher_common.go’s helmChartConfigs). Same optional-interface pattern as ImageImporter/Bootstrapper.</p>
+<pre><code class="language-go">type ManifestApplier interface {
+    // ManifestPaths returns the on-host paths to kubectl apply, in order. Empty when the package
+    // declares none.
+    ManifestPaths(dis distro.ZarfDistro) []string
+}
+</code></pre>
+<p><a name="PreStartUpgrader"></a></p>
+<h2 id="type-prestartupgrader"><a class="header" href="#type-prestartupgrader">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L140-L143">PreStartUpgrader</a></a></h2>
+<p>PreStartUpgrader is implemented by a distro whose upgrade needs a step between the new package install and the service restart -- kubeadm upgrade, unlike rke2/k3s where a plain restart on the new binary is enough. UpgradeHosts calls it, when implemented, right after installDistro and before startService. Same optional-interface pattern as Bootstrapper.</p>
+<pre><code class="language-go">type PreStartUpgrader interface {
+    // PreStartUpgrade runs after the new packages are staged but before the service restarts.
+    PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
+}
+</code></pre>
+<p><a name="PreUninstallResetter"></a></p>
+<h2 id="type-preuninstallresetter"><a class="header" href="#type-preuninstallresetter">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L149-L152">PreUninstallResetter</a></a></h2>
+<p>PreUninstallResetter is implemented by a distro that must tear down its own cluster membership before its packages are removed -- kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. UninstallEngine calls it, when implemented, before resolving package names and removing them. Same optional-interface pattern as PreStartUpgrader.</p>
+<pre><code class="language-go">type PreUninstallResetter interface {
+    // PreUninstallReset runs before packages are resolved and removed.
+    PreUninstallReset(ctx context.Context, host *cluster.ZarfHost) error
+}
+</code></pre>
 <p><a name="RKE2"></a></p>
 <h2 id="type-rke2"><a class="header" href="#type-rke2">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L31-L33">RKE2</a></a></h2>
 <p>RKE2 distro struct</p>
@@ -15024,7 +15651,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>ConfigureEngine does distro specific configuration on a host</p>
 <p><a name="RancherCommon.DesiredFiles"></a></p>
 <h3 id="func-ranchercommon-desiredfiles"><a class="header" href="#func-ranchercommon-desiredfiles">func (*RancherCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L355">DesiredFiles</a></a></h3>
-<pre><code class="language-go">func (d *RancherCommon) DesiredFiles(host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
+<pre><code class="language-go">func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
 </code></pre>
 <p>DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for the given host/run/dis, keyed by their full destination path. Content is identical across hosts of the same run (no host-varying fields are involved), unlike config.yaml.</p>
 <p><a name="RancherCommon.DistroCmdf"></a></p>
@@ -15053,79 +15680,104 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>RunningVersion returns the version of the distro being ran, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream"></a></p>
-<h2 id="type-upstream"><a class="header" href="#type-upstream">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L54-L56">Upstream</a></a></h2>
+<h2 id="type-upstream"><a class="header" href="#type-upstream">type <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L55-L57">Upstream</a></a></h2>
 <p>Upstream distro struct. It targets a kubeadm-bootstrapped cluster: plain kubelet/kubeadm/ kubectl packages and upstream containerd, none of which share rke2/k3s’s single config.yaml or wharfie registries.yaml, so it implements Distro directly rather than embedding RancherCommon.</p>
 <pre><code class="language-go">type Upstream struct {
     Common
 }
 </code></pre>
 <p><a name="Upstream.AdminCredentials"></a></p>
-<h3 id="func-upstream-admincredentials"><a class="header" href="#func-upstream-admincredentials">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L87">AdminCredentials</a></a></h3>
+<h3 id="func-upstream-admincredentials"><a class="header" href="#func-upstream-admincredentials">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L92">AdminCredentials</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
 </code></pre>
 <p>AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig kubeadm writes on a controller host.</p>
+<p><a name="Upstream.Bootstrap"></a></p>
+<h3 id="func-upstream-bootstrap"><a class="header" href="#func-upstream-bootstrap">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L63">Bootstrap</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error
+</code></pre>
+<p>Bootstrap forms the cluster on the leader with `kubeadm init`, joins an additional controller onto it with kubeadm’s HA control-plane path, or joins a worker with a plain `kubeadm join`, against the kubeadm-config.yaml ConfigureEngine already wrote to host.</p>
 <p><a name="Upstream.CleanupPaths"></a></p>
-<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L230">CleanupPaths</a></a></h3>
+<h3 id="func-upstream-cleanuppaths"><a class="header" href="#func-upstream-cleanuppaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L287">CleanupPaths</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) CleanupPaths() []string
 </code></pre>
 <p>CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config directory, the kubelet data directory, and the staged package directory, all of which upstream owns outright.</p>
 <p><a name="Upstream.ConfigureEngine"></a></p>
-<h3 id="func-upstream-configureengine"><a class="header" href="#func-upstream-configureengine">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L150">ConfigureEngine</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) ConfigureEngine(_ context.Context, _ *cluster.ZarfHost, _ cluster.ZarfRuntimeMeta, _ distro.ZarfDistro) error
+<h3 id="func-upstream-configureengine"><a class="header" href="#func-upstream-configureengine">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L157">ConfigureEngine</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
 </code></pre>
-<p>ConfigureEngine does distro specific configuration on a host. kubeadm has no equivalent of rke2/k3s’s single config.yaml write: a controller is bootstrapped with `kubeadm init` and a worker joins with `kubeadm join`, neither of which is implemented yet.</p>
+<p>ConfigureEngine writes DesiredFiles’ output to host: containerd’s config, crictl.yaml, registry hosts.toml, and the kubeadm-config.yaml this host’s role needs. Unlike RancherCommon.ConfigureEngine there is no already-running guard -- kubeadm-config.yaml is meant to be rewritten every run (Bootstrap rewrites it again with the real join token right before `kubeadm join`), so an unconditional overwrite is correct here, not a gap.</p>
 <p><a name="Upstream.DesiredFiles"></a></p>
-<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L157">DesiredFiles</a></a></h3>
-<pre><code class="language-go">func (d *Upstream) DesiredFiles(_ *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
+<h3 id="func-upstream-desiredfiles"><a class="header" href="#func-upstream-desiredfiles">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L173">DesiredFiles</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
 </code></pre>
 <p>DesiredFiles returns the full set of engine config files this distro would write: containerd’s config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.</p>
 <p><a name="Upstream.DistroCmdf"></a></p>
-<h3 id="func-upstream-distrocmdf"><a class="header" href="#func-upstream-distrocmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L106">DistroCmdf</a></a></h3>
+<h3 id="func-upstream-distrocmdf"><a class="header" href="#func-upstream-distrocmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L111">DistroCmdf</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) DistroCmdf(template string, args ...any) string
 </code></pre>
 <p>DistroCmdf returns a string that can be used to execute a command directly. Upstream has no single engine binary to wrap a command through -- kubeadm, kubelet, and kubectl are three separate packages -- so the template is formatted as-is.</p>
 <p><a name="Upstream.GetClusterCIDR"></a></p>
-<h3 id="func-upstream-getclustercidr"><a class="header" href="#func-upstream-getclustercidr">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L132">GetClusterCIDR</a></a></h3>
+<h3 id="func-upstream-getclustercidr"><a class="header" href="#func-upstream-getclustercidr">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L137">GetClusterCIDR</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string
 </code></pre>
 <p>GetClusterCIDR returns the known cluster CIDR blocks. kubeadm’s service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default -- that is entirely CNI dependent -- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.</p>
 <p><a name="Upstream.ImportImages"></a></p>
-<h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L207">ImportImages</a></a></h3>
+<h3 id="func-upstream-importimages"><a class="header" href="#func-upstream-importimages">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L257">ImportImages</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error
 </code></pre>
 <p>ImportImages imports every image tarball staged under path into containerd’s k8s.io image store. Unlike rke2/k3s, upstream’s containerd has no agent watching that directory on its own, so cargoship has to trigger the import itself.</p>
+<p><a name="Upstream.IsBootstrapped"></a></p>
+<h3 id="func-upstream-isbootstrapped"><a class="header" href="#func-upstream-isbootstrapped">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_bootstrap.go#L56">IsBootstrapped</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool
+</code></pre>
+<p>IsBootstrapped reports whether host has already run `kubeadm init` or `kubeadm join`.</p>
 <p><a name="Upstream.JoinTokenPathAgent"></a></p>
-<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L237">JoinTokenPathAgent</a></a></h3>
+<h3 id="func-upstream-jointokenpathagent"><a class="header" href="#func-upstream-jointokenpathagent">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L294">JoinTokenPathAgent</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) JoinTokenPathAgent() string
 </code></pre>
 <p>JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has no static agent-join-token file -- tokens are short-lived and minted on demand with `kubeadm token create` -- so there is nothing to point at yet.</p>
 <p><a name="Upstream.KubeconfigPath"></a></p>
-<h3 id="func-upstream-kubeconfigpath"><a class="header" href="#func-upstream-kubeconfigpath">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L93">KubeconfigPath</a></a></h3>
+<h3 id="func-upstream-kubeconfigpath"><a class="header" href="#func-upstream-kubeconfigpath">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L98">KubeconfigPath</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
 </code></pre>
 <p>KubeconfigPath returns the path to the admin config kubeadm writes. Unlike rke2/k3s, this path does not vary by host or data directory.</p>
 <p><a name="Upstream.KubectlCmdf"></a></p>
-<h3 id="func-upstream-kubectlcmdf"><a class="header" href="#func-upstream-kubectlcmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L99">KubectlCmdf</a></a></h3>
+<h3 id="func-upstream-kubectlcmdf"><a class="header" href="#func-upstream-kubectlcmdf">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L104">KubectlCmdf</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
 </code></pre>
 <p>KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.</p>
 <p><a name="Upstream.ManagedDirs"></a></p>
-<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L198">ManagedDirs</a></a></h3>
+<h3 id="func-upstream-manageddirs"><a class="header" href="#func-upstream-manageddirs">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L248">ManagedDirs</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) ManagedDirs() []ManagedDir
 </code></pre>
 <p>ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per-registry hosts.toml directories under containerdCertsDir are not included -- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry’s own subdirectory, so a removed registry’s hosts.toml is left behind rather than risk pruning the wrong thing.</p>
+<p><a name="Upstream.ManifestPaths"></a></p>
+<h3 id="func-upstream-manifestpaths"><a class="header" href="#func-upstream-manifestpaths">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L280">ManifestPaths</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string
+</code></pre>
+<p>ManifestPaths returns the on-host manifest paths the package declares for cargoship to kubectl apply, e.g. a CNI. Delivery of those files is Config.Files’ job; this is only the list of what to apply.</p>
+<p><a name="Upstream.PreStartUpgrade"></a></p>
+<h3 id="func-upstream-prestartupgrade"><a class="header" href="#func-upstream-prestartupgrade">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_upgrade.go#L95">PreStartUpgrade</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, dis distro.ZarfDistro) error
+</code></pre>
+<p>PreStartUpgrade runs kubeadm’s own upgrade sequence between the shared upgrade phase’s package install and service restart steps. kubeadm, unlike rke2/k3s, refuses to move the control plane forward on a plain kubelet restart -- it must install the new kubeadm binary and run its own upgrade command first, and the first controller runs a different command than every other node.</p>
+<p><a name="Upstream.PreUninstallReset"></a></p>
+<h3 id="func-upstream-preuninstallreset"><a class="header" href="#func-upstream-preuninstallreset">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L29">PreUninstallReset</a></a></h3>
+<pre><code class="language-go">func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) error
+</code></pre>
+<p>PreUninstallReset runs kubeadm’s own teardown before packages are removed, then cleans up what kubeadm reset deliberately leaves behind: it prints a reminder about CNI state and iptables/ipvs rules rather than removing them itself. Each post-reset command is best-effort -- a link that does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected common case, not a failure worth reporting.</p>
 <p><a name="Upstream.RunningVersion"></a></p>
-<h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L112">RunningVersion</a></a></h3>
+<h3 id="func-upstream-runningversion"><a class="header" href="#func-upstream-runningversion">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L117">RunningVersion</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)
 </code></pre>
 <p>RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an “ErrVersionNotDetected” error</p>
 <p><a name="Upstream.StopControllerService"></a></p>
-<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L244">StopControllerService</a></a></h3>
+<h3 id="func-upstream-stopcontrollerservice"><a class="header" href="#func-upstream-stopcontrollerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L301">StopControllerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error
 </code></pre>
 <p>StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.</p>
 <p><a name="Upstream.StopWorkerService"></a></p>
-<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L249">StopWorkerService</a></a></h3>
+<h3 id="func-upstream-stopworkerservice"><a class="header" href="#func-upstream-stopworkerservice">func (*Upstream) <a href="https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L306">StopWorkerService</a></a></h3>
 <pre><code class="language-go">func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error
 </code></pre>
 <p>StopWorkerService stops the worker service on the host.</p>
@@ -15135,9 +15787,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/distrocfg/registry"
 </code></pre>
 <p>Package registry is used to register a distro</p>
-<h2 id="index-43"><a class="header" href="#index-43">Index</a></h2>
+<h2 id="index-49"><a class="header" href="#index-49">Index</a></h2>
 <ul>
-<li><a href="#variables-25">Variables</a></li>
+<li><a href="#variables-31">Variables</a></li>
 <li><a href="#RegisterDistroModule">func RegisterDistroModule(mf MatchFunc, bf BuildFunc)</a></li>
 <li><a href="#BuildFunc">type BuildFunc</a>
 <ul>
@@ -15146,7 +15798,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#MatchFunc">type MatchFunc</a></li>
 </ul>
-<h2 id="variables-25"><a class="header" href="#variables-25">Variables</a></h2>
+<h2 id="variables-31"><a class="header" href="#variables-31">Variables</a></h2>
 <p><a name="ErrDistroModuleNotFound"></a>ErrDistroModuleNotFound is used when a distro module is not found in the registry</p>
 <pre><code class="language-go">var ErrDistroModuleNotFound = errors.New("distro support not found")
 </code></pre>
@@ -15176,7 +15828,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/os"
 </code></pre>
 <p>Package os is for running commands on a remote host</p>
-<h2 id="index-44"><a class="header" href="#index-44">Index</a></h2>
+<h2 id="index-50"><a class="header" href="#index-50">Index</a></h2>
 <ul>
 <li><a href="#constants-14">Constants</a></li>
 <li><a href="#RegisterOSModule">func RegisterOSModule(match func(*rigos.Release) bool, builder func() any)</a></li>
@@ -15371,7 +16023,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/os/linux"
 </code></pre>
 <p>Package linux is implementing the interface github.com/colonel-byte/cargoship/types/os.Configurer for Linux based hosts</p>
-<h2 id="index-45"><a class="header" href="#index-45">Index</a></h2>
+<h2 id="index-51"><a class="header" href="#index-51">Index</a></h2>
 <ul>
 <li><a href="#constants-15">Constants</a></li>
 <li><a href="#Alpine">type Alpine</a>
@@ -15688,7 +16340,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/os/linux/enterpriselinux"
 </code></pre>
 <p>Package enterpriselinux is implementing the interface github.com/colonel-byte/cargoship/types/os.Configurer for Enterprise Linux hosts</p>
-<h2 id="index-46"><a class="header" href="#index-46">Index</a></h2>
+<h2 id="index-52"><a class="header" href="#index-52">Index</a></h2>
 <ul>
 <li><a href="#AlmaLinux">type AlmaLinux</a>
 <ul>
@@ -17986,14 +18638,19 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>So the choice on an unpinnable host is between installing unpinned and not installing at all.</p>
 <p>Failing is also badly timed. By the time pinning runs, <code>InstallPackage</code> has already succeeded and the engine packages are on disk. Returning an error there does not undo the install; it reports a failure for a host that is in fact installed, and the operator’s only route forward is to stop the run from trying to pin. An unpinned host is a weaker guarantee than a pinned one, but it is a working host, and the warning names it and the packages it left unpinned.</p>
 <h2 id="what-is-still-fatal"><a class="header" href="#what-is-still-fatal">What is still fatal</a></h2>
-<p>The tolerance is deliberately narrow, and it lives in <code>holdRPMPackages</code> rather than in the shared <code>installAndPinPackagesFor</code>, so it cannot spread to the apt path:</p>
+<p>The tolerance is deliberately narrow, and it lives in the rpm-specific <code>holdRPMPackages</code>, <code>unholdRPMPackages</code>, and <code>unholdKubeadm</code> rather than in the shared <code>installAndPinPackagesFor</code>, so it cannot spread to the apt path:</p>
 <ul>
 <li>A host that <em>has</em> versionlock and still fails to pin is a real error. The probe (<code>dnf versionlock --help</code>, chosen because it reads no repository metadata and touches no existing lock) is what separates “this tooling is absent” from “this tooling failed”.</li>
 <li>A staged file whose package name cannot be read fails the phase on either package manager. That is a property of the artifact, not of the host’s pinning tooling, and <code>packageNames</code> gives up on the first file it cannot read – so continuing would leave <em>every</em> package on the host unpinned while reporting success.</li>
 </ul>
+<h2 id="the-same-rule-now-covers-the-unhold"><a class="header" href="#the-same-rule-now-covers-the-unhold">The same rule now covers the unhold</a></h2>
+<p>The unhold this once deferred now exists. <code>installAndPinPackagesFor</code> releases the prior pin before installing, because that is what lets apt or dnf move a held package to a new version at all, and the same closure runs on every upgrade. That extends this decision rather than changing it: <code>unholdRPMPackages</code> skips a host with no versionlock plugin for the same reason <code>holdRPMPackages</code> does, and it matters more there, because unhold runs <em>before</em> the install – <code>dnf versionlock delete</code> failing with <code>No such command: versionlock</code> would fail the phase outright on exactly the hosts this decision keeps working. A host with no plugin has nothing locked, so there is nothing to release. It skips at debug rather than warn, since <code>holdRPMPackages</code> warns about the same host later in the same phase and that warning is the one naming a real consequence.</p>
+<h2 id="the-kubeadm-upgrade-unholds-separately"><a class="header" href="#the-kubeadm-upgrade-unholds-separately">The kubeadm upgrade unholds separately</a></h2>
+<p><code>Upstream.PreStartUpgrade</code> installs a new kubeadm before the shared upgrade phase touches the rest of the package set, so it releases kubeadm’s own pin rather than going through <code>installAndPinPackagesFor</code>. It is subject to this decision for the same reason and in the same shape: <code>unholdKubeadm</code> probes with <code>dnf versionlock --help</code> and skips at debug when the plugin is absent, leaving the apt path unconditional.</p>
+<p>It cannot reuse <code>pkg/phase</code>’s helpers, because <code>pkg/phase</code> imports <code>types/distrocfg</code> and the import cannot run the other way. The probe is therefore duplicated, and the two copies have to agree – a change to one is a change to both.</p>
+<p>One consequence is worth naming: the probe cannot tell an absent plugin from a host that answers nothing at all, so an unreachable rpm host skips the unhold and surfaces its failure on the install that follows instead. That is the same trade <code>holdRPMPackages</code> already makes, and the phase still fails; only the message moves.</p>
 <h2 id="what-would-justify-revisiting-1"><a class="header" href="#what-would-justify-revisiting-1">What would justify revisiting</a></h2>
 <p>Staging the versionlock plugin as part of the package, so a RHEL-family host can be given the plugin before the pin instead of excused from it. That turns an unpinnable host back into a fatal error, which is the stronger behavior, and it is the only change that should reverse this.</p>
-<p>Note also that nothing unpins yet: the comment on <code>holdAPTPackages</code> defers the unhold needed before an upgrade installs a newer set to the upgrade phase, which does not exist. Until it does, the warning is the only record that a host’s engine is not pinned.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-oncreate-actions-go-through-zarfs-package-converter"><a class="header" href="#why-oncreate-actions-go-through-zarfs-package-converter">Why onCreate actions go through zarf’s package converter</a></h1>
 <p><code>runCreateActions</code> in <a href="#assemble"><code>pkg/packager/assemble/actions.go</code></a> hands each action to zarf, and since zarf v0.87.0 that means converting it first. The conversion is one function, <code>toAPIActionSet</code>, and it does something that looks wasteful: it wraps a single action set in a throwaway <code>ZarfPackage</code> carrying one unnamed component, runs <code>convert.PackageFromV1alpha1</code> over the whole thing, and reads the converted action set back out of <code>Components[0]</code>. This document records why that is the shape, and the behavior change it brought with it, because both look like accidents from the code alone.</p>

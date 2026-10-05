@@ -37,10 +37,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-fa6591ef.js";
+            window.path_to_searchindex_js = "../../../searchindex-5fe1a38c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-ec789240.js"></script>
+        <script src="../../../toc-fd7f4d60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -192,6 +192,7 @@
 <li><a href="#variables">Variables</a></li>
 <li><a href="#Generate">func Generate(opts Options) ([]byte, error)</a></li>
 <li><a href="#GenerateComponents">func GenerateComponents(opts ComponentsOptions) ([]byte, error)</a></li>
+<li><a href="#GenerateNestedKeys">func GenerateNestedKeys(opts NestedKeysOptions) ([]byte, error)</a></li>
 <li><a href="#Keys">func Keys(v any) map[string]struct{}</a></li>
 <li><a href="#UnknownAddons">func UnknownAddons(disable any, addons []string) []string</a></li>
 <li><a href="#ComponentsOptions">type ComponentsOptions</a></li>
@@ -200,6 +201,7 @@
 <li><a href="#Lookup">func Lookup(distroID, version string) (Entry, bool)</a></li>
 </ul>
 </li>
+<li><a href="#NestedKeysOptions">type NestedKeysOptions</a></li>
 <li><a href="#Options">type Options</a></li>
 </ul>
 <h2 id="variables"><a class="header" href="#variables">Variables</a></h2>
@@ -223,6 +225,14 @@
         "v1_36": {Server: rke2_v1_36.ServerConfig{}, Agent: rke2_v1_36.AgentConfig{}, Addons: rke2_v1_36.Addons, CNIs: rke2_v1_36.CNIs, IngressControllers: rke2_v1_36.IngressControllers},
         "v1_37": {Server: rke2_v1_37.ServerConfig{}, Agent: rke2_v1_37.AgentConfig{}, Addons: rke2_v1_37.Addons, CNIs: rke2_v1_37.CNIs, IngressControllers: rke2_v1_37.IngressControllers},
     },
+    "upstream": {
+        "v1_32": {Server: upstream_v1_32.ClusterConfigurationKeys, Addons: upstream_v1_32.Addons, CNIs: upstream_v1_32.CNIs, IngressControllers: upstream_v1_32.IngressControllers},
+        "v1_33": {Server: upstream_v1_33.ClusterConfigurationKeys, Addons: upstream_v1_33.Addons, CNIs: upstream_v1_33.CNIs, IngressControllers: upstream_v1_33.IngressControllers},
+        "v1_34": {Server: upstream_v1_34.ClusterConfigurationKeys, Addons: upstream_v1_34.Addons, CNIs: upstream_v1_34.CNIs, IngressControllers: upstream_v1_34.IngressControllers},
+        "v1_35": {Server: upstream_v1_35.ClusterConfigurationKeys, Addons: upstream_v1_35.Addons, CNIs: upstream_v1_35.CNIs, IngressControllers: upstream_v1_35.IngressControllers},
+        "v1_36": {Server: upstream_v1_36.ClusterConfigurationKeys, Addons: upstream_v1_36.Addons, CNIs: upstream_v1_36.CNIs, IngressControllers: upstream_v1_36.IngressControllers},
+        "v1_37": {Server: upstream_v1_37.ClusterConfigurationKeys, Addons: upstream_v1_37.Addons, CNIs: upstream_v1_37.CNIs, IngressControllers: upstream_v1_37.IngressControllers},
+    },
 }
 </code></pre>
 <p><a name="Generate"></a></p>
@@ -235,6 +245,11 @@
 <pre><code class="language-go">func GenerateComponents(opts ComponentsOptions) ([]byte, error)
 </code></pre>
 <p>GenerateComponents renders and gofmt’s the packaged-component source for opts. It is always written, even when every list is empty: the generated registry references these vars in every distro/version package, so a package missing them fails to build.</p>
+<p><a name="GenerateNestedKeys"></a></p>
+<h2 id="func-generatenestedkeys"><a class="header" href="#func-generatenestedkeys">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/nested.go#L44">GenerateNestedKeys</a></a></h2>
+<pre><code class="language-go">func GenerateNestedKeys(opts NestedKeysOptions) ([]byte, error)
+</code></pre>
+<p>GenerateNestedKeys renders and gofmt’s opts.Node as a literal extract.FieldNode value, unlike Generate (a real Go struct consumed via reflect): upstream’s config document is genuinely nested, so what’s extracted is a key tree, not a flag set, and there’s no struct shape to declare -- the tree itself is what gets consumed at validation time.</p>
 <p><a name="Keys"></a></p>
 <h2 id="func-keys"><a class="header" href="#func-keys">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/lookup.go#L71">Keys</a></a></h2>
 <pre><code class="language-go">func Keys(v any) map[string]struct{}
@@ -277,6 +292,18 @@
 <pre><code class="language-go">func Lookup(distroID, version string) (Entry, bool)
 </code></pre>
 <p>Lookup returns the Entry registered for distroID (e.g. “k3s”, “rke2”) and an engine version string in any format containing a dotted major.minor (e.g. “1.35.3-k3s1”, “v1.35.3+k3s1”). The version is truncated to its minor release before lookup, the same way mage generate:pullEngineSource truncates upstream tags before pulling source -- so a single generated version covers every patch release in that minor line. Reports false if no source was ever pulled/generated for that distro/minor-version pair.</p>
+<p><a name="NestedKeysOptions"></a></p>
+<h2 id="type-nestedkeysoptions"><a class="header" href="#type-nestedkeysoptions">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/nested.go#L27-L34">NestedKeysOptions</a></a></h2>
+<p>NestedKeysOptions configures one generated nested-key-tree file.</p>
+<pre><code class="language-go">type NestedKeysOptions struct {
+    PackageName string // must already be a valid Go package identifier
+    VarName     string // exported Go identifier for the generated var
+    Distro      string
+    Version     string
+    RootType    string // the source struct this tree was extracted from, e.g. "ClusterConfiguration"
+    Node        extract.FieldNode
+}
+</code></pre>
 <p><a name="Options"></a></p>
 <h2 id="type-options"><a class="header" href="#type-options">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/gen.go#L32-L36">Options</a></a></h2>
 <p>Options configures one generated struct file.</p>

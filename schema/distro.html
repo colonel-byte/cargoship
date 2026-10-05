@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fa6591ef.js";
+            window.path_to_searchindex_js = "../searchindex-5fe1a38c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ec789240.js"></script>
+        <script src="../toc-fd7f4d60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -454,6 +454,7 @@
 <tr><td><code>engine</code></td><td>object</td><td>no</td><td></td><td>holds configuration passed through to the distro engine.</td></tr>
 <tr><td><code>files</code></td><td><a href="#zarffiles">ZarfFiles</a></td><td>no</td><td></td><td>lists files that cargoship writes to every host, no matter which install method it uses.</td></tr>
 <tr><td><code>imageConfig</code></td><td><a href="#zarfdistroimageconfig">ZarfDistroImageConfig</a></td><td>no</td><td></td><td>holds settings for the images bundled with the package.</td></tr>
+<tr><td><code>manifests</code></td><td>array of <code>string</code></td><td>no</td><td></td><td>lists on-host paths – each one the Target of a Files entry – that cargoship<br>kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by<br>Files; this is only the marker that says “and apply this one,” e.g. for a CNI a package<br>declares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.</td></tr>
 <tr><td><code>os</code></td><td><a href="#zarfdistroos">ZarfDistroOS</a></td><td>no</td><td></td><td>holds settings applied to the host operating system.</td></tr>
 </tbody>
 </table>

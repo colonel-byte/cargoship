@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-fa6591ef.js";
+            window.path_to_searchindex_js = "../../searchindex-5fe1a38c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-ec789240.js"></script>
+        <script src="../../toc-fd7f4d60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -201,6 +201,15 @@
 <li><a href="#APTUploadFiles.Title">func (p *APTUploadFiles) Title() string</a></li>
 </ul>
 </li>
+<li><a href="#ApplyManifests">type ApplyManifests</a>
+<ul>
+<li><a href="#ApplyManifests.Explanation">func (p *ApplyManifests) Explanation() string</a></li>
+<li><a href="#ApplyManifests.Prepare">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error</a></li>
+<li><a href="#ApplyManifests.Run">func (p *ApplyManifests) Run(ctx context.Context) error</a></li>
+<li><a href="#ApplyManifests.ShouldRun">func (p *ApplyManifests) ShouldRun() bool</a></li>
+<li><a href="#ApplyManifests.Title">func (p *ApplyManifests) Title() string</a></li>
+</ul>
+</li>
 <li><a href="#BINUploadFiles">type BINUploadFiles</a>
 <ul>
 <li><a href="#BINUploadFiles.Explanation">func (p *BINUploadFiles) Explanation() string</a></li>
@@ -344,6 +353,7 @@
 <li><a href="#GenericPhase.SetManager">func (p *GenericPhase) SetManager(m *Manager)</a></li>
 <li><a href="#GenericPhase.VersionGreater">func (p *GenericPhase) VersionGreater(host *cluster.ZarfHost, version string) bool</a></li>
 <li><a href="#GenericPhase.VersionLess">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool</a></li>
+<li><a href="#GenericPhase.VersionSkewTooGreat">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool</a></li>
 <li><a href="#GenericPhase.Wet">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs …errorfunc) error</a></li>
 </ul>
 </li>
@@ -359,7 +369,7 @@
 <li><a href="#InitializeControllers">type InitializeControllers</a>
 <ul>
 <li><a href="#InitializeControllers.Explanation">func (p *InitializeControllers) Explanation() string</a></li>
-<li><a href="#InitializeControllers.Prepare">func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeControllers.Prepare">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
 <li><a href="#InitializeControllers.Run">func (p *InitializeControllers) Run(ctx context.Context) error</a></li>
 <li><a href="#InitializeControllers.ShouldRun">func (p *InitializeControllers) ShouldRun() bool</a></li>
 <li><a href="#InitializeControllers.Title">func (p *InitializeControllers) Title() string</a></li>
@@ -368,7 +378,7 @@
 <li><a href="#InitializeWorkers">type InitializeWorkers</a>
 <ul>
 <li><a href="#InitializeWorkers.Explanation">func (p *InitializeWorkers) Explanation() string</a></li>
-<li><a href="#InitializeWorkers.Prepare">func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#InitializeWorkers.Prepare">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
 <li><a href="#InitializeWorkers.Run">func (p *InitializeWorkers) Run(ctx context.Context) error</a></li>
 <li><a href="#InitializeWorkers.ShouldRun">func (p *InitializeWorkers) ShouldRun() bool</a></li>
 <li><a href="#InitializeWorkers.Title">func (p *InitializeWorkers) Title() string</a></li>
@@ -605,6 +615,9 @@
 <p><a name="ErrWillNotDowngrade"></a>ErrWillNotDowngrade is returned when a host already runs a version newer than the one the package carries. An engine does not support moving backwards, so the run stops here rather than uninstalling a newer version part way through.</p>
 <pre><code class="language-go">var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
 </code></pre>
+<p><a name="ErrWillNotUpgradeVersionSkewTooGreat"></a>ErrWillNotUpgradeVersionSkewTooGreat is returned when a package is trying to upgrade the cluster more then 1 minor version at a time; v1.33.x to v1.34.x is allowed, but v1.33.x to v1.35.x is not.</p>
+<pre><code class="language-go">var ErrWillNotUpgradeVersionSkewTooGreat = errors.New("will not upgrade the cluster more than one minor version at a time")
+</code></pre>
 <p><a name="Force"></a>Force is used by various phases to attempt a forced installation</p>
 <pre><code class="language-go">var Force bool
 </code></pre>
@@ -652,6 +665,40 @@
 <p><a name="APTUploadFiles.Title"></a></p>
 <h3 id="func-aptuploadfiles-title"><a class="header" href="#func-aptuploadfiles-title">func (*APTUploadFiles) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/58_apt_install.go#L33">Title</a></a></h3>
 <pre><code class="language-go">func (p *APTUploadFiles) Title() string
+</code></pre>
+<p>Title for the phase</p>
+<p><a name="ApplyManifests"></a></p>
+<h2 id="type-applymanifests"><a class="header" href="#type-applymanifests">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L32-L37">ApplyManifests</a></a></h2>
+<p>ApplyManifests kubectl-applies the raw manifests a distro’s package declares -- typically a CNI -- from the leader, once it has bootstrapped and before workers are expected to join.</p>
+<pre><code class="language-go">type ApplyManifests struct {
+    GenericPhase
+    Distro distrocfg.Distro
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ApplyManifests.Explanation"></a></p>
+<h3 id="func-applymanifests-explanation"><a class="header" href="#func-applymanifests-explanation">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L55">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ApplyManifests.Prepare"></a></p>
+<h3 id="func-applymanifests-prepare"><a class="header" href="#func-applymanifests-prepare">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L60">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ApplyManifests.Run"></a></p>
+<h3 id="func-applymanifests-run"><a class="header" href="#func-applymanifests-run">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L78">Run</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ApplyManifests.ShouldRun"></a></p>
+<h3 id="func-applymanifests-shouldrun"><a class="header" href="#func-applymanifests-shouldrun">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L73">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when there is a leader to apply from and the package declares manifests.</p>
+<p><a name="ApplyManifests.Title"></a></p>
+<h3 id="func-applymanifests-title"><a class="header" href="#func-applymanifests-title">func (*ApplyManifests) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/64_apply_manifests.go#L50">Title</a></a></h3>
+<pre><code class="language-go">func (p *ApplyManifests) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="BINUploadFiles"></a></p>
@@ -1122,7 +1169,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="GatherFactsDistro"></a></p>
-<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L39-L48">GatherFactsDistro</a></a></h2>
+<h2 id="type-gatherfactsdistro"><a class="header" href="#type-gatherfactsdistro">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L43-L52">GatherFactsDistro</a></a></h2>
 <p>GatherFactsDistro state</p>
 <pre><code class="language-go">type GatherFactsDistro struct {
     GenericPhase
@@ -1135,27 +1182,27 @@
 }
 </code></pre>
 <p><a name="GatherFactsDistro.Explanation"></a></p>
-<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L56">Explanation</a></a></h3>
+<h3 id="func-gatherfactsdistro-explanation"><a class="header" href="#func-gatherfactsdistro-explanation">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L60">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="GatherFactsDistro.Prepare"></a></p>
-<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L66">Prepare</a></a></h3>
+<h3 id="func-gatherfactsdistro-prepare"><a class="header" href="#func-gatherfactsdistro-prepare">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L70">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Prepare(_ context.Context, _ *cluster.ZarfCluster, d *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="GatherFactsDistro.ReadOnly"></a></p>
-<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L61">ReadOnly</a></a></h3>
+<h3 id="func-gatherfactsdistro-readonly"><a class="header" href="#func-gatherfactsdistro-readonly">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L65">ReadOnly</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) ReadOnly() string
 </code></pre>
 <p>ReadOnly marks this phase safe under a dry run, and returns the reason for the phase docs.</p>
 <p><a name="GatherFactsDistro.Run"></a></p>
-<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L73">Run</a></a></h3>
+<h3 id="func-gatherfactsdistro-run"><a class="header" href="#func-gatherfactsdistro-run">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L77">Run</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Run(ctx context.Context) (err error)
 </code></pre>
 <p>Run the phase</p>
 <p><a name="GatherFactsDistro.Title"></a></p>
-<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L51">Title</a></a></h3>
+<h3 id="func-gatherfactsdistro-title"><a class="header" href="#func-gatherfactsdistro-title">func (*GatherFactsDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/12_gather_facts_distro.go#L55">Title</a></a></h3>
 <pre><code class="language-go">func (p *GatherFactsDistro) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -1196,6 +1243,11 @@
 <pre><code class="language-go">func (p *GenericPhase) VersionLess(host *cluster.ZarfHost, version string) bool
 </code></pre>
 <p>VersionLess if host version is less then the distro version</p>
+<p><a name="GenericPhase.VersionSkewTooGreat"></a></p>
+<h3 id="func-genericphase-versionskewtoogreat"><a class="header" href="#func-genericphase-versionskewtoogreat">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L205">VersionSkewTooGreat</a></a></h3>
+<pre><code class="language-go">func (p *GenericPhase) VersionSkewTooGreat(host *cluster.ZarfHost, target string) bool
+</code></pre>
+<p>VersionSkewTooGreat reports whether host’s running version is more than one minor version behind target. kubeadm’s own upgrade path refuses to skip a minor version, and a two-minor jump fails partway through the control plane rather than up front, so this catches it before a real run starts one. UnknownVersion (no engine detected yet, a fresh install) never counts as skew.</p>
 <p><a name="GenericPhase.Wet"></a></p>
 <h3 id="func-genericphase-wet"><a class="header" href="#func-genericphase-wet">func (*GenericPhase) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/00_generic_phase.go#L171">Wet</a></a></h3>
 <pre><code class="language-go">func (p *GenericPhase) Wet(host fmt.Stringer, msg string, funcs ...errorfunc) error
@@ -1236,7 +1288,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="InitializeControllers"></a></p>
-<h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L39">InitializeControllers</a></a></h2>
+<h2 id="type-initializecontrollers"><a class="header" href="#type-initializecontrollers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L40">InitializeControllers</a></a></h2>
 <p>InitializeControllers phase state</p>
 <pre><code class="language-go">type InitializeControllers struct {
     GenericPhase
@@ -1245,32 +1297,32 @@
 }
 </code></pre>
 <p><a name="InitializeControllers.Explanation"></a></p>
-<h3 id="func-initializecontrollers-explanation"><a class="header" href="#func-initializecontrollers-explanation">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L58">Explanation</a></a></h3>
+<h3 id="func-initializecontrollers-explanation"><a class="header" href="#func-initializecontrollers-explanation">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L82">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeControllers.Prepare"></a></p>
-<h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L42">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<h3 id="func-initializecontrollers-prepare"><a class="header" href="#func-initializecontrollers-prepare">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L59">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeControllers.Run"></a></p>
-<h3 id="func-initializecontrollers-run"><a class="header" href="#func-initializecontrollers-run">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L63">Run</a></a></h3>
+<h3 id="func-initializecontrollers-run"><a class="header" href="#func-initializecontrollers-run">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L87">Run</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="InitializeControllers.ShouldRun"></a></p>
-<h3 id="func-initializecontrollers-shouldrun"><a class="header" href="#func-initializecontrollers-shouldrun">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L85">ShouldRun</a></a></h3>
+<h3 id="func-initializecontrollers-shouldrun"><a class="header" href="#func-initializecontrollers-shouldrun">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L121">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
 <p><a name="InitializeControllers.Title"></a></p>
-<h3 id="func-initializecontrollers-title"><a class="header" href="#func-initializecontrollers-title">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L53">Title</a></a></h3>
+<h3 id="func-initializecontrollers-title"><a class="header" href="#func-initializecontrollers-title">func (*InitializeControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L77">Title</a></a></h3>
 <pre><code class="language-go">func (p *InitializeControllers) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="InitializeWorkers"></a></p>
-<h2 id="type-initializeworkers"><a class="header" href="#type-initializeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L40">InitializeWorkers</a></a></h2>
+<h2 id="type-initializeworkers"><a class="header" href="#type-initializeworkers">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L41">InitializeWorkers</a></a></h2>
 <p>InitializeWorkers phase state</p>
 <pre><code class="language-go">type InitializeWorkers struct {
     GenericPhase
@@ -1281,27 +1333,27 @@
 }
 </code></pre>
 <p><a name="InitializeWorkers.Explanation"></a></p>
-<h3 id="func-initializeworkers-explanation"><a class="header" href="#func-initializeworkers-explanation">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L48">Explanation</a></a></h3>
+<h3 id="func-initializeworkers-explanation"><a class="header" href="#func-initializeworkers-explanation">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L64">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="InitializeWorkers.Prepare"></a></p>
-<h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L53">Prepare</a></a></h3>
-<pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+<h3 id="func-initializeworkers-prepare"><a class="header" href="#func-initializeworkers-prepare">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L69">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="InitializeWorkers.Run"></a></p>
-<h3 id="func-initializeworkers-run"><a class="header" href="#func-initializeworkers-run">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L68">Run</a></a></h3>
+<h3 id="func-initializeworkers-run"><a class="header" href="#func-initializeworkers-run">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L91">Run</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="InitializeWorkers.ShouldRun"></a></p>
-<h3 id="func-initializeworkers-shouldrun"><a class="header" href="#func-initializeworkers-shouldrun">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L63">ShouldRun</a></a></h3>
+<h3 id="func-initializeworkers-shouldrun"><a class="header" href="#func-initializeworkers-shouldrun">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L86">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
 <p><a name="InitializeWorkers.Title"></a></p>
-<h3 id="func-initializeworkers-title"><a class="header" href="#func-initializeworkers-title">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L43">Title</a></a></h3>
+<h3 id="func-initializeworkers-title"><a class="header" href="#func-initializeworkers-title">func (*InitializeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L59">Title</a></a></h3>
 <pre><code class="language-go">func (p *InitializeWorkers) Title() string
 </code></pre>
 <p>Title for the phase</p>
@@ -1907,7 +1959,7 @@
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UpgradeController.Run"></a></p>
-<h3 id="func-upgradecontroller-run"><a class="header" href="#func-upgradecontroller-run">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L68">Run</a></a></h3>
+<h3 id="func-upgradecontroller-run"><a class="header" href="#func-upgradecontroller-run">func (*UpgradeController) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/66_upgrade_controller.go#L70">Run</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeController) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -1917,7 +1969,7 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="UpgradeHosts"></a></p>
-<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L36-L42">UpgradeHosts</a></a></h2>
+<h2 id="type-upgradehosts"><a class="header" href="#type-upgradehosts">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L37-L44">UpgradeHosts</a></a></h2>
 <p>UpgradeHosts phase state</p>
 <pre><code class="language-go">type UpgradeHosts struct {
     GenericPhase
@@ -1926,7 +1978,7 @@
 }
 </code></pre>
 <p><a name="UpgradeHosts.ShouldRun"></a></p>
-<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L45">ShouldRun</a></a></h3>
+<h3 id="func-upgradehosts-shouldrun"><a class="header" href="#func-upgradehosts-shouldrun">func (*UpgradeHosts) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/65_upgrade_common.go#L47">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeHosts) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are workers</p>
@@ -1949,7 +2001,7 @@
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UpgradeWorkers.Run"></a></p>
-<h3 id="func-upgradeworkers-run"><a class="header" href="#func-upgradeworkers-run">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L69">Run</a></a></h3>
+<h3 id="func-upgradeworkers-run"><a class="header" href="#func-upgradeworkers-run">func (*UpgradeWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/67_upgrade_worker.go#L70">Run</a></a></h3>
 <pre><code class="language-go">func (p *UpgradeWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>

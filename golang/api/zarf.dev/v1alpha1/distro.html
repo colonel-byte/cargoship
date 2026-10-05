@@ -37,10 +37,10 @@
             const path_to_root = "../../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../../searchindex-fa6591ef.js";
+            window.path_to_searchindex_js = "../../../../searchindex-5fe1a38c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../../toc-ec789240.js"></script>
+        <script src="../../../../toc-fd7f4d60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -276,12 +276,12 @@
 }
 </code></pre>
 <p><a name="ZarfDistro.Arches"></a></p>
-<h3 id="func-zarfdistro-arches"><a class="header" href="#func-zarfdistro-arches">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L310">Arches</a></a></h3>
+<h3 id="func-zarfdistro-arches"><a class="header" href="#func-zarfdistro-arches">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L315">Arches</a></a></h3>
 <pre><code class="language-go">func (distro ZarfDistro) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.</p>
 <p><a name="ZarfDistro.IsSBOMAble"></a></p>
-<h3 id="func-zarfdistro-issbomable"><a class="header" href="#func-zarfdistro-issbomable">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L318">IsSBOMAble</a></a></h3>
+<h3 id="func-zarfdistro-issbomable"><a class="header" href="#func-zarfdistro-issbomable">func (ZarfDistro) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L323">IsSBOMAble</a></a></h3>
 <pre><code class="language-go">func (distro ZarfDistro) IsSBOMAble() bool
 </code></pre>
 <p>IsSBOMAble reports whether cargoship can generate an SBOM for this distro package. It returns true if the config lists any images or files.</p>
@@ -330,12 +330,12 @@
 }
 </code></pre>
 <p><a name="ZarfDistroBuildData.Arches"></a></p>
-<h3 id="func-zarfdistrobuilddata-arches"><a class="header" href="#func-zarfdistrobuilddata-arches">func (ZarfDistroBuildData) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L297">Arches</a></a></h3>
+<h3 id="func-zarfdistrobuilddata-arches"><a class="header" href="#func-zarfdistrobuilddata-arches">func (ZarfDistroBuildData) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L302">Arches</a></a></h3>
 <pre><code class="language-go">func (b ZarfDistroBuildData) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package was built for. It prefers Architectures and falls back to the single Architecture field.</p>
 <p><a name="ZarfDistroConfig"></a></p>
-<h2 id="type-zarfdistroconfig"><a class="header" href="#type-zarfdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L178-L187">ZarfDistroConfig</a></a></h2>
+<h2 id="type-zarfdistroconfig"><a class="header" href="#type-zarfdistroconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L178-L192">ZarfDistroConfig</a></a></h2>
 <p>ZarfDistroConfig holds the configuration for the distro engine.</p>
 <pre><code class="language-go">type ZarfDistroConfig struct {
     // Files lists files that cargoship writes to every host, no matter which install method it uses.
@@ -346,15 +346,20 @@
     OS  ZarfDistroOS `json:"os,omitempty"`
     // Engine holds configuration passed through to the distro engine.
     Engine dig.Mapping `json:"engine,omitempty"`
+    // Manifests lists on-host paths -- each one the Target of a Files entry -- that cargoship
+    // kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by
+    // Files; this is only the marker that says "and apply this one," e.g. for a CNI a package
+    // declares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.
+    Manifests []string `json:"manifests,omitempty"`
 }
 </code></pre>
 <p><a name="ZarfDistroConfig.JSONSchemaExtend"></a></p>
-<h3 id="func-zarfdistroconfig-jsonschemaextend"><a class="header" href="#func-zarfdistroconfig-jsonschemaextend">func (ZarfDistroConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L193">JSONSchemaExtend</a></a></h3>
+<h3 id="func-zarfdistroconfig-jsonschemaextend"><a class="header" href="#func-zarfdistroconfig-jsonschemaextend">func (ZarfDistroConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L198">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (ZarfDistroConfig) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend pins down the shape of the engine’s manifest section, whose values are Helm values written into a HelmChartConfig: either a YAML string or a mapping cargoship serializes to YAML for the chart. Engine is otherwise a free-form mapping handed to the distro engine, so the section list stays open and every other section keeps validating as it did.</p>
 <p><a name="ZarfDistroImageConfig"></a></p>
-<h2 id="type-zarfdistroimageconfig"><a class="header" href="#type-zarfdistroimageconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L228-L235">ZarfDistroImageConfig</a></a></h2>
+<h2 id="type-zarfdistroimageconfig"><a class="header" href="#type-zarfdistroimageconfig">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L233-L240">ZarfDistroImageConfig</a></a></h2>
 <p>ZarfDistroImageConfig holds settings for the images cargoship writes to a host.</p>
 <pre><code class="language-go">type ZarfDistroImageConfig struct {
     // Compression sets the compression format for the image tarballs.
@@ -366,7 +371,7 @@
 }
 </code></pre>
 <p><a name="ZarfDistroImageConfig.TarballSuffix"></a></p>
-<h3 id="func-zarfdistroimageconfig-tarballsuffix"><a class="header" href="#func-zarfdistroimageconfig-tarballsuffix">func (ZarfDistroImageConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L241">TarballSuffix</a></a></h3>
+<h3 id="func-zarfdistroimageconfig-tarballsuffix"><a class="header" href="#func-zarfdistroimageconfig-tarballsuffix">func (ZarfDistroImageConfig) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L246">TarballSuffix</a></a></h3>
 <pre><code class="language-go">func (c ZarfDistroImageConfig) TarballSuffix() (string, error)
 </code></pre>
 <p>TarballSuffix returns the file suffix image tarballs get for the configured compression format. The suffixes match the archive extensions a host imports, so a compressed tarball is still picked up. An unset format means no compression. It returns an error for a format cargoship cannot write.</p>
@@ -403,12 +408,12 @@
 }
 </code></pre>
 <p><a name="ZarfDistroMetadata.Arches"></a></p>
-<h3 id="func-zarfdistrometadata-arches"><a class="header" href="#func-zarfdistrometadata-arches">func (ZarfDistroMetadata) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L285">Arches</a></a></h3>
+<h3 id="func-zarfdistrometadata-arches"><a class="header" href="#func-zarfdistrometadata-arches">func (ZarfDistroMetadata) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L290">Arches</a></a></h3>
 <pre><code class="language-go">func (m ZarfDistroMetadata) Arches() api.Arches
 </code></pre>
 <p>Arches returns the CPU architectures the package targets. It prefers Architectures and falls back to the single Architecture field, so callers never have to know which one the package set.</p>
 <p><a name="ZarfDistroOS"></a></p>
-<h2 id="type-zarfdistroos"><a class="header" href="#type-zarfdistroos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L255-L266">ZarfDistroOS</a></a></h2>
+<h2 id="type-zarfdistroos"><a class="header" href="#type-zarfdistroos">type <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L260-L271">ZarfDistroOS</a></a></h2>
 <p>ZarfDistroOS holds settings applied to a host.</p>
 <pre><code class="language-go">type ZarfDistroOS struct {
     // Sysctl maps sysctl keys to the values cargoship applies to a host.
@@ -424,7 +429,7 @@
 }
 </code></pre>
 <p><a name="ZarfDistroOS.JSONSchemaExtend"></a></p>
-<h3 id="func-zarfdistroos-jsonschemaextend"><a class="header" href="#func-zarfdistroos-jsonschemaextend">func (ZarfDistroOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L270">JSONSchemaExtend</a></a></h3>
+<h3 id="func-zarfdistroos-jsonschemaextend"><a class="header" href="#func-zarfdistroos-jsonschemaextend">func (ZarfDistroOS) <a href="https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L275">JSONSchemaExtend</a></a></h3>
 <pre><code class="language-go">func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)
 </code></pre>
 <p>JSONSchemaExtend widens sysctl values to accept numbers alongside strings, so unquoted numeric values in YAML validate.</p>

@@ -37,10 +37,10 @@
             const path_to_root = "../../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../searchindex-fa6591ef.js";
+            window.path_to_searchindex_js = "../../../searchindex-5fe1a38c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc-ec789240.js"></script>
+        <script src="../../../toc-fd7f4d60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -196,6 +196,11 @@
 <li><a href="#ParseK3SFlagSet">func ParseK3SFlagSet(optIndex map[string]K3SFlagOption, mapLit *ast.CompositeLit) (map[string]K3SFlagOption, error)</a></li>
 <li><a href="#StringListDecl">func StringListDecl(name string, files …*ast.File) ([]string, bool)</a></li>
 <li><a href="#Components">type Components</a></li>
+<li><a href="#FieldNode">type FieldNode</a>
+<ul>
+<li><a href="#ExtractNestedKeys">func ExtractNestedKeys(file *ast.File, rootType string) (FieldNode, error)</a></li>
+</ul>
+</li>
 <li><a href="#Flag">type Flag</a>
 <ul>
 <li><a href="#ApplyK3SFlagSet">func ApplyK3SFlagSet(k3sFlags []Flag, flagSet map[string]K3SFlagOption) (flags []Flag, unmapped []string)</a></li>
@@ -252,6 +257,18 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     Ingress []string
 }
 </code></pre>
+<p><a name="FieldNode"></a></p>
+<h2 id="type-fieldnode"><a class="header" href="#type-fieldnode">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/nested.go#L29-L31">FieldNode</a></a></h2>
+<p>FieldNode describes one field of a nested config document, recovered from a real Go struct’s json tags. A nil Children means the field is a leaf: a scalar, a slice, or a map, whose contents pass through unvalidated -- recursion stops at the first field whose type isn’t itself a named struct declared in the same file, rather than guessing the shape of a slice-of-struct or a type from another package.</p>
+<pre><code class="language-go">type FieldNode struct {
+    Children map[string]FieldNode
+}
+</code></pre>
+<p><a name="ExtractNestedKeys"></a></p>
+<h3 id="func-extractnestedkeys"><a class="header" href="#func-extractnestedkeys">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/nested.go#L61">ExtractNestedKeys</a></a></h3>
+<pre><code class="language-go">func ExtractNestedKeys(file *ast.File, rootType string) (FieldNode, error)
+</code></pre>
+<p>ExtractNestedKeys walks rootType’s fields in file, resolving each field’s json tag name and, for a field whose type is itself a named struct declared in file, recursing into it. An embedded field naming another local struct (e.g. “APIServer” embedding “ControlPlaneComponent” with json:“,inline”) has its children merged directly into the embedding type’s own node, matching how encoding/json flattens an inlined struct. An embedded field naming a type from another package (e.g. metav1.TypeMeta) carries no fields this walker can see, so it is skipped rather than guessed at.</p>
 <p><a name="Flag"></a></p>
 <h2 id="type-flag"><a class="header" href="#type-flag">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/extract/extract.go#L30-L48">Flag</a></a></h2>
 <p>Flag is one urfave/cli flag recovered from a []cli.Flag{…} literal.</p>

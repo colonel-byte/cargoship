@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-fa6591ef.js";
+            window.path_to_searchindex_js = "../searchindex-5fe1a38c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-ec789240.js"></script>
+        <script src="../toc-fd7f4d60.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -298,6 +298,12 @@
 <li>Initialize Controller
 <ul>
 <li>If the remote node does not have a running controller service, and is a controller, install the engine and start each service sequentially</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
+<li>Apply manifests
+<ul>
+<li>For a distro whose package declares raw manifests – a CNI, typically – kubectl applies each one from the leader</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
