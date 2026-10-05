@@ -512,6 +512,13 @@
           "$ref": "#/$defs/ZarfDistroImageConfig",
           "description": "holds settings for the images bundled with the package."
         },
+        "manifests": {
+          "description": "lists on-host paths -- each one the Target of a Files entry -- that cargoship\nkubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by\nFiles; this is only the marker that says \"and apply this one,\" e.g. for a CNI a package\ndeclares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "os": {
           "$ref": "#/$defs/ZarfDistroOS",
           "description": "holds settings applied to the host operating system."

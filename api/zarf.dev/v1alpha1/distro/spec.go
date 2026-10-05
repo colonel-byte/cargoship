@@ -184,6 +184,11 @@ type ZarfDistroConfig struct {
 	OS ZarfDistroOS `json:"os,omitempty"`
 	// Engine holds configuration passed through to the distro engine.
 	Engine dig.Mapping `json:"engine,omitempty"`
+	// Manifests lists on-host paths -- each one the Target of a Files entry -- that cargoship
+	// kubectl-applies, in order, from the leader once it bootstraps. Delivery is already solved by
+	// Files; this is only the marker that says "and apply this one," e.g. for a CNI a package
+	// declares. A distro with no apply mechanism (rke2/k3s use HelmChartConfig instead) ignores it.
+	Manifests []string `json:"manifests,omitempty"`
 }
 
 // JSONSchemaExtend pins down the shape of the engine's manifest section, whose values are Helm

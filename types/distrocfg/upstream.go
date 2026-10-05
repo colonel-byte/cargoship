@@ -57,9 +57,10 @@ type Upstream struct {
 }
 
 var (
-	_ Distro        = (*Upstream)(nil)
-	_ ImageImporter = (*Upstream)(nil)
-	_ Bootstrapper  = (*Upstream)(nil)
+	_ Distro          = (*Upstream)(nil)
+	_ ImageImporter   = (*Upstream)(nil)
+	_ Bootstrapper    = (*Upstream)(nil)
+	_ ManifestApplier = (*Upstream)(nil)
 )
 
 func init() {
@@ -269,6 +270,13 @@ func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error {
 		}
 		return nil
 	})
+}
+
+// ManifestPaths returns the on-host manifest paths the package declares for cargoship to kubectl
+// apply, e.g. a CNI. Delivery of those files is Config.Files' job; this is only the list of what
+// to apply.
+func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string {
+	return dis.Spec.Config.Manifests
 }
 
 // CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config
