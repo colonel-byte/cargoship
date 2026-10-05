@@ -152,13 +152,19 @@ func TestUpstreamGetClusterCIDRWithPodSubnet(t *testing.T) {
 	}
 }
 
-func TestUpstreamConfigureEngineNotImplemented(t *testing.T) {
+func TestUpstreamConfigureEngineWritesDesiredFiles(t *testing.T) {
 	d := newTestUpstream()
+	cfg := &fakeHost{fileExist: map[string]bool{}}
+	host := cfg.attach(&cluster.ZarfHost{Hostname: "worker-1", Role: cluster.RoleWorker})
 
-	err := d.ConfigureEngine(context.Background(), &cluster.ZarfHost{}, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{})
+	if err := d.ConfigureEngine(context.Background(), host, cluster.ZarfRuntimeMeta{}, distro.ZarfDistro{}); err != nil {
+		t.Fatalf("ConfigureEngine() error = %v, want nil", err)
+	}
 
-	if !errors.Is(err, ErrNotImplemented) {
-		t.Fatalf("ConfigureEngine() error = %v, want %v", err, ErrNotImplemented)
+	for _, path := range []string{containerdConfigPath, crictlConfigPath, kubeadmConfigPath} {
+		if _, ok := cfg.files[path]; !ok {
+			t.Fatalf("ConfigureEngine() did not write %s, files = %+v", path, cfg.files)
+		}
 	}
 }
 

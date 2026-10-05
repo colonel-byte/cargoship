@@ -35,8 +35,24 @@ import (
 type InitializeWorkers struct {
 	GenericPhase
 	Distro           distrocfg.Distro
+	run              cluster.ZarfRuntimeMeta
 	worker           cluster.ZarfHosts
 	WorkerConcurrent string
+}
+
+// workersNeedingInit filters hosts down to non-controllers that have not yet joined the cluster.
+// When d implements Bootstrapper that is asked directly; every other distro falls back to the
+// existing service-running check.
+func workersNeedingInit(ctx context.Context, hosts cluster.ZarfHosts, d distrocfg.Distro) cluster.ZarfHosts {
+	return hosts.Filter(func(h *cluster.ZarfHost) bool {
+		if h.IsController() {
+			return false
+		}
+		if b, ok := d.(distrocfg.Bootstrapper); ok {
+			return !b.IsBootstrapped(h)
+		}
+		return !h.ServiceIsRunning(ctx, d.GetWorkerService())
+	})
 }
 
 // Title for the phase
@@ -50,10 +66,17 @@ func (p *InitializeWorkers) Explanation() string {
 }
 
 // Prepare the phase
-func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	p.worker = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
-		return !h.ServiceIsRunning(ctx, p.Distro.GetWorkerService()) && !h.IsController()
-	})
+func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
+	control := p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool { return h.IsController() })
+	// Recomputed independently of ConfigureEngine.Prepare's identical Leader/LoadBalancer setup --
+	// deliberate, not DRY-able, so this phase does not depend on phase-ordering assumptions.
+	if len(control) > 0 {
+		control[0].Metadata.IsLeader = true
+		p.run.Leader = control[0]
+	}
+	p.run.LoadBalancer = c.Spec.Config.LoadBalancer
+
+	p.worker = workersNeedingInit(ctx, p.manager.Config.Spec.Hosts, p.Distro)
 	logger.From(ctx).Debug("number of systems that need to be started", "hosts", len(p.worker))
 
 	return nil
@@ -77,6 +100,18 @@ func (p *InitializeWorkers) Run(ctx context.Context) error {
 	}
 	// waiting a second too clean up the logs
 	time.Sleep(1 * time.Second)
+
+	if b, ok := p.Distro.(distrocfg.Bootstrapper); ok {
+		return p.batchedParallelPerProfileWithMessage(
+			ctx,
+			"joining cluster",
+			p.worker,
+			p.WorkerConcurrent,
+			func(ctx context.Context, h *cluster.ZarfHost) error {
+				return b.Bootstrap(ctx, h, p.run, *p.GetDistro())
+			},
+		)
+	}
 	return p.batchedParallelPerProfileWithMessage(
 		ctx,
 		"starting agent",

@@ -119,13 +119,13 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*ImportImages\) Title\(\) string](<#ImportImages.Title>)
 - [type InitializeControllers](<#InitializeControllers>)
   - [func \(p \*InitializeControllers\) Explanation\(\) string](<#InitializeControllers.Explanation>)
-  - [func \(p \*InitializeControllers\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InitializeControllers.Prepare>)
+  - [func \(p \*InitializeControllers\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InitializeControllers.Prepare>)
   - [func \(p \*InitializeControllers\) Run\(ctx context.Context\) error](<#InitializeControllers.Run>)
   - [func \(p \*InitializeControllers\) ShouldRun\(\) bool](<#InitializeControllers.ShouldRun>)
   - [func \(p \*InitializeControllers\) Title\(\) string](<#InitializeControllers.Title>)
 - [type InitializeWorkers](<#InitializeWorkers>)
   - [func \(p \*InitializeWorkers\) Explanation\(\) string](<#InitializeWorkers.Explanation>)
-  - [func \(p \*InitializeWorkers\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InitializeWorkers.Prepare>)
+  - [func \(p \*InitializeWorkers\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#InitializeWorkers.Prepare>)
   - [func \(p \*InitializeWorkers\) Run\(ctx context.Context\) error](<#InitializeWorkers.Run>)
   - [func \(p \*InitializeWorkers\) ShouldRun\(\) bool](<#InitializeWorkers.ShouldRun>)
   - [func \(p \*InitializeWorkers\) Title\(\) string](<#InitializeWorkers.Title>)
@@ -1390,7 +1390,7 @@ func (p *ImportImages) Title() string
 Title for the phase
 
 <a name="InitializeControllers"></a>
-## type [InitializeControllers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L39>)
+## type [InitializeControllers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L35-L40>)
 
 InitializeControllers phase state
 
@@ -1403,7 +1403,7 @@ type InitializeControllers struct {
 ```
 
 <a name="InitializeControllers.Explanation"></a>
-### func \(\*InitializeControllers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L58>)
+### func \(\*InitializeControllers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L82>)
 
 ```go
 func (p *InitializeControllers) Explanation() string
@@ -1412,16 +1412,16 @@ func (p *InitializeControllers) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="InitializeControllers.Prepare"></a>
-### func \(\*InitializeControllers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L42>)
+### func \(\*InitializeControllers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L59>)
 
 ```go
-func (p *InitializeControllers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *InitializeControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 ```
 
 Prepare the phase
 
 <a name="InitializeControllers.Run"></a>
-### func \(\*InitializeControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L63>)
+### func \(\*InitializeControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L87>)
 
 ```go
 func (p *InitializeControllers) Run(ctx context.Context) error
@@ -1430,7 +1430,7 @@ func (p *InitializeControllers) Run(ctx context.Context) error
 Run the phase
 
 <a name="InitializeControllers.ShouldRun"></a>
-### func \(\*InitializeControllers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L85>)
+### func \(\*InitializeControllers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L121>)
 
 ```go
 func (p *InitializeControllers) ShouldRun() bool
@@ -1439,7 +1439,7 @@ func (p *InitializeControllers) ShouldRun() bool
 ShouldRun is true when there are workers
 
 <a name="InitializeControllers.Title"></a>
-### func \(\*InitializeControllers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L53>)
+### func \(\*InitializeControllers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/61_initialize_controller.go#L77>)
 
 ```go
 func (p *InitializeControllers) Title() string
@@ -1448,7 +1448,7 @@ func (p *InitializeControllers) Title() string
 Title for the phase
 
 <a name="InitializeWorkers"></a>
-## type [InitializeWorkers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L40>)
+## type [InitializeWorkers](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L35-L41>)
 
 InitializeWorkers phase state
 
@@ -1463,7 +1463,7 @@ type InitializeWorkers struct {
 ```
 
 <a name="InitializeWorkers.Explanation"></a>
-### func \(\*InitializeWorkers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L48>)
+### func \(\*InitializeWorkers\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L64>)
 
 ```go
 func (p *InitializeWorkers) Explanation() string
@@ -1472,16 +1472,16 @@ func (p *InitializeWorkers) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="InitializeWorkers.Prepare"></a>
-### func \(\*InitializeWorkers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L53>)
+### func \(\*InitializeWorkers\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L69>)
 
 ```go
-func (p *InitializeWorkers) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+func (p *InitializeWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 ```
 
 Prepare the phase
 
 <a name="InitializeWorkers.Run"></a>
-### func \(\*InitializeWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L68>)
+### func \(\*InitializeWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L91>)
 
 ```go
 func (p *InitializeWorkers) Run(ctx context.Context) error
@@ -1490,7 +1490,7 @@ func (p *InitializeWorkers) Run(ctx context.Context) error
 Run the phase
 
 <a name="InitializeWorkers.ShouldRun"></a>
-### func \(\*InitializeWorkers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L63>)
+### func \(\*InitializeWorkers\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L86>)
 
 ```go
 func (p *InitializeWorkers) ShouldRun() bool
@@ -1499,7 +1499,7 @@ func (p *InitializeWorkers) ShouldRun() bool
 ShouldRun is true when there are workers
 
 <a name="InitializeWorkers.Title"></a>
-### func \(\*InitializeWorkers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L43>)
+### func \(\*InitializeWorkers\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/62_initialize_worker.go#L59>)
 
 ```go
 func (p *InitializeWorkers) Title() string
