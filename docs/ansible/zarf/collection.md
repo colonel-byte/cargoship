@@ -1,6 +1,8 @@
 # The `colonel_byte.zarf` collection
 
-Zarf runs inside a playbook as an Ansible collection: `zarf init` initialises a cluster and `zarf package deploy` puts a package on it, both driven from the node the task is delegated to. The modules are compiled wrapper binaries named `zarf_<action>`, and the name selects the action. There is no Python module behind either, and nothing is installed on the cluster's nodes.
+Zarf runs inside a playbook as an Ansible collection: `zarf init` initialises a cluster and `zarf package deploy` puts a package on it, both driven from the node the task is delegated to. Those two modules are compiled wrapper binaries named `zarf_<action>`, and the name selects the action. There is no Python module behind either, and nothing is installed on the cluster's nodes.
+
+Three further modules read a cluster rather than converging it -- the deployed packages, a package definition, and zarf's own state -- and three roles wrap them. Those are plain action plugins rather than wrapper binaries, and [choice-zarf-info-modules](../../agent/choice-zarf-info-modules.md) is the record of why a read-only command earns no binary.
 
 This collection is a proof of [ZEP-0072](https://github.com/zarf-dev/proposals/pull/73), which proposes this pattern for zarf itself, built here because the pattern it copies is the one [`colonel_byte.cargoship`](../cargoship/collection.md) already runs. It is expected to be removed once that proposal is resolved -- see [choice-zarf-collection-removal](../../agent/choice-zarf-collection-removal.md).
 
@@ -8,20 +10,22 @@ Zarf is not an SSH orchestrator. It reaches one cluster through a kubeconfig, so
 
 ## What is here
 
-| Page                                                | What it covers                                                                    |
-| --------------------------------------------------- | --------------------------------------------------------------------------------- |
-| [Modules](modules.md)                               | The actions: initialising a cluster, deploying packages, and inspecting state.   |
-| [Roles](roles.md)                                   | Convenient role wrapper for fetching cluster state facts.                         |
-| [Module guide](../../guides/zarf-ansible-module.md) | Installing the modules, the two-module walk, check mode, and the result.          |
+| Page                                                | What it covers                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [Modules](modules.md)                               | The two modules that converge a cluster, and the three that read it.         |
+| [Roles](roles.md)                                   | The roles that wrap the read-only modules and set what they return as facts. |
+| [Module guide](../../guides/zarf-ansible-module.md) | Installing the modules, the two-module walk, check mode, and the result.     |
 
 ## Which to reach for
 
-There is no role here, and no module picks the other's work up. A playbook writes the action it wants: `zarf_init` for the cluster itself, `zarf_package_deploy` for anything deployed onto it afterwards.
+No module picks another's work up. A playbook writes the action it wants: `zarf_init` for the cluster itself, `zarf_package_deploy` for anything deployed onto it afterwards.
 
 The two are usually written together rather than separately. A cluster whose distribution ships no storage provider cannot be initialised until one is deployed -- zarf's registry claims a volume during the seed phase -- and a package cannot normally be deployed until the cluster is initialised. The way out is a connected deploy, which pushes no images and so needs no registry; the [module guide](../../guides/zarf-ansible-module.md) covers the ordering.
 
+For reading a cluster, reach for the role rather than the module. `state`, `packages` and `package_inspect` exist to set what the module returned as a fact under a predictable name, and the `state` role additionally defaults `no_log` on both of its tasks -- which the module cannot do on the playbook's behalf. A module called directly is the right answer when a play wants the result registered rather than as a fact, or wants two of them in one play.
+
 ## Reference pages are generated
 
-Every `module_*.md` page here is generated from the collection itself -- the `DOCUMENTATION` and `EXAMPLES` blocks in each action plugin -- by `mage generate:document`. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.
+Every `module_*.md` page here is generated from the collection itself -- the `DOCUMENTATION` and `EXAMPLES` blocks in each action plugin -- and every `role_*.md` page from a role's `meta/argument_specs.yml`, by `mage generate:document`. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.
 
-This page and [modules.md](modules.md) are written by hand. The generators are shared with the cargoship collection, so the contract in `ansible/colonel_byte/cargoship/AGENTS.md` applies here too: every option declares a `type`, a `description`, and a `cli_flag`, and every `description` entry is double-quoted.
+This page, [modules.md](modules.md) and [roles.md](roles.md) are written by hand. The generators are shared with the cargoship collection, so the contract in `ansible/colonel_byte/cargoship/AGENTS.md` applies here too: every option declares a `type`, a `description`, and a `cli_flag`, and every `description` entry is double-quoted.

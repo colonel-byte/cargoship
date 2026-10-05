@@ -24,10 +24,12 @@
 
 ## package_inspect
 
-`package_inspect` parses a package tarball, OCI reference, or cluster package definition and sets facts:
+`package_inspect` parses a package tarball, OCI reference, or cluster package definition and sets facts.
+
+Naming `zarf_public_key` requires a signature. That is the role being stricter than the module, which passes `verify` through and leaves zarf's own `if-possible` default alone -- and `if-possible` accepts an unsigned package whether or not a key was given. Set `zarf_verify` explicitly to override, including to `if-possible` to get zarf's default back.
 
 ```yaml
-- name: Inspect storage package definition
+- name: Inspect storage package definition, rejecting it when unsigned
   ansible.builtin.include_role:
     name: colonel_byte.zarf.package_inspect
   vars:
@@ -44,7 +46,9 @@
 
 ## state
 
-`state` is the convenient way to retrieve and parse Zarf's cluster state. It runs `zarf tools kubectl get secret zarf-state -n zarf -o jsonpath='{.data.state}'`, decodes the payload, and sets the resulting dictionary as the `zarf_state` fact:
+`state` is the convenient way to retrieve and parse Zarf's cluster state. It runs `zarf tools kubectl get secret zarf-state -n zarf -o jsonpath='{.data.state}'`, decodes the payload, and sets the resulting dictionary as the `zarf_state` fact.
+
+The credentials in that Secret -- the registry push, pull and seed secrets, the git server passwords, the artifact server token, and the agent webhook's TLS private key -- are withheld. The paths withheld are set as `zarf_state_redacted`, and `zarf_include_credentials: true` returns them instead. The role defaults `no_log` on both of its tasks, which is also why reaching for the role beats calling the module directly here: `set_fact` prints what the module censored, so the module alone cannot keep a credential out of a `-v` transcript. See [choice-zarf-info-modules](../../agent/choice-zarf-info-modules.md).
 
 ```yaml
 - name: Load cluster zarf state
@@ -56,4 +60,8 @@
 - name: Inspect cluster registry mode
   ansible.builtin.debug:
     msg: "Cluster registry mode is {{ zarf_state.registryInfo.registryMode }}"
+
+- name: Report which paths were withheld
+  ansible.builtin.debug:
+    var: zarf_state_redacted
 ```

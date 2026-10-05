@@ -9,6 +9,7 @@ argument_specs:
       - "Runs one cargoship action against the fleet described by the Ansible inventory, on the management node."
       - "Every task carries C(run_once: true) and delegates to C(cargoship_delegate_to). Cargoship converges the whole fleet in a single run, so a play over the fleet's own inventory would otherwise converge it once per host."
       - "Ansible supplies the inventory and nothing else. It does not connect to the fleet, and nothing is installed on the managed nodes."
+    version_added: "0.26.0"
     options:
       cargoship_action:
         type: str

@@ -145,9 +145,13 @@ type moduleDoc struct {
 // roleEntrypoint is one entry point in a role's argument_specs.yml. Only main is documented; a
 // role with a second entry point would need a page section of its own.
 type roleEntrypoint struct {
-	ShortDescription string          `yaml:"short_description"`
-	Description      []string        `yaml:"description"`
-	Options          goyaml.MapSlice `yaml:"options"`
+	ShortDescription string   `yaml:"short_description"`
+	Description      []string `yaml:"description"`
+	// VersionAdded is the collection version the role first shipped in, the same key a module
+	// declares. It is the collection's version and not the repository's: release-please bumps both
+	// galaxy.yml files on a release, and this names what an operator pins.
+	VersionAdded string          `yaml:"version_added"`
+	Options      goyaml.MapSlice `yaml:"options"`
 }
 
 // roleSpecs is a role's meta/argument_specs.yml.

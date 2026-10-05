@@ -43,6 +43,7 @@ author:
   - Allen Conlon (@colonel-byte)
 notes:
   - "Set C(run_once: true) and C(delegate_to: localhost) on the task."
+  - "The module runs in check mode and reports C(changed: false), because reading a cluster changes nothing."
 options:
   kubeconfig:
     description:

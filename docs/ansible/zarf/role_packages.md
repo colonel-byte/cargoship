@@ -6,6 +6,8 @@ List all Zarf packages deployed to a cluster into an Ansible fact.
 
 Include it as `colonel_byte.zarf.packages`.
 
+Added in `colonel_byte.zarf` 0.31.0.
+
 Queries the cluster via `zarf package list` and sets the resulting package list as the `zarf_packages` fact.
 
 Every task carries `run_once: true` and delegates to `zarf_delegate_to`.

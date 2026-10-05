@@ -6,6 +6,8 @@ Stage a package onto the fleet and ready the hosts.
 
 Write it as `colonel_byte.cargoship.cargoship_prepare`. It runs on the management node; nothing is installed on the fleet.
 
+Added in `colonel_byte.cargoship` 0.26.0.
+
 Runs `cargoship prepare` against the fleet described by an Ansible inventory.
 
 It takes no key material: it neither reads an encrypted value nor writes a kubeconfig, so there is no vault password and no age identity to name.

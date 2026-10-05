@@ -6,6 +6,8 @@ Inspect and parse the definition of a Zarf package.
 
 Write it as `colonel_byte.zarf.zarf_package_inspect`. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster's nodes.
 
+Added in `colonel_byte.zarf` 0.31.0.
+
 Runs `zarf package inspect definition` against a local package tarball, an `oci://` reference, or a deployed package name.
 
 Signature verification is zarf's `if-possible` unless `verify` says otherwise, so an unsigned package inspects cleanly even when `public_key` is given.
@@ -27,6 +29,7 @@ Runs on the node the task is delegated to (typically localhost).
 ### Notes
 
 - Set `run_once: true` and `delegate_to: localhost` on the task.
+- The module runs in check mode and reports `changed: false`, because reading a package definition changes nothing.
 
 ### Example
 

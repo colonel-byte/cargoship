@@ -46,6 +46,7 @@ author:
   - Allen Conlon (@colonel-byte)
 notes:
   - "Set C(run_once: true) and C(delegate_to: localhost) on the task."
+  - "The module runs in check mode and reports C(changed: false), because reading a package definition changes nothing."
 options:
   package:
     description:

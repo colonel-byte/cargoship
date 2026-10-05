@@ -83,6 +83,10 @@ func writeModuleDoc(collection ansibleCollection, doc moduleDoc, options []named
 		md.PlainText("")
 		md.PlainTextf("Write it as `%s.%s`. %s", collection.fqcn, doc.Module, collection.tagline)
 		md.PlainText("")
+		if line := renderVersionAdded(collection, doc.VersionAdded); line != "" {
+			md.PlainText(line)
+			md.PlainText("")
+		}
 		for _, line := range doc.Description {
 			md.PlainText(renderProse(line))
 			md.PlainText("")

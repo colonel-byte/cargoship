@@ -137,6 +137,19 @@ func renderYAMLValue(value any) string {
 	return strings.TrimSpace(string(out))
 }
 
+// renderVersionAdded renders the line naming the collection version something first shipped in, and
+// the empty string when it declares none.
+//
+// The collection is named rather than left implicit, because version_added is the collection's own
+// version and a reader who has just come from the repository's release notes will otherwise read it
+// as cargoship's.
+func renderVersionAdded(collection ansibleCollection, version string) string {
+	if version == "" {
+		return ""
+	}
+	return fmt.Sprintf("Added in `%s` %s.", collection.fqcn, version)
+}
+
 // renderCLIFlag renders the flag an option maps onto. "None" is the documented spelling for an
 // option that renders no flag, and it is left as prose rather than dressed up as code, because
 // there is no flag there to quote.

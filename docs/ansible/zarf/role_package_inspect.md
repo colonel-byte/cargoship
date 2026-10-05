@@ -6,6 +6,8 @@ Inspect a Zarf package definition and expose structured metadata facts.
 
 Include it as `colonel_byte.zarf.package_inspect`.
 
+Added in `colonel_byte.zarf` 0.31.0.
+
 Runs `zarf package inspect definition` against a package source and parses the YAML definition.
 
 A `zarf_public_key` with no `zarf_verify` requires a signature, which is stricter than the module's own default. See `zarf_verify`.

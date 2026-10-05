@@ -6,6 +6,8 @@ Deploy a zarf package onto an initialised cluster.
 
 Write it as `colonel_byte.zarf.zarf_package_deploy`. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster's nodes.
 
+Added in `colonel_byte.zarf` 0.0.1.
+
 Runs `zarf package deploy` against the cluster a kubeconfig names, and follows the deployment component by component.
 
 The module is a small wrapper binary, not zarf. It renders the command line from these parameters, runs the installed zarf, reads the component boundaries back out of zarf's log stream, and reports one JSON result.
