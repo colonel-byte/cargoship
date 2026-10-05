@@ -65,8 +65,7 @@ Rewriting k3d's own output rather than hand-writing a kubeconfig keeps the embed
 Reaching the published port instead means host networking, since that port is bound on the host:
 
 ```sh
-k3d kubeconfig get zarf \
-  | sed 's|https://0.0.0.0:[0-9]{5}|https://127.0.0.1:41609|' > kubeconfig.yaml
+k3d kubeconfig get zarf | sed 's|https://0.0.0.0:|https://127.0.0.1:|' > kubeconfig.yaml
 chmod 0644 kubeconfig.yaml
 ```
 
