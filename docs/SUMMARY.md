@@ -175,6 +175,7 @@
 - [mage](dev/mage.md)
 - [shell-completion](dev/shell-completion.md)
 - [thirdparty-src](dev/thirdparty-src.md)
+- [tofu-provider](dev/tofu-provider.md)
 
 
 -----------
@@ -235,6 +236,7 @@
 - [choice-zarf-collection-removal](agent/choice-zarf-collection-removal.md)
 - [choice-zarf-info-modules](agent/choice-zarf-info-modules.md)
 - [design-config-codegen](agent/design-config-codegen.md)
+- [design-tofu-provider-install](agent/design-tofu-provider-install.md)
 - [ideas-inventory-sources](agent/ideas-inventory-sources.md)
 - [todo-pkg-action-unit-tests](agent/todo-pkg-action-unit-tests.md)
 - [todo-pkg-coci-registry-tests](agent/todo-pkg-coci-registry-tests.md)

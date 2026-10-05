@@ -28,6 +28,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -39,6 +40,8 @@ const (
 	// module rather than a module of its own, which is why this is an ordinary package path and
 	// the build below needs no -C. See docs/agent/choice-tofu-provider-layout.md.
 	providerPackage = "./cmd/terraform-provider-cargoship"
+	// providerImportPath is the provider package whose Version the build stamps.
+	providerImportPath = "github.com/colonel-byte/cargoship/internal/tofuprovider"
 	// providerBinaryBase is the binary name the zip has to carry, without the version. OpenTofu
 	// looks for terraform-provider-<name>_v<version> inside the package, so this is not ours to
 	// choose.
@@ -48,6 +51,11 @@ const (
 	providerRepository = "ghcr.io/colonel-byte/tofu-providers/colonel-byte/cargoship"
 	// providerOutputDir holds the zips and the OCI layout. It is under build/, which is ignored.
 	providerOutputDir = "build/tofu-provider"
+	// providerMirrorPath is where a filesystem_mirror expects a provider: the registry hostname
+	// the configuration names, then the namespace, then the type. The hostname is part of it even
+	// for a provider no registry serves, because that is the source address a configuration
+	// resolves -- see docs/agent/choice-tofu-provider-layout.md.
+	providerMirrorPath = "registry.opentofu.org/colonel-byte/cargoship"
 
 	// artifactTypeIndex and artifactTypeTarget are what OpenTofu looks for when it reads a
 	// provider out of an OCI registry: the index declares the first and each per-platform
@@ -164,6 +172,44 @@ func TofuProvider(opts Options) error {
 	return nil
 }
 
+// TofuProviderHost builds the provider for this machine only, into the layout OpenTofu's
+// filesystem_mirror reads: build/tofu-provider/mirror/<hostname>/<namespace>/<type>/<version>/<os>_<arch>/.
+//
+// It exists because the publish path is the wrong loop for development. A mirror directory is what
+// `tofu init` reads with no registry, no OCI push and no zip, so a change can be tried in the time
+// a build takes. See docs/dev/tofu-provider.md.
+func TofuProviderHost(version string) (string, error) {
+	if err := validateVersion(version); err != nil {
+		return "", err
+	}
+
+	mirror := filepath.Join(providerOutputDir, "mirror", providerMirrorPath, version,
+		fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH))
+	if err := os.MkdirAll(mirror, 0o755); err != nil {
+		return "", err
+	}
+
+	binary := fmt.Sprintf("%s_v%s", providerBinaryBase, version)
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+	}
+	path := filepath.Join(mirror, binary)
+
+	fmt.Printf("building %s %s for %s/%s\n", providerBinaryBase, version, runtime.GOOS, runtime.GOARCH)
+	ldflags := fmt.Sprintf("-X main.version=%s -X %s.Version=%s", version, providerImportPath, version)
+	if err := sh.RunV("go", "build", "-ldflags", ldflags, "-o", path, providerPackage); err != nil {
+		return "", fmt.Errorf("building the provider for this host: %w", err)
+	}
+
+	root := filepath.Join(providerOutputDir, "mirror")
+	absolute, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	fmt.Printf("provider at %s\n", path)
+	return absolute, nil
+}
+
 // validateVersion rejects what the artifact layout cannot carry. The leading v is checked because
 // the tag the release-please component produces has one and the version inside the artifact must
 // not: a zip holding terraform-provider-cargoship_vv0.1.0 is one no client looks for.
@@ -196,9 +242,13 @@ func buildPlatform(version, oper, arch string) (string, error) {
 		"GOARCH":      arch,
 		"CGO_ENABLED": "0",
 	}
+	// The version is stamped into both the command and the provider package: OpenTofu reports
+	// the first in `tofu version` and the second in provider metadata, and a provider that says
+	// "dev" to either is one nobody can tell apart from a local build.
+	ldflags := fmt.Sprintf("-s -w -X main.version=%s -X %s.Version=%s", version, providerImportPath, version)
 	if err := sh.RunWithV(env, "go", "build",
 		"-trimpath",
-		"-ldflags", "-s -w",
+		"-ldflags", ldflags,
 		"-o", binaryPath,
 		providerPackage,
 	); err != nil {
