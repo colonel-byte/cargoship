@@ -127,7 +127,7 @@ The static image copies the binary directly; this image installs the same RPM pr
 ```sh
 $ docker run --rm --entrypoint rpm \
   ghcr.io/colonel-byte/cargoship-ubi:<tag> -q cargoship
-cargoship-0.21.1-1.x86_64
+cargoship-<version>-1.x86_64
 ```
 
 `rpm -V cargoship` and `rpm -ql cargoship` work as well, which is the main

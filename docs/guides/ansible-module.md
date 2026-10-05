@@ -34,13 +34,15 @@ The modules live in the `colonel_byte.cargoship` collection. The RPM and deb pac
 
 Installing from a tarball or a checkout instead, install the collection, then point its module files at the binary. Each release carries a built `colonel_byte-cargoship-<version>.tar.gz` and a cosign bundle beside it; the collection is not published to Galaxy, because the node that installs it has no route to it.
 
+<!-- x-release-please-start-version -->
 ```sh
 cosign verify-blob --key cosign.pub \
-  --bundle colonel_byte-cargoship-0.25.0.tar.gz.sigstore.json \
-  colonel_byte-cargoship-0.25.0.tar.gz
-ansible-galaxy collection install colonel_byte-cargoship-0.25.0.tar.gz
+  --bundle colonel_byte-cargoship-0.29.0.tar.gz.sigstore.json \
+  colonel_byte-cargoship-0.29.0.tar.gz
+ansible-galaxy collection install colonel_byte-cargoship-0.29.0.tar.gz
 ./hack/ansible-link-modules.sh ~/.ansible/collections/ansible_collections/colonel_byte/cargoship /usr/local/bin/cargoship
 ```
+<!-- x-release-please-end-version -->
 
 From a checkout, build the tarball first with `hack/ansible-build-collection.sh ./bin/ansible`, which is the same script the release pipeline runs.
 

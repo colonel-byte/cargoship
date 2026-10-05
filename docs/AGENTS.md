@@ -39,6 +39,32 @@ Keep the entry for as long as anything outside the repository might still hold t
 
 A page that was never published does not need one, which is why the generated pages added for a new collection have no entries.
 
+## A pinned release version is release-please's to update
+
+A page that pins this project's own version -- an image tag, a release archive's filename, a `galaxy.yml` version in an install snippet -- goes stale on the next release, and nobody notices until a reader copies the command. Release-please already bumps `galaxy.yml` for both collections, and it will bump a Markdown page the same way once the page tells it where to look and the configuration tells it the page exists. Both halves are required: an annotated page that is not listed is never read, and a listed page with no annotation is read and left alone.
+
+Annotate with the block form, as HTML comments on their own lines around the fence:
+
+````markdown
+<!-- x-release-please-start-version -->
+```sh
+podman pull ghcr.io/colonel-byte/cargoship-ansible:0.29.0
+```
+<!-- x-release-please-end-version -->
+````
+
+The per-line form, `x-release-please-version` on the same line as the version, is the one to reach for in YAML or a Dockerfile and the wrong one here: inside a fenced code block an HTML comment is content, so it renders to the reader as part of the command they are about to run.
+
+Then add the page to `extra-files` in [`release-please-config.json`](../release-please-config.json), beside the two `galaxy.yml` entries. The next release PR rewrites every version inside every annotated region in it, and a page that nothing lists is a page release-please does not open.
+
+**An annotated region must hold no other dotted-decimal string.** Release-please replaces each semver match it finds between the markers, and `0.0.0.0` matches one -- a region containing both an image tag and that address comes out of the next release with `https://0.29.1.0:41609` in it. `127.0.0.1`, a k3s version, a CIDR and a zarf or k3d version are all the same hazard. Where an example needs both, split the fence: the version-free half stays unannotated, which is why [`guides/ansible-container.md`](guides/ansible-container.md) writes its kubeconfig in one block and runs the container in the next.
+
+A version in a generated page is annotated where it is written, not where it lands: a pinned version in `README.md` gets the markers in `README.md`, since `docs/index.md` is rewritten from it on the next `generate:document`.
+
+Illustrative output is the one place to prefer a placeholder over an annotation. `rpm -q` prints `cargoship-0.29.0-1.x86_64`, where the trailing `-1.x86_64` is the RPM release and reads as a semver prerelease, so a rewrite of that region can swallow it; [`dev/goreleaser.md`](dev/goreleaser.md) writes `cargoship-<version>-1.x86_64` instead, which matches the `:<tag>` placeholders in the command above it and cannot go stale.
+
+Set the version to the current release when adding the annotation, rather than leaving whatever was there. The markers fix the page from the next release onward and do nothing for the one in front of a reader today.
+
 ## Do not hand-edit the generated pages
 
 Every generated path below is also marked `linguist-generated` in [`.gitattributes`](../.gitattributes); see the "Keeping `.gitattributes` in sync with the generators" section of the root [`AGENTS.md`](../AGENTS.md) when a generator starts or stops writing one.
