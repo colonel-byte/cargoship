@@ -38,6 +38,7 @@ module: zarf_package_inspect
 short_description: Inspect and parse the definition of a Zarf package
 description:
   - "Runs C(zarf package inspect definition) against a local package tarball, an C(oci://) reference, or a deployed package name."
+  - "Signature verification is zarf's C(if-possible) unless C(verify) says otherwise, so an unsigned package inspects cleanly even when C(public_key) is given."
   - "Parses the resulting YAML definition into structured output containing package metadata, build data, and components."
   - "Runs on the node the task is delegated to (typically localhost)."
 version_added: "0.31.0"
@@ -54,10 +55,21 @@ options:
     cli_flag: None
   public_key:
     description:
-      - "Path to a public key file used to validate signed packages."
+      - "Path to the public key a package signature is verified against."
+      - "Supplying it does not by itself require a signature: zarf verifies when it can and passes an unsigned package otherwise. Set C(verify: always) to reject one."
     type: path
     required: false
     cli_flag: "--key"
+  verify:
+    description:
+      - "When to verify the package signature. Left unset, zarf's own default applies, which is C(if-possible)."
+    type: str
+    required: false
+    choices:
+      - never
+      - if-possible
+      - always
+    cli_flag: "--verify"
   kubeconfig:
     description:
       - "Path to the kubeconfig file, used when inspecting a package already deployed to a cluster."
@@ -74,10 +86,11 @@ options:
 """
 
 EXAMPLES = r"""
-- name: Inspect a staged Zarf package tarball
+- name: Inspect a staged Zarf package tarball, rejecting it when unsigned
   colonel_byte.zarf.zarf_package_inspect:
     package: /srv/staging/zarf-package-csi-rook-ceph-amd64-v1.20.7-upstream.tar.zst
     public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+    verify: always
   delegate_to: localhost
   run_once: true
   register: pkg_inspect
@@ -128,6 +141,13 @@ def command_parts(params):
     ]
     if params.get("public_key"):
         parts.extend(["--key", params["public_key"]])
+    if params.get("verify"):
+        # --verify=always, never --verify always. It is a flag with a no-argument default, so pflag
+        # reads it the way it reads a boolean: the space form leaves the mode as a positional
+        # argument and zarf rejects the command for having one too many. internal/zarfmod renders it
+        # through command.valueFlag for the same reason; see
+        # docs/agent/choice-zarf-ansible-module.md.
+        parts.append("--verify=%s" % params["verify"])
     return parts
 
 

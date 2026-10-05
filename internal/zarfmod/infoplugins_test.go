@@ -39,7 +39,25 @@ var commandPartsBody = regexp.MustCompile(`(?sm)^def command_parts\(params\):\n(
 // renderedFlagLiteral is a flag spelled as a string literal inside command_parts. Every flag a
 // read-only module renders is written there and nowhere else, which is the whole reason the
 // function exists as a plain function of the parameters.
-var renderedFlagLiteral = regexp.MustCompile(`"(--[a-z][a-z0-9-]*)"`)
+//
+// The second group is the "=value" of a flag written as one word. It is optional because most
+// flags are not, and it is captured because for some of them it is the whole point: see
+// equalsFlags.
+var renderedFlagLiteral = regexp.MustCompile(`"(--[a-z][a-z0-9-]*)(=[^"]*)?"`)
+
+// equalsFlags are the flags that must be written as one word, --name=value, rather than as two.
+// Each one declares a no-argument default, so pflag reads it the way it reads a boolean: the space
+// form leaves the value as a positional argument and zarf rejects the command for having one too
+// many. internal/zarfmod renders these through command.valueFlag, and
+// docs/agent/choice-zarf-ansible-module.md records the finding.
+//
+// This is the one thing TestInfoPluginDocsMatchRenderedFlags can say about how a value attaches,
+// and it is here because it is the mistake worth catching: a module that renders --verify always
+// fails against every package rather than silently, but it fails at run time on a cluster rather
+// than here.
+var equalsFlags = map[string]bool{
+	"verify": true,
+}
 
 // infoOwnFlags are the flags a read-only module renders for itself rather than for any parameter,
 // so that the every-rendered-flag-is-documented direction below has to let them through. It is
@@ -178,7 +196,13 @@ func renderedFlagLiterals(t *testing.T, module string) []string {
 
 	seen := map[string]bool{}
 	for _, match := range renderedFlagLiteral.FindAllSubmatch(body[1], -1) {
-		seen[strings.TrimPrefix(string(match[1]), "--")] = true
+		name := strings.TrimPrefix(string(match[1]), "--")
+		if equalsFlags[name] && len(match[2]) == 0 {
+			t.Errorf("command_parts in %s renders --%s as a separate word. It declares a "+
+				"no-argument default, so it has to be written --%s=<value>; see equalsFlags.",
+				path, name, name)
+		}
+		seen[name] = true
 	}
 	return sortedKeys(seen)
 }

@@ -8,18 +8,21 @@ Write it as `colonel_byte.zarf.zarf_package_inspect`. It runs the installed zarf
 
 Runs `zarf package inspect definition` against a local package tarball, an `oci://` reference, or a deployed package name.
 
+Signature verification is zarf's `if-possible` unless `verify` says otherwise, so an unsigned package inspects cleanly even when `public_key` is given.
+
 Parses the resulting YAML definition into structured output containing package metadata, build data, and components.
 
 Runs on the node the task is delegated to (typically localhost).
 
 ### Parameters
 
-| Parameter     | Type   | Required | Flag    | Description                                                                                            |
-| ------------- | ------ | -------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| `package`     | `str`  | yes      | None    | Path to a local package tarball, an `oci://` reference, an `https://` URL, or a deployed package name. |
-| `public_key`  | `path` | no       | `--key` | Path to a public key file used to validate signed packages.                                            |
-| `kubeconfig`  | `path` | no       | None    | Path to the kubeconfig file, used when inspecting a package already deployed to a cluster.             |
-| `zarf_binary` | `path` | no       | None    | Path to the `zarf` CLI binary on the delegated host. When omitted, `zarf` on `PATH` is used.           |
+| Parameter     | Type   | Required | Flag       | Description                                                                                                                                                                                                                  |
+| ------------- | ------ | -------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package`     | `str`  | yes      | None       | Path to a local package tarball, an `oci://` reference, an `https://` URL, or a deployed package name.                                                                                                                       |
+| `public_key`  | `path` | no       | `--key`    | Path to the public key a package signature is verified against. Supplying it does not by itself require a signature: zarf verifies when it can and passes an unsigned package otherwise. Set `verify: always` to reject one. |
+| `verify`      | `str`  | no       | `--verify` | When to verify the package signature. Left unset, zarf's own default applies, which is `if-possible`. One of `never`, `if-possible`, `always`.                                                                               |
+| `kubeconfig`  | `path` | no       | None       | Path to the kubeconfig file, used when inspecting a package already deployed to a cluster.                                                                                                                                   |
+| `zarf_binary` | `path` | no       | None       | Path to the `zarf` CLI binary on the delegated host. When omitted, `zarf` on `PATH` is used.                                                                                                                                 |
 
 ### Notes
 
@@ -28,10 +31,11 @@ Runs on the node the task is delegated to (typically localhost).
 ### Example
 
 ```yaml
-- name: Inspect a staged Zarf package tarball
+- name: Inspect a staged Zarf package tarball, rejecting it when unsigned
   colonel_byte.zarf.zarf_package_inspect:
     package: /srv/staging/zarf-package-csi-rook-ceph-amd64-v1.20.7-upstream.tar.zst
     public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+    verify: always
   delegate_to: localhost
   run_once: true
   register: pkg_inspect
