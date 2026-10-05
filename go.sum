@@ -880,8 +880,8 @@ github.com/phsym/console-slog v0.3.1 h1:Fuzcrjr40xTc004S9Kni8XfNsk+qrptQmyR+wZw9
 github.com/phsym/console-slog v0.3.1/go.mod h1:oJskjp/X6e6c0mGpfP8ELkfKUsrkDifYRAqJQgmdDS0=
 github.com/phuslu/lru v1.0.18 h1:ioKRYLym7nv6UmaKHXSR0Z8s2KCEra+mcWcn9zXQnlM=
 github.com/phuslu/lru v1.0.18/go.mod h1:ci5hb8dRIa+2I+KcPl4958OWCg09FxwZCP8InU1L1ME=
-github.com/pierrec/lz4/v4 v4.1.31 h1:TI8ck6XSudzSzotzAmy0+kh/KpRHaVsKLPzS97gRyNg=
-github.com/pierrec/lz4/v4 v4.1.31/go.mod h1:7SE9MC2STkNtL4PIwGhjmyVwvILaGI9/COYQNBhKM/c=
+github.com/pierrec/lz4/v4 v4.1.32 h1:UfNWLn8dnxkdl6VsKRe8NNszDMA7nCciQjsjXwQUFVs=
+github.com/pierrec/lz4/v4 v4.1.32/go.mod h1:7SE9MC2STkNtL4PIwGhjmyVwvILaGI9/COYQNBhKM/c=
 github.com/pjbgf/sha1cd v0.6.0 h1:3WJ8Wz8gvDz29quX1OcEmkAlUg9diU4GxJHqs0/XiwU=
 github.com/pjbgf/sha1cd v0.6.0/go.mod h1:lhpGlyHLpQZoxMv8HcgXvZEhcGs0PG/vsZnEJ7H0iCM=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
