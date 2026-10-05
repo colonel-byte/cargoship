@@ -22,6 +22,9 @@ docs/index.md linguist-generated
 docs/security.md linguist-generated
 docs/SUMMARY.md linguist-generated
 
+# mage generate:zarfFlags
+internal/zarfmod/testdata/zarf-*-flags.txt linguist-generated
+
 # mage generate:examples
 example/*/**/distro.yaml linguist-generated
 example/*/**/values.yaml linguist-generated
