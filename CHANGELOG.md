@@ -1,5 +1,64 @@
 # Changelog
 
+## [0.30.0](https://github.com/colonel-byte/cargoship/compare/v0.29.0...v0.30.0) (2026-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **distro:** upstream validate engine config against kubeadm API types ([#517](https://github.com/colonel-byte/cargoship/issues/517))
+* **distro:** render kubeadm v1beta4 config documents ([#511](https://github.com/colonel-byte/cargoship/issues/511))
+* **ansible:** add the colonel_byte.zarf collection ([#599](https://github.com/colonel-byte/cargoship/issues/599))
+* **zarfmod:** answer Ansible as zarf_init and zarf_package_deploy ([#598](https://github.com/colonel-byte/cargoship/issues/598))
+
+### Features
+
+* **ansible:** add the colonel_byte.zarf collection ([#599](https://github.com/colonel-byte/cargoship/issues/599)) ([592ffb3](https://github.com/colonel-byte/cargoship/commit/592ffb3281a4bc4a861c8a896f81d2da1baa0fa8))
+* bootstrap single-controller upstream cluster ([#512](https://github.com/colonel-byte/cargoship/issues/512)) ([9c4abc6](https://github.com/colonel-byte/cargoship/commit/9c4abc64223ede6c36db22703bbfed2616d89cd6))
+* **distro/upstream:** join additional controllers via kubeadm HA path ([#514](https://github.com/colonel-byte/cargoship/issues/514)) ([45fc6b6](https://github.com/colonel-byte/cargoship/commit/45fc6b6fc32790ea0de39ac911bd31e5b4aa9473))
+* **distro:** render kubeadm v1beta4 config documents ([#511](https://github.com/colonel-byte/cargoship/issues/511)) ([f5a1018](https://github.com/colonel-byte/cargoship/commit/f5a10189832185cc68ee0470a676cec5cf875b44))
+* **distro:** upstream validate engine config against kubeadm API types ([#517](https://github.com/colonel-byte/cargoship/issues/517)) ([a656ab2](https://github.com/colonel-byte/cargoship/commit/a656ab2388b521e20b589132c6d4f47df8b11774))
+* **distro:** upstream: reset with kubeadm reset ([#516](https://github.com/colonel-byte/cargoship/issues/516)) ([7996bfe](https://github.com/colonel-byte/cargoship/commit/7996bfed05ba858a97c8976215121fad6389e14b))
+* **distro:** upstream: upgrade with kubeadm upgrade ([#515](https://github.com/colonel-byte/cargoship/issues/515)) ([070a758](https://github.com/colonel-byte/cargoship/commit/070a75861dcfadcaa418332dc19b33e48b5b9c00))
+* **docs:** generate a reference per Ansible collection ([#602](https://github.com/colonel-byte/cargoship/issues/602)) ([7b84a08](https://github.com/colonel-byte/cargoship/commit/7b84a08b6947f073ebecb253700a8be914821fde))
+* **release:** build, package and smoke-test the zarf module files ([#601](https://github.com/colonel-byte/cargoship/issues/601)) ([4121315](https://github.com/colonel-byte/cargoship/commit/4121315866b2fda11b7261224b8cfaff8f861964))
+* **schema:** mark the properties that can carry a secret ([#606](https://github.com/colonel-byte/cargoship/issues/606)) ([1efa64a](https://github.com/colonel-byte/cargoship/commit/1efa64acc88d1a2f5c706b8b84f58824ab917969))
+* **tofu:** publish the provider to ghcr.io as an OpenTofu mirror ([#609](https://github.com/colonel-byte/cargoship/issues/609)) ([7a687f9](https://github.com/colonel-byte/cargoship/commit/7a687f90fa54258bd3be913d60447125a0360d09))
+* **upstream:** apply a CNI manifest after bootstrap ([#513](https://github.com/colonel-byte/cargoship/issues/513)) ([bea8299](https://github.com/colonel-byte/cargoship/commit/bea8299a3c7a86f7fa6cc242371dd274d13b9e1a))
+* **zarfmod:** answer Ansible as zarf_init and zarf_package_deploy ([#598](https://github.com/colonel-byte/cargoship/issues/598)) ([5b96891](https://github.com/colonel-byte/cargoship/commit/5b96891a98b0628e0b4de2c37a56d325ce02531b))
+
+
+### Bug Fixes
+
+* **distro:** refuse a downgrade before any phase writes to a host ([#607](https://github.com/colonel-byte/cargoship/issues/607)) ([9f66dda](https://github.com/colonel-byte/cargoship/commit/9f66dda354ae09b832ac1ec5e3b0c319b14955c3))
+
+
+### Refactoring
+
+* **cmd:** build the released binary from cmd/cargoship ([#596](https://github.com/colonel-byte/cargoship/issues/596)) ([8127dbe](https://github.com/colonel-byte/cargoship/commit/8127dbef8fcc558170ea706eee8e18b25d37d8ef))
+* **containers:** base the ubi image on almalinux 10-base ([#593](https://github.com/colonel-byte/cargoship/issues/593)) ([e3b8574](https://github.com/colonel-byte/cargoship/commit/e3b85749acb4dd2e3f0aea547ad33b6c6d14abaa))
+* **containers:** remove labels from docker files ([#594](https://github.com/colonel-byte/cargoship/issues/594)) ([abd7476](https://github.com/colonel-byte/cargoship/commit/abd747690b23cf17949228b1bad0e050c521569e))
+
+
+### Documentation
+
+* **zarf:** document the collection and record why it is a proof ([#604](https://github.com/colonel-byte/cargoship/issues/604)) ([77b526a](https://github.com/colonel-byte/cargoship/commit/77b526a0b67385de86d4c7d75020a613268df7f1))
+
+
+### Miscellaneous
+
+* **git:** mark every generated path linguist-generated ([#597](https://github.com/colonel-byte/cargoship/issues/597)) ([6a552e4](https://github.com/colonel-byte/cargoship/commit/6a552e4fbdb02b398fa458f5478d46ed558253fc))
+
+
+### Build
+
+* **deps:** bump github.com/andybalholm/brotli from 1.2.5 to 1.2.6 ([#612](https://github.com/colonel-byte/cargoship/issues/612)) ([27d3f41](https://github.com/colonel-byte/cargoship/commit/27d3f410e272a6f9fc244fe7eec1e1ab55fe8c23))
+* **deps:** bump github.com/Azure/azure-sdk-for-go/sdk/internal from 1.12.0 to 1.13.0 ([#613](https://github.com/colonel-byte/cargoship/issues/613)) ([08dd9c6](https://github.com/colonel-byte/cargoship/commit/08dd9c6d31c891f64b5c37bcb7e5d1b2d6ab110d))
+* **deps:** bump github.com/go-git/go-billy/v5 from 5.9.1 to 5.9.2 ([#591](https://github.com/colonel-byte/cargoship/issues/591)) ([89ae5ac](https://github.com/colonel-byte/cargoship/commit/89ae5aca7044cf3136f7603fe071cf1a8bd75398))
+* **deps:** bump github.com/goccy/go-json from 0.11.1 to 0.11.2 ([#611](https://github.com/colonel-byte/cargoship/issues/611)) ([671a196](https://github.com/colonel-byte/cargoship/commit/671a1961c738683efea4baf431c3b054a7b4a6ad))
+* **deps:** bump github.com/zarf-dev/zarf from 0.86.0 to 0.87.0 ([#615](https://github.com/colonel-byte/cargoship/issues/615)) ([85538ef](https://github.com/colonel-byte/cargoship/commit/85538ef4b6c86d7a12681977b36b820548ebac55))
+* **deps:** bump go.opentelemetry.io/proto/otlp from 1.11.0 to 1.11.1 ([#614](https://github.com/colonel-byte/cargoship/issues/614)) ([84c19d0](https://github.com/colonel-byte/cargoship/commit/84c19d05fbc79bb8dd3346c7177ba376eeba45a9))
+* **tofu:** add the provider binary and record where it lives ([#605](https://github.com/colonel-byte/cargoship/issues/605)) ([d7f6126](https://github.com/colonel-byte/cargoship/commit/d7f61260ba115a32b8f0cef64ed514381616ef0a))
+
 ## [0.29.0](https://github.com/colonel-byte/cargoship/compare/v0.28.2...v0.29.0) (2026-10-02)
 
 
