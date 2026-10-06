@@ -6,7 +6,7 @@ For the modules themselves -- their parameters and what `changed` means -- see [
 
 <!-- x-release-please-start-version -->
 ```sh
-podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.30.0
+podman pull ghcr.io/colonel-byte/cargoship-ansible:v0.31.0
 ```
 <!-- x-release-please-end-version -->
 
@@ -55,7 +55,7 @@ docker run --rm \
   -v "$PWD/build/tmp/zarf-config.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.31.0 \
   ansible-playbook init.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -75,7 +75,7 @@ docker run --rm \
   --network host \
   -v "$PWD/kubeconfig.yaml":/home/nonroot/.kube/config:ro,z \
   -e KUBECONFIG=/home/nonroot/.kube/config \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.31.0 \
   zarf tools kubectl get nodes
 ```
 <!-- x-release-please-end-version -->
@@ -99,7 +99,7 @@ podman run --rm \
   -v ~/.ssh/fleet_ed25519:/home/nonroot/.ssh/fleet_ed25519:ro,z \
   -v ~/.ssh/known_hosts:/home/nonroot/.ssh/known_hosts:z \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.31.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -117,7 +117,7 @@ podman run --rm \
   -v ~/.cargoship-cache:/home/nonroot/.cargoship-cache:rw,z \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.31.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -135,7 +135,7 @@ podman run --rm \
   -v cargoship-cache:/home/nonroot/.cargoship-cache \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.31.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->
@@ -172,7 +172,7 @@ podman run --rm \
   -e SSH_AUTH_SOCK=/run/ssh-agent.sock \
   -v /srv/staging:/srv/staging:ro,z \
   -v "$PWD":/workspace:ro,z \
-  ghcr.io/colonel-byte/cargoship-ansible:v0.30.0 \
+  ghcr.io/colonel-byte/cargoship-ansible:v0.31.0 \
   ansible-playbook -i inventory.yaml converge.yaml
 ```
 <!-- x-release-please-end-version -->

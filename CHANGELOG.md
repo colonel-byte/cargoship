@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.31.0](https://github.com/colonel-byte/cargoship/compare/v0.30.0...v0.31.0) (2026-10-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ansible:** add read-only zarf modules and the roles that wrap them ([#630](https://github.com/colonel-byte/cargoship/issues/630))
+
+### Features
+
+* **ansible:** add read-only zarf modules and the roles that wrap them ([#630](https://github.com/colonel-byte/cargoship/issues/630)) ([6021940](https://github.com/colonel-byte/cargoship/commit/60219405d1f2ed3b8a1fe2d12803edb9a2cd3dcb))
+* **ansible:** let zarf_package_inspect require a package signature ([#633](https://github.com/colonel-byte/cargoship/issues/633)) ([5e81e2c](https://github.com/colonel-byte/cargoship/commit/5e81e2c5dbfcac7716e2b74bdf4595108ce5f0dc))
+* **ansible:** withhold the credentials in the zarf-state Secret ([#632](https://github.com/colonel-byte/cargoship/issues/632)) ([6ce4a4d](https://github.com/colonel-byte/cargoship/commit/6ce4a4d84160a439081e016a96fc1a595e262c1f))
+
+
+### Refactoring
+
+* **ansible:** share the read-only zarf plugins' plumbing and cover their contract ([#631](https://github.com/colonel-byte/cargoship/issues/631)) ([a82287b](https://github.com/colonel-byte/cargoship/commit/a82287b155d159362e27e49b085ea1e6888cbd4c))
+
+
+### Documentation
+
+* **ansible:** describe the read-only modules and render version_added ([#635](https://github.com/colonel-byte/cargoship/issues/635)) ([5821f40](https://github.com/colonel-byte/cargoship/commit/5821f40b1175ae0ab043b4fa7307843ff46ce6b5))
+
+
+### Build
+
+* **deps:** bump anchore/sbom-action/download-syft from 0.24.2 to 0.24.3 in the core group ([#628](https://github.com/colonel-byte/cargoship/issues/628)) ([fc5d082](https://github.com/colonel-byte/cargoship/commit/fc5d08208557a0616f9db560d47d636064e6ff2a))
+* **deps:** bump github.com/google/s2a-go from 0.1.10 to 0.1.11 ([#642](https://github.com/colonel-byte/cargoship/issues/642)) ([85cc30c](https://github.com/colonel-byte/cargoship/commit/85cc30c461b322e797f10cf16ac23faba1b70024))
+* **deps:** bump github.com/huandu/xstrings from 1.6.1 to 1.6.2 ([#626](https://github.com/colonel-byte/cargoship/issues/626)) ([33d493a](https://github.com/colonel-byte/cargoship/commit/33d493a806fdef974bffa40b178da4274a3e8e2a))
+* **deps:** bump github.com/moby/moby/api from 1.56.0 to 1.56.1 ([#640](https://github.com/colonel-byte/cargoship/issues/640)) ([6efe78f](https://github.com/colonel-byte/cargoship/commit/6efe78f222ad8a6739aa773b462e074e1ec32be0))
+* **deps:** bump github.com/mozillazg/docker-credential-acr-helper from 0.4.0 to 0.4.1 ([#623](https://github.com/colonel-byte/cargoship/issues/623)) ([a93fd7b](https://github.com/colonel-byte/cargoship/commit/a93fd7b1442a908cdfc7e85d53ebb94c9068f466))
+* **deps:** bump github.com/pierrec/lz4/v4 from 4.1.31 to 4.1.32 ([#625](https://github.com/colonel-byte/cargoship/issues/625)) ([00ab3cc](https://github.com/colonel-byte/cargoship/commit/00ab3cc897de55b9cf6df3ebbc04ef5e661b87c1))
+* **deps:** bump github.com/pierrec/lz4/v4 from 4.1.32 to 4.1.33 ([#641](https://github.com/colonel-byte/cargoship/issues/641)) ([b1da6c0](https://github.com/colonel-byte/cargoship/commit/b1da6c0304faa2388cb0ed6dc238c6f859a62676))
+* **deps:** bump go.opentelemetry.io/.../otelhttp from 0.71.0 to 0.72.0 ([#639](https://github.com/colonel-byte/cargoship/issues/639)) ([5b9aaa5](https://github.com/colonel-byte/cargoship/commit/5b9aaa586ae2021fbfc2f74e70af8cfd61ed456b))
+* **deps:** bump go.opentelemetry.io/.../stdoutmetric from 1.46.0 to 1.47.0 ([#638](https://github.com/colonel-byte/cargoship/issues/638)) ([c34887c](https://github.com/colonel-byte/cargoship/commit/c34887c0a5c3e0560050d3a41c9d27f2aa122e3e))
+* **deps:** bump go.opentelemetry.io/otel from 1.46.0 to 1.47.0 ([#624](https://github.com/colonel-byte/cargoship/issues/624)) ([bdae158](https://github.com/colonel-byte/cargoship/commit/bdae15827a33b2425dfa34af9fc8ea2390406995))
+* **deps:** bump sigs.k8s.io/release-utils from 0.12.4 to 0.12.5 ([#627](https://github.com/colonel-byte/cargoship/issues/627)) ([aeeed12](https://github.com/colonel-byte/cargoship/commit/aeeed125b113876642d3832b45703f9d604e77f6))
+* **pre-commit:** lint the collections' Python for errors with ruff ([#634](https://github.com/colonel-byte/cargoship/issues/634)) ([1ae77dc](https://github.com/colonel-byte/cargoship/commit/1ae77dc90adf7dc92713ca40737434911576e49e))
+
 ## [0.30.0](https://github.com/colonel-byte/cargoship/compare/v0.29.0...v0.30.0) (2026-10-05)
 
 
