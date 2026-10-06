@@ -2,7 +2,7 @@
 
 [ZEP-0072](https://github.com/zarf-dev/proposals/pull/73) proposes native Ansible module support for zarf: the `zarf` binary dispatches on `argv[0]`, so a `zarf_init` symlink to `/usr/bin/zarf` is an Ansible module, with a thin Python action plugin alongside it. That is the design `colonel_byte.cargoship` already runs, and [choice-ansible-module](choice-ansible-module.md) is the record of why.
 
-This repository holds a proof of that proposal for `zarf init` and `zarf package deploy`: the collection in `ansible/colonel_byte/zarf/`, the module logic in `internal/zarfmod/`, and the module files built from `cmd/zarf/init/` and `cmd/zarf/deploy/`. It is a proof of concept and is meant to be removed once the proposal is resolved -- see [choice-zarf-collection-removal](choice-zarf-collection-removal.md). The proof diverges from the proposal in exactly one place, and that divergence is the point of this note.
+This repository holds a proof of that proposal for the two commands that converge a cluster, `zarf init` and `zarf package deploy`: the collection in `ansible/colonel_byte/zarf/`, the module logic in `internal/zarfmod/`, and the module files built from `cmd/zarf/init/` and `cmd/zarf/deploy/`. The collection also ships read-only modules, which are built as plain action plugins rather than as wrapper binaries and are not part of this proof -- see [choice-zarf-info-modules](choice-zarf-info-modules.md). It is a proof of concept and is meant to be removed once the proposal is resolved -- see [choice-zarf-collection-removal](choice-zarf-collection-removal.md). The proof diverges from the proposal in exactly one place, and that divergence is the point of this note.
 
 ## The divergence: the modules are not the zarf binary
 

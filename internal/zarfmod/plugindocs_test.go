@@ -76,12 +76,20 @@ var moduleOwnFlags = map[string]bool{
 //     read off a struct tag -- it exists only as a statement inside buildInitArgs or
 //     buildDeployArgs -- so each case populates every parameter, renders the command line, and
 //     checks the documented flags against the ones that came out.
-func TestActionPluginDocsMatchModuleParams(t *testing.T) {
-	for _, tt := range []struct {
-		module string
-		params any
-		argv   []string
-	}{
+//
+// wrapperModuleCase is one module whose parameters are a Go struct and whose command line a Go
+// function renders, which is what lets the two directions below be checked against the real thing.
+type wrapperModuleCase struct {
+	module string
+	params any
+	argv   []string
+}
+
+// wrapperModuleCases are the modules built that way. The read-only modules are not among them and
+// deliberately so; TestEveryActionPluginIsCovered in infoplugins_test.go is what holds this list
+// and that one against the plugins on disk, so that a module in neither cannot go unnoticed.
+func wrapperModuleCases() []wrapperModuleCase {
+	return []wrapperModuleCase{
 		{
 			module: "zarf_init",
 			params: &initParams{},
@@ -95,7 +103,11 @@ func TestActionPluginDocsMatchModuleParams(t *testing.T) {
 			params: &deployParams{},
 			argv:   buildDeployArgs(fullDeployParams()),
 		},
-	} {
+	}
+}
+
+func TestActionPluginDocsMatchModuleParams(t *testing.T) {
+	for _, tt := range wrapperModuleCases() {
 		t.Run(tt.module, func(t *testing.T) {
 			documented := documentedOptions(t, tt.module)
 

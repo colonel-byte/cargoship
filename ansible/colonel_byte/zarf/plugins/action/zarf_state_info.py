@@ -14,21 +14,24 @@
 
 """Action plugin for the zarf_state_info module.
 
-Reads and parses the cluster's zarf-state secret using `zarf tools kubectl`.
+It reads the cluster's zarf-state Secret. The plumbing is in ZarfInfoActionBase; see
+plugins/plugin_utils/info.py and docs/agent/choice-zarf-info-modules.md.
 """
+
 
 from __future__ import absolute_import, division, print_function
 
+__metaclass__ = type
+
 import base64
 import json
-import os
-import shlex
-import shutil
 
-from ansible.errors import AnsibleActionFail
-from ansible.plugins.action import ActionBase
+from ansible_collections.colonel_byte.zarf.plugins.plugin_utils.info import (
+    ZarfInfoActionBase,
+)
 
-__metaclass__ = type
+# The cli_flag key on each option is a cargoship extension, not a standard Ansible doc key. Here it
+# is held against command_parts below by internal/zarfmod/infoplugins_test.go.
 
 DOCUMENTATION = r"""
 module: zarf_state_info
@@ -77,81 +80,59 @@ EXAMPLES = r"""
     msg: "{{ zarf_state_result.state.registryInfo.registryMode }}"
 """
 
+# The key of the Secret the state is stored under, and the Secret's own name. Neither is a
+# parameter: they are zarf's own names for its own state.
+STATE_SECRET = "zarf-state"
+STATE_KEY = "jsonpath={.data.state}"
 
-class ActionModule(ActionBase):
-    """Action plugin that fetches and decodes the zarf-state secret."""
 
-    def run(self, tmp=None, task_vars=None):
-        if task_vars is None:
-            task_vars = {}
+def command_parts(params):
+    """Return the zarf command line this module runs.
 
-        result = super(ActionModule, self).run(tmp, task_vars)
-        del tmp
+    A plain function of the parameters, and the only place a flag is named, so that
+    internal/zarfmod/infoplugins_test.go can read the flags the module renders out of the source
+    and hold them against the documented cli_flag values.
 
-        kubeconfig = self._task.args.get('kubeconfig')
-        zarf_binary = self._task.args.get('zarf_binary', 'zarf')
-        namespace = self._task.args.get('namespace', 'zarf')
+    --no-color is deliberately absent, unlike the other read-only modules: `zarf tools kubectl`
+    hands its arguments to kubectl, which rejects the flag rather than ignoring it.
+    """
+    return [
+        params["zarf_binary"],
+        "tools",
+        "kubectl",
+        "get",
+        "secret",
+        STATE_SECRET,
+        "-n",
+        params.get("namespace") or "zarf",
+        "-o",
+        STATE_KEY,
+    ]
 
-        # Check if zarf binary exists or is on PATH
-        resolved_bin = zarf_binary
-        if os.path.sep not in zarf_binary:
-            found = shutil.which(zarf_binary)
-            if found:
-                resolved_bin = found
 
-        cmd_parts = []
-        if kubeconfig:
-            cmd_parts.extend(["env", "KUBECONFIG=%s" % shlex.quote(str(kubeconfig))])
+class ActionModule(ZarfInfoActionBase):
+    """Action plugin that fetches and decodes the zarf-state Secret."""
 
-        cmd_parts.extend([
-            shlex.quote(resolved_bin),
-            'tools',
-            'kubectl',
-            'get',
-            'secret',
-            'zarf-state',
-            '-n',
-            shlex.quote(str(namespace)),
-            '-o',
-            shlex.quote("jsonpath={.data.state}"),
-        ])
 
-        res = self._low_level_execute_command(
-            cmd=' '.join(cmd_parts),
-            executable='/bin/sh',
-        )
+    def zarf_argv(self, params):
+        return command_parts(params)
 
-        rc = res.get('rc', 0)
-        stdout = res.get('stdout', '').strip()
-        stderr = res.get('stderr', '').strip()
-
-        if rc != 0:
-            result['failed'] = True
-            result['msg'] = (
-                "Failed to fetch zarf-state Secret in namespace %s: %s"
-                % (namespace, stderr or stdout)
-            )
-            result['rc'] = rc
-            result['stderr'] = stderr
-            return result
-
+    def interpret(self, result, stdout):
+        stdout = stdout.strip()
         if not stdout:
-            result['failed'] = True
-            result['msg'] = (
-                "The zarf-state Secret in namespace %s contained no .data.state entry"
-                % namespace
+            result["failed"] = True
+            result["msg"] = (
+                "the %s Secret holds no .data.state entry, so this cluster has a Secret of that "
+                "name that zarf did not write" % STATE_SECRET
             )
-            return result
+            return
 
         try:
-            raw_json = base64.b64decode(stdout).decode('utf-8')
-            state = json.loads(raw_json)
+            state = json.loads(base64.b64decode(stdout).decode("utf-8"))
         except Exception as exc:
-            result['failed'] = True
-            result['msg'] = "Failed to decode zarf state JSON: %s" % exc
-            return result
+            result["failed"] = True
+            result["msg"] = "unable to decode the zarf state: %s" % exc
+            return
 
-        result['changed'] = False
-        result['state'] = state
-        result['msg'] = "Retrieved and parsed zarf-state"
-        return result
+        result["state"] = state
+        result["msg"] = "retrieved and parsed %s" % STATE_SECRET

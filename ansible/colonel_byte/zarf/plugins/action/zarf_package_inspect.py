@@ -14,20 +14,24 @@
 
 """Action plugin for the zarf_package_inspect module.
 
-Inspects the definition of a Zarf package tarball, OCI reference, or cluster package.
+It reads the zarf.yaml of a package tarball, an OCI reference, or a deployed package. The plumbing
+is in ZarfInfoActionBase; see plugins/plugin_utils/info.py and
+docs/agent/choice-zarf-info-modules.md.
 """
+
 
 from __future__ import absolute_import, division, print_function
 
-import os
-import shlex
-import shutil
+__metaclass__ = type
+
 import yaml
 
-from ansible.errors import AnsibleActionFail
-from ansible.plugins.action import ActionBase
+from ansible_collections.colonel_byte.zarf.plugins.plugin_utils.info import (
+    ZarfInfoActionBase,
+)
 
-__metaclass__ = type
+# The cli_flag key on each option is a cargoship extension, not a standard Ansible doc key. Here it
+# is held against command_parts below by internal/zarfmod/infoplugins_test.go.
 
 DOCUMENTATION = r"""
 module: zarf_package_inspect
@@ -86,95 +90,78 @@ EXAMPLES = r"""
       flavor: "{{ pkg_inspect.definition.build.flavor | default('default') }}"
 """
 
+# The top-level keys of a zarf.yaml. The definition is found by the first line that begins one of
+# them at column 0, rather than by searching the stream for "kind:": the verification line zarf
+# prints ahead of the YAML when --key is given is not the only thing that can hold that substring,
+# and a component's own nested YAML routinely does. Searching would silently cut the definition
+# short at the wrong place and return a mapping missing everything above the match.
+DEFINITION_KEYS = ("kind", "metadata", "build", "components", "constants", "variables")
 
-class ActionModule(ActionBase):
-    """Action plugin that runs zarf package inspect definition and parses YAML."""
 
-    def run(self, tmp=None, task_vars=None):
-        if task_vars is None:
-            task_vars = {}
+def _definition_yaml(stdout):
+    """Return the YAML definition in zarf's output, without whatever it printed ahead of it."""
+    lines = (stdout or "").splitlines()
+    for index, line in enumerate(lines):
+        key = line.split(":", 1)[0]
+        if key in DEFINITION_KEYS and line.startswith(key + ":"):
+            return "\n".join(lines[index:])
+    # No recognisable key: hand the whole stream to the parser, which reports a better error about
+    # it than this function could.
+    return stdout
 
-        result = super(ActionModule, self).run(tmp, task_vars)
-        del tmp
 
-        package = self._task.args.get('package')
-        if not package:
-            result['failed'] = True
-            result['msg'] = "missing required argument: package"
-            return result
+def command_parts(params):
+    """Return the zarf command line this module runs.
 
-        public_key = self._task.args.get('public_key')
-        kubeconfig = self._task.args.get('kubeconfig')
-        zarf_binary = self._task.args.get('zarf_binary', 'zarf')
+    A plain function of the parameters, and the only place a flag is named, so that
+    internal/zarfmod/infoplugins_test.go can read the flags the module renders out of the source
+    and hold them against the documented cli_flag values.
+    """
+    parts = [
+        params["zarf_binary"],
+        "package",
+        "inspect",
+        "definition",
+        params["package"],
+        # The definition is parsed as YAML below, and colour codes in it are not YAML.
+        "--no-color",
+    ]
+    if params.get("public_key"):
+        parts.extend(["--key", params["public_key"]])
+    return parts
 
-        resolved_bin = zarf_binary
-        if os.path.sep not in zarf_binary:
-            found = shutil.which(zarf_binary)
-            if found:
-                resolved_bin = found
 
-        cmd_parts = []
-        if kubeconfig:
-            cmd_parts.extend(["env", "KUBECONFIG=%s" % shlex.quote(str(kubeconfig))])
+class ActionModule(ZarfInfoActionBase):
+    """Action plugin that runs zarf package inspect definition and parses the YAML."""
 
-        cmd_parts.extend([
-            shlex.quote(resolved_bin),
-            'package',
-            'inspect',
-            'definition',
-            shlex.quote(str(package)),
-            '--no-color',
-        ])
+    REQUIRED = ("package",)
 
-        if public_key:
-            cmd_parts.extend(['--key', shlex.quote(str(public_key))])
+    def zarf_argv(self, params):
+        return command_parts(params)
 
-        res = self._low_level_execute_command(
-            cmd=' '.join(cmd_parts),
-            executable='/bin/sh',
-        )
-
-        rc = res.get('rc', 0)
-        stdout = res.get('stdout', '') or ''
-        stderr = res.get('stderr', '') or ''
-
-        if rc != 0:
-            result['failed'] = True
-            result['msg'] = "Failed to inspect package %s: %s" % (package, stderr.strip() or stdout.strip())
-            result['rc'] = rc
-            result['stderr'] = stderr
-            return result
-
-        # zarf package inspect definition prints "Verified OK" before YAML when --key is supplied
-        yaml_content = stdout
-        if "kind:" in yaml_content:
-            idx = yaml_content.find("kind:")
-            yaml_content = yaml_content[idx:]
-
+    def interpret(self, result, stdout):
         try:
-            definition = yaml.safe_load(yaml_content)
+            definition = yaml.safe_load(_definition_yaml(stdout))
         except Exception as exc:
-            result['failed'] = True
-            result['msg'] = "Failed to parse inspect output as YAML: %s" % exc
-            result['stdout'] = stdout
-            return result
+            result["failed"] = True
+            result["msg"] = "unable to parse the inspected definition as YAML: %s" % exc
+            result["module_stdout"] = stdout
+            return
 
         if not isinstance(definition, dict):
-            result['failed'] = True
-            result['msg'] = "Parsed definition is not a dictionary"
-            result['stdout'] = stdout
-            return result
+            result["failed"] = True
+            result["msg"] = "the inspected definition is not a mapping"
+            result["module_stdout"] = stdout
+            return
 
-        metadata = definition.get('metadata', {}) or {}
-        build = definition.get('build', {}) or {}
+        metadata = definition.get("metadata") or {}
+        build = definition.get("build") or {}
 
-        result['changed'] = False
-        result['definition'] = definition
-        result['package_name'] = metadata.get('name', '')
-        result['package_version'] = metadata.get('version', '')
-        result['package_flavor'] = build.get('flavor', '')
-        result['msg'] = "Inspected package %s (%s)" % (
-            metadata.get('name', package),
-            metadata.get('version', 'unknown'),
+        result["definition"] = definition
+        result["package_name"] = metadata.get("name", "")
+        result["package_version"] = metadata.get("version", "")
+        result["package_flavor"] = build.get("flavor", "")
+        result["msg"] = "inspected %s (%s)" % (
+            metadata.get("name") or "the package",
+            metadata.get("version") or "no version",
         )
-        return result
