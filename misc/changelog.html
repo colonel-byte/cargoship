@@ -37,7 +37,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-274b2cae.js";
+            window.path_to_searchindex_js = "../searchindex-8645ce9b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-384f5763.js"></script>
@@ -183,15 +183,49 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
-<h2 id="0300-2026-10-05"><a class="header" href="#0300-2026-10-05"><a href="https://github.com/colonel-byte/cargoship/compare/v0.29.0...v0.30.0">0.30.0</a> (2026-10-05)</a></h2>
+<h2 id="0310-2026-10-06"><a class="header" href="#0310-2026-10-06"><a href="https://github.com/colonel-byte/cargoship/compare/v0.30.0...v0.31.0">0.31.0</a> (2026-10-06)</a></h2>
 <h3 id="-breaking-changes"><a class="header" href="#-breaking-changes">⚠ BREAKING CHANGES</a></h3>
+<ul>
+<li><strong>ansible:</strong> add read-only zarf modules and the roles that wrap them (<a href="https://github.com/colonel-byte/cargoship/issues/630">#630</a>)</li>
+</ul>
+<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<ul>
+<li><strong>ansible:</strong> add read-only zarf modules and the roles that wrap them (<a href="https://github.com/colonel-byte/cargoship/issues/630">#630</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/60219405d1f2ed3b8a1fe2d12803edb9a2cd3dcb">6021940</a>)</li>
+<li><strong>ansible:</strong> let zarf_package_inspect require a package signature (<a href="https://github.com/colonel-byte/cargoship/issues/633">#633</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5e81e2c5dbfcac7716e2b74bdf4595108ce5f0dc">5e81e2c</a>)</li>
+<li><strong>ansible:</strong> withhold the credentials in the zarf-state Secret (<a href="https://github.com/colonel-byte/cargoship/issues/632">#632</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6ce4a4d84160a439081e016a96fc1a595e262c1f">6ce4a4d</a>)</li>
+</ul>
+<h3 id="refactoring"><a class="header" href="#refactoring">Refactoring</a></h3>
+<ul>
+<li><strong>ansible:</strong> share the read-only zarf plugins’ plumbing and cover their contract (<a href="https://github.com/colonel-byte/cargoship/issues/631">#631</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a82287b155d159362e27e49b085ea1e6888cbd4c">a82287b</a>)</li>
+</ul>
+<h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
+<ul>
+<li><strong>ansible:</strong> describe the read-only modules and render version_added (<a href="https://github.com/colonel-byte/cargoship/issues/635">#635</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5821f40b1175ae0ab043b4fa7307843ff46ce6b5">5821f40</a>)</li>
+</ul>
+<h3 id="build"><a class="header" href="#build">Build</a></h3>
+<ul>
+<li><strong>deps:</strong> bump anchore/sbom-action/download-syft from 0.24.2 to 0.24.3 in the core group (<a href="https://github.com/colonel-byte/cargoship/issues/628">#628</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/fc5d08208557a0616f9db560d47d636064e6ff2a">fc5d082</a>)</li>
+<li><strong>deps:</strong> bump github.com/google/s2a-go from 0.1.10 to 0.1.11 (<a href="https://github.com/colonel-byte/cargoship/issues/642">#642</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/85cc30c461b322e797f10cf16ac23faba1b70024">85cc30c</a>)</li>
+<li><strong>deps:</strong> bump github.com/huandu/xstrings from 1.6.1 to 1.6.2 (<a href="https://github.com/colonel-byte/cargoship/issues/626">#626</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/33d493a806fdef974bffa40b178da4274a3e8e2a">33d493a</a>)</li>
+<li><strong>deps:</strong> bump github.com/moby/moby/api from 1.56.0 to 1.56.1 (<a href="https://github.com/colonel-byte/cargoship/issues/640">#640</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6efe78f222ad8a6739aa773b462e074e1ec32be0">6efe78f</a>)</li>
+<li><strong>deps:</strong> bump github.com/mozillazg/docker-credential-acr-helper from 0.4.0 to 0.4.1 (<a href="https://github.com/colonel-byte/cargoship/issues/623">#623</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a93fd7b1442a908cdfc7e85d53ebb94c9068f466">a93fd7b</a>)</li>
+<li><strong>deps:</strong> bump github.com/pierrec/lz4/v4 from 4.1.31 to 4.1.32 (<a href="https://github.com/colonel-byte/cargoship/issues/625">#625</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/00ab3cc897de55b9cf6df3ebbc04ef5e661b87c1">00ab3cc</a>)</li>
+<li><strong>deps:</strong> bump github.com/pierrec/lz4/v4 from 4.1.32 to 4.1.33 (<a href="https://github.com/colonel-byte/cargoship/issues/641">#641</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b1da6c0304faa2388cb0ed6dc238c6f859a62676">b1da6c0</a>)</li>
+<li><strong>deps:</strong> bump go.opentelemetry.io/…/otelhttp from 0.71.0 to 0.72.0 (<a href="https://github.com/colonel-byte/cargoship/issues/639">#639</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5b9aaa586ae2021fbfc2f74e70af8cfd61ed456b">5b9aaa5</a>)</li>
+<li><strong>deps:</strong> bump go.opentelemetry.io/…/stdoutmetric from 1.46.0 to 1.47.0 (<a href="https://github.com/colonel-byte/cargoship/issues/638">#638</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c34887c0a5c3e0560050d3a41c9d27f2aa122e3e">c34887c</a>)</li>
+<li><strong>deps:</strong> bump go.opentelemetry.io/otel from 1.46.0 to 1.47.0 (<a href="https://github.com/colonel-byte/cargoship/issues/624">#624</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/bdae15827a33b2425dfa34af9fc8ea2390406995">bdae158</a>)</li>
+<li><strong>deps:</strong> bump sigs.k8s.io/release-utils from 0.12.4 to 0.12.5 (<a href="https://github.com/colonel-byte/cargoship/issues/627">#627</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/aeeed125b113876642d3832b45703f9d604e77f6">aeeed12</a>)</li>
+<li><strong>pre-commit:</strong> lint the collections’ Python for errors with ruff (<a href="https://github.com/colonel-byte/cargoship/issues/634">#634</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1ae77dc90adf7dc92713ca40737434911576e49e">1ae77dc</a>)</li>
+</ul>
+<h2 id="0300-2026-10-05"><a class="header" href="#0300-2026-10-05"><a href="https://github.com/colonel-byte/cargoship/compare/v0.29.0...v0.30.0">0.30.0</a> (2026-10-05)</a></h2>
+<h3 id="-breaking-changes-1"><a class="header" href="#-breaking-changes-1">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li><strong>distro:</strong> upstream validate engine config against kubeadm API types (<a href="https://github.com/colonel-byte/cargoship/issues/517">#517</a>)</li>
 <li><strong>distro:</strong> render kubeadm v1beta4 config documents (<a href="https://github.com/colonel-byte/cargoship/issues/511">#511</a>)</li>
 <li><strong>ansible:</strong> add the colonel_byte.zarf collection (<a href="https://github.com/colonel-byte/cargoship/issues/599">#599</a>)</li>
 <li><strong>zarfmod:</strong> answer Ansible as zarf_init and zarf_package_deploy (<a href="https://github.com/colonel-byte/cargoship/issues/598">#598</a>)</li>
 </ul>
-<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<h3 id="features-1"><a class="header" href="#features-1">Features</a></h3>
 <ul>
 <li><strong>ansible:</strong> add the colonel_byte.zarf collection (<a href="https://github.com/colonel-byte/cargoship/issues/599">#599</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/592ffb3281a4bc4a861c8a896f81d2da1baa0fa8">592ffb3</a>)</li>
 <li>bootstrap single-controller upstream cluster (<a href="https://github.com/colonel-byte/cargoship/issues/512">#512</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c4abc64223ede6c36db22703bbfed2616d89cd6">9c4abc6</a>)</li>
@@ -211,13 +245,13 @@
 <ul>
 <li><strong>distro:</strong> refuse a downgrade before any phase writes to a host (<a href="https://github.com/colonel-byte/cargoship/issues/607">#607</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9f66dda354ae09b832ac1ec5e3b0c319b14955c3">9f66dda</a>)</li>
 </ul>
-<h3 id="refactoring"><a class="header" href="#refactoring">Refactoring</a></h3>
+<h3 id="refactoring-1"><a class="header" href="#refactoring-1">Refactoring</a></h3>
 <ul>
 <li><strong>cmd:</strong> build the released binary from cmd/cargoship (<a href="https://github.com/colonel-byte/cargoship/issues/596">#596</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8127dbef8fcc558170ea706eee8e18b25d37d8ef">8127dbe</a>)</li>
 <li><strong>containers:</strong> base the ubi image on almalinux 10-base (<a href="https://github.com/colonel-byte/cargoship/issues/593">#593</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e3b85749acb4dd2e3f0aea547ad33b6c6d14abaa">e3b8574</a>)</li>
 <li><strong>containers:</strong> remove labels from docker files (<a href="https://github.com/colonel-byte/cargoship/issues/594">#594</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/abd747690b23cf17949228b1bad0e050c521569e">abd7476</a>)</li>
 </ul>
-<h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
+<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
 <ul>
 <li><strong>zarf:</strong> document the collection and record why it is a proof (<a href="https://github.com/colonel-byte/cargoship/issues/604">#604</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/77b526a0b67385de86d4c7d75020a613268df7f1">77b526a</a>)</li>
 </ul>
@@ -225,7 +259,7 @@
 <ul>
 <li><strong>git:</strong> mark every generated path linguist-generated (<a href="https://github.com/colonel-byte/cargoship/issues/597">#597</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6a552e4fbdb02b398fa458f5478d46ed558253fc">6a552e4</a>)</li>
 </ul>
-<h3 id="build"><a class="header" href="#build">Build</a></h3>
+<h3 id="build-1"><a class="header" href="#build-1">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/andybalholm/brotli from 1.2.5 to 1.2.6 (<a href="https://github.com/colonel-byte/cargoship/issues/612">#612</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/27d3f410e272a6f9fc244fe7eec1e1ab55fe8c23">27d3f41</a>)</li>
 <li><strong>deps:</strong> bump github.com/Azure/azure-sdk-for-go/sdk/internal from 1.12.0 to 1.13.0 (<a href="https://github.com/colonel-byte/cargoship/issues/613">#613</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/08dd9c6d31c891f64b5c37bcb7e5d1b2d6ab110d">08dd9c6</a>)</li>
@@ -236,13 +270,13 @@
 <li><strong>tofu:</strong> add the provider binary and record where it lives (<a href="https://github.com/colonel-byte/cargoship/issues/605">#605</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7f61260ba115a32b8f0cef64ed514381616ef0a">d7f6126</a>)</li>
 </ul>
 <h2 id="0290-2026-10-02"><a class="header" href="#0290-2026-10-02"><a href="https://github.com/colonel-byte/cargoship/compare/v0.28.2...v0.29.0">0.29.0</a> (2026-10-02)</a></h2>
-<h3 id="-breaking-changes-1"><a class="header" href="#-breaking-changes-1">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-2"><a class="header" href="#-breaking-changes-2">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>remove 32bit support (<a href="https://github.com/colonel-byte/cargoship/issues/590">#590</a>)</li>
 <li><strong>reset:</strong> remove the hosts, firewall, and fapolicyd flags it never read (<a href="https://github.com/colonel-byte/cargoship/issues/573">#573</a>)</li>
 <li>enable merge queue on main branch (<a href="https://github.com/colonel-byte/cargoship/issues/552">#552</a>)</li>
 </ul>
-<h3 id="features-1"><a class="header" href="#features-1">Features</a></h3>
+<h3 id="features-2"><a class="header" href="#features-2">Features</a></h3>
 <ul>
 <li><strong>create:</strong> add –file-override to mirror file downloads (<a href="https://github.com/colonel-byte/cargoship/issues/548">#548</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/814694e6fb5f4ebbb05f8cd1fe5011b6640f08c0">814694e</a>)</li>
 <li><strong>create:</strong> record per-file provenance for overridden downloads (<a href="https://github.com/colonel-byte/cargoship/issues/549">#549</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ac27c42f037bc7e2b92d0ce35e5826ff8823039c">ac27c42</a>)</li>
@@ -257,13 +291,13 @@
 <li><strong>lang:</strong> correct typos and miswording in command help and phase titles (<a href="https://github.com/colonel-byte/cargoship/issues/575">#575</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7e3029bdb93223a188d31132d16b1f78b71ce4ae">7e3029b</a>)</li>
 <li><strong>reset:</strong> remove the hosts, firewall, and fapolicyd flags it never read (<a href="https://github.com/colonel-byte/cargoship/issues/573">#573</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2a3cf37eaf12dda145de3172fe8a5487c20d3123">2a3cf37</a>)</li>
 </ul>
-<h3 id="refactoring-1"><a class="header" href="#refactoring-1">Refactoring</a></h3>
+<h3 id="refactoring-2"><a class="header" href="#refactoring-2">Refactoring</a></h3>
 <ul>
 <li><strong>cmd:</strong> collapse the duplicate flag-name constants onto one each (<a href="https://github.com/colonel-byte/cargoship/issues/574">#574</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7585b71986a02b4a6695889c8f3f62ae1d89eae6">7585b71</a>)</li>
 <li><strong>magefiles:</strong> split large package files by topic (<a href="https://github.com/colonel-byte/cargoship/issues/547">#547</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/82ea3b488eb9937de7351303827b4f99aa4707df">82ea3b4</a>)</li>
 <li><strong>phase:</strong> drop the unused InstallFapolicy phase (<a href="https://github.com/colonel-byte/cargoship/issues/577">#577</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d90456b89eb43da6271c7d8dc008637a1e0b2ac9">d90456b</a>)</li>
 </ul>
-<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
+<h3 id="documentation-2"><a class="header" href="#documentation-2">Documentation</a></h3>
 <ul>
 <li><strong>lang:</strong> add long help for the core lifecycle and package commands (<a href="https://github.com/colonel-byte/cargoship/issues/572">#572</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6e479651109d7a4bc42d9d42c2ea978910260b70">6e47965</a>)</li>
 <li><strong>readme:</strong> add installation instructions and –confirm to the examples (<a href="https://github.com/colonel-byte/cargoship/issues/570">#570</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/69a763a2c8ee8d1b0184122d8ed5cefe3646fef5">69a763a</a>)</li>
@@ -283,7 +317,7 @@
 <li>remove 32bit support (<a href="https://github.com/colonel-byte/cargoship/issues/590">#590</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7a59b8b799f347744831a757fb084ef758ef42a">d7a59b8</a>)</li>
 <li>update Dependabot schedule to daily for gomod and pre-commit (<a href="https://github.com/colonel-byte/cargoship/issues/578">#578</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8b2df63f48cedf203a7054ad796373910760f739">8b2df63</a>)</li>
 </ul>
-<h3 id="build-1"><a class="header" href="#build-1">Build</a></h3>
+<h3 id="build-2"><a class="header" href="#build-2">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump almalinux/10-base from <code>f110fee</code> to <code>ed618ca</code> in /containers/ansible (<a href="https://github.com/colonel-byte/cargoship/issues/580">#580</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/15c57d092d9658d56b4246b48cc26e261e481ce6">15c57d0</a>)</li>
 <li><strong>deps:</strong> bump almalinux/10-minimal from <code>ee053be</code> to <code>1c0191d</code> in /containers/ubi (<a href="https://github.com/colonel-byte/cargoship/issues/579">#579</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/829a09e0351a2c57f2ebb68f8e91cb7ae1de0199">829a09e</a>)</li>
@@ -302,7 +336,7 @@
 <li><strong>deps:</strong> bump sigs.k8s.io/kustomize/kyaml from 0.21.1 to 0.21.2 (<a href="https://github.com/colonel-byte/cargoship/issues/588">#588</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/70668f0383b25fd20be2ed13c9e61ccc4ba6f8e9">70668f0</a>)</li>
 </ul>
 <h2 id="0282-2026-09-30"><a class="header" href="#0282-2026-09-30"><a href="https://github.com/colonel-byte/cargoship/compare/v0.28.1...v0.28.2">0.28.2</a> (2026-09-30)</a></h2>
-<h3 id="features-2"><a class="header" href="#features-2">Features</a></h3>
+<h3 id="features-3"><a class="header" href="#features-3">Features</a></h3>
 <ul>
 <li><strong>install:</strong> address issue when dnf pin is not present (<a href="https://github.com/colonel-byte/cargoship/issues/543">#543</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d27943c1816b3324985f813b72d2bb554ea1f66e">d27943c</a>)</li>
 </ul>
@@ -310,21 +344,21 @@
 <ul>
 <li><strong>gitattributes:</strong> drop stale src/ prefix from the generated Go pattern (<a href="https://github.com/colonel-byte/cargoship/issues/544">#544</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/824148639afe89b52a8ba3e99e9217c0220adefb">8241486</a>)</li>
 </ul>
-<h3 id="documentation-2"><a class="header" href="#documentation-2">Documentation</a></h3>
+<h3 id="documentation-3"><a class="header" href="#documentation-3">Documentation</a></h3>
 <ul>
 <li><strong>agents:</strong> symlink CLAUDE.md to AGENTS.md and warn on its root-only scope (<a href="https://github.com/colonel-byte/cargoship/issues/545">#545</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/09d5858c40fb33dc3ad09890765ae81ceabc48f8">09d5858</a>)</li>
 </ul>
-<h3 id="build-2"><a class="header" href="#build-2">Build</a></h3>
+<h3 id="build-3"><a class="header" href="#build-3">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump https://github.com/golangci/golangci-lint from v2.13.2 to 2.14.0 in the core group (<a href="https://github.com/colonel-byte/cargoship/issues/541">#541</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4328aab4c822632b2dd8625403da34a2c18c67eb">4328aab</a>)</li>
 </ul>
 <h2 id="0281-2026-09-30"><a class="header" href="#0281-2026-09-30"><a href="https://github.com/colonel-byte/cargoship/compare/v0.28.0...v0.28.1">0.28.1</a> (2026-09-30)</a></h2>
-<h3 id="features-3"><a class="header" href="#features-3">Features</a></h3>
+<h3 id="features-4"><a class="header" href="#features-4">Features</a></h3>
 <ul>
 <li><strong>drift:</strong> move files around to make sense (<a href="https://github.com/colonel-byte/cargoship/issues/540">#540</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/098ac1b109ec5accc5e905e84bacf6dd5fed9880">098ac1b</a>)</li>
 <li>install and pin upstream kubeadm packages (<a href="https://github.com/colonel-byte/cargoship/issues/509">#509</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/dbe72cb9495912dc01c45732a7cf311d4e910805">dbe72cb</a>)</li>
 </ul>
-<h3 id="documentation-3"><a class="header" href="#documentation-3">Documentation</a></h3>
+<h3 id="documentation-4"><a class="header" href="#documentation-4">Documentation</a></h3>
 <ul>
 <li><strong>agent:</strong> add Go test formatting rule and align repo with it (<a href="https://github.com/colonel-byte/cargoship/issues/534">#534</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9d3e2465d42ccca89c0f564763d5968e985dfa1e">9d3e246</a>)</li>
 </ul>
@@ -334,7 +368,7 @@
 <li><strong>examples:</strong> update versions (<a href="https://github.com/colonel-byte/cargoship/issues/537">#537</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/dd0959b821ca42265dbf71f609c866f0382a1fa8">dd0959b</a>)</li>
 <li><strong>releaser:</strong> update config to address build issues (<a href="https://github.com/colonel-byte/cargoship/issues/539">#539</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/10ef7ccf562f02aa3ebaff5813fb5fd873f56906">10ef7cc</a>)</li>
 </ul>
-<h3 id="build-3"><a class="header" href="#build-3">Build</a></h3>
+<h3 id="build-4"><a class="header" href="#build-4">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/ProtonMail/go-crypto from 1.5.1 to 1.5.2 (<a href="https://github.com/colonel-byte/cargoship/issues/532">#532</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0696e8a60d33827d10f0ecfd444874fc643537ed">0696e8a</a>)</li>
 <li><strong>deps:</strong> bump the core group with 3 updates (<a href="https://github.com/colonel-byte/cargoship/issues/533">#533</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/11c1e7f2a829041e228bc3155fdab634fea328d1">11c1e7f</a>)</li>
@@ -343,12 +377,12 @@
 <li><strong>deps:</strong> bump the misc group with 19 updates (<a href="https://github.com/colonel-byte/cargoship/issues/530">#530</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/fd2cfcaf96666ce54561dc087d96b44f0c2ffbe3">fd2cfca</a>)</li>
 </ul>
 <h2 id="0280-2026-09-27"><a class="header" href="#0280-2026-09-27"><a href="https://github.com/colonel-byte/cargoship/compare/v0.27.0...v0.28.0">0.28.0</a> (2026-09-27)</a></h2>
-<h3 id="-breaking-changes-2"><a class="header" href="#-breaking-changes-2">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-3"><a class="header" href="#-breaking-changes-3">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>move src/ contents to repo root (<a href="https://github.com/colonel-byte/cargoship/issues/503">#503</a>)</li>
 <li>update to v2 rig (<a href="https://github.com/colonel-byte/cargoship/issues/214">#214</a>)</li>
 </ul>
-<h3 id="features-4"><a class="header" href="#features-4">Features</a></h3>
+<h3 id="features-5"><a class="header" href="#features-5">Features</a></h3>
 <ul>
 <li>add k3s single-controller topology for e2e-cluster CI (<a href="https://github.com/colonel-byte/cargoship/issues/504">#504</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f95b31b08b0dcb930fe41b18b4261fc21cd348f9">f95b31b</a>)</li>
 <li>finish the apply walk, from the engine config to disconnect (<a href="https://github.com/colonel-byte/cargoship/issues/273">#273</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8f4830c7ab17706221df2ab6133abccdbaea0285">8f4830c</a>)</li>
@@ -363,12 +397,12 @@
 <ul>
 <li>mark engine populated only when a phase actually uploaded files (<a href="https://github.com/colonel-byte/cargoship/issues/502">#502</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9e78c0d0b93de68204430ee188774aaa2ca526c1">9e78c0d</a>)</li>
 </ul>
-<h3 id="refactoring-2"><a class="header" href="#refactoring-2">Refactoring</a></h3>
+<h3 id="refactoring-3"><a class="header" href="#refactoring-3">Refactoring</a></h3>
 <ul>
 <li>move src/ contents to repo root (<a href="https://github.com/colonel-byte/cargoship/issues/503">#503</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/cdf9b5f298892ee45d96d54ae0fc83d9c79e5205">cdf9b5f</a>)</li>
 <li>move test/ out of src/ and consolidate shared internal/ packages (<a href="https://github.com/colonel-byte/cargoship/issues/495">#495</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/cd771c4c8a95a2626308716ecc09aea9a1aee841">cd771c4</a>)</li>
 </ul>
-<h3 id="documentation-4"><a class="header" href="#documentation-4">Documentation</a></h3>
+<h3 id="documentation-5"><a class="header" href="#documentation-5">Documentation</a></h3>
 <ul>
 <li>add src/fuzz AGENTS.md and rename FuzzParseRecipient to avoid -fuzz ambiguity (<a href="https://github.com/colonel-byte/cargoship/issues/500">#500</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/970d154534efeb2d2c54bc0cb213959d85aea91b">970d154</a>)</li>
 <li><strong>agent:</strong> require pre-commit before commit, drop em dash (<a href="https://github.com/colonel-byte/cargoship/issues/523">#523</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/458cc4d8b2b0e3b46ad319480535e3aa30158c92">458cc4d</a>)</li>
@@ -388,7 +422,7 @@
 <li>publish artifacts on regular basis (<a href="https://github.com/colonel-byte/cargoship/issues/445">#445</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/89085d78629533be47af69ddbca8ea0b700af079">89085d7</a>)</li>
 <li>test-build container images on dependabot docker bumps (<a href="https://github.com/colonel-byte/cargoship/issues/499">#499</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a76827fd0792c649f36d4f5ea1cc3d8aaa6b0567">a76827f</a>)</li>
 </ul>
-<h3 id="build-4"><a class="header" href="#build-4">Build</a></h3>
+<h3 id="build-5"><a class="header" href="#build-5">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump chainguard/cgr.dev/chainguard/static from <code>90b7f22</code> to <code>a6d1bbf</code> (<a href="https://github.com/colonel-byte/cargoship/issues/490">#490</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b547eaef57371719c48acd2ec48eb04b091c1fcb">b547eae</a>)</li>
 <li><strong>deps:</strong> bump chainguard/cgr.dev/chainguard/static from <code>a6d1bbf</code> to <code>f2787f1</code> (<a href="https://github.com/colonel-byte/cargoship/issues/497">#497</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c25c5e858b2e2a69288d6c705da309fb0f90950e">c25c5e8</a>)</li>
@@ -398,11 +432,11 @@
 <li><strong>deps:</strong> bump the misc group with 5 updates (<a href="https://github.com/colonel-byte/cargoship/issues/494">#494</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e9f76d21bd4c21aef0089b624986acd6c1d185f5">e9f76d2</a>)</li>
 </ul>
 <h2 id="0270-2026-09-24"><a class="header" href="#0270-2026-09-24"><a href="https://github.com/colonel-byte/cargoship/compare/v0.26.2...v0.27.0">0.27.0</a> (2026-09-24)</a></h2>
-<h3 id="-breaking-changes-3"><a class="header" href="#-breaking-changes-3">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-4"><a class="header" href="#-breaking-changes-4">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li><strong>release:</strong> add windows support (<a href="https://github.com/colonel-byte/cargoship/issues/487">#487</a>)</li>
 </ul>
-<h3 id="documentation-5"><a class="header" href="#documentation-5">Documentation</a></h3>
+<h3 id="documentation-6"><a class="header" href="#documentation-6">Documentation</a></h3>
 <ul>
 <li>address some drift (<a href="https://github.com/colonel-byte/cargoship/issues/486">#486</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/093b943a18f6f8b0ca5a86548f59501d665a7e8a">093b943</a>)</li>
 </ul>
@@ -411,7 +445,7 @@
 <li><strong>release:</strong> add windows support (<a href="https://github.com/colonel-byte/cargoship/issues/487">#487</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b80834d56607079d2d638fa14f3147021e773839">b80834d</a>)</li>
 </ul>
 <h2 id="0262-2026-09-23"><a class="header" href="#0262-2026-09-23"><a href="https://github.com/colonel-byte/cargoship/compare/v0.26.1...v0.26.2">0.26.2</a> (2026-09-23)</a></h2>
-<h3 id="documentation-6"><a class="header" href="#documentation-6">Documentation</a></h3>
+<h3 id="documentation-7"><a class="header" href="#documentation-7">Documentation</a></h3>
 <ul>
 <li><strong>ansible:</strong> declare the module and role interfaces in the collection (<a href="https://github.com/colonel-byte/cargoship/issues/481">#481</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c4437fe9c8ebb7f1dcb8830253c0367140ee2449">c4437fe</a>)</li>
 <li><strong>ansible:</strong> generate the collection reference pages (<a href="https://github.com/colonel-byte/cargoship/issues/482">#482</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d53be499eef7737ff9ebacc3cb4811182c988866">d53be49</a>)</li>
@@ -425,7 +459,7 @@
 <li>modify Cosign verification steps in .goreleaser.yaml (<a href="https://github.com/colonel-byte/cargoship/issues/477">#477</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/efbf83d388c0830b12376092ce57c46b9db12cf1">efbf83d</a>)</li>
 </ul>
 <h2 id="0261-2026-09-22"><a class="header" href="#0261-2026-09-22"><a href="https://github.com/colonel-byte/cargoship/compare/v0.26.0...v0.26.1">0.26.1</a> (2026-09-22)</a></h2>
-<h3 id="features-5"><a class="header" href="#features-5">Features</a></h3>
+<h3 id="features-6"><a class="header" href="#features-6">Features</a></h3>
 <ul>
 <li><strong>cli:</strong> add flag for overriding version (<a href="https://github.com/colonel-byte/cargoship/issues/469">#469</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/472b4b28c64e6e34baa2f0e277ff1cd5723b744b">472b4b2</a>)</li>
 <li><strong>example:</strong> allow overriding pod sec (<a href="https://github.com/colonel-byte/cargoship/issues/470">#470</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9055c02843f68821a5601ac9097a40d0cdab5944">9055c02</a>)</li>
@@ -441,17 +475,17 @@
 <li><strong>container:</strong> pin dnf packages (<a href="https://github.com/colonel-byte/cargoship/issues/468">#468</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/259f717ce3c605cb7fd5408d1bc0a5cdc58d2079">259f717</a>)</li>
 <li><strong>pin:</strong> update issue search (<a href="https://github.com/colonel-byte/cargoship/issues/473">#473</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/01e35fd93a8d1c1fcf198ef9af1709f3fb585855">01e35fd</a>)</li>
 </ul>
-<h3 id="build-5"><a class="header" href="#build-5">Build</a></h3>
+<h3 id="build-6"><a class="header" href="#build-6">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/ulikunitz/xz from 0.5.16 to 0.5.17 in the misc group (<a href="https://github.com/colonel-byte/cargoship/issues/465">#465</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b00556d59fdb203c3c5c08f7346301487cf3262e">b00556d</a>)</li>
 <li><strong>deps:</strong> bump the cosign group with 2 updates (<a href="https://github.com/colonel-byte/cargoship/issues/464">#464</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/79630658b6dd5a9d8d71bd5c67bce861f2792049">7963065</a>)</li>
 </ul>
 <h2 id="0260-2026-09-22"><a class="header" href="#0260-2026-09-22"><a href="https://github.com/colonel-byte/cargoship/compare/v0.25.0...v0.26.0">0.26.0</a> (2026-09-22)</a></h2>
-<h3 id="-breaking-changes-4"><a class="header" href="#-breaking-changes-4">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-5"><a class="header" href="#-breaking-changes-5">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>address various unsafe repo settings (<a href="https://github.com/colonel-byte/cargoship/issues/446">#446</a>)</li>
 </ul>
-<h3 id="features-6"><a class="header" href="#features-6">Features</a></h3>
+<h3 id="features-7"><a class="header" href="#features-7">Features</a></h3>
 <ul>
 <li><strong>ansible:</strong> add container to goreleaser (<a href="https://github.com/colonel-byte/cargoship/issues/456">#456</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/25667e2ac09563d97620a4b6b633afead9540457">25667e2</a>)</li>
 <li><strong>ansible:</strong> add heartbeat to ansible logs (<a href="https://github.com/colonel-byte/cargoship/issues/458">#458</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7998f65c0144b0279e1a88a2217d5fdf044b5944">7998f65</a>)</li>
@@ -469,7 +503,7 @@
 <ul>
 <li><strong>clustercfg:</strong> correct six YAML splice defects (<a href="https://github.com/colonel-byte/cargoship/issues/438">#438</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f2f07302fad3c04ac01f0b5f9671a5049b110749">f2f0730</a>)</li>
 </ul>
-<h3 id="documentation-7"><a class="header" href="#documentation-7">Documentation</a></h3>
+<h3 id="documentation-8"><a class="header" href="#documentation-8">Documentation</a></h3>
 <ul>
 <li>add ideas for inventory from-x (<a href="https://github.com/colonel-byte/cargoship/issues/437">#437</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/070774254ca08b05288919d84e74e2bb426ef0ab">0707742</a>)</li>
 <li><strong>agent:</strong> refine pr description (<a href="https://github.com/colonel-byte/cargoship/issues/440">#440</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9d5c4d6b2d3de698b5b49b4e626952830d16b0d6">9d5c4d6</a>)</li>
@@ -488,7 +522,7 @@
 <li><strong>mage:</strong> expose osv overrides (<a href="https://github.com/colonel-byte/cargoship/issues/463">#463</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7838fd9292579da6e1460fbeb62a294d30e293ee">7838fd9</a>)</li>
 <li><strong>vendor:</strong> stop scoring vendored JavaScript and Python as cargoship vulns (<a href="https://github.com/colonel-byte/cargoship/issues/447">#447</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d757666d4179529dee89b883f8c9ca969890d842">d757666</a>)</li>
 </ul>
-<h3 id="build-6"><a class="header" href="#build-6">Build</a></h3>
+<h3 id="build-7"><a class="header" href="#build-7">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump github.com/docker/cli from 29.8.0 to 29.8.1 (<a href="https://github.com/colonel-byte/cargoship/issues/451">#451</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/54c34a29ab0fa8915ca4ec0aa440b852f0883b1a">54c34a2</a>)</li>
 <li><strong>deps:</strong> bump github.com/zarf-dev/zarf from 0.85.0 to 0.86.0 in the zarf group (<a href="https://github.com/colonel-byte/cargoship/issues/449">#449</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ee26849a9b715ab4348ad23836d91bb1328eaa76">ee26849</a>)</li>
@@ -501,11 +535,11 @@
 <li><strong>deps:</strong> bump ubi9/ubi-minimal from <code>7b8e25a</code> to <code>984df0a</code> (<a href="https://github.com/colonel-byte/cargoship/issues/448">#448</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/fdcd56c6145cb43a868c1539b92f0eb951a9620d">fdcd56c</a>)</li>
 </ul>
 <h2 id="0250-2026-09-18"><a class="header" href="#0250-2026-09-18"><a href="https://github.com/colonel-byte/cargoship/compare/v0.24.0...v0.25.0">0.25.0</a> (2026-09-18)</a></h2>
-<h3 id="-breaking-changes-5"><a class="header" href="#-breaking-changes-5">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-6"><a class="header" href="#-breaking-changes-6">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li><strong>dagger:</strong> remove dagger config (<a href="https://github.com/colonel-byte/cargoship/issues/419">#419</a>)</li>
 </ul>
-<h3 id="features-7"><a class="header" href="#features-7">Features</a></h3>
+<h3 id="features-8"><a class="header" href="#features-8">Features</a></h3>
 <ul>
 <li><strong>vault:</strong> add age receipts (<a href="https://github.com/colonel-byte/cargoship/issues/424">#424</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1d814ee6033ec80947042b33c11c64a7e5a51e43">1d814ee</a>)</li>
 </ul>
@@ -513,7 +547,7 @@
 <ul>
 <li><strong>clustercfg:</strong> stop corrupting flow mappings and CRLF documents (<a href="https://github.com/colonel-byte/cargoship/issues/422">#422</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/687baea02af045c653b33a84bbe4a512ade40650">687baea</a>)</li>
 </ul>
-<h3 id="documentation-8"><a class="header" href="#documentation-8">Documentation</a></h3>
+<h3 id="documentation-9"><a class="header" href="#documentation-9">Documentation</a></h3>
 <ul>
 <li><strong>github:</strong> add AGENTS.md for pull request descriptions (<a href="https://github.com/colonel-byte/cargoship/issues/423">#423</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/083794e2b6487cc1afb5a6cc29b43db67c6bc9b0">083794e</a>)</li>
 </ul>
@@ -523,12 +557,12 @@
 <li><strong>fuzzing:</strong> testing (<a href="https://github.com/colonel-byte/cargoship/issues/421">#421</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8d8eeffaf5e0ea39c425ae82bf3766384d3f4218">8d8eeff</a>)</li>
 </ul>
 <h2 id="0240-2026-09-17"><a class="header" href="#0240-2026-09-17"><a href="https://github.com/colonel-byte/cargoship/compare/v0.23.0...v0.24.0">0.24.0</a> (2026-09-17)</a></h2>
-<h3 id="-breaking-changes-6"><a class="header" href="#-breaking-changes-6">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-7"><a class="header" href="#-breaking-changes-7">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li><strong>cli:</strong> add validate command (<a href="https://github.com/colonel-byte/cargoship/issues/417">#417</a>)</li>
 <li><strong>schema:</strong> generate schema file (<a href="https://github.com/colonel-byte/cargoship/issues/416">#416</a>)</li>
 </ul>
-<h3 id="features-8"><a class="header" href="#features-8">Features</a></h3>
+<h3 id="features-9"><a class="header" href="#features-9">Features</a></h3>
 <ul>
 <li><strong>assemble:</strong> resolve values before the build runs (<a href="https://github.com/colonel-byte/cargoship/issues/403">#403</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8c62cb5aa36318f4bac81e0cc8dce8d259fba8df">8c62cb5</a>)</li>
 <li><strong>cli:</strong> add validate command (<a href="https://github.com/colonel-byte/cargoship/issues/417">#417</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d0ca61866d5b121935f46b38add40d7e978e3f78">d0ca618</a>)</li>
@@ -549,16 +583,16 @@
 <li><strong>example:</strong> expand packages (<a href="https://github.com/colonel-byte/cargoship/issues/413">#413</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4bcb52331d56d6f1425a31712eb74b9bde440202">4bcb523</a>)</li>
 <li><strong>example:</strong> generate all examples (<a href="https://github.com/colonel-byte/cargoship/issues/412">#412</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4326533f3922c4a9bfd4132e9edd7290f6ec57b1">4326533</a>)</li>
 </ul>
-<h3 id="build-7"><a class="header" href="#build-7">Build</a></h3>
+<h3 id="build-8"><a class="header" href="#build-8">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump chainguard/cgr.dev/chainguard/static from <code>fa805e7</code> to <code>90b7f22</code> (<a href="https://github.com/colonel-byte/cargoship/issues/411">#411</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/902711ac30eddeac653cc184db532c7adfaa77d1">902711a</a>)</li>
 </ul>
 <h2 id="0230-2026-09-16"><a class="header" href="#0230-2026-09-16"><a href="https://github.com/colonel-byte/cargoship/compare/v0.22.1...v0.23.0">0.23.0</a> (2026-09-16)</a></h2>
-<h3 id="-breaking-changes-7"><a class="header" href="#-breaking-changes-7">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-8"><a class="header" href="#-breaking-changes-8">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>change base image for non-ubi image (<a href="https://github.com/colonel-byte/cargoship/issues/399">#399</a>)</li>
 </ul>
-<h3 id="features-9"><a class="header" href="#features-9">Features</a></h3>
+<h3 id="features-10"><a class="header" href="#features-10">Features</a></h3>
 <ul>
 <li><strong>cluster:</strong> accept SSH keys as age keys (<a href="https://github.com/colonel-byte/cargoship/issues/391">#391</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1323ef946c2e4b2897c279efdf2de7904ca5f77e">1323ef9</a>)</li>
 <li><strong>clustercfg:</strong> report registry credentials encrypt-file unchanged (<a href="https://github.com/colonel-byte/cargoship/issues/387">#387</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b850c0946bb958e7273733a5bb866d8516d96611">b850c09</a>)</li>
@@ -581,7 +615,7 @@
 <li><strong>dependabot:</strong> add docker registry auth (<a href="https://github.com/colonel-byte/cargoship/issues/395">#395</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/30c462306750177ffd7a350a3a1fc4bd4ba5a31b">30c4623</a>)</li>
 <li><strong>dependabot:</strong> add registry1 auth (<a href="https://github.com/colonel-byte/cargoship/issues/398">#398</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/863afa85830258c07e57c4f9331cbed826fc0179">863afa8</a>)</li>
 </ul>
-<h3 id="build-8"><a class="header" href="#build-8">Build</a></h3>
+<h3 id="build-9"><a class="header" href="#build-9">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> bump sigs.k8s.io/controller-runtime from 0.25.0 to 0.25.1 (<a href="https://github.com/colonel-byte/cargoship/issues/396">#396</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2a24295f7d659776a5790dc6084f918f996a538a">2a24295</a>)</li>
 <li><strong>deps:</strong> bump the misc group across 1 directory with 2 updates (<a href="https://github.com/colonel-byte/cargoship/issues/397">#397</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8b57a7e0aa36cf9b855a7354347d0eb6a9c66a04">8b57a7e</a>)</li>
@@ -594,22 +628,22 @@
 <ul>
 <li><strong>gorelease:</strong> add ‘latest’ tag (<a href="https://github.com/colonel-byte/cargoship/issues/372">#372</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d4c0f1ed892ef7fce3f742116e75e76c55554912">d4c0f1e</a>)</li>
 </ul>
-<h3 id="build-9"><a class="header" href="#build-9">Build</a></h3>
+<h3 id="build-10"><a class="header" href="#build-10">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump the cosign group with 20 updates (<a href="https://github.com/colonel-byte/cargoship/issues/369">#369</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8f000467b5f612f6bf61f77718a30eb3e70a2367">8f00046</a>)</li>
 <li><strong>deps:</strong> Bump the misc group with 6 updates (<a href="https://github.com/colonel-byte/cargoship/issues/370">#370</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7bc188fc74c85e0ffcdbfb5cd3c3f2ed7c996701">7bc188f</a>)</li>
 </ul>
 <h2 id="0220-2026-09-13"><a class="header" href="#0220-2026-09-13"><a href="https://github.com/colonel-byte/cargoship/compare/v0.21.0...v0.22.0">0.22.0</a> (2026-09-13)</a></h2>
-<h3 id="-breaking-changes-8"><a class="header" href="#-breaking-changes-8">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-9"><a class="header" href="#-breaking-changes-9">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add docker images (<a href="https://github.com/colonel-byte/cargoship/issues/364">#364</a>)</li>
 <li>add code owners file (<a href="https://github.com/colonel-byte/cargoship/issues/366">#366</a>)</li>
 </ul>
-<h3 id="features-10"><a class="header" href="#features-10">Features</a></h3>
+<h3 id="features-11"><a class="header" href="#features-11">Features</a></h3>
 <ul>
 <li><strong>cli:</strong> remove unneeded global flags (<a href="https://github.com/colonel-byte/cargoship/issues/361">#361</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1185e460b5eec1e160adf95cd1e8dbeb5d006e65">1185e46</a>)</li>
 </ul>
-<h3 id="refactoring-3"><a class="header" href="#refactoring-3">Refactoring</a></h3>
+<h3 id="refactoring-4"><a class="header" href="#refactoring-4">Refactoring</a></h3>
 <ul>
 <li><strong>test:</strong> make it more easy to track (<a href="https://github.com/colonel-byte/cargoship/issues/362">#362</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/bde3b68d026850b3568b907b96a390d975869c93">bde3b68</a>)</li>
 </ul>
@@ -619,17 +653,17 @@
 <li>add docker images (<a href="https://github.com/colonel-byte/cargoship/issues/364">#364</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a3a5070695757712f3d13f8d5c60f39490843b20">a3a5070</a>)</li>
 <li>add pre-commit checking (<a href="https://github.com/colonel-byte/cargoship/issues/365">#365</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e19472a34b7e9bdd99b1357fd260d4d08989b5d5">e19472a</a>)</li>
 </ul>
-<h3 id="build-10"><a class="header" href="#build-10">Build</a></h3>
+<h3 id="build-11"><a class="header" href="#build-11">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump alpine from 3.22 to 3.24 (<a href="https://github.com/colonel-byte/cargoship/issues/368">#368</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6f85407a36937f2f82f56906a3b1032f706a6127">6f85407</a>)</li>
 <li><strong>deps:</strong> Bump the golang group 11 updates (<a href="https://github.com/colonel-byte/cargoship/issues/367">#367</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d727bd3037b57900654fda92be9b97357e97647f">d727bd3</a>)</li>
 </ul>
 <h2 id="0210-2026-09-11"><a class="header" href="#0210-2026-09-11"><a href="https://github.com/colonel-byte/cargoship/compare/v0.20.1...v0.21.0">0.21.0</a> (2026-09-11)</a></h2>
-<h3 id="-breaking-changes-9"><a class="header" href="#-breaking-changes-9">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-10"><a class="header" href="#-breaking-changes-10">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>kubeconfig as value (<a href="https://github.com/colonel-byte/cargoship/issues/337">#337</a>)</li>
 </ul>
-<h3 id="features-11"><a class="header" href="#features-11">Features</a></h3>
+<h3 id="features-12"><a class="header" href="#features-12">Features</a></h3>
 <ul>
 <li>allow passing yaml blocks for helm manifests (<a href="https://github.com/colonel-byte/cargoship/issues/341">#341</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d493a7ce8fdfa4d1e25bbbe5582acb62b1346f1b">d493a7c</a>)</li>
 <li>kubeconfig as value (<a href="https://github.com/colonel-byte/cargoship/issues/337">#337</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7182994c711bcb8a78cd122eb6192fd3fc1f076">d718299</a>)</li>
@@ -646,11 +680,11 @@
 <ul>
 <li><strong>vault:</strong> rewrite a credential two registries share only once (<a href="https://github.com/colonel-byte/cargoship/issues/357">#357</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a91971a1914c0d3c74f7af50eeedd06472da2e7b">a91971a</a>)</li>
 </ul>
-<h3 id="refactoring-4"><a class="header" href="#refactoring-4">Refactoring</a></h3>
+<h3 id="refactoring-5"><a class="header" href="#refactoring-5">Refactoring</a></h3>
 <ul>
 <li><strong>examples:</strong> show off yaml block (<a href="https://github.com/colonel-byte/cargoship/issues/342">#342</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/82ffe23c8ef10bd617a50fc819df539a2d39ab27">82ffe23</a>)</li>
 </ul>
-<h3 id="documentation-9"><a class="header" href="#documentation-9">Documentation</a></h3>
+<h3 id="documentation-10"><a class="header" href="#documentation-10">Documentation</a></h3>
 <ul>
 <li><strong>vault:</strong> add a guide to vault encryption and decryption (<a href="https://github.com/colonel-byte/cargoship/issues/348">#348</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6f1ad356c3f62605be55152ab9577994f6bb338b">6f1ad35</a>)</li>
 </ul>
@@ -662,7 +696,7 @@
 <li>update logic on clean (<a href="https://github.com/colonel-byte/cargoship/issues/360">#360</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d42991ea71f7f10b6ea131d5a251271051c7ef0e">d42991e</a>)</li>
 </ul>
 <h2 id="0201-2026-09-10"><a class="header" href="#0201-2026-09-10"><a href="https://github.com/colonel-byte/cargoship/compare/v0.20.0...v0.20.1">0.20.1</a> (2026-09-10)</a></h2>
-<h3 id="features-12"><a class="header" href="#features-12">Features</a></h3>
+<h3 id="features-13"><a class="header" href="#features-13">Features</a></h3>
 <ul>
 <li>add mage function for generating packages (<a href="https://github.com/colonel-byte/cargoship/issues/335">#335</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5dd0c19079f41b6ac6934ca2ceaf291547ac0e07">5dd0c19</a>)</li>
 <li><strong>engine-config:</strong> remove files cargoship no longer writes (<a href="https://github.com/colonel-byte/cargoship/issues/331">#331</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2f9de30a6448a74a683b7f9c8d1105ae706e1e99">2f9de30</a>)</li>
@@ -676,16 +710,16 @@
 <ul>
 <li>write the registry keys the engines actually read (<a href="https://github.com/colonel-byte/cargoship/issues/327">#327</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ab1565bbcc0ef98238a5e7c884e5b41118e287fc">ab1565b</a>)</li>
 </ul>
-<h3 id="refactoring-5"><a class="header" href="#refactoring-5">Refactoring</a></h3>
+<h3 id="refactoring-6"><a class="header" href="#refactoring-6">Refactoring</a></h3>
 <ul>
 <li><strong>example:</strong> expand examples and dev setup (<a href="https://github.com/colonel-byte/cargoship/issues/334">#334</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2c49dfdbe5f16bf853ff41e1150806acab9d102a">2c49dfd</a>)</li>
 </ul>
 <h2 id="0200-2026-09-09"><a class="header" href="#0200-2026-09-09"><a href="https://github.com/colonel-byte/cargoship/compare/v0.19.0...v0.20.0">0.20.0</a> (2026-09-09)</a></h2>
-<h3 id="-breaking-changes-10"><a class="header" href="#-breaking-changes-10">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-11"><a class="header" href="#-breaking-changes-11">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>rework backend selection (<a href="https://github.com/colonel-byte/cargoship/issues/264">#264</a>)</li>
 </ul>
-<h3 id="features-13"><a class="header" href="#features-13">Features</a></h3>
+<h3 id="features-14"><a class="header" href="#features-14">Features</a></h3>
 <ul>
 <li>add dry-run support (<a href="https://github.com/colonel-byte/cargoship/issues/312">#312</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c1a2cf429f75021b8a1d070f51504a853145dde8">c1a2cf4</a>)</li>
 <li>assemble multi-arch packages with an OCI image index (<a href="https://github.com/colonel-byte/cargoship/issues/263">#263</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/db8d106e0710e4dbd835143512b44e9bb2d00716">db8d106</a>)</li>
@@ -705,14 +739,14 @@
 <li>export image tarballs for the package architecture (<a href="https://github.com/colonel-byte/cargoship/issues/266">#266</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/dbe65d7fa8bb12243566ee443e896955678c408a">dbe65d7</a>)</li>
 <li>honour –architecture on package create and package pull (<a href="https://github.com/colonel-byte/cargoship/issues/262">#262</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4665c850b71f89d0f7472e659f805fd70f313217">4665c85</a>)</li>
 </ul>
-<h3 id="refactoring-6"><a class="header" href="#refactoring-6">Refactoring</a></h3>
+<h3 id="refactoring-7"><a class="header" href="#refactoring-7">Refactoring</a></h3>
 <ul>
 <li><strong>distro:</strong> drop the concrete-type switch from the uninstall phase (<a href="https://github.com/colonel-byte/cargoship/issues/318">#318</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7e8f8ad20e42ac7ea5ec5e4b11b4245c9efc3928">7e8f8ad</a>)</li>
 <li><strong>distro:</strong> move the engine version regex off Common (<a href="https://github.com/colonel-byte/cargoship/issues/317">#317</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d2149a48a0f6d763bba43fa153823d0860b2ae5e">d2149a4</a>)</li>
 <li><strong>distro:</strong> read admin kubeconfig credentials through the distro interface (<a href="https://github.com/colonel-byte/cargoship/issues/319">#319</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/74c792af85834e8501228c3c4ad4f7d86606a91e">74c792a</a>)</li>
 <li><strong>example:</strong> retune the cilium defaults and unquote the sysctl values (<a href="https://github.com/colonel-byte/cargoship/issues/324">#324</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/bb06592f46794372dd9da9ca1db4c3f649292e05">bb06592</a>)</li>
 </ul>
-<h3 id="documentation-10"><a class="header" href="#documentation-10">Documentation</a></h3>
+<h3 id="documentation-11"><a class="header" href="#documentation-11">Documentation</a></h3>
 <ul>
 <li>play with cleaner print-able (<a href="https://github.com/colonel-byte/cargoship/issues/254">#254</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c751bf4a4f661fc006772eafd3a34723190d82e1">c751bf4</a>)</li>
 </ul>
@@ -724,7 +758,7 @@
 <li>unhide refactor section (<a href="https://github.com/colonel-byte/cargoship/issues/321">#321</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f45dcd68eef60ced3c6403b54ee5c3b928dd19b6">f45dcd6</a>)</li>
 <li>update dependabot config (<a href="https://github.com/colonel-byte/cargoship/issues/303">#303</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/920e51591355d08934cf88eeaa4c8649d3563ffe">920e515</a>)</li>
 </ul>
-<h3 id="build-11"><a class="header" href="#build-11">Build</a></h3>
+<h3 id="build-12"><a class="header" href="#build-12">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/docker/cli from 29.7.2 to 29.8.0 (<a href="https://github.com/colonel-byte/cargoship/issues/300">#300</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/f3993388e016d1b1c76932f1d25812686049a111">f399338</a>)</li>
 <li><strong>deps:</strong> Bump github.com/zarf-dev/zarf from 0.84.0 to 0.85.0 (<a href="https://github.com/colonel-byte/cargoship/issues/297">#297</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8ffbd145990ebdb83fc2659c04e11f2f5b10245c">8ffbd14</a>)</li>
@@ -736,27 +770,27 @@
 <li><strong>deps:</strong> Bump the misc group across 1 directory with 36 updates (<a href="https://github.com/colonel-byte/cargoship/issues/313">#313</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/15745826331aa09ee51c6a1baba85d9723dc3702">1574582</a>)</li>
 </ul>
 <h2 id="0190-2026-09-01"><a class="header" href="#0190-2026-09-01"><a href="https://github.com/colonel-byte/cargoship/compare/v0.18.0...v0.19.0">0.19.0</a> (2026-09-01)</a></h2>
-<h3 id="-breaking-changes-11"><a class="header" href="#-breaking-changes-11">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-12"><a class="header" href="#-breaking-changes-12">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>rework to add ufw support (<a href="https://github.com/colonel-byte/cargoship/issues/249">#249</a>)</li>
 <li>drop the update- prefix from the host modification flags (<a href="https://github.com/colonel-byte/cargoship/issues/250">#250</a>)</li>
 </ul>
-<h3 id="features-14"><a class="header" href="#features-14">Features</a></h3>
+<h3 id="features-15"><a class="header" href="#features-15">Features</a></h3>
 <ul>
 <li>add an nftables firewall backend (<a href="https://github.com/colonel-byte/cargoship/issues/251">#251</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7541115416e50159d54e351de0f87cb959e35772">7541115</a>)</li>
 <li>drop the update- prefix from the host modification flags (<a href="https://github.com/colonel-byte/cargoship/issues/250">#250</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/39d0d4734939093f563e81752f7ad3720584c0f9">39d0d47</a>)</li>
 <li>rework to add ufw support (<a href="https://github.com/colonel-byte/cargoship/issues/249">#249</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8576563efae70748eb21ba019651df29e979829b">8576563</a>)</li>
 </ul>
 <h2 id="0180-2026-09-01"><a class="header" href="#0180-2026-09-01"><a href="https://github.com/colonel-byte/cargoship/compare/v0.17.0...v0.18.0">0.18.0</a> (2026-09-01)</a></h2>
-<h3 id="-breaking-changes-12"><a class="header" href="#-breaking-changes-12">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-13"><a class="header" href="#-breaking-changes-13">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add package verification (<a href="https://github.com/colonel-byte/cargoship/issues/248">#248</a>)</li>
 </ul>
-<h3 id="features-15"><a class="header" href="#features-15">Features</a></h3>
+<h3 id="features-16"><a class="header" href="#features-16">Features</a></h3>
 <ul>
 <li>add package verification (<a href="https://github.com/colonel-byte/cargoship/issues/248">#248</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/231030b60eea38478c9903a0b8dc6025e0dcf01b">231030b</a>)</li>
 </ul>
-<h3 id="build-12"><a class="header" href="#build-12">Build</a></h3>
+<h3 id="build-13"><a class="header" href="#build-13">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/docker/docker-credential-helpers from 0.9.8 to 0.9.9 (<a href="https://github.com/colonel-byte/cargoship/issues/241">#241</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0c0d8e81b9834c8fe85a99f790a621898096a39d">0c0d8e8</a>)</li>
 <li><strong>deps:</strong> Bump golangci-lint from v2.13.1 to 2.13.2 in the core group across 1 directory (<a href="https://github.com/colonel-byte/cargoship/issues/239">#239</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e9bdab85d00a5086bb19ba0e7762aaba3af594b5">e9bdab8</a>)</li>
@@ -767,7 +801,7 @@
 <li><strong>deps:</strong> Bump the opentelemetry group across 1 directory with 11 updates (<a href="https://github.com/colonel-byte/cargoship/issues/245">#245</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5d15c695e518b4b6bce5598c0eee6f7340205edf">5d15c69</a>)</li>
 </ul>
 <h2 id="0170-2026-08-31"><a class="header" href="#0170-2026-08-31"><a href="https://github.com/colonel-byte/cargoship/compare/v0.16.0...v0.17.0">0.17.0</a> (2026-08-31)</a></h2>
-<h3 id="-breaking-changes-13"><a class="header" href="#-breaking-changes-13">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-14"><a class="header" href="#-breaking-changes-14">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>make package signature verification actually run on publish and local sources (<a href="https://github.com/colonel-byte/cargoship/issues/236">#236</a>)</li>
 </ul>
@@ -783,18 +817,18 @@
 <li>update actions (<a href="https://github.com/colonel-byte/cargoship/issues/232">#232</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c62b748a1f3bf4e79e0e60b58aae3082f902f537">c62b748</a>)</li>
 </ul>
 <h2 id="0160-2026-08-30"><a class="header" href="#0160-2026-08-30"><a href="https://github.com/colonel-byte/cargoship/compare/v0.15.1...v0.16.0">0.16.0</a> (2026-08-30)</a></h2>
-<h3 id="-breaking-changes-14"><a class="header" href="#-breaking-changes-14">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-15"><a class="header" href="#-breaking-changes-15">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>generate rke2 and k3s example packages per CNI flavor (<a href="https://github.com/colonel-byte/cargoship/issues/228">#228</a>)</li>
 </ul>
-<h3 id="features-16"><a class="header" href="#features-16">Features</a></h3>
+<h3 id="features-17"><a class="header" href="#features-17">Features</a></h3>
 <ul>
 <li>generate rke2 and k3s example packages per CNI flavor (<a href="https://github.com/colonel-byte/cargoship/issues/228">#228</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d9e5c0d2dec0be80a48cdac082b4d5f4fbb91126">d9e5c0d</a>)</li>
 <li>generate typed engine config structs per distro and version (<a href="https://github.com/colonel-byte/cargoship/issues/226">#226</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/c2649b3e10c2f5f88139dd8d841dce70b76997db">c2649b3</a>)</li>
 <li>pull pinned k3s and rke2 source into thirdparty-src (<a href="https://github.com/colonel-byte/cargoship/issues/225">#225</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b8ee10659b87616d67108cacacf7dcdd66aca27e">b8ee106</a>)</li>
 <li>validate engine config keys against the generated schemas (<a href="https://github.com/colonel-byte/cargoship/issues/227">#227</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b959ef581a873d2188625daf8fac90ae845ecb50">b959ef5</a>)</li>
 </ul>
-<h3 id="documentation-11"><a class="header" href="#documentation-11">Documentation</a></h3>
+<h3 id="documentation-12"><a class="header" href="#documentation-12">Documentation</a></h3>
 <ul>
 <li>add usage examples to every cargoship subcommand (<a href="https://github.com/colonel-byte/cargoship/issues/230">#230</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d4d7528940ee174847782d754f3a532743e309ed">d4d7528</a>)</li>
 <li>expand the mage target reference (<a href="https://github.com/colonel-byte/cargoship/issues/224">#224</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/84c60f77bc3a0758b73b02c3ee66faaa8c2f8501">84c60f7</a>)</li>
@@ -804,17 +838,17 @@
 <li>add commit hash (<a href="https://github.com/colonel-byte/cargoship/issues/231">#231</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b9ac48aacab5675b1af960d5503d60a2ee78a20a">b9ac48a</a>)</li>
 </ul>
 <h2 id="0151-2026-08-29"><a class="header" href="#0151-2026-08-29"><a href="https://github.com/colonel-byte/cargoship/compare/v0.15.0...v0.15.1">0.15.1</a> (2026-08-29)</a></h2>
-<h3 id="features-17"><a class="header" href="#features-17">Features</a></h3>
+<h3 id="features-18"><a class="header" href="#features-18">Features</a></h3>
 <ul>
 <li>reduce binary (<a href="https://github.com/colonel-byte/cargoship/issues/221">#221</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/43a17fc5e96d73277d82ced969b462a86876987a">43a17fc</a>)</li>
 </ul>
 <h2 id="0150-2026-08-28"><a class="header" href="#0150-2026-08-28"><a href="https://github.com/colonel-byte/cargoship/compare/v0.14.0...v0.15.0">0.15.0</a> (2026-08-28)</a></h2>
-<h3 id="-breaking-changes-15"><a class="header" href="#-breaking-changes-15">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-16"><a class="header" href="#-breaking-changes-16">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add profile concurrency (<a href="https://github.com/colonel-byte/cargoship/issues/219">#219</a>)</li>
 <li>allow registry overrides (<a href="https://github.com/colonel-byte/cargoship/issues/215">#215</a>)</li>
 </ul>
-<h3 id="features-18"><a class="header" href="#features-18">Features</a></h3>
+<h3 id="features-19"><a class="header" href="#features-19">Features</a></h3>
 <ul>
 <li>add profile concurrency (<a href="https://github.com/colonel-byte/cargoship/issues/219">#219</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1abcc66b9a50168c30fb9ac388a7a9800b4df872">1abcc66</a>)</li>
 <li>allow registry overrides (<a href="https://github.com/colonel-byte/cargoship/issues/215">#215</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/cac56ee52a83071d4a0dbc414c5d9d4b25387ac9">cac56ee</a>)</li>
@@ -824,13 +858,13 @@
 <li>logging on rig (<a href="https://github.com/colonel-byte/cargoship/issues/217">#217</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4e00e9959943955149f8ded82075995e55a8cddf">4e00e99</a>)</li>
 </ul>
 <h2 id="0140-2026-08-27"><a class="header" href="#0140-2026-08-27"><a href="https://github.com/colonel-byte/cargoship/compare/v0.13.0...v0.14.0">0.14.0</a> (2026-08-27)</a></h2>
-<h3 id="-breaking-changes-16"><a class="header" href="#-breaking-changes-16">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-17"><a class="header" href="#-breaking-changes-17">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add logging to file (<a href="https://github.com/colonel-byte/cargoship/issues/213">#213</a>)</li>
 <li>add logic for keeping track of files uploaded (<a href="https://github.com/colonel-byte/cargoship/issues/212">#212</a>)</li>
 <li>add registry overrides (<a href="https://github.com/colonel-byte/cargoship/issues/211">#211</a>)</li>
 </ul>
-<h3 id="features-19"><a class="header" href="#features-19">Features</a></h3>
+<h3 id="features-20"><a class="header" href="#features-20">Features</a></h3>
 <ul>
 <li>add ability to sign packages (<a href="https://github.com/colonel-byte/cargoship/issues/208">#208</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3646edff8d641eabd9570db483b1c1eef5dd45bc">3646edf</a>)</li>
 <li>add logging to file (<a href="https://github.com/colonel-byte/cargoship/issues/213">#213</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b9ee105cfc6f99d681c7f480e89b9961ee60ccb0">b9ee105</a>)</li>
@@ -839,11 +873,11 @@
 <li>add the ability to create reproducible packages (<a href="https://github.com/colonel-byte/cargoship/issues/209">#209</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2737a873bc441c4ef49eec1b45e9bdd4973a57f8">2737a87</a>)</li>
 </ul>
 <h2 id="0130-2026-08-24"><a class="header" href="#0130-2026-08-24"><a href="https://github.com/colonel-byte/cargoship/compare/v0.12.0...v0.13.0">0.13.0</a> (2026-08-24)</a></h2>
-<h3 id="-breaking-changes-17"><a class="header" href="#-breaking-changes-17">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-18"><a class="header" href="#-breaking-changes-18">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add caching of artifacts (<a href="https://github.com/colonel-byte/cargoship/issues/204">#204</a>)</li>
 </ul>
-<h3 id="features-20"><a class="header" href="#features-20">Features</a></h3>
+<h3 id="features-21"><a class="header" href="#features-21">Features</a></h3>
 <ul>
 <li>add caching of artifacts (<a href="https://github.com/colonel-byte/cargoship/issues/204">#204</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/854111dd521c03b7eb2b275c5906dc23c0e2a77a">854111d</a>)</li>
 <li>add shell completion for arch (<a href="https://github.com/colonel-byte/cargoship/issues/207">#207</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e81b2fbf3befe062c8e39adf04141bb50b560f7e">e81b2fb</a>)</li>
@@ -853,7 +887,7 @@
 <ul>
 <li>update dependabot config (<a href="https://github.com/colonel-byte/cargoship/issues/196">#196</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3ca50fddde487d5916b35823bdc77bf9602cf412">3ca50fd</a>)</li>
 </ul>
-<h3 id="build-13"><a class="header" href="#build-13">Build</a></h3>
+<h3 id="build-14"><a class="header" href="#build-14">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump google.golang.org/grpc from 1.83.0 to 1.83.1 (<a href="https://github.com/colonel-byte/cargoship/issues/195">#195</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/88784531588e37eeb94694e8327bf60cd370230a">8878453</a>)</li>
 <li><strong>deps:</strong> Bump the core group across 1 directory with 2 updates (<a href="https://github.com/colonel-byte/cargoship/issues/198">#198</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/1b6324e93ad3a94422e62d77c351959eb9ed52c1">1b6324e</a>)</li>
@@ -862,11 +896,11 @@
 <li><strong>deps:</strong> Bump the misc group across 1 directory with 28 updates (<a href="https://github.com/colonel-byte/cargoship/issues/201">#201</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/dfb9e2973390e93c8f4949f53203237f072d9341">dfb9e29</a>)</li>
 </ul>
 <h2 id="0120-2026-08-23"><a class="header" href="#0120-2026-08-23"><a href="https://github.com/colonel-byte/cargoship/compare/v0.11.0...v0.12.0">0.12.0</a> (2026-08-23)</a></h2>
-<h3 id="-breaking-changes-18"><a class="header" href="#-breaking-changes-18">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-19"><a class="header" href="#-breaking-changes-19">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>rework viper config (<a href="https://github.com/colonel-byte/cargoship/issues/191">#191</a>)</li>
 </ul>
-<h3 id="features-21"><a class="header" href="#features-21">Features</a></h3>
+<h3 id="features-22"><a class="header" href="#features-22">Features</a></h3>
 <ul>
 <li>add shell completion for flags (<a href="https://github.com/colonel-byte/cargoship/issues/190">#190</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c4046a77ee96911930cae4c0df9b379b0158a2d">9c4046a</a>)</li>
 <li>rework viper config (<a href="https://github.com/colonel-byte/cargoship/issues/191">#191</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5513027781368449747342ad12f685dfb3ae9318">5513027</a>)</li>
@@ -876,15 +910,15 @@
 <li>move mage main to allow vendoring (<a href="https://github.com/colonel-byte/cargoship/issues/188">#188</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/75c6d464621ea3e128087d4376ec315d92fefe8f">75c6d46</a>)</li>
 </ul>
 <h2 id="0110-2026-08-21"><a class="header" href="#0110-2026-08-21"><a href="https://github.com/colonel-byte/cargoship/compare/v0.10.2...v0.11.0">0.11.0</a> (2026-08-21)</a></h2>
-<h3 id="-breaking-changes-19"><a class="header" href="#-breaking-changes-19">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-20"><a class="header" href="#-breaking-changes-20">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>update zarf version (<a href="https://github.com/colonel-byte/cargoship/issues/187">#187</a>)</li>
 </ul>
-<h3 id="features-22"><a class="header" href="#features-22">Features</a></h3>
+<h3 id="features-23"><a class="header" href="#features-23">Features</a></h3>
 <ul>
 <li>update zarf version (<a href="https://github.com/colonel-byte/cargoship/issues/187">#187</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/13c95955fecc3fca242f847befc0f1f65dc0069c">13c9595</a>)</li>
 </ul>
-<h3 id="build-14"><a class="header" href="#build-14">Build</a></h3>
+<h3 id="build-15"><a class="header" href="#build-15">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump the cosign group across 1 directory with 20 updates (<a href="https://github.com/colonel-byte/cargoship/issues/183">#183</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/eb4a6ff3669d650d29a7591b137e0defe8915074">eb4a6ff</a>)</li>
 <li><strong>deps:</strong> Bump the golang group across 1 directory with 10 updates (<a href="https://github.com/colonel-byte/cargoship/issues/182">#182</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a9deafcedd1cce6addcd103d0cc16b2a370a1a69">a9deafc</a>)</li>
@@ -892,33 +926,33 @@
 <li><strong>deps:</strong> Bump the opentelemetry group across 1 directory with 5 updates (<a href="https://github.com/colonel-byte/cargoship/issues/184">#184</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/61ce4938316fc0388463542ec11c9e685fa04207">61ce493</a>)</li>
 </ul>
 <h2 id="0102-2026-08-14"><a class="header" href="#0102-2026-08-14"><a href="https://github.com/colonel-byte/cargoship/compare/v0.10.1...v0.10.2">0.10.2</a> (2026-08-14)</a></h2>
-<h3 id="features-23"><a class="header" href="#features-23">Features</a></h3>
+<h3 id="features-24"><a class="header" href="#features-24">Features</a></h3>
 <ul>
 <li>remove ingests folder from tarball (<a href="https://github.com/colonel-byte/cargoship/issues/180">#180</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/29ded7b16f47e9434f9e721b82af055ca29db074">29ded7b</a>)</li>
 </ul>
-<h3 id="documentation-12"><a class="header" href="#documentation-12">Documentation</a></h3>
+<h3 id="documentation-13"><a class="header" href="#documentation-13">Documentation</a></h3>
 <ul>
 <li>add asd ste1000 (<a href="https://github.com/colonel-byte/cargoship/issues/179">#179</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6fed7f5c709087d33403eac0fa5793abe739226e">6fed7f5</a>)</li>
 </ul>
 <h2 id="0101-2026-08-12"><a class="header" href="#0101-2026-08-12"><a href="https://github.com/colonel-byte/cargoship/compare/v0.10.0...v0.10.1">0.10.1</a> (2026-08-12)</a></h2>
-<h3 id="documentation-13"><a class="header" href="#documentation-13">Documentation</a></h3>
+<h3 id="documentation-14"><a class="header" href="#documentation-14">Documentation</a></h3>
 <ul>
 <li>simplify markdown (<a href="https://github.com/colonel-byte/cargoship/issues/177">#177</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/37511a5ca3c8db665ea3d5f8b1bda99cbfe7a91d">37511a5</a>)</li>
 </ul>
 <h2 id="0100-2026-08-11"><a class="header" href="#0100-2026-08-11"><a href="https://github.com/colonel-byte/cargoship/compare/v0.9.0...v0.10.0">0.10.0</a> (2026-08-11)</a></h2>
-<h3 id="-breaking-changes-20"><a class="header" href="#-breaking-changes-20">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-21"><a class="header" href="#-breaking-changes-21">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add profiles for the config (<a href="https://github.com/colonel-byte/cargoship/issues/176">#176</a>)</li>
 <li>schema generator includes golang comments (<a href="https://github.com/colonel-byte/cargoship/issues/165">#165</a>)</li>
 </ul>
-<h3 id="features-24"><a class="header" href="#features-24">Features</a></h3>
+<h3 id="features-25"><a class="header" href="#features-25">Features</a></h3>
 <ul>
 <li>add profiles for the config (<a href="https://github.com/colonel-byte/cargoship/issues/176">#176</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/cda1112ef8c1f284b7abff2a71d33380910b7d4a">cda1112</a>)</li>
 <li>add the built dagger artifacts (<a href="https://github.com/colonel-byte/cargoship/issues/158">#158</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9f6163021dcd1300a522b44101d652ee7c6a6e23">9f61630</a>)</li>
 <li>schema generator includes golang comments (<a href="https://github.com/colonel-byte/cargoship/issues/165">#165</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/68364ff101da6177193702a1d82ac68c978a53da">68364ff</a>)</li>
 <li>standardize the location distro interaction (<a href="https://github.com/colonel-byte/cargoship/issues/159">#159</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3ba592eb0e1549cc36eba7cd21e8991bcb958de4">3ba592e</a>)</li>
 </ul>
-<h3 id="documentation-14"><a class="header" href="#documentation-14">Documentation</a></h3>
+<h3 id="documentation-15"><a class="header" href="#documentation-15">Documentation</a></h3>
 <ul>
 <li>expand info about the project (<a href="https://github.com/colonel-byte/cargoship/issues/166">#166</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4d672f52f66f4b715946dc2ee681f80866b640d9">4d672f5</a>)</li>
 </ul>
@@ -929,7 +963,7 @@
 <li>update the dependabot config (<a href="https://github.com/colonel-byte/cargoship/issues/172">#172</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/aa6652a756d87b1fc52d029c14eb1a9b8a123478">aa6652a</a>)</li>
 <li>update the dependabot logic (<a href="https://github.com/colonel-byte/cargoship/issues/150">#150</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d7b2fef1d05514ff6dab86cba825d3768caf0ec9">d7b2fef</a>)</li>
 </ul>
-<h3 id="build-15"><a class="header" href="#build-15">Build</a></h3>
+<h3 id="build-16"><a class="header" href="#build-16">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/alibabacloud-go/debug from 1.0.0 to 1.0.1 (<a href="https://github.com/colonel-byte/cargoship/issues/149">#149</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/6891f31721473f27187f5ff8d6e79f6e57b5c1b1">6891f31</a>)</li>
 <li><strong>deps:</strong> Bump github.com/aws/aws-sdk-go-v2/internal/configsources from 1.4.29 to 1.4.34 (<a href="https://github.com/colonel-byte/cargoship/issues/144">#144</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/45d3e40af149ad24077947d705e4a0eb33635e66">45d3e40</a>)</li>
@@ -954,24 +988,24 @@
 <li><strong>deps:</strong> Bump the sigstore group across 1 directory with 6 updates (<a href="https://github.com/colonel-byte/cargoship/issues/161">#161</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/26f65d3919ddee72f2a3feeecce74bbb61b4cf33">26f65d3</a>)</li>
 </ul>
 <h2 id="090-2026-08-05"><a class="header" href="#090-2026-08-05"><a href="https://github.com/colonel-byte/cargoship/compare/v0.8.0...v0.9.0">0.9.0</a> (2026-08-05)</a></h2>
-<h3 id="-breaking-changes-21"><a class="header" href="#-breaking-changes-21">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-22"><a class="header" href="#-breaking-changes-22">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add framework for publishing and pulling packages (<a href="https://github.com/colonel-byte/cargoship/issues/134">#134</a>)</li>
 </ul>
-<h3 id="features-25"><a class="header" href="#features-25">Features</a></h3>
+<h3 id="features-26"><a class="header" href="#features-26">Features</a></h3>
 <ul>
 <li>add framework for publishing and pulling packages (<a href="https://github.com/colonel-byte/cargoship/issues/134">#134</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9f972535442cd50c596424ae6610bd7fbc8671ea">9f97253</a>)</li>
 </ul>
 <h2 id="080-2026-08-04"><a class="header" href="#080-2026-08-04"><a href="https://github.com/colonel-byte/cargoship/compare/v0.7.0...v0.8.0">0.8.0</a> (2026-08-04)</a></h2>
-<h3 id="-breaking-changes-22"><a class="header" href="#-breaking-changes-22">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-23"><a class="header" href="#-breaking-changes-23">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add sha256sum command (<a href="https://github.com/colonel-byte/cargoship/issues/136">#136</a>)</li>
 </ul>
-<h3 id="features-26"><a class="header" href="#features-26">Features</a></h3>
+<h3 id="features-27"><a class="header" href="#features-27">Features</a></h3>
 <ul>
 <li>add sha256sum command (<a href="https://github.com/colonel-byte/cargoship/issues/136">#136</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a1b5f8b8b67c78a6d8daa3fbe7db6a9a0eec0425">a1b5f8b</a>)</li>
 </ul>
-<h3 id="documentation-15"><a class="header" href="#documentation-15">Documentation</a></h3>
+<h3 id="documentation-16"><a class="header" href="#documentation-16">Documentation</a></h3>
 <ul>
 <li>add mdbook site builder (<a href="https://github.com/colonel-byte/cargoship/issues/135">#135</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/fa31b78f796838e57b97afe233269be13e45900a">fa31b78</a>)</li>
 </ul>
@@ -981,7 +1015,7 @@
 <li>remove bootloose images (<a href="https://github.com/colonel-byte/cargoship/issues/131">#131</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/49bc60cf344ad9b22bb22a4f425dc46501cef11d">49bc60c</a>)</li>
 </ul>
 <h2 id="070-2026-07-28"><a class="header" href="#070-2026-07-28"><a href="https://github.com/colonel-byte/cargoship/compare/v0.6.0...v0.7.0">0.7.0</a> (2026-07-28)</a></h2>
-<h3 id="-breaking-changes-23"><a class="header" href="#-breaking-changes-23">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-24"><a class="header" href="#-breaking-changes-24">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>vendor the golang dep (<a href="https://github.com/colonel-byte/cargoship/issues/128">#128</a>)</li>
 </ul>
@@ -991,7 +1025,7 @@
 <li>address dependabot issues (<a href="https://github.com/colonel-byte/cargoship/issues/129">#129</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/07c3a04402cd70ea0631b5416731884affb8c681">07c3a04</a>)</li>
 <li>vendor the golang dep (<a href="https://github.com/colonel-byte/cargoship/issues/128">#128</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/832f376f9f47c88db9e514f626a8b389091be36f">832f376</a>)</li>
 </ul>
-<h3 id="build-16"><a class="header" href="#build-16">Build</a></h3>
+<h3 id="build-17"><a class="header" href="#build-17">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/checkout from 7.0.0 to 7.0.1 (<a href="https://github.com/colonel-byte/cargoship/issues/122">#122</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0d7757876902877b16439e69cc63873b699a591d">0d77578</a>)</li>
 <li><strong>deps:</strong> Bump actions/setup-go from 6.5.0 to 7.0.0 (<a href="https://github.com/colonel-byte/cargoship/issues/120">#120</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4276e9d88ea8c3e30bf368505b81d86732a81ec4">4276e9d</a>)</li>
@@ -1009,27 +1043,27 @@
 <li><strong>deps:</strong> Bump oras.land/oras-go/v2 from 2.6.1 to 2.6.2 (<a href="https://github.com/colonel-byte/cargoship/issues/116">#116</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/7140d42428c8fa09ba6ceaa3202a7227c91a1e4d">7140d42</a>)</li>
 </ul>
 <h2 id="060-2026-06-30"><a class="header" href="#060-2026-06-30"><a href="https://github.com/colonel-byte/cargoship/compare/v0.5.0...v0.6.0">0.6.0</a> (2026-06-30)</a></h2>
-<h3 id="-breaking-changes-24"><a class="header" href="#-breaking-changes-24">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-25"><a class="header" href="#-breaking-changes-25">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add firewalld policy management (<a href="https://github.com/colonel-byte/cargoship/issues/107">#107</a>)</li>
 <li>reduce binary size (<a href="https://github.com/colonel-byte/cargoship/issues/101">#101</a>)</li>
 </ul>
-<h3 id="features-27"><a class="header" href="#features-27">Features</a></h3>
+<h3 id="features-28"><a class="header" href="#features-28">Features</a></h3>
 <ul>
 <li>add firewalld policy management (<a href="https://github.com/colonel-byte/cargoship/issues/107">#107</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/4a520304207ee9c7ebe1fe555cd2a9917198259f">4a52030</a>)</li>
 <li>reduce binary size (<a href="https://github.com/colonel-byte/cargoship/issues/101">#101</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/81bd7ea8d26f8bb180a494d72c837f6b6b9a338e">81bd7ea</a>)</li>
 </ul>
-<h3 id="build-17"><a class="header" href="#build-17">Build</a></h3>
+<h3 id="build-18"><a class="header" href="#build-18">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump golangci/golangci-lint-action from 9.2.1 to 9.3.0 (<a href="https://github.com/colonel-byte/cargoship/issues/105">#105</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a314b7c9b40a75c0ab5dd363f0bb51d2dea656a0">a314b7c</a>)</li>
 <li><strong>deps:</strong> Bump goreleaser/goreleaser-action from 7.2.2 to 7.2.3 (<a href="https://github.com/colonel-byte/cargoship/issues/106">#106</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/0b32174b9bb006681159c561909c5e918184d8ea">0b32174</a>)</li>
 </ul>
 <h2 id="050-2026-06-25"><a class="header" href="#050-2026-06-25"><a href="https://github.com/colonel-byte/cargoship/compare/v0.4.0...v0.5.0">0.5.0</a> (2026-06-25)</a></h2>
-<h3 id="-breaking-changes-25"><a class="header" href="#-breaking-changes-25">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-26"><a class="header" href="#-breaking-changes-26">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add prepare command (<a href="https://github.com/colonel-byte/cargoship/issues/99">#99</a>)</li>
 </ul>
-<h3 id="features-28"><a class="header" href="#features-28">Features</a></h3>
+<h3 id="features-29"><a class="header" href="#features-29">Features</a></h3>
 <ul>
 <li>add prepare command (<a href="https://github.com/colonel-byte/cargoship/issues/99">#99</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9f191aa097f8ffb01af7c124751c792deb695a29">9f191aa</a>)</li>
 <li><strong>logging:</strong> add better logic for distro output (<a href="https://github.com/colonel-byte/cargoship/issues/97">#97</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/8e96e830dcc26d3b3d50549668bd80353fd4d3d6">8e96e83</a>)</li>
@@ -1040,7 +1074,7 @@
 <li><strong>dagger:</strong> update version (<a href="https://github.com/colonel-byte/cargoship/issues/88">#88</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a1643cb3a38a6edda63fe5aa2cf672d87f93de54">a1643cb</a>)</li>
 <li>update dagger to 0.21.7 (<a href="https://github.com/colonel-byte/cargoship/issues/96">#96</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/da2b4f857320875add6b1a61a9d36eabf2534d5b">da2b4f8</a>)</li>
 </ul>
-<h3 id="build-18"><a class="header" href="#build-18">Build</a></h3>
+<h3 id="build-19"><a class="header" href="#build-19">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/checkout from 6.0.2 to 6.0.3 (<a href="https://github.com/colonel-byte/cargoship/issues/85">#85</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e0598381202f9fa518e1b0ffc2f8d9564eb29cdc">e059838</a>)</li>
 <li><strong>deps:</strong> Bump actions/checkout from 6.0.3 to 7.0.0 (<a href="https://github.com/colonel-byte/cargoship/issues/94">#94</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2c55700306c9bf2612ccee98ebad0b005f50e2ef">2c55700</a>)</li>
@@ -1053,11 +1087,11 @@
 <li><strong>deps:</strong> Bump oras.land/oras-go/v2 from 2.6.0 to 2.6.1 (<a href="https://github.com/colonel-byte/cargoship/issues/89">#89</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/b4a51f8ae1e7b619fea8ad2f4f73d3d69422b8e2">b4a51f8</a>)</li>
 </ul>
 <h2 id="040-2026-05-23"><a class="header" href="#040-2026-05-23"><a href="https://github.com/colonel-byte/cargoship/compare/v0.3.0...v0.4.0">0.4.0</a> (2026-05-23)</a></h2>
-<h3 id="-breaking-changes-26"><a class="header" href="#-breaking-changes-26">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-27"><a class="header" href="#-breaking-changes-27">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add dagger for ci building (<a href="https://github.com/colonel-byte/cargoship/issues/59">#59</a>)</li>
 </ul>
-<h3 id="features-29"><a class="header" href="#features-29">Features</a></h3>
+<h3 id="features-30"><a class="header" href="#features-30">Features</a></h3>
 <ul>
 <li>add dagger for ci building (<a href="https://github.com/colonel-byte/cargoship/issues/59">#59</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/2545844143f8e6b002c1d08631e455a067ee49e0">2545844</a>)</li>
 <li>add mage for make like tool (<a href="https://github.com/colonel-byte/cargoship/issues/63">#63</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e35aed7198b429f5f5bf3fcc5e87dc8fb749afba">e35aed7</a>)</li>
@@ -1077,7 +1111,7 @@
 <li>remove the mage sub-modules (<a href="https://github.com/colonel-byte/cargoship/issues/74">#74</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c073a4266601a9935e8e459a14d6b5585289a22">9c073a4</a>)</li>
 <li>update dagger deps (<a href="https://github.com/colonel-byte/cargoship/issues/64">#64</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/96ad0c834feb236c169c71634c9164db994accd0">96ad0c8</a>)</li>
 </ul>
-<h3 id="build-19"><a class="header" href="#build-19">Build</a></h3>
+<h3 id="build-20"><a class="header" href="#build-20">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/create-github-app-token from 3.1.1 to 3.2.0 (<a href="https://github.com/colonel-byte/cargoship/issues/61">#61</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ac2c0b733af9bedef407a769a9d4d12b6314861a">ac2c0b7</a>)</li>
 <li><strong>deps:</strong> Bump docker/build-push-action from 7.1.0 to 7.2.0 (<a href="https://github.com/colonel-byte/cargoship/issues/79">#79</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/a0b4da139a540ac6440f0637e1677983f4bc05e4">a0b4da1</a>)</li>
@@ -1095,11 +1129,11 @@
 <li><strong>deps:</strong> Bump sigstore/cosign-installer from 4.1.1 to 4.1.2 (<a href="https://github.com/colonel-byte/cargoship/issues/57">#57</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3aa36365be6395e9c0e0e81cabd370fcd68a5c2d">3aa3636</a>)</li>
 </ul>
 <h2 id="030-2026-05-07"><a class="header" href="#030-2026-05-07"><a href="https://github.com/colonel-byte/cargoship/compare/v0.2.5...v0.3.0">0.3.0</a> (2026-05-07)</a></h2>
-<h3 id="-breaking-changes-27"><a class="header" href="#-breaking-changes-27">⚠ BREAKING CHANGES</a></h3>
+<h3 id="-breaking-changes-28"><a class="header" href="#-breaking-changes-28">⚠ BREAKING CHANGES</a></h3>
 <ul>
 <li>add proper code attribution (<a href="https://github.com/colonel-byte/cargoship/issues/55">#55</a>)</li>
 </ul>
-<h3 id="features-30"><a class="header" href="#features-30">Features</a></h3>
+<h3 id="features-31"><a class="header" href="#features-31">Features</a></h3>
 <ul>
 <li>add command to get kubeconfig (<a href="https://github.com/colonel-byte/cargoship/issues/41">#41</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ae53fdf31401b6062552f2373f42e24bc678c118">ae53fdf</a>)</li>
 <li>add proper code attribution (<a href="https://github.com/colonel-byte/cargoship/issues/55">#55</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/e971e89a38a7422a64f803d042baec488ef8a366">e971e89</a>)</li>
@@ -1110,7 +1144,7 @@
 <ul>
 <li><strong>e2e:</strong> add image files for testing cargoship (<a href="https://github.com/colonel-byte/cargoship/issues/52">#52</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9d02b4529c77ffe91b0fd3d546d123885f814ed0">9d02b45</a>)</li>
 </ul>
-<h3 id="build-20"><a class="header" href="#build-20">Build</a></h3>
+<h3 id="build-21"><a class="header" href="#build-21">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/zarf-dev/zarf from 0.75.0 to 0.75.1 (<a href="https://github.com/colonel-byte/cargoship/issues/46">#46</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/57327f88337bfa69ad758dc5e6dd08df1c876d7e">57327f8</a>)</li>
 <li><strong>deps:</strong> Bump https://github.com/golangci/golangci-lint from v2.11.4 to 2.12.1 (<a href="https://github.com/colonel-byte/cargoship/issues/45">#45</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/d791dd0686a6188e6614dfc3096364f35f187680">d791dd0</a>)</li>
@@ -1121,7 +1155,7 @@
 <ul>
 <li><strong>release:</strong> expand release logic (<a href="https://github.com/colonel-byte/cargoship/commit/10eb37f3c65514159d09cec7b37c18e46f20f33e">10eb37f</a>)</li>
 </ul>
-<h3 id="build-21"><a class="header" href="#build-21">Build</a></h3>
+<h3 id="build-22"><a class="header" href="#build-22">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump github.com/Masterminds/semver/v3 from 3.4.0 to 3.5.0 (<a href="https://github.com/colonel-byte/cargoship/issues/42">#42</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/945d93bfc33732157960fbc89571a0e72e81183e">945d93b</a>)</li>
 </ul>
@@ -1131,11 +1165,11 @@
 <li><strong>release:</strong> change cosign cert (<a href="https://github.com/colonel-byte/cargoship/issues/35">#35</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/ce4c5beaec3b56e09216581c9661d9b294f492cc">ce4c5be</a>)</li>
 </ul>
 <h2 id="023-2026-04-28"><a class="header" href="#023-2026-04-28"><a href="https://github.com/colonel-byte/cargoship/compare/v0.2.2...v0.2.3">0.2.3</a> (2026-04-28)</a></h2>
-<h3 id="features-31"><a class="header" href="#features-31">Features</a></h3>
+<h3 id="features-32"><a class="header" href="#features-32">Features</a></h3>
 <ul>
 <li>rework cosign logic (<a href="https://github.com/colonel-byte/cargoship/issues/34">#34</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/9c5687f6e9b28676856c4cc1fc7cd6612dfd1635">9c5687f</a>)</li>
 </ul>
-<h3 id="build-22"><a class="header" href="#build-22">Build</a></h3>
+<h3 id="build-23"><a class="header" href="#build-23">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump sigstore/cosign-installer from 4.1.0 to 4.1.1 (<a href="https://github.com/colonel-byte/cargoship/issues/32">#32</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/25cbcdd7b35821bf2d588ec1679b4636bfd5a19e">25cbcdd</a>)</li>
 </ul>
@@ -1155,7 +1189,7 @@
 <li><strong>release:</strong> add syft action (<a href="https://github.com/colonel-byte/cargoship/issues/24">#24</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/3b9293ee2bfba660e100fe6bcc1b8df6eb39114b">3b9293e</a>)</li>
 </ul>
 <h2 id="010-2026-04-27"><a class="header" href="#010-2026-04-27">0.1.0 (2026-04-27)</a></h2>
-<h3 id="features-32"><a class="header" href="#features-32">Features</a></h3>
+<h3 id="features-33"><a class="header" href="#features-33">Features</a></h3>
 <ul>
 <li>add logic for allowing distro to manage stopping service (<a href="https://github.com/colonel-byte/cargoship/issues/11">#11</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/73010f5d887405c7fb9636de1a402f374d70f08d">73010f5</a>)</li>
 <li>add reset action (<a href="https://github.com/colonel-byte/cargoship/issues/19">#19</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/5b3bc07bd0317788113285412453d40d9c9e52a8">5b3bc07</a>)</li>
@@ -1174,7 +1208,7 @@
 <li><strong>release:</strong> fix config settings (<a href="https://github.com/colonel-byte/cargoship/commit/88a8fd18e88acfcfcae54fcbbbee81087e264bc0">88a8fd1</a>)</li>
 <li><strong>release:</strong> remove versioning (<a href="https://github.com/colonel-byte/cargoship/commit/30efbff506acffa34ccaab13d9fae9ddd9875490">30efbff</a>)</li>
 </ul>
-<h3 id="build-23"><a class="header" href="#build-23">Build</a></h3>
+<h3 id="build-24"><a class="header" href="#build-24">Build</a></h3>
 <ul>
 <li><strong>deps:</strong> Bump actions/setup-node from 6.3.0 to 6.4.0 (<a href="https://github.com/colonel-byte/cargoship/issues/21">#21</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/846530bf1cfc67b9f755e819bc05ace871f860a8">846530b</a>)</li>
 <li><strong>deps:</strong> Bump github.com/invopop/jsonschema from 0.13.0 to 0.14.0 (<a href="https://github.com/colonel-byte/cargoship/issues/3">#3</a>) (<a href="https://github.com/colonel-byte/cargoship/commit/51e8ace6fde4be678e46b0eafb4bad879f978e6c">51e8ace</a>)</li>
