@@ -1,0 +1,14 @@
+---
+# Default variables for the zarf state role.
+
+# Path to the kubeconfig file used to reach the cluster.
+zarf_kubeconfig: ""
+
+# The node zarf runs on. Defaults to localhost.
+zarf_delegate_to: localhost
+
+# Path to the zarf binary. Defaults to 'zarf'.
+zarf_binary: zarf
+
+# The namespace holding the zarf-state Secret.
+zarf_namespace: zarf

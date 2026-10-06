@@ -1,0 +1,29 @@
+---
+# The role's documented interface.
+argument_specs:
+  main:
+    short_description: Fetch and parse the Zarf state secret from a cluster into an Ansible fact
+    description:
+      - "Queries the cluster for the C(zarf-state) Secret via C(zarf tools kubectl) and sets the parsed state as the C(zarf_state) fact."
+      - "Every task carries C(run_once: true) and delegates to C(zarf_delegate_to)."
+    options:
+      zarf_kubeconfig:
+        type: str
+        default: ""
+        description:
+          - "Path to the kubeconfig file used to reach the cluster. Left empty, uses default kubeconfig."
+      zarf_delegate_to:
+        type: str
+        default: localhost
+        description:
+          - "The node on which to execute the zarf state query."
+      zarf_binary:
+        type: str
+        default: zarf
+        description:
+          - "Path to the C(zarf) binary on the delegated host."
+      zarf_namespace:
+        type: str
+        default: zarf
+        description:
+          - "The namespace holding the C(zarf-state) Secret."

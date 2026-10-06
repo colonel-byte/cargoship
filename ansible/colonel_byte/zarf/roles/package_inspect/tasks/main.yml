@@ -1,0 +1,18 @@
+---
+- name: Inspect Zarf package definition
+  colonel_byte.zarf.zarf_package_inspect:
+    package: "{{ zarf_package }}"
+    public_key: "{{ zarf_public_key | default(omit) if (zarf_public_key | length > 0) else omit }}"
+    kubeconfig: "{{ zarf_kubeconfig | default(omit) if (zarf_kubeconfig | length > 0) else omit }}"
+    zarf_binary: "{{ zarf_binary }}"
+  delegate_to: "{{ zarf_delegate_to }}"
+  run_once: true
+  register: _zarf_package_inspect_res
+
+- name: Set zarf package definition facts
+  ansible.builtin.set_fact:
+    zarf_package_definition: "{{ _zarf_package_inspect_res.definition }}"
+    zarf_package_name: "{{ _zarf_package_inspect_res.package_name }}"
+    zarf_package_version: "{{ _zarf_package_inspect_res.package_version }}"
+    zarf_package_flavor: "{{ _zarf_package_inspect_res.package_flavor }}"
+  run_once: true

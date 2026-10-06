@@ -18,14 +18,17 @@ Roles come from group membership. By default the group named `controller` suppli
 
 ## Playbooks
 
-| File                               | What it runs                                                                                                      |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `playbooks/apply.yml`              | `cargoship apply`. Installs or converges the whole cluster, with profiles, a registry mirror, and package values. |
-| `playbooks/prepare.yml`            | `cargoship prepare`. Stages the package and readies the hosts ahead of a maintenance window.                      |
-| `playbooks/engine-config-sync.yml` | `cargoship engine-config-sync`. The run to put on a schedule, and the one whose `changed` is worth acting on.     |
-| `playbooks/kube-config.yml`        | `cargoship kube-config`, then `kubernetes.core.k8s_info` against what it fetched.                                 |
-| `playbooks/reset.yml`              | `cargoship reset`. Removes the cluster, behind a guard that has to be typed.                                      |
-| `playbooks/modules-direct.yml`     | The same work without the role: `run_once`, `delegate_to`, `no_log`, and `roleGroups` spelled out.                |
+| File                                | What it runs                                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `playbooks/apply.yml`               | `cargoship apply`. Installs or converges the whole cluster, with profiles, a registry mirror, and package values.    |
+| `playbooks/prepare.yml`             | `cargoship prepare`. Stages the package and readies the hosts ahead of a maintenance window.                         |
+| `playbooks/engine-config-sync.yml`  | `cargoship engine-config-sync`. The run to put on a schedule, and the one whose `changed` is worth acting on.        |
+| `playbooks/kube-config.yml`         | `cargoship kube-config`, then `kubernetes.core.k8s_info` against what it fetched.                                    |
+| `playbooks/reset.yml`               | `cargoship reset`. Removes the cluster, behind a guard that has to be typed.                                         |
+| `playbooks/modules-direct.yml`      | The same work without the role: `run_once`, `delegate_to`, `no_log`, and `roleGroups` spelled out.                   |
+| `playbooks/zarf-bundle-order.yml`   | Zarf init and package deploy in bundle order, checking installed package versions and deploying only on drift.       |
+| `playbooks/zarf-provider-first.yml` | Connected storage provider deploy before zarf init, checking installed package versions and deploying only on drift. |
+| `playbooks/zarf-state.yml`          | Fetch and parse Zarf cluster state using both the `state` role and `zarf_state_info` module primitive.               |
 
 Run one against an inventory:
 

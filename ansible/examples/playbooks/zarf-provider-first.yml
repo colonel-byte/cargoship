@@ -1,0 +1,80 @@
+---
+# Deploy storage provider before initialising on clusters without a default StorageClass,
+# checking currently installed package versions with `colonel_byte.zarf.packages` to only deploy/upgrade
+# when drift occurs.
+#
+# It is modeled on test/e2e/zarf/testdata/provider-first.yml.
+#
+# On an uninitialised cluster without a storage provider, the storage provider is deployed first
+# using `connected: true` (which requires no registry or initialised cluster). Once initialised,
+# the `colonel_byte.zarf.state` role can read the cluster's Zarf state and packages can be
+# converged only when version drift is detected.
+- name: Deploy storage provider before initialising with drift detection
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    zarf_kubeconfig: /etc/rancher/rke2/rke2.yaml
+    zarf_storage_package: /srv/staging/zarf-package-csi-local-path-provider-amd64-0.0.37-upstream.tar.zst
+    zarf_init_package: /srv/staging/zarf-init-amd64-v0.85.0.tar.zst
+    zarf_public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+    zarf_timeout: 15m
+
+    # Target versions expected for drift comparison.
+    zarf_init_package_name: init
+    zarf_init_target_version: v0.85.0
+    zarf_storage_package_name: csi-local-path-provider
+    zarf_storage_target_version: 0.0.37-upstream
+
+  tasks:
+    - name: Query installed Zarf packages on the cluster
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.packages
+      vars:
+        zarf_kubeconfig: "{{ zarf_kubeconfig }}"
+
+    - name: Determine current installed package versions
+      ansible.builtin.set_fact:
+        installed_init_version: "{{ (zarf_packages | selectattr('package', 'equalto', zarf_init_package_name) | map(attribute='version') | list | first) | default('') }}"
+        installed_storage_version: "{{ (zarf_packages | selectattr('package', 'equalto', zarf_storage_package_name) | map(attribute='version') | list | first) | default('') }}"
+      run_once: true
+
+    - name: Deploy the storage provider onto the uninitialised cluster
+      colonel_byte.zarf.zarf_package_deploy:
+        package: "{{ zarf_storage_package }}"
+        components: local-path-images,local-path-chart
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        public_key: "{{ zarf_public_key }}"
+        verify: always
+        connected: true
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_storage
+      when: installed_storage_version != zarf_storage_target_version
+
+    - name: Initialise the cluster
+      colonel_byte.zarf.zarf_init:
+        init_package: "{{ zarf_init_package }}"
+        kubeconfig: "{{ zarf_kubeconfig }}"
+        registry_mode: proxy
+        timeout: "{{ zarf_timeout }}"
+      delegate_to: localhost
+      run_once: true
+      register: step_init
+      when: installed_init_version != zarf_init_target_version
+
+    - name: Load and verify cluster zarf state after initialisation
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.state
+      vars:
+        zarf_kubeconfig: "{{ zarf_kubeconfig }}"
+      when: installed_init_version != zarf_init_target_version
+
+    - name: Report post-initialisation cluster state
+      ansible.builtin.debug:
+        msg:
+          registryMode: "{{ zarf_state.registryInfo.registryMode | default('unknown') }}"
+          storageClass: "{{ zarf_state.storageClass | default('none') }}"
+      when: zarf_state is defined

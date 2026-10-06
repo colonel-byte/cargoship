@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: Allen Conlon
+  description: List all Zarf packages deployed to a cluster into the zarf_packages fact
+  license: Apache-2.0
+  min_ansible_version: "2.15.0"
+dependencies: []

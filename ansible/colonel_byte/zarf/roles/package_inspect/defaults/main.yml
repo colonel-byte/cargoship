@@ -1,0 +1,17 @@
+---
+# Default variables for the zarf package_inspect role.
+
+# The package to inspect: a path to a staged tarball, an oci:// reference, or a deployed package name.
+zarf_package: ""
+
+# Path to a public key file used to validate signed packages.
+zarf_public_key: ""
+
+# Path to the kubeconfig file, used when inspecting a deployed cluster package.
+zarf_kubeconfig: ""
+
+# Path to the zarf binary. Defaults to 'zarf'.
+zarf_binary: zarf
+
+# The node zarf runs on. Defaults to localhost.
+zarf_delegate_to: localhost

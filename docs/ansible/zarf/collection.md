@@ -8,10 +8,11 @@ Zarf is not an SSH orchestrator. It reaches one cluster through a kubeconfig, so
 
 ## What is here
 
-| Page                                                 | What it covers                                                            |
-| ---------------------------------------------------- | ------------------------------------------------------------------------- |
-| [Modules](modules.md)                                | The two actions: initialising a cluster, and deploying a package onto it. |
-| [Module guide](../../guides/zarf-ansible-module.md)  | Installing the modules, the two-module walk, check mode, and the result.  |
+| Page                                                | What it covers                                                                    |
+| --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Modules](modules.md)                               | The actions: initialising a cluster, deploying packages, and inspecting state.   |
+| [Roles](roles.md)                                   | Convenient role wrapper for fetching cluster state facts.                         |
+| [Module guide](../../guides/zarf-ansible-module.md) | Installing the modules, the two-module walk, check mode, and the result.          |
 
 ## Which to reach for
 

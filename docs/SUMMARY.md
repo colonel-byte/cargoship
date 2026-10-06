@@ -81,6 +81,13 @@
 - [zarf modules](ansible/zarf/modules.md)
   - [init](ansible/zarf/module_init.md)
   - [package_deploy](ansible/zarf/module_package_deploy.md)
+  - [package_info](ansible/zarf/module_package_info.md)
+  - [package_inspect](ansible/zarf/module_package_inspect.md)
+  - [state_info](ansible/zarf/module_state_info.md)
+- [zarf roles](ansible/zarf/roles.md)
+  - [package_inspect](ansible/zarf/role_package_inspect.md)
+  - [packages](ansible/zarf/role_packages.md)
+  - [state](ansible/zarf/role_state.md)
 
 
 -----------
