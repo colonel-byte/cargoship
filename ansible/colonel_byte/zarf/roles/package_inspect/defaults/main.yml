@@ -24,5 +24,8 @@ zarf_kubeconfig: ""
 # Path to the zarf binary. Defaults to 'zarf'.
 zarf_binary: zarf
 
+# Whether to suppress verbose assert output when asserting inputs. Defaults to true.
+zarf_quiet: true
+
 # The node zarf runs on. Defaults to localhost.
 zarf_delegate_to: localhost
