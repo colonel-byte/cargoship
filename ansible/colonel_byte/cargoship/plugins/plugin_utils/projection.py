@@ -152,22 +152,34 @@ class CargoshipActionBase(ActionBase):
                             key = (phase, status)
                             if key != last_phase:
                                 last_phase = key
+                                width = len(str(total)) if total else 2
+                                if width < 2:
+                                    width = 2
+                                try:
+                                    formatted_idx = "%0*d" % (width, int(idx))
+                                except (ValueError, TypeError):
+                                    formatted_idx = str(idx)
+                                try:
+                                    formatted_total = "%0*d" % (width, int(total)) if total else str(total)
+                                except (ValueError, TypeError):
+                                    formatted_total = str(total)
+
                                 if status == "running":
                                     display.display(
                                         "[cargoship] Phase %s/%s: %s [running]"
-                                        % (idx, total, phase),
+                                        % (formatted_idx, formatted_total, phase),
                                         color=C.COLOR_VERBOSE,
                                     )
                                 elif status == "completed":
                                     display.display(
                                         "[cargoship] Phase %s/%s: %s [done]"
-                                        % (idx, total, phase),
+                                        % (formatted_idx, formatted_total, phase),
                                         color=C.COLOR_OK,
                                     )
                                 elif status == "failed":
                                     display.display(
                                         "[cargoship] Phase %s/%s: %s [failed]"
-                                        % (idx, total, phase),
+                                        % (formatted_idx, formatted_total, phase),
                                         color=C.COLOR_ERROR,
                                     )
                     except Exception:
