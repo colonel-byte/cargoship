@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-604d2687.js";
+            window.path_to_searchindex_js = "../../searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-fd7f4d60.js"></script>
+        <script src="../../toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,6 +186,7 @@
 <h2 id="cluster"><a class="header" href="#cluster">cluster</a></h2>
 <p>Run a cargoship cluster action from an Ansible inventory.</p>
 <p>Include it as <code>colonel_byte.cargoship.cluster</code>.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs one cargoship action against the fleet described by the Ansible inventory, on the management node.</p>
 <p>Every task carries <code>run_once: true</code> and delegates to <code>cargoship_delegate_to</code>. Cargoship converges the whole fleet in a single run, so a play over the fleet’s own inventory would otherwise converge it once per host.</p>
 <p>Ansible supplies the inventory and nothing else. It does not connect to the fleet, and nothing is installed on the managed nodes.</p>

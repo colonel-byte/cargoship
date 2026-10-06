@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-604d2687.js";
+            window.path_to_searchindex_js = "../searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-fd7f4d60.js"></script>
+        <script src="../toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -286,9 +286,9 @@ ansible-galaxy collection install colonel_byte-cargoship-0.30.0.tar.gz
 <p>Cargoship’s own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.</p>
 <h2 id="live-progress"><a class="header" href="#live-progress">Live progress</a></h2>
 <p>A fleet-wide <code>apply</code> is one Ansible task that runs for several minutes, so the modules report where they are while they run. The action plugin prints one line per phase transition:</p>
-<pre><code>[cargoship] Phase 1/12: Connect to hosts [running]
-[cargoship] Phase 1/12: Connect to hosts [done]
-[cargoship] Phase 2/12: Detect host operating systems [running]
+<pre><code>[cargoship] Phase 01/12: Connect to hosts [running]
+[cargoship] Phase 01/12: Connect to hosts [done]
+[cargoship] Phase 02/12: Detect host operating systems [running]
 </code></pre>
 <p>The counter is the phase’s position in the list for that module, so <code>docs/phases/apply.md</code> and its siblings read as the same sequence. A phase that fails is printed <code>[failed]</code>, ahead of the failure Ansible itself reports.</p>
 <p>None of this needs configuring. The action plugin creates a temporary status file, points the module at it, polls it while the module runs, and removes it afterwards whether the run succeeded or not.</p>

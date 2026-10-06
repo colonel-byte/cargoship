@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-604d2687.js";
+            window.path_to_searchindex_js = "../../searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-fd7f4d60.js"></script>
+        <script src="../../toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,6 +186,7 @@
 <h2 id="zarf_init"><a class="header" href="#zarf_init">zarf_init</a></h2>
 <p>Initialise a cluster with a staged zarf init package.</p>
 <p>Write it as <code>colonel_byte.zarf.zarf_init</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.0.1.</p>
 <p>Runs <code>zarf init</code> against the cluster a kubeconfig names, and follows the init package’s deployment component by component.</p>
 <p>The module is a small wrapper binary, not zarf. It renders the <code>zarf init</code> command line from these parameters, runs the installed zarf, reads the component boundaries back out of zarf’s log stream, and reports one JSON result.</p>
 <p>This is a proof of ZEP-0072 (<a href="https://github.com/zarf-dev/proposals/pull/73">https://github.com/zarf-dev/proposals/pull/73</a>), which proposes putting this dispatch inside the zarf binary itself.</p>

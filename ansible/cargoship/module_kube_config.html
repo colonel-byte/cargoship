@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-604d2687.js";
+            window.path_to_searchindex_js = "../../searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-fd7f4d60.js"></script>
+        <script src="../../toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,6 +186,7 @@
 <h2 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config">cargoship_kube_config</a></h2>
 <p>Fetch the cluster kubeconfig onto the management node.</p>
 <p>Write it as <code>colonel_byte.cargoship.cargoship_kube_config</code>. It runs on the management node; nothing is installed on the fleet.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs <code>cargoship kube-config</code> against the fleet described by an Ansible inventory.</p>
 <p>It is the one module that changes the node the play runs on rather than the fleet.</p>
 <p><code>cargoship kube-config</code> has no dry run, so under <code>--check</code> the module reports <code>skipped: true</code> and runs nothing at all.</p>

@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-604d2687.js";
+            window.path_to_searchindex_js = "../../searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-fd7f4d60.js"></script>
+        <script src="../../toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,8 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="the-colonel_bytezarf-collection"><a class="header" href="#the-colonel_bytezarf-collection">The <code>colonel_byte.zarf</code> collection</a></h1>
-<p>Zarf runs inside a playbook as an Ansible collection: <code>zarf init</code> initialises a cluster and <code>zarf package deploy</code> puts a package on it, both driven from the node the task is delegated to. The modules are compiled wrapper binaries named <code>zarf_&lt;action&gt;</code>, and the name selects the action. There is no Python module behind either, and nothing is installed on the cluster’s nodes.</p>
+<p>Zarf runs inside a playbook as an Ansible collection: <code>zarf init</code> initialises a cluster and <code>zarf package deploy</code> puts a package on it, both driven from the node the task is delegated to. Those two modules are compiled wrapper binaries named <code>zarf_&lt;action&gt;</code>, and the name selects the action. There is no Python module behind either, and nothing is installed on the cluster’s nodes.</p>
+<p>Three further modules read a cluster rather than converging it – the deployed packages, a package definition, and zarf’s own state – and three roles wrap them. Those are plain action plugins rather than wrapper binaries, and <a href="../../agent/choice-zarf-info-modules.html">choice-zarf-info-modules</a> is the record of why a read-only command earns no binary.</p>
 <p>This collection is a proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes this pattern for zarf itself, built here because the pattern it copies is the one <a href="../cargoship/collection.html"><code>colonel_byte.cargoship</code></a> already runs. It is expected to be removed once that proposal is resolved – see <a href="../../agent/choice-zarf-collection-removal.html">choice-zarf-collection-removal</a>.</p>
 <p>Zarf is not an SSH orchestrator. It reaches one cluster through a kubeconfig, so Ansible supplies no inventory here: a task supplies a kubeconfig, a package, and the parameters the zarf command takes. The zarf that does the work is the one on the node’s path, which is what keeps the module and the tool in step.</p>
 <h2 id="what-is-here"><a class="header" href="#what-is-here">What is here</a></h2>
@@ -193,17 +194,19 @@
 <tr><th>Page</th><th>What it covers</th></tr>
 </thead>
 <tbody>
-<tr><td><a href="modules.html">Modules</a></td><td>The two actions: initialising a cluster, and deploying a package onto it.</td></tr>
+<tr><td><a href="modules.html">Modules</a></td><td>The two modules that converge a cluster, and the three that read it.</td></tr>
+<tr><td><a href="roles.html">Roles</a></td><td>The roles that wrap the read-only modules and set what they return as facts.</td></tr>
 <tr><td><a href="../../guides/zarf-ansible-module.html">Module guide</a></td><td>Installing the modules, the two-module walk, check mode, and the result.</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="which-to-reach-for"><a class="header" href="#which-to-reach-for">Which to reach for</a></h2>
-<p>There is no role here, and no module picks the other’s work up. A playbook writes the action it wants: <code>zarf_init</code> for the cluster itself, <code>zarf_package_deploy</code> for anything deployed onto it afterwards.</p>
+<p>No module picks another’s work up. A playbook writes the action it wants: <code>zarf_init</code> for the cluster itself, <code>zarf_package_deploy</code> for anything deployed onto it afterwards.</p>
 <p>The two are usually written together rather than separately. A cluster whose distribution ships no storage provider cannot be initialised until one is deployed – zarf’s registry claims a volume during the seed phase – and a package cannot normally be deployed until the cluster is initialised. The way out is a connected deploy, which pushes no images and so needs no registry; the <a href="../../guides/zarf-ansible-module.html">module guide</a> covers the ordering.</p>
+<p>For reading a cluster, reach for the role rather than the module. <code>state</code>, <code>packages</code> and <code>package_inspect</code> exist to set what the module returned as a fact under a predictable name, and the <code>state</code> role additionally defaults <code>no_log</code> on both of its tasks – which the module cannot do on the playbook’s behalf. A module called directly is the right answer when a play wants the result registered rather than as a fact, or wants two of them in one play.</p>
 <h2 id="reference-pages-are-generated"><a class="header" href="#reference-pages-are-generated">Reference pages are generated</a></h2>
-<p>Every <code>module_*.md</code> page here is generated from the collection itself – the <code>DOCUMENTATION</code> and <code>EXAMPLES</code> blocks in each action plugin – by <code>mage generate:document</code>. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.</p>
-<p>This page and <a href="modules.html">modules.md</a> are written by hand. The generators are shared with the cargoship collection, so the contract in <code>ansible/colonel_byte/cargoship/AGENTS.md</code> applies here too: every option declares a <code>type</code>, a <code>description</code>, and a <code>cli_flag</code>, and every <code>description</code> entry is double-quoted.</p>
+<p>Every <code>module_*.md</code> page here is generated from the collection itself – the <code>DOCUMENTATION</code> and <code>EXAMPLES</code> blocks in each action plugin – and every <code>role_*.md</code> page from a role’s <code>meta/argument_specs.yml</code>, by <code>mage generate:document</code>. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.</p>
+<p>This page, <a href="modules.html">modules.md</a> and <a href="roles.html">roles.md</a> are written by hand. The generators are shared with the cargoship collection, so the contract in <code>ansible/colonel_byte/cargoship/AGENTS.md</code> applies here too: every option declares a <code>type</code>, a <code>description</code>, and a <code>cli_flag</code>, and every <code>description</code> entry is double-quoted.</p>
 
                     </main>
 

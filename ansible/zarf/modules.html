@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-604d2687.js";
+            window.path_to_searchindex_js = "../../searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-fd7f4d60.js"></script>
+        <script src="../../toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -183,7 +183,9 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="modules"><a class="header" href="#modules">Modules</a></h1>
-<p>Two modules ship, one per zarf command a convergence run needs. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run – and neither is package removal, which nothing here has needed yet.</p>
+<p>Five modules ship. Two of them converge a cluster, and three read it.</p>
+<p><code>zarf_init</code> and <code>zarf_package_deploy</code> are the converging pair: they are the proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, each is a compiled wrapper binary with its parameters and command line in Go, and <a href="../../agent/choice-zarf-ansible-module.html">choice-zarf-ansible-module</a> records how. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run – and neither is package removal, which nothing here has needed yet.</p>
+<p><code>zarf_package_info</code>, <code>zarf_package_inspect</code> and <code>zarf_state_info</code> read. They change nothing, they answer during a check-mode play rather than skipping, and they are plain action plugins with no wrapper binary behind them, for the reasons in <a href="../../agent/choice-zarf-info-modules.html">choice-zarf-info-modules</a>.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -192,6 +194,9 @@
 <tbody>
 <tr><td><a href="module_init.html"><code>zarf_init</code></a></td><td>Initialises a cluster: the injector, the seed registry, the registry, the agent.</td></tr>
 <tr><td><a href="module_package_deploy.html"><code>zarf_package_deploy</code></a></td><td>Puts a package on a cluster, from a path, an <code>oci://</code> reference, or an <code>https://</code> URL.</td></tr>
+<tr><td><a href="module_package_info.html"><code>zarf_package_info</code></a></td><td>Lists the packages deployed to a cluster, via <code>zarf package list</code>.</td></tr>
+<tr><td><a href="module_package_inspect.html"><code>zarf_package_inspect</code></a></td><td>Reads the <code>zarf.yaml</code> of a package tarball, an <code>oci://</code> reference, or a deployed package.</td></tr>
+<tr><td><a href="module_state_info.html"><code>zarf_state_info</code></a></td><td>Reads the cluster’s <code>zarf-state</code> Secret, withholding the credentials in it.</td></tr>
 </tbody>
 </table>
 </div>
@@ -200,11 +205,12 @@
 <p>Each module’s page lists its full parameter set and the flag each parameter renders. A parameter that renders no flag is listed as <code>None</code>: it is either the command’s positional argument, something passed to zarf in its environment, or something the action plugin consumes before the command line is built.</p>
 <h2 id="what-every-task-needs"><a class="header" href="#what-every-task-needs">What every task needs</a></h2>
 <p>A parameter left unset is left unset: the module passes no flag for it, so whatever zarf’s own configuration file sets still applies. That is why <code>plain_http: false</code> and omitting <code>plain_http</code> are different.</p>
-<p>Set <code>run_once: true</code> and <code>delegate_to</code> on every task. One <code>zarf init</code> initialises the whole cluster and one deploy puts the package on all of it, so a play over the cluster’s own inventory would otherwise do the work once per host. Set <code>no_log: true</code> on any task carrying a credential: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
+<p>Set <code>run_once: true</code> and <code>delegate_to</code> on every task. One <code>zarf init</code> initialises the whole cluster, one deploy puts the package on all of it, and one read answers for all of it, so a play over the cluster’s own inventory would otherwise do the work once per host. Set <code>no_log: true</code> on any task carrying a credential: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
 <p>Credentials given as parameters are rendered as flags, which puts them in the process table for the life of the run. <code>zarf_config</code> names a zarf configuration file instead, which zarf reads them from.</p>
 <h2 id="what-the-result-says"><a class="header" href="#what-the-result-says">What the result says</a></h2>
-<p>Both modules report <code>changed: true</code> with <code>changedSignal: partial</code> on every successful run, and name every component they deployed in <code>changedUndeclared</code>. Zarf reports which components ran and not whether any of them found the cluster already as it wanted, so <code>partial</code> is the honest answer rather than an unfinished one.</p>
-<p>Check mode reports the task as skipped. Neither command has a dry run.</p>
+<p>The two converging modules report <code>changed: true</code> with <code>changedSignal: partial</code> on every successful run, and name every component they deployed in <code>changedUndeclared</code>. Zarf reports which components ran and not whether any of them found the cluster already as it wanted, so <code>partial</code> is the honest answer rather than an unfinished one. Check mode reports the task as skipped, because neither command has a dry run.</p>
+<p>The three read-only modules report <code>changed: false</code>, which is not an approximation, and they run in check mode rather than skipping: answering a question during a run an operator asked to be told about is the honest thing to do.</p>
+<p><code>zarf_state_info</code> withholds what it reads. The <code>zarf-state</code> Secret carries the registry, git and artifact server credentials and the agent webhook’s TLS private key, so the returned <code>state</code> has them removed and <code>redacted</code> names the paths that went. <code>include_credentials: true</code> returns them and censors the task’s own output in the same breath; the task that reads the result afterwards needs its own <code>no_log</code>, because <code>set_fact</code> prints what the module hid.</p>
 <p>The <a href="../../guides/zarf-ansible-module.html">module guide</a> covers installing the modules, the ordering a cluster with no storage provider needs, the live progress display, and the shape of the result.</p>
 
                     </main>

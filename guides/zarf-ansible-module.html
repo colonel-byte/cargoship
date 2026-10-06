@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-604d2687.js";
+            window.path_to_searchindex_js = "../searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-fd7f4d60.js"></script>
+        <script src="../toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,8 +184,8 @@
                     <main>
                         <h1 id="driving-zarf-from-ansible"><a class="header" href="#driving-zarf-from-ansible">Driving zarf from Ansible</a></h1>
 <p>The <code>colonel_byte.zarf</code> collection initialises a cluster with zarf and deploys zarf packages onto it from a playbook. It is a proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes native Ansible module support for zarf, built here because the pattern it proposes is the one <code>colonel_byte.cargoship</code> already runs. See <a href="ansible-module.html">ansible-module</a> for that collection, whose shape this one copies.</p>
-<p>This guide covers what the two modules are, how to install them, the two-module walk that a cluster with no storage provider needs, and what the result holds. The full parameter set of each module, and the zarf flag each parameter renders, is on its reference page: <a href="../ansible/zarf/module_init.html"><code>zarf_init</code></a> and <a href="../ansible/zarf/module_package_deploy.html"><code>zarf_package_deploy</code></a>, both generated from the collection. For why the modules are separate wrapper binaries rather than the <code>zarf</code> binary itself, see <a href="../agent/choice-zarf-ansible-module.html">choice-zarf-ansible-module</a>.</p>
-<h2 id="the-two-modules"><a class="header" href="#the-two-modules">The two modules</a></h2>
+<p>This guide covers the two modules that converge a cluster: what they are, how to install them, the two-module walk that a cluster with no storage provider needs, and what the result holds. The collection also ships three read-only modules and three roles that wrap them – <code>zarf_package_info</code>, <code>zarf_package_inspect</code> and <code>zarf_state_info</code> – which are not part of the walk and are documented on the <a href="../ansible/zarf/collection.html">collection reference</a>; <a href="../agent/choice-zarf-info-modules.html">choice-zarf-info-modules</a> records why they are built differently. The full parameter set of each module, and the zarf flag each parameter renders, is on its reference page: <a href="../ansible/zarf/module_init.html"><code>zarf_init</code></a> and <a href="../ansible/zarf/module_package_deploy.html"><code>zarf_package_deploy</code></a>, both generated from the collection. For why the modules are separate wrapper binaries rather than the <code>zarf</code> binary itself, see <a href="../agent/choice-zarf-ansible-module.html">choice-zarf-ansible-module</a>.</p>
+<h2 id="the-two-converging-modules"><a class="header" href="#the-two-converging-modules">The two converging modules</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>

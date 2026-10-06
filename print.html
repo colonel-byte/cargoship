@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-604d2687.js";
+            window.path_to_searchindex_js = "searchindex-274b2cae.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-fd7f4d60.js"></script>
+        <script src="toc-384f5763.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1057,9 +1057,9 @@ ansible-galaxy collection install colonel_byte-cargoship-0.30.0.tar.gz
 <p>Cargoship’s own logging goes to stderr, which Ansible captures and shows on failure. Per-host detail lives there, not in the result: Ansible sees one task for the whole fleet, not one result per host.</p>
 <h2 id="live-progress"><a class="header" href="#live-progress">Live progress</a></h2>
 <p>A fleet-wide <code>apply</code> is one Ansible task that runs for several minutes, so the modules report where they are while they run. The action plugin prints one line per phase transition:</p>
-<pre><code>[cargoship] Phase 1/12: Connect to hosts [running]
-[cargoship] Phase 1/12: Connect to hosts [done]
-[cargoship] Phase 2/12: Detect host operating systems [running]
+<pre><code>[cargoship] Phase 01/12: Connect to hosts [running]
+[cargoship] Phase 01/12: Connect to hosts [done]
+[cargoship] Phase 02/12: Detect host operating systems [running]
 </code></pre>
 <p>The counter is the phase’s position in the list for that module, so <code>docs/phases/apply.md</code> and its siblings read as the same sequence. A phase that fails is printed <code>[failed]</code>, ahead of the failure Ansible itself reports.</p>
 <p>None of this needs configuring. The action plugin creates a temporary status file, points the module at it, polls it while the module runs, and removes it afterwards whether the run succeeded or not.</p>
@@ -2296,8 +2296,8 @@ ansible-vault decrypt --vault-password-file ./vault-pass.txt --output - &lt; ct.
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="driving-zarf-from-ansible"><a class="header" href="#driving-zarf-from-ansible">Driving zarf from Ansible</a></h1>
 <p>The <code>colonel_byte.zarf</code> collection initialises a cluster with zarf and deploys zarf packages onto it from a playbook. It is a proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes native Ansible module support for zarf, built here because the pattern it proposes is the one <code>colonel_byte.cargoship</code> already runs. See <a href="#running-cargoship-as-an-ansible-module">ansible-module</a> for that collection, whose shape this one copies.</p>
-<p>This guide covers what the two modules are, how to install them, the two-module walk that a cluster with no storage provider needs, and what the result holds. The full parameter set of each module, and the zarf flag each parameter renders, is on its reference page: <a href="#init"><code>zarf_init</code></a> and <a href="#package_deploy"><code>zarf_package_deploy</code></a>, both generated from the collection. For why the modules are separate wrapper binaries rather than the <code>zarf</code> binary itself, see <a href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">choice-zarf-ansible-module</a>.</p>
-<h2 id="the-two-modules"><a class="header" href="#the-two-modules">The two modules</a></h2>
+<p>This guide covers the two modules that converge a cluster: what they are, how to install them, the two-module walk that a cluster with no storage provider needs, and what the result holds. The collection also ships three read-only modules and three roles that wrap them – <code>zarf_package_info</code>, <code>zarf_package_inspect</code> and <code>zarf_state_info</code> – which are not part of the walk and are documented on the <a href="#the-colonel_bytezarf-collection">collection reference</a>; <a href="#why-the-read-only-zarf-modules-are-python-rather-than-wrapper-binaries">choice-zarf-info-modules</a> records why they are built differently. The full parameter set of each module, and the zarf flag each parameter renders, is on its reference page: <a href="#init"><code>zarf_init</code></a> and <a href="#package_deploy"><code>zarf_package_deploy</code></a>, both generated from the collection. For why the modules are separate wrapper binaries rather than the <code>zarf</code> binary itself, see <a href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">choice-zarf-ansible-module</a>.</p>
+<h2 id="the-two-converging-modules"><a class="header" href="#the-two-converging-modules">The two converging modules</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -4716,6 +4716,7 @@ $ cargoship version -o json
 <h2 id="cargoship_apply"><a class="header" href="#cargoship_apply">cargoship_apply</a></h2>
 <p>Install or converge a Kubernetes cluster across the fleet.</p>
 <p>Write it as <code>colonel_byte.cargoship.cargoship_apply</code>. It runs on the management node; nothing is installed on the fleet.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs <code>cargoship apply</code> against the fleet described by an Ansible inventory. It is the widest action cargoship has.</p>
 <p>The module runs on one management node. Ansible does not connect to the fleet; cargoship opens every SSH connection itself from there.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
@@ -4779,6 +4780,7 @@ $ cargoship version -o json
 <h2 id="cargoship_engine_config_sync"><a class="header" href="#cargoship_engine_config_sync">cargoship_engine_config_sync</a></h2>
 <p>Converge engine configuration across the fleet.</p>
 <p>Write it as <code>colonel_byte.cargoship.cargoship_engine_config_sync</code>. It runs on the management node; nothing is installed on the fleet.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs <code>cargoship engine-config-sync</code> against the fleet described by an Ansible inventory. It is the most Ansible-shaped thing cargoship does, and the one action whose phases report whether they changed anything.</p>
 <p>It does not update the hosts themselves, so it takes none of the three host switches.</p>
 <h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
@@ -4836,6 +4838,7 @@ $ cargoship version -o json
 <h2 id="cargoship_kube_config"><a class="header" href="#cargoship_kube_config">cargoship_kube_config</a></h2>
 <p>Fetch the cluster kubeconfig onto the management node.</p>
 <p>Write it as <code>colonel_byte.cargoship.cargoship_kube_config</code>. It runs on the management node; nothing is installed on the fleet.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs <code>cargoship kube-config</code> against the fleet described by an Ansible inventory.</p>
 <p>It is the one module that changes the node the play runs on rather than the fleet.</p>
 <p><code>cargoship kube-config</code> has no dry run, so under <code>--check</code> the module reports <code>skipped: true</code> and runs nothing at all.</p>
@@ -4884,6 +4887,7 @@ $ cargoship version -o json
 <h2 id="cargoship_prepare"><a class="header" href="#cargoship_prepare">cargoship_prepare</a></h2>
 <p>Stage a package onto the fleet and ready the hosts.</p>
 <p>Write it as <code>colonel_byte.cargoship.cargoship_prepare</code>. It runs on the management node; nothing is installed on the fleet.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs <code>cargoship prepare</code> against the fleet described by an Ansible inventory.</p>
 <p>It takes no key material: it neither reads an encrypted value nor writes a kubeconfig, so there is no vault password and no age identity to name.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
@@ -4939,6 +4943,7 @@ $ cargoship version -o json
 <h2 id="cargoship_reset"><a class="header" href="#cargoship_reset">cargoship_reset</a></h2>
 <p>Remove the cluster from the fleet.</p>
 <p>Write it as <code>colonel_byte.cargoship.cargoship_reset</code>. It runs on the management node; nothing is installed on the fleet.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs <code>cargoship reset</code> against the fleet described by an Ansible inventory.</p>
 <p>There is no package: it removes what is installed, and the distro to remove is named directly rather than read out of one. It installs nothing, so it takes no values and no signature parameters.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
@@ -5015,6 +5020,7 @@ $ cargoship version -o json
 <h2 id="cluster"><a class="header" href="#cluster">cluster</a></h2>
 <p>Run a cargoship cluster action from an Ansible inventory.</p>
 <p>Include it as <code>colonel_byte.cargoship.cluster</code>.</p>
+<p>Added in <code>colonel_byte.cargoship</code> 0.26.0.</p>
 <p>Runs one cargoship action against the fleet described by the Ansible inventory, on the management node.</p>
 <p>Every task carries <code>run_once: true</code> and delegates to <code>cargoship_delegate_to</code>. Cargoship converges the whole fleet in a single run, so a play over the fleet’s own inventory would otherwise converge it once per host.</p>
 <p>Ansible supplies the inventory and nothing else. It does not connect to the fleet, and nothing is installed on the managed nodes.</p>
@@ -5042,7 +5048,8 @@ $ cargoship version -o json
 </div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="the-colonel_bytezarf-collection"><a class="header" href="#the-colonel_bytezarf-collection">The <code>colonel_byte.zarf</code> collection</a></h1>
-<p>Zarf runs inside a playbook as an Ansible collection: <code>zarf init</code> initialises a cluster and <code>zarf package deploy</code> puts a package on it, both driven from the node the task is delegated to. The modules are compiled wrapper binaries named <code>zarf_&lt;action&gt;</code>, and the name selects the action. There is no Python module behind either, and nothing is installed on the cluster’s nodes.</p>
+<p>Zarf runs inside a playbook as an Ansible collection: <code>zarf init</code> initialises a cluster and <code>zarf package deploy</code> puts a package on it, both driven from the node the task is delegated to. Those two modules are compiled wrapper binaries named <code>zarf_&lt;action&gt;</code>, and the name selects the action. There is no Python module behind either, and nothing is installed on the cluster’s nodes.</p>
+<p>Three further modules read a cluster rather than converging it – the deployed packages, a package definition, and zarf’s own state – and three roles wrap them. Those are plain action plugins rather than wrapper binaries, and <a href="#why-the-read-only-zarf-modules-are-python-rather-than-wrapper-binaries">choice-zarf-info-modules</a> is the record of why a read-only command earns no binary.</p>
 <p>This collection is a proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, which proposes this pattern for zarf itself, built here because the pattern it copies is the one <a href="#the-colonel_bytecargoship-collection"><code>colonel_byte.cargoship</code></a> already runs. It is expected to be removed once that proposal is resolved – see <a href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">choice-zarf-collection-removal</a>.</p>
 <p>Zarf is not an SSH orchestrator. It reaches one cluster through a kubeconfig, so Ansible supplies no inventory here: a task supplies a kubeconfig, a package, and the parameters the zarf command takes. The zarf that does the work is the one on the node’s path, which is what keeps the module and the tool in step.</p>
 <h2 id="what-is-here-1"><a class="header" href="#what-is-here-1">What is here</a></h2>
@@ -5052,20 +5059,24 @@ $ cargoship version -o json
 <tr><th>Page</th><th>What it covers</th></tr>
 </thead>
 <tbody>
-<tr><td><a href="#modules-1">Modules</a></td><td>The two actions: initialising a cluster, and deploying a package onto it.</td></tr>
+<tr><td><a href="#modules-1">Modules</a></td><td>The two modules that converge a cluster, and the three that read it.</td></tr>
+<tr><td><a href="#roles-1">Roles</a></td><td>The roles that wrap the read-only modules and set what they return as facts.</td></tr>
 <tr><td><a href="#driving-zarf-from-ansible">Module guide</a></td><td>Installing the modules, the two-module walk, check mode, and the result.</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="which-to-reach-for-2"><a class="header" href="#which-to-reach-for-2">Which to reach for</a></h2>
-<p>There is no role here, and no module picks the other’s work up. A playbook writes the action it wants: <code>zarf_init</code> for the cluster itself, <code>zarf_package_deploy</code> for anything deployed onto it afterwards.</p>
+<p>No module picks another’s work up. A playbook writes the action it wants: <code>zarf_init</code> for the cluster itself, <code>zarf_package_deploy</code> for anything deployed onto it afterwards.</p>
 <p>The two are usually written together rather than separately. A cluster whose distribution ships no storage provider cannot be initialised until one is deployed – zarf’s registry claims a volume during the seed phase – and a package cannot normally be deployed until the cluster is initialised. The way out is a connected deploy, which pushes no images and so needs no registry; the <a href="#driving-zarf-from-ansible">module guide</a> covers the ordering.</p>
+<p>For reading a cluster, reach for the role rather than the module. <code>state</code>, <code>packages</code> and <code>package_inspect</code> exist to set what the module returned as a fact under a predictable name, and the <code>state</code> role additionally defaults <code>no_log</code> on both of its tasks – which the module cannot do on the playbook’s behalf. A module called directly is the right answer when a play wants the result registered rather than as a fact, or wants two of them in one play.</p>
 <h2 id="reference-pages-are-generated-1"><a class="header" href="#reference-pages-are-generated-1">Reference pages are generated</a></h2>
-<p>Every <code>module_*.md</code> page here is generated from the collection itself – the <code>DOCUMENTATION</code> and <code>EXAMPLES</code> blocks in each action plugin – by <code>mage generate:document</code>. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.</p>
-<p>This page and <a href="#modules-1">modules.md</a> are written by hand. The generators are shared with the cargoship collection, so the contract in <code>ansible/colonel_byte/cargoship/AGENTS.md</code> applies here too: every option declares a <code>type</code>, a <code>description</code>, and a <code>cli_flag</code>, and every <code>description</code> entry is double-quoted.</p>
+<p>Every <code>module_*.md</code> page here is generated from the collection itself – the <code>DOCUMENTATION</code> and <code>EXAMPLES</code> blocks in each action plugin – and every <code>role_*.md</code> page from a role’s <code>meta/argument_specs.yml</code>, by <code>mage generate:document</code>. Edit the collection and regenerate; an edit to a generated page does not survive the next commit.</p>
+<p>This page, <a href="#modules-1">modules.md</a> and <a href="#roles-1">roles.md</a> are written by hand. The generators are shared with the cargoship collection, so the contract in <code>ansible/colonel_byte/cargoship/AGENTS.md</code> applies here too: every option declares a <code>type</code>, a <code>description</code>, and a <code>cli_flag</code>, and every <code>description</code> entry is double-quoted.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="modules-1"><a class="header" href="#modules-1">Modules</a></h1>
-<p>Two modules ship, one per zarf command a convergence run needs. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run – and neither is package removal, which nothing here has needed yet.</p>
+<p>Five modules ship. Two of them converge a cluster, and three read it.</p>
+<p><code>zarf_init</code> and <code>zarf_package_deploy</code> are the converging pair: they are the proof of <a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a>, each is a compiled wrapper binary with its parameters and command line in Go, and <a href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">choice-zarf-ansible-module</a> records how. Package creation is not among them – it builds an artifact from a definition in a repository, which belongs in a pipeline rather than in a convergence run – and neither is package removal, which nothing here has needed yet.</p>
+<p><code>zarf_package_info</code>, <code>zarf_package_inspect</code> and <code>zarf_state_info</code> read. They change nothing, they answer during a check-mode play rather than skipping, and they are plain action plugins with no wrapper binary behind them, for the reasons in <a href="#why-the-read-only-zarf-modules-are-python-rather-than-wrapper-binaries">choice-zarf-info-modules</a>.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -5074,6 +5085,9 @@ $ cargoship version -o json
 <tbody>
 <tr><td><a href="#init"><code>zarf_init</code></a></td><td>Initialises a cluster: the injector, the seed registry, the registry, the agent.</td></tr>
 <tr><td><a href="#package_deploy"><code>zarf_package_deploy</code></a></td><td>Puts a package on a cluster, from a path, an <code>oci://</code> reference, or an <code>https://</code> URL.</td></tr>
+<tr><td><a href="#package_info"><code>zarf_package_info</code></a></td><td>Lists the packages deployed to a cluster, via <code>zarf package list</code>.</td></tr>
+<tr><td><a href="#package_inspect-2"><code>zarf_package_inspect</code></a></td><td>Reads the <code>zarf.yaml</code> of a package tarball, an <code>oci://</code> reference, or a deployed package.</td></tr>
+<tr><td><a href="#state_info"><code>zarf_state_info</code></a></td><td>Reads the cluster’s <code>zarf-state</code> Secret, withholding the credentials in it.</td></tr>
 </tbody>
 </table>
 </div>
@@ -5082,11 +5096,12 @@ $ cargoship version -o json
 <p>Each module’s page lists its full parameter set and the flag each parameter renders. A parameter that renders no flag is listed as <code>None</code>: it is either the command’s positional argument, something passed to zarf in its environment, or something the action plugin consumes before the command line is built.</p>
 <h2 id="what-every-task-needs-1"><a class="header" href="#what-every-task-needs-1">What every task needs</a></h2>
 <p>A parameter left unset is left unset: the module passes no flag for it, so whatever zarf’s own configuration file sets still applies. That is why <code>plain_http: false</code> and omitting <code>plain_http</code> are different.</p>
-<p>Set <code>run_once: true</code> and <code>delegate_to</code> on every task. One <code>zarf init</code> initialises the whole cluster and one deploy puts the package on all of it, so a play over the cluster’s own inventory would otherwise do the work once per host. Set <code>no_log: true</code> on any task carrying a credential: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
+<p>Set <code>run_once: true</code> and <code>delegate_to</code> on every task. One <code>zarf init</code> initialises the whole cluster, one deploy puts the package on all of it, and one read answers for all of it, so a play over the cluster’s own inventory would otherwise do the work once per host. Set <code>no_log: true</code> on any task carrying a credential: a binary module has no per-parameter <code>no_log</code>, so the task-level setting is what suppresses the arguments and the result.</p>
 <p>Credentials given as parameters are rendered as flags, which puts them in the process table for the life of the run. <code>zarf_config</code> names a zarf configuration file instead, which zarf reads them from.</p>
 <h2 id="what-the-result-says"><a class="header" href="#what-the-result-says">What the result says</a></h2>
-<p>Both modules report <code>changed: true</code> with <code>changedSignal: partial</code> on every successful run, and name every component they deployed in <code>changedUndeclared</code>. Zarf reports which components ran and not whether any of them found the cluster already as it wanted, so <code>partial</code> is the honest answer rather than an unfinished one.</p>
-<p>Check mode reports the task as skipped. Neither command has a dry run.</p>
+<p>The two converging modules report <code>changed: true</code> with <code>changedSignal: partial</code> on every successful run, and name every component they deployed in <code>changedUndeclared</code>. Zarf reports which components ran and not whether any of them found the cluster already as it wanted, so <code>partial</code> is the honest answer rather than an unfinished one. Check mode reports the task as skipped, because neither command has a dry run.</p>
+<p>The three read-only modules report <code>changed: false</code>, which is not an approximation, and they run in check mode rather than skipping: answering a question during a run an operator asked to be told about is the honest thing to do.</p>
+<p><code>zarf_state_info</code> withholds what it reads. The <code>zarf-state</code> Secret carries the registry, git and artifact server credentials and the agent webhook’s TLS private key, so the returned <code>state</code> has them removed and <code>redacted</code> names the paths that went. <code>include_credentials: true</code> returns them and censors the task’s own output in the same breath; the task that reads the result afterwards needs its own <code>no_log</code>, because <code>set_fact</code> prints what the module hid.</p>
 <p>The <a href="#driving-zarf-from-ansible">module guide</a> covers installing the modules, the ordering a cluster with no storage provider needs, the live progress display, and the shape of the result.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="init"><a href="#init" class="header">init</a></h1>
@@ -5094,6 +5109,7 @@ $ cargoship version -o json
 <h2 id="zarf_init"><a class="header" href="#zarf_init">zarf_init</a></h2>
 <p>Initialise a cluster with a staged zarf init package.</p>
 <p>Write it as <code>colonel_byte.zarf.zarf_init</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.0.1.</p>
 <p>Runs <code>zarf init</code> against the cluster a kubeconfig names, and follows the init package’s deployment component by component.</p>
 <p>The module is a small wrapper binary, not zarf. It renders the <code>zarf init</code> command line from these parameters, runs the installed zarf, reads the component boundaries back out of zarf’s log stream, and reports one JSON result.</p>
 <p>This is a proof of ZEP-0072 (<a href="https://github.com/zarf-dev/proposals/pull/73">https://github.com/zarf-dev/proposals/pull/73</a>), which proposes putting this dispatch inside the zarf binary itself.</p>
@@ -5211,6 +5227,7 @@ $ cargoship version -o json
 <h2 id="zarf_package_deploy"><a class="header" href="#zarf_package_deploy">zarf_package_deploy</a></h2>
 <p>Deploy a zarf package onto an initialised cluster.</p>
 <p>Write it as <code>colonel_byte.zarf.zarf_package_deploy</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.0.1.</p>
 <p>Runs <code>zarf package deploy</code> against the cluster a kubeconfig names, and follows the deployment component by component.</p>
 <p>The module is a small wrapper binary, not zarf. It renders the command line from these parameters, runs the installed zarf, reads the component boundaries back out of zarf’s log stream, and reports one JSON result.</p>
 <p>It is the companion of <code>colonel_byte.zarf.zarf_init</code>. A cluster whose init package has no StorageClass to claim cannot finish initialising until a storage provider is deployed, and the provider cannot be deployed until the cluster is initialised far enough to hold it, so a playbook alternates between the two.</p>
@@ -5287,6 +5304,283 @@ $ cargoship version -o json
   ansible.builtin.debug:
     var: deploy_result.zarf.componentsRan
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="package_info"><a href="#package_info" class="header">package_info</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="zarf_package_info"><a class="header" href="#zarf_package_info">zarf_package_info</a></h2>
+<p>List all Zarf packages deployed to a cluster.</p>
+<p>Write it as <code>colonel_byte.zarf.zarf_package_info</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.31.0.</p>
+<p>Retrieves the list of packages deployed to the cluster via <code>zarf package list --output-format json</code> and returns structured package records.</p>
+<p>Runs on the node the task is delegated to (typically localhost), reaching the cluster through a kubeconfig.</p>
+<h3 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Flag</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>kubeconfig</code></td><td><code>path</code></td><td>no</td><td>None</td><td>Path to the kubeconfig file used to reach the cluster.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>path</code></td><td>no</td><td>None</td><td>Path to the <code>zarf</code> CLI binary on the delegated host. When omitted, <code>zarf</code> on <code>PATH</code> is used.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="notes-9"><a class="header" href="#notes-9">Notes</a></h3>
+<ul>
+<li>Set <code>run_once: true</code> and <code>delegate_to: localhost</code> on the task.</li>
+<li>The module runs in check mode and reports <code>changed: false</code>, because reading a cluster changes nothing.</li>
+</ul>
+<h3 id="example-7"><a class="header" href="#example-7">Example</a></h3>
+<pre><code class="language-yaml">- name: List deployed zarf packages
+  colonel_byte.zarf.zarf_package_info:
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  register: zarf_packages_result
+
+- name: Display package names and versions
+  ansible.builtin.debug:
+    msg: "{{ zarf_packages_result.packages | map(attribute='package') | list }}"
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="package_inspect-2"><a href="#package_inspect-2" class="header">package_inspect</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="zarf_package_inspect"><a class="header" href="#zarf_package_inspect">zarf_package_inspect</a></h2>
+<p>Inspect and parse the definition of a Zarf package.</p>
+<p>Write it as <code>colonel_byte.zarf.zarf_package_inspect</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.31.0.</p>
+<p>Runs <code>zarf package inspect definition</code> against a local package tarball, an <code>oci://</code> reference, or a deployed package name.</p>
+<p>Signature verification is zarf’s <code>if-possible</code> unless <code>verify</code> says otherwise, so an unsigned package inspects cleanly even when <code>public_key</code> is given.</p>
+<p>Parses the resulting YAML definition into structured output containing package metadata, build data, and components.</p>
+<p>Runs on the node the task is delegated to (typically localhost).</p>
+<h3 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Flag</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>package</code></td><td><code>str</code></td><td>yes</td><td>None</td><td>Path to a local package tarball, an <code>oci://</code> reference, an <code>https://</code> URL, or a deployed package name.</td></tr>
+<tr><td><code>public_key</code></td><td><code>path</code></td><td>no</td><td><code>--key</code></td><td>Path to the public key a package signature is verified against. Supplying it does not by itself require a signature: zarf verifies when it can and passes an unsigned package otherwise. Set <code>verify: always</code> to reject one.</td></tr>
+<tr><td><code>verify</code></td><td><code>str</code></td><td>no</td><td><code>--verify</code></td><td>When to verify the package signature. Left unset, zarf’s own default applies, which is <code>if-possible</code>. One of <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
+<tr><td><code>kubeconfig</code></td><td><code>path</code></td><td>no</td><td>None</td><td>Path to the kubeconfig file, used when inspecting a package already deployed to a cluster.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>path</code></td><td>no</td><td>None</td><td>Path to the <code>zarf</code> CLI binary on the delegated host. When omitted, <code>zarf</code> on <code>PATH</code> is used.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="notes-10"><a class="header" href="#notes-10">Notes</a></h3>
+<ul>
+<li>Set <code>run_once: true</code> and <code>delegate_to: localhost</code> on the task.</li>
+<li>The module runs in check mode and reports <code>changed: false</code>, because reading a package definition changes nothing.</li>
+</ul>
+<h3 id="example-8"><a class="header" href="#example-8">Example</a></h3>
+<pre><code class="language-yaml">- name: Inspect a staged Zarf package tarball, rejecting it when unsigned
+  colonel_byte.zarf.zarf_package_inspect:
+    package: /srv/staging/zarf-package-csi-rook-ceph-amd64-v1.20.7-upstream.tar.zst
+    public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+    verify: always
+  delegate_to: localhost
+  run_once: true
+  register: pkg_inspect
+
+- name: Display package version and flavor
+  ansible.builtin.debug:
+    msg:
+      name: "{{ pkg_inspect.definition.metadata.name }}"
+      version: "{{ pkg_inspect.definition.metadata.version }}"
+      flavor: "{{ pkg_inspect.definition.build.flavor | default('default') }}"
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="state_info"><a href="#state_info" class="header">state_info</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="zarf_state_info"><a class="header" href="#zarf_state_info">zarf_state_info</a></h2>
+<p>Fetch and parse the Zarf state secret from a cluster.</p>
+<p>Write it as <code>colonel_byte.zarf.zarf_state_info</code>. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster’s nodes.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.31.0.</p>
+<p>Retrieves the <code>zarf-state</code> Secret from the cluster via <code>zarf tools kubectl</code> and parses the base64-encoded state JSON into structured output.</p>
+<p>Runs on the node the task is delegated to (typically localhost), reaching the cluster through a kubeconfig.</p>
+<p>The Secret holds the registry, git and artifact server credentials and the agent’s TLS private key, so by default they are removed from <code>state</code> and the paths that were removed are returned in <code>redacted</code>. Set <code>include_credentials: true</code> to get them.</p>
+<h3 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Required</th><th>Flag</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>kubeconfig</code></td><td><code>path</code></td><td>no</td><td>None</td><td>Path to the kubeconfig file used to reach the cluster.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>path</code></td><td>no</td><td>None</td><td>Path to the <code>zarf</code> CLI binary on the delegated host. When omitted, <code>zarf</code> on <code>PATH</code> is used.</td></tr>
+<tr><td><code>namespace</code></td><td><code>str</code></td><td>no</td><td>None</td><td>The namespace holding the <code>zarf-state</code> Secret.</td></tr>
+<tr><td><code>include_credentials</code></td><td><code>bool</code></td><td>no</td><td>None</td><td>Whether to return the credentials the <code>zarf-state</code> Secret holds. Left unset, they are removed from <code>state</code> and named in <code>redacted</code>. A run that sets it censors its own task output. See the notes.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="notes-11"><a class="header" href="#notes-11">Notes</a></h3>
+<ul>
+<li>Set <code>run_once: true</code> and <code>delegate_to: localhost</code> on the task.</li>
+<li>The returned <code>state</code> is redacted unless <code>include_credentials</code> is set, because zarf writes eight secrets into that one Secret: the registry push, pull and seed secrets, the git server push and pull passwords, the artifact server token, and the agent webhook’s TLS private key.</li>
+<li>A run with <code>include_credentials: true</code> censors its own task output, as though <code>no_log: true</code> had been set on the task. The registered variable still holds the real state; it is the display that is suppressed. Note that a later task which templates the state - <code>set_fact</code> in particular - prints what this one hid, so it needs <code>no_log: true</code> of its own.</li>
+<li>The module runs in check mode and reports <code>changed: false</code>, because reading state changes nothing.</li>
+</ul>
+<h3 id="example-9"><a class="header" href="#example-9">Example</a></h3>
+<pre><code class="language-yaml">- name: Fetch and inspect the zarf state
+  colonel_byte.zarf.zarf_state_info:
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+  delegate_to: localhost
+  run_once: true
+  register: zarf_state_result
+
+- name: Display registry mode
+  ansible.builtin.debug:
+    msg: "{{ zarf_state_result.state.registryInfo.registryMode }}"
+
+- name: Report which paths were withheld
+  ansible.builtin.debug:
+    var: zarf_state_result.redacted
+
+- name: Read the registry push credentials to log in with them
+  colonel_byte.zarf.zarf_state_info:
+    kubeconfig: /etc/rancher/rke2/rke2.yaml
+    include_credentials: true
+  delegate_to: localhost
+  run_once: true
+  register: zarf_state_credentials
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="roles-1"><a class="header" href="#roles-1">Roles</a></h1>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Role</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><a href="#packages-2"><code>packages</code></a></td><td>Queries the cluster via <code>zarf package list</code> and sets the <code>zarf_packages</code> fact.</td></tr>
+<tr><td><a href="#package_inspect-3"><code>package_inspect</code></a></td><td>Inspects a Zarf package definition and sets structured metadata facts.</td></tr>
+<tr><td><a href="#state-2"><code>state</code></a></td><td>Queries the cluster for the <code>zarf-state</code> Secret and sets the parsed <code>zarf_state</code> fact.</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="packages"><a class="header" href="#packages">packages</a></h2>
+<p><code>packages</code> queries installed Zarf packages and exposes them as a structured list under the <code>zarf_packages</code> fact:</p>
+<pre><code class="language-yaml">- name: List installed Zarf packages
+  ansible.builtin.include_role:
+    name: colonel_byte.zarf.packages
+  vars:
+    zarf_kubeconfig: /etc/rancher/rke2/rke2.yaml
+
+- name: Report installed packages
+  ansible.builtin.debug:
+    msg: "{{ zarf_packages | map(attribute='package') | list }}"
+</code></pre>
+<h2 id="package_inspect"><a class="header" href="#package_inspect">package_inspect</a></h2>
+<p><code>package_inspect</code> parses a package tarball, OCI reference, or cluster package definition and sets facts.</p>
+<p>Naming <code>zarf_public_key</code> requires a signature. That is the role being stricter than the module, which passes <code>verify</code> through and leaves zarf’s own <code>if-possible</code> default alone – and <code>if-possible</code> accepts an unsigned package whether or not a key was given. Set <code>zarf_verify</code> explicitly to override, including to <code>if-possible</code> to get zarf’s default back.</p>
+<pre><code class="language-yaml">- name: Inspect storage package definition, rejecting it when unsigned
+  ansible.builtin.include_role:
+    name: colonel_byte.zarf.package_inspect
+  vars:
+    zarf_package: /srv/staging/zarf-package-csi-rook-ceph-amd64-v1.20.7-upstream.tar.zst
+    zarf_public_key: /etc/zarf/colonel-byte-zarf-packages.pub
+
+- name: Report package details
+  ansible.builtin.debug:
+    msg:
+      name: "{{ zarf_package_name }}"
+      version: "{{ zarf_package_version }}"
+      flavor: "{{ zarf_package_flavor }}"
+</code></pre>
+<h2 id="state"><a class="header" href="#state">state</a></h2>
+<p><code>state</code> is the convenient way to retrieve and parse Zarf’s cluster state. It runs <code>zarf tools kubectl get secret zarf-state -n zarf -o jsonpath='{.data.state}'</code>, decodes the payload, and sets the resulting dictionary as the <code>zarf_state</code> fact.</p>
+<p>The credentials in that Secret – the registry push, pull and seed secrets, the git server passwords, the artifact server token, and the agent webhook’s TLS private key – are withheld. The paths withheld are set as <code>zarf_state_redacted</code>, and <code>zarf_include_credentials: true</code> returns them instead. The role defaults <code>no_log</code> on both of its tasks, which is also why reaching for the role beats calling the module directly here: <code>set_fact</code> prints what the module censored, so the module alone cannot keep a credential out of a <code>-v</code> transcript. See <a href="#why-the-read-only-zarf-modules-are-python-rather-than-wrapper-binaries">choice-zarf-info-modules</a>.</p>
+<pre><code class="language-yaml">- name: Load cluster zarf state
+  ansible.builtin.include_role:
+    name: colonel_byte.zarf.state
+  vars:
+    zarf_kubeconfig: /etc/rancher/rke2/rke2.yaml
+
+- name: Inspect cluster registry mode
+  ansible.builtin.debug:
+    msg: "Cluster registry mode is {{ zarf_state.registryInfo.registryMode }}"
+
+- name: Report which paths were withheld
+  ansible.builtin.debug:
+    var: zarf_state_redacted
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="package_inspect-3"><a href="#package_inspect-3" class="header">package_inspect</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="package_inspect-1"><a class="header" href="#package_inspect-1">package_inspect</a></h2>
+<p>Inspect a Zarf package definition and expose structured metadata facts.</p>
+<p>Include it as <code>colonel_byte.zarf.package_inspect</code>.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.31.0.</p>
+<p>Runs <code>zarf package inspect definition</code> against a package source and parses the YAML definition.</p>
+<p>A <code>zarf_public_key</code> with no <code>zarf_verify</code> requires a signature, which is stricter than the module’s own default. See <code>zarf_verify</code>.</p>
+<p>Sets the <code>zarf_package_definition</code>, <code>zarf_package_name</code>, <code>zarf_package_version</code>, and <code>zarf_package_flavor</code> facts.</p>
+<p>Every task carries <code>run_once: true</code> and delegates to <code>zarf_delegate_to</code>.</p>
+<h3 id="variables-1"><a class="header" href="#variables-1">Variables</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>zarf_package</code></td><td><code>str</code></td><td><code>""</code></td><td>The package source to inspect: a path to a staged tarball, an <code>oci://</code> reference, or a deployed package name.</td></tr>
+<tr><td><code>zarf_public_key</code></td><td><code>str</code></td><td><code>""</code></td><td>Path to the public key a package signature is verified against.</td></tr>
+<tr><td><code>zarf_verify</code></td><td><code>str</code></td><td><code>""</code></td><td>When to verify the package signature. Left empty, the role requires a signature when <code>zarf_public_key</code> names a key, and leaves zarf’s own <code>if-possible</code> default alone when it does not. Set it explicitly to override. One of ``, <code>never</code>, <code>if-possible</code>, <code>always</code>.</td></tr>
+<tr><td><code>zarf_kubeconfig</code></td><td><code>str</code></td><td><code>""</code></td><td>Path to the kubeconfig file, used when inspecting a deployed cluster package.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>str</code></td><td><code>zarf</code></td><td>Path to the <code>zarf</code> binary on the delegated host.</td></tr>
+<tr><td><code>zarf_quiet</code></td><td><code>bool</code></td><td><code>true</code></td><td>Whether to suppress verbose assert output when asserting inputs.</td></tr>
+<tr><td><code>zarf_delegate_to</code></td><td><code>str</code></td><td><code>localhost</code></td><td>The node on which to execute the inspection.</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="packages-2"><a href="#packages-2" class="header">packages</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="packages-1"><a class="header" href="#packages-1">packages</a></h2>
+<p>List all Zarf packages deployed to a cluster into an Ansible fact.</p>
+<p>Include it as <code>colonel_byte.zarf.packages</code>.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.31.0.</p>
+<p>Queries the cluster via <code>zarf package list</code> and sets the resulting package list as the <code>zarf_packages</code> fact.</p>
+<p>Every task carries <code>run_once: true</code> and delegates to <code>zarf_delegate_to</code>.</p>
+<h3 id="variables-2"><a class="header" href="#variables-2">Variables</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>zarf_kubeconfig</code></td><td><code>str</code></td><td><code>""</code></td><td>Path to the kubeconfig file used to reach the cluster. Left empty, uses default kubeconfig.</td></tr>
+<tr><td><code>zarf_delegate_to</code></td><td><code>str</code></td><td><code>localhost</code></td><td>The node on which to execute the zarf package list query.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>str</code></td><td><code>zarf</code></td><td>Path to the <code>zarf</code> binary on the delegated host.</td></tr>
+</tbody>
+</table>
+</div>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="state-2"><a href="#state-2" class="header">state</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="state-1"><a class="header" href="#state-1">state</a></h2>
+<p>Fetch and parse the Zarf state secret from a cluster into an Ansible fact.</p>
+<p>Include it as <code>colonel_byte.zarf.state</code>.</p>
+<p>Added in <code>colonel_byte.zarf</code> 0.31.0.</p>
+<p>Queries the cluster for the <code>zarf-state</code> Secret via <code>zarf tools kubectl</code> and sets the parsed state as the <code>zarf_state</code> fact.</p>
+<p>The credentials the Secret holds are withheld unless <code>zarf_include_credentials</code> is set. The paths that were withheld are set as the <code>zarf_state_redacted</code> fact.</p>
+<p>Every task carries <code>run_once: true</code>, <code>no_log</code> from <code>zarf_no_log</code>, and delegates to <code>zarf_delegate_to</code>.</p>
+<h3 id="variables-3"><a class="header" href="#variables-3">Variables</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Variable</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>zarf_kubeconfig</code></td><td><code>str</code></td><td><code>""</code></td><td>Path to the kubeconfig file used to reach the cluster. Left empty, uses default kubeconfig.</td></tr>
+<tr><td><code>zarf_delegate_to</code></td><td><code>str</code></td><td><code>localhost</code></td><td>The node on which to execute the zarf state query.</td></tr>
+<tr><td><code>zarf_binary</code></td><td><code>str</code></td><td><code>zarf</code></td><td>Path to the <code>zarf</code> binary on the delegated host.</td></tr>
+<tr><td><code>zarf_namespace</code></td><td><code>str</code></td><td><code>zarf</code></td><td>The namespace holding the <code>zarf-state</code> Secret.</td></tr>
+<tr><td><code>zarf_include_credentials</code></td><td><code>bool</code></td><td><code>false</code></td><td>Whether to return the credentials the <code>zarf-state</code> Secret holds: the registry push, pull and seed secrets, the git server passwords, the artifact server token, and the agent’s TLS private key. Left false, they are removed from <code>zarf_state</code> and named in <code>zarf_state_redacted</code>.</td></tr>
+<tr><td><code>zarf_no_log</code></td><td><code>bool</code></td><td><code>true</code></td><td>Whether to suppress task parameter and result logging. Applied to the <code>set_fact</code> task as well as to the module call, because <code>set_fact</code> prints the fact it sets. Set it to false when debugging locally.</td></tr>
+</tbody>
+</table>
+</div>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="apply-2"><a href="#apply-2" class="header">apply</a></h1>
 <h2 id="apply-phases"><a class="header" href="#apply-phases">apply phases</a></h2>
@@ -5740,7 +6034,7 @@ $ cargoship version -o json
 <h2 id="index"><a class="header" href="#index">Index</a></h2>
 <ul>
 <li><a href="#constants">Constants</a></li>
-<li><a href="#variables-1">Variables</a></li>
+<li><a href="#variables-4">Variables</a></li>
 <li><a href="#FormatArches">func FormatArches(arches Arches) string</a></li>
 <li><a href="#Arch">type Arch</a>
 <ul>
@@ -5759,7 +6053,7 @@ $ cargoship version -o json
 <p><a name="BuildTimestampFormat"></a>BuildTimestampFormat is the timestamp layout used in log output.</p>
 <pre><code class="language-go">const BuildTimestampFormat = time.RFC1123Z
 </code></pre>
-<h2 id="variables-1"><a class="header" href="#variables-1">Variables</a></h2>
+<h2 id="variables-4"><a class="header" href="#variables-4">Variables</a></h2>
 <p><a name="ErrUnknownArch"></a>ErrUnknownArch is returned for a CPU architecture cargoship does not support.</p>
 <pre><code class="language-go">var ErrUnknownArch = fmt.Errorf("invalid platform operating system architecture")
 </code></pre>
@@ -5976,7 +6270,7 @@ $ cargoship version -o json
 <h2 id="index-2"><a class="header" href="#index-2">Index</a></h2>
 <ul>
 <li><a href="#constants-2">Constants</a></li>
-<li><a href="#variables-2">Variables</a></li>
+<li><a href="#variables-5">Variables</a></li>
 <li><a href="#IsAgeEncrypted">func IsAgeEncrypted(value string) bool</a></li>
 <li><a href="#IsEncrypted">func IsEncrypted(value string) bool</a></li>
 <li><a href="#IsVaultEncrypted">func IsVaultEncrypted(value string) bool</a></li>
@@ -6146,7 +6440,7 @@ $ cargoship version -o json
 <p><a name="VaultHeader"></a>VaultHeader marks a value in a cluster configuration as Ansible Vault ciphertext produced by `ansible-vault encrypt_string`. Cargoship decrypts such a value at apply time, so anything that inspects the plaintext has to wait until then.</p>
 <pre><code class="language-go">const VaultHeader = "$ANSIBLE_VAULT"
 </code></pre>
-<h2 id="variables-2"><a class="header" href="#variables-2">Variables</a></h2>
+<h2 id="variables-5"><a class="header" href="#variables-5">Variables</a></h2>
 <p><a name="ErrCommandFailed"></a>ErrCommandFailed is returned when a command fails</p>
 <pre><code class="language-go">var ErrCommandFailed = errors.New("command failed")
 </code></pre>
@@ -7419,7 +7713,7 @@ $ cargoship version -o json
 <h2 id="index-5"><a class="header" href="#index-5">Index</a></h2>
 <ul>
 <li><a href="#constants-4">Constants</a></li>
-<li><a href="#variables-3">Variables</a></li>
+<li><a href="#variables-6">Variables</a></li>
 <li><a href="#AssembleLayers">func AssembleLayers(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher, include …layers.LayerType) ([]ocispec.Descriptor, error)</a></li>
 <li><a href="#CopyPackage">func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOptions) (err error)</a></li>
 <li><a href="#FetchDistroYAML">func FetchDistroYAML(ctx context.Context, root *oci.Manifest, fetcher content.Fetcher) (distro.ZarfDistro, error)</a></li>
@@ -7458,7 +7752,7 @@ $ cargoship version -o json
 <p><a name="OCITimestampFormat"></a>OCITimestampFormat is the format used for the OCI timestamp annotation</p>
 <pre><code class="language-go">const OCITimestampFormat = time.RFC3339
 </code></pre>
-<h2 id="variables-3"><a class="header" href="#variables-3">Variables</a></h2>
+<h2 id="variables-6"><a class="header" href="#variables-6">Variables</a></h2>
 <p><a name="PackageAlwaysPull"></a></p>
 <pre><code class="language-go">var (
     // PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
@@ -7880,7 +8174,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package gen turns an extract.Manifest into a Go struct source file: one field per resolved, non-alias flag, tagged with the flag’s real kebab-case name as its yaml key. See docs/agent/design-config-codegen.md -- the flag name, not the Go field name, is the source of truth for what a valid config.yaml key looks like.</p>
 <h2 id="index-9"><a class="header" href="#index-9">Index</a></h2>
 <ul>
-<li><a href="#variables-4">Variables</a></li>
+<li><a href="#variables-7">Variables</a></li>
 <li><a href="#Generate">func Generate(opts Options) ([]byte, error)</a></li>
 <li><a href="#GenerateComponents">func GenerateComponents(opts ComponentsOptions) ([]byte, error)</a></li>
 <li><a href="#GenerateNestedKeys">func GenerateNestedKeys(opts NestedKeysOptions) ([]byte, error)</a></li>
@@ -7895,7 +8189,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#NestedKeysOptions">type NestedKeysOptions</a></li>
 <li><a href="#Options">type Options</a></li>
 </ul>
-<h2 id="variables-4"><a class="header" href="#variables-4">Variables</a></h2>
+<h2 id="variables-7"><a class="header" href="#variables-7">Variables</a></h2>
 <p><a name="Registry"></a>Registry maps distro id (e.g. “k3s”, “rke2”) -&gt; sanitized minor version package name (e.g. “v1_35”) -&gt; Entry. See Lookup in lookup.go for the consumer-facing API.</p>
 <pre><code class="language-go">var Registry = map[string]map[string]Entry{
     "k3s": {
@@ -8011,11 +8305,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-10"><a class="header" href="#index-10">Index</a></h2>
 <ul>
-<li><a href="#variables-5">Variables</a></li>
+<li><a href="#variables-8">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-5"><a class="header" href="#variables-5">Variables</a></h2>
+<h2 id="variables-8"><a class="header" href="#variables-8">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_31 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8217,11 +8511,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-11"><a class="header" href="#index-11">Index</a></h2>
 <ul>
-<li><a href="#variables-6">Variables</a></li>
+<li><a href="#variables-9">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-6"><a class="header" href="#variables-6">Variables</a></h2>
+<h2 id="variables-9"><a class="header" href="#variables-9">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_32 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8423,11 +8717,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-12"><a class="header" href="#index-12">Index</a></h2>
 <ul>
-<li><a href="#variables-7">Variables</a></li>
+<li><a href="#variables-10">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-7"><a class="header" href="#variables-7">Variables</a></h2>
+<h2 id="variables-10"><a class="header" href="#variables-10">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_33 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8629,11 +8923,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-13"><a class="header" href="#index-13">Index</a></h2>
 <ul>
-<li><a href="#variables-8">Variables</a></li>
+<li><a href="#variables-11">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-8"><a class="header" href="#variables-8">Variables</a></h2>
+<h2 id="variables-11"><a class="header" href="#variables-11">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_34 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -8836,11 +9130,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-14"><a class="header" href="#index-14">Index</a></h2>
 <ul>
-<li><a href="#variables-9">Variables</a></li>
+<li><a href="#variables-12">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-9"><a class="header" href="#variables-9">Variables</a></h2>
+<h2 id="variables-12"><a class="header" href="#variables-12">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -9043,11 +9337,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-15"><a class="header" href="#index-15">Index</a></h2>
 <ul>
-<li><a href="#variables-10">Variables</a></li>
+<li><a href="#variables-13">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-10"><a class="header" href="#variables-10">Variables</a></h2>
+<h2 id="variables-13"><a class="header" href="#variables-13">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -9250,11 +9544,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-16"><a class="header" href="#index-16">Index</a></h2>
 <ul>
-<li><a href="#variables-11">Variables</a></li>
+<li><a href="#variables-14">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-11"><a class="header" href="#variables-11">Variables</a></h2>
+<h2 id="variables-14"><a class="header" href="#variables-14">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -9458,11 +9752,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-17"><a class="header" href="#index-17">Index</a></h2>
 <ul>
-<li><a href="#variables-12">Variables</a></li>
+<li><a href="#variables-15">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-12"><a class="header" href="#variables-12">Variables</a></h2>
+<h2 id="variables-15"><a class="header" href="#variables-15">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_31 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -9672,11 +9966,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-18"><a class="header" href="#index-18">Index</a></h2>
 <ul>
-<li><a href="#variables-13">Variables</a></li>
+<li><a href="#variables-16">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-13"><a class="header" href="#variables-13">Variables</a></h2>
+<h2 id="variables-16"><a class="header" href="#variables-16">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_32 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -9886,11 +10180,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-19"><a class="header" href="#index-19">Index</a></h2>
 <ul>
-<li><a href="#variables-14">Variables</a></li>
+<li><a href="#variables-17">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-14"><a class="header" href="#variables-14">Variables</a></h2>
+<h2 id="variables-17"><a class="header" href="#variables-17">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_33 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -10102,11 +10396,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-20"><a class="header" href="#index-20">Index</a></h2>
 <ul>
-<li><a href="#variables-15">Variables</a></li>
+<li><a href="#variables-18">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-15"><a class="header" href="#variables-15">Variables</a></h2>
+<h2 id="variables-18"><a class="header" href="#variables-18">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_34 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -10319,11 +10613,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-21"><a class="header" href="#index-21">Index</a></h2>
 <ul>
-<li><a href="#variables-16">Variables</a></li>
+<li><a href="#variables-19">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-16"><a class="header" href="#variables-16">Variables</a></h2>
+<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -10536,11 +10830,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-22"><a class="header" href="#index-22">Index</a></h2>
 <ul>
-<li><a href="#variables-17">Variables</a></li>
+<li><a href="#variables-20">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-17"><a class="header" href="#variables-17">Variables</a></h2>
+<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -10753,11 +11047,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-23"><a class="header" href="#index-23">Index</a></h2>
 <ul>
-<li><a href="#variables-18">Variables</a></li>
+<li><a href="#variables-21">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-18"><a class="header" href="#variables-18">Variables</a></h2>
+<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -10974,9 +11268,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-24"><a class="header" href="#index-24">Index</a></h2>
 <ul>
-<li><a href="#variables-19">Variables</a></li>
+<li><a href="#variables-22">Variables</a></li>
 </ul>
-<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
+<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_32 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11052,9 +11346,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-25"><a class="header" href="#index-25">Index</a></h2>
 <ul>
-<li><a href="#variables-20">Variables</a></li>
+<li><a href="#variables-23">Variables</a></li>
 </ul>
-<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
+<h2 id="variables-23"><a class="header" href="#variables-23">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_33 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11130,9 +11424,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-26"><a class="header" href="#index-26">Index</a></h2>
 <ul>
-<li><a href="#variables-21">Variables</a></li>
+<li><a href="#variables-24">Variables</a></li>
 </ul>
-<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
+<h2 id="variables-24"><a class="header" href="#variables-24">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_34 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11208,9 +11502,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-27"><a class="header" href="#index-27">Index</a></h2>
 <ul>
-<li><a href="#variables-22">Variables</a></li>
+<li><a href="#variables-25">Variables</a></li>
 </ul>
-<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
+<h2 id="variables-25"><a class="header" href="#variables-25">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11287,9 +11581,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-28"><a class="header" href="#index-28">Index</a></h2>
 <ul>
-<li><a href="#variables-23">Variables</a></li>
+<li><a href="#variables-26">Variables</a></li>
 </ul>
-<h2 id="variables-23"><a class="header" href="#variables-23">Variables</a></h2>
+<h2 id="variables-26"><a class="header" href="#variables-26">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11366,9 +11660,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <h2 id="index-29"><a class="header" href="#index-29">Index</a></h2>
 <ul>
-<li><a href="#variables-24">Variables</a></li>
+<li><a href="#variables-27">Variables</a></li>
 </ul>
-<h2 id="variables-24"><a class="header" href="#variables-24">Variables</a></h2>
+<h2 id="variables-27"><a class="header" href="#variables-27">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -12287,7 +12581,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-38"><a class="header" href="#index-38">Index</a></h2>
 <ul>
 <li><a href="#constants-9">Constants</a></li>
-<li><a href="#variables-25">Variables</a></li>
+<li><a href="#variables-28">Variables</a></li>
 <li><a href="#ValidateArch">func ValidateArch(format Arch) error</a></li>
 <li><a href="#Arch">type Arch</a></li>
 </ul>
@@ -12302,7 +12596,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     ArchRISCV = api.ArchRISCV
 )
 </code></pre>
-<h2 id="variables-25"><a class="header" href="#variables-25">Variables</a></h2>
+<h2 id="variables-28"><a class="header" href="#variables-28">Variables</a></h2>
 <p><a name="ErrUnknownArch"></a></p>
 <pre><code class="language-go">var (
     // ErrUnknownArch is returned when a Arch is not one of the supported architectures.
@@ -12368,7 +12662,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-40"><a class="header" href="#index-40">Index</a></h2>
 <ul>
 <li><a href="#constants-10">Constants</a></li>
-<li><a href="#variables-26">Variables</a></li>
+<li><a href="#variables-29">Variables</a></li>
 <li><a href="#AnnotationsFromMetadata">func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string</a></li>
 <li><a href="#IsCleanPath">func IsCleanPath(s string) bool</a></li>
 <li><a href="#IsContainedPath">func IsContainedPath(s string) bool</a></li>
@@ -12433,7 +12727,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     OCITimestampFormat = time.RFC3339
 )
 </code></pre>
-<h2 id="variables-26"><a class="header" href="#variables-26">Variables</a></h2>
+<h2 id="variables-29"><a class="header" href="#variables-29">Variables</a></h2>
 <p><a name="ErrNoVerificationMaterial"></a>ErrNoVerificationMaterial is returned when there is nothing to verify against. VerifyIfPossible tolerates this; all other verification errors are always fatal.</p>
 <pre><code class="language-go">var ErrNoVerificationMaterial = errors.New("no verification material available")
 </code></pre>
@@ -12711,7 +13005,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-42"><a class="header" href="#index-42">Index</a></h2>
 <ul>
 <li><a href="#constants-11">Constants</a></li>
-<li><a href="#variables-27">Variables</a></li>
+<li><a href="#variables-30">Variables</a></li>
 <li><a href="#DryRunNote">func DryRunNote(p Phase) string</a></li>
 <li><a href="#Titles">func Titles(results []PhaseResult) []string</a></li>
 <li><a href="#APTUploadFiles">type APTUploadFiles</a>
@@ -13123,7 +13417,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     UnknownVersion = "v0.0.0"
 )
 </code></pre>
-<h2 id="variables-27"><a class="header" href="#variables-27">Variables</a></h2>
+<h2 id="variables-30"><a class="header" href="#variables-30">Variables</a></h2>
 <p><a name="ErrNoControllers"></a>ErrNoControllers an error for when no controllers are running</p>
 <pre><code class="language-go">var ErrNoControllers = errors.New("no controllers are running")
 </code></pre>
@@ -14628,13 +14922,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package retry provides simple retry wrappers for functions that return an error</p>
 <h2 id="index-43"><a class="header" href="#index-43">Index</a></h2>
 <ul>
-<li><a href="#variables-28">Variables</a></li>
+<li><a href="#variables-31">Variables</a></li>
 <li><a href="#Context">func Context(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Timeout">func Timeout(ctx context.Context, timeout time.Duration, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Times">func Times(ctx context.Context, times int, f func(context.Context) error) error</a></li>
 <li><a href="#WithDefaultTimeout">func WithDefaultTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 </ul>
-<h2 id="variables-28"><a class="header" href="#variables-28">Variables</a></h2>
+<h2 id="variables-31"><a class="header" href="#variables-31">Variables</a></h2>
 <p><a name="DefaultTimeout"></a></p>
 <pre><code class="language-go">var (
     // DefaultTimeout is a default timeout for retry operations
@@ -14964,7 +15258,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package types is a little bit of a hacky way to generate the cargo-ship-config jsonschema</p>
 <h2 id="index-47"><a class="header" href="#index-47">Index</a></h2>
 <ul>
-<li><a href="#variables-29">Variables</a></li>
+<li><a href="#variables-32">Variables</a></li>
 <li><a href="#AgeOptions">type AgeOptions</a></li>
 <li><a href="#ApplyOptions">type ApplyOptions</a></li>
 <li><a href="#DistroConfig">type DistroConfig</a></li>
@@ -14984,7 +15278,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#ResetOptions">type ResetOptions</a></li>
 </ul>
-<h2 id="variables-29"><a class="header" href="#variables-29">Variables</a></h2>
+<h2 id="variables-32"><a class="header" href="#variables-32">Variables</a></h2>
 <p><a name="CommonFileSources"></a>CommonFileSources are suggested, non-exhaustive URL prefixes used in generated schemas as autocomplete for FileOverrideMap’s file_override keys, the same way CommonRegistries is used for registry_override. They are the hosts a distro definition most often downloads from.</p>
 <pre><code class="language-go">var CommonFileSources = []string{
     "https://rpm.rancher.io",
@@ -15186,7 +15480,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h2 id="index-48"><a class="header" href="#index-48">Index</a></h2>
 <ul>
 <li><a href="#constants-13">Constants</a></li>
-<li><a href="#variables-30">Variables</a></li>
+<li><a href="#variables-33">Variables</a></li>
 <li><a href="#NodeLabelsMapToList">func NodeLabelsMapToList(m map[string]string) []string</a></li>
 <li><a href="#RemoveStaleFiles">func RemoveStaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) error</a></li>
 <li><a href="#StaleFiles">func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) []string</a></li>
@@ -15313,7 +15607,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="StateDir"></a>StateDir is where cargoship records state files describing the applied distro package.</p>
 <pre><code class="language-go">const StateDir = "/etc/cargoship"
 </code></pre>
-<h2 id="variables-30"><a class="header" href="#variables-30">Variables</a></h2>
+<h2 id="variables-33"><a class="header" href="#variables-33">Variables</a></h2>
 <p><a name="ErrVersionNotDetected"></a></p>
 <pre><code class="language-go">var (
     // ErrVersionNotDetected if a version is not detected
@@ -15789,7 +16083,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package registry is used to register a distro</p>
 <h2 id="index-49"><a class="header" href="#index-49">Index</a></h2>
 <ul>
-<li><a href="#variables-31">Variables</a></li>
+<li><a href="#variables-34">Variables</a></li>
 <li><a href="#RegisterDistroModule">func RegisterDistroModule(mf MatchFunc, bf BuildFunc)</a></li>
 <li><a href="#BuildFunc">type BuildFunc</a>
 <ul>
@@ -15798,7 +16092,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#MatchFunc">type MatchFunc</a></li>
 </ul>
-<h2 id="variables-31"><a class="header" href="#variables-31">Variables</a></h2>
+<h2 id="variables-34"><a class="header" href="#variables-34">Variables</a></h2>
 <p><a name="ErrDistroModuleNotFound"></a>ErrDistroModuleNotFound is used when a distro module is not found in the registry</p>
 <pre><code class="language-go">var ErrDistroModuleNotFound = errors.New("distro support not found")
 </code></pre>
@@ -18725,7 +19019,7 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself"><a class="header" href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">Why the zarf Ansible modules are wrapper binaries rather than zarf itself</a></h1>
 <p><a href="https://github.com/zarf-dev/proposals/pull/73">ZEP-0072</a> proposes native Ansible module support for zarf: the <code>zarf</code> binary dispatches on <code>argv[0]</code>, so a <code>zarf_init</code> symlink to <code>/usr/bin/zarf</code> is an Ansible module, with a thin Python action plugin alongside it. That is the design <code>colonel_byte.cargoship</code> already runs, and <a href="#why-the-ansible-module-is-the-cargoship-binary-run-on-the-management-node">choice-ansible-module</a> is the record of why.</p>
-<p>This repository holds a proof of that proposal for <code>zarf init</code> and <code>zarf package deploy</code>: the collection in <code>ansible/colonel_byte/zarf/</code>, the module logic in <code>internal/zarfmod/</code>, and the module files built from <code>cmd/zarf/init/</code> and <code>cmd/zarf/deploy/</code>. It is a proof of concept and is meant to be removed once the proposal is resolved – see <a href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">choice-zarf-collection-removal</a>. The proof diverges from the proposal in exactly one place, and that divergence is the point of this note.</p>
+<p>This repository holds a proof of that proposal for the two commands that converge a cluster, <code>zarf init</code> and <code>zarf package deploy</code>: the collection in <code>ansible/colonel_byte/zarf/</code>, the module logic in <code>internal/zarfmod/</code>, and the module files built from <code>cmd/zarf/init/</code> and <code>cmd/zarf/deploy/</code>. The collection also ships read-only modules, which are built as plain action plugins rather than as wrapper binaries and are not part of this proof – see <a href="#why-the-read-only-zarf-modules-are-python-rather-than-wrapper-binaries">choice-zarf-info-modules</a>. It is a proof of concept and is meant to be removed once the proposal is resolved – see <a href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">choice-zarf-collection-removal</a>. The proof diverges from the proposal in exactly one place, and that divergence is the point of this note.</p>
 <h2 id="the-divergence-the-modules-are-not-the-zarf-binary"><a class="header" href="#the-divergence-the-modules-are-not-the-zarf-binary">The divergence: the modules are not the zarf binary</a></h2>
 <p>A proof built here cannot put dispatch inside zarf, because zarf is not built here. So each module file is a separate, small binary that renders the zarf command line, runs the installed zarf as a child process, follows the deployment, and reports one JSON result. Three things follow from that, and all three are costs the real implementation would not pay.</p>
 <p><strong>The flag surface is a copy rather than a reference.</strong> Cargoship’s modules render flags that are checked against the live cobra command by <code>TestModuleArgsParse</code>. The wrapper has no command tree to check against, so <code>internal/zarfmod/init.go</code> spells the flags out and <code>TestInitArgsAreKnownFlags</code> holds them against <code>internal/zarfmod/testdata/zarf-init-flags.txt</code>, a recorded list. That test catches a flag the module renders and the recorded zarf does not accept; it cannot catch a zarf release that renamed one without the list being refreshed. Inside zarf, this whole mechanism collapses into reading the real command.</p>
@@ -18795,6 +19089,53 @@ func Run(ctx context.Context, basePath string, actions []api.Action, opts RunOpt
 </ul>
 <h2 id="why-this-is-a-record-rather-than-a-todo"><a class="header" href="#why-this-is-a-record-rather-than-a-todo">Why this is a record rather than a TODO</a></h2>
 <p>The removal is a decision somebody should make deliberately, with the proposal’s outcome in hand, not a chore to be swept up by whoever next tidies the repository. A <code>todo-</code> note would invite the second reading. What makes it safe to remove on short notice is the list above, and what makes it safe to leave is that none of it is reachable from cargoship’s own code paths.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-read-only-zarf-modules-are-python-rather-than-wrapper-binaries"><a class="header" href="#why-the-read-only-zarf-modules-are-python-rather-than-wrapper-binaries">Why the read-only zarf modules are Python rather than wrapper binaries</a></h1>
+<p>Every other module in <code>colonel_byte.zarf</code> is a wrapper binary. <code>plugins/plugin_utils/projection.py</code> opens by saying its Python is “deliberately the whole of” the collection’s Python, and <a href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">choice-zarf-ansible-module</a> records why: the parameters are a Go struct in <code>internal/zarfmod</code>, the command line is rendered by a Go function, and <code>plugindocs_test.go</code> holds the Python <code>DOCUMENTATION</code> block against both.</p>
+<p><code>zarf_package_info</code>, <code>zarf_package_inspect</code>, and <code>zarf_state_info</code> are not built that way. Their whole implementation is the action plugin, sharing <code>ZarfInfoActionBase</code> in <code>plugins/plugin_utils/info.py</code>. This is the record of that decision, and of what it costs.</p>
+<h2 id="why-the-wrapper-buys-nothing-here"><a class="header" href="#why-the-wrapper-buys-nothing-here">Why the wrapper buys nothing here</a></h2>
+<p>The wrapper exists for three reasons, and a read-only command has none of them.</p>
+<p><strong>There is no flag surface worth projecting.</strong> <code>zarf init</code> renders more than thirty flags, which is why spelling them out in Go and checking them against a recorded list earns its keep. These three render one flag between them that any parameter controls – <code>--key</code> on <code>zarf_package_inspect</code>. The rest of each command line is fixed words.</p>
+<p><strong>There is no progress to follow.</strong> <code>internal/zarfmod/progress.go</code> reads component boundaries back out of zarf’s log stream so that a fifteen-minute init is not a silent play. <code>zarf package list</code> returns in under a second and has no components. The heartbeat file, the status-file parameter, and the polling monitor thread in <code>ZarfActionBase</code> would all be carried for nothing.</p>
+<p><strong>There is no <code>changed</code> to signal.</strong> The hardest question in the wrapper – what <code>changedSignal</code> can honestly be when zarf reports which components ran and not whether any of them had work to do – does not arise. These modules always report <code>changed: false</code>, and that is not an approximation.</p>
+<p>Against that, building them as wrappers would add three <code>main</code> packages under <code>cmd/zarf/</code>, three files in <code>internal/zarfmod</code>, three more binaries in every release, and three more things an operator has to install on the management node before a playbook runs. <a href="#the-zarf-collection-is-a-proof-of-concept-and-is-meant-to-be-removed">choice-zarf-collection-removal</a> has the whole collection scheduled for deletion once ZEP-0072 resolves, which is a poor thing to spend a release artifact on.</p>
+<h2 id="what-is-checked-instead"><a class="header" href="#what-is-checked-instead">What is checked instead</a></h2>
+<p>The gap this leaves is not that the modules are Python. It is that <code>plugindocs_test.go</code> is a table of modules, so a module absent from the table is a module no test looks at, and nothing says so. That is the state these three were first written in. Two tests in <code>internal/zarfmod/infoplugins_test.go</code> close it:</p>
+<ul>
+<li><code>TestEveryActionPluginIsCovered</code> globs <code>plugins/action/*.py</code> and requires each plugin to appear in exactly one of two lists: <code>wrapperModuleCases</code>, the table the wrapper modules are checked through, or <code>infoModules</code>, the read-only ones. A plugin in neither fails the test by name. It also fails on a list naming a plugin that no longer exists, since that is a check that passes by checking nothing.</li>
+<li><code>TestInfoPluginDocsMatchRenderedFlags</code> holds each read-only module’s documented <code>cli_flag</code> values against the flags its <code>command_parts</code> function names, in both directions.</li>
+</ul>
+<p><code>command_parts</code> is a module-level function of the task’s parameters, rather than a few lines inside <code>run()</code>, precisely so that the second test has something to read. The same technique holds the variable allowlist in the cargoship collection’s projection plugin: see <code>internal/ansibleinv/plugin_test.go</code>.</p>
+<h2 id="what-that-test-cannot-see"><a class="header" href="#what-that-test-cannot-see">What that test cannot see</a></h2>
+<p>It reads string literals out of Python source, so it is weaker than its wrapper-side counterpart, which populates a struct and renders a real command line. It sees which flags are named. It does not see which parameter a flag is rendered for, in what order, or whether a value is attached with a space or an <code>=</code>. <code>--verify=always</code> – the spelling <a href="#why-the-zarf-ansible-modules-are-wrapper-binaries-rather-than-zarf-itself">choice-zarf-ansible-module</a> records as load-bearing, because the space form leaves <code>always</code> as a positional argument and zarf rejects the command – is exactly the mistake it would miss. It also depends on every flag being a literal inside <code>command_parts</code>, which is why none is assembled from a variable.</p>
+<p>That is an acceptable trade at one parameter-controlled flag per module. It stops being one well before the flag surface gets interesting, and the threshold is worth naming: a read-only module that grows a second or third flag, or any flag whose value attaches in a way pflag cares about, wants a wrapper binary rather than a better regular expression.</p>
+<h2 id="zarf_state_info-withholds-the-credentials-it-reads"><a class="header" href="#zarf_state_info-withholds-the-credentials-it-reads"><code>zarf_state_info</code> withholds the credentials it reads</a></h2>
+<p>The <code>zarf-state</code> Secret is not state with some credentials in it. As of zarf v0.85.0 it holds eight: <code>registryInfo.pushPassword</code>, <code>registryInfo.pullPassword</code>, <code>registryInfo.secret</code>, <code>gitServer.pushPassword</code>, <code>gitServer.pullPassword</code>, <code>artifactServer.pushPassword</code>, <code>agentInfo.tls.key</code>, and the deprecated <code>agentTLS.key</code> that duplicates it. The last one is the agent webhook’s TLS private key, which is a different severity from a registry password: a password is scoped to a registry, and that key is the admission webhook’s identity.</p>
+<p>So the module redacts by default. <code>include_credentials</code> is false unless set, the secret leaves are removed from <code>state</code>, and the dotted paths removed come back in <code>redacted</code>. An operator who needs a password sees <code>redacted: ["registryInfo.pushPassword", ...]</code> and knows which parameter to set, which is a better discovery path than documentation.</p>
+<p>Three decisions inside that are worth the words:</p>
+<p><strong>The keys are removed, not blanked.</strong> A missing key fails a template with <code>'dict object' has no attribute 'pushPassword'</code>, which names the problem. A sentinel like <code>VALUE_REDACTED</code> templates cleanly into a registry login and fails somewhere else entirely, hours later, as an authentication error against a registry whose password is right in the Secret.</p>
+<p><strong>Matching is by leaf name, not by a list of the eight paths.</strong> A path list is more precise and goes stale the next time zarf adds a field, and what staleness costs here is a leaked credential rather than a failed task. Leaf-name matching picks up a new field under a name like these without anybody revisiting the file. The cost is over-redaction: a future benign field named <code>*key</code> would be withheld. That is the right direction to be wrong in. <code>agentInfo.tls.ca</code> and <code>.cert</code> are deliberately not matched – they are public certificates, and templating the CA into a trust bundle is a reason to call this module.</p>
+<p><strong>A run that asks for the credentials censors its own output.</strong> <code>executor/task_result.py</code> honours an <code>_ansible_no_log</code> key in a module’s <em>returned</em> data, not just the task’s own <code>no_log</code>, so the module sets it when <code>include_credentials</code> is true. The registered variable still holds the real state; only the display is suppressed. Asking for the data is not the same as asking for it to be printed, and relying on the playbook author to have remembered <code>no_log</code> is relying on the thing that fails.</p>
+<h3 id="set_fact-prints-what-the-module-hid"><a class="header" href="#set_fact-prints-what-the-module-hid"><code>set_fact</code> prints what the module hid</a></h3>
+<p>This is the part that is easy to get wrong, and it is why <code>zarf_no_log</code> defaults to true on <em>both</em> of the <code>state</code> role’s tasks rather than just the module call. A <code>set_fact</code> that reads a censored result prints the value in its own result:</p>
+<pre><code>TASK [set_fact from a censored result] *****
+ok: [localhost] =&gt; {
+    "ansible_facts": {
+        "zarf_state": "hunter2"
+    },
+</code></pre>
+<p>That is at <code>-v</code>, with the producing task fully censored. <code>no_log</code> on the module alone looks correct in review and leaks on the next line.</p>
+<p>One thing that is already safe, and worth not breaking: <code>set_fact</code> defaults <code>cacheable: false</code> (<code>plugins/action/set_fact.py</code>), so the fact stays in the play’s memory and never reaches a configured fact cache plugin. A <code>cacheable: true</code> here would write the cluster’s registry credentials into a jsonfile cache on the control node, outliving the play that read them. Do not add it.</p>
+<h3 id="how-it-is-tested"><a class="header" href="#how-it-is-tested">How it is tested</a></h3>
+<p>A redaction is a claim about the contents of a returned dictionary, so unlike the flag rendering above it cannot be read out of the source – it has to run. <code>TestZarfStateInfoWithholdsCredentials</code> in <code>test/e2e/noncluster</code> drives a playbook that asserts the redacted paths by name, that no credential value survives anywhere in the document, that every non-credential field is intact, and that <code>include_credentials</code> returns the whole thing.</p>
+<p>It needs no cluster. The module’s one impure step is running zarf, so <code>testdata/zarf-state-stub.sh</code> stands in for it and prints the base64 of <code>testdata/zarf-state.json</code>, a copy of the shape zarf v0.85.0 writes with every credential replaced by a <code>FIXTURE-</code> placeholder. That covers the decode, the redaction, the role, and the fact.</p>
+<p>Two things about that test are deliberate rather than incidental:</p>
+<ul>
+<li><strong>It counts the assertions that reported passing.</strong> A renamed fact or a skipped block leaves every remaining assertion passing, and <code>failed=0</code> would call that a success. The expected count is read out of the playbook rather than written in the Go file, so adding an assertion does not quietly stop the count from meaning anything.</li>
+<li><strong>It reads the playbook, the fixture and the plugin itself before running anything.</strong> Go’s test cache keys on the files the test process opens, and everything this test exercises is opened by the <code>ansible-playbook</code> child. Without those reads, editing the plugin leaves a passing result cached – which is precisely the shape of mistake that gets a credential leak marked as fixed. This was confirmed by sabotaging the redaction: before the reads were added the cached pass survived, and after them the test fails as it should.</li>
+</ul>
+<h2 id="one-thing-that-did-not-generalise"><a class="header" href="#one-thing-that-did-not-generalise">One thing that did not generalise</a></h2>
+<p><code>--no-color</code> is rendered by <code>zarf_package_info</code> and <code>zarf_package_inspect</code>, which parse zarf’s stdout as JSON and YAML respectively and cannot have colour codes in it. It is not rendered by <code>zarf_state_info</code>, and not for want of tidiness: <code>zarf tools kubectl</code> hands its arguments to kubectl, which answers <code>unknown flag: --no-color</code> and exits. It is in each <code>command_parts</code> rather than in the shared base class for that reason, with the reason written at the point where its absence looks like an oversight.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="design-versioned-config-struct-generation-for-k3s--rke2"><a class="header" href="#design-versioned-config-struct-generation-for-k3s--rke2">Design: Versioned Config Struct Generation for k3s / RKE2</a></h1>
 <h2 id="goal"><a class="header" href="#goal">Goal</a></h2>
