@@ -4,8 +4,19 @@
 # The package to inspect: a path to a staged tarball, an oci:// reference, or a deployed package name.
 zarf_package: ""
 
-# Path to a public key file used to validate signed packages.
+# Path to the public key a package signature is verified against.
 zarf_public_key: ""
+
+# When to verify the package signature: never, if-possible, or always.
+#
+# Left empty, the role requires a signature when zarf_public_key names a key, and leaves zarf's own
+# default alone when it does not. That is a role policy rather than the module's behaviour: the
+# module passes this parameter through and zarf's default is if-possible, which passes an unsigned
+# package whether or not a key was given. A role that takes a key and then accepts an unsigned
+# package is doing the opposite of what naming the key asked for.
+#
+# Set it explicitly to override, including to "if-possible" to get zarf's default back.
+zarf_verify: ""
 
 # Path to the kubeconfig file, used when inspecting a deployed cluster package.
 zarf_kubeconfig: ""

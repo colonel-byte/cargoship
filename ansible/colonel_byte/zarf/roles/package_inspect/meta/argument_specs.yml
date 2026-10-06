@@ -5,6 +5,7 @@ argument_specs:
     short_description: Inspect a Zarf package definition and expose structured metadata facts
     description:
       - "Runs C(zarf package inspect definition) against a package source and parses the YAML definition."
+      - "A C(zarf_public_key) with no C(zarf_verify) requires a signature, which is stricter than the module's own default. See C(zarf_verify)."
       - "Sets the C(zarf_package_definition), C(zarf_package_name), C(zarf_package_version), and C(zarf_package_flavor) facts."
       - "Every task carries C(run_once: true) and delegates to C(zarf_delegate_to)."
     options:
@@ -17,7 +18,18 @@ argument_specs:
         type: str
         default: ""
         description:
-          - "Path to a public key file used to validate signed packages."
+          - "Path to the public key a package signature is verified against."
+      zarf_verify:
+        type: str
+        default: ""
+        choices:
+          - ""
+          - never
+          - if-possible
+          - always
+        description:
+          - "When to verify the package signature."
+          - "Left empty, the role requires a signature when C(zarf_public_key) names a key, and leaves zarf's own C(if-possible) default alone when it does not. Set it explicitly to override."
       zarf_kubeconfig:
         type: str
         default: ""

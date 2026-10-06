@@ -15,6 +15,9 @@
   colonel_byte.zarf.zarf_package_inspect:
     package: "{{ zarf_package }}"
     public_key: "{{ zarf_public_key | default(omit) if (zarf_public_key | length > 0) else omit }}"
+    verify: >-
+      {{ zarf_verify if (zarf_verify | length > 0)
+         else ('always' if (zarf_public_key | length > 0) else omit) }}
     kubeconfig: "{{ zarf_kubeconfig | default(omit) if (zarf_kubeconfig | length > 0) else omit }}"
     zarf_binary: "{{ zarf_binary }}"
   delegate_to: "{{ zarf_delegate_to }}"
