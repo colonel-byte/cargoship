@@ -62,6 +62,7 @@ const (
 const (
 	providerFirstPlaybook = "test/e2e/zarf/testdata/provider-first.yml"
 	bundleOrderPlaybook   = "test/e2e/zarf/testdata/bundle-order.yml"
+	infoModulesPlaybook   = "test/e2e/zarf/testdata/info-modules.yml"
 	packagePublicKey      = "test/e2e/zarf/testdata/colonel-byte-zarf-packages.pub"
 )
 
@@ -441,6 +442,9 @@ func (c *cluster) walk(t *testing.T, playbook string) (string, string) {
 		"-e", "zarf_kubeconfig="+c.kubeconfig,
 		"-e", "zarf_result_dir="+results,
 		"-e", "zarf_timeout=15m",
+		// The read-only modules run the installed zarf rather than a wrapper binary, so they are
+		// given its path rather than resolving it on the PATH of a test process.
+		"-e", "zarf_binary="+suite.zarf,
 	)
 	cmd.Env = append(os.Environ(),
 		"ANSIBLE_COLLECTIONS_PATH="+suite.collections,

@@ -1,0 +1,58 @@
+---
+# What colonel_byte.zarf.zarf_package_info returns, and what the packages role does with it.
+#
+# zarf_binary is the stub beside this file rather than a real zarf, so the play needs no cluster.
+# The document it serves is testdata/zarf-package-list.json, whose shape is packageListInfo in
+# zarf's src/cmd/package.go: a list of objects with package, namespaceOverride, version,
+# connectivity and components.
+#
+# What a real cluster adds over this is covered by test/e2e/zarf/testdata/info-modules.yml.
+#
+# Nothing here is contacted.
+- name: zarf_package_info decodes what zarf package list prints
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Read the package list
+      colonel_byte.zarf.zarf_package_info:
+        zarf_binary: "{{ lookup('env', 'CARGOSHIP_E2E_ZARF_STUB') }}"
+      register: listed
+
+    - name: Every record in the document comes back whole
+      ansible.builtin.assert:
+        that:
+          - listed.changed is false
+          - listed.packages | length == 2
+          - (listed.packages | map(attribute='package') | list) == ['init', 'csi-local-path-provider']
+          - (listed.packages | map(attribute='version') | list) == ['v0.85.0', '0.0.37-upstream']
+          - (listed.packages | map(attribute='connectivity') | list) == ['airgap', 'connected']
+          - listed.packages[0].components == ['zarf-injector', 'zarf-seed-registry', 'zarf-registry', 'zarf-agent']
+          - listed.packages[1].components == ['local-path-images', 'local-path-chart']
+        success_msg: ASSERTED the package list decodes record for record
+        fail_msg: the decoded package list is not the document the stub printed
+
+    - name: The order of the document is the order of the result
+      # The drift checks in ansible/examples/playbooks/zarf-bundle-order.yml select a package out of
+      # this list by name, so a module that reordered or deduplicated records would break them
+      # quietly. Holding the order is cheaper than holding what depends on it.
+      ansible.builtin.assert:
+        that:
+          - listed.packages[0].package == 'init'
+          - listed.packages[1].package == 'csi-local-path-provider'
+        success_msg: ASSERTED the result keeps the document's order
+        fail_msg: the module reordered the package list
+
+    - name: The packages role sets the fact its page documents
+      ansible.builtin.include_role:
+        name: colonel_byte.zarf.packages
+      vars:
+        zarf_binary: "{{ lookup('env', 'CARGOSHIP_E2E_ZARF_STUB') }}"
+
+    - name: zarf_packages is what the module returned
+      ansible.builtin.assert:
+        that:
+          - zarf_packages == listed.packages
+        success_msg: ASSERTED the packages role sets zarf_packages
+        fail_msg: the packages role did not set zarf_packages to what the module returned

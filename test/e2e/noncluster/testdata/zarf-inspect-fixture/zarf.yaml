@@ -1,0 +1,25 @@
+---
+# A zarf package definition with nothing in it, for the zarf_package_inspect tests.
+#
+# It is built into a tarball by `zarf package create` at test time rather than committed as one: a
+# .tar.zst is a binary blob nobody can review, and what the tests actually care about is this
+# document -- the name, the version and the component the module is expected to report back.
+#
+# It is deliberately the smallest package that builds. A files-only component needs no registry, no
+# cluster and no network, which is what lets these tests run in the noncluster suite. Adding an
+# image or a repo to it would move them into the cluster suite.
+#
+# It is also unsigned, which is the other half of what it is for: `verify: always` has to reject it.
+#
+# Nothing here is contacted.
+kind: ZarfPackageConfig
+metadata:
+  name: inspect-fixture
+  version: 1.2.3
+  description: A package holding one file, for inspecting rather than deploying
+components:
+  - name: a-file
+    required: true
+    files:
+      - source: payload.txt
+        target: /tmp/zarf-inspect-fixture-payload.txt

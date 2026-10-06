@@ -68,6 +68,10 @@ func TestBundleOrderWalk(t *testing.T) {
 	assertStorageClass(t, cluster)
 	assertRegistryPVCBound(t, cluster)
 	assertRegistryProxyMode(t, cluster)
+
+	// The read-only modules read what this walk produced, so they run here rather than paying for
+	// a cluster of their own. See testInfoModules.
+	t.Run("read-only modules", func(t *testing.T) { testInfoModules(t, cluster) })
 }
 
 // TestProviderFirstWalk runs the same four packages on the uds-bundles k3d config as it is

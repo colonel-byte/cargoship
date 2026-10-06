@@ -41,6 +41,11 @@ argument_specs:
         default: zarf
         description:
           - "Path to the C(zarf) binary on the delegated host."
+      zarf_quiet:
+        type: bool
+        default: true
+        description:
+          - "Whether to suppress verbose assert output when asserting inputs."
       zarf_delegate_to:
         type: str
         default: localhost

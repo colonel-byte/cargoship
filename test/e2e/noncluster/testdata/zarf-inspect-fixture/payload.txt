@@ -1,0 +1,2 @@
+The one file the inspect fixture package carries. Its contents do not matter; a files-only
+component is what makes the package buildable with no registry, no cluster and no network.

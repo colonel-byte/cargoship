@@ -8,6 +8,7 @@
     that:
       - zarf_package | length > 0
     fail_msg: zarf_package is required by the package_inspect role.
+    quiet: "{{ zarf_quiet | bool }}"
   run_once: true
   delegate_to: "{{ zarf_delegate_to }}"
 
