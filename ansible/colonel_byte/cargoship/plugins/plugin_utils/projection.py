@@ -33,7 +33,6 @@ import json
 import os
 import tempfile
 import threading
-import time
 
 from ansible.plugins.action import ActionBase
 from ansible.utils.display import Display
