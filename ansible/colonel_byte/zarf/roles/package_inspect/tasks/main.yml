@@ -1,4 +1,16 @@
 ---
+# zarf_package has an empty default rather than being required in argument_specs.yml, because a
+# role variable with a default is always satisfied and the validator would never fire. The check is
+# here instead, so that an unset package names the role variable the operator got wrong rather than
+# the module parameter it becomes.
+- name: Check that a package was named
+  ansible.builtin.assert:
+    that:
+      - zarf_package | length > 0
+    fail_msg: zarf_package is required by the package_inspect role.
+  run_once: true
+  delegate_to: "{{ zarf_delegate_to }}"
+
 - name: Inspect Zarf package definition
   colonel_byte.zarf.zarf_package_inspect:
     package: "{{ zarf_package }}"

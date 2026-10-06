@@ -12,3 +12,17 @@ zarf_binary: zarf
 
 # The namespace holding the zarf-state Secret.
 zarf_namespace: zarf
+
+# Whether to return the credentials the zarf-state Secret holds -- the registry push, pull and seed
+# secrets, the git server passwords, the artifact server token, and the agent's TLS private key.
+# Left false, they are removed from the zarf_state fact and named in zarf_state_redacted.
+zarf_include_credentials: false
+
+# Whether to suppress task parameter and result logging. Defaults to true, because the module's
+# result carries the cluster's own credentials whenever zarf_include_credentials is set, and because
+# a failed task prints its result whatever the verbosity. Set this to false when debugging locally.
+#
+# It is applied to the set_fact task as well as to the module call, and that is not belt and braces:
+# set_fact prints the fact it sets, so a module result that censored itself is printed in full by
+# the next task unless that task is quiet too.
+zarf_no_log: true

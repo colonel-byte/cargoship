@@ -93,11 +93,10 @@ def command_parts(params):
 class ActionModule(ZarfInfoActionBase):
     """Action plugin that lists the packages deployed to a cluster."""
 
-
     def zarf_argv(self, params):
         return command_parts(params)
 
-    def interpret(self, result, stdout):
+    def interpret(self, result, stdout, params):
         stdout = stdout.strip()
         packages = []
         if stdout:

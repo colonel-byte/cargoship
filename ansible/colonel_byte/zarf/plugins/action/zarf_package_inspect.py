@@ -139,7 +139,7 @@ class ActionModule(ZarfInfoActionBase):
     def zarf_argv(self, params):
         return command_parts(params)
 
-    def interpret(self, result, stdout):
+    def interpret(self, result, stdout, params):
         try:
             definition = yaml.safe_load(_definition_yaml(stdout))
         except Exception as exc:

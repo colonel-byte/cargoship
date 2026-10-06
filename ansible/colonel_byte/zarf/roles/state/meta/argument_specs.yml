@@ -5,7 +5,8 @@ argument_specs:
     short_description: Fetch and parse the Zarf state secret from a cluster into an Ansible fact
     description:
       - "Queries the cluster for the C(zarf-state) Secret via C(zarf tools kubectl) and sets the parsed state as the C(zarf_state) fact."
-      - "Every task carries C(run_once: true) and delegates to C(zarf_delegate_to)."
+      - "The credentials the Secret holds are withheld unless C(zarf_include_credentials) is set. The paths that were withheld are set as the C(zarf_state_redacted) fact."
+      - "Every task carries C(run_once: true), C(no_log) from C(zarf_no_log), and delegates to C(zarf_delegate_to)."
     options:
       zarf_kubeconfig:
         type: str
@@ -27,3 +28,15 @@ argument_specs:
         default: zarf
         description:
           - "The namespace holding the C(zarf-state) Secret."
+      zarf_include_credentials:
+        type: bool
+        default: false
+        description:
+          - "Whether to return the credentials the C(zarf-state) Secret holds: the registry push, pull and seed secrets, the git server passwords, the artifact server token, and the agent's TLS private key."
+          - "Left false, they are removed from C(zarf_state) and named in C(zarf_state_redacted)."
+      zarf_no_log:
+        type: bool
+        default: true
+        description:
+          - "Whether to suppress task parameter and result logging. Applied to the C(set_fact) task as well as to the module call, because C(set_fact) prints the fact it sets."
+          - "Set it to false when debugging locally."

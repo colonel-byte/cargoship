@@ -8,13 +8,17 @@ Include it as `colonel_byte.zarf.state`.
 
 Queries the cluster for the `zarf-state` Secret via `zarf tools kubectl` and sets the parsed state as the `zarf_state` fact.
 
-Every task carries `run_once: true` and delegates to `zarf_delegate_to`.
+The credentials the Secret holds are withheld unless `zarf_include_credentials` is set. The paths that were withheld are set as the `zarf_state_redacted` fact.
+
+Every task carries `run_once: true`, `no_log` from `zarf_no_log`, and delegates to `zarf_delegate_to`.
 
 ### Variables
 
-| Variable           | Type  | Default     | Description                                                                                 |
-| ------------------ | ----- | ----------- | ------------------------------------------------------------------------------------------- |
-| `zarf_kubeconfig`  | `str` | `""`        | Path to the kubeconfig file used to reach the cluster. Left empty, uses default kubeconfig. |
-| `zarf_delegate_to` | `str` | `localhost` | The node on which to execute the zarf state query.                                          |
-| `zarf_binary`      | `str` | `zarf`      | Path to the `zarf` binary on the delegated host.                                            |
-| `zarf_namespace`   | `str` | `zarf`      | The namespace holding the `zarf-state` Secret.                                              |
+| Variable                   | Type   | Default     | Description                                                                                                                                                                                                                                                                         |
+| -------------------------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `zarf_kubeconfig`          | `str`  | `""`        | Path to the kubeconfig file used to reach the cluster. Left empty, uses default kubeconfig.                                                                                                                                                                                         |
+| `zarf_delegate_to`         | `str`  | `localhost` | The node on which to execute the zarf state query.                                                                                                                                                                                                                                  |
+| `zarf_binary`              | `str`  | `zarf`      | Path to the `zarf` binary on the delegated host.                                                                                                                                                                                                                                    |
+| `zarf_namespace`           | `str`  | `zarf`      | The namespace holding the `zarf-state` Secret.                                                                                                                                                                                                                                      |
+| `zarf_include_credentials` | `bool` | `false`     | Whether to return the credentials the `zarf-state` Secret holds: the registry push, pull and seed secrets, the git server passwords, the artifact server token, and the agent's TLS private key. Left false, they are removed from `zarf_state` and named in `zarf_state_redacted`. |
+| `zarf_no_log`              | `bool` | `true`      | Whether to suppress task parameter and result logging. Applied to the `set_fact` task as well as to the module call, because `set_fact` prints the fact it sets. Set it to false when debugging locally.                                                                            |
