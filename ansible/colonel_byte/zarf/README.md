@@ -2,11 +2,13 @@
 
 Initialise an air-gapped cluster with [zarf](https://zarf.dev) from an Ansible playbook. This collection is a proof of [ZEP-0072](https://github.com/zarf-dev/proposals/pull/73), built in the cargoship repository because the pattern it proposes already runs there as `colonel_byte.cargoship`.
 
+`zarf_init` and `zarf_package_deploy` are that proof, and most of this file is about them. Three further modules read a cluster rather than converging it -- `zarf_package_info`, `zarf_package_inspect` and `zarf_state_info` -- with a role apiece: `packages`, `package_inspect` and `state`. They are plain action plugins rather than wrapper binaries, they are not part of the proof, and [choice-zarf-info-modules](../../../docs/agent/choice-zarf-info-modules.md) records why.
+
 ## Architecture
 
 Zarf is not an SSH orchestrator. It talks to one cluster through a kubeconfig, from the node it runs on, so this collection runs `zarf` on the node the task is delegated to and nothing on any managed node. There is no inventory to project and no fleet to connect to: what a task supplies is a kubeconfig, a package, and the parameters the zarf command takes.
 
-Each module is a compiled wrapper binary rather than a Python module:
+Each of the two converging modules is a compiled wrapper binary rather than a Python module:
 
 | Layer                                             | What it is                                                                                                                                                         |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -87,11 +89,13 @@ That alternation -- provider, init, provider, init -- is the shape of the [`init
 
 ## Reference documentation
 
-The per-module reference pages are generated from the `DOCUMENTATION` and `EXAMPLES` blocks in the action plugins by `mage generate:document`, and land under `docs/ansible/zarf/` -- published as the [collection reference](https://colonel-byte.github.io/cargoship/ansible/zarf/collection.html). `go test ./internal/zarfmod -run TestActionPluginDocsMatchModuleParams` is what holds those blocks against the Go parameter structs, so a parameter added to one and not the other fails a test rather than a playbook.
+The per-module reference pages are generated from the `DOCUMENTATION` and `EXAMPLES` blocks in the action plugins by `mage generate:document`, and land under `docs/ansible/zarf/` -- published as the [collection reference](https://colonel-byte.github.io/cargoship/ansible/zarf/collection.html). `go test ./internal/zarfmod -run TestActionPluginDocsMatchModuleParams` is what holds those blocks against the Go parameter structs, so a parameter added to one and not the other fails a test rather than a playbook. The read-only modules have no Go struct to be held against, so `TestInfoPluginDocsMatchRenderedFlags` holds their blocks against the flags their `command_parts` functions name, and `TestEveryActionPluginIsCovered` fails on a plugin that neither test looks at.
+
+The role reference pages are generated the same way, from each role's `meta/argument_specs.yml`.
 
 ## Known limits of the proof
 
-- Check mode reports the task as skipped. Neither `zarf init` nor `zarf package deploy` has a dry run.
+- Check mode reports the task as skipped. Neither `zarf init` nor `zarf package deploy` has a dry run. The read-only modules answer in check mode instead, because reading a cluster changes nothing.
 - The collection is a proof of concept and is expected to be removed from this repository once ZEP-0072 is resolved. See [choice-zarf-collection-removal](../../../docs/agent/choice-zarf-collection-removal.md).
 - Component progress is read back out of zarf's log stream, so it depends on zarf's log messages rather than on an API. A renamed log message costs the progress display and nothing else.
 - The flags the wrappers render are held against recorded lists in `internal/zarfmod/testdata/zarf-init-flags.txt` and `zarf-package-deploy-flags.txt`, not against zarf's own command tree. Refresh them when the zarf they run moves.

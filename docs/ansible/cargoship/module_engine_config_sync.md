@@ -6,6 +6,8 @@ Converge engine configuration across the fleet.
 
 Write it as `colonel_byte.cargoship.cargoship_engine_config_sync`. It runs on the management node; nothing is installed on the fleet.
 
+Added in `colonel_byte.cargoship` 0.26.0.
+
 Runs `cargoship engine-config-sync` against the fleet described by an Ansible inventory. It is the most Ansible-shaped thing cargoship does, and the one action whose phases report whether they changed anything.
 
 It does not update the hosts themselves, so it takes none of the three host switches.

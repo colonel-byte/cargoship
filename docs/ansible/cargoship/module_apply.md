@@ -6,6 +6,8 @@ Install or converge a Kubernetes cluster across the fleet.
 
 Write it as `colonel_byte.cargoship.cargoship_apply`. It runs on the management node; nothing is installed on the fleet.
 
+Added in `colonel_byte.cargoship` 0.26.0.
+
 Runs `cargoship apply` against the fleet described by an Ansible inventory. It is the widest action cargoship has.
 
 The module runs on one management node. Ansible does not connect to the fleet; cargoship opens every SSH connection itself from there.

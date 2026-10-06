@@ -6,6 +6,8 @@ Run a cargoship cluster action from an Ansible inventory.
 
 Include it as `colonel_byte.cargoship.cluster`.
 
+Added in `colonel_byte.cargoship` 0.26.0.
+
 Runs one cargoship action against the fleet described by the Ansible inventory, on the management node.
 
 Every task carries `run_once: true` and delegates to `cargoship_delegate_to`. Cargoship converges the whole fleet in a single run, so a play over the fleet's own inventory would otherwise converge it once per host.

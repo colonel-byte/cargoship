@@ -6,6 +6,8 @@ List all Zarf packages deployed to a cluster.
 
 Write it as `colonel_byte.zarf.zarf_package_info`. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster's nodes.
 
+Added in `colonel_byte.zarf` 0.31.0.
+
 Retrieves the list of packages deployed to the cluster via `zarf package list --output-format json` and returns structured package records.
 
 Runs on the node the task is delegated to (typically localhost), reaching the cluster through a kubeconfig.
@@ -20,6 +22,7 @@ Runs on the node the task is delegated to (typically localhost), reaching the cl
 ### Notes
 
 - Set `run_once: true` and `delegate_to: localhost` on the task.
+- The module runs in check mode and reports `changed: false`, because reading a cluster changes nothing.
 
 ### Example
 

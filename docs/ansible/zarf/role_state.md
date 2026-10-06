@@ -6,6 +6,8 @@ Fetch and parse the Zarf state secret from a cluster into an Ansible fact.
 
 Include it as `colonel_byte.zarf.state`.
 
+Added in `colonel_byte.zarf` 0.31.0.
+
 Queries the cluster for the `zarf-state` Secret via `zarf tools kubectl` and sets the parsed state as the `zarf_state` fact.
 
 The credentials the Secret holds are withheld unless `zarf_include_credentials` is set. The paths that were withheld are set as the `zarf_state_redacted` fact.

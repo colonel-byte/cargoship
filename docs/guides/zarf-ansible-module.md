@@ -2,9 +2,9 @@
 
 The `colonel_byte.zarf` collection initialises a cluster with zarf and deploys zarf packages onto it from a playbook. It is a proof of [ZEP-0072](https://github.com/zarf-dev/proposals/pull/73), which proposes native Ansible module support for zarf, built here because the pattern it proposes is the one `colonel_byte.cargoship` already runs. See [ansible-module](ansible-module.md) for that collection, whose shape this one copies.
 
-This guide covers what the two modules are, how to install them, the two-module walk that a cluster with no storage provider needs, and what the result holds. The full parameter set of each module, and the zarf flag each parameter renders, is on its reference page: [`zarf_init`](../ansible/zarf/module_init.md) and [`zarf_package_deploy`](../ansible/zarf/module_package_deploy.md), both generated from the collection. For why the modules are separate wrapper binaries rather than the `zarf` binary itself, see [choice-zarf-ansible-module](../agent/choice-zarf-ansible-module.md).
+This guide covers the two modules that converge a cluster: what they are, how to install them, the two-module walk that a cluster with no storage provider needs, and what the result holds. The collection also ships three read-only modules and three roles that wrap them -- `zarf_package_info`, `zarf_package_inspect` and `zarf_state_info` -- which are not part of the walk and are documented on the [collection reference](../ansible/zarf/collection.md); [choice-zarf-info-modules](../agent/choice-zarf-info-modules.md) records why they are built differently. The full parameter set of each module, and the zarf flag each parameter renders, is on its reference page: [`zarf_init`](../ansible/zarf/module_init.md) and [`zarf_package_deploy`](../ansible/zarf/module_package_deploy.md), both generated from the collection. For why the modules are separate wrapper binaries rather than the `zarf` binary itself, see [choice-zarf-ansible-module](../agent/choice-zarf-ansible-module.md).
 
-## The two modules
+## The two converging modules
 
 | Module                                  | Command it renders   | What it is for                                                                       |
 | --------------------------------------- | -------------------- | ------------------------------------------------------------------------------------ |

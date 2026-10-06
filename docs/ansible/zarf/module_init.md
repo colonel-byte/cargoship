@@ -6,6 +6,8 @@ Initialise a cluster with a staged zarf init package.
 
 Write it as `colonel_byte.zarf.zarf_init`. It runs the installed zarf on the node the task is delegated to; nothing is installed on the cluster's nodes.
 
+Added in `colonel_byte.zarf` 0.0.1.
+
 Runs `zarf init` against the cluster a kubeconfig names, and follows the init package's deployment component by component.
 
 The module is a small wrapper binary, not zarf. It renders the `zarf init` command line from these parameters, runs the installed zarf, reads the component boundaries back out of zarf's log stream, and reports one JSON result.
