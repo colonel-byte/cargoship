@@ -11,10 +11,13 @@ func (s *bytesshard) listInit(size uint32) {
 	if len(s.list) == 0 {
 		s.list = make([]bytesnode, size)
 	}
-	for i := uint32(0); i < size; i++ {
-		s.list[i].next = (i + 1) % size
-		s.list[i].prev = (i + size - 1) % size
+	list := s.list[:size]
+	for i := range list {
+		list[i].next = uint32(i) + 1
+		list[i].prev = uint32(i) - 1
 	}
+	list[0].prev = size - 1
+	list[size-1].next = 0
 }
 
 func (s *bytesshard) listBack() uint32 {
@@ -22,12 +25,12 @@ func (s *bytesshard) listBack() uint32 {
 }
 
 func (s *bytesshard) listMoveToFront(i uint32) {
-	root := &s.list[0]
+	base := unsafe.Pointer(unsafe.SliceData(s.list))
+	root := (*bytesnode)(base)
 	if root.next == i {
 		return
 	}
 
-	base := unsafe.Pointer(root)
 	nodei := (*bytesnode)(unsafe.Add(base, uintptr(i)*unsafe.Sizeof(s.list[0])))
 
 	((*bytesnode)(unsafe.Add(base, uintptr(nodei.prev)*unsafe.Sizeof(s.list[0])))).next = nodei.next
@@ -41,12 +44,12 @@ func (s *bytesshard) listMoveToFront(i uint32) {
 }
 
 func (s *bytesshard) listMoveToBack(i uint32) {
-	j := s.list[0].prev
+	base := unsafe.Pointer(unsafe.SliceData(s.list))
+	j := ((*bytesnode)(base)).prev
 	if i == j {
 		return
 	}
 
-	base := unsafe.Pointer(&s.list[0])
 	nodei := (*bytesnode)(unsafe.Add(base, uintptr(i)*unsafe.Sizeof(s.list[0])))
 	at := (*bytesnode)(unsafe.Add(base, uintptr(j)*unsafe.Sizeof(s.list[0])))
 

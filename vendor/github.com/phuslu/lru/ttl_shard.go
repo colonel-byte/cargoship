@@ -60,24 +60,22 @@ func (s *ttlshard[K, V]) Get(hash uint32, key K) (value V, ok bool) {
 	s.statsGetCalls++
 
 	if index, exists := s.tableGet(hash, key); exists {
-		if expires := s.list[index].expires; expires == 0 {
+		node := (*ttlnode[K, V])(unsafe.Add(unsafe.Pointer(unsafe.SliceData(s.list)), uintptr(index)*unsafe.Sizeof(ttlnode[K, V]{})))
+		if expires := node.expires; expires == 0 {
 			s.listMoveToFront(index)
-			// value = s.list[index].value
-			value = (*ttlnode[K, V])(unsafe.Add(unsafe.Pointer(&s.list[0]), uintptr(index)*unsafe.Sizeof(s.list[0]))).value
+			value = node.value
 			ok = true
 		} else if now := atomic.LoadUint32(&clock); now < expires {
 			if s.sliding {
-				s.list[index].expires = now + s.list[index].ttl
+				node.expires = now + node.ttl
 			}
 			s.listMoveToFront(index)
-			// value = s.list[index].value
-			value = (*ttlnode[K, V])(unsafe.Add(unsafe.Pointer(&s.list[0]), uintptr(index)*unsafe.Sizeof(s.list[0]))).value
+			value = node.value
 			ok = true
 		} else {
 			s.listMoveToBack(index)
-			// s.list[index].value = value
-			(*ttlnode[K, V])(unsafe.Add(unsafe.Pointer(&s.list[0]), uintptr(index)*unsafe.Sizeof(s.list[0]))).value = value
-			s.tableDelete(hash, key)
+			node.value = value
+			s.tableDeleteIndex(hash, index)
 			s.statsMisses++
 		}
 	} else {
@@ -112,7 +110,12 @@ func (s *ttlshard[K, V]) SetIfAbsent(hash uint32, key K, value V, ttl time.Durat
 		// node := &s.list[index]
 		node := (*ttlnode[K, V])(unsafe.Add(unsafe.Pointer(&s.list[0]), uintptr(index)*unsafe.Sizeof(s.list[0])))
 		prev = node.value
-		if node.expires == 0 || atomic.LoadUint32(&clock) < node.expires {
+		if node.expires == 0 {
+			s.mu.Unlock()
+			return
+		}
+		now := atomic.LoadUint32(&clock)
+		if now < node.expires {
 			s.mu.Unlock()
 			return
 		}
@@ -122,7 +125,7 @@ func (s *ttlshard[K, V]) SetIfAbsent(hash uint32, key K, value V, ttl time.Durat
 		node.value = value
 		if ttl > 0 {
 			node.ttl = uint32(ttl / time.Second)
-			node.expires = atomic.LoadUint32(&clock) + node.ttl
+			node.expires = now + node.ttl
 		} else {
 			node.ttl = 0
 			node.expires = 0
@@ -140,15 +143,20 @@ func (s *ttlshard[K, V]) SetIfAbsent(hash uint32, key K, value V, ttl time.Durat
 	index := s.list[0].prev
 	node := (*ttlnode[K, V])(unsafe.Add(unsafe.Pointer(&s.list[0]), uintptr(index)*unsafe.Sizeof(s.list[0])))
 	evictedValue := node.value
-	s.tableDelete(uint32(s.tableHasher(noescape(unsafe.Pointer(&node.key)), s.tableSeed)), node.key)
+	if uint32(len(s.list)-1) <= s.tableLength {
+		s.tableDeleteIndex(uint32(s.tableHasher(noescape(unsafe.Pointer(&node.key)), s.tableSeed)), index)
+	}
 
 	node.key = key
 	node.value = value
 	if ttl > 0 {
 		node.ttl = uint32(ttl / time.Second)
 		node.expires = atomic.LoadUint32(&clock) + node.ttl
+	} else {
+		node.ttl = 0
+		node.expires = 0
 	}
-	s.tableSet(hash, key, index)
+	s.tableInsert(hash, index)
 	s.listMoveToFront(index)
 	prev = evictedValue
 
@@ -170,6 +178,9 @@ func (s *ttlshard[K, V]) Set(hash uint32, key K, value V, ttl time.Duration) (pr
 		if ttl > 0 {
 			node.ttl = uint32(ttl / time.Second)
 			node.expires = atomic.LoadUint32(&clock) + node.ttl
+		} else {
+			node.ttl = 0
+			node.expires = 0
 		}
 		prev = previousValue
 		replaced = true
@@ -185,8 +196,8 @@ func (s *ttlshard[K, V]) Set(hash uint32, key K, value V, ttl time.Duration) (pr
 	evictedValue := node.value
 
 	// delete the old key if the list is full, note that the list length is size+1
-	if len(s.list)-1 < int(s.tableLength+1) && key != node.key {
-		s.tableDelete(uint32(s.tableHasher(noescape(unsafe.Pointer(&node.key)), s.tableSeed)), node.key)
+	if len(s.list)-1 < int(s.tableLength+1) {
+		s.tableDeleteIndex(uint32(s.tableHasher(noescape(unsafe.Pointer(&node.key)), s.tableSeed)), index)
 	}
 
 	node.key = key
@@ -194,8 +205,11 @@ func (s *ttlshard[K, V]) Set(hash uint32, key K, value V, ttl time.Duration) (pr
 	if ttl > 0 {
 		node.ttl = uint32(ttl / time.Second)
 		node.expires = atomic.LoadUint32(&clock) + node.ttl
+	} else {
+		node.ttl = 0
+		node.expires = 0
 	}
-	s.tableSet(hash, key, index)
+	s.tableInsert(hash, index)
 	s.listMoveToFront(index)
 	prev = evictedValue
 
@@ -206,12 +220,11 @@ func (s *ttlshard[K, V]) Set(hash uint32, key K, value V, ttl time.Duration) (pr
 func (s *ttlshard[K, V]) Delete(hash uint32, key K) (v V) {
 	s.mu.Lock()
 
-	if index, exists := s.tableGet(hash, key); exists {
+	if index, exists := s.tableDelete(hash, key); exists {
 		node := &s.list[index]
 		value := node.value
 		s.listMoveToBack(index)
 		node.value = v
-		s.tableDelete(hash, key)
 		v = value
 	}
 

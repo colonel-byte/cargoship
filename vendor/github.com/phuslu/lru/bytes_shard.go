@@ -94,11 +94,13 @@ func (s *bytesshard) SetIfAbsent(hash uint32, key []byte, value []byte) (prev []
 	index := s.list[0].prev
 	node := (*bytesnode)(unsafe.Add(unsafe.Pointer(&s.list[0]), uintptr(index)*unsafe.Sizeof(s.list[0])))
 	evictedValue := node.value
-	s.tableDelete(uint32(wyhashHashbytes(node.key, 0)), node.key)
+	if uint32(len(s.list)-1) <= s.tableLength {
+		s.tableDeleteIndex(uint32(wyhashHashbytes(node.key, 0)), index)
+	}
 
 	node.key = key
 	node.value = value
-	s.tableSet(hash, key, index)
+	s.tableInsert(hash, index)
 	s.listMoveToFront(index)
 	prev = evictedValue
 
@@ -129,11 +131,13 @@ func (s *bytesshard) Set(hash uint32, key []byte, value []byte) (prev []byte, re
 	index := s.list[0].prev
 	node := (*bytesnode)(unsafe.Add(unsafe.Pointer(&s.list[0]), uintptr(index)*unsafe.Sizeof(s.list[0])))
 	evictedValue := node.value
-	s.tableDelete(uint32(wyhashHashbytes(node.key, 0)), node.key)
+	if uint32(len(s.list)-1) <= s.tableLength {
+		s.tableDeleteIndex(uint32(wyhashHashbytes(node.key, 0)), index)
+	}
 
 	node.key = key
 	node.value = value
-	s.tableSet(hash, key, index)
+	s.tableInsert(hash, index)
 	s.listMoveToFront(index)
 	prev = evictedValue
 
@@ -144,12 +148,11 @@ func (s *bytesshard) Set(hash uint32, key []byte, value []byte) (prev []byte, re
 func (s *bytesshard) Delete(hash uint32, key []byte) (v []byte) {
 	s.mu.Lock()
 
-	if index, exists := s.tableGet(hash, key); exists {
+	if index, exists := s.tableDelete(hash, key); exists {
 		node := &s.list[index]
 		value := node.value
 		s.listMoveToBack(index)
 		node.value = v
-		s.tableDelete(hash, key)
 		v = value
 	}
 

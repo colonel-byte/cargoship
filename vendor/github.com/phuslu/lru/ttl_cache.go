@@ -11,10 +11,11 @@ import (
 
 // TTLCache implements LRU Cache with TTL functionality.
 type TTLCache[K comparable, V any] struct {
-	shards [512]ttlshard[K, V]
+	shards [shardCount]ttlshard[K, V]
 	mask   uint32
 	hasher func(key unsafe.Pointer, seed uintptr) uintptr
 	seed   uintptr
+	_      [128]byte // keep fields read by every call off the line written by group.mu
 	loader func(ctx context.Context, key K) (value V, ttl time.Duration, err error)
 	group  singleflightGroup[K, V]
 }
@@ -24,9 +25,11 @@ func NewTTLCache[K comparable, V any](size int, options ...Option[K, V]) *TTLCac
 	clocking()
 
 	j := -1
+	autoShards := true
 	for i, o := range options {
-		if _, ok := o.(*shardsOption[K, V]); ok {
+		if so, ok := o.(*shardsOption[K, V]); ok {
 			j = i
+			autoShards = so.count == 0
 		}
 	}
 	switch {
@@ -48,22 +51,28 @@ func NewTTLCache[K comparable, V any](size int, options ...Option[K, V]) *TTLCac
 		c.seed = uintptr(fastrand64())
 	}
 
-	if isamd64 {
-		// pre-alloc lists and tables for compactness
-		shardsize := (uint32(size) + c.mask) / (c.mask + 1)
-		shardlists := make([]ttlnode[K, V], (shardsize+1)*(c.mask+1))
-		tablesize := ttlNewTableSize(uint32(shardsize))
-		tablebuckets := make([]uint64, tablesize*(c.mask+1))
-		for i := uint32(0); i <= c.mask; i++ {
-			c.shards[i].list = shardlists[i*(shardsize+1) : (i+1)*(shardsize+1)]
-			c.shards[i].tableBuckets = tablebuckets[i*tablesize : (i+1)*tablesize]
-			c.shards[i].Init(shardsize, c.hasher, c.seed)
+	// When auto-calculating shard count, cap it so each shard has a
+	// meaningful minimum size. Without this, small caches on many-core
+	// machines would end up with 1-entry shards, making LRU eviction
+	// effectively useless.
+	const minShardSize = 16
+	if autoShards {
+		if maxShards := nextPowOf2(uint32((size + minShardSize - 1) / minShardSize)); maxShards < 1 {
+			c.mask = 0
+		} else if c.mask+1 > maxShards {
+			c.mask = maxShards - 1
 		}
-	} else {
-		shardsize := (uint32(size) + c.mask) / (c.mask + 1)
-		for i := uint32(0); i <= c.mask; i++ {
-			c.shards[i].Init(shardsize, c.hasher, c.seed)
-		}
+	}
+
+	// pre-alloc lists and tables for compactness
+	shardsize := (uint32(size) + c.mask) / (c.mask + 1)
+	shardlists := make([]ttlnode[K, V], (shardsize+1)*(c.mask+1))
+	tablesize := ttlNewTableSize(uint32(shardsize))
+	tablebuckets := make([]uint64, tablesize*(c.mask+1))
+	for i := uint32(0); i <= c.mask; i++ {
+		c.shards[i].list = shardlists[i*(shardsize+1) : (i+1)*(shardsize+1)]
+		c.shards[i].tableBuckets = tablebuckets[i*tablesize : (i+1)*tablesize]
+		c.shards[i].Init(shardsize, c.hasher, c.seed)
 	}
 
 	return c
