@@ -18,6 +18,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/colonel-byte/cargoship/magefiles/pkg/release"
 	"github.com/magefile/mage/mg"
 )
@@ -41,6 +43,21 @@ func (Release) TofuProvider(
 		opts.Repository = *repository
 	}
 	return release.TofuProvider(opts)
+}
+
+// TofuProviderDev builds the provider for this machine into a filesystem_mirror layout under
+// build/, and prints the directory to point a .tofurc at. It is the development loop; see
+// docs/dev/tofu-provider.md.
+func (Release) TofuProviderDev(
+	// version to build as, without the leading v (e.g. 0.0.0)
+	version string,
+) error {
+	mirror, err := release.TofuProviderHost(version)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("point a filesystem_mirror at %s\n", mirror)
+	return nil
 }
 
 // TofuProviderLayout builds the same artifact and stops before pushing it, leaving the OCI layout

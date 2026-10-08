@@ -88,9 +88,11 @@ The `Release` namespace holds the release artifacts goreleaser does not build. O
 
 *   `TofuProvider` - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading `v`, and optionally the repository to publish to. Needs ORAS 1.3.0 or newer on `PATH`, which is what `--artifact-platform` needs.
 *   `TofuProviderLayout` - The same build and assembly, stopping before the push and leaving the OCI layout under `build/tofu-provider/layout`. This is how the artifact shape is checked without a registry.
+*   `TofuProviderDev` - Builds the provider for this machine only, into a `filesystem_mirror` layout under `build/tofu-provider/mirror/`, and prints the directory to point a `.tofurc` at. This is the development loop; see [tofu-provider](tofu-provider.md).
 
 ```sh
-mage release:tofuProviderLayout 0.1.0     # build the artifact, push nothing
+mage release:tofuProviderDev 0.1.0        # build for this host into a filesystem_mirror, to run tofu against
+mage release:tofuProviderLayout 0.1.0     # build the publishable artifact, push nothing
 mage release:tofuProvider 0.1.0           # build it and push it to the default ghcr.io repository
 ```
 
@@ -167,7 +169,7 @@ The usual order after any pin change is `updatePins` (or `latestTag`), then `eng
 *   **`build.go`:** Entrypoint for the `Build` namespace (`Build.Binary`, `Build.All`, `Build.Examples`), delegating to `magefiles/pkg/build`.
 *   **`dev.go`:** Entrypoint for the `Dev` namespace (`Dev.Clean`, `Dev.Tidy`, `Dev.Digest`, `Dev.DnfPins`, `Dev.WriteOSVOverrides`, `Dev.VerifyVendor`).
 *   **`generate.go`:** Entrypoint for the `Generate` namespace (`Generate.Document`, `Generate.Schema`, `Generate.Completion`, `Generate.EngineConfig`, `Generate.Examples`, etc.), delegating to `magefiles/pkg/gen/...`.
-*   **`release.go`:** Entrypoint for the `Release` namespace (`Release.TofuProvider`, `Release.TofuProviderLayout`), delegating to `magefiles/pkg/release`.
+*   **`release.go`:** Entrypoint for the `Release` namespace (`Release.TofuProvider`, `Release.TofuProviderLayout`, `Release.TofuProviderDev`), delegating to `magefiles/pkg/release`.
 *   **`test.go`:** Entrypoint for the `Test` namespace (`Test.Unit`, `Test.EndToEnd`, `Test.EndToEndNonCluster`, `Test.EndToEndCluster`, `Test.EndToEndClusterStage`, `Test.EndToEndClusterDryRun`, `Test.EndToEndClusterUpgrade`, `Test.CleanCluster`, `Test.Fuzz`), delegating to `magefiles/pkg/testrunner`.
 *   **`pkg/build/`:** Binary compilation logic, flag assembly, and example package builds.
 *   **`pkg/devtools/`:** Developer tooling packages, including `dnfpins` (AlmaLinux repomd XML parser and pin updater) and `osv` (OpenSSF Scorecard vendor overrides).
