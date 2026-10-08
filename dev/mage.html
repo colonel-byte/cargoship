@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8645ce9b.js";
+            window.path_to_searchindex_js = "../searchindex-9503bab2.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-384f5763.js"></script>
+        <script src="../toc-a9faf70c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -256,8 +256,10 @@ mage test:fuzz                  # replay the fuzz seed corpus
 <ul>
 <li><code>TofuProvider</code> - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading <code>v</code>, and optionally the repository to publish to. Needs ORAS 1.3.0 or newer on <code>PATH</code>, which is what <code>--artifact-platform</code> needs.</li>
 <li><code>TofuProviderLayout</code> - The same build and assembly, stopping before the push and leaving the OCI layout under <code>build/tofu-provider/layout</code>. This is how the artifact shape is checked without a registry.</li>
+<li><code>TofuProviderDev</code> - Builds the provider for this machine only, into a <code>filesystem_mirror</code> layout under <code>build/tofu-provider/mirror/</code>, and prints the directory to point a <code>.tofurc</code> at. This is the development loop; see <a href="tofu-provider.html">tofu-provider</a>.</li>
 </ul>
-<pre><code class="language-sh">mage release:tofuProviderLayout 0.1.0     # build the artifact, push nothing
+<pre><code class="language-sh">mage release:tofuProviderDev 0.1.0        # build for this host into a filesystem_mirror, to run tofu against
+mage release:tofuProviderLayout 0.1.0     # build the publishable artifact, push nothing
 mage release:tofuProvider 0.1.0           # build it and push it to the default ghcr.io repository
 </code></pre>
 <h3 id="generate-namespace"><a class="header" href="#generate-namespace"><code>Generate</code> Namespace</a></h3>
@@ -333,7 +335,7 @@ mage generate:examples
 <li><strong><code>build.go</code>:</strong> Entrypoint for the <code>Build</code> namespace (<code>Build.Binary</code>, <code>Build.All</code>, <code>Build.Examples</code>), delegating to <code>magefiles/pkg/build</code>.</li>
 <li><strong><code>dev.go</code>:</strong> Entrypoint for the <code>Dev</code> namespace (<code>Dev.Clean</code>, <code>Dev.Tidy</code>, <code>Dev.Digest</code>, <code>Dev.DnfPins</code>, <code>Dev.WriteOSVOverrides</code>, <code>Dev.VerifyVendor</code>).</li>
 <li><strong><code>generate.go</code>:</strong> Entrypoint for the <code>Generate</code> namespace (<code>Generate.Document</code>, <code>Generate.Schema</code>, <code>Generate.Completion</code>, <code>Generate.EngineConfig</code>, <code>Generate.Examples</code>, etc.), delegating to <code>magefiles/pkg/gen/...</code>.</li>
-<li><strong><code>release.go</code>:</strong> Entrypoint for the <code>Release</code> namespace (<code>Release.TofuProvider</code>, <code>Release.TofuProviderLayout</code>), delegating to <code>magefiles/pkg/release</code>.</li>
+<li><strong><code>release.go</code>:</strong> Entrypoint for the <code>Release</code> namespace (<code>Release.TofuProvider</code>, <code>Release.TofuProviderLayout</code>, <code>Release.TofuProviderDev</code>), delegating to <code>magefiles/pkg/release</code>.</li>
 <li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterDryRun</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.CleanCluster</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
 <li><strong><code>pkg/build/</code>:</strong> Binary compilation logic, flag assembly, and example package builds.</li>
 <li><strong><code>pkg/devtools/</code>:</strong> Developer tooling packages, including <code>dnfpins</code> (AlmaLinux repomd XML parser and pin updater) and <code>osv</code> (OpenSSF Scorecard vendor overrides).</li>
