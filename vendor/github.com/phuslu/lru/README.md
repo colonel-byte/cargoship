@@ -2,6 +2,24 @@
 
 [![godoc][godoc-img]][godoc] [![release][release-img]][release] [![goreport][goreport-img]][goreport] [![codecov][codecov-img]][codecov]
 
+### Overview
+
+This package provides LRU and TTL cache implementations for Go services that
+need predictable cache behavior on hot paths. Cache operations stay simple and
+synchronous: hits update recency immediately, sets are visible immediately, and
+the API does not hide background admission queues or delayed write paths.
+
+The implementation is shaped around Go's runtime costs. Fixed-size shards,
+array-backed lists, compact hash tables, low pointer density, and no per-entry
+allocation keep classic LRU semantics while reducing heap pressure, pointer
+chasing, and GC scan work. The tests keep statement coverage at 100% and assert
+observable cache behavior across eviction, replacement, loading, TTL expiry,
+and byte-key paths.
+
+`BytesCache` covers byte-oriented paths where keys and values are already
+available as `[]byte`. It avoids string conversion, keeps the byte path
+zero-copy, and assumes cached slices are treated as immutable.
+
 ### Features
 
 * Simple
@@ -55,7 +73,7 @@ func main() {
 
 ### Throughput benchmarks
 
-*Disclaimer: This have been testing on my 3 environments and the results may be very different from yours. see https://github.com/phuslu/lru/issues/14*
+*Disclaimer: This have been testing on github actions environments and the results may be very different from yours. see https://github.com/phuslu/lru/issues/14*
 
 A Performance result as below. Check github [benchmark][benchmark] action for more results and details.
 <details>
@@ -85,7 +103,7 @@ import (
 	hashicorp "github.com/hashicorp/golang-lru/v2/expirable"
 	ccache "github.com/karlseguin/ccache/v3"
 	lxzan "github.com/lxzan/memorycache"
-	otter "github.com/maypok86/otter"
+	otter "github.com/maypok86/otter/v2"
 	ecache "github.com/orca-zhang/ecache"
 	phuslu "github.com/phuslu/lru"
 )
@@ -296,7 +314,7 @@ func BenchmarkNoTTLSetGet(b *testing.B) {
 }
 
 func BenchmarkCcacheSetGet(b *testing.B) {
-	cache := ccache.New(ccache.Configure[int]().MaxSize(cachesize).ItemsToPrune(100))
+	cache := ccache.New(ccache.Configure[int]().MaxSize(cachesize).PercentToPrune(2))
 	for i := range cachesize/2 {
 		cache.Set(keys[i], i, time.Hour)
 	}
@@ -366,9 +384,10 @@ func BenchmarkTheineSetGet(b *testing.B) {
 }
 
 func BenchmarkOtterSetGet(b *testing.B) {
-	cache, _ := otter.MustBuilder[string, int](cachesize).WithVariableTTL().Build()
+	cache := otter.Must[string, int](&otter.Options[string, int]{MaximumSize: cachesize, InitialCapacity: cachesize})
 	for i := range cachesize/2 {
-		cache.Set(keys[i], i, time.Hour)
+		cache.Set(keys[i], i)
+		cache.SetExpiresAfter(keys[i], time.Hour)
 	}
 
 	b.ResetTimer()
@@ -379,9 +398,10 @@ func BenchmarkOtterSetGet(b *testing.B) {
 		for pb.Next() {
 			if threshold > 0 && cheaprand.Uint32() <= threshold {
 				i := int(cheaprand.Uint32n(cachesize))
-				cache.Set(keys[i], i, time.Hour)
+				cache.Set(keys[i], i)
+				// cache.SetExpiresAfter(keys[i], time.Hour)
 			} else {
-				cache.Get(keys[zipf.Uint64()])
+				cache.GetEntry(keys[zipf.Uint64()])
 			}
 		}
 	})
@@ -395,93 +415,64 @@ Run with 95% [zipf](https://ieeexplore.ieee.org/document/749260) reads and 5% ra
 ```
 goos: linux
 goarch: amd64
-cpu: AMD EPYC 7763 64-Core Processor                
+cpu: AMD EPYC 9V74 80-Core Processor                
 BenchmarkHashicorpSetGet
-BenchmarkHashicorpSetGet-8    	14216642	       437.8 ns/op	       1 B/op	       0 allocs/op
+BenchmarkHashicorpSetGet-8    	12710121	       498.5 ns/op	       1 B/op	       0 allocs/op
 BenchmarkCloudflareSetGet
-BenchmarkCloudflareSetGet-8   	48545095	       138.4 ns/op	      16 B/op	       1 allocs/op
+BenchmarkCloudflareSetGet-8   	40197817	       164.0 ns/op	      16 B/op	       1 allocs/op
 BenchmarkEcacheSetGet
-BenchmarkEcacheSetGet-8       	58657796	       111.3 ns/op	       1 B/op	       0 allocs/op
+BenchmarkEcacheSetGet-8       	50372371	       125.9 ns/op	       1 B/op	       0 allocs/op
 BenchmarkLxzanSetGet
-BenchmarkLxzanSetGet-8        	58624521	       108.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLxzanSetGet-8        	49560567	       131.3 ns/op	       0 B/op	       0 allocs/op
 BenchmarkFreelruSetGet
-BenchmarkFreelruSetGet-8      	57877179	       114.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFreelruSetGet-8      	45481604	       134.2 ns/op	       0 B/op	       0 allocs/op
 BenchmarkPhusluSetGet
-BenchmarkPhusluSetGet-8       	80641694	        84.63 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPhusluSetGet-8       	69294555	        99.67 ns/op	       0 B/op	       0 allocs/op
 BenchmarkNoTTLSetGet
-BenchmarkNoTTLSetGet-8        	82049758	        81.10 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNoTTLSetGet-8        	63600603	        96.89 ns/op	       0 B/op	       0 allocs/op
 BenchmarkCcacheSetGet
-BenchmarkCcacheSetGet-8       	15654375	       341.5 ns/op	      25 B/op	       2 allocs/op
+BenchmarkCcacheSetGet-8       	15698938	       408.0 ns/op	      25 B/op	       2 allocs/op
 BenchmarkRistrettoSetGet
-BenchmarkRistrettoSetGet-8    	55431110	       111.9 ns/op	       8 B/op	       0 allocs/op
+BenchmarkRistrettoSetGet-8    	51207961	       120.6 ns/op	       8 B/op	       0 allocs/op
 BenchmarkTheineSetGet
-BenchmarkTheineSetGet-8       	38325188	       145.9 ns/op	       2 B/op	       0 allocs/op
+BenchmarkTheineSetGet-8       	36972397	       173.7 ns/op	       2 B/op	       0 allocs/op
 BenchmarkOtterSetGet
-BenchmarkOtterSetGet-8        	70208274	        93.29 ns/op	       4 B/op	       0 allocs/op
+BenchmarkOtterSetGet-8        	50816445	       125.3 ns/op	       2 B/op	       0 allocs/op
 PASS
-ok  	command-line-arguments	106.169s
+ok  	command-line-arguments	95.373s
 ```
 
-**In my windows laptop:**
-```
-goos: windows
-goarch: amd64
-cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-BenchmarkHashicorpSetGet
-BenchmarkHashicorpSetGet-8      17376360               570.8 ns/op             0 B/op          0 allocs/op
-BenchmarkCloudflareSetGet
-BenchmarkCloudflareSetGet-8     74426450                92.55 ns/op           16 B/op          1 allocs/op
-BenchmarkEcacheSetGet
-BenchmarkEcacheSetGet-8         88482524                78.37 ns/op            1 B/op          0 allocs/op
-BenchmarkLxzanSetGet
-BenchmarkLxzanSetGet-8          74142448                90.51 ns/op            0 B/op          0 allocs/op
-BenchmarkFreelruSetGet
-BenchmarkFreelruSetGet-8        80740551                88.70 ns/op            0 B/op          0 allocs/op
-BenchmarkPhusluSetGet
-BenchmarkPhusluSetGet-8         97101519                65.88 ns/op            0 B/op          0 allocs/op
-BenchmarkNoTTLSetGet
-BenchmarkNoTTLSetGet-8          92839735                65.27 ns/op            0 B/op          0 allocs/op
-BenchmarkCcacheSetGet
-BenchmarkCcacheSetGet-8         25047673               350.2 ns/op            25 B/op          2 allocs/op
-BenchmarkRistrettoSetGet
-BenchmarkRistrettoSetGet-8      90289784                81.44 ns/op           22 B/op          1 allocs/op
-BenchmarkTheineSetGet
-BenchmarkTheineSetGet-8         57348163               114.3 ns/op             0 B/op          0 allocs/op
-BenchmarkOtterSetGet
-BenchmarkOtterSetGet-8          100000000               65.72 ns/op            4 B/op          0 allocs/op
-PASS
-ok      command-line-arguments  104.553s
-```
+Run with 50% [zipf](https://ieeexplore.ieee.org/document/749260) reads and 50% randomly writes.
 
-**In an idle 48c256g server:**
+**In github actions:**
 ```
 goos: linux
 goarch: amd64
-cpu: Intel(R) Xeon(R) Silver 4116 CPU @ 2.10GHz
+cpu: AMD EPYC 9V74 80-Core Processor                
 BenchmarkHashicorpSetGet
-BenchmarkHashicorpSetGet-8    	 6939919	       762.1 ns/op	       1 B/op	       0 allocs/op
+BenchmarkHashicorpSetGet-8    	 7554756	       860.6 ns/op	      19 B/op	       0 allocs/op
 BenchmarkCloudflareSetGet
-BenchmarkCloudflareSetGet-8   	47835366	       141.1 ns/op	      16 B/op	       1 allocs/op
+BenchmarkCloudflareSetGet-8   	24251788	       297.0 ns/op	      19 B/op	       1 allocs/op
 BenchmarkEcacheSetGet
-BenchmarkEcacheSetGet-8       	64053291	        94.14 ns/op	       1 B/op	       0 allocs/op
+BenchmarkEcacheSetGet-8       	35366967	       165.8 ns/op	      11 B/op	       0 allocs/op
 BenchmarkLxzanSetGet
-BenchmarkLxzanSetGet-8        	54651466	       115.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLxzanSetGet-8        	36468183	       204.7 ns/op	       0 B/op	       0 allocs/op
 BenchmarkFreelruSetGet
-BenchmarkFreelruSetGet-8      	46037301	       130.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFreelruSetGet-8      	38325979	       178.6 ns/op	       0 B/op	       0 allocs/op
 BenchmarkPhusluSetGet
-BenchmarkPhusluSetGet-8       	67405720	        91.43 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPhusluSetGet-8       	50458717	       134.1 ns/op	       0 B/op	       0 allocs/op
 BenchmarkNoTTLSetGet
-BenchmarkNoTTLSetGet-8        	67561371	        85.05 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNoTTLSetGet-8        	48443700	       129.6 ns/op	       0 B/op	       0 allocs/op
 BenchmarkCcacheSetGet
-BenchmarkCcacheSetGet-8       	12946960	       499.0 ns/op	      25 B/op	       2 allocs/op
+BenchmarkCcacheSetGet-8       	 9978307	       679.4 ns/op	      78 B/op	       3 allocs/op
 BenchmarkRistrettoSetGet
-BenchmarkRistrettoSetGet-8    	58647771	       103.5 ns/op	      23 B/op	       1 allocs/op
+BenchmarkRistrettoSetGet-8    	37208272	       172.4 ns/op	      45 B/op	       0 allocs/op
 BenchmarkTheineSetGet
-BenchmarkTheineSetGet-8       	15404998	       381.8 ns/op	       2 B/op	       0 allocs/op
+BenchmarkTheineSetGet-8       	15435932	       405.6 ns/op	       7 B/op	       0 allocs/op
 BenchmarkOtterSetGet
-BenchmarkOtterSetGet-8        	70728278	        88.09 ns/op	       4 B/op	       0 allocs/op
+BenchmarkOtterSetGet-8        	20852547	       431.3 ns/op	      24 B/op	       0 allocs/op
 PASS
-ok  	command-line-arguments	117.662s
+ok  	command-line-arguments	104.895s
 ```
 
 ### GC scan
@@ -510,7 +501,7 @@ import (
 	hashicorp "github.com/hashicorp/golang-lru/v2/expirable"
 	ccache "github.com/karlseguin/ccache/v3"
 	lxzan "github.com/lxzan/memorycache"
-	otter "github.com/maypok86/otter"
+	otter "github.com/maypok86/otter/v2"
 	ecache "github.com/orca-zhang/ecache"
 	phuslu "github.com/phuslu/lru"
 )
@@ -582,11 +573,12 @@ func SetupFreelru(cachesize int) {
 
 func SetupOtter(cachesize int) {
 	defer debug.SetGCPercent(debug.SetGCPercent(-1))
-	cache, _ := otter.MustBuilder[string, int](cachesize).WithVariableTTL().Build()
+	cache := otter.Must[string, int](&otter.Options[string, int]{MaximumSize: cachesize, InitialCapacity: cachesize})
 	runtime.GC()
 	for range repeat {
 		for i := range cachesize {
-			cache.Set(keys[i], i, time.Hour)
+			cache.Set(keys[i], i)
+			cache.SetExpiresAfter(keys[i], time.Hour)
 		}
 		runtime.GC()
 	}
@@ -662,7 +654,7 @@ func SetupCloudflare(cachesize int) {
 
 func SetupCcache(cachesize int) {
 	defer debug.SetGCPercent(debug.SetGCPercent(-1))
-	cache := ccache.New(ccache.Configure[int]().MaxSize(int64(cachesize)).ItemsToPrune(100))
+	cache := ccache.New(ccache.Configure[int]().MaxSize(int64(cachesize)).PercentToPrune(2))
 	runtime.GC()
 	for range repeat {
 		for i := range cachesize {
@@ -688,17 +680,17 @@ func SetupHashicorp(cachesize int) {
 
 | GCScan     | 100000 | 200000 | 400000 | 1000000 |
 | ---------- | ------ | ------ | ------ | ------- |
-| nottl      | 1 ms   | 3 ms   | 6 ms   | 15 ms   |
-| phuslu     | 1 ms   | 3 ms   | 6 ms   | 14 ms   |
-| ristretto  | 2 ms   | 4 ms   | 7 ms   | 13 ms   |
-| freelru    | 2 ms   | 4 ms   | 7 ms   | 16 ms   |
-| lxzan      | 2 ms   | 5 ms   | 8 ms   | 19 ms   |
-| cloudflare | 5 ms   | 11 ms  | 21 ms  | 56 ms   |
-| otter      | 5 ms   | 12 ms  | 22 ms  | 58 ms   |
-| ecache     | 5 ms   | 11 ms  | 23 ms  | 60 ms   |
-| ccache     | 5 ms   | 11 ms  | 24 ms  | 60 ms   |
-| hashicorp  | 9 ms   | 17 ms  | 35 ms  | 79 ms   |
-| theine     | 7 ms   | 15 ms  | 35 ms  | 83 ms   |
+| ristretto  | 1 ms   | 2 ms   | 3 ms   | 7 ms    |
+| nottl      | 1 ms   | 2 ms   | 4 ms   | 10 ms   |
+| phuslu     | 1 ms   | 2 ms   | 4 ms   | 10 ms   |
+| freelru    | 1 ms   | 2 ms   | 4 ms   | 13 ms   |
+| lxzan      | 1 ms   | 3 ms   | 6 ms   | 14 ms   |
+| otter      | 3 ms   | 6 ms   | 11 ms  | 31 ms   |
+| ecache     | 3 ms   | 6 ms   | 12 ms  | 34 ms   |
+| ccache     | 3 ms   | 7 ms   | 14 ms  | 38 ms   |
+| theine     | 4 ms   | 8 ms   | 16 ms  | 46 ms   |
+| cloudflare | 4 ms   | 9 ms   | 18 ms  | 49 ms   |
+| hashicorp  | 5 ms   | 11 ms  | 23 ms  | 65 ms   |
 
 ### Memory usage
 
@@ -725,7 +717,7 @@ import (
 	hashicorp "github.com/hashicorp/golang-lru/v2/expirable"
 	ccache "github.com/karlseguin/ccache/v3"
 	lxzan "github.com/lxzan/memorycache"
-	otter "github.com/maypok86/otter"
+	otter "github.com/maypok86/otter/v2"
 	ecache "github.com/orca-zhang/ecache"
 	phuslu "github.com/phuslu/lru"
 )
@@ -794,9 +786,10 @@ func SetupFreelru(cachesize int) {
 }
 
 func SetupOtter(cachesize int) {
-	cache, _ := otter.MustBuilder[string, int](cachesize).WithVariableTTL().Build()
+	cache := otter.Must[string, int](&otter.Options[string, int]{MaximumSize: cachesize, InitialCapacity: cachesize})
 	for i := range cachesize {
-		cache.Set(keys[i], i, time.Hour)
+		cache.Set(keys[i], i)
+		cache.SetExpiresAfter(keys[i], time.Hour)
 	}
 }
 
@@ -844,7 +837,7 @@ func SetupCloudflare(cachesize int) {
 }
 
 func SetupCcache(cachesize int) {
-	cache := ccache.New(ccache.Configure[int]().MaxSize(int64(cachesize)).ItemsToPrune(100))
+	cache := ccache.New(ccache.Configure[int]().MaxSize(int64(cachesize)).PercentToPrune(2))
 	for i := range cachesize {
 		cache.Set(keys[i], i, time.Hour)
 	}
@@ -861,17 +854,17 @@ func SetupHashicorp(cachesize int) {
 
 |            | 100000 | 200000 | 400000 | 1000000 | 2000000 | 4000000 |
 | ---------- | ------ | ------ | ------ | ------- | ------- | ------- |
-| nottl      | 3 MB   | 6 MB   | 13 MB  | 39 MB   | 77 MB   | 155 MB  |
+| nottl      | 3 MB   | 6 MB   | 13 MB  | 38 MB   | 77 MB   | 154 MB  |
 | phuslu     | 4 MB   | 8 MB   | 16 MB  | 46 MB   | 92 MB   | 185 MB  |
-| ristretto  | 13 MB  | 12 MB  | 28 MB  | 58 MB   | 150 MB  | 291 MB  |
-| lxzan      | 8 MB   | 17 MB  | 35 MB  | 95 MB   | 191 MB  | 379 MB  |
-| otter      | 13 MB  | 27 MB  | 54 MB  | 104 MB  | 209 MB  | 418 MB  |
+| ristretto  | 8 MB   | 12 MB  | 28 MB  | 79 MB   | 152 MB  | 292 MB  |
+| otter      | 7 MB   | 14 MB  | 28 MB  | 79 MB   | 158 MB  | 314 MB  |
+| lxzan      | 8 MB   | 17 MB  | 35 MB  | 101 MB  | 202 MB  | 403 MB  |
 | freelru    | 6 MB   | 13 MB  | 27 MB  | 112 MB  | 224 MB  | 448 MB  |
-| ecache     | 11 MB  | 22 MB  | 44 MB  | 123 MB  | 238 MB  | 468 MB  |
-| theine     | 15 MB  | 31 MB  | 62 MB  | 178 MB  | 357 MB  | 714 MB  |
-| cloudflare | 16 MB  | 33 MB  | 64 MB  | 183 MB  | 358 MB  | 716 MB  |
-| ccache     | 16 MB  | 32 MB  | 65 MB  | 182 MB  | 365 MB  | 730 MB  |
-| hashicorp  | 18 MB  | 37 MB  | 57 MB  | 241 MB  | 484 MB  | 967 MB  |
+| ecache     | 11 MB  | 22 MB  | 45 MB  | 128 MB  | 256 MB  | 505 MB  |
+| theine     | 14 MB  | 28 MB  | 58 MB  | 156 MB  | 314 MB  | 620 MB  |
+| ccache     | 14 MB  | 29 MB  | 59 MB  | 161 MB  | 329 MB  | 658 MB  |
+| cloudflare | 15 MB  | 31 MB  | 62 MB  | 180 MB  | 352 MB  | 705 MB  |
+| hashicorp  | 16 MB  | 27 MB  | 55 MB  | 228 MB  | 455 MB  | 910 MB  |
 - nottl is the phuslu/lru version without ttl functionality, resulting in 20% memory saving and a slight increase in throughput.
 
 ### Hit ratio

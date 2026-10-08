@@ -1825,8 +1825,8 @@ github.com/peterbourgon/diskv
 # github.com/phsym/console-slog v0.3.1
 ## explicit; go 1.21
 github.com/phsym/console-slog
-# github.com/phuslu/lru v1.0.18
-## explicit; go 1.18
+# github.com/phuslu/lru v1.0.24
+## explicit; go 1.20
 github.com/phuslu/lru
 # github.com/pierrec/lz4/v4 v4.1.33
 ## explicit; go 1.22
