@@ -123,6 +123,14 @@ Three things the first slice found, which the plan below did not anticipate:
 
 Still missing from the resource: `ModifyPlan`, and acceptance tests. `ImportState` is deliberately absent -- an ID alone cannot recover the host blocks or their key paths.
 
+### Profiles and per-host overrides
+
+The resource's `profiles` map renders `Spec.Config.Profiles`, and the host block carries the node-configuring half: `node_labels`, `node_taints`, `environment`, `private_interface`, `ports`, `firewall_rules` and `bastion`. Before this a host could select a profile and get only the node-role label its name implies, because nothing filled the profiles map in.
+
+Two decisions in it. A host selecting a profile the map does not define is refused, because nothing downstream treats that as wrong -- the lookup returns a zero value and the taints the operator wrote never exist. And a `profile` with no profiles map at all is still accepted, since it names the `node-role.kubernetes.io` label and groups hosts for concurrency.
+
+The data source keeps the smaller host block: a read needs an address, a role and the connection details. `TestTheDataSourceHostBlockIsASubsetOfTheResource` holds the relationship rather than pinning the two to be equal.
+
 ## Order of work
 
 Five layers, stacked on #609 (the stack is linear and these all depend on the package existing):

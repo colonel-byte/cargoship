@@ -69,8 +69,68 @@ type clusterResourceModel struct {
 	EngineVersion types.String `tfsdk:"engine_version"`
 	Kubeconfig    types.String `tfsdk:"kubeconfig"`
 
-	Hosts map[string]factsHost `tfsdk:"hosts"`
-	Nodes []factsNode          `tfsdk:"nodes"`
+	Profiles map[string]profileAttr `tfsdk:"profiles"`
+
+	Hosts map[string]clusterHost `tfsdk:"hosts"`
+	Nodes []factsNode            `tfsdk:"nodes"`
+}
+
+// profileAttr is one entry of the profiles map.
+type profileAttr struct {
+	NodeLabels    map[string]string `tfsdk:"node_labels"`
+	NodeTaints    []string          `tfsdk:"node_taints"`
+	Ports         []portAttr        `tfsdk:"ports"`
+	FirewallRules []firewallAttr    `tfsdk:"firewall_rules"`
+	Concurrency   types.String      `tfsdk:"concurrency"`
+}
+
+// clusterHost is a host block of the resource. It is the data source's host block plus everything
+// that configures a node rather than reaching it, which is why the two are separate types: a read
+// needs an address and a role, and an apply needs the rest.
+type clusterHost struct {
+	Address        types.String `tfsdk:"address"`
+	User           types.String `tfsdk:"user"`
+	Port           types.Int64  `tfsdk:"port"`
+	KeyPath        types.String `tfsdk:"key_path"`
+	Role           types.String `tfsdk:"role"`
+	Profile        types.String `tfsdk:"profile"`
+	Hostname       types.String `tfsdk:"hostname"`
+	PrivateAddress types.String `tfsdk:"private_address"`
+
+	PrivateInterface types.String      `tfsdk:"private_interface"`
+	Environment      map[string]string `tfsdk:"environment"`
+	NodeLabels       map[string]string `tfsdk:"node_labels"`
+	NodeTaints       []string          `tfsdk:"node_taints"`
+	Ports            []portAttr        `tfsdk:"ports"`
+	FirewallRules    []firewallAttr    `tfsdk:"firewall_rules"`
+	Bastion          *bastionAttr      `tfsdk:"bastion"`
+}
+
+// portAttr is one port a host or profile opens.
+type portAttr struct {
+	Port     types.String `tfsdk:"port"`
+	Protocol types.String `tfsdk:"protocol"`
+}
+
+// firewallAttr is one backend-neutral firewall rule.
+type firewallAttr struct {
+	Name        types.String `tfsdk:"name"`
+	Action      types.String `tfsdk:"action"`
+	Direction   types.String `tfsdk:"direction"`
+	Source      types.String `tfsdk:"source"`
+	Destination types.String `tfsdk:"destination"`
+	Ingress     types.String `tfsdk:"ingress"`
+	Egress      types.String `tfsdk:"egress"`
+	Port        types.String `tfsdk:"port"`
+	Protocol    types.String `tfsdk:"protocol"`
+}
+
+// bastionAttr is the jump host a host is reached through.
+type bastionAttr struct {
+	Address types.String `tfsdk:"address"`
+	User    types.String `tfsdk:"user"`
+	Port    types.Int64  `tfsdk:"port"`
+	KeyPath types.String `tfsdk:"key_path"`
 }
 
 func (r *clusterResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -186,13 +246,24 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:            true,
 				Sensitive:           true,
 			},
+			"profiles": schema.MapNestedAttribute{
+				MarkdownDescription: "The profiles a host can select, keyed by name. A profile is how a fleet says " +
+					"\"every infra node is tainted this way\" once rather than per host, and it is also where " +
+					"per-profile concurrency is set.\n\n" +
+					"A host's own `node_labels`, `node_taints` and `ports` **replace** its profile's rather than " +
+					"merging with them; firewall rules are the exception and are unioned. A host that selects a " +
+					"profile this map does not define is a configuration error, since the labels and taints it " +
+					"expected would otherwise silently never exist.",
+				Optional:     true,
+				NestedObject: profilesNestedObject(),
+			},
 			"hosts": schema.MapNestedAttribute{
 				MarkdownDescription: "The fleet, keyed by hostname or an identifier of your choosing. The key names " +
 					"the host when `hostname` is not set, and it is what orders the run: controllers are acted on " +
 					"first, and the controller whose key sorts first becomes the leader.",
 				Optional: true,
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: hostBlockAttributes(),
+					Attributes: clusterHostAttributes(),
 				},
 			},
 			"nodes": schema.ListNestedAttribute{
@@ -532,6 +603,163 @@ func hostBlockAttributes() map[string]schema.Attribute {
 	}
 }
 
+// profilesNestedObject is one entry of the profiles map.
+// clusterHostAttributes is the resource's host block: everything needed to reach a host, plus
+// everything that configures the node it becomes.
+//
+// It is hostBlockAttributes plus the node-configuring half. The data source keeps the smaller set
+// on purpose -- a read needs an address and a role and nothing else -- and
+// TestTheDataSourceHostBlockIsASubsetOfTheResource holds the relationship between the two.
+func clusterHostAttributes() map[string]schema.Attribute {
+	attributes := hostBlockAttributes()
+
+	attributes["private_interface"] = schema.StringAttribute{
+		MarkdownDescription: "Overrides the private interface the facts phase would discover, for a node with more " +
+			"than one.",
+		Optional: true,
+	}
+	attributes["environment"] = schema.MapAttribute{
+		MarkdownDescription: "Environment variables cargoship sets on the host, for a proxy or a no-proxy list.",
+		Optional:            true,
+		ElementType:         types.StringType,
+	}
+	attributes["node_labels"] = schema.MapAttribute{
+		MarkdownDescription: "Kubernetes node labels for this host. They **replace** the labels of the profile the " +
+			"host selects rather than merging with them.",
+		Optional:    true,
+		ElementType: types.StringType,
+	}
+	attributes["node_taints"] = schema.ListAttribute{
+		MarkdownDescription: "Kubernetes node taints for this host, as `key=value:Effect`. They replace the " +
+			"profile's rather than merging with them.",
+		Optional:    true,
+		ElementType: types.StringType,
+	}
+	attributes["ports"] = schema.ListNestedAttribute{
+		MarkdownDescription: "Ports opened on this host, replacing the profile's.",
+		Optional:            true,
+		NestedObject:        portsNestedObject(),
+	}
+	attributes["firewall_rules"] = schema.ListNestedAttribute{
+		MarkdownDescription: "Firewall rules for this host. Unlike the fields above, these are unioned with the " +
+			"profile's rather than replacing them.",
+		Optional:     true,
+		NestedObject: firewallNestedObject(),
+	}
+	attributes["bastion"] = schema.SingleNestedAttribute{
+		MarkdownDescription: "The jump host this host is reached through. Cargoship opens its own SSH connections, " +
+			"so a bastion has to be stated here rather than inherited from an SSH client configuration.",
+		Optional: true,
+		Attributes: map[string]schema.Attribute{
+			"address": schema.StringAttribute{
+				MarkdownDescription: "The bastion's address.",
+				Required:            true,
+			},
+			"user": schema.StringAttribute{
+				MarkdownDescription: "The SSH user on the bastion. Defaults to `root`.",
+				Optional:            true,
+			},
+			"port": schema.Int64Attribute{
+				MarkdownDescription: "The SSH port on the bastion. Defaults to 22.",
+				Optional:            true,
+			},
+			"key_path": schema.StringAttribute{
+				MarkdownDescription: "Path to the private key for the bastion, on the machine running OpenTofu.",
+				Optional:            true,
+			},
+		},
+	}
+	return attributes
+}
+
+func profilesNestedObject() schema.NestedAttributeObject {
+	return schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"node_labels": schema.MapAttribute{
+				MarkdownDescription: "Kubernetes node labels applied to a host selecting this profile.",
+				Optional:            true,
+				ElementType:         types.StringType,
+			},
+			"node_taints": schema.ListAttribute{
+				MarkdownDescription: "Kubernetes node taints applied to a host selecting this profile, as " +
+					"`key=value:Effect`.",
+				Optional:    true,
+				ElementType: types.StringType,
+			},
+			"ports": schema.ListNestedAttribute{
+				MarkdownDescription: "Ports opened on a host selecting this profile.",
+				Optional:            true,
+				NestedObject:        portsNestedObject(),
+			},
+			"firewall_rules": schema.ListNestedAttribute{
+				MarkdownDescription: "Firewall rules applied to a host selecting this profile. A host's own rules " +
+					"are unioned with these rather than replacing them.",
+				Optional:     true,
+				NestedObject: firewallNestedObject(),
+			},
+			"concurrency": schema.StringAttribute{
+				MarkdownDescription: "How many hosts sharing this profile cargoship acts on at once -- draining, " +
+					"upgrading, initializing, uninstalling -- as a count (`1`) or a percentage of those hosts " +
+					"(`25%`). Empty falls back to the phase's own concurrency.",
+				Optional: true,
+			},
+		},
+	}
+}
+
+// portsNestedObject is one port entry, shared by a host and a profile.
+func portsNestedObject() schema.NestedAttributeObject {
+	return schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"port": schema.StringAttribute{
+				MarkdownDescription: "The port number or inclusive range, as a string: `6443`, `30000-32767`.",
+				Required:            true,
+			},
+			"protocol": schema.StringAttribute{
+				MarkdownDescription: "`tcp` or `udp`. Defaults to `tcp`.",
+				Optional:            true,
+			},
+		},
+	}
+}
+
+// firewallNestedObject is one backend-neutral firewall rule. Every match field is optional and an
+// omitted one means "any"; the backends translate a rule into firewalld, ufw or nftables, so not
+// every combination is expressible everywhere.
+func firewallNestedObject() schema.NestedAttributeObject {
+	return schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"action": schema.StringAttribute{
+				MarkdownDescription: "What happens to matching traffic: `allow`, `deny` or `reject`. It is the one " +
+					"field a rule cannot omit.",
+				Required: true,
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: "Names the rule, and names the artifacts cargoship writes on the node for it, " +
+					"so it has to be unique within a host. One is generated when it is empty.",
+				Optional: true,
+			},
+			"direction": schema.StringAttribute{
+				MarkdownDescription: "`in`, `out` or `forward`. Defaults to `in`.",
+				Optional:            true,
+			},
+			"source":      schema.StringAttribute{MarkdownDescription: "The address or CIDR the traffic comes from.", Optional: true},
+			"destination": schema.StringAttribute{MarkdownDescription: "The address or CIDR the traffic goes to.", Optional: true},
+			"ingress": schema.StringAttribute{
+				MarkdownDescription: "Where forward traffic enters: a zone on firewalld hosts, an interface on ufw " +
+					"hosts. Forward rules only.",
+				Optional: true,
+			},
+			"egress": schema.StringAttribute{
+				MarkdownDescription: "Where forward traffic leaves, read the same way as `ingress`. Forward rules only.",
+				Optional:            true,
+			},
+			"port":     schema.StringAttribute{MarkdownDescription: "The port or inclusive range the rule matches.", Optional: true},
+			"protocol": schema.StringAttribute{MarkdownDescription: "The protocol the rule matches.", Optional: true},
+		},
+	}
+}
+
 func nodesNestedObject() schema.NestedAttributeObject {
 	return schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
@@ -569,20 +797,87 @@ func clusterModelOf(model clusterResourceModel) clusterModel {
 		if hostname == "" {
 			hostname = k
 		}
-		hosts = append(hosts, hostModel{
-			Address:        host.Address.ValueString(),
-			User:           host.User.ValueString(),
-			Port:           int(host.Port.ValueInt64()),
-			KeyPath:        host.KeyPath.ValueString(),
-			Role:           host.Role.ValueString(),
-			Profile:        host.Profile.ValueString(),
-			Hostname:       hostname,
-			PrivateAddress: host.PrivateAddress.ValueString(),
-		})
+		mapped := hostModel{
+			Address:          host.Address.ValueString(),
+			User:             host.User.ValueString(),
+			Port:             int(host.Port.ValueInt64()),
+			KeyPath:          host.KeyPath.ValueString(),
+			Role:             host.Role.ValueString(),
+			Profile:          host.Profile.ValueString(),
+			Hostname:         hostname,
+			PrivateAddress:   host.PrivateAddress.ValueString(),
+			PrivateInterface: host.PrivateInterface.ValueString(),
+			Environment:      host.Environment,
+			NodeLabels:       host.NodeLabels,
+			NodeTaints:       host.NodeTaints,
+			Ports:            portsOf(host.Ports),
+			FirewallRules:    rulesOf(host.FirewallRules),
+		}
+		if host.Bastion != nil {
+			mapped.Bastion = &bastionModel{
+				Address: host.Bastion.Address.ValueString(),
+				User:    host.Bastion.User.ValueString(),
+				Port:    int(host.Bastion.Port.ValueInt64()),
+				KeyPath: host.Bastion.KeyPath.ValueString(),
+			}
+		}
+		hosts = append(hosts, mapped)
 	}
+
+	var profiles map[string]profileModel
+	if len(model.Profiles) > 0 {
+		profiles = make(map[string]profileModel, len(model.Profiles))
+		for name, profile := range model.Profiles {
+			profiles[name] = profileModel{
+				NodeLabels:    profile.NodeLabels,
+				NodeTaints:    profile.NodeTaints,
+				Ports:         portsOf(profile.Ports),
+				FirewallRules: rulesOf(profile.FirewallRules),
+				Concurrency:   profile.Concurrency.ValueString(),
+			}
+		}
+	}
+
 	return clusterModel{
 		Name:         model.Name.ValueString(),
 		LoadBalancer: model.LoadBalancer.ValueString(),
+		Profiles:     profiles,
 		Hosts:        hosts,
 	}
+}
+
+// portsOf and rulesOf are the same boundary for the two shapes a host and a profile share.
+func portsOf(attrs []portAttr) []portModel {
+	if len(attrs) == 0 {
+		return nil
+	}
+	ports := make([]portModel, 0, len(attrs))
+	for _, attr := range attrs {
+		ports = append(ports, portModel{
+			Port:     attr.Port.ValueString(),
+			Protocol: attr.Protocol.ValueString(),
+		})
+	}
+	return ports
+}
+
+func rulesOf(attrs []firewallAttr) []firewallRuleModel {
+	if len(attrs) == 0 {
+		return nil
+	}
+	rules := make([]firewallRuleModel, 0, len(attrs))
+	for _, attr := range attrs {
+		rules = append(rules, firewallRuleModel{
+			Name:        attr.Name.ValueString(),
+			Action:      attr.Action.ValueString(),
+			Direction:   attr.Direction.ValueString(),
+			Source:      attr.Source.ValueString(),
+			Destination: attr.Destination.ValueString(),
+			Ingress:     attr.Ingress.ValueString(),
+			Egress:      attr.Egress.ValueString(),
+			Port:        attr.Port.ValueString(),
+			Protocol:    attr.Protocol.ValueString(),
+		})
+	}
+	return rules
 }

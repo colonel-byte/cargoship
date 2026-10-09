@@ -44,7 +44,7 @@ func clusterModelFor() clusterResourceModel {
 		ModifyHosts:       types.BoolValue(true),
 		WorkerConcurrency: types.StringValue("25%"),
 		Timeout:           types.StringValue("20m"),
-		Hosts: map[string]factsHost{
+		Hosts: map[string]clusterHost{
 			"worker": {
 				Address: types.StringValue("10.0.0.21"),
 				Role:    types.StringValue(cluster.RoleWorker),
@@ -356,11 +356,11 @@ func TestTeardownNeedsTheRecordedDistro(t *testing.T) {
 	}
 }
 
-// TestHostBlocksMatchBetweenTheResourceAndTheDataSource is what keeps the two schemas in step. The
-// framework gives resources and data sources different schema packages, so the host block is
-// written out twice; an attribute added to one and not the other is a configuration that works in
-// one place and fails in the other.
-func TestHostBlocksMatchBetweenTheResourceAndTheDataSource(t *testing.T) {
+// TestTheDataSourceHostBlockIsASubsetOfTheResource holds the relationship between the two host
+// blocks. The data source's is deliberately smaller -- a read needs an address and a role, not
+// node labels or firewall rules -- but every attribute it does have has to mean the same thing in
+// both, so an operator moving a host block from one to the other does not find it renamed.
+func TestTheDataSourceHostBlockIsASubsetOfTheResource(t *testing.T) {
 	var resourceResp resource.SchemaResponse
 	(&clusterResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resourceResp)
 
@@ -380,14 +380,28 @@ func TestHostBlocksMatchBetweenTheResourceAndTheDataSource(t *testing.T) {
 		t.Fatalf("the data source's host block is a %T", dataResp.Schema.Blocks["host"])
 	}
 
-	for name := range resourceHosts.NestedObject.Attributes {
-		if _, found := dataHost.NestedObject.Attributes[name]; !found {
-			t.Errorf("the resource's host block has %q and the data source's does not", name)
-		}
-	}
 	for name := range dataHost.NestedObject.Attributes {
 		if _, found := resourceHosts.NestedObject.Attributes[name]; !found {
 			t.Errorf("the data source's host block has %q and the resource's does not", name)
+		}
+	}
+
+	// The resource's extras are the node-configuring half, and they are named here so that an
+	// attribute dropped from the resource fails rather than quietly narrowing what can be
+	// configured.
+	for _, name := range []string{
+		// keep-sorted start
+		"bastion",
+		"environment",
+		"firewall_rules",
+		"node_labels",
+		"node_taints",
+		"ports",
+		"private_interface",
+		// keep-sorted end
+	} {
+		if _, found := resourceHosts.NestedObject.Attributes[name]; !found {
+			t.Errorf("the resource's host block lost %q", name)
 		}
 	}
 }
