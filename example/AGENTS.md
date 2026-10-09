@@ -11,6 +11,8 @@ Almost everything under `example/` is generated. Regenerate it with mage; do not
 | `example/shasums.json`                                                          | the same targets - a cache of the digests of the files the examples install                        |
 | `example/upstream/<minor>/<version>/distro.yaml`                                | `Generate.Examples`, from `magefiles/templates/upstream-distro.yaml.tmpl`                          |
 
+One subtree is hand-written and regenerates from nothing: `example/terragrunt/`, a worked Terragrunt layout for the OpenTofu provider. Edit it directly, and see its own [README](terragrunt/README.md).
+
 To change a generated example, edit its template in `magefiles/templates/` and re-run `mage generate:examples`, which re-renders every example directory already on disk. An edit made directly to a rendered file is lost on the next run.
 
 Every path in that table is also marked `linguist-generated` in [`.gitattributes`](../.gitattributes), so a target that starts writing a new file needs a pattern there as well. See the "Keeping `.gitattributes` in sync with the generators" section of the root [`AGENTS.md`](../AGENTS.md).
