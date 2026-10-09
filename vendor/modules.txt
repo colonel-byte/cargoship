@@ -1784,8 +1784,8 @@ github.com/nozzle/throttler
 # github.com/nwaples/rardecode/v2 v2.4.1
 ## explicit; go 1.21
 github.com/nwaples/rardecode/v2
-# github.com/oklog/run v1.1.0
-## explicit; go 1.13
+# github.com/oklog/run v1.2.0
+## explicit; go 1.20
 github.com/oklog/run
 # github.com/oklog/ulid/v2 v2.1.2
 ## explicit; go 1.15
