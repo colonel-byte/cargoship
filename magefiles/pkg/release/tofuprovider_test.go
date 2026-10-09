@@ -19,6 +19,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content/oci"
 )
 
 func TestValidateVersion(t *testing.T) {
@@ -113,5 +116,50 @@ func TestProviderPlatformsAreUnique(t *testing.T) {
 	}
 	if len(providerPlatforms) == 0 {
 		t.Fatal("no platforms are published, so the index would hold nothing")
+	}
+}
+
+// TestAssembleIndexAndPushPlatform verifies that pushPlatform and assembleIndex produce
+// a valid OCI layout with platform manifests and index without needing an external oras binary.
+func TestAssembleIndexAndPushPlatform(t *testing.T) {
+	dir := t.TempDir()
+	binaryPath := filepath.Join(dir, "binary")
+	if err := os.WriteFile(binaryPath, []byte("provider binary content"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	archive := filepath.Join(dir, "provider.zip")
+	if err := zipBinary(archive, binaryPath, "terraform-provider-cargoship_v0.1.0"); err != nil {
+		t.Fatal(err)
+	}
+
+	layoutDir := filepath.Join(dir, "layout")
+	store, err := oci.New(layoutDir)
+	if err != nil {
+		t.Fatalf("oci.New: %v", err)
+	}
+
+	ctx := t.Context()
+	desc, err := pushPlatform(ctx, store, "linux_amd64", "linux", "amd64", archive)
+	if err != nil {
+		t.Fatalf("pushPlatform: %v", err)
+	}
+
+	if desc.Platform == nil || desc.Platform.OS != "linux" || desc.Platform.Architecture != "amd64" {
+		t.Errorf("manifest descriptor platform = %+v, want linux/amd64", desc.Platform)
+	}
+	if desc.ArtifactType != artifactTypeTarget {
+		t.Errorf("manifest descriptor artifactType = %q, want %q", desc.ArtifactType, artifactTypeTarget)
+	}
+
+	if err := assembleIndex(ctx, store, "0.1.0", []ocispec.Descriptor{desc}); err != nil {
+		t.Fatalf("assembleIndex: %v", err)
+	}
+
+	indexDesc, err := store.Resolve(ctx, "0.1.0")
+	if err != nil {
+		t.Fatalf("store.Resolve index: %v", err)
+	}
+	if indexDesc.ArtifactType != artifactTypeIndex {
+		t.Errorf("index descriptor artifactType = %q, want %q", indexDesc.ArtifactType, artifactTypeIndex)
 	}
 }

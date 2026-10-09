@@ -86,7 +86,7 @@ mage test:fuzz                  # replay the fuzz seed corpus
 
 The `Release` namespace holds the release artifacts goreleaser does not build. Only the OpenTofu provider is here, because what has to be published for it is an OCI image index assembled to the shape an OpenTofu provider mirror serves rather than a release asset. See [choice-tofu-provider-layout](../agent/choice-tofu-provider-layout.md).
 
-*   `TofuProvider` - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading `v`, and optionally the repository to publish to. Needs ORAS 1.3.0 or newer on `PATH`, which is what `--artifact-platform` needs.
+*   `TofuProvider` - Builds the provider for every published platform, assembles the per-platform manifests and the index an OpenTofu provider mirror serves, and pushes the result to an OCI repository. Takes the version without its leading `v`, and optionally the repository to publish to.
 *   `TofuProviderLayout` - The same build and assembly, stopping before the push and leaving the OCI layout under `build/tofu-provider/layout`. This is how the artifact shape is checked without a registry.
 *   `TofuProviderDev` - Builds the provider for this machine only, into a `filesystem_mirror` layout under `build/tofu-provider/mirror/`, and prints the directory to point a `.tofurc` at. This is the development loop; see [tofu-provider](tofu-provider.md).
 
