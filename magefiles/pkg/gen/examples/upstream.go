@@ -311,6 +311,13 @@ func renderUpstreamLine(repoURL, prefix string, sums *exampleShasums) error {
 	if err := sortTagsDesc(tags); err != nil {
 		return err
 	}
+	tags, err = aboveFloor(tags)
+	if err != nil {
+		return err
+	}
+	if len(tags) == 0 {
+		return fmt.Errorf("no upstream releases on %s at or above the %s floor", prefix, exampleMinorFloor)
+	}
 
 	tmpl, err := parseUpstreamTemplate()
 	if err != nil {

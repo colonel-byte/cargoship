@@ -33,12 +33,14 @@ const (
 // The multi-architecture flavors exist to show what a package covering more than one
 // architecture looks like, not to cover every release: the current minor lines are enough to
 // read, and keep the arm64 artifacts the shasum cache has to hold down to a handful.
+//
+// Every line the examples render is now inside that window -- see exampleMinorFloor -- so this
+// list and the rendered lines currently coincide. It stays a list of its own because the two
+// answer different questions: which lines are rendered at all, and which are worth paying
+// arm64 artifacts for.
 var (
 	exampleMultiArches = []string{"amd64", "arm64"}
 	exampleMultiMinors = []string{
-		"v1_32",
-		"v1_33",
-		"v1_34",
 		"v1_35",
 		"v1_36",
 		"v1_37",
