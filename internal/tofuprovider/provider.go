@@ -145,11 +145,11 @@ func (p *cargoshipProvider) Configure(ctx context.Context, req provider.Configur
 	resp.ResourceData = p.converger
 }
 
-// Resources are the resources the provider serves. There are none yet: the first slice of the
-// provider is read-only on purpose, so that every part of the plumbing is exercised before
-// anything can change a host. See docs/agent/design-tofu-provider-install.md.
+// Resources are the resources the provider serves.
 func (p *cargoshipProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		newClusterResource,
+	}
 }
 
 // DataSources are the data sources the provider serves.

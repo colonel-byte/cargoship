@@ -112,6 +112,17 @@ Three things the first slice found, which the plan below did not anticipate:
 
 `TestNewRefreshIsEntirelyReadOnly` holds the property the action rests on, with one documented exception: `Disconnect` declares its own dry-run path rather than being read-only, because in an apply it has a staged binary to remove. After a refresh there is nothing to remove, and what it does is close connections.
 
+### The resource
+
+`cargoship_cluster` with `Create`, `Read`, `Update` and `Delete`. The decisions worth recording, because the natural code shape gets each of them wrong:
+
+- **State is written on failure.** `converge` sets state before reporting the error, and the converger returns a result alongside a non-nil error for the same reason: an apply that failed part way through has changed hosts, and a plan reading an empty state would re-bootstrap a live cluster. `fillUnknown` exists because state cannot hold an unknown value, so a run that failed before producing a computed attribute would fail to write state at all -- and then the only thing reported would be the framework complaining about unknowns.
+- **The engine is read from the package, not stated twice.** `distro` is computed from what `distro.Load` reports, and it is what `Read` and `Delete` need. A reset loads no package, so a teardown with no recorded engine is refused rather than guessed at.
+- **The apply never writes the operator's kubeconfig.** `ApplyOptions.NoKubeConfigFile` is what the provider sets: merging credentials into `~/.kube/config` as a side effect of an apply would change a machine the resource does not describe. The credentials are read back through `Apply.KubeConfigBytes` instead, and only when `export_kubeconfig` asks for them.
+- **A failed destroy leaves the resource in state.** A reset that failed part way has removed the engine from some hosts and not others; dropping the resource would leave nothing describing the half that remains.
+
+Still missing from the resource: `ModifyPlan`, and acceptance tests. `ImportState` is deliberately absent -- an ID alone cannot recover the host blocks or their key paths.
+
 ## Order of work
 
 Five layers, stacked on #609 (the stack is linear and these all depend on the package existing):

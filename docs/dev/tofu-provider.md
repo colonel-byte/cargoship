@@ -4,9 +4,13 @@ The provider lives at `cmd/terraform-provider-cargoship`, with its implementatio
 
 ## What exists
 
-One data source, `cargoship_cluster_facts`. It runs `action.NewRefresh`, the read-only half of an apply -- `Connect`, `DetectOS`, `GatherFacts`, `GatherFactsDistro`, `Disconnect` -- and reports what each host says: operating system, version, architecture, hostname, private address, and the engine version it is running. It takes no cluster lock and writes nothing to any host. The phase list lives in `pkg/action` rather than in the provider so that "which phases are safe to run" is decided once; [docs/phases/refresh.md](../phases/refresh.md) is generated from it.
+One resource, `cargoship_cluster`, and one data source, `cargoship_cluster_facts`.
 
-There is no resource yet, so nothing the provider can do changes a fleet. That is deliberate: the first slice exercises the schema, the translation into a cluster document, the SSH connections, the logging and cancellation in a place where the worst outcome of a bug is a failed plan.
+`cargoship_cluster` converges a cluster on its configuration: `Create` and `Update` are the same call, because `action.NewApply` builds one phase list covering install, join and upgrade with each phase gated by its own `ShouldRun`. `Read` refreshes what the hosts report. `Delete` resets the cluster unless `retain_on_destroy` is set, in which case it drops it from state with a warning and leaves it running.
+
+The data source, `cargoship_cluster_facts`. It runs `action.NewRefresh`, the read-only half of an apply -- `Connect`, `DetectOS`, `GatherFacts`, `GatherFactsDistro`, `Disconnect` -- and reports what each host says: operating system, version, architecture, hostname, private address, and the engine version it is running. It takes no cluster lock and writes nothing to any host. The phase list lives in `pkg/action` rather than in the provider so that "which phases are safe to run" is decided once; [docs/phases/refresh.md](../phases/refresh.md) is generated from it.
+
+What is **not** there yet: `ModifyPlan`, so the plan-time downgrade and removed-host checks of [#307](https://github.com/colonel-byte/cargoship/issues/307) do not run; `ImportState`, which cannot work from an ID alone because the host blocks and their key paths are not recoverable from a running cluster; and acceptance tests. The `engine_version` of each node is in state, which is the input the plan-time check needs.
 
 ## The development loop
 
@@ -141,6 +145,21 @@ Then point a host block at `127.0.0.1` port `2223` with `key_path = "/tmp/facts-
 
 For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs -- see [e2e-tests](e2e-tests.md) -- and the addresses, user and key path in it are what a host block needs.
 
+## Applying for real
+
+An apply needs a package and a fleet, so the loop is longer than the data source's:
+
+```sh
+mage build:binary
+./build/cargoship_linux_amd64 package create example/k3s-flannel/v1_36/v1.36.4-k3s1 --output /srv/staging
+```
+
+That pulls the engine's artifacts and images, which is the one step that needs a network and around 1.5GB. Point `package` at the `.tar.zst` it writes, and the host blocks at a fleet -- the cluster e2e suite's bootloose inventory is the cheapest one to hand, see [e2e-tests](e2e-tests.md).
+
+Two things to expect from the first apply. It is long and it looks silent: the phases log through cargoship's own logger, and OpenTofu shows a resource as "Still creating..." until the whole run returns. And a run that fails part way through **still writes state** -- deliberately, because an apply that failed has already changed hosts, and a resource that returned without writing would leave the next plan deciding nothing is installed and re-bootstrapping a live cluster. The error says so, and the nodes it reached are in state.
+
+A destroy resets the cluster by default. `retain_on_destroy = true` drops the resource and leaves the cluster running, with a warning naming it and the `cargoship install reset` that would tear it down.
+
 ## `connect_timeout`, and why it exists
 
 cargoship's connect phase retries for **ten minutes** (`pkg/phase/07_connect.go`), because a host rebooting into a new kernel mid-apply is ordinary. That is the wrong answer for a plan: a typo in an address would make `tofu plan` sit silent for ten minutes before failing. The provider bounds every read at `connect_timeout`, one minute by default, and says so when it gives up:
@@ -159,6 +178,7 @@ Raise it for a fleet that is genuinely slow to answer. Note that an authenticati
 
 ```sh
 go test ./internal/tofuprovider/...     # unit: translation, state mapping, diagnostics
+go test ./pkg/action/...                # the actions the provider calls, including the read-only one
 go test ./cmd/cargoship/                # holds that the CLI does not reach the provider's packages
 ```
 

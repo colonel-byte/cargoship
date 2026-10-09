@@ -12,6 +12,7 @@ Package action are various actions used by the package
 
 - [type Apply](<#Apply>)
   - [func NewApply\(opts ApplyOptions\) \(\*Apply, error\)](<#NewApply>)
+  - [func \(a Apply\) KubeConfigBytes\(\) \(\[\]byte, error\)](<#Apply.KubeConfigBytes>)
   - [func \(a Apply\) Run\(ctx context.Context\) error](<#Apply.Run>)
 - [type ApplyOptions](<#ApplyOptions>)
 - [type EngineConfigSync](<#EngineConfigSync>)
@@ -39,7 +40,7 @@ Package action are various actions used by the package
 
 
 <a name="Apply"></a>
-## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L69-L72>)
+## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L78-L84>)
 
 Apply state logic
 
@@ -47,11 +48,12 @@ Apply state logic
 type Apply struct {
     ApplyOptions
     Phases phase.Phases
+    // contains filtered or unexported fields
 }
 ```
 
 <a name="NewApply"></a>
-### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75>)
+### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L87>)
 
 ```go
 func NewApply(opts ApplyOptions) (*Apply, error)
@@ -59,8 +61,19 @@ func NewApply(opts ApplyOptions) (*Apply, error)
 
 NewApply an apply action object
 
+<a name="Apply.KubeConfigBytes"></a>
+### func \(Apply\) [KubeConfigBytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L214>)
+
+```go
+func (a Apply) KubeConfigBytes() ([]byte, error)
+```
+
+KubeConfigBytes is the cluster's admin credentials, serialized, as the run built them.
+
+It is read after Run, and only means anything for a run that enabled UpdateKubeConfig: the phase is skipped otherwise and there is nothing to return. What comes back is cluster\-admin, so a caller holding it is holding the cluster.
+
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L195>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L222>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error
@@ -69,7 +82,7 @@ func (a Apply) Run(ctx context.Context) error
 Run the actions
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L37-L66>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L37-L75>)
 
 ApplyOptions struct
 
@@ -96,6 +109,15 @@ type ApplyOptions struct {
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // NoKubeConfigFile builds the admin credentials without merging them into the operator's
+    // kubeconfig, so that a caller can read them through KubeConfigBytes and nothing on the
+    // machine running the apply is changed.
+    //
+    // It is phrased as the negative for the reason KubeConfigOptions.NoWrite is: the zero value
+    // writes, which is what every caller before this field existed did. The OpenTofu provider is
+    // the caller that sets it -- an apply that merged credentials into ~/.kube/config as a side
+    // effect would be changing a machine the resource does not describe.
+    NoKubeConfigFile bool
     // LabelNodes whether to check and add the node-role.kubernetes.io/<profile> label on nodes
     LabelNodes bool
     // AllowUnmanagedNodes lets an apply continue when the cluster holds a node no host in the
