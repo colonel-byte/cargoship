@@ -145,6 +145,12 @@ Then point a host block at `127.0.0.1` port `2223` with `key_path = "/tmp/facts-
 
 For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs -- see [e2e-tests](e2e-tests.md) -- and the addresses, user and key path in it are what a host block needs.
 
+## Where the phase logs go
+
+cargoship's phases log through a context-scoped `slog` logger, and OpenTofu shows a provider's logs only through `tflog`. `withTofuLogger` bridges the two: every `Refresh`, `Apply` and `Teardown` installs a handler that maps slog levels onto `tflog` and flattens grouped attributes into the flat map `tflog` takes. So `TF_LOG=debug` is how to watch an apply, and without it a long run looks silent.
+
+The handler is on the path of every log line a run produces, which is why it is tested for every level and attribute kind rather than only for the happy one: a kind it could not render would take the provider down mid-installation rather than lose a line.
+
 ## Applying for real
 
 An apply needs a package and a fleet, so the loop is longer than the data source's:

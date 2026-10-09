@@ -64,6 +64,9 @@ type clusterResourceModel struct {
 	RetainOnDestroy     types.Bool   `tfsdk:"retain_on_destroy"`
 	NoDrainOnDestroy    types.Bool   `tfsdk:"no_drain_on_destroy"`
 
+	Values      types.String `tfsdk:"values"`
+	ValuesFiles types.List   `tfsdk:"values_files"`
+
 	ID            types.String `tfsdk:"id"`
 	Distro        types.String `tfsdk:"distro"`
 	EngineVersion types.String `tfsdk:"engine_version"`
@@ -72,7 +75,7 @@ type clusterResourceModel struct {
 	Profiles map[string]profileAttr `tfsdk:"profiles"`
 
 	Hosts map[string]clusterHost `tfsdk:"hosts"`
-	Nodes []factsNode            `tfsdk:"nodes"`
+	Nodes types.List             `tfsdk:"nodes"`
 }
 
 // profileAttr is one entry of the profiles map.
@@ -217,6 +220,17 @@ func (r *clusterResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 					"it gives workloads no chance to move.",
 				Optional: true,
 			},
+			"values": schema.StringAttribute{
+				MarkdownDescription: "Overrides for the values the distro package was built with, as a YAML string " +
+					"(e.g. from `file(\"values.yaml\")` or `yamlencode(...)`).",
+				Optional: true,
+			},
+			"values_files": schema.ListAttribute{
+				MarkdownDescription: "Paths to YAML values files overriding the values the package ships with. " +
+					"Loaded and merged in order, winning over inline `values`.",
+				Optional:    true,
+				ElementType: types.StringType,
+			},
 
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The cluster's name, which is its identity here. There is no `import`: the " +
@@ -344,7 +358,9 @@ func (r *clusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		model.Distro = types.StringValue(distroID)
 	}
 
-	model.Nodes = nodesOf(facts)
+	nodesList, nodesDiags := types.ListValueFrom(ctx, nodesNestedObject().Type(), nodesOf(facts))
+	resp.Diagnostics.Append(nodesDiags...)
+	model.Nodes = nodesList
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }
 
@@ -420,8 +436,17 @@ func (r *clusterResource) converge(ctx context.Context, model *clusterResourceMo
 		"hosts":   len(model.Hosts),
 	})
 
+	var valuesFiles []string
+	if !model.ValuesFiles.IsNull() && !model.ValuesFiles.IsUnknown() {
+		diags.Append(model.ValuesFiles.ElementsAs(ctx, &valuesFiles, false)...)
+		if diags.HasError() {
+			return
+		}
+	}
+
 	result, runErr := r.converger.Apply(ctx, cfg, applyOptions{
 		Package:             model.Package.ValueString(),
+		ValuesFiles:         valuesFiles,
 		ModifyHosts:         model.ModifyHosts.ValueBool(),
 		ModifyFirewall:      model.ModifyFirewall.ValueBool(),
 		LabelNodes:          model.LabelNodes.ValueBool(),
@@ -439,7 +464,9 @@ func (r *clusterResource) converge(ctx context.Context, model *clusterResourceMo
 	if result.EngineVersion != "" {
 		model.EngineVersion = types.StringValue(result.EngineVersion)
 	}
-	model.Nodes = nodesOf(result.Facts)
+	nodesList, nodesDiags := types.ListValueFrom(ctx, nodesNestedObject().Type(), nodesOf(result.Facts))
+	diags.Append(nodesDiags...)
+	model.Nodes = nodesList
 	model.Kubeconfig = types.StringValue(string(result.Kubeconfig))
 
 	// Unknown values are illegal in state, and a failed run leaves whatever it never reached
@@ -473,6 +500,9 @@ func fillUnknown(model *clusterResourceModel) {
 	}
 	if model.ID.IsUnknown() {
 		model.ID = model.Name
+	}
+	if model.Nodes.IsUnknown() {
+		model.Nodes = types.ListNull(nodesNestedObject().Type())
 	}
 }
 
@@ -841,6 +871,7 @@ func clusterModelOf(model clusterResourceModel) clusterModel {
 	return clusterModel{
 		Name:         model.Name.ValueString(),
 		LoadBalancer: model.LoadBalancer.ValueString(),
+		Values:       model.Values.ValueString(),
 		Profiles:     profiles,
 		Hosts:        hosts,
 	}

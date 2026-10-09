@@ -108,6 +108,8 @@ type clusterModel struct {
 	Name string
 	// LoadBalancer is the address clients use to reach the control plane.
 	LoadBalancer string
+	// Values is the raw YAML string overriding the package's values.
+	Values string
 	// Profiles maps a profile name to the overrides a host selecting it receives. A profile is
 	// how a fleet says "every infra node is tainted this way" once rather than per host.
 	Profiles map[string]profileModel
@@ -220,6 +222,13 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 		return nil, err
 	}
 
+	var values map[string]any
+	if strings.TrimSpace(model.Values) != "" {
+		if err := goyaml.Unmarshal([]byte(model.Values), &values); err != nil {
+			return nil, fmt.Errorf("unable to parse values YAML: %w", err)
+		}
+	}
+
 	out := &cluster.ZarfCluster{
 		APIVersion: apiVersion,
 		Kind:       documentKind,
@@ -228,6 +237,7 @@ func translate(ctx context.Context, model clusterModel) (*cluster.ZarfCluster, e
 			Config: cluster.ZarfClusterConfig{
 				LoadBalancer: model.LoadBalancer,
 				Profiles:     profiles,
+				Values:       values,
 			},
 			Hosts: hosts,
 		},
