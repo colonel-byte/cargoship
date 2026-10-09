@@ -192,7 +192,9 @@ The unit tests need no cluster, no SSH and no `tofu` binary, and they are the on
 
 `TestCargoshipDoesNotDependOnTheProvider` is what keeps the provider's dependencies out of the CLI. The property it holds is that the linker never loads a package the import graph does not reach, so `cargoship` is the same size whatever the provider depends on -- and one import from a package the CLI already uses would undo that silently. It reads `go list -deps` and fails on any dependency under the provider's packages or `terraform-plugin`.
 
-Acceptance tests with `terraform-plugin-testing` come with the resource, since what they are for is asserting that an apply converges a cluster. When they land they will need a `tofu` binary on the runner, and `TF_ACC_TERRAFORM_PATH` pointing at it -- the framework's harness looks for `terraform` by default.
+The end-to-end half is `mage test:endToEndTofu`: three bootloose machines, the real `tofu` CLI, and the shipped module, walked from `init` through a removal to a destroy. It builds the provider into the same mirror this page's development loop uses, and skips when there is no `tofu` on PATH. See [e2e-tofu-tests](e2e-tofu-tests.md) for what each step holds and what it leaves uncovered.
+
+That suite stands in for acceptance tests with `terraform-plugin-testing`, which would need the same `tofu` binary and `TF_ACC_TERRAFORM_PATH` pointing at it -- the framework's harness looks for `terraform` by default. What the framework would add over the suite is per-step plan assertions; what it would not is the module, which is the layer a practitioner actually consumes.
 
 ## Driving it from Terragrunt
 

@@ -24,6 +24,7 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/action"
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/phase"
+	"github.com/colonel-byte/cargoship/test"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -100,7 +101,7 @@ func (s *DryRunSuite) Test_1_CreatePackage() {
 	cache, err := cachePath()
 	s.Require().NoError(err)
 
-	definition, err := containerSafeDefinition(examplePackage(), s.pkgDir)
+	definition, err := test.ContainerSafeDefinition(examplePackage(), s.pkgDir)
 	s.Require().NoError(err)
 
 	pkgPath, err := distro.Create(s.ctx, definition, s.pkgDir, distro.CreateOptions{
