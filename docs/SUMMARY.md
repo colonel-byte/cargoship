@@ -238,6 +238,7 @@
 - [choice-removed-hosts](agent/choice-removed-hosts.md)
 - [choice-reset-target-hosts](agent/choice-reset-target-hosts.md)
 - [choice-selinux-policy](agent/choice-selinux-policy.md)
+- [choice-tofu-host-removal](agent/choice-tofu-host-removal.md)
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)

@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/stretchr/testify/require"
 )
 
 // threeHosts is a configuration whose controller is not written first, which is what the ordering
@@ -469,5 +471,23 @@ cilium:
 	}
 	if cilium["enabled"] != true {
 		t.Errorf("cilium.enabled = %v, want true", cilium["enabled"])
+	}
+}
+
+// TestClusterModelOfExcludesAbsentHosts verifies that hosts marked absent are excluded from the translated cluster.
+func TestClusterModelOfExcludesAbsentHosts(t *testing.T) {
+	model := clusterModelFor()
+	model.Hosts["absent-worker"] = clusterHost{
+		Address: types.StringValue("10.0.0.31"),
+		Role:    types.StringValue(cluster.RoleWorker),
+		State:   types.StringValue("absent"),
+	}
+
+	cm := clusterModelOf(model)
+	require.Len(t, cm.Hosts, 2)
+	for _, h := range cm.Hosts {
+		if h.Address == "10.0.0.31" {
+			t.Errorf("absent host %s was not excluded from translation", h.Address)
+		}
 	}
 }
