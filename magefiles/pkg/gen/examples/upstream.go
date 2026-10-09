@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file renders example/upstream's distro.yaml examples. Upstream (kubeadm) does not fit
-// exampleDistroSpec: it installs five independently-versioned OS packages from pkgs.k8s.io and
+// This file renders the example/upstream-<cni> distro.yaml examples. Upstream (kubeadm) does not
+// fit exampleDistroSpec: it installs five independently-versioned OS packages from pkgs.k8s.io and
 // containerd.io from download.docker.com, rather than one release's binaries and image list, so
 // it gets its own fetch pipeline (upstream_kubeadm.go, upstream_deb.go, upstream_rpm.go,
 // upstream_repo.go) and its own call from Generate.Examples rather than a fifth
-// exampleDistroSpec entry.
+// exampleDistroSpec entry. The CNI each flavor bakes in is upstream_cni.go's.
 
 package examples
 
@@ -35,7 +35,6 @@ import (
 
 const (
 	upstreamTemplate = "magefiles/templates/upstream-distro.yaml.tmpl"
-	upstreamDir      = "example/upstream"
 
 	// upstreamDebCodename is the Debian release pkgs.k8s.io and download.docker.com both
 	// publish packages for. The example targets one OS baseline, so this is a constant
@@ -84,6 +83,11 @@ type upstreamVersion struct {
 	EtcdVersion    string // 3.6.6-0
 	CoreDNSVersion string // v1.13.1
 	PauseVersion   string // 3.10.1
+
+	// CNI is the manifest this flavor applies after kubeadm forms the cluster, and the images
+	// it runs. Upstream ships none of its own, so it is the flavor rather than the release
+	// that answers for it.
+	CNI upstreamCNI
 
 	Arches    []upstreamArch
 	MultiArch bool
@@ -187,8 +191,9 @@ func fetchUpstreamArch(minor, target, arch, rpmArch string, cache *upstreamRepoC
 }
 
 // newUpstreamVersion builds one tag's upstreamVersion: every architecture's package files, the
-// image versions kubeadm's own source pins, and the Kubernetes version they all render against.
-func newUpstreamVersion(tag string, cache *upstreamRepoCache, sums *exampleShasums) (upstreamVersion, error) {
+// image versions kubeadm's own source pins, the Kubernetes version they all render against, and
+// the flavor's already-resolved CNI.
+func newUpstreamVersion(tag string, cni upstreamCNI, cache *upstreamRepoCache, sums *exampleShasums) (upstreamVersion, error) {
 	semver, err := engineconfig.TagVersion(tag)
 	if err != nil {
 		return upstreamVersion{}, err
@@ -196,7 +201,7 @@ func newUpstreamVersion(tag string, cache *upstreamRepoCache, sums *exampleShasu
 	minor := fmt.Sprintf("%d.%d", semver[0], semver[1])
 	target := fmt.Sprintf("%d.%d.%d", semver[0], semver[1], semver[2])
 
-	v := upstreamVersion{Minor: minor}
+	v := upstreamVersion{Minor: minor, CNI: cni}
 	for _, arch := range exampleMultiArches {
 		rpmArch, ok := exampleRPMArches[arch]
 		if !ok {
@@ -228,10 +233,10 @@ func parseUpstreamTemplate() (*template.Template, error) {
 	return tmpl, nil
 }
 
-// renderOneUpstreamExample fetches and writes one tag's example/upstream/<minor>/<version>/
-// distro.yaml, and reports the path it wrote.
-func renderOneUpstreamExample(tmpl *template.Template, tag string, cache *upstreamRepoCache, sums *exampleShasums) (string, error) {
-	v, err := newUpstreamVersion(tag, cache, sums)
+// renderOneUpstreamExample fetches and writes one tag's
+// example/upstream-<cni>/<minor>/<version>/distro.yaml, and reports the path it wrote.
+func renderOneUpstreamExample(tmpl *template.Template, tag string, f upstreamCNIFlavor, cni upstreamCNI, cache *upstreamRepoCache, sums *exampleShasums) (string, error) {
+	v, err := newUpstreamVersion(tag, cni, cache, sums)
 	if err != nil {
 		return "", fmt.Errorf("generating upstream example for %s: %w", tag, err)
 	}
@@ -240,7 +245,7 @@ func renderOneUpstreamExample(tmpl *template.Template, tag string, cache *upstre
 	if err != nil {
 		return "", err
 	}
-	dir := filepath.Join(upstreamDir, minor, "v"+v.Version)
+	dir := filepath.Join(f.dir, minor, "v"+v.Version)
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, v); err != nil {
@@ -256,31 +261,42 @@ func renderOneUpstreamExample(tmpl *template.Template, tag string, cache *upstre
 	return path, nil
 }
 
-// renderUpstreamExamples renders example/upstream/<minor>/<version>/distro.yaml for every tag
-// pins.json pins for upstream, plus whatever is already on disk. There is no probe hook: unlike
-// Rancher's RPM revision pruning, pkgs.k8s.io keeps every published minor's packages available,
-// so a fetch failure means something worth investigating rather than a routine retirement.
+// renderUpstreamExamples renders example/upstream-<cni>/<minor>/<version>/distro.yaml for every
+// tag pins.json pins for upstream, plus whatever each flavor already has on disk. There is no
+// probe hook: unlike Rancher's RPM revision pruning, pkgs.k8s.io keeps every published minor's
+// packages available, so a fetch failure means something worth investigating rather than a
+// routine retirement.
+//
+// One repo cache and one resolved CNI set serve every flavor: the pkgs.k8s.io and
+// download.docker.com package indexes do not depend on which CNI an example installs, so three
+// flavors cost what one used to.
 func renderUpstreamExamples(pinned []string, sums *exampleShasums) error {
 	spec := exampleDistroSpec{name: "upstream"}
-	f := exampleFlavor{dir: upstreamDir}
-
-	tags, err := exampleTags(pinned, spec, f)
-	if err != nil {
-		return err
-	}
 
 	tmpl, err := parseUpstreamTemplate()
 	if err != nil {
 		return err
 	}
 
+	cnis, err := resolveUpstreamCNIs(sums)
+	if err != nil {
+		return err
+	}
+
 	cache := newUpstreamRepoCache()
-	for _, tag := range tags {
-		path, err := renderOneUpstreamExample(tmpl, tag, cache, sums)
+	for _, f := range upstreamCNIFlavors {
+		tags, err := exampleTags(pinned, spec, exampleFlavor{dir: f.dir})
 		if err != nil {
 			return err
 		}
-		fmt.Println("Generated " + path)
+
+		for _, tag := range tags {
+			path, err := renderOneUpstreamExample(tmpl, tag, f, cnis[f.cni], cache, sums)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Generated " + path)
+		}
 	}
 	return nil
 }
@@ -299,9 +315,9 @@ func stableTags(tags []string) []string {
 	return out
 }
 
-// renderUpstreamLine backfills every stable upstream release on one minor line ("v1.37"),
-// mirroring Generate.ExampleLine for the distros that fit exampleDistroSpec. Touches the
-// network.
+// renderUpstreamLine backfills every stable upstream release on one minor line ("v1.37"), for
+// every CNI flavor, mirroring Generate.ExampleLine for the distros that fit exampleDistroSpec.
+// Touches the network.
 func renderUpstreamLine(repoURL, prefix string, sums *exampleShasums) error {
 	tags, err := engineconfig.RemoteTags(repoURL, prefix)
 	if err != nil {
@@ -324,13 +340,20 @@ func renderUpstreamLine(repoURL, prefix string, sums *exampleShasums) error {
 		return err
 	}
 
+	cnis, err := resolveUpstreamCNIs(sums)
+	if err != nil {
+		return err
+	}
+
 	cache := newUpstreamRepoCache()
-	for _, tag := range tags {
-		path, err := renderOneUpstreamExample(tmpl, tag, cache, sums)
-		if err != nil {
-			return err
+	for _, f := range upstreamCNIFlavors {
+		for _, tag := range tags {
+			path, err := renderOneUpstreamExample(tmpl, tag, f, cnis[f.cni], cache, sums)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Generated " + path)
 		}
-		fmt.Println("Generated " + path)
 	}
 	return nil
 }

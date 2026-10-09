@@ -29,6 +29,7 @@ internal/zarfmod/testdata/zarf-*-flags.txt linguist-generated
 example/*/**/distro.yaml linguist-generated
 example/*/**/values.yaml linguist-generated
 example/*/**/values.schema.json linguist-generated
+example/*/cni/*.yaml linguist-generated
 example/shasums.json linguist-generated
 
 # mage dev:vendor
