@@ -14,6 +14,7 @@
 - [file-override](guides/file-override.md)
 - [firewall](guides/firewall.md)
 - [multi-architecture](guides/multi-architecture.md)
+- [opentofu-terragrunt](guides/opentofu-terragrunt.md)
 - [package-values](guides/package-values.md)
 - [profile-concurrency](guides/profile-concurrency.md)
 - [registry-override](guides/registry-override.md)
