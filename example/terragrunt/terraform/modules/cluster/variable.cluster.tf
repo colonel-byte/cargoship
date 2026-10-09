@@ -163,3 +163,15 @@ variable "no_drain_on_destroy" {
   description = "Skip draining each node before it is deleted during a destroy"
   default     = false
 }
+
+variable "values" {
+  type        = string
+  description = "Overrides for the values the distro package was built with, as a YAML string"
+  default     = null
+}
+
+variable "values_files" {
+  type        = list(string)
+  description = "Paths to YAML values files overriding the values the package ships with"
+  default     = null
+}

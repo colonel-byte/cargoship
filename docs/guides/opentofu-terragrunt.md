@@ -166,6 +166,26 @@ kw04 = {
 
 The facts data source has none of this, and it still takes `host` blocks rather than a map, because a read has nothing to key. Its block takes an address, a role and the connection details, because a read needs nothing else -- so a fleet described for an apply is a superset of one described for a read.
 
+## Package values
+
+A package ships with values, and a cluster usually wants some of them changed. Two attributes do that, and they are merged in order -- the package's own values first, then `values`, then each file in `values_files` -- so the last one to set a key wins:
+
+```hcl
+resource "cargoship_cluster" "prod" {
+  # ...
+
+  values = yamlencode({
+    cilium = {
+      hubble = { enabled = true }
+    }
+  })
+
+  values_files = ["/srv/staging/values/bubbles.yaml"]
+}
+```
+
+`values` is a YAML string, so `yamlencode(...)` and `file("values.yaml")` both work; `values_files` are paths read on the machine running OpenTofu when the apply runs, not at plan time. What they override is the same `.spec.config.values` a cluster inventory carries, and the package's own `values.schema.json` is what validates the result -- so a key the package does not define fails the apply rather than being ignored.
+
 ## Credentials
 
 The provider takes **no credentials as attributes**. A value an attribute carries is a value the state file carries, and a state file is committed, pushed to a remote backend, and readable by everyone with access to that backend. [choice-tofu-secrets](../agent/choice-tofu-secrets.md) records the reasoning.
