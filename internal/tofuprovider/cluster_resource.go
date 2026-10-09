@@ -43,9 +43,25 @@ type clusterResource struct {
 	converger converger
 }
 
+// clusterResource implements the plan-time hook as well as the CRUD interface; the assertion is
+// here because a ModifyPlan with a drifted signature is silently never called.
+var _ resource.ResourceWithModifyPlan = (*clusterResource)(nil)
+
 func newClusterResource() resource.Resource {
 	return &clusterResource{}
 }
+
+const (
+	// hostStatePresent is a host that belongs to the cluster, which is what a `hosts` entry means
+	// when it says nothing.
+	hostStatePresent = "present"
+	// hostStateAbsent is a host to remove from the cluster: drained, deleted, and its engine
+	// uninstalled, while every other host is left running.
+	//
+	// It is stated rather than inferred from a deleted block, because a deleted block takes the
+	// address and the key path with it -- see docs/agent/choice-removed-hosts.md.
+	hostStateAbsent = "absent"
+)
 
 // clusterResourceModel is the resource's state.
 type clusterResourceModel struct {
@@ -87,7 +103,7 @@ type profileAttr struct {
 	Concurrency   types.String      `tfsdk:"concurrency"`
 }
 
-// clusterHost is a host block of the resource. It is the data source's host block plus everything
+// clusterHost is one entry of the resource's host map. It is the data source's host block plus everything
 // that configures a node rather than reaching it, which is why the two are separate types: a read
 // needs an address and a role, and an apply needs the rest.
 type clusterHost struct {
@@ -99,6 +115,10 @@ type clusterHost struct {
 	Profile        types.String `tfsdk:"profile"`
 	Hostname       types.String `tfsdk:"hostname"`
 	PrivateAddress types.String `tfsdk:"private_address"`
+	State          types.String `tfsdk:"state"`
+	// Removed records that a host marked absent has been torn down. It is what lets the block
+	// stay in the configuration afterwards without the removal running again on every apply.
+	Removed types.Bool `tfsdk:"removed"`
 
 	PrivateInterface types.String      `tfsdk:"private_interface"`
 	Environment      map[string]string `tfsdk:"environment"`
@@ -313,7 +333,9 @@ func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.converge(ctx, &model, &resp.Diagnostics, &resp.State)
+	// Nothing was ever installed, so a host marked absent at create time is one to leave alone
+	// rather than one to tear down. There is no prior state to carry.
+	r.converge(ctx, &model, nil, &resp.Diagnostics, &resp.State)
 }
 
 // Update is the same call as Create. See the type comment.
@@ -323,7 +345,16 @@ func (r *clusterResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	r.converge(ctx, &model, &resp.Diagnostics, &resp.State)
+
+	// The prior state says which removals have already happened. Without it a host left marked
+	// absent would be torn down again on every apply, which means reaching a machine that is
+	// gone -- and failing once it has been decommissioned.
+	var prior clusterResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	r.converge(ctx, &model, prior.Hosts, &resp.Diagnostics, &resp.State)
 }
 
 // Read refreshes what the hosts report, without changing them.
@@ -382,7 +413,23 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	cfg, err := translate(ctx, clusterModelOf(model))
+	// A destroy tears down whatever is still out there, which is not the same as the hosts the
+	// apply converges. A host marked absent whose removal failed is still running and still
+	// joined, and clusterModelOf drops every absent host -- so taking that list would walk past
+	// exactly the machine a failed removal left behind, and report a destroy that finished.
+	//
+	// A host already removed is left out for the opposite reason: it is gone, and reaching for it
+	// would fail against a machine that may since have been decommissioned.
+	teardownModel := model
+	teardownModel.Hosts = hostsStillInstalled(model.Hosts)
+	if len(teardownModel.Hosts) == 0 {
+		tflog.Info(ctx, "nothing to reset: every host was already removed", map[string]any{
+			"cluster": model.Name.ValueString(),
+		})
+		return
+	}
+
+	cfg, err := translate(ctx, clusterModelOf(teardownModel))
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid cluster configuration", err.Error())
 		return
@@ -394,9 +441,13 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
-	tflog.Info(ctx, "resetting the cluster", map[string]any{"cluster": model.Name.ValueString()})
+	tflog.Info(ctx, "resetting the cluster", map[string]any{
+		"cluster": model.Name.ValueString(),
+		"hosts":   len(teardownModel.Hosts),
+	})
+	distroID := r.resolveDistro(ctx, &model)
 	if err := r.converger.Teardown(ctx, cfg, teardownOptions{
-		DistroID:         r.resolveDistro(ctx, &model),
+		DistroID:         distroID,
 		WorkerConcurrent: model.WorkerConcurrency.ValueString(),
 		NoDrain:          model.NoDrainOnDestroy.ValueBool(),
 		Timeout:          timeout,
@@ -417,16 +468,74 @@ func (r *clusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 // State is written whether or not the apply succeeded, and that is the whole point of the shape:
 // an apply that failed has already changed hosts, so a resource that returned without writing
 // would leave the next plan deciding nothing is installed.
-func (r *clusterResource) converge(ctx context.Context, model *clusterResourceModel, diags *diag.Diagnostics, state *tfsdk.State) {
-	cfg, err := translate(ctx, clusterModelOf(*model))
-	if err != nil {
-		diags.AddError("Invalid cluster configuration", err.Error())
+// ModifyPlan reports the configuration an apply cannot converge, while the operator is still
+// reading a diff rather than watching hosts being drained.
+//
+// Only the emptied cluster is checked here. It is the one refusal that is visible from the
+// configuration alone: every other one -- a controller that has to survive the run, a target
+// naming no host -- depends on which engines are actually running, which the provider learns by
+// connecting, and connecting during a plan is what a plan is not allowed to do.
+func (r *clusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A destroy plans a null resource, and destroying every host is exactly what it is for.
+	if req.Plan.Raw.IsNull() {
 		return
 	}
 
+	var model clusterResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if len(model.Hosts) == 0 {
+		return
+	}
+	for _, host := range model.Hosts {
+		// An unknown state is a value that comes from somewhere else in the configuration; it
+		// could resolve either way, so the plan says nothing about it.
+		if host.State.IsUnknown() || !isAbsent(host) {
+			return
+		}
+	}
+	resp.Diagnostics.Append(emptiedClusterDiagnostic(model.Name.ValueString()))
+}
+
+// emptiedClusterDiagnostic is the refusal for a configuration whose every host is marked absent.
+//
+// It is raised from the plan and again during the apply, because the two are reached
+// independently: a plan file applied later holds the configuration that was planned, and the
+// apply is where the hosts already recorded as removed are known.
+func emptiedClusterDiagnostic(name string) diag.Diagnostic {
+	return diag.NewErrorDiagnostic(
+		"Every host is marked absent",
+		fmt.Sprintf("%s would have no hosts left, and an apply cannot remove the resource that describes it. "+
+			"Run `tofu destroy` against it instead, or set retain_on_destroy if the machines are going away "+
+			"with it.", name),
+	)
+}
+
+func (r *clusterResource) converge(
+	ctx context.Context,
+	model *clusterResourceModel,
+	prior map[string]clusterHost,
+	diags *diag.Diagnostics,
+	state *tfsdk.State,
+) {
 	timeout, diag := durationOf(model.Timeout, "timeout")
 	if diag != nil {
 		diags.Append(diag)
+		return
+	}
+
+	// Removals come first, and a removal that failed stops the run: converging on top of a
+	// half-removed cluster would report success over a node that is still joined.
+	if !r.reconcileRemovals(ctx, model, prior, timeout, diags, state) {
+		return
+	}
+
+	cfg, err := translate(ctx, clusterModelOf(*model))
+	if err != nil {
+		diags.AddError("Invalid cluster configuration", err.Error())
 		return
 	}
 
@@ -486,24 +595,162 @@ func (r *clusterResource) converge(ctx context.Context, model *clusterResourceMo
 	}
 }
 
-// fillUnknown replaces any computed value the run never produced with a known zero, since state
-// cannot hold an unknown.
-func fillUnknown(model *clusterResourceModel) {
-	if model.Distro.IsUnknown() {
-		model.Distro = types.StringValue("")
+// reconcileRemovals tears down the hosts marked `state = "absent"` that have not been torn down
+// already, and reports whether the apply should go on.
+//
+// Three things about it are deliberate, and each of them is a failure mode that was easy to write
+// by accident.
+//
+// A host stays in state either way. On success it keeps its block with `removed = true`, which is
+// what stops the next apply from tearing it down again -- a removal that repeated would have to
+// reach a machine that is gone, and would fail once it was decommissioned. On failure it keeps its
+// block with `removed` false, so the configuration that still describes how to reach it survives:
+// a host pruned from state after a failed teardown is a running, still-joined node that nothing
+// anywhere holds an address or a key for.
+//
+// A failure is a diagnostic rather than a warning. tflog output is invisible without TF_LOG, so a
+// warning here meant an apply that printed "Apply complete!" over a cluster that still held the
+// node.
+//
+// And a failure stops the apply. The convergence that follows would otherwise run against a
+// cluster left half-removed -- drained and deleted but not uninstalled, or the reverse.
+func (r *clusterResource) reconcileRemovals(
+	ctx context.Context,
+	model *clusterResourceModel,
+	prior map[string]clusterHost,
+	timeout time.Duration,
+	diags *diag.Diagnostics,
+	state *tfsdk.State,
+) bool {
+	removed := removedHosts(prior)
+
+	keys := make([]string, 0, len(model.Hosts))
+	for k := range model.Hosts {
+		keys = append(keys, k)
 	}
-	if model.EngineVersion.IsUnknown() {
-		model.EngineVersion = types.StringValue("")
+	slices.Sort(keys)
+
+	var targets []string
+	var pending []string
+	for _, k := range keys {
+		host := model.Hosts[k]
+		if !isAbsent(host) {
+			continue
+		}
+		// Already gone: keep the record, do nothing. This is the difference between a tombstone
+		// an operator can leave in place and one they have to remember to delete.
+		target := hostKey(k, host)
+		if removed[target] {
+			host.Removed = types.BoolValue(true)
+			model.Hosts[k] = host
+			continue
+		}
+		targets = append(targets, target)
+		pending = append(pending, k)
 	}
-	if model.Kubeconfig.IsUnknown() {
-		model.Kubeconfig = types.StringValue("")
+
+	// Every host marked absent is a teardown wearing a removal's clothes: the apply would reset
+	// the whole cluster and then fail translating a cluster with no hosts in it, which is a
+	// confusing way to arrive at something `tofu destroy` does properly -- including dropping the
+	// resource afterwards, which an apply cannot do.
+	if len(targets) > 0 && len(targets) == len(model.Hosts) {
+		diags.Append(emptiedClusterDiagnostic(model.Name.ValueString()))
+		return false
 	}
-	if model.ID.IsUnknown() {
-		model.ID = model.Name
+
+	// Nothing to remove, or nothing that has not been removed already.
+	if len(targets) == 0 {
+		for k, h := range model.Hosts {
+			if h.Removed.IsUnknown() || h.Removed.IsNull() {
+				h.Removed = types.BoolValue(false)
+				model.Hosts[k] = h
+			}
+		}
+		return true
 	}
-	if model.Nodes.IsUnknown() {
-		model.Nodes = types.ListNull(nodesNestedObject().Type())
+
+	// A teardown needs the hosts that are staying as well as the ones going: the node deletions
+	// are driven through a controller that survives, which is the whole point of #339. So the
+	// document holds every host, and the target list is what says which of them to remove.
+	full := *model
+	full.Hosts = make(map[string]clusterHost, len(model.Hosts))
+	for k, host := range model.Hosts {
+		host.State = types.StringValue(hostStatePresent)
+		full.Hosts[k] = host
 	}
+
+	cfg, err := translate(ctx, clusterModelOf(full))
+	if err != nil {
+		diags.AddError(
+			"Invalid cluster configuration",
+			fmt.Sprintf("the hosts marked absent could not be removed, because the configuration does not describe a "+
+				"valid cluster: %s", err),
+		)
+		return false
+	}
+
+	tflog.Info(ctx, "removing hosts marked absent", map[string]any{
+		"cluster": model.Name.ValueString(),
+		"targets": targets,
+	})
+
+	distroID := r.resolveDistro(ctx, model)
+	if err := r.converger.Teardown(ctx, cfg, teardownOptions{
+		DistroID:         distroID,
+		TargetHosts:      targets,
+		WorkerConcurrent: model.WorkerConcurrency.ValueString(),
+		NoDrain:          model.NoDrainOnDestroy.ValueBool(),
+		Timeout:          timeout,
+	}); err != nil {
+		for _, k := range pending {
+			h := model.Hosts[k]
+			h.Removed = types.BoolValue(false)
+			model.Hosts[k] = h
+		}
+		fillUnknown(model)
+		diags.Append(state.Set(ctx, model)...)
+		diags.AddError(
+			"The hosts marked absent were not removed",
+			fmt.Sprintf("cargoship could not remove %s from %s: %s\n\nThey are still described in state, so the "+
+				"configuration that reaches them is intact and the removal can be retried. The rest of the apply did "+
+				"not run, because converging on top of a half-removed cluster would report success over a node that "+
+				"is still joined.",
+				strings.Join(targets, ", "), model.Name.ValueString(), err),
+		)
+		return false
+	}
+
+	for _, k := range pending {
+		h := model.Hosts[k]
+		h.Removed = types.BoolValue(true)
+		model.Hosts[k] = h
+	}
+	for k, h := range model.Hosts {
+		if h.Removed.IsUnknown() || h.Removed.IsNull() {
+			h.Removed = types.BoolValue(false)
+			model.Hosts[k] = h
+		}
+	}
+	return true
+}
+
+// hostsStillInstalled are the hosts a destroy has to tear down: everything the cluster still holds,
+// including a host marked absent whose removal did not finish, and excluding one whose removal did.
+func hostsStillInstalled(hosts map[string]clusterHost) map[string]clusterHost {
+	out := make(map[string]clusterHost, len(hosts))
+	for k, host := range hosts {
+		if isAbsent(host) && host.Removed.ValueBool() {
+			continue
+		}
+		host.State = types.StringValue(hostStatePresent)
+		out[k] = host
+	}
+	return out
+}
+
+// isAbsent reports whether a host entry asks to be removed from the cluster.
+func isAbsent(host clusterHost) bool {
+	return strings.EqualFold(host.State.ValueString(), hostStateAbsent)
 }
 
 // resolveDistro returns the engine to act on: what state recorded, and failing that what the
@@ -531,6 +778,53 @@ func (r *clusterResource) resolveDistro(ctx context.Context, model *clusterResou
 		return ""
 	}
 	return distroID
+}
+
+func hostKey(key string, host clusterHost) string {
+	if name := host.Hostname.ValueString(); name != "" {
+		return name
+	}
+	if key != "" {
+		return key
+	}
+	return host.Address.ValueString()
+}
+
+// removedHosts indexes the prior state by the hosts it records as already removed.
+func removedHosts(prior map[string]clusterHost) map[string]bool {
+	out := make(map[string]bool, len(prior))
+	for k, host := range prior {
+		if host.Removed.ValueBool() {
+			out[k] = true
+			if name := host.Hostname.ValueString(); name != "" {
+				out[name] = true
+			}
+			if addr := host.Address.ValueString(); addr != "" {
+				out[addr] = true
+			}
+		}
+	}
+	return out
+}
+
+// fillUnknown replaces any computed value the run never produced with a known zero, since state
+// cannot hold an unknown.
+func fillUnknown(model *clusterResourceModel) {
+	if model.Distro.IsUnknown() {
+		model.Distro = types.StringValue("")
+	}
+	if model.EngineVersion.IsUnknown() {
+		model.EngineVersion = types.StringValue("")
+	}
+	if model.Kubeconfig.IsUnknown() {
+		model.Kubeconfig = types.StringValue("")
+	}
+	if model.ID.IsUnknown() {
+		model.ID = model.Name
+	}
+	if model.Nodes.IsUnknown() {
+		model.Nodes = types.ListNull(nodesNestedObject().Type())
+	}
 }
 
 // useStateUnlessPackageChanged keeps a computed attribute's prior value in the plan, so a plan
@@ -563,6 +857,29 @@ func (useStateUnlessPackageChanged) PlanModifyString(ctx context.Context, req pl
 		return
 	}
 	if !planned.Equal(prior) {
+		return
+	}
+	resp.PlanValue = req.StateValue
+}
+
+type useBoolStateForUnknownModifier struct{}
+
+func (useBoolStateForUnknownModifier) Description(_ context.Context) string {
+	return "Once set, the value of this attribute in state will not change unless modified."
+}
+
+func (useBoolStateForUnknownModifier) MarkdownDescription(_ context.Context) string {
+	return "Once set, the value of this attribute in state will not change unless modified."
+}
+
+func (useBoolStateForUnknownModifier) PlanModifyBool(_ context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+	if req.State.Raw.IsNull() || !req.PlanValue.IsUnknown() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	// A host added to an existing cluster has no value at this path in state, and planning the
+	// null it would return is worse than planning unknown: the apply records false, and a
+	// computed attribute whose planned value does not survive the apply fails the run.
+	if req.StateValue.IsNull() {
 		return
 	}
 	resp.PlanValue = req.StateValue
@@ -642,6 +959,27 @@ func hostBlockAttributes() map[string]schema.Attribute {
 // TestTheDataSourceHostBlockIsASubsetOfTheResource holds the relationship between the two.
 func clusterHostAttributes() map[string]schema.Attribute {
 	attributes := hostBlockAttributes()
+
+	attributes["state"] = schema.StringAttribute{
+		MarkdownDescription: "The lifecycle state of this host: `present` (the default) or `absent`. Marking a host " +
+			"`absent` drains it, deletes it from the cluster and uninstalls its engine on the next apply, while " +
+			"every other host keeps running.\n\n" +
+			"The block stays where it is afterwards -- `removed` records that the work is done, so later applies " +
+			"leave the machine alone and never try to reach one that has been decommissioned. Delete the block " +
+			"whenever it suits; nothing depends on it going.\n\n" +
+			"Removal is stated rather than inferred from a deleted block, because deleting the block takes the " +
+			"address and the key path with it: see " +
+			"[choice-removed-hosts](https://github.com/colonel-byte/cargoship/blob/main/docs/agent/choice-removed-hosts.md).",
+		Optional: true,
+	}
+	attributes["removed"] = schema.BoolAttribute{
+		MarkdownDescription: "Whether this host has been removed from the cluster. Computed: it becomes true once a " +
+			"host marked `absent` has been torn down, and that is what stops the removal from running again.",
+		Computed: true,
+		PlanModifiers: []planmodifier.Bool{
+			useBoolStateForUnknownModifier{},
+		},
+	}
 
 	attributes["private_interface"] = schema.StringAttribute{
 		MarkdownDescription: "Overrides the private interface the facts phase would discover, for a node with more " +
@@ -811,9 +1149,6 @@ func nodesNestedObject() schema.NestedAttributeObject {
 
 // clusterModelOf is the translation boundary for the resource, the counterpart of modelOf.
 func clusterModelOf(model clusterResourceModel) clusterModel {
-	// A map has no order, and the run does: controllers go first and the first of them leads. So
-	// the keys are sorted, which makes the leader the controller whose key sorts first -- stable
-	// across plans, and stated in the attribute's description.
 	keys := make([]string, 0, len(model.Hosts))
 	for k := range model.Hosts {
 		keys = append(keys, k)
@@ -823,6 +1158,9 @@ func clusterModelOf(model clusterResourceModel) clusterModel {
 	hosts := make([]hostModel, 0, len(model.Hosts))
 	for _, k := range keys {
 		host := model.Hosts[k]
+		if strings.EqualFold(host.State.ValueString(), "absent") {
+			continue
+		}
 		hostname := host.Hostname.ValueString()
 		if hostname == "" {
 			hostname = k

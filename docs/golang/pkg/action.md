@@ -363,7 +363,7 @@ type RefreshOptions struct {
 ```
 
 <a name="Reset"></a>
-## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L50-L53>)
+## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L58-L61>)
 
 Reset state logic
 
@@ -375,7 +375,7 @@ type Reset struct {
 ```
 
 <a name="NewReset"></a>
-### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L56>)
+### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L64>)
 
 ```go
 func NewReset(opts ResetOptions) (*Reset, error)
@@ -384,7 +384,7 @@ func NewReset(opts ResetOptions) (*Reset, error)
 NewReset an apply action object
 
 <a name="Reset.Run"></a>
-### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L109>)
+### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L131>)
 
 ```go
 func (r Reset) Run(ctx context.Context) error
@@ -393,7 +393,7 @@ func (r Reset) Run(ctx context.Context) error
 Run the actions
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L35-L47>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L35-L55>)
 
 ResetOptions struct
 
@@ -410,6 +410,14 @@ type ResetOptions struct {
     // WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
     // count ("5") or a percentage of the batch ("25%")
     WorkerConcurrent string
+    // TargetHosts names the hosts to delete and uninstall, by hostname or by the address the
+    // configuration connects through. Empty means every host in the configuration, which is what
+    // a reset has always done.
+    //
+    // The hosts not named still take part: leader selection scans the whole configuration, so a
+    // controller that is staying is what the node deletions are driven through. That separation is
+    // the whole point -- see #339.
+    TargetHosts []string
 }
 ```
 

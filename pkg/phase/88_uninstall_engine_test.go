@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,4 +62,95 @@ func TestPreUninstallResetPropagatesError(t *testing.T) {
 	err := p.preUninstallReset(context.Background(), h)
 
 	require.ErrorIs(t, err, wantErr)
+}
+
+type fakeBinaryDistro struct {
+	fakeServiceDistro
+	binary string
+}
+
+func (f fakeBinaryDistro) BinaryName() string {
+	return f.binary
+}
+
+func (f fakeBinaryDistro) PackageStagingDir() string {
+	return ""
+}
+
+func (f fakeBinaryDistro) CleanupPaths() []string {
+	return nil
+}
+
+func TestUninstallEngineTargetHostsFiltersHosts(t *testing.T) {
+	p := &UninstallEngine{
+		Distro:      fakeServiceDistro{},
+		TargetHosts: []string{"worker1"},
+	}
+	m := &Manager{
+		Config: &cluster.ZarfCluster{
+			Spec: cluster.ZarfClusterSpec{
+				Hosts: cluster.ZarfHosts{
+					{Hostname: "controller1", Role: cluster.RoleController},
+					{Hostname: "worker1", Role: cluster.RoleWorker},
+					{Hostname: "worker2", Role: cluster.RoleWorker},
+				},
+			},
+		},
+	}
+	p.SetManager(m)
+
+	require.NoError(t, p.Prepare(context.Background(), m.Config, nil))
+	require.Len(t, p.hosts, 1)
+	require.Equal(t, "worker1", p.hosts[0].Hostname)
+}
+
+func TestDetectInstalledEnginePackagesNoDistro(t *testing.T) {
+	p := &UninstallEngine{Distro: nil}
+	h := &cluster.ZarfHost{Hostname: "node1"}
+	pkgs := p.detectInstalledEnginePackages(context.Background(), h)
+	require.Nil(t, pkgs)
+}
+
+func TestDetectInstalledEnginePackagesUnknownDistro(t *testing.T) {
+	p := &UninstallEngine{Distro: fakeBinaryDistro{binary: "unknown"}}
+	h := &cluster.ZarfHost{Hostname: "node1"}
+	pkgs := p.detectInstalledEnginePackages(context.Background(), h)
+	require.Nil(t, pkgs)
+}
+
+func TestCleanManagedDirsNoDistro(_ *testing.T) {
+	p := &UninstallEngine{Distro: nil}
+	h := &cluster.ZarfHost{Hostname: "node1"}
+	// Should not panic or error with nil distro
+	p.cleanManagedDirs(context.Background(), h)
+}
+
+// recordingDirsDistro counts the times a distro is asked what it manages on a host.
+type recordingDirsDistro struct {
+	fakeBinaryDistro
+	asked *int
+}
+
+func (f recordingDirsDistro) ManagedDirs() []distrocfg.ManagedDir {
+	*f.asked++
+	return []distrocfg.ManagedDir{{Path: "/etc/cargoship"}}
+}
+
+// TestUninstallNodeCleansWhatCargoshipManages is the removal path's half of the cleanup: a host
+// marked absent is uninstalled through this same function, so the managed directories -- the TLS
+// material, the state directory, the chart manifests -- have to go with the engine rather than
+// outliving a node that is no longer in the cluster.
+func TestUninstallNodeCleansWhatCargoshipManages(t *testing.T) {
+	asked := 0
+	p := &UninstallEngine{
+		Distro: recordingDirsDistro{
+			fakeBinaryDistro: fakeBinaryDistro{binary: "unknown"},
+			asked:            &asked,
+		},
+		TargetHosts: []string{"worker1"},
+	}
+	h := &cluster.ZarfHost{Hostname: "worker1"}
+
+	require.NoError(t, p.uninstallNode(context.Background(), h))
+	require.Positive(t, asked, "the uninstall never asked the distro what it manages")
 }
