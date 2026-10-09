@@ -75,6 +75,18 @@ Check a specific file rather than reasoning about the patterns:
 git check-attr linguist-generated -- docs/ansible/zarf/module_init.md
 ```
 
+## Keeping `README.md` current
+
+[`README.md`](README.md) is the repository's front page and the pitch: what cargoship does, which distros it supports, how to install it, and one example per phase. It is also the source for the book's landing page - `magefiles/pkg/gen/docs/book.go` copies it to `docs/index.md` - so a stale README is stale in two places.
+
+Treat it as part of the change, not a follow-up:
+
+- **a feature lands** - add it where a reader would look for it. A new phase or command belongs in `Usage Examples` with a runnable snippet; a new distro in `Supported Distributions`; a new install channel in `Installation`; a new config file or schema in `Configuration and Schemas`.
+- **a feature is removed or renamed** - delete or rename every mention, including the example that exercised it. A documented flag that no longer exists is worse than no documentation.
+- **behaviour changes under an existing heading** - fix the prose and the snippet together. Commands shown in `README.md` are copied and pasted; they should work as written against the current build.
+
+The generated command and phase reference under `docs/` comes from the code, so it corrects itself on `go run ./magefiles/core generate:document`. `README.md` does not - it is hand-written, and nothing fails if it drifts. After editing it, run that target so `docs/index.md` matches.
+
 ## Committing changes
 
 Run `pre-commit run --all-files` before every commit and fix anything it flags. Several hooks in [`.pre-commit-config.yaml`](.pre-commit-config.yaml) rewrite files (`end-of-file-fixer`, `trailing-whitespace`, `keep-sorted`, `addlicense`, doc/schema generators) - re-stage after it runs. Don't skip hooks with `--no-verify` or `SKIP=`.
@@ -112,6 +124,20 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 ## Pull requests
 
 Before creating or updating a pull request description, read [`.github/pull_request_template.md`](.github/pull_request_template.md) and follow the format rules in [`.github/AGENTS.md`](.github/AGENTS.md#writing-a-pull-request-description).
+
+## Tracking work in issues
+
+Work here is tracked in issues on the main repository, [`colonel-byte/cargoship`](https://github.com/colonel-byte/cargoship). Before starting a task, check for a related issue - someone may already have filed it, or filed something that overlaps enough to change the approach:
+
+```sh
+gh issue list --repo colonel-byte/cargoship --search "<keywords>" --state all
+```
+
+If there is no issue covering the work, ask the person whether they would like one submitted before continuing. Don't open one unprompted, and don't treat a missing issue as a reason to stop - they may well say no.
+
+When work is being broken up into a stacked PR, the issue structure should mirror the stack: the parent issue describes the whole change, and each layer of the stack gets a subissue created off that parent. Link each PR in the stack to its own subissue, not to the parent.
+
+Only the top-most PR in the stack closes the parent issue - each lower PR closes its own subissue and nothing more, so the parent stays open until the whole change has landed. Don't move that closing reference to an earlier PR unless the operator asks for it.
 
 ## Quirks worth knowing
 
