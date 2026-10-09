@@ -88,7 +88,8 @@ type clusterModel struct {
 	Name string
 	// LoadBalancer is the address clients use to reach the control plane.
 	LoadBalancer string
-	// Hosts are the host blocks, in configuration order.
+	// Hosts are the fleet, in the order the resource handed them over: by map key, so the first
+	// controller -- the leader -- is the controller whose key sorts first.
 	Hosts []hostModel
 }
 
