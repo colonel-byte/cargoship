@@ -106,7 +106,7 @@ func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error
 			},
 			&phase.LabelNodes{
 				Distro:  d,
-				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
+				Enabled: opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),

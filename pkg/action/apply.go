@@ -182,7 +182,7 @@ func NewApply(opts ApplyOptions) (*Apply, error) {
 			},
 			&phase.LabelNodes{
 				Distro:  d,
-				Enabled: opts.UpdateKubeConfig && opts.LabelNodes,
+				Enabled: opts.LabelNodes,
 			},
 
 			lockPhase.UnlockPhase(),
