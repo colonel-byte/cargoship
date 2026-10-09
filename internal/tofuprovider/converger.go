@@ -98,6 +98,8 @@ type teardownOptions struct {
 	// DistroID is the engine to remove. A reset loads no package, so it has nothing else to read
 	// the engine's identity from.
 	DistroID string
+	// TargetHosts names specific hosts to delete and uninstall. When empty, resets every host.
+	TargetHosts []string
 	// WorkerConcurrent is the batch size nodes are drained and deleted in.
 	WorkerConcurrent string
 	// NoDrain skips draining a node before deleting it.
@@ -116,8 +118,8 @@ type converger interface {
 	// Refresh runs the read-only phases and reports what they found, host by host. It changes
 	// nothing, which is what lets a data source and a resource's Read share it.
 	Refresh(ctx context.Context, c *cluster.ZarfCluster, distroID string) ([]hostFacts, error)
-	// DistroFromPackage reads the engine the package carries, for the paths that have no engine
-	// recorded in state to act on.
+	// DistroFromPackage loads the package's definition and returns the engine type it carries
+	// (e.g. "k3s" or "rke2").
 	DistroFromPackage(ctx context.Context, pkg string) (string, error)
 	// Apply converges the cluster on the configuration: one phase list covering install, join
 	// and upgrade, each phase gated by its own ShouldRun, which is why Create and Update are the
@@ -392,6 +394,7 @@ func (c cargoshipConverger) Teardown(ctx context.Context, cfg *cluster.ZarfClust
 	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: opts.WorkerConcurrent,
+		TargetHosts:      opts.TargetHosts,
 		NoDrain:          opts.NoDrain,
 		NoWait:           true,
 	})

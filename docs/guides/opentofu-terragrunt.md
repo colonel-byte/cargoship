@@ -207,9 +207,40 @@ Leave `export_kubeconfig` off unless something in the configuration consumes the
 
 **A failed apply still writes state.** An apply that failed part way through has already changed hosts, so the resource records what it reached and reports the error alongside it. The alternative -- writing nothing -- would leave the next plan deciding nothing is installed, and re-bootstrapping a live cluster. Read the error, fix the cause, and apply again: the phases are convergent, so the second run resumes rather than restarting.
 
-**Removing a `host` block does not remove the node.** An apply converges forwards only: the machine keeps running the engine and stays joined, and the next apply stops rather than walking past it. `allow_unmanaged_nodes = true` downgrades that to a warning. [Removing a host from the cluster](removing-hosts.md) is the full account, and the short version is that a configuration which no longer describes a host also no longer describes how to reach it.
+**Removing a host is `state = "absent"`, not a deleted block.** Deleting the block takes the address and the key path with it, so nothing is left that can reach the machine -- the apply stops rather than walking past a node nothing accounts for. Marking the host absent removes it in one apply: drained and deleted through a controller that is staying, then its engine uninstalled over SSH, while every other host is left alone. The block then stays where it is with `removed = true`, which is what keeps later applies from repeating the teardown against a machine that may since have been decommissioned; delete it whenever it suits. A removal that fails stops the apply and keeps the block, because that block is the only thing that can still reach the node. Marking *every* host absent is refused at plan time -- that is a destroy, and an apply cannot drop the resource that describes the cluster. Removing a controller carries its own rules, and one of them is that the apply after the removal is not optional. [Removing a host from the cluster](removing-hosts.md) is the full account.
 
-**A destroy resets the cluster.** `tofu destroy` drains the nodes, deletes them, and uninstalls the engine, because that is what destroy means everywhere else. `retain_on_destroy = true` drops the resource and leaves the cluster running instead, with a warning naming the cluster and the `cargoship install reset` that would tear it down.
+**A destroy resets the cluster.** `tofu destroy` drains the nodes, deletes them, and uninstalls the engine, because that is what destroy means everywhere else. It ignores the `state` markers: anything still installed is torn down, including a host marked absent whose removal did not finish, and excluding one whose removal did. `retain_on_destroy = true` drops the resource and leaves the cluster running instead, with a warning naming the cluster and the `cargoship install reset` that would tear it down.
+
+### Destroying the machines as well
+
+If the nodes themselves are OpenTofu resources -- VMs, instances, bare metal through some other provider -- then a `tofu destroy` is deleting the machines too, and the cluster teardown is work nobody will see the result of. Two things decide whether that goes well.
+
+**Make the dependency real.** OpenTofu destroys a resource before the things it depends on, so the cluster is reset while the machines are still up -- but only if the dependency exists. A host block whose `address` is `libvirt_domain.node["kw0"].network_interface[0].addresses[0]` creates that edge; one with a hard-coded `"10.3.20.21"` does not, and the machines can be deleted first, leaving the reset to fail against addresses that no longer answer. Reference the node resource, or say `depends_on` and mean it.
+
+**Consider not resetting at all.** Draining a node and uninstalling its engine takes minutes per host, and every second of it is spent on a machine that is about to be deleted. `retain_on_destroy = true` skips the teardown entirely and lets the machines carry the cluster to the grave with them -- which is what you want for a lab, a preview environment, or anything rebuilt from scratch. Keep the teardown for a fleet whose machines outlive the cluster: bare metal, or a VM you are handing back rather than deleting.
+
+That attribute is the awkward part of the design, and it is worth knowing why. It belongs to the resource, so it is decided when the configuration is written -- while "am I deleting the machines in this run?" is a property of the run. OpenTofu tells a provider nothing about what else is being destroyed, so it cannot be inferred, and there is no destroy-time flag for it. Make it a variable, and the decision becomes an argument instead of an edit:
+
+```hcl
+variable "retain_cluster_on_destroy" {
+  type    = bool
+  default = false
+}
+
+resource "cargoship_cluster" "prod" {
+  # ...
+  retain_on_destroy = var.retain_cluster_on_destroy
+}
+```
+
+```sh
+tofu destroy -var retain_cluster_on_destroy=true     # the machines are going too
+tofu destroy                                         # the machines are staying; reset them properly
+```
+
+[choice-tofu-host-removal](../agent/choice-tofu-host-removal.md) records the rest of the reasoning, including what a failed removal keeps and why.
+
+The tombstones do not matter here either way. `state = "absent"` is for removing one host from a cluster that stays; a destroy is the whole thing going, and the markers are read only to tell what is still out there.
 
 ## What is not there yet
 

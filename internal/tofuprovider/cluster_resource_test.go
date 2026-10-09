@@ -19,6 +19,7 @@ import (
 	"errors"
 	"log/slog"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -27,17 +28,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	tftypes "github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // clusterModelFor is the configuration a practitioner would write, as the framework would decode
-// it: one controller and one worker, keyed so the controller is not the first key either.
+// it: one controller and one worker, written worker-first.
 func clusterModelFor() clusterResourceModel {
 	return clusterResourceModel{
 		Name:              types.StringValue("bubbles"),
@@ -406,6 +408,7 @@ func TestTheDataSourceHostBlockIsASubsetOfTheResource(t *testing.T) {
 		"node_taints",
 		"ports",
 		"private_interface",
+		"state",
 		// keep-sorted end
 	} {
 		if _, found := resourceHosts.NestedObject.Attributes[name]; !found {
@@ -430,145 +433,6 @@ func TestKubeconfigIsSensitive(t *testing.T) {
 	}
 	if !kubeconfig.IsComputed() {
 		t.Error("kubeconfig is not computed, which would make it something an operator sets")
-	}
-}
-
-// resourceSchema is the resource's own schema, which every fixture here is built from.
-func resourceSchema(t *testing.T) rschema.Schema {
-	t.Helper()
-
-	var resp resource.SchemaResponse
-	(&clusterResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resp)
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("the resource schema is invalid: %v", resp.Diagnostics)
-	}
-	return resp.Schema
-}
-
-// emptyState is the state a create starts from: the right schema holding a null object.
-func emptyState(t *testing.T) *tfsdk.State {
-	t.Helper()
-
-	s := resourceSchema(t)
-	return &tfsdk.State{
-		Schema: s,
-		Raw:    tftypes.NewValue(s.Type().TerraformType(context.Background()), nil),
-	}
-}
-
-// withTypedNulls fills in the element types a zero-value collection has not got.
-//
-// The framework refuses a types.List or types.Map whose element type is unset, and OpenTofu never
-// hands one over -- a value it has not computed yet is a typed null. A test fixture that leaves a
-// collection at its zero value has to be corrected the same way, and taking the types from the
-// schema means a new collection attribute does not have to be remembered here.
-func withTypedNulls(t *testing.T, s rschema.Schema, model clusterResourceModel) clusterResourceModel {
-	t.Helper()
-
-	v := reflect.ValueOf(&model).Elem()
-	for i := range v.NumField() {
-		a, ok := s.Attributes[v.Type().Field(i).Tag.Get("tfsdk")]
-		if !ok {
-			continue
-		}
-		collection, ok := a.GetType().(attr.TypeWithElementType)
-		if !ok {
-			continue
-		}
-		switch field := v.Field(i).Interface().(type) {
-		case types.List:
-			if field.IsNull() {
-				v.Field(i).Set(reflect.ValueOf(types.ListNull(collection.ElementType())))
-			}
-		case types.Set:
-			if field.IsNull() {
-				v.Field(i).Set(reflect.ValueOf(types.SetNull(collection.ElementType())))
-			}
-		case types.Map:
-			if field.IsNull() {
-				v.Field(i).Set(reflect.ValueOf(types.MapNull(collection.ElementType())))
-			}
-		}
-	}
-	return model
-}
-
-// stateFor renders a model into a tfsdk.State the way OpenTofu hands one to Read or Delete.
-func stateFor(t *testing.T, model clusterResourceModel) tfsdk.State {
-	t.Helper()
-
-	state := emptyState(t)
-	fixed := withTypedNulls(t, resourceSchema(t), model)
-	if diags := state.Set(context.Background(), &fixed); diags.HasError() {
-		t.Fatalf("the model does not fit the schema: %v", diags)
-	}
-	return *state
-}
-
-// planFor renders a model into a plan the way OpenTofu hands one to ModifyPlan.
-func planFor(t *testing.T, model clusterResourceModel) tfsdk.Plan {
-	t.Helper()
-
-	state := emptyState(t)
-	plan := tfsdk.Plan{
-		Schema: state.Schema,
-		Raw:    state.Raw,
-	}
-	fixed := withTypedNulls(t, resourceSchema(t), model)
-	if diags := plan.Set(context.Background(), &fixed); diags.HasError() {
-		t.Fatalf("the model does not fit the schema: %v", diags)
-	}
-	return plan
-}
-
-// TestUseStateUnlessPackageChanged covers both halves of the modifier that keeps the package's
-// answers out of every plan: the value is held while the package is the same, and released as soon
-// as it is not, because a plan that promises the old engine version over a new package fails the
-// apply that corrects it.
-func TestUseStateUnlessPackageChanged(t *testing.T) {
-	prior := clusterModelFor()
-	prior.Package = types.StringValue("./k3s-1.33.4.tar.zst")
-	prior.EngineVersion = types.StringValue("v1.33.4+k3s1")
-	state := stateFor(t, prior)
-
-	for _, tc := range []struct {
-		name    string
-		pkg     string
-		wantSet bool
-	}{
-		{
-			name:    "the same package keeps the recorded version",
-			pkg:     "./k3s-1.33.4.tar.zst",
-			wantSet: true,
-		},
-		{
-			name:    "a new package leaves it unknown",
-			pkg:     "./k3s-1.34.0.tar.zst",
-			wantSet: false,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			planned := prior
-			planned.Package = types.StringValue(tc.pkg)
-			planned.EngineVersion = types.StringUnknown()
-
-			req := planmodifier.StringRequest{
-				Plan:       planFor(t, planned),
-				State:      state,
-				StateValue: prior.EngineVersion,
-				PlanValue:  types.StringUnknown(),
-			}
-			var resp planmodifier.StringResponse
-			resp.PlanValue = req.PlanValue
-			useStateUnlessPackageChanged{}.PlanModifyString(context.Background(), req, &resp)
-
-			if tc.wantSet && !resp.PlanValue.Equal(prior.EngineVersion) {
-				t.Errorf("the plan value is %s, want the recorded %s", resp.PlanValue, prior.EngineVersion)
-			}
-			if !tc.wantSet && !resp.PlanValue.IsUnknown() {
-				t.Errorf("the plan value is %s, want it left unknown", resp.PlanValue)
-			}
-		})
 	}
 }
 
@@ -628,5 +492,409 @@ func TestWithAttrsCarriesAcrossLoggers(t *testing.T) {
 	}
 	if _, leaked := base.attrs["host"]; leaked {
 		t.Error("WithAttrs wrote into the parent's attributes")
+	}
+}
+
+// emptyState is a tfsdk.State the reconcile can write into. The framework needs a schema to encode
+// against, so the resource's own is used rather than a stand-in: a test that wrote into a different
+// shape would pass over a model the real one rejects.
+func emptyState(t *testing.T) *tfsdk.State {
+	t.Helper()
+
+	var resp resource.SchemaResponse
+	(&clusterResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("the resource schema is invalid: %v", resp.Diagnostics)
+	}
+	return &tfsdk.State{
+		Schema: resp.Schema,
+		Raw:    tftypes.NewValue(resp.Schema.Type().TerraformType(context.Background()), nil),
+	}
+}
+
+// absentCluster is a three-host fleet with one worker marked for removal.
+func absentCluster() clusterResourceModel {
+	model := clusterModelFor()
+	model.Distro = types.StringValue("k3s")
+	model.Hosts["worker2"] = clusterHost{
+		Address:  types.StringValue("10.0.0.22"),
+		Hostname: types.StringValue("worker2"),
+		Role:     types.StringValue(cluster.RoleWorker),
+		State:    types.StringValue(hostStateAbsent),
+	}
+	return model
+}
+
+// TestReconcileRemovalsTargetsOnlyTheAbsentHost covers the shape #339 asked for: the document the
+// teardown runs against holds every host, because the node deletions are driven through a
+// controller that stays, and only the absent one is named as a target.
+func TestReconcileRemovalsTargetsOnlyTheAbsentHost(t *testing.T) {
+	fake := &fakeConverger{}
+	r := &clusterResource{converger: fake}
+	model := absentCluster()
+
+	var diags diag.Diagnostics
+	state := emptyState(t)
+	if !r.reconcileRemovals(context.Background(), &model, nil, 0, &diags, state) {
+		t.Fatalf("reconcileRemovals stopped the apply: %v", diags)
+	}
+	if diags.HasError() {
+		t.Fatalf("reconcileRemovals reported %v", diags)
+	}
+
+	if fake.tornDown == nil {
+		t.Fatal("no teardown ran")
+	}
+	if got := fake.tornDown.TargetHosts; len(got) != 1 || got[0] != "worker2" {
+		t.Errorf("the teardown targeted %v, want only worker2", got)
+	}
+	// Every host reaches the document, including the one being removed: the surviving controller
+	// is what the node deletion is driven through.
+	if fake.got == nil || len(fake.got.Spec.Hosts) != len(model.Hosts) {
+		t.Errorf("the teardown received %d hosts, want all %d", len(fake.got.Spec.Hosts), len(model.Hosts))
+	}
+
+	for _, host := range model.Hosts {
+		if isAbsent(host) && !host.Removed.ValueBool() {
+			t.Error("the removed host was not recorded as removed, so the next apply would remove it again")
+		}
+	}
+}
+
+// TestReconcileRemovalsKeepsAFailedHostInState is the failure this whole review was about. A host
+// whose teardown failed is still running and still joined, and the configuration that reaches it
+// -- its address and its key path -- exists nowhere else. Pruning it from state leaves nothing
+// anywhere able to finish the job.
+func TestReconcileRemovalsKeepsAFailedHostInState(t *testing.T) {
+	fake := &fakeConverger{teardownErr: errors.New("drain node worker2: context deadline exceeded")}
+	r := &clusterResource{converger: fake}
+	model := absentCluster()
+	before := len(model.Hosts)
+
+	var diags diag.Diagnostics
+	state := emptyState(t)
+	if r.reconcileRemovals(context.Background(), &model, nil, 0, &diags, state) {
+		t.Fatal("reconcileRemovals let the apply continue over a half-removed cluster")
+	}
+
+	if !diags.HasError() {
+		t.Fatal("a failed removal was not reported as an error, so the apply would print Apply complete")
+	}
+	if len(model.Hosts) != before {
+		t.Errorf("state holds %d hosts, want all %d: a host that was not removed must keep its block", len(model.Hosts), before)
+	}
+	for _, host := range model.Hosts {
+		if isAbsent(host) && host.Removed.ValueBool() {
+			t.Error("a host whose teardown failed was recorded as removed")
+		}
+	}
+}
+
+// TestReconcileRemovalsSkipsAHostAlreadyRemoved is what makes the tombstone safe to leave in the
+// configuration: the second apply does nothing, rather than reaching for a machine that is gone.
+func TestReconcileRemovalsSkipsAHostAlreadyRemoved(t *testing.T) {
+	fake := &fakeConverger{}
+	r := &clusterResource{converger: fake}
+	model := absentCluster()
+
+	prior := make(map[string]clusterHost, len(model.Hosts))
+	for k, host := range model.Hosts {
+		if isAbsent(host) {
+			host.Removed = types.BoolValue(true)
+		}
+		prior[k] = host
+	}
+
+	var diags diag.Diagnostics
+	if !r.reconcileRemovals(context.Background(), &model, prior, 0, &diags, emptyState(t)) {
+		t.Fatalf("reconcileRemovals stopped the apply: %v", diags)
+	}
+	if fake.tornDown != nil {
+		t.Error("a host already removed was torn down again")
+	}
+}
+
+// TestReconcileRemovalsIsANoOpWithoutAbsentHosts pins the ordinary case: a configuration with no
+// tombstones never reaches a teardown at all.
+func TestReconcileRemovalsIsANoOpWithoutAbsentHosts(t *testing.T) {
+	fake := &fakeConverger{}
+	r := &clusterResource{converger: fake}
+	model := clusterModelFor()
+
+	var diags diag.Diagnostics
+	if !r.reconcileRemovals(context.Background(), &model, nil, 0, &diags, emptyState(t)) {
+		t.Fatalf("reconcileRemovals stopped the apply: %v", diags)
+	}
+	if fake.tornDown != nil {
+		t.Error("a configuration with no absent hosts ran a teardown")
+	}
+	for _, host := range model.Hosts {
+		if host.Removed.IsNull() || host.Removed.IsUnknown() {
+			t.Error("removed was left unknown, which state cannot hold")
+		}
+	}
+}
+
+// TestClusterModelOfDropsAbsentHosts holds the other half: a host marked absent is not part of the
+// cluster the apply converges, so nothing tries to install an engine on the machine it just
+// removed one from.
+func TestClusterModelOfDropsAbsentHosts(t *testing.T) {
+	model := clusterModelOf(absentCluster())
+
+	for _, host := range model.Hosts {
+		if host.Hostname == "worker2" || host.Address == "10.0.0.22" {
+			t.Error("a host marked absent reached the cluster the apply converges")
+		}
+	}
+}
+
+// TestHostsStillInstalledIsWhatADestroyTearsDown covers the one list a destroy must not take from
+// the apply. The hosts an apply converges exclude every host marked absent; a destroy has to
+// include the one whose removal failed, because that machine is still running and still joined,
+// and has to exclude the one whose removal finished, because reaching for it would fail against a
+// machine that may have been decommissioned since.
+func TestHostsStillInstalledIsWhatADestroyTearsDown(t *testing.T) {
+	hosts := map[string]clusterHost{
+		"c1": {
+			Address: types.StringValue("10.0.0.11"),
+			Role:    types.StringValue(cluster.RoleController),
+		},
+		"w1": {
+			Address: types.StringValue("10.0.0.21"),
+			Role:    types.StringValue(cluster.RoleWorker),
+			State:   types.StringValue(hostStateAbsent),
+			Removed: types.BoolValue(true),
+		},
+		"w2": {
+			Address: types.StringValue("10.0.0.22"),
+			Role:    types.StringValue(cluster.RoleWorker),
+			State:   types.StringValue(hostStateAbsent),
+			Removed: types.BoolValue(false),
+		},
+	}
+
+	got := hostsStillInstalled(hosts)
+
+	var addresses []string
+	for _, host := range got {
+		addresses = append(addresses, host.Address.ValueString())
+		if isAbsent(host) {
+			t.Errorf("%s is still marked absent, so the teardown would drop it", host.Address.ValueString())
+		}
+	}
+	slices.Sort(addresses)
+
+	want := []string{"10.0.0.11", "10.0.0.22"}
+	if !reflect.DeepEqual(addresses, want) {
+		t.Errorf("a destroy would tear down %v, want %v", addresses, want)
+	}
+}
+
+// TestReconcileRemovalsRefusesAnEmptiedCluster covers the configuration that is a destroy written
+// the long way. Left alone it would reset every host and then fail translating a cluster with no
+// hosts, which is a confusing route to something destroy does properly -- an apply cannot drop the
+// resource that describes the cluster.
+func TestReconcileRemovalsRefusesAnEmptiedCluster(t *testing.T) {
+	fake := &fakeConverger{}
+	r := &clusterResource{converger: fake}
+
+	model := clusterModelFor()
+	for k, host := range model.Hosts {
+		host.State = types.StringValue(hostStateAbsent)
+		model.Hosts[k] = host
+	}
+
+	var diags diag.Diagnostics
+	if r.reconcileRemovals(context.Background(), &model, nil, 0, &diags, emptyState(t)) {
+		t.Fatal("reconcileRemovals accepted a configuration with every host absent")
+	}
+	if !diags.HasError() {
+		t.Fatal("emptying the cluster was not reported as an error")
+	}
+	if fake.tornDown != nil {
+		t.Error("the cluster was torn down through the apply path")
+	}
+	if !strings.Contains(diags.Errors()[0].Detail(), "tofu destroy") {
+		t.Errorf("the error does not point at destroy: %s", diags.Errors()[0].Detail())
+	}
+}
+
+// stateFor renders a model into a tfsdk.State the way OpenTofu hands one to Read or Delete.
+func stateFor(t *testing.T, model clusterResourceModel) tfsdk.State {
+	t.Helper()
+
+	state := emptyState(t)
+	if model.ValuesFiles.IsNull() {
+		model.ValuesFiles = types.ListNull(types.StringType)
+	}
+	if model.Nodes.IsNull() {
+		nodes, ok := state.Schema.GetAttributes()["nodes"].GetType().(attr.TypeWithElementType)
+		if !ok {
+			t.Fatal("the nodes attribute is not a collection")
+		}
+		model.Nodes = types.ListNull(nodes.ElementType())
+	}
+	if diags := state.Set(context.Background(), &model); diags.HasError() {
+		t.Fatalf("the model does not fit the schema: %v", diags)
+	}
+	return *state
+}
+
+// planFor renders a model into a plan the way OpenTofu hands one to ModifyPlan.
+func planFor(t *testing.T, model clusterResourceModel) tfsdk.Plan {
+	t.Helper()
+
+	state := emptyState(t)
+	plan := tfsdk.Plan{
+		Schema: state.Schema,
+		Raw:    state.Raw,
+	}
+	// A list the model left at its zero value carries no element type, which the framework
+	// refuses. OpenTofu never hands one over: a value it has not computed yet is a typed null.
+	if model.ValuesFiles.IsNull() {
+		model.ValuesFiles = types.ListNull(types.StringType)
+	}
+	if model.Nodes.IsNull() {
+		nodes, ok := state.Schema.GetAttributes()["nodes"].GetType().(attr.TypeWithElementType)
+		if !ok {
+			t.Fatal("the nodes attribute is not a collection")
+		}
+		model.Nodes = types.ListNull(nodes.ElementType())
+	}
+	if diags := plan.Set(context.Background(), &model); diags.HasError() {
+		t.Fatalf("the model does not fit the schema: %v", diags)
+	}
+	return plan
+}
+
+// TestModifyPlanRefusesAnEmptiedCluster is the same refusal as the apply-time one, moved to where
+// an operator reads it: before anything has been drained.
+func TestModifyPlanRefusesAnEmptiedCluster(t *testing.T) {
+	model := clusterModelFor()
+	for k, host := range model.Hosts {
+		host.State = types.StringValue(hostStateAbsent)
+		model.Hosts[k] = host
+	}
+
+	var resp resource.ModifyPlanResponse
+	(&clusterResource{}).ModifyPlan(
+		context.Background(),
+		resource.ModifyPlanRequest{Plan: planFor(t, model)},
+		&resp,
+	)
+
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("a plan with every host absent was accepted")
+	}
+	if !strings.Contains(resp.Diagnostics.Errors()[0].Detail(), "tofu destroy") {
+		t.Errorf("the error does not point at destroy: %s", resp.Diagnostics.Errors()[0].Detail())
+	}
+}
+
+func TestModifyPlanAllowsARemovalAndADestroy(t *testing.T) {
+	// One host absent beside hosts that are staying is the ordinary removal.
+	var removal resource.ModifyPlanResponse
+	(&clusterResource{}).ModifyPlan(
+		context.Background(),
+		resource.ModifyPlanRequest{Plan: planFor(t, absentCluster())},
+		&removal,
+	)
+	if removal.Diagnostics.HasError() {
+		t.Fatalf("a removal was refused at plan time: %v", removal.Diagnostics)
+	}
+
+	// A destroy plans a null resource, and tearing every host down is what it is for.
+	state := emptyState(t)
+	var destroy resource.ModifyPlanResponse
+	(&clusterResource{}).ModifyPlan(
+		context.Background(),
+		resource.ModifyPlanRequest{Plan: tfsdk.Plan{
+			Schema: state.Schema,
+			Raw:    state.Raw,
+		}},
+		&destroy,
+	)
+	if destroy.Diagnostics.HasError() {
+		t.Fatalf("a destroy was refused at plan time: %v", destroy.Diagnostics)
+	}
+}
+
+// TestUseStateUnlessPackageChanged covers both halves of the modifier that keeps the package's
+// answers out of every plan: the value is held while the package is the same, and released as soon
+// as it is not, because a plan that promises the old engine version over a new package fails the
+// apply that corrects it.
+func TestUseStateUnlessPackageChanged(t *testing.T) {
+	prior := clusterModelFor()
+	prior.Package = types.StringValue("./k3s-1.33.4.tar.zst")
+	prior.EngineVersion = types.StringValue("v1.33.4+k3s1")
+	state := stateFor(t, prior)
+
+	for _, tc := range []struct {
+		name    string
+		pkg     string
+		wantSet bool
+	}{
+		{
+			name:    "the same package keeps the recorded version",
+			pkg:     "./k3s-1.33.4.tar.zst",
+			wantSet: true,
+		},
+		{
+			name:    "a new package leaves it unknown",
+			pkg:     "./k3s-1.34.0.tar.zst",
+			wantSet: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			planned := prior
+			planned.Package = types.StringValue(tc.pkg)
+			planned.EngineVersion = types.StringUnknown()
+
+			req := planmodifier.StringRequest{
+				Plan:       planFor(t, planned),
+				State:      state,
+				StateValue: prior.EngineVersion,
+				PlanValue:  types.StringUnknown(),
+			}
+			var resp planmodifier.StringResponse
+			resp.PlanValue = req.PlanValue
+			useStateUnlessPackageChanged{}.PlanModifyString(context.Background(), req, &resp)
+
+			if tc.wantSet && !resp.PlanValue.Equal(prior.EngineVersion) {
+				t.Errorf("the plan value is %s, want the recorded %s", resp.PlanValue, prior.EngineVersion)
+			}
+			if !tc.wantSet && !resp.PlanValue.IsUnknown() {
+				t.Errorf("the plan value is %s, want it left unknown", resp.PlanValue)
+			}
+		})
+	}
+}
+
+// TestUseBoolStateForUnknownLeavesANewHostUnknown is the case the obvious modifier gets wrong: a
+// host added to an existing cluster has no value at its path in state, and planning that null
+// would commit the plan to a value the apply then contradicts.
+func TestUseBoolStateForUnknownLeavesANewHostUnknown(t *testing.T) {
+	state := stateFor(t, clusterModelFor())
+
+	req := planmodifier.BoolRequest{
+		State:      state,
+		StateValue: types.BoolNull(),
+		PlanValue:  types.BoolUnknown(),
+	}
+	var resp planmodifier.BoolResponse
+	resp.PlanValue = req.PlanValue
+	useBoolStateForUnknownModifier{}.PlanModifyBool(context.Background(), req, &resp)
+
+	if !resp.PlanValue.IsUnknown() {
+		t.Errorf("the plan value is %s, want it left unknown for a host that is not in state", resp.PlanValue)
+	}
+
+	// A host that is in state keeps what it recorded, which is what stops the removal running twice.
+	req.StateValue = types.BoolValue(true)
+	resp.PlanValue = types.BoolUnknown()
+	useBoolStateForUnknownModifier{}.PlanModifyBool(context.Background(), req, &resp)
+
+	if !resp.PlanValue.Equal(types.BoolValue(true)) {
+		t.Errorf("the plan value is %s, want the recorded true", resp.PlanValue)
 	}
 }

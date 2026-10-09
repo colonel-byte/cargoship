@@ -96,6 +96,8 @@ const (
 	InstallVaultPasswordFile = "vault-password-file"
 	// InstallValues flag
 	InstallValues = "values"
+	// InstallTargetHosts flag
+	InstallTargetHosts = "target-hosts"
 )
 
 const (
