@@ -230,6 +230,7 @@
 - [choice-reset-target-hosts](agent/choice-reset-target-hosts.md)
 - [choice-run-receipts](agent/choice-run-receipts.md)
 - [choice-selinux-policy](agent/choice-selinux-policy.md)
+- [choice-tofu-e2e](agent/choice-tofu-e2e.md)
 - [choice-tofu-host-removal](agent/choice-tofu-host-removal.md)
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)
