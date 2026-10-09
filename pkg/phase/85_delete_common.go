@@ -41,10 +41,11 @@ type DeleteCommon struct {
 	Distro      distrocfg.Distro
 	TargetHosts []string
 	leader      *cluster.ZarfHost
-	// keepEngineForDelete is set when the engine has to stay up on a controller while its node is
-	// deleted, which is the case only when the removal leaves a single controller behind. See
-	// stopEngineBeforeDelete.
-	keepEngineForDelete bool
+	// leavesOneController is set when the run takes the cluster down to a single controller,
+	// which is the case where the member being removed has to still be voting to carry its own
+	// removal. It is passed to the distro, because what it changes depends on the engine. See
+	// prepareNodeDelete.
+	leavesOneController bool
 }
 
 // ErrNoSurvivingController is returned when every running controller is being removed, but some
@@ -112,28 +113,29 @@ func (p *DeleteCommon) planControllerRemovals(ctx context.Context, control, surv
 		return fmt.Errorf("%w: %d of %d running controllers are targeted", ErrControllersNotOneAtATime, removing, len(control))
 	}
 
-	// Taking the engine down first is what makes the node deletion stick: an engine that is still
-	// running re-registers the node object seconds after it is deleted, and the etcd member it
-	// owns is removed on deletion only once it has stopped. The exception is the removal that
-	// leaves one controller, where the member being removed has to still be up to form the
-	// majority of two that commits its own removal.
-	p.keepEngineForDelete = removing > 0 && len(surviving) < 2
-	if p.keepEngineForDelete {
-		logger.From(ctx).Warn("this removal leaves a single controller, so the engine stays up until the node is deleted",
+	// Whether the engine comes down before the node is deleted is the distro's call -- rke2 and
+	// k3s need it stopped, kubeadm needs it running through its own reset -- so all this phase
+	// decides is whether the cluster is about to be left with a single controller, which is the
+	// case both engines have to treat specially.
+	p.leavesOneController = removing > 0 && len(surviving) < 2
+	if p.leavesOneController {
+		logger.From(ctx).Warn("this removal leaves a single controller, which is the case where its own removal needs it voting",
 			"controllers", len(control))
 	}
 	return nil
 }
 
-// stopEngineBeforeDelete takes the engine down on a host whose node is about to be deleted, unless
-// the membership arithmetic in planControllerRemovals says it has to stay up.
-func (p *DeleteCommon) stopEngineBeforeDelete(ctx context.Context, h *cluster.ZarfHost) error {
-	if p.keepEngineForDelete {
+// prepareNodeDelete lets the distro give up a controller's etcd membership before its node is
+// deleted, which is a different operation for each engine and has to happen on each engine's
+// terms. See distrocfg.NodeDeletePreparer. A distro that implements nothing has its controllers
+// deleted and then uninstalled, as before.
+func (p *DeleteCommon) prepareNodeDelete(ctx context.Context, h *cluster.ZarfHost) error {
+	preparer, ok := p.Distro.(distrocfg.NodeDeletePreparer)
+	if !ok {
 		return nil
 	}
-	logger.From(ctx).Info("stopping the engine before deleting the node", "host", h)
-	if err := p.Distro.StopControllerService(h); err != nil {
-		return fmt.Errorf("stop the engine on %s before deleting its node: %w", h, err)
+	if err := preparer.PrepareNodeDelete(ctx, h, p.leavesOneController); err != nil {
+		return fmt.Errorf("prepare %s for its node to be deleted: %w", h, err)
 	}
 	return nil
 }

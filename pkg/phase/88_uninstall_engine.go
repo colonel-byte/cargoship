@@ -74,6 +74,7 @@ func (p *UninstallEngine) Run(ctx context.Context) error {
 		"uninstalling engine files",
 		p.hosts,
 		p.WorkerConcurrent,
+		p.preUninstallReset,
 		p.stopService,
 		p.uninstallNode,
 	)
@@ -88,23 +89,29 @@ func (p *UninstallEngine) stopService(ctx context.Context, h *cluster.ZarfHost) 
 	return p.Distro.StopControllerService(h)
 }
 
-// preUninstallReset runs the distro's pre-package-removal teardown, when it implements one --
-// kubeadm reset, unlike rke2/k3s where uninstalling the package is the whole story. Warns and
-// continues on error, matching the rest of uninstallNode: a host that is unreachable or already
-// reset should not block the rest of the uninstall.
+// preUninstallReset runs the distro's own teardown, when it implements one -- kubeadm reset,
+// unlike rke2/k3s where uninstalling the package is the whole story. Warns and continues on
+// error: a host that is unreachable or already reset should not block the rest of the uninstall.
+//
+// It runs before the service is stopped, which is the ordering kubeadm needs. Its
+// `remove-etcd-member` phase removes the local member through the cluster, and a member whose own
+// etcd is already down cannot carry its removal when there were only two of them -- the
+// controller that stays is then holding one vote of two, with no API server to fix it through.
+// kubeadm reset stops the kubelet itself, so stopping it afterwards is a second, idempotent step
+// rather than a skipped one.
 func (p *UninstallEngine) preUninstallReset(ctx context.Context, h *cluster.ZarfHost) error {
-	if r, ok := p.Distro.(distrocfg.PreUninstallResetter); ok {
-		return r.PreUninstallReset(ctx, h)
+	r, ok := p.Distro.(distrocfg.PreUninstallResetter)
+	if !ok {
+		return nil
+	}
+	if err := r.PreUninstallReset(ctx, h); err != nil {
+		logger.From(ctx).Warn("failed to reset the host before removing packages", "error", err)
 	}
 	return nil
 }
 
 func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("uninstall", "node", h)
-
-	if err := p.preUninstallReset(ctx, h); err != nil {
-		logger.From(ctx).Warn("failed to reset the host before removing packages", "error", err)
-	}
 
 	packages := []string{}
 

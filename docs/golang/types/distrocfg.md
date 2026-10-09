@@ -35,16 +35,19 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*K3S\) AdminCredentials\(host \*cluster.ZarfHost, dataDir string\) \(AdminCredentials, error\)](<#K3S.AdminCredentials>)
   - [func \(d \*K3S\) KubeconfigPath\(\_ \*cluster.ZarfHost, \_ string\) string](<#K3S.KubeconfigPath>)
   - [func \(d \*K3S\) KubectlCmdf\(host \*cluster.ZarfHost, dataDir string, s string, args ...any\) string](<#K3S.KubectlCmdf>)
+  - [func \(d \*K3S\) PrepareNodeDelete\(ctx context.Context, host \*cluster.ZarfHost, leavesOneController bool\) error](<#K3S.PrepareNodeDelete>)
   - [func \(d \*K3S\) StopControllerService\(h \*cluster.ZarfHost\) error](<#K3S.StopControllerService>)
   - [func \(d \*K3S\) StopWorkerService\(h \*cluster.ZarfHost\) error](<#K3S.StopWorkerService>)
 - [type ManagedDir](<#ManagedDir>)
 - [type ManifestApplier](<#ManifestApplier>)
+- [type NodeDeletePreparer](<#NodeDeletePreparer>)
 - [type PreStartUpgrader](<#PreStartUpgrader>)
 - [type PreUninstallResetter](<#PreUninstallResetter>)
 - [type RKE2](<#RKE2>)
   - [func \(d \*RKE2\) AdminCredentials\(host \*cluster.ZarfHost, dataDir string\) \(AdminCredentials, error\)](<#RKE2.AdminCredentials>)
   - [func \(d \*RKE2\) KubeconfigPath\(\_ \*cluster.ZarfHost, \_ string\) string](<#RKE2.KubeconfigPath>)
   - [func \(d \*RKE2\) KubectlCmdf\(host \*cluster.ZarfHost, dataDir string, s string, args ...any\) string](<#RKE2.KubectlCmdf>)
+  - [func \(d \*RKE2\) PrepareNodeDelete\(ctx context.Context, host \*cluster.ZarfHost, leavesOneController bool\) error](<#RKE2.PrepareNodeDelete>)
   - [func \(d \*RKE2\) StopControllerService\(h \*cluster.ZarfHost\) error](<#RKE2.StopControllerService>)
   - [func \(d \*RKE2\) StopWorkerService\(h \*cluster.ZarfHost\) error](<#RKE2.StopWorkerService>)
 - [type RancherCommon](<#RancherCommon>)
@@ -73,6 +76,7 @@ Package distrocfg defines the standard interface that all distro config settings
   - [func \(d \*Upstream\) ManifestPaths\(dis distro.ZarfDistro\) \[\]string](<#Upstream.ManifestPaths>)
   - [func \(d \*Upstream\) PreStartUpgrade\(ctx context.Context, host \*cluster.ZarfHost, dis distro.ZarfDistro\) error](<#Upstream.PreStartUpgrade>)
   - [func \(d \*Upstream\) PreUninstallReset\(\_ context.Context, host \*cluster.ZarfHost\) error](<#Upstream.PreUninstallReset>)
+  - [func \(d \*Upstream\) PrepareNodeDelete\(ctx context.Context, host \*cluster.ZarfHost, \_ bool\) error](<#Upstream.PrepareNodeDelete>)
   - [func \(d \*Upstream\) RunningVersion\(host \*cluster.ZarfHost\) \(string, error\)](<#Upstream.RunningVersion>)
   - [func \(d \*Upstream\) StopControllerService\(h \*cluster.ZarfHost\) error](<#Upstream.StopControllerService>)
   - [func \(d \*Upstream\) StopWorkerService\(h \*cluster.ZarfHost\) error](<#Upstream.StopWorkerService>)
@@ -441,7 +445,7 @@ type ImageImporter interface {
 ```
 
 <a name="K3S"></a>
-## type [K3S](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L31-L33>)
+## type [K3S](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L32-L34>)
 
 K3S distro struct
 
@@ -452,7 +456,7 @@ type K3S struct {
 ```
 
 <a name="K3S.AdminCredentials"></a>
-### func \(\*K3S\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L63>)
+### func \(\*K3S\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L67>)
 
 ```go
 func (d *K3S) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
@@ -461,7 +465,7 @@ func (d *K3S) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCre
 AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig k3s writes on a controller host.
 
 <a name="K3S.KubeconfigPath"></a>
-### func \(\*K3S\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L68>)
+### func \(\*K3S\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L72>)
 
 ```go
 func (d *K3S) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
@@ -470,7 +474,7 @@ func (d *K3S) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
 KubeconfigPath returns the path to the admin config for a given
 
 <a name="K3S.KubectlCmdf"></a>
-### func \(\*K3S\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L73>)
+### func \(\*K3S\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L77>)
 
 ```go
 func (d *K3S) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
@@ -478,8 +482,17 @@ func (d *K3S) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args
 
 KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
 
+<a name="K3S.PrepareNodeDelete"></a>
+### func \(\*K3S\) [PrepareNodeDelete](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L88>)
+
+```go
+func (d *K3S) PrepareNodeDelete(ctx context.Context, host *cluster.ZarfHost, leavesOneController bool) error
+```
+
+PrepareNodeDelete stops the engine before the node is deleted, so k3s removes the etcd member with it. See RancherCommon.prepareNodeDelete for the one case that leaves it running.
+
 <a name="K3S.StopControllerService"></a>
-### func \(\*K3S\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L78>)
+### func \(\*K3S\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L82>)
 
 ```go
 func (d *K3S) StopControllerService(h *cluster.ZarfHost) error
@@ -488,7 +501,7 @@ func (d *K3S) StopControllerService(h *cluster.ZarfHost) error
 StopControllerService stops the controller service on the host
 
 <a name="K3S.StopWorkerService"></a>
-### func \(\*K3S\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L83>)
+### func \(\*K3S\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_k3s.go#L93>)
 
 ```go
 func (d *K3S) StopWorkerService(h *cluster.ZarfHost) error
@@ -516,7 +529,7 @@ type ManagedDir struct {
 ```
 
 <a name="ManifestApplier"></a>
-## type [ManifestApplier](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L158-L162>)
+## type [ManifestApplier](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L182-L186>)
 
 ManifestApplier is implemented by a distro whose package can declare raw manifests \-\- typically a CNI \-\- that cargoship applies with kubectl once the leader is reachable, instead of rendering them into a HelmChartConfig an embedded controller reconciles \(rancher\_common.go's helmChartConfigs\). Same optional\-interface pattern as ImageImporter/Bootstrapper.
 
@@ -525,6 +538,28 @@ type ManifestApplier interface {
     // ManifestPaths returns the on-host paths to kubectl apply, in order. Empty when the package
     // declares none.
     ManifestPaths(dis distro.ZarfDistro) []string
+}
+```
+
+<a name="NodeDeletePreparer"></a>
+## type [NodeDeletePreparer](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/interface.go#L169-L176>)
+
+NodeDeletePreparer is implemented by a distro that needs something done on a controller before its Node object is deleted, because that is where its etcd membership is given up.
+
+The two engines do it at opposite moments. k3s and rke2 drop the member when the Node object goes, but only once the engine behind it has stopped \-\- so the preparation is stopping the engine. kubeadm has no such coupling: \`kubectl delete node\` leaves the member in place and \`kubeadm reset\` is what removes it, which needs the local etcd still running, so the preparation is running the reset while the cluster is whole.
+
+Getting it backwards is not a cosmetic failure. A member removed from a two\-member cluster with its own etcd already down cannot commit, and the controller that stays is left holding one vote of two: no quorum, no API server, and nothing left to remove the member with.
+
+Same optional\-interface pattern as PreUninstallResetter. A distro that implements neither has its controllers deleted and then uninstalled, which is the behaviour that predates this.
+
+```go
+type NodeDeletePreparer interface {
+    // PrepareNodeDelete runs on a controller immediately before its Node object is deleted.
+    //
+    // leavesOneController reports that this removal takes the cluster to a single controller,
+    // which is the case where the member being removed has to still be voting to carry its own
+    // removal through a majority of two.
+    PrepareNodeDelete(ctx context.Context, host *cluster.ZarfHost, leavesOneController bool) error
 }
 ```
 
@@ -553,7 +588,7 @@ type PreUninstallResetter interface {
 ```
 
 <a name="RKE2"></a>
-## type [RKE2](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L31-L33>)
+## type [RKE2](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L32-L34>)
 
 RKE2 distro struct
 
@@ -564,7 +599,7 @@ type RKE2 struct {
 ```
 
 <a name="RKE2.AdminCredentials"></a>
-### func \(\*RKE2\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L63>)
+### func \(\*RKE2\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L67>)
 
 ```go
 func (d *RKE2) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
@@ -573,7 +608,7 @@ func (d *RKE2) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCr
 AdminCredentials returns the cluster CA certificate and the admin client key pair, read out of the admin kubeconfig rke2 writes on a controller host.
 
 <a name="RKE2.KubeconfigPath"></a>
-### func \(\*RKE2\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L68>)
+### func \(\*RKE2\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L72>)
 
 ```go
 func (d *RKE2) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
@@ -582,7 +617,7 @@ func (d *RKE2) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
 KubeconfigPath returns the path to the admin config for a given distro
 
 <a name="RKE2.KubectlCmdf"></a>
-### func \(\*RKE2\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L73>)
+### func \(\*RKE2\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L77>)
 
 ```go
 func (d *RKE2) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
@@ -590,8 +625,17 @@ func (d *RKE2) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, arg
 
 KubectlCmdf returns a string with that can be executed to interact with the kubernetes cluster
 
+<a name="RKE2.PrepareNodeDelete"></a>
+### func \(\*RKE2\) [PrepareNodeDelete](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L88>)
+
+```go
+func (d *RKE2) PrepareNodeDelete(ctx context.Context, host *cluster.ZarfHost, leavesOneController bool) error
+```
+
+PrepareNodeDelete stops the engine before the node is deleted, so rke2 removes the etcd member with it. See RancherCommon.prepareNodeDelete for the one case that leaves it running.
+
 <a name="RKE2.StopControllerService"></a>
-### func \(\*RKE2\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L78>)
+### func \(\*RKE2\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L82>)
 
 ```go
 func (d *RKE2) StopControllerService(h *cluster.ZarfHost) error
@@ -600,7 +644,7 @@ func (d *RKE2) StopControllerService(h *cluster.ZarfHost) error
 StopControllerService implements Distro.
 
 <a name="RKE2.StopWorkerService"></a>
-### func \(\*RKE2\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L83>)
+### func \(\*RKE2\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_rke2.go#L93>)
 
 ```go
 func (d *RKE2) StopWorkerService(h *cluster.ZarfHost) error
@@ -703,7 +747,7 @@ type Upstream struct {
 ```
 
 <a name="Upstream.AdminCredentials"></a>
-### func \(\*Upstream\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L92>)
+### func \(\*Upstream\) [AdminCredentials](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L93>)
 
 ```go
 func (d *Upstream) AdminCredentials(host *cluster.ZarfHost, dataDir string) (AdminCredentials, error)
@@ -721,7 +765,7 @@ func (d *Upstream) Bootstrap(_ context.Context, host *cluster.ZarfHost, run clus
 Bootstrap forms the cluster on the leader with \`kubeadm init\`, joins an additional controller onto it with kubeadm's HA control\-plane path, or joins a worker with a plain \`kubeadm join\`, against the kubeadm\-config.yaml ConfigureEngine already wrote to host.
 
 <a name="Upstream.CleanupPaths"></a>
-### func \(\*Upstream\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L287>)
+### func \(\*Upstream\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L288>)
 
 ```go
 func (d *Upstream) CleanupPaths() []string
@@ -730,7 +774,7 @@ func (d *Upstream) CleanupPaths() []string
 CleanupPaths returns the paths an uninstall removes from a host: the kubernetes config directory, the kubelet data directory, and the staged package directory, all of which upstream owns outright.
 
 <a name="Upstream.ConfigureEngine"></a>
-### func \(\*Upstream\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L157>)
+### func \(\*Upstream\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L158>)
 
 ```go
 func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
@@ -739,7 +783,7 @@ func (d *Upstream) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, 
 ConfigureEngine writes DesiredFiles' output to host: containerd's config, crictl.yaml, registry hosts.toml, and the kubeadm\-config.yaml this host's role needs. Unlike RancherCommon.ConfigureEngine there is no already\-running guard \-\- kubeadm\-config.yaml is meant to be rewritten every run \(Bootstrap rewrites it again with the real join token right before \`kubeadm join\`\), so an unconditional overwrite is correct here, not a gap.
 
 <a name="Upstream.DesiredFiles"></a>
-### func \(\*Upstream\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L173>)
+### func \(\*Upstream\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L174>)
 
 ```go
 func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
@@ -748,7 +792,7 @@ func (d *Upstream) DesiredFiles(ctx context.Context, host *cluster.ZarfHost, run
 DesiredFiles returns the full set of engine config files this distro would write: containerd's config.toml, crictl.yaml, and a hosts.toml plus any CA certificate per registry cargoship configures a mirror, credential, or TLS setting for.
 
 <a name="Upstream.DistroCmdf"></a>
-### func \(\*Upstream\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L111>)
+### func \(\*Upstream\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L112>)
 
 ```go
 func (d *Upstream) DistroCmdf(template string, args ...any) string
@@ -757,7 +801,7 @@ func (d *Upstream) DistroCmdf(template string, args ...any) string
 DistroCmdf returns a string that can be used to execute a command directly. Upstream has no single engine binary to wrap a command through \-\- kubeadm, kubelet, and kubectl are three separate packages \-\- so the template is formatted as\-is.
 
 <a name="Upstream.GetClusterCIDR"></a>
-### func \(\*Upstream\) [GetClusterCIDR](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L137>)
+### func \(\*Upstream\) [GetClusterCIDR](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L138>)
 
 ```go
 func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string
@@ -766,7 +810,7 @@ func (d *Upstream) GetClusterCIDR(dis distro.ZarfDistro) []string
 GetClusterCIDR returns the known cluster CIDR blocks. kubeadm's service subnet defaults to 10.96.0.0/12 when unset, but it has no pod subnet default \-\- that is entirely CNI dependent \-\- so one is only returned when the engine config sets podSubnet. Trusting nothing is safer here than inventing a value the firewall phase would treat as authoritative.
 
 <a name="Upstream.ImportImages"></a>
-### func \(\*Upstream\) [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L257>)
+### func \(\*Upstream\) [ImportImages](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L258>)
 
 ```go
 func (d *Upstream) ImportImages(host *cluster.ZarfHost, path string) error
@@ -784,7 +828,7 @@ func (d *Upstream) IsBootstrapped(host *cluster.ZarfHost) bool
 IsBootstrapped reports whether host has already run \`kubeadm init\` or \`kubeadm join\`.
 
 <a name="Upstream.JoinTokenPathAgent"></a>
-### func \(\*Upstream\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L294>)
+### func \(\*Upstream\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L295>)
 
 ```go
 func (d *Upstream) JoinTokenPathAgent() string
@@ -793,7 +837,7 @@ func (d *Upstream) JoinTokenPathAgent() string
 JoinTokenPathAgent returns the path of the token to join the cluster as a worker. kubeadm has no static agent\-join\-token file \-\- tokens are short\-lived and minted on demand with \`kubeadm token create\` \-\- so there is nothing to point at yet.
 
 <a name="Upstream.KubeconfigPath"></a>
-### func \(\*Upstream\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L98>)
+### func \(\*Upstream\) [KubeconfigPath](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L99>)
 
 ```go
 func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
@@ -802,7 +846,7 @@ func (d *Upstream) KubeconfigPath(_ *cluster.ZarfHost, _ string) string
 KubeconfigPath returns the path to the admin config kubeadm writes. Unlike rke2/k3s, this path does not vary by host or data directory.
 
 <a name="Upstream.KubectlCmdf"></a>
-### func \(\*Upstream\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L104>)
+### func \(\*Upstream\) [KubectlCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L105>)
 
 ```go
 func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args ...any) string
@@ -811,7 +855,7 @@ func (d *Upstream) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string,
 KubectlCmdf returns a string that can be executed to interact with the kubernetes cluster. kubectl is a plain host binary here, not reached through an engine wrapper.
 
 <a name="Upstream.ManagedDirs"></a>
-### func \(\*Upstream\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L248>)
+### func \(\*Upstream\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L249>)
 
 ```go
 func (d *Upstream) ManagedDirs() []ManagedDir
@@ -820,7 +864,7 @@ func (d *Upstream) ManagedDirs() []ManagedDir
 ManagedDirs returns the directories on a host cargoship prunes: the shared CA directory registryCAFiles writes to. The per\-registry hosts.toml directories under containerdCertsDir are not included \-\- ManagedDir only prunes files directly inside a directory, not ones nested a level down in a registry's own subdirectory, so a removed registry's hosts.toml is left behind rather than risk pruning the wrong thing.
 
 <a name="Upstream.ManifestPaths"></a>
-### func \(\*Upstream\) [ManifestPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L280>)
+### func \(\*Upstream\) [ManifestPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L281>)
 
 ```go
 func (d *Upstream) ManifestPaths(dis distro.ZarfDistro) []string
@@ -838,7 +882,7 @@ func (d *Upstream) PreStartUpgrade(ctx context.Context, host *cluster.ZarfHost, 
 PreStartUpgrade runs kubeadm's own upgrade sequence between the shared upgrade phase's package install and service restart steps. kubeadm, unlike rke2/k3s, refuses to move the control plane forward on a plain kubelet restart \-\- it must install the new kubeadm binary and run its own upgrade command first, and the first controller runs a different command than every other node.
 
 <a name="Upstream.PreUninstallReset"></a>
-### func \(\*Upstream\) [PreUninstallReset](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L29>)
+### func \(\*Upstream\) [PreUninstallReset](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L48>)
 
 ```go
 func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) error
@@ -846,8 +890,23 @@ func (d *Upstream) PreUninstallReset(_ context.Context, host *cluster.ZarfHost) 
 
 PreUninstallReset runs kubeadm's own teardown before packages are removed, then cleans up what kubeadm reset deliberately leaves behind: it prints a reminder about CNI state and iptables/ipvs rules rather than removing them itself. Each post\-reset command is best\-effort \-\- a link that does not exist, or a flannel.1 interface when the cluster runs a different CNI, is the expected common case, not a failure worth reporting.
 
+<a name="Upstream.PrepareNodeDelete"></a>
+### func \(\*Upstream\) [PrepareNodeDelete](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream_reset.go#L39>)
+
+```go
+func (d *Upstream) PrepareNodeDelete(ctx context.Context, host *cluster.ZarfHost, _ bool) error
+```
+
+PrepareNodeDelete gives the node's etcd membership up before its Node object is deleted, which for kubeadm means running the reset now rather than at uninstall time.
+
+\`kubectl delete node\` does nothing to the membership here \-\- there is no etcd controller watching node deletion, which is rke2 and k3s's behaviour and not upstream's. The removal is kubeadm reset's own \`remove\-etcd\-member\` phase, and it needs the local member still voting: taking it down first and removing it afterwards is what strands a two\-controller cluster on one vote of two. Running the reset here is also what makes the deletion stick, because it stops the kubelet that would otherwise re\-register the node.
+
+leavesOneController changes nothing. The ordering this needs is the ordering that is safe at every size, where rke2 and k3s have a last\-member case to work around.
+
+UninstallEngine runs PreUninstallReset again before removing the packages. A second reset on a host that has already been reset reports nothing to do, and that path is warning\-only.
+
 <a name="Upstream.RunningVersion"></a>
-### func \(\*Upstream\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L117>)
+### func \(\*Upstream\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L118>)
 
 ```go
 func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)
@@ -856,7 +915,7 @@ func (d *Upstream) RunningVersion(host *cluster.ZarfHost) (string, error)
 RunningVersion returns the version of kubelet running on the host, if the engine is not running it throws an "ErrVersionNotDetected" error
 
 <a name="Upstream.StopControllerService"></a>
-### func \(\*Upstream\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L301>)
+### func \(\*Upstream\) [StopControllerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L302>)
 
 ```go
 func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error
@@ -865,7 +924,7 @@ func (d *Upstream) StopControllerService(h *cluster.ZarfHost) error
 StopControllerService stops the controller service on the host. Controller and worker are the same kubelet service, and unlike rke2/k3s there is no embedded containerd or killall script to account for.
 
 <a name="Upstream.StopWorkerService"></a>
-### func \(\*Upstream\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L306>)
+### func \(\*Upstream\) [StopWorkerService](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/upstream.go#L307>)
 
 ```go
 func (d *Upstream) StopWorkerService(h *cluster.ZarfHost) error

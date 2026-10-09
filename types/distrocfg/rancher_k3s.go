@@ -15,6 +15,7 @@
 package distrocfg
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -32,7 +33,10 @@ type K3S struct {
 	RancherCommon
 }
 
-var _ Distro = (*K3S)(nil)
+var (
+	_ Distro             = (*K3S)(nil)
+	_ NodeDeletePreparer = (*K3S)(nil)
+)
 
 func init() {
 	registry.RegisterDistroModule(
@@ -77,6 +81,12 @@ func (d *K3S) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, args
 // StopControllerService stops the controller service on the host
 func (d *K3S) StopControllerService(h *cluster.ZarfHost) error {
 	return d.stopService(h, d.GetControllerService(), "k3s-killall.sh")
+}
+
+// PrepareNodeDelete stops the engine before the node is deleted, so k3s removes the etcd member
+// with it. See RancherCommon.prepareNodeDelete for the one case that leaves it running.
+func (d *K3S) PrepareNodeDelete(ctx context.Context, host *cluster.ZarfHost, leavesOneController bool) error {
+	return d.prepareNodeDelete(ctx, host, leavesOneController, d.StopControllerService)
 }
 
 // StopWorkerService stops the controller service on the host
