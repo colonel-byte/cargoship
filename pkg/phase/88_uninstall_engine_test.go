@@ -53,15 +53,17 @@ func TestPreUninstallResetDispatchesWhenImplemented(t *testing.T) {
 	require.Equal(t, []string{"node1"}, d.calls)
 }
 
-func TestPreUninstallResetPropagatesError(t *testing.T) {
-	wantErr := errors.New("kubeadm reset failed")
-	d := &fakePreUninstallResetterDistro{err: wantErr}
+// TestPreUninstallResetWarnsAndContinues covers the error path: the reset is the first step of
+// the uninstall now, rather than something uninstallNode did on its way past, so an error that
+// propagated would stop the packages from being removed at all. A host that is unreachable or
+// already reset is the ordinary case for it to fail on.
+func TestPreUninstallResetWarnsAndContinues(t *testing.T) {
+	d := &fakePreUninstallResetterDistro{err: errors.New("kubeadm reset failed")}
 	p := &UninstallEngine{Distro: d}
 	h := &cluster.ZarfHost{Hostname: "node1"}
 
-	err := p.preUninstallReset(context.Background(), h)
-
-	require.ErrorIs(t, err, wantErr)
+	require.NoError(t, p.preUninstallReset(context.Background(), h))
+	require.Equal(t, []string{"node1"}, d.calls)
 }
 
 type fakeBinaryDistro struct {

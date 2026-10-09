@@ -706,6 +706,24 @@ func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error) {
 	return match, nil
 }
 
+// prepareNodeDelete stops the engine on a controller whose node is about to be deleted, which is
+// what makes both halves of the deletion stick: rke2 and k3s remove the etcd member with the Node
+// object only once the engine behind it has stopped, and an engine still running re-registers the
+// node seconds later.
+//
+// The exception is the removal that leaves a single controller. Taking the member down first
+// leaves one vote of two and the removal cannot commit, so the engine stays up through the
+// deletion and UninstallEngine stops it immediately after.
+func (d *RancherCommon) prepareNodeDelete(ctx context.Context, h *cluster.ZarfHost, leavesOneController bool, stop func(*cluster.ZarfHost) error) error {
+	if leavesOneController {
+		logger.From(ctx).Info("leaving the engine up through the node deletion, so the last member can carry its own removal",
+			"host", h)
+		return nil
+	}
+	logger.From(ctx).Info("stopping the engine before deleting the node", "host", h)
+	return stop(h)
+}
+
 func (d *RancherCommon) stopService(h *cluster.ZarfHost, ser string, killall string) error {
 	ctx := context.Background()
 	riglogger.Logger().Debug("trying to stop service", "service", ser)

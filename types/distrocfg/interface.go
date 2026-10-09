@@ -151,6 +151,30 @@ type PreUninstallResetter interface {
 	PreUninstallReset(ctx context.Context, host *cluster.ZarfHost) error
 }
 
+// NodeDeletePreparer is implemented by a distro that needs something done on a controller before
+// its Node object is deleted, because that is where its etcd membership is given up.
+//
+// The two engines do it at opposite moments. k3s and rke2 drop the member when the Node object
+// goes, but only once the engine behind it has stopped -- so the preparation is stopping the
+// engine. kubeadm has no such coupling: `kubectl delete node` leaves the member in place and
+// `kubeadm reset` is what removes it, which needs the local etcd still running, so the
+// preparation is running the reset while the cluster is whole.
+//
+// Getting it backwards is not a cosmetic failure. A member removed from a two-member cluster with
+// its own etcd already down cannot commit, and the controller that stays is left holding one vote
+// of two: no quorum, no API server, and nothing left to remove the member with.
+//
+// Same optional-interface pattern as PreUninstallResetter. A distro that implements neither has
+// its controllers deleted and then uninstalled, which is the behaviour that predates this.
+type NodeDeletePreparer interface {
+	// PrepareNodeDelete runs on a controller immediately before its Node object is deleted.
+	//
+	// leavesOneController reports that this removal takes the cluster to a single controller,
+	// which is the case where the member being removed has to still be voting to carry its own
+	// removal through a majority of two.
+	PrepareNodeDelete(ctx context.Context, host *cluster.ZarfHost, leavesOneController bool) error
+}
+
 // ManifestApplier is implemented by a distro whose package can declare raw manifests -- typically
 // a CNI -- that cargoship applies with kubectl once the leader is reachable, instead of rendering
 // them into a HelmChartConfig an embedded controller reconciles (rancher_common.go's

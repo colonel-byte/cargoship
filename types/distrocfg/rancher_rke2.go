@@ -15,6 +15,7 @@
 package distrocfg
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -32,7 +33,10 @@ type RKE2 struct {
 	RancherCommon
 }
 
-var _ Distro = (*RKE2)(nil)
+var (
+	_ Distro             = (*RKE2)(nil)
+	_ NodeDeletePreparer = (*RKE2)(nil)
+)
 
 func init() {
 	registry.RegisterDistroModule(
@@ -77,6 +81,12 @@ func (d *RKE2) KubectlCmdf(host *cluster.ZarfHost, dataDir string, s string, arg
 // StopControllerService implements Distro.
 func (d *RKE2) StopControllerService(h *cluster.ZarfHost) error {
 	return d.stopService(h, d.GetControllerService(), "rke2-killall.sh")
+}
+
+// PrepareNodeDelete stops the engine before the node is deleted, so rke2 removes the etcd member
+// with it. See RancherCommon.prepareNodeDelete for the one case that leaves it running.
+func (d *RKE2) PrepareNodeDelete(ctx context.Context, host *cluster.ZarfHost, leavesOneController bool) error {
+	return d.prepareNodeDelete(ctx, host, leavesOneController, d.StopControllerService)
 }
 
 // StopWorkerService implements Distro.
