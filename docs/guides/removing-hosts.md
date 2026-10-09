@@ -28,7 +28,51 @@ Doing only the first half would be worse than doing nothing, because it looks li
 
 So an apply reports the gap and leaves the cluster alone.
 
-## Removing the machine with the CLI
+## Removing a host in OpenTofu
+
+In OpenTofu, mark the host as `state = "absent"` in your `cargoship_cluster` resource:
+
+```hcl
+resource "cargoship_cluster" "prod" {
+  # ...
+
+  hosts = {
+    controller1 = {
+      address  = "10.0.0.11"
+      role     = "controller"
+      key_path = "~/.ssh/id_ed25519"
+      profile  = "control"
+    }
+
+    # worker3 is marked for removal:
+    worker3 = {
+      address  = "10.0.0.31"
+      role     = "worker"
+      key_path = "~/.ssh/id_ed25519"
+      state    = "absent"
+    }
+  }
+}
+```
+
+One `tofu apply` does the whole removal:
+
+1. The node is drained and deleted from the cluster, through a controller that is staying. The run refuses rather than guessing if every running controller is itself marked absent -- removing all of them is a teardown, and `tofu destroy` is what does that.
+2. Cargoship connects to `10.0.0.31` over SSH, stops the engine and uninstalls it.
+3. Every other host is left alone, and the apply then converges them as usual.
+4. The host's `removed` attribute becomes `true`.
+
+**Leave the entry where it is.** `removed` is what tells later applies the work is done, so they neither repeat the teardown nor try to reach a machine that may since have been decommissioned. Delete the entry whenever it suits; nothing depends on it going, and deleting it changes nothing on any host.
+
+If the removal fails, the apply stops there and says so. The entry stays in state with `removed` still false, which is deliberate: the machine is still running and still joined, and that entry holds the only address and key path that can reach it. Fix the cause and apply again. The rest of the convergence does not run, because converging on top of a half-removed cluster would report success over a node that is still in it.
+
+### What a destroy does with the markers
+
+Nothing, beyond reading them. `tofu destroy` tears down everything the cluster still holds: a host marked absent whose removal failed is included, because the machine is still running and still joined, and one whose removal finished is left out, because reaching for a decommissioned machine would fail. The markers are not something to clean up before destroying.
+
+If the machines are OpenTofu resources too and are being destroyed in the same run, consider `retain_on_destroy = true` -- draining and uninstalling a node that is about to be deleted is minutes spent on a result nobody sees. See [opentofu-terragrunt](opentofu-terragrunt.md#destroying-the-machines-as-well).
+
+## Removing the machine by hand (CLI)
 
 With the CLI, use targeted reset with `--target-hosts`:
 
@@ -50,7 +94,9 @@ A worker leaves the cluster by being drained, deleted and uninstalled. A control
 
 ### Removing the first controller
 
-There is nothing special about the first controller at runtime -- it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:
+This section is about `k3s` and `rke2`. On `upstream` there is nothing to do: kubeadm is given `controlPlaneEndpoint: <load_balancer>` at init and every host -- controllers included -- joins through `apiServerEndpoint: <load_balancer>`, so no host holds the first controller's name. The removed controller lingers in the API server's `certSANs` until the next apply re-renders them, which changes nothing.
+
+On k3s and RKE2 there is nothing special about the first controller at runtime either -- it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:
 
 | Points at                                | Removing the first controller                                                                                                                                     |
 | :--------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -60,7 +106,9 @@ There is nothing special about the first controller at runtime -- it is the firs
 
 So the step that makes it safe is re-rendering `config.yaml` on the controllers that stayed, which `cargoship apply` does: it re-elects the first controller from the remaining hosts and writes the new `server:` to every one of them. The engines are not restarted for it, which is the point -- the file is correct again before anything reads it.
 
-The targeted reset and the apply are two commands, and the apply is not optional:
+In OpenTofu this is already one operation. `tofu apply` removes the host and then converges what is left, in that order, in the same run.
+
+With the CLI, the targeted reset and the apply are two commands, and the apply is not optional:
 
 ```console
 $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts controller1 --confirm
