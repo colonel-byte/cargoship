@@ -108,5 +108,9 @@ func (o *installResetOptions) run(ctx context.Context, _ []string) error {
 		NoDrain:          true,
 	}
 
-	return action.NewReset(resetOpts).Run(ctx)
+	reset, err := action.NewReset(resetOpts)
+	if err != nil {
+		return err
+	}
+	return reset.Run(ctx)
 }

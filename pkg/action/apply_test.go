@@ -28,14 +28,31 @@ import (
 func newTestApply(t *testing.T) *Apply {
 	t.Helper()
 
-	a := NewApply(ApplyOptions{
+	a, err := NewApply(ApplyOptions{
 		Manager: &phase.Manager{
 			DistroID: "k3s",
 			Config:   &cluster.ZarfCluster{},
 		},
 	})
-	require.NotNil(t, a, "NewApply returned nil, which it only does for an unknown distro")
+	require.NoError(t, err)
+	require.NotNil(t, a)
 	return a
+}
+
+// TestNewApplyReportsAnUnknownDistro is what the error return is for. The constructor used to
+// return a nil *Apply for a distro ID it could not resolve, which every caller then dereferenced:
+// the CLI reached it through a flag default and would have panicked, and the OpenTofu provider
+// reaches it through an attribute an operator types.
+func TestNewApplyReportsAnUnknownDistro(t *testing.T) {
+	a, err := NewApply(ApplyOptions{
+		Manager: &phase.Manager{
+			DistroID: "k3ss",
+			Config:   &cluster.ZarfCluster{},
+		},
+	})
+	require.Error(t, err)
+	require.Nil(t, a)
+	require.Contains(t, err.Error(), "k3ss")
 }
 
 // TestApplyChecksRunBeforeTheLock is what protects the ordering #307 asks for. Every phase ahead
@@ -91,13 +108,14 @@ func TestApplyRefusesADowngradeBeforeTheLock(t *testing.T) {
 // TestApplyPassesAllowDowngrade pins the flag reaching the phase that reads it. The option was a
 // struct field wired to nothing for long enough that the dead end is worth a test.
 func TestApplyPassesAllowDowngrade(t *testing.T) {
-	a := NewApply(ApplyOptions{
+	a, err := NewApply(ApplyOptions{
 		Manager: &phase.Manager{
 			DistroID: "k3s",
 			Config:   &cluster.ZarfCluster{},
 		},
 		AllowDowngrade: true,
 	})
+	require.NoError(t, err)
 	require.NotNil(t, a)
 
 	for _, p := range a.Phases {
@@ -107,4 +125,154 @@ func TestApplyPassesAllowDowngrade(t *testing.T) {
 		}
 	}
 	t.Fatal("apply no longer gathers distro facts")
+}
+
+// TestNewRefreshIsEntirelyReadOnly is the property the whole action rests on. A refresh runs
+// against a live fleet during a plan, so a phase in the list that is not read-only would change a
+// host while reporting on it -- and the classification the manager gates on is the same one this
+// reads, so there is one answer rather than two.
+func TestNewRefreshIsEntirelyReadOnly(t *testing.T) {
+	r, err := NewRefresh(RefreshOptions{
+		Manager: &phase.Manager{
+			DistroID: "k3s",
+			Config:   &cluster.ZarfCluster{},
+		},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, r.Phases)
+
+	for _, p := range r.Phases {
+		if _, ok := p.(*phase.Disconnect); ok {
+			// Disconnect declares its own dry-run path rather than being read-only, because in
+			// an apply it has a temporary binary to remove. After a refresh there is nothing to
+			// remove -- no phase in this list uploads anything -- so what it does here is close
+			// the connections, which is the opposite of leaving something behind.
+			require.NotEqual(t, phase.DryRunSkip, phase.ClassifyDryRun(p))
+			continue
+		}
+		require.Equalf(
+			t,
+			phase.DryRunReadOnly,
+			phase.ClassifyDryRun(p),
+			"%s is in the refresh list but does not declare itself read-only", p.Title(),
+		)
+	}
+}
+
+// TestNewRefreshTakesNoLock pins the other half: Lock declares neither dry-run interface
+// deliberately, so it could never be in the list above -- but a refresh must also not hold the
+// cluster while it reads, because a plan is not a change and would otherwise block a real apply.
+func TestNewRefreshTakesNoLock(t *testing.T) {
+	r, err := NewRefresh(RefreshOptions{
+		Manager: &phase.Manager{
+			DistroID: "k3s",
+			Config:   &cluster.ZarfCluster{},
+		},
+	})
+	require.NoError(t, err)
+
+	for _, p := range r.Phases {
+		switch p.(type) {
+		case *phase.Lock, *phase.Unlock:
+			t.Errorf("%s takes the cluster lock during a read", p.Title())
+		}
+	}
+}
+
+// TestNewRefreshRequiresAManager covers the one input it cannot do without, since a nil manager
+// would otherwise be dereferenced reading DistroID.
+func TestNewRefreshRequiresAManager(t *testing.T) {
+	r, err := NewRefresh(RefreshOptions{})
+	require.Error(t, err)
+	require.Nil(t, r)
+}
+
+// TestKubeConfigWritesUnlessToldNot holds what NoWrite means on each side. The zero value writes,
+// because that is what every caller did before the field existed: `cargoship install kube-config`
+// exists to write the file.
+func TestKubeConfigWritesUnlessToldNot(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		noWrite   bool
+		wantWrite bool
+	}{
+		{
+			name:      "the zero value writes",
+			noWrite:   false,
+			wantWrite: true,
+		},
+		{
+			name:      "NoWrite builds the credentials and writes nothing",
+			noWrite:   true,
+			wantWrite: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, err := NewKubeConfig(KubeConfigOptions{
+				Manager: &phase.Manager{
+					DistroID: "k3s",
+					Config:   &cluster.ZarfCluster{},
+				},
+				NoWrite: tc.noWrite,
+			})
+			require.NoError(t, err)
+
+			var found bool
+			for _, p := range a.Phases {
+				kubeconfig, ok := p.(*phase.KubeConfig)
+				if !ok {
+					continue
+				}
+				found = true
+				require.Equal(t, tc.wantWrite, kubeconfig.Write)
+			}
+			require.True(t, found, "the action no longer holds a kubeconfig phase")
+		})
+	}
+}
+
+// TestKubeConfigBytesBeforeTheRun is the honest answer to being asked for credentials that have
+// not been fetched: the sentinel, rather than an empty document a caller might write to disk.
+func TestKubeConfigBytesBeforeTheRun(t *testing.T) {
+	a, err := NewKubeConfig(KubeConfigOptions{
+		Manager: &phase.Manager{
+			DistroID: "k3s",
+			Config:   &cluster.ZarfCluster{},
+		},
+		NoWrite: true,
+	})
+	require.NoError(t, err)
+
+	_, err = a.Bytes()
+	require.ErrorIs(t, err, phase.ErrNoKubeConfig)
+	require.Nil(t, a.Config())
+}
+
+// TestApplyLabelsNodesWithoutWritingAKubeConfig covers a gate that was wrong rather than missing.
+// LabelNodes used to be enabled only when UpdateKubeConfig was also set, which read as a
+// dependency and is not one: the phase reads the cluster's admin credentials off a controller
+// itself (see LabelNodes.clientset) and dials the load balancer with them, so the operator's own
+// kubeconfig has nothing to do with it. Labelling a fleet meant writing a kubeconfig nobody asked
+// for, and an OpenTofu apply has no business writing one at all.
+func TestApplyLabelsNodesWithoutWritingAKubeConfig(t *testing.T) {
+	a, err := NewApply(ApplyOptions{
+		Manager: &phase.Manager{
+			DistroID: "k3s",
+			Config:   &cluster.ZarfCluster{},
+		},
+		LabelNodes:       true,
+		UpdateKubeConfig: false,
+	})
+	require.NoError(t, err)
+
+	var found bool
+	for _, p := range a.Phases {
+		label, ok := p.(*phase.LabelNodes)
+		if !ok {
+			continue
+		}
+		found = true
+		require.True(t, label.Enabled, "label_nodes was asked for and the phase is disabled")
+	}
+	require.True(t, found, "apply no longer holds a label-nodes phase")
 }

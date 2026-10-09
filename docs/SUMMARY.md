@@ -98,6 +98,7 @@
 - [engine-config-sync](phases/engine-config-sync.md)
 - [kube-config](phases/kube-config.md)
 - [prepare](phases/prepare.md)
+- [refresh](phases/refresh.md)
 - [reset](phases/reset.md)
 
 

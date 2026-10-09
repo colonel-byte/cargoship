@@ -50,27 +50,57 @@ type phaseDoc struct {
 
 // phaseDocs lists every action whose phases get a docs/phases/<name>.md page. Add a new
 // action's phases here to get it picked up by `Document()` -- no new function needed.
-func phaseDocs() []phaseDoc {
+//
+// The action constructors return an error for a distro ID they cannot resolve, and the managers
+// below name a real one, so an error here is the generator being wrong rather than an input being
+// wrong: it comes back and `Document()` fails with it, instead of rendering a page from a nil
+// action's empty phase list.
+func phaseDocs() ([]phaseDoc, error) {
+	apply, err := action.NewApply(action.ApplyOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, err
+	}
+	reset, err := action.NewReset(action.ResetOptions{
+		Manager: genDocsManagerNoConfig,
+	})
+	if err != nil {
+		return nil, err
+	}
+	kubeConfig, err := action.NewKubeConfig(action.KubeConfigOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, err
+	}
+	refresh, err := action.NewRefresh(action.RefreshOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, err
+	}
+	sync, err := action.NewEngineConfigSync(action.EngineConfigSyncOptions{
+		Manager: genDocsManager,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return []phaseDoc{
 		{
-			name: "apply",
-			phases: action.NewApply(action.ApplyOptions{
-				Manager: genDocsManager,
-			}).Phases,
+			name:   "apply",
+			phases: apply.Phases,
 			dryRun: true,
 		},
 		{
-			name: "reset",
-			phases: action.NewReset(action.ResetOptions{
-				Manager: genDocsManagerNoConfig,
-			}).Phases,
+			name:   "reset",
+			phases: reset.Phases,
 			dryRun: true,
 		},
 		{
-			name: "kube-config",
-			phases: action.NewKubeConfig(action.KubeConfigOptions{
-				Manager: genDocsManager,
-			}).Phases,
+			name:   "kube-config",
+			phases: kubeConfig.Phases,
 		},
 		{
 			name:   "prepare",
@@ -78,13 +108,15 @@ func phaseDocs() []phaseDoc {
 			dryRun: true,
 		},
 		{
-			name: "engine-config-sync",
-			phases: action.NewEngineConfigSync(action.EngineConfigSyncOptions{
-				Manager: genDocsManager,
-			}).Phases,
+			name:   "refresh",
+			phases: refresh.Phases,
+		},
+		{
+			name:   "engine-config-sync",
+			phases: sync.Phases,
 			dryRun: true,
 		},
-	}
+	}, nil
 }
 
 // printExcludedNote marks the sections that docs/css/print.css hides from

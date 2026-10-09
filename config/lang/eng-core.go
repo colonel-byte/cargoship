@@ -106,7 +106,7 @@ const (
 	// CmdInstallAllowDowngrade install flag allow downgrade
 	CmdInstallAllowDowngrade = "Continue when a host already runs an engine version newer than the one the package carries. A downgrade is refused by default, because an engine does not support being moved backwards and the data directory it leaves behind was written by the newer version. Set this when the move backwards is deliberate and the hosts are expected to survive it."
 	// CmdInstallLabelNodes install flag label nodes
-	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. Requires --update-kubeconfig."
+	CmdInstallLabelNodes = "Whether to check and add the node-role.kubernetes.io/PROFILE label on cluster nodes. The phase reads the cluster's admin credentials off a controller itself, so this does not depend on --update-kubeconfig."
 	// CmdInstallKubeConfigPath install flag kubeconfig path
 	CmdInstallKubeConfigPath = "Path of the kubeconfig file to merge the admin creds for this cluster into. The file is created when it does not exist, and an existing one keeps every other cluster it holds. Defaults to the standard location: KUBECONFIG when set, otherwise ~/.kube/config."
 	// CmdInstallUpdateKubeConfig install flag update kubeconfig

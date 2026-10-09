@@ -4,7 +4,7 @@ The provider lives at `cmd/terraform-provider-cargoship`, with its implementatio
 
 ## What exists
 
-One data source, `cargoship_cluster_facts`. It runs the five read-only phases of an apply -- `Connect`, `DetectOS`, `GatherFacts`, `GatherFactsDistro`, `Disconnect` -- and reports what each host says: operating system, version, architecture, hostname, private address, and the engine version it is running. It takes no cluster lock and writes nothing to any host.
+One data source, `cargoship_cluster_facts`. It runs `action.NewRefresh`, the read-only half of an apply -- `Connect`, `DetectOS`, `GatherFacts`, `GatherFactsDistro`, `Disconnect` -- and reports what each host says: operating system, version, architecture, hostname, private address, and the engine version it is running. It takes no cluster lock and writes nothing to any host. The phase list lives in `pkg/action` rather than in the provider so that "which phases are safe to run" is decided once; [docs/phases/refresh.md](../phases/refresh.md) is generated from it.
 
 There is no resource yet, so nothing the provider can do changes a fleet. That is deliberate: the first slice exercises the schema, the translation into a cluster document, the SSH connections, the logging and cancellation in a place where the worst outcome of a bug is a failed plan.
 

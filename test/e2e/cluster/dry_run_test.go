@@ -120,15 +120,16 @@ func (s *DryRunSuite) Test_2_ApplyDryRunLeavesTheHostsAlone() {
 	defer cleanup()
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(apply.Run(ctx))
 
 	result := sink.Result()
 	s.Require().True(sink.Observed(), "the run never reached its phases")
@@ -181,13 +182,14 @@ func (s *DryRunSuite) Test_4_ResetDryRunWithNoRunningController() {
 	s.Require().NoError(err)
 	manager.DryRun = true
 
-	err = action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
 		NoWait:           true,
 		NoDrain:          true,
-	}).Run(s.ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(s.ctx))
 
 	s.reconnect(manager)
 	defer disconnectAll(manager.Config.Spec.Hosts)
