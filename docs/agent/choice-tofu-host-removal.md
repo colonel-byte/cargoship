@@ -72,7 +72,19 @@ tofu destroy -var retain_cluster_on_destroy=true
 
 That is documented rather than solved, and it is the honest state of it.
 
+## Where the membership is given up is the distro's business
+
+The first version of this stopped the engine on a controller before deleting its node, full stop, and that is only correct for `rke2` and `k3s`. Their etcd controller watches node deletion; kubeadm has none, so on `upstream` the deletion leaves the member in place and `kubeadm reset`'s own `remove-etcd-member` phase is what removes it -- which needs the local member still voting.
+
+Stopping first and removing afterwards is not a cosmetic failure there. A two-controller cluster whose departing member is already down leaves the controller that stays holding one vote of two: no quorum, no API server, and nothing left to remove the member with except `etcdctl --force`. `UninstallEngine` had the same inversion, running `stopService` before the `PreUninstallReset` that holds the reset, which this fixes by running the reset first -- kubeadm reset stops the kubelet itself, so the stop that follows is a second idempotent step rather than a skipped one.
+
+So the preparation is a distro capability, `distrocfg.NodeDeletePreparer`, following `PreUninstallResetter`'s pattern. The phase decides only one thing: whether the run leaves a single controller, which is the case `rke2` and `k3s` have to work around and `upstream` does not. A distro implementing neither interface keeps the old behaviour.
+
+The one-controller-per-run refusal is distro-agnostic, because the raft arithmetic is the same for stacked etcd either way.
+
 ## Removing the first controller is a configuration problem, not an etcd one
+
+This one is `rke2` and `k3s` only: `upstream` renders `controlPlaneEndpoint` and every join's `apiServerEndpoint` as the load balancer (`types/distrocfg/upstream_kubeadm.go`), so no host holds the first controller's name and `run.Leader` is read only while joining.
 
 The membership arithmetic above is the part that looks dangerous, and it is handled in the phases. What is specific to the *first* controller is a file: every other controller's `config.yaml` carries `server: https://<first controller>:9345`, written by `ConfigureEngine` when it joined (`types/distrocfg/rancher_common.go`), while workers and the kubeconfig both point at the load balancer instead.
 

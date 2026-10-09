@@ -34,3 +34,17 @@ func TestPreUninstallResetReachesKubeadmReset(t *testing.T) {
 	require.ErrorContains(t, err, "kubeadm reset")
 	require.ErrorIs(t, err, cluster.ErrNotConnected)
 }
+
+// TestPrepareNodeDeleteResetsBeforeTheNodeIsDeleted pins the ordering upstream needs: the
+// membership is given up by kubeadm reset, so the reset is what happens before the node is
+// deleted -- at every cluster size, which is where rke2 and k3s have a last-member case.
+func TestPrepareNodeDeleteResetsBeforeTheNodeIsDeleted(t *testing.T) {
+	d := &Upstream{}
+
+	for _, leavesOne := range []bool{false, true} {
+		err := d.PrepareNodeDelete(context.Background(), &cluster.ZarfHost{}, leavesOne)
+
+		require.ErrorContains(t, err, "kubeadm reset")
+		require.ErrorIs(t, err, cluster.ErrNotConnected)
+	}
+}

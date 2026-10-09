@@ -286,7 +286,7 @@ func TestDeleteCommonRemovesControllersOneRunAtATime(t *testing.T) {
 	one.SetManager(m)
 	require.NoError(t, one.Prepare(context.Background(), m.Config, nil))
 	require.Equal(t, "controller2", one.leader.Hostname)
-	require.False(t, one.keepEngineForDelete)
+	require.False(t, one.leavesOneController)
 }
 
 func TestDeleteCommonKeepsTheEngineUpWhenOneControllerIsLeft(t *testing.T) {
@@ -321,8 +321,42 @@ func TestDeleteCommonKeepsTheEngineUpWhenOneControllerIsLeft(t *testing.T) {
 	p.SetManager(m)
 	require.NoError(t, p.Prepare(context.Background(), m.Config, nil))
 	require.Equal(t, "controller2", p.leader.Hostname)
-	require.True(t, p.keepEngineForDelete)
-	require.NoError(t, p.stopEngineBeforeDelete(context.Background(), hosts[0]))
+	require.True(t, p.leavesOneController)
+	require.NoError(t, p.prepareNodeDelete(context.Background(), hosts[0]))
+}
+
+// fakeNodeDeletePreparer records what the phase hands the distro before a node is deleted.
+type fakeNodeDeletePreparer struct {
+	fakeServiceDistro
+	calls []bool
+}
+
+func (f *fakeNodeDeletePreparer) PrepareNodeDelete(_ context.Context, _ *cluster.ZarfHost, leavesOneController bool) error {
+	f.calls = append(f.calls, leavesOneController)
+	return nil
+}
+
+// TestPrepareNodeDeleteIsTheDistrosCall covers the dispatch: what has to happen to a controller
+// before its node is deleted depends on where the engine gives up its etcd membership, so the
+// phase only reports whether the cluster is about to be left with a single controller.
+func TestPrepareNodeDeleteIsTheDistrosCall(t *testing.T) {
+	host := &cluster.ZarfHost{
+		Hostname: "controller1",
+		Role:     cluster.RoleController,
+	}
+
+	d := &fakeNodeDeletePreparer{}
+	p := &DeleteCommon{
+		Distro:              d,
+		leavesOneController: true,
+	}
+	require.NoError(t, p.prepareNodeDelete(context.Background(), host))
+	require.Equal(t, []bool{true}, d.calls)
+
+	// A distro that prepares nothing has its controllers deleted and then uninstalled, which is
+	// the behaviour that predates the capability.
+	plain := &DeleteCommon{Distro: fakeServiceDistro{}}
+	require.NoError(t, plain.prepareNodeDelete(context.Background(), host))
 }
 
 // TestMatchNodesToHostsMatchesOnAnyIdentifier is the fix for a host whose machine name is not
@@ -445,7 +479,7 @@ func TestDeleteWorkersStopsTheAgentBeforeDeletingTheNode(t *testing.T) {
 }
 
 // TestStopAgentBeforeDeleteIgnoresControllerQuorum covers why this is not the controller helper.
-// keepEngineForDelete exists because a controller removal that leaves one controller needs the
+// leavesOneController exists because a controller removal that leaves one controller needs the
 // departing member up to commit its own removal. A worker is not an etcd member, so its engine
 // comes down whatever that flag says.
 func TestStopAgentBeforeDeleteIgnoresControllerQuorum(t *testing.T) {
@@ -464,7 +498,7 @@ func TestStopAgentBeforeDeleteIgnoresControllerQuorum(t *testing.T) {
 
 	p := &DeleteCommon{
 		Distro:              dis,
-		keepEngineForDelete: true,
+		leavesOneController: true,
 	}
 	require.NoError(t, p.stopAgentBeforeDelete(context.Background(), worker))
 }

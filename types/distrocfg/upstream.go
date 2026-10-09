@@ -63,6 +63,7 @@ var (
 	_ ManifestApplier      = (*Upstream)(nil)
 	_ PreStartUpgrader     = (*Upstream)(nil)
 	_ PreUninstallResetter = (*Upstream)(nil)
+	_ NodeDeletePreparer   = (*Upstream)(nil)
 )
 
 func init() {

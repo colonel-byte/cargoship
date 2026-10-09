@@ -1788,3 +1788,26 @@ func TestEveryRegisteredDistroNamesASupervisorPort(t *testing.T) {
 		require.NotContainsf(t, dis.SupervisorURL("host"), ":0", "%s renders a port of zero", distroID)
 	}
 }
+
+// TestPrepareNodeDeleteStopsTheEngineUnlessItIsTheLastMember pins both halves of rke2 and k3s's
+// ordering: the engine comes down before the node is deleted, because the etcd member goes with
+// the Node object only once it has stopped -- except when the removal leaves a single controller,
+// where the member has to still be voting to carry its own removal.
+func TestPrepareNodeDeleteStopsTheEngineUnlessItIsTheLastMember(t *testing.T) {
+	stopErr := errors.New("stop refused")
+	fake := &fakeHost{
+		serviceRunning: true,
+		stopServiceErr: stopErr,
+	}
+	d := &K3S{}
+	host := fake.attach(&cluster.ZarfHost{
+		Hostname: "controller1",
+		Role:     cluster.RoleController,
+	})
+
+	// The stop is attempted, and the fake refuses it so the call is observable.
+	require.ErrorIs(t, d.PrepareNodeDelete(context.Background(), host, false), stopErr)
+
+	// The last-member case does not touch the engine at all.
+	require.NoError(t, d.PrepareNodeDelete(context.Background(), host, true))
+}

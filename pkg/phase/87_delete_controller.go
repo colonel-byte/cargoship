@@ -97,10 +97,10 @@ func (p *DeleteControllers) Run(ctx context.Context) error {
 	}
 	if err := p.batchedParallelWithMessage(
 		ctx,
-		"stopping engines",
+		"preparing nodes for deletion",
 		p.hosts,
 		1,
-		p.stopEngineBeforeDelete,
+		p.prepareNodeDelete,
 	); err != nil {
 		return err
 	}

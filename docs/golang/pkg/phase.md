@@ -414,7 +414,7 @@ var NoWait bool
 ```
 
 <a name="CheckTargetHosts"></a>
-## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L302>)
+## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L304>)
 
 ```go
 func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error
@@ -802,7 +802,7 @@ func (p *DaemonReload) Title() string
 Title for the phase
 
 <a name="DeleteCommon"></a>
-## type [DeleteCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L50-L61>)
+## type [DeleteCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L50-L62>)
 
 DeleteCommon phase state
 
@@ -816,7 +816,7 @@ type DeleteCommon struct {
 ```
 
 <a name="DeleteCommon.Prepare"></a>
-### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L88>)
+### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L89>)
 
 ```go
 func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error

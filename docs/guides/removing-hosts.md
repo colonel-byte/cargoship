@@ -88,13 +88,22 @@ Removing a controller is the same command with more rules attached, and a run th
 
 A worker leaves the cluster by being drained, deleted and uninstalled. A controller does that and also gives up an etcd member, so the order matters and the run is more constrained.
 
-**Cargoship stops the engine on the target before deleting its node.** That is what makes the deletion stick: k3s and RKE2 remove the etcd member when the Node object is deleted, but only once the engine behind it has stopped, and an engine that is still running re-registers the node seconds later. The one exception is a removal that leaves a single controller, where the member being removed has to still be up to form the majority of two that commits its own removal -- there the engine stays running through the deletion and is uninstalled immediately after.
+**Cargoship prepares the controller before deleting its node, and how depends on the distro.** The two engines give the membership up at opposite moments:
+
+| Distro        | Before the node is deleted                                                                                                                                                                                                              |
+| :------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `k3s`, `rke2` | The engine is stopped. These remove the etcd member when the Node object is deleted, but only once the engine behind it has stopped, and an engine still running re-registers the node seconds later                                    |
+| `upstream`    | `kubeadm reset -f` is run. `kubectl delete node` does nothing to the membership on kubeadm -- the reset's `remove-etcd-member` phase is what removes it, and it needs the local member still voting. The reset stops the kubelet itself |
+
+For k3s and RKE2 there is one exception: a removal that leaves a single controller keeps the engine running through the deletion, because the member being removed has to still be up to form the majority of two that commits its own removal. It is uninstalled immediately after. Upstream needs no exception -- running the reset first is the ordering that is safe at every size.
 
 **One controller per run.** A run that keeps the cluster and targets two running controllers is refused. Each removal is a raft reconfiguration that needs a majority of the membership it starts from; the second one in a run would start from three members with one already stopped, and taking the next one down leaves one of two, which hangs with the cluster unavailable rather than failing cleanly. Removing them in separate runs is safe, because the cluster is whole again at the start of each.
 
 ### Removing the first controller
 
-There is nothing special about the first controller at runtime -- it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:
+This section is about `k3s` and `rke2`. On `upstream` there is nothing to do: kubeadm is given `controlPlaneEndpoint: <load_balancer>` at init and every host -- controllers included -- joins through `apiServerEndpoint: <load_balancer>`, so no host holds the first controller's name. The removed controller lingers in the API server's `certSANs` until the next apply re-renders them, which changes nothing.
+
+On k3s and RKE2 there is nothing special about the first controller at runtime either -- it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:
 
 | Points at                                | Removing the first controller                                                                                                                                     |
 | :--------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
