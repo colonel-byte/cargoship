@@ -239,6 +239,7 @@
 - [choice-phase-e2e-tests](agent/choice-phase-e2e-tests.md)
 - [choice-preferred-firewall](agent/choice-preferred-firewall.md)
 - [choice-removed-hosts](agent/choice-removed-hosts.md)
+- [choice-tofu-e2e](agent/choice-tofu-e2e.md)
 - [choice-tofu-host-removal](agent/choice-tofu-host-removal.md)
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)
