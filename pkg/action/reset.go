@@ -22,6 +22,7 @@ package action
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/colonel-byte/cargoship/pkg/phase"
@@ -52,12 +53,15 @@ type Reset struct {
 }
 
 // NewReset an apply action object
-func NewReset(opts ResetOptions) *Reset {
+func NewReset(opts ResetOptions) (*Reset, error) {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("no distro module for %q: %w", opts.Manager.DistroID, err)
 	}
-	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
+	d, ok := disBuilder().(distrocfg.Distro)
+	if !ok {
+		return nil, fmt.Errorf("the distro module for %q does not implement the distro interface", opts.Manager.DistroID)
+	}
 
 	lockPhase := &phase.Lock{}
 	reset := &Reset{
@@ -98,7 +102,7 @@ func NewReset(opts ResetOptions) *Reset {
 		},
 	}
 
-	return reset
+	return reset, nil
 }
 
 // Run the actions

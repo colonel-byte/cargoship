@@ -23,6 +23,7 @@ package action
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/colonel-byte/cargoship/internal/clustercfg"
@@ -71,17 +72,20 @@ type Apply struct {
 }
 
 // NewApply an apply action object
-func NewApply(opts ApplyOptions) *Apply {
+func NewApply(opts ApplyOptions) (*Apply, error) {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("no distro module for %q: %w", opts.Manager.DistroID, err)
 	}
 
 	if opts.Manager.Concurrency < 0 {
 		opts.Manager.Concurrency = 0
 	}
 
-	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
+	d, ok := disBuilder().(distrocfg.Distro)
+	if !ok {
+		return nil, fmt.Errorf("the distro module for %q does not implement the distro interface", opts.Manager.DistroID)
+	}
 
 	lockPhase := &phase.Lock{}
 	return &Apply{
@@ -184,7 +188,7 @@ func NewApply(opts ApplyOptions) *Apply {
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
-	}
+	}, nil
 }
 
 // Run the actions

@@ -105,5 +105,9 @@ func (o *installKubeConfigOptions) run(ctx context.Context, _ []string) error {
 		KubeConfigPath: o.kubeConfigPath,
 	}
 
-	return action.NewKubeConfig(configOpts).Run(ctx)
+	kubeConfig, err := action.NewKubeConfig(configOpts)
+	if err != nil {
+		return err
+	}
+	return kubeConfig.Run(ctx)
 }

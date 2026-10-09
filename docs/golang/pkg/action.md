@@ -11,29 +11,35 @@ Package action are various actions used by the package
 ## Index
 
 - [type Apply](<#Apply>)
-  - [func NewApply\(opts ApplyOptions\) \*Apply](<#NewApply>)
+  - [func NewApply\(opts ApplyOptions\) \(\*Apply, error\)](<#NewApply>)
   - [func \(a Apply\) Run\(ctx context.Context\) error](<#Apply.Run>)
 - [type ApplyOptions](<#ApplyOptions>)
 - [type EngineConfigSync](<#EngineConfigSync>)
-  - [func NewEngineConfigSync\(opts EngineConfigSyncOptions\) \*EngineConfigSync](<#NewEngineConfigSync>)
+  - [func NewEngineConfigSync\(opts EngineConfigSyncOptions\) \(\*EngineConfigSync, error\)](<#NewEngineConfigSync>)
   - [func \(r EngineConfigSync\) Run\(ctx context.Context\) error](<#EngineConfigSync.Run>)
 - [type EngineConfigSyncOptions](<#EngineConfigSyncOptions>)
 - [type KubeConfig](<#KubeConfig>)
-  - [func NewKubeConfig\(opts KubeConfigOptions\) \*KubeConfig](<#NewKubeConfig>)
+  - [func NewKubeConfig\(opts KubeConfigOptions\) \(\*KubeConfig, error\)](<#NewKubeConfig>)
+  - [func \(a KubeConfig\) Bytes\(\) \(\[\]byte, error\)](<#KubeConfig.Bytes>)
+  - [func \(a KubeConfig\) Config\(\) \*clientcmdapi.Config](<#KubeConfig.Config>)
   - [func \(a KubeConfig\) Run\(ctx context.Context\) error](<#KubeConfig.Run>)
 - [type KubeConfigOptions](<#KubeConfigOptions>)
 - [type Prepare](<#Prepare>)
   - [func NewPrepare\(opts PrepareOptions\) \*Prepare](<#NewPrepare>)
   - [func \(a Prepare\) Run\(ctx context.Context\) error](<#Prepare.Run>)
 - [type PrepareOptions](<#PrepareOptions>)
+- [type Refresh](<#Refresh>)
+  - [func NewRefresh\(opts RefreshOptions\) \(\*Refresh, error\)](<#NewRefresh>)
+  - [func \(a Refresh\) Run\(ctx context.Context\) error](<#Refresh.Run>)
+- [type RefreshOptions](<#RefreshOptions>)
 - [type Reset](<#Reset>)
-  - [func NewReset\(opts ResetOptions\) \*Reset](<#NewReset>)
+  - [func NewReset\(opts ResetOptions\) \(\*Reset, error\)](<#NewReset>)
   - [func \(r Reset\) Run\(ctx context.Context\) error](<#Reset.Run>)
 - [type ResetOptions](<#ResetOptions>)
 
 
 <a name="Apply"></a>
-## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L68-L71>)
+## type [Apply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L69-L72>)
 
 Apply state logic
 
@@ -45,16 +51,16 @@ type Apply struct {
 ```
 
 <a name="NewApply"></a>
-### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L74>)
+### func [NewApply](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L75>)
 
 ```go
-func NewApply(opts ApplyOptions) *Apply
+func NewApply(opts ApplyOptions) (*Apply, error)
 ```
 
 NewApply an apply action object
 
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L191>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L195>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error
@@ -63,7 +69,7 @@ func (a Apply) Run(ctx context.Context) error
 Run the actions
 
 <a name="ApplyOptions"></a>
-## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L36-L65>)
+## type [ApplyOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L37-L66>)
 
 ApplyOptions struct
 
@@ -101,7 +107,7 @@ type ApplyOptions struct {
 ```
 
 <a name="EngineConfigSync"></a>
-## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L50-L53>)
+## type [EngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L51-L54>)
 
 EngineConfigSync state logic
 
@@ -113,16 +119,16 @@ type EngineConfigSync struct {
 ```
 
 <a name="NewEngineConfigSync"></a>
-### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L56>)
+### func [NewEngineConfigSync](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L57>)
 
 ```go
-func NewEngineConfigSync(opts EngineConfigSyncOptions) *EngineConfigSync
+func NewEngineConfigSync(opts EngineConfigSyncOptions) (*EngineConfigSync, error)
 ```
 
 NewEngineConfigSync an engine\-config\-sync action object
 
 <a name="EngineConfigSync.Run"></a>
-### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L115>)
+### func \(EngineConfigSync\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L119>)
 
 ```go
 func (r EngineConfigSync) Run(ctx context.Context) error
@@ -131,7 +137,7 @@ func (r EngineConfigSync) Run(ctx context.Context) error
 Run the actions
 
 <a name="EngineConfigSyncOptions"></a>
-## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L29-L47>)
+## type [EngineConfigSyncOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/engine_config_sync.go#L30-L48>)
 
 EngineConfigSyncOptions struct
 
@@ -158,7 +164,7 @@ type EngineConfigSyncOptions struct {
 ```
 
 <a name="KubeConfig"></a>
-## type [KubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L43-L46>)
+## type [KubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L54-L60>)
 
 KubeConfig state logic
 
@@ -166,20 +172,43 @@ KubeConfig state logic
 type KubeConfig struct {
     KubeConfigOptions
     Phases phase.Phases
+    // contains filtered or unexported fields
 }
 ```
 
 <a name="NewKubeConfig"></a>
-### func [NewKubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L49>)
+### func [NewKubeConfig](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L63>)
 
 ```go
-func NewKubeConfig(opts KubeConfigOptions) *KubeConfig
+func NewKubeConfig(opts KubeConfigOptions) (*KubeConfig, error)
 ```
 
 NewKubeConfig pulls the admin cert from a control\-plane node and updates the local kube\-config
 
+<a name="KubeConfig.Bytes"></a>
+### func \(KubeConfig\) [Bytes](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L106>)
+
+```go
+func (a KubeConfig) Bytes() ([]byte, error)
+```
+
+Bytes is the kubeconfig the run built, serialized.
+
+It is read after Run, and it is the half of this action that has nothing to do with the operator's own kubeconfig: phase.KubeConfig builds the credentials whether or not it writes them, and \#305 separated the two so a caller could have the value without touching \~/.kube/config. Before this, the only way to reach it was to rebuild the phase list by hand.
+
+What comes back is cluster\-admin credentials, so a caller holding them is holding the cluster.
+
+<a name="KubeConfig.Config"></a>
+### func \(KubeConfig\) [Config](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L115>)
+
+```go
+func (a KubeConfig) Config() *clientcmdapi.Config
+```
+
+Config is the same credentials as a structure, for a caller that wants to read a field rather than a file. Nil until Run has built it.
+
 <a name="KubeConfig.Run"></a>
-### func \(KubeConfig\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L79>)
+### func \(KubeConfig\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L123>)
 
 ```go
 func (a KubeConfig) Run(ctx context.Context) error
@@ -188,7 +217,7 @@ func (a KubeConfig) Run(ctx context.Context) error
 Run the actions
 
 <a name="KubeConfigOptions"></a>
-## type [KubeConfigOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L34-L40>)
+## type [KubeConfigOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/kube-config.go#L36-L51>)
 
 KubeConfigOptions struct
 
@@ -199,6 +228,15 @@ type KubeConfigOptions struct {
     // KubeConfigPath is the kubeconfig file to merge the admin creds into, the standard
     // location when empty
     KubeConfigPath string
+    // NoWrite leaves the operator's kubeconfig alone, so the credentials are built and returned
+    // and nothing on this machine is touched.
+    //
+    // It is phrased as the negative so that the zero value writes, which is what every caller
+    // before this field existed did: `cargoship install kube-config` exists to write the file.
+    // A caller that wants the value instead reads Bytes or Config after Run; see
+    // docs/agent/choice-tofu-secrets.md for why the OpenTofu provider is that caller and why it
+    // does not expose the result unless it is asked to.
+    NoWrite bool
 }
 ```
 
@@ -254,8 +292,56 @@ type PrepareOptions struct {
 }
 ```
 
+<a name="Refresh"></a>
+## type [Refresh](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L35-L38>)
+
+Refresh state logic
+
+```go
+type Refresh struct {
+    RefreshOptions
+    Phases phase.Phases
+}
+```
+
+<a name="NewRefresh"></a>
+### func [NewRefresh](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L57>)
+
+```go
+func NewRefresh(opts RefreshOptions) (*Refresh, error)
+```
+
+NewRefresh a refresh action object.
+
+Refresh is the read\-only half of an apply: it connects to every host the configuration names, resolves each one's OS, gathers its network facts and reads the engine version already installed on it, and disconnects. Every phase in the list declares ReadOnly\(\), which is the property that makes the whole action safe to run against a live fleet \-\- nothing is written, and no cluster lock is taken, because Lock deliberately declares neither interface.
+
+It exists as an action rather than as a phase list each caller assembles because there is now more than one caller. The OpenTofu provider reads a fleet during a plan and during a refresh, and a provider that built its own list would be a second place where "which phases are safe to run" is decided \-\- which is exactly the question ReadOnly\(\) exists to answer once. The CLI has no command for it yet; see docs/agent/design\-tofu\-provider\-install.md.
+
+What it leaves behind is on the hosts themselves: each phase records what it learned on the ZarfHost it ran against, so a caller reads the facts off Manager.Config.Spec.Hosts afterwards rather than out of a return value.
+
+<a name="Refresh.Run"></a>
+### func \(Refresh\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L90>)
+
+```go
+func (a Refresh) Run(ctx context.Context) error
+```
+
+Run the actions
+
+<a name="RefreshOptions"></a>
+## type [RefreshOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/refresh.go#L29-L32>)
+
+RefreshOptions struct
+
+```go
+type RefreshOptions struct {
+    // Manager is the phase manager
+    Manager *phase.Manager
+}
+```
+
 <a name="Reset"></a>
-## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L49-L52>)
+## type [Reset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L50-L53>)
 
 Reset state logic
 
@@ -267,16 +353,16 @@ type Reset struct {
 ```
 
 <a name="NewReset"></a>
-### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L55>)
+### func [NewReset](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L56>)
 
 ```go
-func NewReset(opts ResetOptions) *Reset
+func NewReset(opts ResetOptions) (*Reset, error)
 ```
 
 NewReset an apply action object
 
 <a name="Reset.Run"></a>
-### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L105>)
+### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L109>)
 
 ```go
 func (r Reset) Run(ctx context.Context) error
@@ -285,7 +371,7 @@ func (r Reset) Run(ctx context.Context) error
 Run the actions
 
 <a name="ResetOptions"></a>
-## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L34-L46>)
+## type [ResetOptions](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L35-L47>)
 
 ResetOptions struct
 

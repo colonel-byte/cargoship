@@ -121,15 +121,16 @@ func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
 	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
 	defer cleanup()
 
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(s.ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(apply.Run(s.ctx))
 }
 
 // Test_ZZ3_ApplyDryRunConverges re-runs the apply as a dry run, now that the cluster is up, and
@@ -152,15 +153,16 @@ func (s *ApplyPhaseSuite) Test_ZZ3_ApplyDryRunConverges() {
 	manager.DryRun = true
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewApply(action.ApplyOptions{
+	apply, err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
 		LabelNodes:       true,
-	}).Run(ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(apply.Run(ctx))
 
 	planned := len(sink.Result().Planned)
 	s.Require().Lessf(planned, dryRunPlannedFresh,
@@ -233,13 +235,14 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 	manager.DryRun = true
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
 		NoWait:           true,
 		NoDrain:          true,
-	}).Run(ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(ctx))
 
 	// The delete and uninstall phases declare no dry-run path, so a dry run has to have reported
 	// them. Finding none reported on a cluster that is up would mean the run decided there was
@@ -267,13 +270,14 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 func (s *ResetSuite) Test_1_Reset() {
 	manager := s.newBareManager(e2e.ClusterConfigPath)
 
-	err := action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
 		NoWait:           true,
 		NoDrain:          true,
-	}).Run(s.ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(s.ctx))
 }
 
 // Test_2_PostReset confirms kube-config can no longer find a running controller once the
@@ -290,8 +294,9 @@ func (s *ResetSuite) Test_2_PostReset() {
 		}
 	}()
 
-	err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager}).Run(s.ctx)
-	s.Require().Error(err)
+	kubeConfig, err := action.NewKubeConfig(action.KubeConfigOptions{Manager: manager})
+	s.Require().NoError(err)
+	s.Require().Error(kubeConfig.Run(s.ctx))
 
 	_, err = os.Stat(kubeconfigPath)
 	s.Require().NoError(err)
