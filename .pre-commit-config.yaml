@@ -61,10 +61,10 @@ repos:
     rev: v2.14.0
     hooks:
       - id: golangci-lint
-        language_version: "1.27.0"
+        language_version: "1.27.2"
         exclude: vendor/.*
       - id: golangci-lint-config-verify
-        language_version: "1.27.0"
+        language_version: "1.27.2"
         exclude: vendor/.*
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.10
