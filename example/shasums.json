@@ -1,4 +1,10 @@
 {
+  "canal.yaml": {
+    "urls": [
+      "https://raw.githubusercontent.com/projectcalico/calico/v3.33.0/manifests/canal.yaml"
+    ],
+    "sha256": "07cb3eaab0cd11c96e6c223c02fc7651c6fc1283337004973ee763d81c2d14e7"
+  },
   "containerd.io-2.3.6-1.el9.aarch64.rpm": {
     "urls": [
       "https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.3.6-1.el9.aarch64.rpm"
@@ -11,6 +17,18 @@
     ],
     "sha256": "57445951673c94e937aa382ec5acf981f9bf1731545eb22ba620b80181b8877c"
   },
+  "containerd.io-2.4.1-2.el9.aarch64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.1-2.el9.aarch64.rpm"
+    ],
+    "sha256": "fb4f4c35d974d26ccce98eee9bd62a43ab95b6e62559bec493842ad9149c2137"
+  },
+  "containerd.io-2.4.1-2.el9.x86_64.rpm": {
+    "urls": [
+      "https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.1-2.el9.x86_64.rpm"
+    ],
+    "sha256": "725168d015f5bf4b7faa78405786888527ce4368996bc7e83bee2c933f08aa70"
+  },
   "containerd.io_2.3.6-1~debian.13~trixie_amd64.deb": {
     "urls": [
       "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.3.6-1~debian.13~trixie_amd64.deb"
@@ -22,6 +40,18 @@
       "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.3.6-1~debian.13~trixie_arm64.deb"
     ],
     "sha256": "10c67eebc8e371f3b246fc35ff4a89c3ecf00d28e857c9659519050f47b4fb31"
+  },
+  "containerd.io_2.4.1-2~debian.13~trixie_amd64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.1-2~debian.13~trixie_amd64.deb"
+    ],
+    "sha256": "ebcffac9d869e111054abf235042afd5d908a9e1a009f9c99776428dd80f2620"
+  },
+  "containerd.io_2.4.1-2~debian.13~trixie_arm64.deb": {
+    "urls": [
+      "https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.1-2~debian.13~trixie_arm64.deb"
+    ],
+    "sha256": "03af94dfe2b8f291a9a50e37276c14e87ad418fd1625544ad52040989c39350b"
   },
   "cri-tools-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
@@ -172,6 +202,12 @@
       "https://rpm.rancher.io/k3s/latest/common/centos/9/noarch/k3s-selinux-1.6-1.el9.noarch.rpm"
     ],
     "sha256": "1115a1223b0db998c7977c879f2a3a6f07a0c63240f68f6e3b665a7ae27c38f7"
+  },
+  "kube-flannel.yml": {
+    "urls": [
+      "https://github.com/flannel-io/flannel/releases/download/v0.28.10/kube-flannel.yml"
+    ],
+    "sha256": "393bdbce53eb50c8eb97dd513b218518b7d6e7985dc7b889be956e112a711084"
   },
   "kubeadm-1.32.0-150500.1.1.aarch64.rpm": {
     "urls": [
