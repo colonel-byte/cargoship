@@ -65,6 +65,7 @@ The `Test` namespace hosts the integration and validation suites:
 *   `EndToEndCluster` - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.
 *   `EndToEndClusterStage` - Runs the same suite as `EndToEndCluster`, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.
 *   `EndToEndClusterDryRun` - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with `--dry-run` against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.
+*   `EndToEndTofu` - Runs the OpenTofu provider suite: three bootloose machines installed, reduced by one worker and destroyed through the real `tofu` CLI over the module in `example/terragrunt`. It builds the provider into the local filesystem mirror first, which is where the suite resolves it from. Needs Docker and a `tofu` on PATH; the suite skips with a reason when either is missing. See [e2e-tofu-tests](e2e-tofu-tests.md).
 *   `EndToEndZarf` - Runs the zarf Ansible module suite: two k3d clusters -- one with a storage provider, one without -- and the [`init-local-path` uds-bundle](https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-local-path/uds-bundle.yaml)'s four packages walked across each by `colonel_byte.zarf`. It builds both module wrapper binaries first. Needs `k3d`, a `zarf` on PATH, `ansible-playbook`, Docker, and the network to pull the packages the first time; every test skips with a reason when one is missing. See [zarf-ansible-module](../guides/zarf-ansible-module.md).
 *   `CleanZarfClusters` - Removes the k3d clusters `EndToEndZarf` creates. That target does this before it runs; use this one for a run that was killed partway through.
 *   `CleanCluster` - Removes the containers a bootloose cluster left behind. `EndToEndCluster` does this before it runs; use this target for a run that was killed partway through, or to inspect what a failed run left before clearing it.
@@ -76,6 +77,7 @@ mage test:endToEndNonCluster    # run the misc/package command suites, no cluste
 mage test:endToEndCluster       # run the install command suite against a bootloose cluster
 mage test:endToEndClusterStage  # same, but stop at the pre-engine staging boundary
 mage test:endToEndClusterDryRun # run only the --dry-run walk against the staging cluster
+mage test:endToEndTofu          # run the OpenTofu provider suite against a three-machine cluster (needs tofu)
 mage test:endToEndZarf          # run the zarf Ansible module suite (needs k3d, zarf, ansible-playbook)
 mage test:cleanZarfClusters     # remove the k3d clusters left behind by a killed zarf run
 mage test:cleanCluster          # remove bootloose containers left behind by a killed run

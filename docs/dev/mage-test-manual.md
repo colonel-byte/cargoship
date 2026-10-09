@@ -60,6 +60,23 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_ST
 
 This is the one CI actually runs, on every pull request.
 
+## `Test.EndToEndTofu`
+
+Same cleanup, plus the provider build the suite resolves against. The build is `release:tofuProviderDev` in one line: the provider for this machine, into the mirror layout, stamped with the version the module's constraint asks for.
+
+```console
+$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] && docker rm -fv $ids
+$ mkdir -p build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"
+$ go build -ldflags "-X main.version=0.1.0 -X github.com/colonel-byte/cargoship/internal/tofuprovider.Version=0.1.0" \
+    -o build/tofu-provider/mirror/registry.opentofu.org/colonel-byte/cargoship/0.1.0/"$(go env GOOS)_$(go env GOARCH)"/terraform-provider-cargoship_v0.1.0 \
+    ./cmd/terraform-provider-cargoship
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/tofu/...
+```
+
+The suite skips rather than fails when `tofu` is not on PATH or the mirror does not hold that binary, so a run that prints two skips and passes means one of those two is missing. See [e2e-tofu-tests](e2e-tofu-tests.md).
+
 ## `Test.CleanCluster`
 
 ```console

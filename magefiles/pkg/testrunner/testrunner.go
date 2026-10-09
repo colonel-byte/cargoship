@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/colonel-byte/cargoship/magefiles/pkg/build"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/release"
 	"github.com/magefile/mage/sh"
 )
 
@@ -63,6 +64,32 @@ func RunE2EZarf() error {
 		return err
 	}
 	return RunE2ENoBuild("90m", "github.com/colonel-byte/cargoship/test/e2e/zarf/...")
+}
+
+// TofuProviderVersion is the version the tofu provider suite builds into the local mirror and
+// the module's `>=0.1.0` constraint resolves to. OpenTofu refuses 0.0.0, which is reserved for a
+// provider that is not published, so the development loop and the suite both use 0.1.0. It is
+// also spelled in test/e2e/tofu/main_test.go, which is what skips the suite when the mirror does
+// not hold it.
+const TofuProviderVersion = "0.1.0"
+
+// RunE2ETofu builds the provider into the filesystem mirror the suite reads, then runs the tofu
+// provider e2e suite.
+//
+// The mirror is built here rather than by the suite because building it is a release step, not a
+// test one: the same function the development loop calls, producing the same layout a `.tofurc`
+// points at. A suite run without it skips rather than fails, naming the target.
+//
+// The timeout is generous because the suite stands up three bootloose machines, builds a distro
+// package, installs an engine across them, removes a node and destroys the cluster -- each of
+// those a real apply through the provider's own subprocess.
+func RunE2ETofu() error {
+	mirror, err := release.TofuProviderHost(TofuProviderVersion)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("the suite will resolve the provider from %s\n", mirror)
+	return RunE2ENoBuild("90m", "github.com/colonel-byte/cargoship/test/e2e/tofu/...")
 }
 
 // K3dClusters are the clusters the zarf module e2e suite creates, named in
