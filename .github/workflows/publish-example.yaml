@@ -159,8 +159,10 @@ jobs:
 
           if [ "$SELECTION" = "changed" ]; then
             # Flavors are the directories under example/ that hold a version directory at
-            # the depth examples are rendered to, which leaves out example/upstream and
-            # anything else kept there by hand.
+            # the depth examples are rendered to, which leaves out example/k3s (shared unit
+            # files, no versions of its own) and anything else kept there by hand. The three
+            # example/upstream-<cni> flavors do render at that depth, so they publish like
+            # any other.
             mapfile -t flavors < <(
               find example -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
             )

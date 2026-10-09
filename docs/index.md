@@ -74,6 +74,7 @@ Cargoship currently provides native support and integration for the following Ku
 
 *   **K3s**
 *   **RKE2**
+*   **Upstream Kubernetes** (kubeadm) - installs the `pkgs.k8s.io` packages and containerd, and applies a CNI the package declares
 
 ---
 
