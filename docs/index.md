@@ -179,6 +179,18 @@ Cargoship also ships as an Ansible collection, `colonel_byte.cargoship`, so the 
 
 ---
 
+## OpenTofu Integration
+
+Cargoship is also an OpenTofu provider, so the same phases run from a declarative configuration: `cargoship_cluster` converges a cluster -- install, join and upgrade are one apply, because the engine version already on each host is what tells them apart -- and `cargoship_cluster_facts` reads a fleet without changing it. The provider drives cargoship in process, so it still opens every SSH connection itself from the machine OpenTofu runs on.
+
+It is early: the resource and the data source work, and plan-time version checks, `import` and acceptance tests do not exist yet.
+
+*   [Driving Cargoship from OpenTofu and Terragrunt](guides/opentofu-terragrunt.md) - installing the provider from a mirror, the module and inventory layout, and the behaviours that differ from an ordinary resource.
+*   [`example/terragrunt/`](https://github.com/colonel-byte/cargoship/tree/main/example/terragrunt) - the worked layout that guide describes.
+*   [Running the OpenTofu provider](dev/tofu-provider.md) - building it, pointing OpenTofu at the build, and testing it.
+
+---
+
 ## Configuration and Schemas
 
 Cargoship relies on strongly-typed YAML definitions to govern its operations:
