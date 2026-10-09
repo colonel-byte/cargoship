@@ -24,6 +24,10 @@ package release
 
 import (
 	"archive/zip"
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -33,6 +37,14 @@ import (
 	"time"
 
 	"github.com/magefile/mage/sh"
+	"github.com/opencontainers/go-digest"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/errdef"
+	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/credentials"
 )
 
 const (
@@ -110,10 +122,8 @@ func TofuProvider(opts Options) error {
 	if err := validateVersion(opts.Version); err != nil {
 		return err
 	}
-	if _, err := sh.Output("oras", "version"); err != nil {
-		return fmt.Errorf("oras is not usable: install ORAS 1.3.0 or newer, which is what --artifact-platform needs: %w", err)
-	}
 
+	ctx := context.Background()
 	repository := opts.Repository
 	if repository == "" {
 		repository = providerRepository
@@ -130,9 +140,12 @@ func TofuProvider(opts Options) error {
 		return err
 	}
 
-	// The index is assembled from the tag each platform manifest was pushed under in the local
-	// layout, so this collects them as they are built.
-	manifestTags := make([]string, 0, len(providerPlatforms))
+	store, err := oci.New(layout)
+	if err != nil {
+		return fmt.Errorf("initializing OCI layout store at %s: %w", layout, err)
+	}
+
+	manifestDescs := make([]ocispec.Descriptor, 0, len(providerPlatforms))
 
 	for _, platform := range providerPlatforms {
 		oper, arch := platform[0], platform[1]
@@ -143,19 +156,15 @@ func TofuProvider(opts Options) error {
 		}
 
 		manifestTag := fmt.Sprintf("%s_%s", oper, arch)
-		if err := pushPlatform(layout, manifestTag, oper, arch, archive); err != nil {
+		manifestDesc, err := pushPlatform(ctx, store, manifestTag, oper, arch, archive)
+		if err != nil {
 			return err
 		}
-		manifestTags = append(manifestTags, manifestTag)
+		manifestDescs = append(manifestDescs, manifestDesc)
 	}
 
 	fmt.Printf("assembling the index as %s\n", tag)
-	args := []string{
-		"manifest", "index", "create",
-		"--artifact-type", artifactTypeIndex,
-		"--oci-layout", layout + ":" + tag,
-	}
-	if err := sh.RunV("oras", append(args, manifestTags...)...); err != nil {
+	if err := assembleIndex(ctx, store, tag, manifestDescs); err != nil {
 		return fmt.Errorf("assembling the provider index: %w", err)
 	}
 
@@ -166,7 +175,7 @@ func TofuProvider(opts Options) error {
 
 	target := repository + ":" + tag
 	fmt.Printf("pushing %s\n", target)
-	if err := sh.RunV("oras", "cp", "--from-oci-layout", layout+":"+tag, target); err != nil {
+	if err := pushIndexToRemote(ctx, store, repository, tag); err != nil {
 		return fmt.Errorf("pushing %s: %w", target, err)
 	}
 	return nil
@@ -303,37 +312,111 @@ func zipBinary(archive, binaryPath, entry string) error {
 	return f.Close()
 }
 
-// pushPlatform pushes one platform's zip into the local OCI layout.
-//
-// It runs from the directory holding the zip, for two reasons: oras refuses an absolute path for a
-// file argument, and the path it is given becomes the layer's org.opencontainers.image.title, so a
-// relative one keeps the title the file name rather than wherever the build happened to run. The
-// layout path is not a file argument, so it stays absolute and survives the change of directory.
-func pushPlatform(layout, manifestTag, oper, arch, archive string) error {
-	layoutAbs, err := filepath.Abs(layout)
+// pushPlatform pushes one platform's zip and its manifest into the local OCI layout store.
+// It returns the descriptor of the platform manifest, configured with its platform and artifactType.
+func pushPlatform(ctx context.Context, store *oci.Store, manifestTag, oper, arch, archive string) (ocispec.Descriptor, error) {
+	archiveBytes, err := os.ReadFile(archive)
 	if err != nil {
-		return err
+		return ocispec.Descriptor{}, fmt.Errorf("reading archive %s: %w", archive, err)
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
+	layerDesc := ocispec.Descriptor{
+		MediaType: layerMediaType,
+		Digest:    digest.FromBytes(archiveBytes),
+		Size:      int64(len(archiveBytes)),
+		Annotations: map[string]string{
+			ocispec.AnnotationTitle: filepath.Base(archive),
+		},
 	}
-	if err := os.Chdir(filepath.Dir(archive)); err != nil {
-		return err
+	if err := store.Push(ctx, layerDesc, bytes.NewReader(archiveBytes)); err != nil && !errors.Is(err, errdef.ErrAlreadyExists) {
+		return ocispec.Descriptor{}, fmt.Errorf("pushing layer for %s_%s: %w", oper, arch, err)
 	}
-	defer func() {
-		if err := os.Chdir(cwd); err != nil {
-			panic(err)
-		}
-	}()
 
-	// --artifact-platform is what puts the platform property on the descriptor the index carries.
-	// Without it a client cannot tell which manifest is for its machine.
-	return sh.RunV("oras", "push",
-		"--artifact-type", artifactTypeTarget,
-		"--artifact-platform", oper+"/"+arch,
-		"--oci-layout", layoutAbs+":"+manifestTag,
-		filepath.Base(archive)+":"+layerMediaType,
-	)
+	configDesc := ocispec.DescriptorEmptyJSON
+	if err := store.Push(ctx, configDesc, bytes.NewReader(configDesc.Data)); err != nil && !errors.Is(err, errdef.ErrAlreadyExists) {
+		return ocispec.Descriptor{}, fmt.Errorf("pushing empty config for %s_%s: %w", oper, arch, err)
+	}
+
+	manifest := ocispec.Manifest{
+		MediaType:    ocispec.MediaTypeImageManifest,
+		ArtifactType: artifactTypeTarget,
+		Config:       configDesc,
+		Layers:       []ocispec.Descriptor{layerDesc},
+	}
+	manifest.SchemaVersion = 2
+	manifestBytes, err := json.Marshal(manifest)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("marshaling manifest for %s_%s: %w", oper, arch, err)
+	}
+
+	manifestDesc := ocispec.Descriptor{
+		MediaType:    ocispec.MediaTypeImageManifest,
+		Digest:       digest.FromBytes(manifestBytes),
+		Size:         int64(len(manifestBytes)),
+		ArtifactType: artifactTypeTarget,
+		Platform: &ocispec.Platform{
+			OS:           oper,
+			Architecture: arch,
+		},
+	}
+	if err := store.Push(ctx, manifestDesc, bytes.NewReader(manifestBytes)); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("pushing manifest for %s_%s: %w", oper, arch, err)
+	}
+	if err := store.Tag(ctx, manifestDesc, manifestTag); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("tagging manifest %s: %w", manifestTag, err)
+	}
+	return manifestDesc, nil
+}
+
+// assembleIndex creates an OCI image index pointing to all platform manifests and saves it to store.
+func assembleIndex(ctx context.Context, store *oci.Store, tag string, manifests []ocispec.Descriptor) error {
+	index := ocispec.Index{
+		MediaType:    ocispec.MediaTypeImageIndex,
+		ArtifactType: artifactTypeIndex,
+		Manifests:    manifests,
+	}
+	index.SchemaVersion = 2
+	indexBytes, err := json.Marshal(index)
+	if err != nil {
+		return fmt.Errorf("marshaling index: %w", err)
+	}
+
+	indexDesc := ocispec.Descriptor{
+		MediaType:    ocispec.MediaTypeImageIndex,
+		Digest:       digest.FromBytes(indexBytes),
+		Size:         int64(len(indexBytes)),
+		ArtifactType: artifactTypeIndex,
+	}
+	if err := store.Push(ctx, indexDesc, bytes.NewReader(indexBytes)); err != nil {
+		return fmt.Errorf("pushing index: %w", err)
+	}
+	if err := store.Tag(ctx, indexDesc, tag); err != nil {
+		return fmt.Errorf("tagging index %s: %w", tag, err)
+	}
+	return nil
+}
+
+// pushIndexToRemote copies the tagged index and its dependencies from the local store to repository.
+func pushIndexToRemote(ctx context.Context, store *oci.Store, repository, tag string) error {
+	repo, err := remote.NewRepository(repository)
+	if err != nil {
+		return fmt.Errorf("creating remote repository client for %s: %w", repository, err)
+	}
+
+	storeOpts := credentials.StoreOptions{
+		DetectDefaultNativeStore: true,
+	}
+	credStore, err := credentials.NewStoreFromDocker(storeOpts)
+	if err != nil {
+		return fmt.Errorf("creating docker credential store: %w", err)
+	}
+	repo.Client = &auth.Client{
+		Credential: credentials.Credential(credStore),
+	}
+
+	_, err = oras.Copy(ctx, store, tag, repo, tag, oras.DefaultCopyOptions)
+	if err != nil {
+		return fmt.Errorf("copying index %s to %s: %w", tag, repository, err)
+	}
+	return nil
 }
