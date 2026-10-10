@@ -272,4 +272,9 @@ const (
 	CmdDistroSignShort = "Signs an existing Cargoship distro package"
 	// CmdDistroSignLong sign long
 	CmdDistroSignLong = "Signs an existing Cargoship distro package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the distro.yaml file and does not modify the package checksums."
+
+	// CmdDistroVerifyShort verify short
+	CmdDistroVerifyShort = "Verifies the signature on a Cargoship distro package"
+	// CmdDistroVerifyLong verify long
+	CmdDistroVerifyLong = "Verifies the signature on an existing Cargoship distro package. The package can be a local tarball or pulled from an OCI registry. Pass --key to verify against a public key, or the keyless flags to verify a signer identity against a Fulcio root and a transparency log. An unsigned package is reported as a failure. The other commands that load packages verify as part of loading, gated on their --verify flag -- this command verifies and nothing else, so it can be run before a play that has no network for the keyless flow."
 )

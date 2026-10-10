@@ -52,6 +52,7 @@
     - [encrypt](commands/cargoship_vault_encrypt.md)
     - [keygen](commands/cargoship_vault_keygen.md)
     - [rekey](commands/cargoship_vault_rekey.md)
+  - [verify](commands/cargoship_verify.md)
   - [version](commands/cargoship_version.md)
 
 

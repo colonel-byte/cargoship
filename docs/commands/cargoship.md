@@ -34,5 +34,6 @@ cargoship COMMAND [flags]
 * [cargoship sign](./cargoship_sign.md)	 - Signs an existing Cargoship distro package
 * [cargoship validate](./cargoship_validate.md)	 - Checks a cluster inventory, package definition, or config file against its schema
 * [cargoship vault](./cargoship_vault.md)	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age
+* [cargoship verify](./cargoship_verify.md)	 - Verifies the signature on a Cargoship distro package
 * [cargoship version](./cargoship_version.md)	 - Shows the version of the running binary
 

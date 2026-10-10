@@ -153,6 +153,19 @@ $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key ./priv
 # Sign with a cloud KMS key
 $ cargoship sign cargoship-rancher-rke2-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key`
 
+	// CmdDistroVerifyExample verify example
+	CmdDistroVerifyExample = `# Verify a signed package against a public key
+$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --key ./cosign.pub
+
+# Verify a package in an OCI registry
+$ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
+
+# Verify a keyless signature against a signer identity and its OIDC issuer
+$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-identity signer@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Match the signer identity by pattern instead
+$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-identity-regexp '.*@example\.com' --certificate-oidc-issuer https://token.actions.githubusercontent.com`
+
 	// CmdSha256SumExample sha256sum example
 	CmdSha256SumExample = `# Checksum a local file
 $ cargoship sha256sum ./build/cargoship-rancher-rke2-amd64-1.0.0.tar.zst
