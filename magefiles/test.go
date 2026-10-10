@@ -86,6 +86,22 @@ func (Test) EndToEndClusterVM() error {
 	return testrunner.RunE2ENoBuild("1h", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
 }
 
+// EndToEndClusterInventory runs the cluster suite against hosts that already exist, named by
+// the ZarfCluster document at the given path. Nothing is provisioned and nothing is torn down:
+// it changes those hosts and does not change them back. See docs/dev/e2e-external-inventory.md.
+func (Test) EndToEndClusterInventory(
+	// path to a ZarfCluster document naming the hosts to run against
+	inventory string,
+) error {
+	if err := os.Setenv("CARGOSHIP_E2E_BACKEND", "inventory"); err != nil {
+		return err
+	}
+	if err := os.Setenv("CARGOSHIP_E2E_INVENTORY", inventory); err != nil {
+		return err
+	}
+	return testrunner.RunE2ENoBuild("2h", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
+}
+
 // EndToEndClusterDryRun runs only the dry-run walk, which reports over nodes with nothing on
 // them and asserts it left them that way. It starts no engine, so it runs against the smaller
 // staging cluster and is the fastest way to exercise --dry-run against real hosts.

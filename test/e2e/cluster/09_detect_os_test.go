@@ -53,13 +53,25 @@ func (s *phaseWalk) detectOS() {
 
 		release, err := host.OS()
 		s.Require().NoErrorf(err, "%s: failed to read the OS release", host)
-		s.Require().Equalf(clusterConfig().osIDFor(host.Hostname), release.ID,
-			"%s: detected a different OS than the image the machine was built from", host)
+		s.Require().NotEmptyf(release.ID, "%s: the configurer resolved no os-release ID", host)
+
+		// A fleet that declares what each group runs is held to it. An externally supplied
+		// inventory declares nothing -- the operating systems are whatever the operator's
+		// hosts run, and are not knowable until this phase has asked them -- so there the
+		// assertion is only that detection produced something.
+		if want := clusterConfig().osIDFor(host.Hostname); want != "" {
+			s.Require().Equalf(want, release.ID,
+				"%s: detected a different OS than the image the machine was built from", host)
+		}
 		families[release.ID]++
 	}
 
-	s.Require().Lenf(families, len(clusterConfig().osIDs()),
-		"the cluster has to run every OS family for the family-routed phases to be tested, it runs %v", families)
+	if declared := clusterConfig().osIDs(); len(declared) > 0 {
+		s.Require().Lenf(families, len(declared),
+			"the cluster has to run every OS family for the family-routed phases to be tested, it runs %v", families)
+	} else {
+		s.T().Logf("the fleet declares no operating systems; it runs %v", families)
+	}
 }
 
 func (s *ApplyPhaseSuite) Test_09_DetectOS() {

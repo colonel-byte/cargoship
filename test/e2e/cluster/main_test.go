@@ -168,7 +168,17 @@ var k3sOS = fleetSpec{ //nolint:gochecknoglobals
 // up inside nested containers, and a virtual machine has none of that trouble. A stage-only
 // run against VMs still stops before the engine phases, it just does so on the same nodes.
 func clusterConfig() fleetSpec {
-	if name, err := backend(); err == nil && name == backendMicroVM {
+	switch name, err := backend(); {
+	case err != nil:
+	case name == backendInventory:
+		// Derived from the operator's document, so a failure to read it surfaces as an empty
+		// fleet here and as the real error from provision, which runs first.
+		spec, err := externalFleet()
+		if err != nil {
+			return fleetSpec{}
+		}
+		return spec
+	case name == backendMicroVM:
 		return vmOS
 	}
 	if stageOnly() {
@@ -280,7 +290,11 @@ func TestClusterPhases(t *testing.T) {
 	// The later walks run whatever the walk before them did. A half-joined or half-upgraded
 	// cluster is still a cluster reset has to be able to tear down, and TestMain deletes the
 	// containers either way.
-	t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
+	if canJoin() {
+		t.Run("join", func(t *testing.T) { suite.Run(t, new(JoinPhaseSuite)) })
+	} else {
+		t.Logf("the join walk needs a host that was not in the cluster when the install ran; this backend creates none, so name one with %s", joinHostEnvVar)
+	}
 	t.Run("upgrade", func(t *testing.T) { suite.Run(t, new(UpgradePhaseSuite)) })
 	t.Run("reset", func(t *testing.T) { suite.Run(t, new(ResetSuite)) })
 }

@@ -19,10 +19,12 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/microvm"
+	"github.com/colonel-byte/cargoship/pkg/packager/load"
 )
 
 // backendEnvVar selects what provisions the suite's hosts.
@@ -49,7 +51,36 @@ const (
 	backendBootloose = "bootloose"
 	// backendMicroVM provisions them as local virtual machines.
 	backendMicroVM = "microvm"
+	// backendInventory provisions nothing and runs against hosts that already exist, named by
+	// an inventory the operator supplies. See inventoryEnvVar.
+	backendInventory = "inventory"
 )
+
+// inventoryEnvVar names the ZarfCluster document backendInventory runs against.
+//
+// This is the backend for hosts cargoship does not create: a fleet on AWS, vSphere, Proxmox,
+// bare metal, anything already reachable over SSH. The suite provisions nothing, tears nothing
+// down, and derives what it asserts from the document rather than from a fleet definition it
+// owns -- so it is the only backend whose host count, roles and operating systems are not
+// known until the file is read. See docs/dev/e2e-external-inventory.md.
+const inventoryEnvVar = "CARGOSHIP_E2E_INVENTORY"
+
+// joinHostEnvVar names the host in that document which the join walk should join.
+//
+// The join walk needs a host that was not in the cluster when the install ran. The other two
+// backends create one on demand; against somebody else's fleet the operator creates it, adds
+// it to the document, and names it here. It is then held out of the fleet the apply walk sees
+// and put back by withJoinMachine, so every count and assertion downstream reads exactly as it
+// does for a fleet this suite provisioned.
+//
+// Unset means the join walk is skipped, which is the right default: a document naming hosts
+// that are all already in the cluster has nothing for it to join.
+const joinHostEnvVar = "CARGOSHIP_E2E_JOIN_HOST"
+
+// joinHost is the host the join walk should join, or empty when none was named.
+func joinHost() string {
+	return os.Getenv(joinHostEnvVar)
+}
 
 // backend reports which backend this run was asked for. An unrecognised value is an error
 // rather than a silent fall back to the default, because the whole point of setting it is to
@@ -60,8 +91,11 @@ func backend() (string, error) {
 		return backendBootloose, nil
 	case backendMicroVM:
 		return backendMicroVM, nil
+	case backendInventory:
+		return backendInventory, nil
 	default:
-		return "", fmt.Errorf("%s=%q is not a backend; it is %s or %s", backendEnvVar, v, backendBootloose, backendMicroVM)
+		return "", fmt.Errorf("%s=%q is not a backend; it is %s, %s or %s",
+			backendEnvVar, v, backendBootloose, backendMicroVM, backendInventory)
 	}
 }
 
@@ -108,6 +142,13 @@ func provision(ctx context.Context, spec fleetSpec) (apicluster.ZarfCluster, err
 	}
 
 	switch name {
+	case backendInventory:
+		inv, err := readInventory()
+		if err != nil {
+			return apicluster.ZarfCluster{}, err
+		}
+		return hostsNamedBy(inv, spec), nil
+
 	case backendMicroVM:
 		fleet, err := microvm.Up(ctx, microvmSpec(spec))
 		if err != nil {
@@ -134,6 +175,11 @@ func teardown() error {
 	}
 
 	switch name {
+	case backendInventory:
+		// The hosts were not created here, so they are not destroyed here either. A run
+		// against somebody's cluster that deleted it on the way out would be a trap.
+		return nil
+
 	case backendMicroVM:
 		if vmFleet == nil {
 			return nil
@@ -183,6 +229,126 @@ func carriesFamily(f fleetSpec, family string) bool {
 		}
 	}
 	return false
+}
+
+// readInventory loads the operator's ZarfCluster document.
+//
+// It goes through the same loader the CLI uses rather than a plain unmarshal, so that a
+// document this backend accepts is one cargoship accepts: the inventory the suite is handed
+// and the inventory a real run would be handed are parsed by the same code.
+func readInventory() (apicluster.ZarfCluster, error) {
+	path := os.Getenv(inventoryEnvVar)
+	if path == "" {
+		return apicluster.ZarfCluster{}, fmt.Errorf("%s=%s needs %s set to a ZarfCluster document",
+			backendEnvVar, backendInventory, inventoryEnvVar)
+	}
+
+	inv, err := load.ClusterDefinition(context.Background(), path, load.ClusterOptions{})
+	if err != nil {
+		return apicluster.ZarfCluster{}, fmt.Errorf("reading %s: %w", path, err)
+	}
+	if len(inv.Spec.Hosts) == 0 {
+		return apicluster.ZarfCluster{}, fmt.Errorf("%s names no hosts", path)
+	}
+	if len(inv.Spec.Hosts.WithRole(apicluster.RoleController)) == 0 {
+		return apicluster.ZarfCluster{}, fmt.Errorf("%s names no controller, so there is nothing to install a control plane on", path)
+	}
+	return inv, nil
+}
+
+// inventoryFleet is the fleet spec for an externally supplied inventory, read once.
+var inventoryFleet struct { //nolint:gochecknoglobals
+	once sync.Once
+	spec fleetSpec
+	err  error
+}
+
+// externalFleet derives a fleet spec from the operator's inventory.
+//
+// Every group holds exactly one host, named literally rather than by a template, because an
+// external inventory's hostnames are whatever the operator's fleet calls them -- `ip-10-0-1-5`,
+// a vSphere VM name -- and nothing about them is a pattern this suite gets to choose.
+//
+// No group declares an osID. The operating systems are not knowable until phase 09 has asked
+// the hosts, so the assertions that compare against a declared OS, and the family guards on the
+// upload phases, all stand down for this backend rather than asserting against a guess.
+func externalFleet() (fleetSpec, error) {
+	inventoryFleet.once.Do(func() {
+		inv, err := readInventory()
+		if err != nil {
+			inventoryFleet.err = err
+			return
+		}
+		join := joinHost()
+		spec := specFromInventory(inv, join)
+		if join != "" && spec.joinGroup == nil {
+			inventoryFleet.err = fmt.Errorf("%s=%s names no host in %s",
+				joinHostEnvVar, join, os.Getenv(inventoryEnvVar))
+			return
+		}
+		if len(spec.machines) == 0 {
+			inventoryFleet.err = fmt.Errorf("%s=%s is the only host in %s, so there is no cluster for it to join",
+				joinHostEnvVar, join, os.Getenv(inventoryEnvVar))
+			return
+		}
+		inventoryFleet.spec = spec
+	})
+	return inventoryFleet.spec, inventoryFleet.err
+}
+
+// hostsNamedBy narrows a document to the hosts a spec names, preserving the document's own
+// ordering so the leader stays first.
+//
+// This is what holds the join host out of the apply walk and lets the join walk have it: both
+// read the same file, and the spec they are given is the difference. A spec naming every host
+// -- which is every spec the other backends produce -- returns the document unchanged.
+func hostsNamedBy(inv apicluster.ZarfCluster, spec fleetSpec) apicluster.ZarfCluster {
+	wanted := make(map[string]bool, len(spec.machines))
+	for _, name := range spec.hostnames() {
+		wanted[name] = true
+	}
+	inv.Spec.Hosts = inv.Spec.Hosts.Filter(func(h *apicluster.ZarfHost) bool {
+		return wanted[h.Hostname]
+	})
+	return inv
+}
+
+// specFromInventory derives a fleet from a document, holding out the host named by join.
+//
+// Separate from externalFleet because that memoises: this is the whole derivation and takes
+// its inputs as arguments, so it can be exercised over several documents in one process.
+func specFromInventory(inv apicluster.ZarfCluster, join string) fleetSpec {
+	spec := fleetSpec{name: inv.Metadata.Name}
+	for _, h := range inv.Spec.Hosts {
+		group := machineSpec{
+			nameTemplate: h.Hostname,
+			role:         h.Role,
+			count:        1,
+		}
+		if join != "" && h.Hostname == join {
+			spec.joinGroup = &group
+			continue
+		}
+		spec.machines = append(spec.machines, group)
+	}
+	return spec
+}
+
+// provisions reports whether the backend creates the hosts it runs against.
+//
+// The join walk needs a host that did not exist when the install ran, which only a backend
+// that creates hosts can produce. Against an external inventory it is skipped rather than
+// failed: the suite has no way to add a node to somebody else's fleet, and saying so is more
+// use than a failure that looks like a product defect.
+func provisions() bool {
+	name, err := backend()
+	return err == nil && name != backendInventory
+}
+
+// canJoin reports whether the join walk has a host to join: one the backend will create, or
+// one the operator created and named.
+func canJoin() bool {
+	return provisions() || joinHost() != ""
 }
 
 // apiDialTimeout bounds the reachability probe below. It is a TCP connect to a host that is
