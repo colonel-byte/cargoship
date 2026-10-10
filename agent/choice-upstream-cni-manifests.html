@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>v1_33</title>
+        <title>choice-upstream-cni-manifests</title>
 
 
         <!-- Custom HTML head -->
@@ -12,35 +12,35 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="../../../../../favicon-de23e50b.svg">
-        <link rel="shortcut icon" href="../../../../../favicon-8114d1fc.png">
-        <link rel="stylesheet" href="../../../../../css/variables-8adf115d.css">
-        <link rel="stylesheet" href="../../../../../css/general-e96d0476.css">
-        <link rel="stylesheet" href="../../../../../css/chrome-d279d366.css">
-        <link rel="stylesheet" href="../../../../../css/print-9e4910d8.css" media="print">
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="../../../../../fonts/fonts-9644e21d.css">
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" id="mdbook-highlight-css" href="../../../../../highlight-493f70e1.css">
-        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../../../../../tomorrow-night-4c0ae647.css">
-        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../../../../../ayu-highlight-3fdfc3ac.css">
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../../../../../docs/css/root-2b369fa7.css">
-        <link rel="stylesheet" href="../../../../../docs/css/print-69d0807c.css">
+        <link rel="stylesheet" href="../docs/css/root-2b369fa7.css">
+        <link rel="stylesheet" href="../docs/css/print-69d0807c.css">
 
 
         <!-- Provide site root and default themes to javascript -->
         <script>
-            const path_to_root = "../../../../../";
+            const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../../../../searchindex-706e0556.js";
+            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../../../toc-a9faf70c.js"></script>
+        <script src="../toc-4b945a24.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -107,7 +107,7 @@
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="../../../../../toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -142,13 +142,13 @@
                     <h1 class="menu-title"></h1>
 
                     <div class="right-buttons">
-                        <a href="../../../../../print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
                         </a>
                         <a href="https://github.com/colonel-byte/cargoship/tree/main" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/golang/pkg/engineconfig/gen/upstream/v1_33.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/colonel-byte/cargoship/edit/main/docs/agent/choice-upstream-cni-manifests.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -182,94 +182,47 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_33"><a class="header" href="#v1_33">v1_33</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_33"
-</code></pre>
-<h2 id="index"><a class="header" href="#index">Index</a></h2>
+                        <h1 id="why-the-upstream-examples-carry-a-cni-and-how-each-one-gets-its-manifest"><a class="header" href="#why-the-upstream-examples-carry-a-cni-and-how-each-one-gets-its-manifest">Why the upstream examples carry a CNI, and how each one gets its manifest</a></h1>
+<p>Upstream (kubeadm) installs no CNI. A cluster built from an upstream example without one forms, passes every check cargoship makes, and leaves every pod at <code>ContainerCreating</code> forever. <code>spec.config.manifests</code> exists for exactly this: cargoship kubectl-applies what a package names there from the leader once it has bootstrapped (<a href="../../pkg/phase/64_apply_manifests.go"><code>pkg/phase/64_apply_manifests.go</code></a>), and only the upstream distro implements <code>ManifestPaths</code>, because rke2 and k3s ship their CNI with the release and configure it through a <code>HelmChartConfig</code> instead.</p>
+<p>So the question is not whether an upstream example declares a CNI. It is which one, and where the manifest comes from – and the three CNIs answer that differently enough that each gets its own flavor directory rather than one example with a knob.</p>
+<h2 id="one-flavor-per-cni"><a class="header" href="#one-flavor-per-cni">One flavor per CNI</a></h2>
+<p><code>example/upstream-cilium</code>, <code>example/upstream-canal</code>, <code>example/upstream-flannel</code>. The CNI decides more than the image list:</p>
 <ul>
-<li><a href="#variables">Variables</a></li>
+<li>the manifest that gets applied,</li>
+<li>the pod CIDR kubeadm has to be told about, since flannel and canal hardcode <code>10.244.0.0/16</code> in the manifest they publish and cilium reads the cluster’s,</li>
+<li>whether kube-proxy stays.</li>
 </ul>
-<h2 id="variables"><a class="header" href="#variables">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_33 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons []string
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values upstream v1_33 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_33.</p>
-<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
-    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "certSANs":     extract.FieldNode{},
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "caCertificateValidityPeriod": extract.FieldNode{},
-    "certificateValidityPeriod":   extract.FieldNode{},
-    "certificatesDir":             extract.FieldNode{},
-    "clusterName":                 extract.FieldNode{},
-    "controlPlaneEndpoint":        extract.FieldNode{},
-    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled":        extract.FieldNode{},
-        "imageRepository": extract.FieldNode{},
-        "imageTag":        extract.FieldNode{},
-    }},
-    "encryptionAlgorithm": extract.FieldNode{},
-    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "caFile":    extract.FieldNode{},
-            "certFile":  extract.FieldNode{},
-            "endpoints": extract.FieldNode{},
-            "keyFile":   extract.FieldNode{},
-        }},
-        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "dataDir":         extract.FieldNode{},
-            "extraArgs":       extract.FieldNode{},
-            "extraEnvs":       extract.FieldNode{},
-            "imageRepository": extract.FieldNode{},
-            "imageTag":        extract.FieldNode{},
-            "peerCertSANs":    extract.FieldNode{},
-            "serverCertSANs":  extract.FieldNode{},
-        }},
-    }},
-    "featureGates":      extract.FieldNode{},
-    "imageRepository":   extract.FieldNode{},
-    "kubernetesVersion": extract.FieldNode{},
-    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "dnsDomain":     extract.FieldNode{},
-        "podSubnet":     extract.FieldNode{},
-        "serviceSubnet": extract.FieldNode{},
-    }},
-    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled": extract.FieldNode{},
-    }},
-    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-}}
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_33 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
+<p>A single example with a values-driven CNI could not express the second: the pod CIDR goes into <code>kubeadm init</code>’s <code>ClusterConfiguration</code>, which is read once at bootstrap, so it has to be in the definition rather than chosen later. The rke2 examples already split per CNI for the same reason.</p>
+<h2 id="flannel-and-canal-a-pinned-url"><a class="header" href="#flannel-and-canal-a-pinned-url">flannel and canal: a pinned URL</a></h2>
+<p>Both publish a manifest per release. The flavor pins the URL with its version in it, cargoship verifies the download against the digest in <code>example/shasums.json</code>, and the generator reads the same file to pull out the images.</p>
+<p>The URL names a version rather than using <code>releases/latest/download</code>. An alias serves different bytes from one stable URL, and <code>example/shasums.json</code> keys entries by file name – so <code>kube-flannel.yml</code> would flip digests on every upstream release, which is precisely the “same name, different content” case the cache treats as a cache miss worth re-hashing.</p>
+<h2 id="cilium-rendered-because-there-is-nothing-to-download"><a class="header" href="#cilium-rendered-because-there-is-nothing-to-download">Cilium: rendered, because there is nothing to download</a></h2>
+<p>Cilium stopped publishing an applyable manifest around v1.10; <code>install/kubernetes/quick-install.yaml</code> 404s. What exists is the Helm chart. Cargoship has no Helm dependency and the apply phase takes <code>kubectl apply -f</code> paths, so the manifest is produced at generate time with <code>helm template</code> and committed.</p>
+<p><strong>Rendered once per chart version, not once per example.</strong> It lands in <code>example/upstream-cilium/cni/cilium-&lt;chart&gt;.yaml</code> and every version directory refers to it as <code>../../cni/…</code>, the way k3s examples share <code>example/k3s/core/</code>. Nineteen committed copies of a 65 KB manifest would otherwise say the same thing nineteen times.</p>
+<p><strong>The render is skipped while the file exists.</strong> This is what keeps <code>helm</code> out of the loop that keeps the examples current: only a chart pin bump produces a path that is not already in the repository, so <code>mage generate:examples</code> on a committed tree never shells out to helm, and <code>refresh-examples.yaml</code> – which runs weekly and never touches the pin – needs nothing but the Go toolchain. The cost of a new pinned tool falls on whoever moves the pin, locally.</p>
+<h3 id="hubbletlsautomethodcronjob-is-not-optional"><a class="header" href="#hubbletlsautomethodcronjob-is-not-optional"><code>hubble.tls.auto.method=cronJob</code> is not optional</a></h3>
+<p>The chart’s default (<code>helm</code>) generates Hubble’s CA keypair <em>while templating</em> and writes it into a Secret in the output – it labels that object <code>cilium.io/helm-template-non-idempotent</code> itself. Two consequences, both disqualifying:</p>
+<ul>
+<li>the render stops being reproducible, so every regeneration produces a diff,</li>
+<li>the private key would be committed, handing every cluster installed from the example the same Hubble CA.</li>
+</ul>
+<p><code>cronJob</code> has cilium’s own certgen job mint the certificates in the cluster instead. The manifest then carries no key and renders byte-identically every time; the certgen image it adds is picked up by the image scrape like any other.</p>
+<p><code>refuseEmbeddedKey</code> fails the render if a key shows up anyway. A chart’s defaults can change under a version bump, and this failure is silent by nature – a committed key looks like any other base64 blob in a diff of a file marked <code>linguist-generated</code>.</p>
+<h2 id="images-come-out-of-the-manifest"><a class="header" href="#images-come-out-of-the-manifest">Images come out of the manifest</a></h2>
+<p>Each flavor’s <code>imageConfig.images</code> is the kubeadm-pinned control plane list plus whatever <code>image:</code> lines the manifest it applies carries. A second list maintained by hand would agree with the manifest until the CNI added a sidecar, and the failure shows up only on an air-gapped host at apply time – the one place it is most expensive to find.</p>
+<h2 id="what-was-not-done"><a class="header" href="#what-was-not-done">What was not done</a></h2>
+<p><strong>Kube-proxy-free cilium.</strong> <code>upstream-cilium</code> runs cilium alongside kube-proxy, unlike <code>example/rke2-multi-cni-cilium</code> which replaces it. Replacing it needs <code>InitConfiguration.skipPhases: [addon/kube-proxy]</code>, which <a href="../../types/distrocfg/upstream_kubeadm.go"><code>types/distrocfg/upstream_kubeadm.go</code></a> does not render, plus a <code>k8sServiceHost</code> that only runtime cluster state knows. That is a feature in the kubeadm config path, not an examples change.</p>
+<p><strong>Helm chart support in the apply phase.</strong> It would let the package ship the chart instead of a rendered manifest, and would be the more faithful way to install cilium. It is also a new surface in <code>api/</code> and <code>pkg/phase/</code> for a problem <code>helm template</code> solves at generate time.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../../../golang/pkg/engineconfig/gen/upstream/v1_32.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../agent/choice-unpinnable-hosts.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../../../../../golang/pkg/engineconfig/gen/upstream/v1_34.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../agent/choice-v1alpha1-action-conversion.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -279,11 +232,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../../../golang/pkg/engineconfig/gen/upstream/v1_32.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../agent/choice-unpinnable-hosts.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../../../../../golang/pkg/engineconfig/gen/upstream/v1_34.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../agent/choice-v1alpha1-action-conversion.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
@@ -303,13 +256,13 @@
         </script>
 
 
-        <script src="../../../../../elasticlunr-ef4e11c1.min.js"></script>
-        <script src="../../../../../mark-09e88c2c.min.js"></script>
-        <script src="../../../../../searcher-09f2665d.js"></script>
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
-        <script src="../../../../../clipboard-1626706a.min.js"></script>
-        <script src="../../../../../highlight-abc7f01d.js"></script>
-        <script src="../../../../../book-609e4cb8.js"></script>
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 

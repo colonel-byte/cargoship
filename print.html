@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-706e0556.js";
+            window.path_to_searchindex_js = "searchindex-5a1cd3bd.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a9faf70c.js"></script>
+        <script src="toc-4b945a24.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -236,6 +236,7 @@ cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:latest
 <ul>
 <li><strong>K3s</strong></li>
 <li><strong>RKE2</strong></li>
+<li><strong>Upstream Kubernetes</strong> (kubeadm) - installs the <code>pkgs.k8s.io</code> packages and containerd, and applies a CNI the package declares</li>
 </ul>
 <hr>
 <h2 id="core-concepts"><a class="header" href="#core-concepts">Core Concepts</a></h2>
@@ -1352,7 +1353,7 @@ metadata:
         - arm64
 </code></pre>
 <p>An entry with no <code>arch</code> selector goes to every host, the same way an entry with no <code>profile</code> selector goes to every role. That is what the architecture-independent files – unit files, scripts, <code>noarch</code> RPMs – want.</p>
-<p><code>selector.arch</code> may only name architectures the definition declares. A file selecting <code>x86_64</code> in a package targeting <code>amd64</code> fails at create time rather than silently never uploading. <code>example/k3s-multi</code>, <code>example/rke2-multi-cni-canal</code> and <code>example/rke2-multi-cni-cilium</code> are complete definitions written this way, generated from the same templates as the single-architecture examples, and <code>example/upstream</code> is a hand-written one that installs Kubernetes from upstream packages for both architectures.</p>
+<p><code>selector.arch</code> may only name architectures the definition declares. A file selecting <code>x86_64</code> in a package targeting <code>amd64</code> fails at create time rather than silently never uploading. <code>example/k3s-multi</code>, <code>example/rke2-multi-cni-canal</code> and <code>example/rke2-multi-cni-cilium</code> are complete definitions written this way, generated from the same templates as the single-architecture examples, and the <code>example/upstream-cilium</code>, <code>example/upstream-canal</code> and <code>example/upstream-flannel</code> flavors are generated the same way, installing Kubernetes from upstream packages for both architectures plus the CNI each one bakes in.</p>
 <h2 id="building"><a class="header" href="#building">Building</a></h2>
 <p><code>cargoship create</code> builds every architecture the definition declares into one package. Images are pulled for each of them, so a two-architecture package with images takes roughly twice as long to build and is roughly twice the size.</p>
 <p>The archive is named <code>cargoship-&lt;name&gt;-&lt;arch&gt;-&lt;version&gt;.tar.zst</code>, and a package covering more than one architecture takes <code>multi</code> in the architecture position, since no single architecture describes what it carries:</p>
@@ -8194,26 +8195,17 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var Registry = map[string]map[string]Entry{
     "k3s": {
         "v1_31": {Server: k3s_v1_31.ServerConfig{}, Agent: k3s_v1_31.AgentConfig{}, Addons: k3s_v1_31.Addons, CNIs: k3s_v1_31.CNIs, IngressControllers: k3s_v1_31.IngressControllers},
-        "v1_32": {Server: k3s_v1_32.ServerConfig{}, Agent: k3s_v1_32.AgentConfig{}, Addons: k3s_v1_32.Addons, CNIs: k3s_v1_32.CNIs, IngressControllers: k3s_v1_32.IngressControllers},
-        "v1_33": {Server: k3s_v1_33.ServerConfig{}, Agent: k3s_v1_33.AgentConfig{}, Addons: k3s_v1_33.Addons, CNIs: k3s_v1_33.CNIs, IngressControllers: k3s_v1_33.IngressControllers},
-        "v1_34": {Server: k3s_v1_34.ServerConfig{}, Agent: k3s_v1_34.AgentConfig{}, Addons: k3s_v1_34.Addons, CNIs: k3s_v1_34.CNIs, IngressControllers: k3s_v1_34.IngressControllers},
         "v1_35": {Server: k3s_v1_35.ServerConfig{}, Agent: k3s_v1_35.AgentConfig{}, Addons: k3s_v1_35.Addons, CNIs: k3s_v1_35.CNIs, IngressControllers: k3s_v1_35.IngressControllers},
         "v1_36": {Server: k3s_v1_36.ServerConfig{}, Agent: k3s_v1_36.AgentConfig{}, Addons: k3s_v1_36.Addons, CNIs: k3s_v1_36.CNIs, IngressControllers: k3s_v1_36.IngressControllers},
         "v1_37": {Server: k3s_v1_37.ServerConfig{}, Agent: k3s_v1_37.AgentConfig{}, Addons: k3s_v1_37.Addons, CNIs: k3s_v1_37.CNIs, IngressControllers: k3s_v1_37.IngressControllers},
     },
     "rke2": {
         "v1_31": {Server: rke2_v1_31.ServerConfig{}, Agent: rke2_v1_31.AgentConfig{}, Addons: rke2_v1_31.Addons, CNIs: rke2_v1_31.CNIs, IngressControllers: rke2_v1_31.IngressControllers},
-        "v1_32": {Server: rke2_v1_32.ServerConfig{}, Agent: rke2_v1_32.AgentConfig{}, Addons: rke2_v1_32.Addons, CNIs: rke2_v1_32.CNIs, IngressControllers: rke2_v1_32.IngressControllers},
-        "v1_33": {Server: rke2_v1_33.ServerConfig{}, Agent: rke2_v1_33.AgentConfig{}, Addons: rke2_v1_33.Addons, CNIs: rke2_v1_33.CNIs, IngressControllers: rke2_v1_33.IngressControllers},
-        "v1_34": {Server: rke2_v1_34.ServerConfig{}, Agent: rke2_v1_34.AgentConfig{}, Addons: rke2_v1_34.Addons, CNIs: rke2_v1_34.CNIs, IngressControllers: rke2_v1_34.IngressControllers},
         "v1_35": {Server: rke2_v1_35.ServerConfig{}, Agent: rke2_v1_35.AgentConfig{}, Addons: rke2_v1_35.Addons, CNIs: rke2_v1_35.CNIs, IngressControllers: rke2_v1_35.IngressControllers},
         "v1_36": {Server: rke2_v1_36.ServerConfig{}, Agent: rke2_v1_36.AgentConfig{}, Addons: rke2_v1_36.Addons, CNIs: rke2_v1_36.CNIs, IngressControllers: rke2_v1_36.IngressControllers},
         "v1_37": {Server: rke2_v1_37.ServerConfig{}, Agent: rke2_v1_37.AgentConfig{}, Addons: rke2_v1_37.Addons, CNIs: rke2_v1_37.CNIs, IngressControllers: rke2_v1_37.IngressControllers},
     },
     "upstream": {
-        "v1_32": {Server: upstream_v1_32.ClusterConfigurationKeys, Addons: upstream_v1_32.Addons, CNIs: upstream_v1_32.CNIs, IngressControllers: upstream_v1_32.IngressControllers},
-        "v1_33": {Server: upstream_v1_33.ClusterConfigurationKeys, Addons: upstream_v1_33.Addons, CNIs: upstream_v1_33.CNIs, IngressControllers: upstream_v1_33.IngressControllers},
-        "v1_34": {Server: upstream_v1_34.ClusterConfigurationKeys, Addons: upstream_v1_34.Addons, CNIs: upstream_v1_34.CNIs, IngressControllers: upstream_v1_34.IngressControllers},
         "v1_35": {Server: upstream_v1_35.ClusterConfigurationKeys, Addons: upstream_v1_35.Addons, CNIs: upstream_v1_35.CNIs, IngressControllers: upstream_v1_35.IngressControllers},
         "v1_36": {Server: upstream_v1_36.ClusterConfigurationKeys, Addons: upstream_v1_36.Addons, CNIs: upstream_v1_36.CNIs, IngressControllers: upstream_v1_36.IngressControllers},
         "v1_37": {Server: upstream_v1_37.ClusterConfigurationKeys, Addons: upstream_v1_37.Addons, CNIs: upstream_v1_37.CNIs, IngressControllers: upstream_v1_37.IngressControllers},
@@ -8506,8 +8498,8 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
 <div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_32"><a class="header" href="#v1_32">v1_32</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_32"
+<h1 id="v1_35"><a class="header" href="#v1_35">v1_35</a></h1>
+<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_35"
 </code></pre>
 <h2 id="index-11"><a class="header" href="#index-11">Index</a></h2>
 <ul>
@@ -8516,625 +8508,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
 <h2 id="variables-9"><a class="header" href="#variables-9">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components k3s v1_32 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons = []string{
-    "coredns",
-    "servicelb",
-    "traefik",
-    "local-storage",
-    "metrics-server",
-    "runtimes",
-}
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values k3s v1_32 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values k3s v1_32 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-1"><a class="header" href="#type-agentconfig-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_32/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
-<p>AgentConfig is the agent config.yaml key set for k3s v1_32.</p>
-<pre><code class="language-go">type AgentConfig struct {
-    Token                          string   `yaml:"token,omitempty"`
-    TokenFile                      string   `yaml:"token-file,omitempty"`
-    Server                         string   `yaml:"server,omitempty"`
-    DataDir                        string   `yaml:"data-dir,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Selinux                        bool     `yaml:"selinux,omitempty"`
-    LbServerPort                   int      `yaml:"lb-server-port,omitempty"`
-    ProtectKernelDefaults          bool     `yaml:"protect-kernel-defaults,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp              []string `yaml:"node-ip,omitempty"`
-    BindAddress         string   `yaml:"bind-address,omitempty"`
-    NodeExternalIp      []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns     []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns     []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf          string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface        string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf         string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf      string   `yaml:"flannel-cni-conf,omitempty"`
-    KubeletArg          []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg        []string `yaml:"kube-proxy-arg,omitempty"`
-    EnablePprof         bool     `yaml:"enable-pprof,omitempty"`
-    Rootless            bool     `yaml:"rootless,omitempty"`
-    Docker              bool     `yaml:"docker,omitempty"`
-    VpnAuth             string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile         string   `yaml:"vpn-auth-file,omitempty"`
-    DisableApiserverLb  bool     `yaml:"disable-apiserver-lb,omitempty"`
-}
-</code></pre>
-<p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-1"><a class="header" href="#type-serverconfig-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_32/zz_server_config.go#L29-L156">ServerConfig</a></a></h2>
-<p>ServerConfig is the server config.yaml key set for k3s v1_32.</p>
-<pre><code class="language-go">type ServerConfig struct {
-    BindAddress     string `yaml:"bind-address,omitempty"`
-    HttpsListenPort int    `yaml:"https-listen-port,omitempty"`
-    // Deprecated: hidden flag.
-    SupervisorPort int `yaml:"supervisor-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverPort int `yaml:"apiserver-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverBindAddress    string   `yaml:"apiserver-bind-address,omitempty"`
-    AdvertiseAddress        string   `yaml:"advertise-address,omitempty"`
-    AdvertisePort           int      `yaml:"advertise-port,omitempty"`
-    TlsSan                  []string `yaml:"tls-san,omitempty"`
-    TlsSanSecurity          bool     `yaml:"tls-san-security,omitempty"`
-    DataDir                 string   `yaml:"data-dir,omitempty"`
-    ClusterCidr             []string `yaml:"cluster-cidr,omitempty"`
-    ServiceCidr             []string `yaml:"service-cidr,omitempty"`
-    ServiceNodePortRange    string   `yaml:"service-node-port-range,omitempty"`
-    ClusterDns              []string `yaml:"cluster-dns,omitempty"`
-    ClusterDomain           string   `yaml:"cluster-domain,omitempty"`
-    FlannelBackend          string   `yaml:"flannel-backend,omitempty"`
-    FlannelIpv6Masq         bool     `yaml:"flannel-ipv6-masq,omitempty"`
-    FlannelExternalIp       bool     `yaml:"flannel-external-ip,omitempty"`
-    EgressSelectorMode      string   `yaml:"egress-selector-mode,omitempty"`
-    ServicelbNamespace      string   `yaml:"servicelb-namespace,omitempty"`
-    WriteKubeconfig         string   `yaml:"write-kubeconfig,omitempty"`
-    WriteKubeconfigMode     string   `yaml:"write-kubeconfig-mode,omitempty"`
-    WriteKubeconfigGroup    string   `yaml:"write-kubeconfig-group,omitempty"`
-    HelmJobImage            string   `yaml:"helm-job-image,omitempty"`
-    Token                   string   `yaml:"token,omitempty"`
-    TokenFile               string   `yaml:"token-file,omitempty"`
-    AgentToken              string   `yaml:"agent-token,omitempty"`
-    AgentTokenFile          string   `yaml:"agent-token-file,omitempty"`
-    Server                  string   `yaml:"server,omitempty"`
-    ClusterInit             bool     `yaml:"cluster-init,omitempty"`
-    ClusterReset            bool     `yaml:"cluster-reset,omitempty"`
-    ClusterResetRestorePath string   `yaml:"cluster-reset-restore-path,omitempty"`
-    KubeApiserverArg        []string `yaml:"kube-apiserver-arg,omitempty"`
-    EtcdArg                 []string `yaml:"etcd-arg,omitempty"`
-    // Aliases (not separately validated here): kube-controller-arg
-    KubeControllerManagerArg []string `yaml:"kube-controller-manager-arg,omitempty"`
-    KubeSchedulerArg         []string `yaml:"kube-scheduler-arg,omitempty"`
-    // Aliases (not separately validated here): kube-cloud-controller-arg
-    KubeCloudControllerManagerArg []string `yaml:"kube-cloud-controller-manager-arg,omitempty"`
-    // Deprecated: hidden flag.
-    KineTls                       bool     `yaml:"kine-tls,omitempty"`
-    DatastoreEndpoint             string   `yaml:"datastore-endpoint,omitempty"`
-    DatastoreCafile               string   `yaml:"datastore-cafile,omitempty"`
-    DatastoreCertfile             string   `yaml:"datastore-certfile,omitempty"`
-    DatastoreKeyfile              string   `yaml:"datastore-keyfile,omitempty"`
-    EtcdExposeMetrics             bool     `yaml:"etcd-expose-metrics,omitempty"`
-    EtcdDisableSnapshots          bool     `yaml:"etcd-disable-snapshots,omitempty"`
-    EtcdSnapshotName              string   `yaml:"etcd-snapshot-name,omitempty"`
-    EtcdSnapshotScheduleCron      string   `yaml:"etcd-snapshot-schedule-cron,omitempty"`
-    EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
-    EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
-    EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
-    EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
-    EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
-    EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
-    EtcdS3EndpointCa              string   `yaml:"etcd-s3-endpoint-ca,omitempty"`
-    EtcdS3SkipSslVerify           bool     `yaml:"etcd-s3-skip-ssl-verify,omitempty"`
-    EtcdS3AccessKey               string   `yaml:"etcd-s3-access-key,omitempty"`
-    EtcdS3SecretKey               string   `yaml:"etcd-s3-secret-key,omitempty"`
-    EtcdS3SessionToken            string   `yaml:"etcd-s3-session-token,omitempty"`
-    EtcdS3Bucket                  string   `yaml:"etcd-s3-bucket,omitempty"`
-    EtcdS3BucketLookupType        string   `yaml:"etcd-s3-bucket-lookup-type,omitempty"`
-    EtcdS3Region                  string   `yaml:"etcd-s3-region,omitempty"`
-    EtcdS3Folder                  string   `yaml:"etcd-s3-folder,omitempty"`
-    EtcdS3Retention               int      `yaml:"etcd-s3-retention,omitempty"`
-    EtcdS3Proxy                   string   `yaml:"etcd-s3-proxy,omitempty"`
-    EtcdS3ConfigSecret            string   `yaml:"etcd-s3-config-secret,omitempty"`
-    EtcdS3Insecure                bool     `yaml:"etcd-s3-insecure,omitempty"`
-    EtcdS3Timeout                 string   `yaml:"etcd-s3-timeout,omitempty"`
-    DefaultLocalStoragePath       string   `yaml:"default-local-storage-path,omitempty"`
-    Disable                       []string `yaml:"disable,omitempty"`
-    DisableScheduler              bool     `yaml:"disable-scheduler,omitempty"`
-    DisableCloudController        bool     `yaml:"disable-cloud-controller,omitempty"`
-    DisableKubeProxy              bool     `yaml:"disable-kube-proxy,omitempty"`
-    DisableNetworkPolicy          bool     `yaml:"disable-network-policy,omitempty"`
-    DisableHelmController         bool     `yaml:"disable-helm-controller,omitempty"`
-    // Deprecated: hidden flag.
-    DisableApiserver bool `yaml:"disable-apiserver,omitempty"`
-    // Deprecated: hidden flag.
-    DisableControllerManager bool `yaml:"disable-controller-manager,omitempty"`
-    // Deprecated: hidden flag.
-    DisableEtcd                    bool     `yaml:"disable-etcd,omitempty"`
-    EmbeddedRegistry               bool     `yaml:"embedded-registry,omitempty"`
-    SupervisorMetrics              bool     `yaml:"supervisor-metrics,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Docker                         bool     `yaml:"docker,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    SystemDefaultRegistry          string   `yaml:"system-default-registry,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry       []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp                    []string `yaml:"node-ip,omitempty"`
-    NodeExternalIp            []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns           []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns           []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf                string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface              string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf               string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf            string   `yaml:"flannel-cni-conf,omitempty"`
-    VpnAuth                   string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile               string   `yaml:"vpn-auth-file,omitempty"`
-    KubeletArg                []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg              []string `yaml:"kube-proxy-arg,omitempty"`
-    ProtectKernelDefaults     bool     `yaml:"protect-kernel-defaults,omitempty"`
-    SecretsEncryption         bool     `yaml:"secrets-encryption,omitempty"`
-    EnablePprof               bool     `yaml:"enable-pprof,omitempty"`
-    Rootless                  bool     `yaml:"rootless,omitempty"`
-    SecretsEncryptionProvider string   `yaml:"secrets-encryption-provider,omitempty"`
-    Selinux                   bool     `yaml:"selinux,omitempty"`
-    LbServerPort              int      `yaml:"lb-server-port,omitempty"`
-    // Deprecated: hidden flag.
-    DisableAgent bool `yaml:"disable-agent,omitempty"`
-}
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_33"><a class="header" href="#v1_33">v1_33</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_33"
-</code></pre>
-<h2 id="index-12"><a class="header" href="#index-12">Index</a></h2>
-<ul>
-<li><a href="#variables-10">Variables</a></li>
-<li><a href="#AgentConfig">type AgentConfig</a></li>
-<li><a href="#ServerConfig">type ServerConfig</a></li>
-</ul>
-<h2 id="variables-10"><a class="header" href="#variables-10">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components k3s v1_33 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons = []string{
-    "coredns",
-    "servicelb",
-    "traefik",
-    "local-storage",
-    "metrics-server",
-    "runtimes",
-}
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values k3s v1_33 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values k3s v1_33 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-2"><a class="header" href="#type-agentconfig-2">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_33/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
-<p>AgentConfig is the agent config.yaml key set for k3s v1_33.</p>
-<pre><code class="language-go">type AgentConfig struct {
-    Token                          string   `yaml:"token,omitempty"`
-    TokenFile                      string   `yaml:"token-file,omitempty"`
-    Server                         string   `yaml:"server,omitempty"`
-    DataDir                        string   `yaml:"data-dir,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Selinux                        bool     `yaml:"selinux,omitempty"`
-    LbServerPort                   int      `yaml:"lb-server-port,omitempty"`
-    ProtectKernelDefaults          bool     `yaml:"protect-kernel-defaults,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp              []string `yaml:"node-ip,omitempty"`
-    BindAddress         string   `yaml:"bind-address,omitempty"`
-    NodeExternalIp      []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns     []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns     []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf          string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface        string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf         string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf      string   `yaml:"flannel-cni-conf,omitempty"`
-    KubeletArg          []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg        []string `yaml:"kube-proxy-arg,omitempty"`
-    EnablePprof         bool     `yaml:"enable-pprof,omitempty"`
-    Rootless            bool     `yaml:"rootless,omitempty"`
-    Docker              bool     `yaml:"docker,omitempty"`
-    VpnAuth             string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile         string   `yaml:"vpn-auth-file,omitempty"`
-    DisableApiserverLb  bool     `yaml:"disable-apiserver-lb,omitempty"`
-}
-</code></pre>
-<p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-2"><a class="header" href="#type-serverconfig-2">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_33/zz_server_config.go#L29-L156">ServerConfig</a></a></h2>
-<p>ServerConfig is the server config.yaml key set for k3s v1_33.</p>
-<pre><code class="language-go">type ServerConfig struct {
-    BindAddress     string `yaml:"bind-address,omitempty"`
-    HttpsListenPort int    `yaml:"https-listen-port,omitempty"`
-    // Deprecated: hidden flag.
-    SupervisorPort int `yaml:"supervisor-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverPort int `yaml:"apiserver-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverBindAddress    string   `yaml:"apiserver-bind-address,omitempty"`
-    AdvertiseAddress        string   `yaml:"advertise-address,omitempty"`
-    AdvertisePort           int      `yaml:"advertise-port,omitempty"`
-    TlsSan                  []string `yaml:"tls-san,omitempty"`
-    TlsSanSecurity          bool     `yaml:"tls-san-security,omitempty"`
-    DataDir                 string   `yaml:"data-dir,omitempty"`
-    ClusterCidr             []string `yaml:"cluster-cidr,omitempty"`
-    ServiceCidr             []string `yaml:"service-cidr,omitempty"`
-    ServiceNodePortRange    string   `yaml:"service-node-port-range,omitempty"`
-    ClusterDns              []string `yaml:"cluster-dns,omitempty"`
-    ClusterDomain           string   `yaml:"cluster-domain,omitempty"`
-    FlannelBackend          string   `yaml:"flannel-backend,omitempty"`
-    FlannelIpv6Masq         bool     `yaml:"flannel-ipv6-masq,omitempty"`
-    FlannelExternalIp       bool     `yaml:"flannel-external-ip,omitempty"`
-    EgressSelectorMode      string   `yaml:"egress-selector-mode,omitempty"`
-    ServicelbNamespace      string   `yaml:"servicelb-namespace,omitempty"`
-    WriteKubeconfig         string   `yaml:"write-kubeconfig,omitempty"`
-    WriteKubeconfigMode     string   `yaml:"write-kubeconfig-mode,omitempty"`
-    WriteKubeconfigGroup    string   `yaml:"write-kubeconfig-group,omitempty"`
-    HelmJobImage            string   `yaml:"helm-job-image,omitempty"`
-    Token                   string   `yaml:"token,omitempty"`
-    TokenFile               string   `yaml:"token-file,omitempty"`
-    AgentToken              string   `yaml:"agent-token,omitempty"`
-    AgentTokenFile          string   `yaml:"agent-token-file,omitempty"`
-    Server                  string   `yaml:"server,omitempty"`
-    ClusterInit             bool     `yaml:"cluster-init,omitempty"`
-    ClusterReset            bool     `yaml:"cluster-reset,omitempty"`
-    ClusterResetRestorePath string   `yaml:"cluster-reset-restore-path,omitempty"`
-    KubeApiserverArg        []string `yaml:"kube-apiserver-arg,omitempty"`
-    EtcdArg                 []string `yaml:"etcd-arg,omitempty"`
-    // Aliases (not separately validated here): kube-controller-arg
-    KubeControllerManagerArg []string `yaml:"kube-controller-manager-arg,omitempty"`
-    KubeSchedulerArg         []string `yaml:"kube-scheduler-arg,omitempty"`
-    // Aliases (not separately validated here): kube-cloud-controller-arg
-    KubeCloudControllerManagerArg []string `yaml:"kube-cloud-controller-manager-arg,omitempty"`
-    // Deprecated: hidden flag.
-    KineTls                       bool     `yaml:"kine-tls,omitempty"`
-    DatastoreEndpoint             string   `yaml:"datastore-endpoint,omitempty"`
-    DatastoreCafile               string   `yaml:"datastore-cafile,omitempty"`
-    DatastoreCertfile             string   `yaml:"datastore-certfile,omitempty"`
-    DatastoreKeyfile              string   `yaml:"datastore-keyfile,omitempty"`
-    EtcdExposeMetrics             bool     `yaml:"etcd-expose-metrics,omitempty"`
-    EtcdDisableSnapshots          bool     `yaml:"etcd-disable-snapshots,omitempty"`
-    EtcdSnapshotName              string   `yaml:"etcd-snapshot-name,omitempty"`
-    EtcdSnapshotScheduleCron      string   `yaml:"etcd-snapshot-schedule-cron,omitempty"`
-    EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
-    EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
-    EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
-    EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
-    EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
-    EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
-    EtcdS3EndpointCa              string   `yaml:"etcd-s3-endpoint-ca,omitempty"`
-    EtcdS3SkipSslVerify           bool     `yaml:"etcd-s3-skip-ssl-verify,omitempty"`
-    EtcdS3AccessKey               string   `yaml:"etcd-s3-access-key,omitempty"`
-    EtcdS3SecretKey               string   `yaml:"etcd-s3-secret-key,omitempty"`
-    EtcdS3SessionToken            string   `yaml:"etcd-s3-session-token,omitempty"`
-    EtcdS3Bucket                  string   `yaml:"etcd-s3-bucket,omitempty"`
-    EtcdS3BucketLookupType        string   `yaml:"etcd-s3-bucket-lookup-type,omitempty"`
-    EtcdS3Region                  string   `yaml:"etcd-s3-region,omitempty"`
-    EtcdS3Folder                  string   `yaml:"etcd-s3-folder,omitempty"`
-    EtcdS3Retention               int      `yaml:"etcd-s3-retention,omitempty"`
-    EtcdS3Proxy                   string   `yaml:"etcd-s3-proxy,omitempty"`
-    EtcdS3ConfigSecret            string   `yaml:"etcd-s3-config-secret,omitempty"`
-    EtcdS3Insecure                bool     `yaml:"etcd-s3-insecure,omitempty"`
-    EtcdS3Timeout                 string   `yaml:"etcd-s3-timeout,omitempty"`
-    DefaultLocalStoragePath       string   `yaml:"default-local-storage-path,omitempty"`
-    Disable                       []string `yaml:"disable,omitempty"`
-    DisableScheduler              bool     `yaml:"disable-scheduler,omitempty"`
-    DisableCloudController        bool     `yaml:"disable-cloud-controller,omitempty"`
-    DisableKubeProxy              bool     `yaml:"disable-kube-proxy,omitempty"`
-    DisableNetworkPolicy          bool     `yaml:"disable-network-policy,omitempty"`
-    DisableHelmController         bool     `yaml:"disable-helm-controller,omitempty"`
-    // Deprecated: hidden flag.
-    DisableApiserver bool `yaml:"disable-apiserver,omitempty"`
-    // Deprecated: hidden flag.
-    DisableControllerManager bool `yaml:"disable-controller-manager,omitempty"`
-    // Deprecated: hidden flag.
-    DisableEtcd                    bool     `yaml:"disable-etcd,omitempty"`
-    EmbeddedRegistry               bool     `yaml:"embedded-registry,omitempty"`
-    SupervisorMetrics              bool     `yaml:"supervisor-metrics,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Docker                         bool     `yaml:"docker,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    SystemDefaultRegistry          string   `yaml:"system-default-registry,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry       []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp                    []string `yaml:"node-ip,omitempty"`
-    NodeExternalIp            []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns           []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns           []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf                string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface              string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf               string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf            string   `yaml:"flannel-cni-conf,omitempty"`
-    VpnAuth                   string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile               string   `yaml:"vpn-auth-file,omitempty"`
-    KubeletArg                []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg              []string `yaml:"kube-proxy-arg,omitempty"`
-    ProtectKernelDefaults     bool     `yaml:"protect-kernel-defaults,omitempty"`
-    SecretsEncryption         bool     `yaml:"secrets-encryption,omitempty"`
-    EnablePprof               bool     `yaml:"enable-pprof,omitempty"`
-    Rootless                  bool     `yaml:"rootless,omitempty"`
-    SecretsEncryptionProvider string   `yaml:"secrets-encryption-provider,omitempty"`
-    Selinux                   bool     `yaml:"selinux,omitempty"`
-    LbServerPort              int      `yaml:"lb-server-port,omitempty"`
-    // Deprecated: hidden flag.
-    DisableAgent bool `yaml:"disable-agent,omitempty"`
-}
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_34"><a class="header" href="#v1_34">v1_34</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_34"
-</code></pre>
-<h2 id="index-13"><a class="header" href="#index-13">Index</a></h2>
-<ul>
-<li><a href="#variables-11">Variables</a></li>
-<li><a href="#AgentConfig">type AgentConfig</a></li>
-<li><a href="#ServerConfig">type ServerConfig</a></li>
-</ul>
-<h2 id="variables-11"><a class="header" href="#variables-11">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components k3s v1_34 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons = []string{
-    "coredns",
-    "servicelb",
-    "traefik",
-    "local-storage",
-    "metrics-server",
-    "runtimes",
-}
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values k3s v1_34 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values k3s v1_34 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-3"><a class="header" href="#type-agentconfig-3">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_34/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
-<p>AgentConfig is the agent config.yaml key set for k3s v1_34.</p>
-<pre><code class="language-go">type AgentConfig struct {
-    Token                          string   `yaml:"token,omitempty"`
-    TokenFile                      string   `yaml:"token-file,omitempty"`
-    Server                         string   `yaml:"server,omitempty"`
-    DataDir                        string   `yaml:"data-dir,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Selinux                        bool     `yaml:"selinux,omitempty"`
-    LbServerPort                   int      `yaml:"lb-server-port,omitempty"`
-    ProtectKernelDefaults          bool     `yaml:"protect-kernel-defaults,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp              []string `yaml:"node-ip,omitempty"`
-    BindAddress         string   `yaml:"bind-address,omitempty"`
-    NodeExternalIp      []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns     []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns     []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf          string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface        string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf         string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf      string   `yaml:"flannel-cni-conf,omitempty"`
-    KubeletArg          []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg        []string `yaml:"kube-proxy-arg,omitempty"`
-    EnablePprof         bool     `yaml:"enable-pprof,omitempty"`
-    Rootless            bool     `yaml:"rootless,omitempty"`
-    Docker              bool     `yaml:"docker,omitempty"`
-    VpnAuth             string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile         string   `yaml:"vpn-auth-file,omitempty"`
-    DisableApiserverLb  bool     `yaml:"disable-apiserver-lb,omitempty"`
-}
-</code></pre>
-<p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-3"><a class="header" href="#type-serverconfig-3">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_34/zz_server_config.go#L29-L157">ServerConfig</a></a></h2>
-<p>ServerConfig is the server config.yaml key set for k3s v1_34.</p>
-<pre><code class="language-go">type ServerConfig struct {
-    BindAddress     string `yaml:"bind-address,omitempty"`
-    HttpsListenPort int    `yaml:"https-listen-port,omitempty"`
-    // Deprecated: hidden flag.
-    SupervisorPort int `yaml:"supervisor-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverPort int `yaml:"apiserver-port,omitempty"`
-    // Deprecated: hidden flag.
-    ApiserverBindAddress    string   `yaml:"apiserver-bind-address,omitempty"`
-    AdvertiseAddress        string   `yaml:"advertise-address,omitempty"`
-    AdvertisePort           int      `yaml:"advertise-port,omitempty"`
-    TlsSan                  []string `yaml:"tls-san,omitempty"`
-    TlsSanSecurity          bool     `yaml:"tls-san-security,omitempty"`
-    DataDir                 string   `yaml:"data-dir,omitempty"`
-    ClusterCidr             []string `yaml:"cluster-cidr,omitempty"`
-    ServiceCidr             []string `yaml:"service-cidr,omitempty"`
-    ServiceNodePortRange    string   `yaml:"service-node-port-range,omitempty"`
-    ClusterDns              []string `yaml:"cluster-dns,omitempty"`
-    ClusterDomain           string   `yaml:"cluster-domain,omitempty"`
-    FlannelBackend          string   `yaml:"flannel-backend,omitempty"`
-    FlannelIpv6Masq         bool     `yaml:"flannel-ipv6-masq,omitempty"`
-    FlannelExternalIp       bool     `yaml:"flannel-external-ip,omitempty"`
-    EgressSelectorMode      string   `yaml:"egress-selector-mode,omitempty"`
-    ServicelbNamespace      string   `yaml:"servicelb-namespace,omitempty"`
-    WriteKubeconfig         string   `yaml:"write-kubeconfig,omitempty"`
-    WriteKubeconfigMode     string   `yaml:"write-kubeconfig-mode,omitempty"`
-    WriteKubeconfigGroup    string   `yaml:"write-kubeconfig-group,omitempty"`
-    HelmJobImage            string   `yaml:"helm-job-image,omitempty"`
-    Token                   string   `yaml:"token,omitempty"`
-    TokenFile               string   `yaml:"token-file,omitempty"`
-    AgentToken              string   `yaml:"agent-token,omitempty"`
-    AgentTokenFile          string   `yaml:"agent-token-file,omitempty"`
-    Server                  string   `yaml:"server,omitempty"`
-    ClusterInit             bool     `yaml:"cluster-init,omitempty"`
-    ClusterReset            bool     `yaml:"cluster-reset,omitempty"`
-    ClusterResetRestorePath string   `yaml:"cluster-reset-restore-path,omitempty"`
-    KubeApiserverArg        []string `yaml:"kube-apiserver-arg,omitempty"`
-    EtcdArg                 []string `yaml:"etcd-arg,omitempty"`
-    // Aliases (not separately validated here): kube-controller-arg
-    KubeControllerManagerArg []string `yaml:"kube-controller-manager-arg,omitempty"`
-    KubeSchedulerArg         []string `yaml:"kube-scheduler-arg,omitempty"`
-    HelmControllerArg        []string `yaml:"helm-controller-arg,omitempty"`
-    // Aliases (not separately validated here): kube-cloud-controller-arg
-    KubeCloudControllerManagerArg []string `yaml:"kube-cloud-controller-manager-arg,omitempty"`
-    // Deprecated: hidden flag.
-    KineTls                       bool     `yaml:"kine-tls,omitempty"`
-    DatastoreEndpoint             string   `yaml:"datastore-endpoint,omitempty"`
-    DatastoreCafile               string   `yaml:"datastore-cafile,omitempty"`
-    DatastoreCertfile             string   `yaml:"datastore-certfile,omitempty"`
-    DatastoreKeyfile              string   `yaml:"datastore-keyfile,omitempty"`
-    EtcdExposeMetrics             bool     `yaml:"etcd-expose-metrics,omitempty"`
-    EtcdDisableSnapshots          bool     `yaml:"etcd-disable-snapshots,omitempty"`
-    EtcdSnapshotName              string   `yaml:"etcd-snapshot-name,omitempty"`
-    EtcdSnapshotScheduleCron      string   `yaml:"etcd-snapshot-schedule-cron,omitempty"`
-    EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
-    EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
-    EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
-    EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
-    EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
-    EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
-    EtcdS3EndpointCa              string   `yaml:"etcd-s3-endpoint-ca,omitempty"`
-    EtcdS3SkipSslVerify           bool     `yaml:"etcd-s3-skip-ssl-verify,omitempty"`
-    EtcdS3AccessKey               string   `yaml:"etcd-s3-access-key,omitempty"`
-    EtcdS3SecretKey               string   `yaml:"etcd-s3-secret-key,omitempty"`
-    EtcdS3SessionToken            string   `yaml:"etcd-s3-session-token,omitempty"`
-    EtcdS3Bucket                  string   `yaml:"etcd-s3-bucket,omitempty"`
-    EtcdS3BucketLookupType        string   `yaml:"etcd-s3-bucket-lookup-type,omitempty"`
-    EtcdS3Region                  string   `yaml:"etcd-s3-region,omitempty"`
-    EtcdS3Folder                  string   `yaml:"etcd-s3-folder,omitempty"`
-    EtcdS3Retention               int      `yaml:"etcd-s3-retention,omitempty"`
-    EtcdS3Proxy                   string   `yaml:"etcd-s3-proxy,omitempty"`
-    EtcdS3ConfigSecret            string   `yaml:"etcd-s3-config-secret,omitempty"`
-    EtcdS3Insecure                bool     `yaml:"etcd-s3-insecure,omitempty"`
-    EtcdS3Timeout                 string   `yaml:"etcd-s3-timeout,omitempty"`
-    DefaultLocalStoragePath       string   `yaml:"default-local-storage-path,omitempty"`
-    Disable                       []string `yaml:"disable,omitempty"`
-    DisableScheduler              bool     `yaml:"disable-scheduler,omitempty"`
-    DisableCloudController        bool     `yaml:"disable-cloud-controller,omitempty"`
-    DisableKubeProxy              bool     `yaml:"disable-kube-proxy,omitempty"`
-    DisableNetworkPolicy          bool     `yaml:"disable-network-policy,omitempty"`
-    DisableHelmController         bool     `yaml:"disable-helm-controller,omitempty"`
-    // Deprecated: hidden flag.
-    DisableApiserver bool `yaml:"disable-apiserver,omitempty"`
-    // Deprecated: hidden flag.
-    DisableControllerManager bool `yaml:"disable-controller-manager,omitempty"`
-    // Deprecated: hidden flag.
-    DisableEtcd                    bool     `yaml:"disable-etcd,omitempty"`
-    EmbeddedRegistry               bool     `yaml:"embedded-registry,omitempty"`
-    SupervisorMetrics              bool     `yaml:"supervisor-metrics,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Docker                         bool     `yaml:"docker,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    ImageServiceEndpoint           string   `yaml:"image-service-endpoint,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    PauseImage                     string   `yaml:"pause-image,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    SystemDefaultRegistry          string   `yaml:"system-default-registry,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry       []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp                    []string `yaml:"node-ip,omitempty"`
-    NodeExternalIp            []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns           []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns           []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf                string   `yaml:"resolv-conf,omitempty"`
-    FlannelIface              string   `yaml:"flannel-iface,omitempty"`
-    FlannelConf               string   `yaml:"flannel-conf,omitempty"`
-    FlannelCniConf            string   `yaml:"flannel-cni-conf,omitempty"`
-    VpnAuth                   string   `yaml:"vpn-auth,omitempty"`
-    VpnAuthFile               string   `yaml:"vpn-auth-file,omitempty"`
-    KubeletArg                []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg              []string `yaml:"kube-proxy-arg,omitempty"`
-    ProtectKernelDefaults     bool     `yaml:"protect-kernel-defaults,omitempty"`
-    SecretsEncryption         bool     `yaml:"secrets-encryption,omitempty"`
-    EnablePprof               bool     `yaml:"enable-pprof,omitempty"`
-    Rootless                  bool     `yaml:"rootless,omitempty"`
-    SecretsEncryptionProvider string   `yaml:"secrets-encryption-provider,omitempty"`
-    Selinux                   bool     `yaml:"selinux,omitempty"`
-    LbServerPort              int      `yaml:"lb-server-port,omitempty"`
-    // Deprecated: hidden flag.
-    DisableAgent bool `yaml:"disable-agent,omitempty"`
-}
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_35"><a class="header" href="#v1_35">v1_35</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_35"
-</code></pre>
-<h2 id="index-14"><a class="header" href="#index-14">Index</a></h2>
-<ul>
-<li><a href="#variables-12">Variables</a></li>
-<li><a href="#AgentConfig">type AgentConfig</a></li>
-<li><a href="#ServerConfig">type ServerConfig</a></li>
-</ul>
-<h2 id="variables-12"><a class="header" href="#variables-12">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -9152,7 +8525,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var IngressControllers []string
 </code></pre>
 <p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-4"><a class="header" href="#type-agentconfig-4">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_35/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
+<h2 id="type-agentconfig-1"><a class="header" href="#type-agentconfig-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_35/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
 <p>AgentConfig is the agent config.yaml key set for k3s v1_35.</p>
 <pre><code class="language-go">type AgentConfig struct {
     Token                          string   `yaml:"token,omitempty"`
@@ -9198,7 +8571,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-4"><a class="header" href="#type-serverconfig-4">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_35/zz_server_config.go#L29-L157">ServerConfig</a></a></h2>
+<h2 id="type-serverconfig-1"><a class="header" href="#type-serverconfig-1">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_35/zz_server_config.go#L29-L157">ServerConfig</a></a></h2>
 <p>ServerConfig is the server config.yaml key set for k3s v1_35.</p>
 <pre><code class="language-go">type ServerConfig struct {
     BindAddress     string `yaml:"bind-address,omitempty"`
@@ -9335,13 +8708,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h1 id="v1_36"><a class="header" href="#v1_36">v1_36</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_36"
 </code></pre>
-<h2 id="index-15"><a class="header" href="#index-15">Index</a></h2>
+<h2 id="index-12"><a class="header" href="#index-12">Index</a></h2>
 <ul>
-<li><a href="#variables-13">Variables</a></li>
+<li><a href="#variables-10">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-13"><a class="header" href="#variables-13">Variables</a></h2>
+<h2 id="variables-10"><a class="header" href="#variables-10">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -9359,7 +8732,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var IngressControllers []string
 </code></pre>
 <p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-5"><a class="header" href="#type-agentconfig-5">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_36/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
+<h2 id="type-agentconfig-2"><a class="header" href="#type-agentconfig-2">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_36/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
 <p>AgentConfig is the agent config.yaml key set for k3s v1_36.</p>
 <pre><code class="language-go">type AgentConfig struct {
     Token                          string   `yaml:"token,omitempty"`
@@ -9405,7 +8778,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-5"><a class="header" href="#type-serverconfig-5">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_36/zz_server_config.go#L29-L157">ServerConfig</a></a></h2>
+<h2 id="type-serverconfig-2"><a class="header" href="#type-serverconfig-2">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_36/zz_server_config.go#L29-L157">ServerConfig</a></a></h2>
 <p>ServerConfig is the server config.yaml key set for k3s v1_36.</p>
 <pre><code class="language-go">type ServerConfig struct {
     BindAddress     string `yaml:"bind-address,omitempty"`
@@ -9542,13 +8915,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h1 id="v1_37"><a class="header" href="#v1_37">v1_37</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/k3s/v1_37"
 </code></pre>
-<h2 id="index-16"><a class="header" href="#index-16">Index</a></h2>
+<h2 id="index-13"><a class="header" href="#index-13">Index</a></h2>
 <ul>
-<li><a href="#variables-14">Variables</a></li>
+<li><a href="#variables-11">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-14"><a class="header" href="#variables-14">Variables</a></h2>
+<h2 id="variables-11"><a class="header" href="#variables-11">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components k3s v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "coredns",
@@ -9566,7 +8939,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var IngressControllers []string
 </code></pre>
 <p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-6"><a class="header" href="#type-agentconfig-6">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_37/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
+<h2 id="type-agentconfig-3"><a class="header" href="#type-agentconfig-3">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_37/zz_agent_config.go#L29-L70">AgentConfig</a></a></h2>
 <p>AgentConfig is the agent config.yaml key set for k3s v1_37.</p>
 <pre><code class="language-go">type AgentConfig struct {
     Token                          string   `yaml:"token,omitempty"`
@@ -9612,7 +8985,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-6"><a class="header" href="#type-serverconfig-6">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_37/zz_server_config.go#L29-L158">ServerConfig</a></a></h2>
+<h2 id="type-serverconfig-3"><a class="header" href="#type-serverconfig-3">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/k3s/v1_37/zz_server_config.go#L29-L158">ServerConfig</a></a></h2>
 <p>ServerConfig is the server config.yaml key set for k3s v1_37.</p>
 <pre><code class="language-go">type ServerConfig struct {
     BindAddress     string `yaml:"bind-address,omitempty"`
@@ -9750,13 +9123,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h1 id="v1_31-1"><a class="header" href="#v1_31-1">v1_31</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_31"
 </code></pre>
-<h2 id="index-17"><a class="header" href="#index-17">Index</a></h2>
+<h2 id="index-14"><a class="header" href="#index-14">Index</a></h2>
 <ul>
-<li><a href="#variables-15">Variables</a></li>
+<li><a href="#variables-12">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-15"><a class="header" href="#variables-15">Variables</a></h2>
+<h2 id="variables-12"><a class="header" href="#variables-12">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_31 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -9794,7 +9167,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-7"><a class="header" href="#type-agentconfig-7">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_31/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
+<h2 id="type-agentconfig-4"><a class="header" href="#type-agentconfig-4">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_31/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
 <p>AgentConfig is the agent config.yaml key set for rke2 v1_31.</p>
 <pre><code class="language-go">type AgentConfig struct {
     Token                          string   `yaml:"token,omitempty"`
@@ -9842,7 +9215,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-7"><a class="header" href="#type-serverconfig-7">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_31/zz_server_config.go#L49-L162">ServerConfig</a></a></h2>
+<h2 id="type-serverconfig-4"><a class="header" href="#type-serverconfig-4">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_31/zz_server_config.go#L49-L162">ServerConfig</a></a></h2>
 <p>ServerConfig is the server config.yaml key set for rke2 v1_31.</p>
 <pre><code class="language-go">type ServerConfig struct {
     BindAddress                   string   `yaml:"bind-address,omitempty"`
@@ -9961,663 +9334,16 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
 <div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_32-1"><a class="header" href="#v1_32-1">v1_32</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_32"
-</code></pre>
-<h2 id="index-18"><a class="header" href="#index-18">Index</a></h2>
-<ul>
-<li><a href="#variables-16">Variables</a></li>
-<li><a href="#AgentConfig">type AgentConfig</a></li>
-<li><a href="#ServerConfig">type ServerConfig</a></li>
-</ul>
-<h2 id="variables-16"><a class="header" href="#variables-16">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_32 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons = []string{
-    "rke2-calico",
-    "rke2-calico-crd",
-    "rke2-canal",
-    "rke2-canal-crd",
-    "rke2-cilium",
-    "rke2-cilium-crd",
-    "rke2-coredns",
-    "rke2-flannel",
-    "rke2-flannel-crd",
-    "rke2-ingress-nginx",
-    "rke2-ingress-nginx-crd",
-    "rke2-metrics-server",
-    "rke2-multus",
-    "rke2-snapshot-controller",
-    "rke2-snapshot-controller-crd",
-    "rke2-snapshot-validation-webhook",
-    "rke2-traefik",
-    "rke2-traefik-crd",
-}
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values rke2 v1_32 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs = []string{
-    "calico",
-    "canal",
-    "cilium",
-    "flannel",
-}
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values rke2 v1_32 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers = []string{
-    "ingress-nginx",
-    "traefik",
-}
-</code></pre>
-<p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-8"><a class="header" href="#type-agentconfig-8">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_32/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
-<p>AgentConfig is the agent config.yaml key set for rke2 v1_32.</p>
-<pre><code class="language-go">type AgentConfig struct {
-    Token                          string   `yaml:"token,omitempty"`
-    TokenFile                      string   `yaml:"token-file,omitempty"`
-    Server                         string   `yaml:"server,omitempty"`
-    DataDir                        string   `yaml:"data-dir,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Selinux                        bool     `yaml:"selinux,omitempty"`
-    LbServerPort                   int      `yaml:"lb-server-port,omitempty"`
-    ProtectKernelDefaults          bool     `yaml:"protect-kernel-defaults,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp              []string `yaml:"node-ip,omitempty"`
-    BindAddress         string   `yaml:"bind-address,omitempty"`
-    NodeExternalIp      []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns     []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns     []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf          string   `yaml:"resolv-conf,omitempty"`
-    KubeletArg          []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg        []string `yaml:"kube-proxy-arg,omitempty"`
-    EnablePprof         bool     `yaml:"enable-pprof,omitempty"`
-    // Deprecated: hidden flag.
-    SystemDefaultRegistry             string   `yaml:"system-default-registry,omitempty"`
-    KubeletPath                       string   `yaml:"kubelet-path,omitempty"`
-    CloudProviderName                 string   `yaml:"cloud-provider-name,omitempty"`
-    CloudProviderConfig               string   `yaml:"cloud-provider-config,omitempty"`
-    NodeNameFromCloudProviderMetadata bool     `yaml:"node-name-from-cloud-provider-metadata,omitempty"`
-    Profile                           string   `yaml:"profile,omitempty"`
-    AuditPolicyFile                   string   `yaml:"audit-policy-file,omitempty"`
-    PodSecurityAdmissionConfigFile    string   `yaml:"pod-security-admission-config-file,omitempty"`
-    ControlPlaneResourceRequests      []string `yaml:"control-plane-resource-requests,omitempty"`
-    ControlPlaneResourceLimits        []string `yaml:"control-plane-resource-limits,omitempty"`
-    ControlPlaneProbeConfiguration    []string `yaml:"control-plane-probe-configuration,omitempty"`
-}
-</code></pre>
-<p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-8"><a class="header" href="#type-serverconfig-8">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_32/zz_server_config.go#L49-L162">ServerConfig</a></a></h2>
-<p>ServerConfig is the server config.yaml key set for rke2 v1_32.</p>
-<pre><code class="language-go">type ServerConfig struct {
-    BindAddress                   string   `yaml:"bind-address,omitempty"`
-    AdvertiseAddress              string   `yaml:"advertise-address,omitempty"`
-    TlsSan                        []string `yaml:"tls-san,omitempty"`
-    TlsSanSecurity                bool     `yaml:"tls-san-security,omitempty"`
-    DataDir                       string   `yaml:"data-dir,omitempty"`
-    ClusterCidr                   []string `yaml:"cluster-cidr,omitempty"`
-    ServiceCidr                   []string `yaml:"service-cidr,omitempty"`
-    ServiceNodePortRange          string   `yaml:"service-node-port-range,omitempty"`
-    ClusterDns                    []string `yaml:"cluster-dns,omitempty"`
-    ClusterDomain                 string   `yaml:"cluster-domain,omitempty"`
-    EgressSelectorMode            string   `yaml:"egress-selector-mode,omitempty"`
-    ServicelbNamespace            string   `yaml:"servicelb-namespace,omitempty"`
-    WriteKubeconfig               string   `yaml:"write-kubeconfig,omitempty"`
-    WriteKubeconfigMode           string   `yaml:"write-kubeconfig-mode,omitempty"`
-    WriteKubeconfigGroup          string   `yaml:"write-kubeconfig-group,omitempty"`
-    HelmJobImage                  string   `yaml:"helm-job-image,omitempty"`
-    Token                         string   `yaml:"token,omitempty"`
-    TokenFile                     string   `yaml:"token-file,omitempty"`
-    AgentToken                    string   `yaml:"agent-token,omitempty"`
-    AgentTokenFile                string   `yaml:"agent-token-file,omitempty"`
-    Server                        string   `yaml:"server,omitempty"`
-    ClusterReset                  bool     `yaml:"cluster-reset,omitempty"`
-    ClusterResetRestorePath       string   `yaml:"cluster-reset-restore-path,omitempty"`
-    KubeApiserverArg              []string `yaml:"kube-apiserver-arg,omitempty"`
-    EtcdArg                       []string `yaml:"etcd-arg,omitempty"`
-    KubeControllerManagerArg      []string `yaml:"kube-controller-manager-arg,omitempty"`
-    KubeSchedulerArg              []string `yaml:"kube-scheduler-arg,omitempty"`
-    KubeCloudControllerManagerArg []string `yaml:"kube-cloud-controller-manager-arg,omitempty"`
-    DatastoreEndpoint             string   `yaml:"datastore-endpoint,omitempty"`
-    DatastoreCafile               string   `yaml:"datastore-cafile,omitempty"`
-    DatastoreCertfile             string   `yaml:"datastore-certfile,omitempty"`
-    DatastoreKeyfile              string   `yaml:"datastore-keyfile,omitempty"`
-    EtcdExposeMetrics             bool     `yaml:"etcd-expose-metrics,omitempty"`
-    EtcdDisableSnapshots          bool     `yaml:"etcd-disable-snapshots,omitempty"`
-    EtcdSnapshotName              string   `yaml:"etcd-snapshot-name,omitempty"`
-    EtcdSnapshotScheduleCron      string   `yaml:"etcd-snapshot-schedule-cron,omitempty"`
-    EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
-    EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
-    EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
-    EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
-    EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
-    EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
-    EtcdS3EndpointCa              string   `yaml:"etcd-s3-endpoint-ca,omitempty"`
-    EtcdS3SkipSslVerify           bool     `yaml:"etcd-s3-skip-ssl-verify,omitempty"`
-    EtcdS3AccessKey               string   `yaml:"etcd-s3-access-key,omitempty"`
-    EtcdS3SecretKey               string   `yaml:"etcd-s3-secret-key,omitempty"`
-    EtcdS3SessionToken            string   `yaml:"etcd-s3-session-token,omitempty"`
-    EtcdS3Bucket                  string   `yaml:"etcd-s3-bucket,omitempty"`
-    EtcdS3BucketLookupType        string   `yaml:"etcd-s3-bucket-lookup-type,omitempty"`
-    EtcdS3Region                  string   `yaml:"etcd-s3-region,omitempty"`
-    EtcdS3Folder                  string   `yaml:"etcd-s3-folder,omitempty"`
-    EtcdS3Retention               int      `yaml:"etcd-s3-retention,omitempty"`
-    EtcdS3Proxy                   string   `yaml:"etcd-s3-proxy,omitempty"`
-    EtcdS3ConfigSecret            string   `yaml:"etcd-s3-config-secret,omitempty"`
-    EtcdS3Insecure                bool     `yaml:"etcd-s3-insecure,omitempty"`
-    EtcdS3Timeout                 string   `yaml:"etcd-s3-timeout,omitempty"`
-    Disable                       []string `yaml:"disable,omitempty"`
-    DisableScheduler              bool     `yaml:"disable-scheduler,omitempty"`
-    DisableCloudController        bool     `yaml:"disable-cloud-controller,omitempty"`
-    DisableKubeProxy              bool     `yaml:"disable-kube-proxy,omitempty"`
-    // Deprecated: hidden flag.
-    DisableApiserver bool `yaml:"disable-apiserver,omitempty"`
-    // Deprecated: hidden flag.
-    DisableControllerManager bool `yaml:"disable-controller-manager,omitempty"`
-    // Deprecated: hidden flag.
-    DisableEtcd                    bool     `yaml:"disable-etcd,omitempty"`
-    EmbeddedRegistry               bool     `yaml:"embedded-registry,omitempty"`
-    SupervisorMetrics              bool     `yaml:"supervisor-metrics,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    SystemDefaultRegistry          string   `yaml:"system-default-registry,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry   []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp                []string `yaml:"node-ip,omitempty"`
-    NodeExternalIp        []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns       []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns       []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf            string   `yaml:"resolv-conf,omitempty"`
-    KubeletArg            []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg          []string `yaml:"kube-proxy-arg,omitempty"`
-    ProtectKernelDefaults bool     `yaml:"protect-kernel-defaults,omitempty"`
-    // Deprecated: hidden flag.
-    SecretsEncryption         bool   `yaml:"secrets-encryption,omitempty"`
-    EnablePprof               bool   `yaml:"enable-pprof,omitempty"`
-    SecretsEncryptionProvider string `yaml:"secrets-encryption-provider,omitempty"`
-    Selinux                   bool   `yaml:"selinux,omitempty"`
-    LbServerPort              int    `yaml:"lb-server-port,omitempty"`
-    // Deprecated: hidden flag.
-    DisableAgent                      bool     `yaml:"disable-agent,omitempty"`
-    Cni                               []string `yaml:"cni,omitempty"`
-    IngressController                 []string `yaml:"ingress-controller,omitempty"`
-    EnableServicelb                   bool     `yaml:"enable-servicelb,omitempty"`
-    KubeletPath                       string   `yaml:"kubelet-path,omitempty"`
-    CloudProviderName                 string   `yaml:"cloud-provider-name,omitempty"`
-    CloudProviderConfig               string   `yaml:"cloud-provider-config,omitempty"`
-    NodeNameFromCloudProviderMetadata bool     `yaml:"node-name-from-cloud-provider-metadata,omitempty"`
-    Profile                           string   `yaml:"profile,omitempty"`
-    AuditPolicyFile                   string   `yaml:"audit-policy-file,omitempty"`
-    PodSecurityAdmissionConfigFile    string   `yaml:"pod-security-admission-config-file,omitempty"`
-    ControlPlaneResourceRequests      []string `yaml:"control-plane-resource-requests,omitempty"`
-    ControlPlaneResourceLimits        []string `yaml:"control-plane-resource-limits,omitempty"`
-    ControlPlaneProbeConfiguration    []string `yaml:"control-plane-probe-configuration,omitempty"`
-}
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_33-1"><a class="header" href="#v1_33-1">v1_33</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_33"
-</code></pre>
-<h2 id="index-19"><a class="header" href="#index-19">Index</a></h2>
-<ul>
-<li><a href="#variables-17">Variables</a></li>
-<li><a href="#AgentConfig">type AgentConfig</a></li>
-<li><a href="#ServerConfig">type ServerConfig</a></li>
-</ul>
-<h2 id="variables-17"><a class="header" href="#variables-17">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_33 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons = []string{
-    "rke2-calico",
-    "rke2-calico-crd",
-    "rke2-canal",
-    "rke2-canal-crd",
-    "rke2-cilium",
-    "rke2-cilium-crd",
-    "rke2-coredns",
-    "rke2-flannel",
-    "rke2-flannel-crd",
-    "rke2-ingress-nginx",
-    "rke2-ingress-nginx-crd",
-    "rke2-metrics-server",
-    "rke2-multus",
-    "rke2-snapshot-controller",
-    "rke2-snapshot-controller-crd",
-    "rke2-snapshot-validation-webhook",
-    "rke2-traefik",
-    "rke2-traefik-crd",
-}
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values rke2 v1_33 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs = []string{
-    "calico",
-    "canal",
-    "cilium",
-    "flannel",
-}
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values rke2 v1_33 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers = []string{
-    "ingress-nginx",
-    "traefik",
-}
-</code></pre>
-<p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-9"><a class="header" href="#type-agentconfig-9">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_33/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
-<p>AgentConfig is the agent config.yaml key set for rke2 v1_33.</p>
-<pre><code class="language-go">type AgentConfig struct {
-    Token                          string   `yaml:"token,omitempty"`
-    TokenFile                      string   `yaml:"token-file,omitempty"`
-    Server                         string   `yaml:"server,omitempty"`
-    DataDir                        string   `yaml:"data-dir,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Selinux                        bool     `yaml:"selinux,omitempty"`
-    LbServerPort                   int      `yaml:"lb-server-port,omitempty"`
-    ProtectKernelDefaults          bool     `yaml:"protect-kernel-defaults,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp              []string `yaml:"node-ip,omitempty"`
-    BindAddress         string   `yaml:"bind-address,omitempty"`
-    NodeExternalIp      []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns     []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns     []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf          string   `yaml:"resolv-conf,omitempty"`
-    KubeletArg          []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg        []string `yaml:"kube-proxy-arg,omitempty"`
-    EnablePprof         bool     `yaml:"enable-pprof,omitempty"`
-    // Deprecated: hidden flag.
-    SystemDefaultRegistry             string   `yaml:"system-default-registry,omitempty"`
-    KubeletPath                       string   `yaml:"kubelet-path,omitempty"`
-    CloudProviderName                 string   `yaml:"cloud-provider-name,omitempty"`
-    CloudProviderConfig               string   `yaml:"cloud-provider-config,omitempty"`
-    NodeNameFromCloudProviderMetadata bool     `yaml:"node-name-from-cloud-provider-metadata,omitempty"`
-    Profile                           string   `yaml:"profile,omitempty"`
-    AuditPolicyFile                   string   `yaml:"audit-policy-file,omitempty"`
-    PodSecurityAdmissionConfigFile    string   `yaml:"pod-security-admission-config-file,omitempty"`
-    ControlPlaneResourceRequests      []string `yaml:"control-plane-resource-requests,omitempty"`
-    ControlPlaneResourceLimits        []string `yaml:"control-plane-resource-limits,omitempty"`
-    ControlPlaneProbeConfiguration    []string `yaml:"control-plane-probe-configuration,omitempty"`
-}
-</code></pre>
-<p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-9"><a class="header" href="#type-serverconfig-9">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_33/zz_server_config.go#L49-L164">ServerConfig</a></a></h2>
-<p>ServerConfig is the server config.yaml key set for rke2 v1_33.</p>
-<pre><code class="language-go">type ServerConfig struct {
-    BindAddress                   string   `yaml:"bind-address,omitempty"`
-    AdvertiseAddress              string   `yaml:"advertise-address,omitempty"`
-    TlsSan                        []string `yaml:"tls-san,omitempty"`
-    TlsSanSecurity                bool     `yaml:"tls-san-security,omitempty"`
-    DataDir                       string   `yaml:"data-dir,omitempty"`
-    ClusterCidr                   []string `yaml:"cluster-cidr,omitempty"`
-    ServiceCidr                   []string `yaml:"service-cidr,omitempty"`
-    ServiceNodePortRange          string   `yaml:"service-node-port-range,omitempty"`
-    ClusterDns                    []string `yaml:"cluster-dns,omitempty"`
-    ClusterDomain                 string   `yaml:"cluster-domain,omitempty"`
-    EgressSelectorMode            string   `yaml:"egress-selector-mode,omitempty"`
-    ServicelbNamespace            string   `yaml:"servicelb-namespace,omitempty"`
-    WriteKubeconfig               string   `yaml:"write-kubeconfig,omitempty"`
-    WriteKubeconfigMode           string   `yaml:"write-kubeconfig-mode,omitempty"`
-    WriteKubeconfigGroup          string   `yaml:"write-kubeconfig-group,omitempty"`
-    HelmJobImage                  string   `yaml:"helm-job-image,omitempty"`
-    Token                         string   `yaml:"token,omitempty"`
-    TokenFile                     string   `yaml:"token-file,omitempty"`
-    AgentToken                    string   `yaml:"agent-token,omitempty"`
-    AgentTokenFile                string   `yaml:"agent-token-file,omitempty"`
-    Server                        string   `yaml:"server,omitempty"`
-    ClusterReset                  bool     `yaml:"cluster-reset,omitempty"`
-    ClusterResetRestorePath       string   `yaml:"cluster-reset-restore-path,omitempty"`
-    KubeApiserverArg              []string `yaml:"kube-apiserver-arg,omitempty"`
-    EtcdArg                       []string `yaml:"etcd-arg,omitempty"`
-    KubeControllerManagerArg      []string `yaml:"kube-controller-manager-arg,omitempty"`
-    KubeSchedulerArg              []string `yaml:"kube-scheduler-arg,omitempty"`
-    KubeCloudControllerManagerArg []string `yaml:"kube-cloud-controller-manager-arg,omitempty"`
-    DatastoreEndpoint             string   `yaml:"datastore-endpoint,omitempty"`
-    DatastoreCafile               string   `yaml:"datastore-cafile,omitempty"`
-    DatastoreCertfile             string   `yaml:"datastore-certfile,omitempty"`
-    DatastoreKeyfile              string   `yaml:"datastore-keyfile,omitempty"`
-    EtcdExposeMetrics             bool     `yaml:"etcd-expose-metrics,omitempty"`
-    EtcdDisableSnapshots          bool     `yaml:"etcd-disable-snapshots,omitempty"`
-    EtcdSnapshotName              string   `yaml:"etcd-snapshot-name,omitempty"`
-    EtcdSnapshotScheduleCron      string   `yaml:"etcd-snapshot-schedule-cron,omitempty"`
-    EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
-    EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
-    EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
-    EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
-    EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
-    EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
-    EtcdS3EndpointCa              string   `yaml:"etcd-s3-endpoint-ca,omitempty"`
-    EtcdS3SkipSslVerify           bool     `yaml:"etcd-s3-skip-ssl-verify,omitempty"`
-    EtcdS3AccessKey               string   `yaml:"etcd-s3-access-key,omitempty"`
-    EtcdS3SecretKey               string   `yaml:"etcd-s3-secret-key,omitempty"`
-    EtcdS3SessionToken            string   `yaml:"etcd-s3-session-token,omitempty"`
-    EtcdS3Bucket                  string   `yaml:"etcd-s3-bucket,omitempty"`
-    EtcdS3BucketLookupType        string   `yaml:"etcd-s3-bucket-lookup-type,omitempty"`
-    EtcdS3Region                  string   `yaml:"etcd-s3-region,omitempty"`
-    EtcdS3Folder                  string   `yaml:"etcd-s3-folder,omitempty"`
-    EtcdS3Retention               int      `yaml:"etcd-s3-retention,omitempty"`
-    EtcdS3Proxy                   string   `yaml:"etcd-s3-proxy,omitempty"`
-    EtcdS3ConfigSecret            string   `yaml:"etcd-s3-config-secret,omitempty"`
-    EtcdS3Insecure                bool     `yaml:"etcd-s3-insecure,omitempty"`
-    EtcdS3Timeout                 string   `yaml:"etcd-s3-timeout,omitempty"`
-    Disable                       []string `yaml:"disable,omitempty"`
-    DisableScheduler              bool     `yaml:"disable-scheduler,omitempty"`
-    DisableCloudController        bool     `yaml:"disable-cloud-controller,omitempty"`
-    DisableKubeProxy              bool     `yaml:"disable-kube-proxy,omitempty"`
-    // Deprecated: hidden flag.
-    DisableApiserver bool `yaml:"disable-apiserver,omitempty"`
-    // Deprecated: hidden flag.
-    DisableControllerManager bool `yaml:"disable-controller-manager,omitempty"`
-    // Deprecated: hidden flag.
-    DisableEtcd                    bool     `yaml:"disable-etcd,omitempty"`
-    EmbeddedRegistry               bool     `yaml:"embedded-registry,omitempty"`
-    SupervisorMetrics              bool     `yaml:"supervisor-metrics,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    SystemDefaultRegistry          string   `yaml:"system-default-registry,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry   []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp                []string `yaml:"node-ip,omitempty"`
-    NodeExternalIp        []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns       []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns       []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf            string   `yaml:"resolv-conf,omitempty"`
-    KubeletArg            []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg          []string `yaml:"kube-proxy-arg,omitempty"`
-    ProtectKernelDefaults bool     `yaml:"protect-kernel-defaults,omitempty"`
-    // Deprecated: hidden flag.
-    SecretsEncryption         bool   `yaml:"secrets-encryption,omitempty"`
-    EnablePprof               bool   `yaml:"enable-pprof,omitempty"`
-    SecretsEncryptionProvider string `yaml:"secrets-encryption-provider,omitempty"`
-    Selinux                   bool   `yaml:"selinux,omitempty"`
-    LbServerPort              int    `yaml:"lb-server-port,omitempty"`
-    // Deprecated: hidden flag.
-    DisableAgent      bool     `yaml:"disable-agent,omitempty"`
-    Cni               []string `yaml:"cni,omitempty"`
-    IngressController []string `yaml:"ingress-controller,omitempty"`
-    EnableServicelb   bool     `yaml:"enable-servicelb,omitempty"`
-    // Deprecated: hidden flag.
-    Prime                             bool     `yaml:"prime,omitempty"`
-    KubeletPath                       string   `yaml:"kubelet-path,omitempty"`
-    CloudProviderName                 string   `yaml:"cloud-provider-name,omitempty"`
-    CloudProviderConfig               string   `yaml:"cloud-provider-config,omitempty"`
-    NodeNameFromCloudProviderMetadata bool     `yaml:"node-name-from-cloud-provider-metadata,omitempty"`
-    Profile                           string   `yaml:"profile,omitempty"`
-    AuditPolicyFile                   string   `yaml:"audit-policy-file,omitempty"`
-    PodSecurityAdmissionConfigFile    string   `yaml:"pod-security-admission-config-file,omitempty"`
-    ControlPlaneResourceRequests      []string `yaml:"control-plane-resource-requests,omitempty"`
-    ControlPlaneResourceLimits        []string `yaml:"control-plane-resource-limits,omitempty"`
-    ControlPlaneProbeConfiguration    []string `yaml:"control-plane-probe-configuration,omitempty"`
-}
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_34-1"><a class="header" href="#v1_34-1">v1_34</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_34"
-</code></pre>
-<h2 id="index-20"><a class="header" href="#index-20">Index</a></h2>
-<ul>
-<li><a href="#variables-18">Variables</a></li>
-<li><a href="#AgentConfig">type AgentConfig</a></li>
-<li><a href="#ServerConfig">type ServerConfig</a></li>
-</ul>
-<h2 id="variables-18"><a class="header" href="#variables-18">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_34 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons = []string{
-    "rke2-calico",
-    "rke2-calico-crd",
-    "rke2-canal",
-    "rke2-canal-crd",
-    "rke2-cilium",
-    "rke2-cilium-crd",
-    "rke2-coredns",
-    "rke2-flannel",
-    "rke2-flannel-crd",
-    "rke2-ingress-nginx",
-    "rke2-ingress-nginx-crd",
-    "rke2-metrics-server",
-    "rke2-multus",
-    "rke2-snapshot-controller",
-    "rke2-snapshot-controller-crd",
-    "rke2-snapshot-validation-webhook",
-    "rke2-traefik",
-    "rke2-traefik-crd",
-}
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values rke2 v1_34 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs = []string{
-    "calico",
-    "canal",
-    "cilium",
-    "flannel",
-}
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values rke2 v1_34 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers = []string{
-    "ingress-nginx",
-    "traefik",
-}
-</code></pre>
-<p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-10"><a class="header" href="#type-agentconfig-10">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_34/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
-<p>AgentConfig is the agent config.yaml key set for rke2 v1_34.</p>
-<pre><code class="language-go">type AgentConfig struct {
-    Token                          string   `yaml:"token,omitempty"`
-    TokenFile                      string   `yaml:"token-file,omitempty"`
-    Server                         string   `yaml:"server,omitempty"`
-    DataDir                        string   `yaml:"data-dir,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    Selinux                        bool     `yaml:"selinux,omitempty"`
-    LbServerPort                   int      `yaml:"lb-server-port,omitempty"`
-    ProtectKernelDefaults          bool     `yaml:"protect-kernel-defaults,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp              []string `yaml:"node-ip,omitempty"`
-    BindAddress         string   `yaml:"bind-address,omitempty"`
-    NodeExternalIp      []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns     []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns     []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf          string   `yaml:"resolv-conf,omitempty"`
-    KubeletArg          []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg        []string `yaml:"kube-proxy-arg,omitempty"`
-    EnablePprof         bool     `yaml:"enable-pprof,omitempty"`
-    // Deprecated: hidden flag.
-    SystemDefaultRegistry             string   `yaml:"system-default-registry,omitempty"`
-    KubeletPath                       string   `yaml:"kubelet-path,omitempty"`
-    CloudProviderName                 string   `yaml:"cloud-provider-name,omitempty"`
-    CloudProviderConfig               string   `yaml:"cloud-provider-config,omitempty"`
-    NodeNameFromCloudProviderMetadata bool     `yaml:"node-name-from-cloud-provider-metadata,omitempty"`
-    Profile                           string   `yaml:"profile,omitempty"`
-    AuditPolicyFile                   string   `yaml:"audit-policy-file,omitempty"`
-    PodSecurityAdmissionConfigFile    string   `yaml:"pod-security-admission-config-file,omitempty"`
-    ControlPlaneResourceRequests      []string `yaml:"control-plane-resource-requests,omitempty"`
-    ControlPlaneResourceLimits        []string `yaml:"control-plane-resource-limits,omitempty"`
-    ControlPlaneProbeConfiguration    []string `yaml:"control-plane-probe-configuration,omitempty"`
-}
-</code></pre>
-<p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-10"><a class="header" href="#type-serverconfig-10">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_34/zz_server_config.go#L49-L165">ServerConfig</a></a></h2>
-<p>ServerConfig is the server config.yaml key set for rke2 v1_34.</p>
-<pre><code class="language-go">type ServerConfig struct {
-    BindAddress                   string   `yaml:"bind-address,omitempty"`
-    AdvertiseAddress              string   `yaml:"advertise-address,omitempty"`
-    TlsSan                        []string `yaml:"tls-san,omitempty"`
-    TlsSanSecurity                bool     `yaml:"tls-san-security,omitempty"`
-    DataDir                       string   `yaml:"data-dir,omitempty"`
-    ClusterCidr                   []string `yaml:"cluster-cidr,omitempty"`
-    ServiceCidr                   []string `yaml:"service-cidr,omitempty"`
-    ServiceNodePortRange          string   `yaml:"service-node-port-range,omitempty"`
-    ClusterDns                    []string `yaml:"cluster-dns,omitempty"`
-    ClusterDomain                 string   `yaml:"cluster-domain,omitempty"`
-    EgressSelectorMode            string   `yaml:"egress-selector-mode,omitempty"`
-    ServicelbNamespace            string   `yaml:"servicelb-namespace,omitempty"`
-    WriteKubeconfig               string   `yaml:"write-kubeconfig,omitempty"`
-    WriteKubeconfigMode           string   `yaml:"write-kubeconfig-mode,omitempty"`
-    WriteKubeconfigGroup          string   `yaml:"write-kubeconfig-group,omitempty"`
-    HelmJobImage                  string   `yaml:"helm-job-image,omitempty"`
-    Token                         string   `yaml:"token,omitempty"`
-    TokenFile                     string   `yaml:"token-file,omitempty"`
-    AgentToken                    string   `yaml:"agent-token,omitempty"`
-    AgentTokenFile                string   `yaml:"agent-token-file,omitempty"`
-    Server                        string   `yaml:"server,omitempty"`
-    ClusterReset                  bool     `yaml:"cluster-reset,omitempty"`
-    ClusterResetRestorePath       string   `yaml:"cluster-reset-restore-path,omitempty"`
-    KubeApiserverArg              []string `yaml:"kube-apiserver-arg,omitempty"`
-    EtcdArg                       []string `yaml:"etcd-arg,omitempty"`
-    KubeControllerManagerArg      []string `yaml:"kube-controller-manager-arg,omitempty"`
-    KubeSchedulerArg              []string `yaml:"kube-scheduler-arg,omitempty"`
-    HelmControllerArg             []string `yaml:"helm-controller-arg,omitempty"`
-    KubeCloudControllerManagerArg []string `yaml:"kube-cloud-controller-manager-arg,omitempty"`
-    DatastoreEndpoint             string   `yaml:"datastore-endpoint,omitempty"`
-    DatastoreCafile               string   `yaml:"datastore-cafile,omitempty"`
-    DatastoreCertfile             string   `yaml:"datastore-certfile,omitempty"`
-    DatastoreKeyfile              string   `yaml:"datastore-keyfile,omitempty"`
-    EtcdExposeMetrics             bool     `yaml:"etcd-expose-metrics,omitempty"`
-    EtcdDisableSnapshots          bool     `yaml:"etcd-disable-snapshots,omitempty"`
-    EtcdSnapshotName              string   `yaml:"etcd-snapshot-name,omitempty"`
-    EtcdSnapshotScheduleCron      string   `yaml:"etcd-snapshot-schedule-cron,omitempty"`
-    EtcdSnapshotReconcileInterval string   `yaml:"etcd-snapshot-reconcile-interval,omitempty"`
-    EtcdSnapshotRetention         int      `yaml:"etcd-snapshot-retention,omitempty"`
-    EtcdSnapshotDir               string   `yaml:"etcd-snapshot-dir,omitempty"`
-    EtcdSnapshotCompress          bool     `yaml:"etcd-snapshot-compress,omitempty"`
-    EtcdS3                        bool     `yaml:"etcd-s3,omitempty"`
-    EtcdS3Endpoint                string   `yaml:"etcd-s3-endpoint,omitempty"`
-    EtcdS3EndpointCa              string   `yaml:"etcd-s3-endpoint-ca,omitempty"`
-    EtcdS3SkipSslVerify           bool     `yaml:"etcd-s3-skip-ssl-verify,omitempty"`
-    EtcdS3AccessKey               string   `yaml:"etcd-s3-access-key,omitempty"`
-    EtcdS3SecretKey               string   `yaml:"etcd-s3-secret-key,omitempty"`
-    EtcdS3SessionToken            string   `yaml:"etcd-s3-session-token,omitempty"`
-    EtcdS3Bucket                  string   `yaml:"etcd-s3-bucket,omitempty"`
-    EtcdS3BucketLookupType        string   `yaml:"etcd-s3-bucket-lookup-type,omitempty"`
-    EtcdS3Region                  string   `yaml:"etcd-s3-region,omitempty"`
-    EtcdS3Folder                  string   `yaml:"etcd-s3-folder,omitempty"`
-    EtcdS3Retention               int      `yaml:"etcd-s3-retention,omitempty"`
-    EtcdS3Proxy                   string   `yaml:"etcd-s3-proxy,omitempty"`
-    EtcdS3ConfigSecret            string   `yaml:"etcd-s3-config-secret,omitempty"`
-    EtcdS3Insecure                bool     `yaml:"etcd-s3-insecure,omitempty"`
-    EtcdS3Timeout                 string   `yaml:"etcd-s3-timeout,omitempty"`
-    Disable                       []string `yaml:"disable,omitempty"`
-    DisableScheduler              bool     `yaml:"disable-scheduler,omitempty"`
-    DisableCloudController        bool     `yaml:"disable-cloud-controller,omitempty"`
-    DisableKubeProxy              bool     `yaml:"disable-kube-proxy,omitempty"`
-    // Deprecated: hidden flag.
-    DisableApiserver bool `yaml:"disable-apiserver,omitempty"`
-    // Deprecated: hidden flag.
-    DisableControllerManager bool `yaml:"disable-controller-manager,omitempty"`
-    // Deprecated: hidden flag.
-    DisableEtcd                    bool     `yaml:"disable-etcd,omitempty"`
-    EmbeddedRegistry               bool     `yaml:"embedded-registry,omitempty"`
-    SupervisorMetrics              bool     `yaml:"supervisor-metrics,omitempty"`
-    NodeName                       string   `yaml:"node-name,omitempty"`
-    WithNodeId                     bool     `yaml:"with-node-id,omitempty"`
-    NodeLabel                      []string `yaml:"node-label,omitempty"`
-    NodeTaint                      []string `yaml:"node-taint,omitempty"`
-    ImageCredentialProviderBinDir  string   `yaml:"image-credential-provider-bin-dir,omitempty"`
-    ImageCredentialProviderConfig  string   `yaml:"image-credential-provider-config,omitempty"`
-    ContainerRuntimeEndpoint       string   `yaml:"container-runtime-endpoint,omitempty"`
-    DefaultRuntime                 string   `yaml:"default-runtime,omitempty"`
-    DisableDefaultRegistryEndpoint bool     `yaml:"disable-default-registry-endpoint,omitempty"`
-    NonrootDevices                 bool     `yaml:"nonroot-devices,omitempty"`
-    Snapshotter                    string   `yaml:"snapshotter,omitempty"`
-    PrivateRegistry                string   `yaml:"private-registry,omitempty"`
-    SystemDefaultRegistry          string   `yaml:"system-default-registry,omitempty"`
-    // Deprecated: hidden flag.
-    AirgapExtraRegistry   []string `yaml:"airgap-extra-registry,omitempty"`
-    NodeIp                []string `yaml:"node-ip,omitempty"`
-    NodeExternalIp        []string `yaml:"node-external-ip,omitempty"`
-    NodeInternalDns       []string `yaml:"node-internal-dns,omitempty"`
-    NodeExternalDns       []string `yaml:"node-external-dns,omitempty"`
-    ResolvConf            string   `yaml:"resolv-conf,omitempty"`
-    KubeletArg            []string `yaml:"kubelet-arg,omitempty"`
-    KubeProxyArg          []string `yaml:"kube-proxy-arg,omitempty"`
-    ProtectKernelDefaults bool     `yaml:"protect-kernel-defaults,omitempty"`
-    // Deprecated: hidden flag.
-    SecretsEncryption         bool   `yaml:"secrets-encryption,omitempty"`
-    EnablePprof               bool   `yaml:"enable-pprof,omitempty"`
-    SecretsEncryptionProvider string `yaml:"secrets-encryption-provider,omitempty"`
-    Selinux                   bool   `yaml:"selinux,omitempty"`
-    LbServerPort              int    `yaml:"lb-server-port,omitempty"`
-    // Deprecated: hidden flag.
-    DisableAgent      bool     `yaml:"disable-agent,omitempty"`
-    Cni               []string `yaml:"cni,omitempty"`
-    IngressController []string `yaml:"ingress-controller,omitempty"`
-    EnableServicelb   bool     `yaml:"enable-servicelb,omitempty"`
-    // Deprecated: hidden flag.
-    Prime                             bool     `yaml:"prime,omitempty"`
-    KubeletPath                       string   `yaml:"kubelet-path,omitempty"`
-    CloudProviderName                 string   `yaml:"cloud-provider-name,omitempty"`
-    CloudProviderConfig               string   `yaml:"cloud-provider-config,omitempty"`
-    NodeNameFromCloudProviderMetadata bool     `yaml:"node-name-from-cloud-provider-metadata,omitempty"`
-    Profile                           string   `yaml:"profile,omitempty"`
-    AuditPolicyFile                   string   `yaml:"audit-policy-file,omitempty"`
-    PodSecurityAdmissionConfigFile    string   `yaml:"pod-security-admission-config-file,omitempty"`
-    ControlPlaneResourceRequests      []string `yaml:"control-plane-resource-requests,omitempty"`
-    ControlPlaneResourceLimits        []string `yaml:"control-plane-resource-limits,omitempty"`
-    ControlPlaneProbeConfiguration    []string `yaml:"control-plane-probe-configuration,omitempty"`
-}
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
 <h1 id="v1_35-1"><a class="header" href="#v1_35-1">v1_35</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_35"
 </code></pre>
-<h2 id="index-21"><a class="header" href="#index-21">Index</a></h2>
+<h2 id="index-15"><a class="header" href="#index-15">Index</a></h2>
 <ul>
-<li><a href="#variables-19">Variables</a></li>
+<li><a href="#variables-13">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
+<h2 id="variables-13"><a class="header" href="#variables-13">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -10655,7 +9381,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-11"><a class="header" href="#type-agentconfig-11">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_35/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
+<h2 id="type-agentconfig-5"><a class="header" href="#type-agentconfig-5">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_35/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
 <p>AgentConfig is the agent config.yaml key set for rke2 v1_35.</p>
 <pre><code class="language-go">type AgentConfig struct {
     Token                          string   `yaml:"token,omitempty"`
@@ -10703,7 +9429,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-11"><a class="header" href="#type-serverconfig-11">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_35/zz_server_config.go#L49-L165">ServerConfig</a></a></h2>
+<h2 id="type-serverconfig-5"><a class="header" href="#type-serverconfig-5">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_35/zz_server_config.go#L49-L165">ServerConfig</a></a></h2>
 <p>ServerConfig is the server config.yaml key set for rke2 v1_35.</p>
 <pre><code class="language-go">type ServerConfig struct {
     BindAddress                   string   `yaml:"bind-address,omitempty"`
@@ -10828,13 +9554,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h1 id="v1_36-1"><a class="header" href="#v1_36-1">v1_36</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_36"
 </code></pre>
-<h2 id="index-22"><a class="header" href="#index-22">Index</a></h2>
+<h2 id="index-16"><a class="header" href="#index-16">Index</a></h2>
 <ul>
-<li><a href="#variables-20">Variables</a></li>
+<li><a href="#variables-14">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
+<h2 id="variables-14"><a class="header" href="#variables-14">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -10872,7 +9598,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-12"><a class="header" href="#type-agentconfig-12">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_36/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
+<h2 id="type-agentconfig-6"><a class="header" href="#type-agentconfig-6">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_36/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
 <p>AgentConfig is the agent config.yaml key set for rke2 v1_36.</p>
 <pre><code class="language-go">type AgentConfig struct {
     Token                          string   `yaml:"token,omitempty"`
@@ -10920,7 +9646,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-12"><a class="header" href="#type-serverconfig-12">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_36/zz_server_config.go#L49-L165">ServerConfig</a></a></h2>
+<h2 id="type-serverconfig-6"><a class="header" href="#type-serverconfig-6">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_36/zz_server_config.go#L49-L165">ServerConfig</a></a></h2>
 <p>ServerConfig is the server config.yaml key set for rke2 v1_36.</p>
 <pre><code class="language-go">type ServerConfig struct {
     BindAddress                   string   `yaml:"bind-address,omitempty"`
@@ -11045,13 +9771,13 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h1 id="v1_37-1"><a class="header" href="#v1_37-1">v1_37</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/rke2/v1_37"
 </code></pre>
-<h2 id="index-23"><a class="header" href="#index-23">Index</a></h2>
+<h2 id="index-17"><a class="header" href="#index-17">Index</a></h2>
 <ul>
-<li><a href="#variables-21">Variables</a></li>
+<li><a href="#variables-15">Variables</a></li>
 <li><a href="#AgentConfig">type AgentConfig</a></li>
 <li><a href="#ServerConfig">type ServerConfig</a></li>
 </ul>
-<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
+<h2 id="variables-15"><a class="header" href="#variables-15">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components rke2 v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons = []string{
     "rke2-calico",
@@ -11092,7 +9818,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="AgentConfig"></a></p>
-<h2 id="type-agentconfig-13"><a class="header" href="#type-agentconfig-13">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_37/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
+<h2 id="type-agentconfig-7"><a class="header" href="#type-agentconfig-7">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_37/zz_agent_config.go#L49-L92">AgentConfig</a></a></h2>
 <p>AgentConfig is the agent config.yaml key set for rke2 v1_37.</p>
 <pre><code class="language-go">type AgentConfig struct {
     Token                          string   `yaml:"token,omitempty"`
@@ -11140,7 +9866,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 }
 </code></pre>
 <p><a name="ServerConfig"></a></p>
-<h2 id="type-serverconfig-13"><a class="header" href="#type-serverconfig-13">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_37/zz_server_config.go#L49-L166">ServerConfig</a></a></h2>
+<h2 id="type-serverconfig-7"><a class="header" href="#type-serverconfig-7">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/engineconfig/gen/rke2/v1_37/zz_server_config.go#L49-L166">ServerConfig</a></a></h2>
 <p>ServerConfig is the server config.yaml key set for rke2 v1_37.</p>
 <pre><code class="language-go">type ServerConfig struct {
     BindAddress                   string   `yaml:"bind-address,omitempty"`
@@ -11263,248 +9989,14 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
 <div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_32-2"><a class="header" href="#v1_32-2">v1_32</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_32"
-</code></pre>
-<h2 id="index-24"><a class="header" href="#index-24">Index</a></h2>
-<ul>
-<li><a href="#variables-22">Variables</a></li>
-</ul>
-<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_32 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons []string
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values upstream v1_32 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_32.</p>
-<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
-    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "certSANs":     extract.FieldNode{},
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "caCertificateValidityPeriod": extract.FieldNode{},
-    "certificateValidityPeriod":   extract.FieldNode{},
-    "certificatesDir":             extract.FieldNode{},
-    "clusterName":                 extract.FieldNode{},
-    "controlPlaneEndpoint":        extract.FieldNode{},
-    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled":        extract.FieldNode{},
-        "imageRepository": extract.FieldNode{},
-        "imageTag":        extract.FieldNode{},
-    }},
-    "encryptionAlgorithm": extract.FieldNode{},
-    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "caFile":    extract.FieldNode{},
-            "certFile":  extract.FieldNode{},
-            "endpoints": extract.FieldNode{},
-            "keyFile":   extract.FieldNode{},
-        }},
-        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "dataDir":         extract.FieldNode{},
-            "extraArgs":       extract.FieldNode{},
-            "extraEnvs":       extract.FieldNode{},
-            "imageRepository": extract.FieldNode{},
-            "imageTag":        extract.FieldNode{},
-            "peerCertSANs":    extract.FieldNode{},
-            "serverCertSANs":  extract.FieldNode{},
-        }},
-    }},
-    "featureGates":      extract.FieldNode{},
-    "imageRepository":   extract.FieldNode{},
-    "kubernetesVersion": extract.FieldNode{},
-    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "dnsDomain":     extract.FieldNode{},
-        "podSubnet":     extract.FieldNode{},
-        "serviceSubnet": extract.FieldNode{},
-    }},
-    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled": extract.FieldNode{},
-    }},
-    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-}}
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_32 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_33-2"><a class="header" href="#v1_33-2">v1_33</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_33"
-</code></pre>
-<h2 id="index-25"><a class="header" href="#index-25">Index</a></h2>
-<ul>
-<li><a href="#variables-23">Variables</a></li>
-</ul>
-<h2 id="variables-23"><a class="header" href="#variables-23">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_33 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons []string
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values upstream v1_33 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_33.</p>
-<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
-    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "certSANs":     extract.FieldNode{},
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "caCertificateValidityPeriod": extract.FieldNode{},
-    "certificateValidityPeriod":   extract.FieldNode{},
-    "certificatesDir":             extract.FieldNode{},
-    "clusterName":                 extract.FieldNode{},
-    "controlPlaneEndpoint":        extract.FieldNode{},
-    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled":        extract.FieldNode{},
-        "imageRepository": extract.FieldNode{},
-        "imageTag":        extract.FieldNode{},
-    }},
-    "encryptionAlgorithm": extract.FieldNode{},
-    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "caFile":    extract.FieldNode{},
-            "certFile":  extract.FieldNode{},
-            "endpoints": extract.FieldNode{},
-            "keyFile":   extract.FieldNode{},
-        }},
-        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "dataDir":         extract.FieldNode{},
-            "extraArgs":       extract.FieldNode{},
-            "extraEnvs":       extract.FieldNode{},
-            "imageRepository": extract.FieldNode{},
-            "imageTag":        extract.FieldNode{},
-            "peerCertSANs":    extract.FieldNode{},
-            "serverCertSANs":  extract.FieldNode{},
-        }},
-    }},
-    "featureGates":      extract.FieldNode{},
-    "imageRepository":   extract.FieldNode{},
-    "kubernetesVersion": extract.FieldNode{},
-    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "dnsDomain":     extract.FieldNode{},
-        "podSubnet":     extract.FieldNode{},
-        "serviceSubnet": extract.FieldNode{},
-    }},
-    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled": extract.FieldNode{},
-    }},
-    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-}}
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_33 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
-<h1 id="v1_34-2"><a class="header" href="#v1_34-2">v1_34</a></h1>
-<pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_34"
-</code></pre>
-<h2 id="index-26"><a class="header" href="#index-26">Index</a></h2>
-<ul>
-<li><a href="#variables-24">Variables</a></li>
-</ul>
-<h2 id="variables-24"><a class="header" href="#variables-24">Variables</a></h2>
-<p><a name="Addons"></a>Addons is the set of packaged components upstream v1_34 accepts in `disable:`.</p>
-<pre><code class="language-go">var Addons []string
-</code></pre>
-<p><a name="CNIs"></a>CNIs is the set of values upstream v1_34 accepts in `cni:`. Empty for distros that do not declare a CNI selection flag.</p>
-<pre><code class="language-go">var CNIs []string
-</code></pre>
-<p><a name="ClusterConfigurationKeys"></a>ClusterConfigurationKeys is the nested key tree extracted from upstream’s ClusterConfiguration for upstream v1_34.</p>
-<pre><code class="language-go">var ClusterConfigurationKeys = extract.FieldNode{Children: map[string]extract.FieldNode{
-    "apiServer": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "certSANs":     extract.FieldNode{},
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "caCertificateValidityPeriod": extract.FieldNode{},
-    "certificateValidityPeriod":   extract.FieldNode{},
-    "certificatesDir":             extract.FieldNode{},
-    "clusterName":                 extract.FieldNode{},
-    "controlPlaneEndpoint":        extract.FieldNode{},
-    "controllerManager": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-    "dns": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled":        extract.FieldNode{},
-        "imageRepository": extract.FieldNode{},
-        "imageTag":        extract.FieldNode{},
-    }},
-    "encryptionAlgorithm": extract.FieldNode{},
-    "etcd": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "external": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "caFile":    extract.FieldNode{},
-            "certFile":  extract.FieldNode{},
-            "endpoints": extract.FieldNode{},
-            "keyFile":   extract.FieldNode{},
-        }},
-        "local": extract.FieldNode{Children: map[string]extract.FieldNode{
-            "dataDir":         extract.FieldNode{},
-            "extraArgs":       extract.FieldNode{},
-            "extraEnvs":       extract.FieldNode{},
-            "imageRepository": extract.FieldNode{},
-            "imageTag":        extract.FieldNode{},
-            "peerCertSANs":    extract.FieldNode{},
-            "serverCertSANs":  extract.FieldNode{},
-        }},
-    }},
-    "featureGates":      extract.FieldNode{},
-    "imageRepository":   extract.FieldNode{},
-    "kubernetesVersion": extract.FieldNode{},
-    "networking": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "dnsDomain":     extract.FieldNode{},
-        "podSubnet":     extract.FieldNode{},
-        "serviceSubnet": extract.FieldNode{},
-    }},
-    "proxy": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "disabled": extract.FieldNode{},
-    }},
-    "scheduler": extract.FieldNode{Children: map[string]extract.FieldNode{
-        "extraArgs":    extract.FieldNode{},
-        "extraEnvs":    extract.FieldNode{},
-        "extraVolumes": extract.FieldNode{},
-    }},
-}}
-</code></pre>
-<p><a name="IngressControllers"></a>IngressControllers is the set of values upstream v1_34 accepts in `ingress-controller:`. Empty for distros that do not declare one.</p>
-<pre><code class="language-go">var IngressControllers []string
-</code></pre>
-<p>Generated by <a href="https://github.com/princjef/gomarkdoc">gomarkdoc</a></p>
-<div style="break-before: page; page-break-before: always;"></div><!-- Code generated by gomarkdoc. DO NOT EDIT -->
 <h1 id="v1_35-2"><a class="header" href="#v1_35-2">v1_35</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_35"
 </code></pre>
-<h2 id="index-27"><a class="header" href="#index-27">Index</a></h2>
+<h2 id="index-18"><a class="header" href="#index-18">Index</a></h2>
 <ul>
-<li><a href="#variables-25">Variables</a></li>
+<li><a href="#variables-16">Variables</a></li>
 </ul>
-<h2 id="variables-25"><a class="header" href="#variables-25">Variables</a></h2>
+<h2 id="variables-16"><a class="header" href="#variables-16">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_35 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11579,11 +10071,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h1 id="v1_36-2"><a class="header" href="#v1_36-2">v1_36</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_36"
 </code></pre>
-<h2 id="index-28"><a class="header" href="#index-28">Index</a></h2>
+<h2 id="index-19"><a class="header" href="#index-19">Index</a></h2>
 <ul>
-<li><a href="#variables-26">Variables</a></li>
+<li><a href="#variables-17">Variables</a></li>
 </ul>
-<h2 id="variables-26"><a class="header" href="#variables-26">Variables</a></h2>
+<h2 id="variables-17"><a class="header" href="#variables-17">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_36 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11658,11 +10150,11 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <h1 id="v1_37-2"><a class="header" href="#v1_37-2">v1_37</a></h1>
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/engineconfig/gen/upstream/v1_37"
 </code></pre>
-<h2 id="index-29"><a class="header" href="#index-29">Index</a></h2>
+<h2 id="index-20"><a class="header" href="#index-20">Index</a></h2>
 <ul>
-<li><a href="#variables-27">Variables</a></li>
+<li><a href="#variables-18">Variables</a></li>
 </ul>
-<h2 id="variables-27"><a class="header" href="#variables-27">Variables</a></h2>
+<h2 id="variables-18"><a class="header" href="#variables-18">Variables</a></h2>
 <p><a name="Addons"></a>Addons is the set of packaged components upstream v1_37 accepts in `disable:`.</p>
 <pre><code class="language-go">var Addons []string
 </code></pre>
@@ -11739,7 +10231,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Package fileoverride redirects the file downloads a distro definition declares to an internal mirror or to a directory of pre-staged assets, the way images.RegistryOverride redirects image pulls.</p>
 <p>It differs from the registry case in one way worth knowing. A registry override matches on a raw string prefix, which is survivable for a registry reference but not for a URL: an override for “https://github.com” would otherwise also capture “https://github.com.example.invalid/…”. Matching here is done on the parsed URL, and the prefix has to end on a path-segment boundary.</p>
-<h2 id="index-30"><a class="header" href="#index-30">Index</a></h2>
+<h2 id="index-21"><a class="header" href="#index-21">Index</a></h2>
 <ul>
 <li><a href="#ToMap">func ToMap(overrides []Override) map[string]string</a></li>
 <li><a href="#Match">type Match</a>
@@ -11809,7 +10301,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Package firewall renders cargoship’s backend-neutral firewall configuration onto whichever host firewall a node runs.</p>
 <p>A Plan describes what the cluster needs open on one node: the addresses of its peers, the pod and service CIDRs, the ports from the inventory’s `.host.ports`, and the rules from the inventory’s `.host.firewall.rules`. A Backend translates that Plan into one firewall’s own dialect and applies it. Backends are matched to a node by the node’s OS and by Detect, so a single inventory can target a mix of firewalld, ufw, and nftables hosts.</p>
-<h2 id="index-31"><a class="header" href="#index-31">Index</a></h2>
+<h2 id="index-22"><a class="header" href="#index-22">Index</a></h2>
 <ul>
 <li><a href="#constants-5">Constants</a></li>
 <li><a href="#NftSplitFamilies">func NftSplitFamilies(addrs []string) (v4 []string, v6 []string)</a></li>
@@ -12033,7 +10525,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Package helmvalues renders Helm-style value templates and reads and writes the nested interface values those templates draw on.</p>
 <p>Values are addressed by ZEP-0021 value paths: a leading dot followed by dot-separated keys, with list indices written after a key, as in .servers[0].port. A lone “.” names the root.</p>
 <p>Scalar typing follows Helm’s strvals package rather than Go’s own parsing rules, so a value that travels through cargoship lands in a chart as the same type it would have landed as under plain `helm --set`.</p>
-<h2 id="index-32"><a class="header" href="#index-32">Index</a></h2>
+<h2 id="index-23"><a class="header" href="#index-23">Index</a></h2>
 <ul>
 <li><a href="#ApplyMapping">func ApplyMapping(dst map[string]any, values map[string]any, source string, target string) (bool, error)</a></li>
 <li><a href="#EvaluateValuesTemplates">func EvaluateValuesTemplates(v any, data any, opts …Option) (any, error)</a></li>
@@ -12181,7 +10673,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/helpers"
 </code></pre>
 <p>Package helpers are a sub-section of function from defense-unicorn pkg helpers package</p>
-<h2 id="index-33"><a class="header" href="#index-33">Index</a></h2>
+<h2 id="index-24"><a class="header" href="#index-24">Index</a></h2>
 <ul>
 <li><a href="#constants-6">Constants</a></li>
 <li><a href="#CreateDirectory">func CreateDirectory(path string, mode os.FileMode) error</a></li>
@@ -12302,7 +10794,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/images"
 </code></pre>
 <p>Package images is functionality related to interacting with oci images. This also stems from zarf-dev/zarf</p>
-<h2 id="index-34"><a class="header" href="#index-34">Index</a></h2>
+<h2 id="index-25"><a class="header" href="#index-25">Index</a></h2>
 <ul>
 <li><a href="#constants-7">Constants</a></li>
 <li><a href="#Ping">func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) (err error)</a></li>
@@ -12438,7 +10930,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/lint"
 </code></pre>
 <p>Package lint contains functions for verifying yaml files are valid</p>
-<h2 id="index-35"><a class="header" href="#index-35">Index</a></h2>
+<h2 id="index-26"><a class="header" href="#index-26">Index</a></h2>
 <ul>
 <li><a href="#constants-8">Constants</a></li>
 <li><a href="#LintError">type LintError</a>
@@ -12507,7 +10999,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/node"
 </code></pre>
 <p>Package node is used for status related functions</p>
-<h2 id="index-36"><a class="header" href="#index-36">Index</a></h2>
+<h2 id="index-27"><a class="header" href="#index-27">Index</a></h2>
 <ul>
 <li><a href="#RetryFunc">type RetryFunc</a>
 <ul>
@@ -12543,7 +11035,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/oci/archive"
 </code></pre>
 <p>Package archive implements the Archive interface for the OCI archive store.</p>
-<h2 id="index-37"><a class="header" href="#index-37">Index</a></h2>
+<h2 id="index-28"><a class="header" href="#index-28">Index</a></h2>
 <ul>
 <li><a href="#OciArchiveStore">type OciArchiveStore</a>
 <ul>
@@ -12578,10 +11070,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/oci/platform"
 </code></pre>
 <p>Package platform defines canonical CPU architecture identifiers and validation helpers used by cargoship when targeting specific platforms in OCI workflows.</p>
-<h2 id="index-38"><a class="header" href="#index-38">Index</a></h2>
+<h2 id="index-29"><a class="header" href="#index-29">Index</a></h2>
 <ul>
 <li><a href="#constants-9">Constants</a></li>
-<li><a href="#variables-28">Variables</a></li>
+<li><a href="#variables-19">Variables</a></li>
 <li><a href="#ValidateArch">func ValidateArch(format Arch) error</a></li>
 <li><a href="#Arch">type Arch</a></li>
 </ul>
@@ -12596,7 +11088,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     ArchRISCV = api.ArchRISCV
 )
 </code></pre>
-<h2 id="variables-28"><a class="header" href="#variables-28">Variables</a></h2>
+<h2 id="variables-19"><a class="header" href="#variables-19">Variables</a></h2>
 <p><a name="ErrUnknownArch"></a></p>
 <pre><code class="language-go">var (
     // ErrUnknownArch is returned when a Arch is not one of the supported architectures.
@@ -12620,7 +11112,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/packager/assemble"
 </code></pre>
 <p>Package assemble builds a Cargoship package on disk</p>
-<h2 id="index-39"><a class="header" href="#index-39">Index</a></h2>
+<h2 id="index-30"><a class="header" href="#index-30">Index</a></h2>
 <ul>
 <li><a href="#AssembleDistro">func AssembleDistro(ctx context.Context, d distro.ZarfDistro, distroPath string, opts AssembleOptions) (*layout.DistroLayout, error)</a></li>
 <li><a href="#AssembleOptions">type AssembleOptions</a></li>
@@ -12659,10 +11151,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/packager/layout"
 </code></pre>
 <p>Package layout is used to defining the distro package files</p>
-<h2 id="index-40"><a class="header" href="#index-40">Index</a></h2>
+<h2 id="index-31"><a class="header" href="#index-31">Index</a></h2>
 <ul>
 <li><a href="#constants-10">Constants</a></li>
-<li><a href="#variables-29">Variables</a></li>
+<li><a href="#variables-20">Variables</a></li>
 <li><a href="#AnnotationsFromMetadata">func AnnotationsFromMetadata(metadata distro.ZarfDistroMetadata) map[string]string</a></li>
 <li><a href="#IsCleanPath">func IsCleanPath(s string) bool</a></li>
 <li><a href="#IsContainedPath">func IsContainedPath(s string) bool</a></li>
@@ -12727,7 +11219,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     OCITimestampFormat = time.RFC3339
 )
 </code></pre>
-<h2 id="variables-29"><a class="header" href="#variables-29">Variables</a></h2>
+<h2 id="variables-20"><a class="header" href="#variables-20">Variables</a></h2>
 <p><a name="ErrNoVerificationMaterial"></a>ErrNoVerificationMaterial is returned when there is nothing to verify against. VerifyIfPossible tolerates this; all other verification errors are always fatal.</p>
 <pre><code class="language-go">var ErrNoVerificationMaterial = errors.New("no verification material available")
 </code></pre>
@@ -12962,7 +11454,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/packager/load"
 </code></pre>
 <p>Package load for loading a given package</p>
-<h2 id="index-41"><a class="header" href="#index-41">Index</a></h2>
+<h2 id="index-32"><a class="header" href="#index-32">Index</a></h2>
 <ul>
 <li><a href="#ClusterDefinition">func ClusterDefinition(ctx context.Context, configPath string, _ ClusterOptions) (v1alpha1.ZarfCluster, error)</a></li>
 <li><a href="#DistroDefinition">func DistroDefinition(ctx context.Context, distroPath string, opts DefinitionOptions) (v1alpha1.ZarfDistro, error)</a></li>
@@ -13002,10 +11494,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/phase"
 </code></pre>
 <p>Package phase is all the various phases used for bootstrapping a cluster. The phase files are named in a rough order used during an install; - 0x are for preconnection resources, along with ssh-ing into the node - 1x are used to gather information about the nodes in the cluster - 2x are for modifying host services, like firewalls, host files, and enabling kernel level modules - 5x are for staging files for the distro engine, e.i. rpm’s, apt’s, or binary files - 6x are for starting the engine or for upgrading an existing install - 8x are for resetting the engine from the nodes - 9x are last minute things and finally disconnecting from a node - ext are files that are currently not used but may be incorporated later</p>
-<h2 id="index-42"><a class="header" href="#index-42">Index</a></h2>
+<h2 id="index-33"><a class="header" href="#index-33">Index</a></h2>
 <ul>
 <li><a href="#constants-11">Constants</a></li>
-<li><a href="#variables-30">Variables</a></li>
+<li><a href="#variables-21">Variables</a></li>
 <li><a href="#DryRunNote">func DryRunNote(p Phase) string</a></li>
 <li><a href="#Titles">func Titles(results []PhaseResult) []string</a></li>
 <li><a href="#APTUploadFiles">type APTUploadFiles</a>
@@ -13417,7 +11909,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
     UnknownVersion = "v0.0.0"
 )
 </code></pre>
-<h2 id="variables-30"><a class="header" href="#variables-30">Variables</a></h2>
+<h2 id="variables-21"><a class="header" href="#variables-21">Variables</a></h2>
 <p><a name="ErrNoControllers"></a>ErrNoControllers an error for when no controllers are running</p>
 <pre><code class="language-go">var ErrNoControllers = errors.New("no controllers are running")
 </code></pre>
@@ -14920,15 +13412,15 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/retry"
 </code></pre>
 <p>Package retry provides simple retry wrappers for functions that return an error</p>
-<h2 id="index-43"><a class="header" href="#index-43">Index</a></h2>
+<h2 id="index-34"><a class="header" href="#index-34">Index</a></h2>
 <ul>
-<li><a href="#variables-31">Variables</a></li>
+<li><a href="#variables-22">Variables</a></li>
 <li><a href="#Context">func Context(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Timeout">func Timeout(ctx context.Context, timeout time.Duration, f func(ctx context.Context) error) error</a></li>
 <li><a href="#Times">func Times(ctx context.Context, times int, f func(context.Context) error) error</a></li>
 <li><a href="#WithDefaultTimeout">func WithDefaultTimeout(ctx context.Context, f func(ctx context.Context) error) error</a></li>
 </ul>
-<h2 id="variables-31"><a class="header" href="#variables-31">Variables</a></h2>
+<h2 id="variables-22"><a class="header" href="#variables-22">Variables</a></h2>
 <p><a name="DefaultTimeout"></a></p>
 <pre><code class="language-go">var (
     // DefaultTimeout is a default timeout for retry operations
@@ -14965,7 +13457,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/schema"
 </code></pre>
 <p>Package schema serves the JSON Schema documents cargoship generates for its own file formats, out of the binary rather than over the network. The documents under embedded/ are byte-identical copies of the repository’s schema/ directory, written by the same `mage generate:schema` target; go:embed cannot reach outside its own package directory, which is why the copy exists at all.</p>
-<h2 id="index-44"><a class="header" href="#index-44">Index</a></h2>
+<h2 id="index-35"><a class="header" href="#index-35">Index</a></h2>
 <ul>
 <li><a href="#ComposeInventory">func ComposeInventory(values helmvalues.Schema, note string) (map[string]any, error)</a></li>
 <li><a href="#Decode">func Decode(b []byte) (any, error)</a></li>
@@ -15092,7 +13584,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </code></pre>
 <p>Package utils is for commonly used functions.</p>
 <p>Package utils is for commonly used functions</p>
-<h2 id="index-45"><a class="header" href="#index-45">Index</a></h2>
+<h2 id="index-36"><a class="header" href="#index-36">Index</a></h2>
 <ul>
 <li><a href="#constants-12">Constants</a></li>
 <li><a href="#CreateDirectory">func CreateDirectory(path string, mode os.FileMode) error</a></li>
@@ -15229,7 +13721,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/pkg/utils/build"
 </code></pre>
 <p>Package build is the build flag logic shared across mage and the CLI</p>
-<h2 id="index-46"><a class="header" href="#index-46">Index</a></h2>
+<h2 id="index-37"><a class="header" href="#index-37">Index</a></h2>
 <ul>
 <li><a href="#GCFLags">func GCFLags() string</a></li>
 <li><a href="#LDFlags">func LDFlags(version string, commit string) string</a></li>
@@ -15256,9 +13748,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types"
 </code></pre>
 <p>Package types is a little bit of a hacky way to generate the cargo-ship-config jsonschema</p>
-<h2 id="index-47"><a class="header" href="#index-47">Index</a></h2>
+<h2 id="index-38"><a class="header" href="#index-38">Index</a></h2>
 <ul>
-<li><a href="#variables-32">Variables</a></li>
+<li><a href="#variables-23">Variables</a></li>
 <li><a href="#AgeOptions">type AgeOptions</a></li>
 <li><a href="#ApplyOptions">type ApplyOptions</a></li>
 <li><a href="#DistroConfig">type DistroConfig</a></li>
@@ -15278,7 +13770,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#ResetOptions">type ResetOptions</a></li>
 </ul>
-<h2 id="variables-32"><a class="header" href="#variables-32">Variables</a></h2>
+<h2 id="variables-23"><a class="header" href="#variables-23">Variables</a></h2>
 <p><a name="CommonFileSources"></a>CommonFileSources are suggested, non-exhaustive URL prefixes used in generated schemas as autocomplete for FileOverrideMap’s file_override keys, the same way CommonRegistries is used for registry_override. They are the hosts a distro definition most often downloads from.</p>
 <pre><code class="language-go">var CommonFileSources = []string{
     "https://rpm.rancher.io",
@@ -15477,10 +13969,10 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/distrocfg"
 </code></pre>
 <p>Package distrocfg defines the standard interface that all distro config settings</p>
-<h2 id="index-48"><a class="header" href="#index-48">Index</a></h2>
+<h2 id="index-39"><a class="header" href="#index-39">Index</a></h2>
 <ul>
 <li><a href="#constants-13">Constants</a></li>
-<li><a href="#variables-33">Variables</a></li>
+<li><a href="#variables-24">Variables</a></li>
 <li><a href="#NodeLabelsMapToList">func NodeLabelsMapToList(m map[string]string) []string</a></li>
 <li><a href="#RemoveStaleFiles">func RemoveStaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) error</a></li>
 <li><a href="#StaleFiles">func StaleFiles(h *cluster.ZarfHost, dirs []ManagedDir, desired map[string]DesiredFile) []string</a></li>
@@ -15607,7 +14099,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p><a name="StateDir"></a>StateDir is where cargoship records state files describing the applied distro package.</p>
 <pre><code class="language-go">const StateDir = "/etc/cargoship"
 </code></pre>
-<h2 id="variables-33"><a class="header" href="#variables-33">Variables</a></h2>
+<h2 id="variables-24"><a class="header" href="#variables-24">Variables</a></h2>
 <p><a name="ErrVersionNotDetected"></a></p>
 <pre><code class="language-go">var (
     // ErrVersionNotDetected if a version is not detected
@@ -16081,9 +14573,9 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/distrocfg/registry"
 </code></pre>
 <p>Package registry is used to register a distro</p>
-<h2 id="index-49"><a class="header" href="#index-49">Index</a></h2>
+<h2 id="index-40"><a class="header" href="#index-40">Index</a></h2>
 <ul>
-<li><a href="#variables-34">Variables</a></li>
+<li><a href="#variables-25">Variables</a></li>
 <li><a href="#RegisterDistroModule">func RegisterDistroModule(mf MatchFunc, bf BuildFunc)</a></li>
 <li><a href="#BuildFunc">type BuildFunc</a>
 <ul>
@@ -16092,7 +14584,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 </li>
 <li><a href="#MatchFunc">type MatchFunc</a></li>
 </ul>
-<h2 id="variables-34"><a class="header" href="#variables-34">Variables</a></h2>
+<h2 id="variables-25"><a class="header" href="#variables-25">Variables</a></h2>
 <p><a name="ErrDistroModuleNotFound"></a>ErrDistroModuleNotFound is used when a distro module is not found in the registry</p>
 <pre><code class="language-go">var ErrDistroModuleNotFound = errors.New("distro support not found")
 </code></pre>
@@ -16122,7 +14614,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/os"
 </code></pre>
 <p>Package os is for running commands on a remote host</p>
-<h2 id="index-50"><a class="header" href="#index-50">Index</a></h2>
+<h2 id="index-41"><a class="header" href="#index-41">Index</a></h2>
 <ul>
 <li><a href="#constants-14">Constants</a></li>
 <li><a href="#RegisterOSModule">func RegisterOSModule(match func(*rigos.Release) bool, builder func() any)</a></li>
@@ -16317,7 +14809,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/os/linux"
 </code></pre>
 <p>Package linux is implementing the interface github.com/colonel-byte/cargoship/types/os.Configurer for Linux based hosts</p>
-<h2 id="index-51"><a class="header" href="#index-51">Index</a></h2>
+<h2 id="index-42"><a class="header" href="#index-42">Index</a></h2>
 <ul>
 <li><a href="#constants-15">Constants</a></li>
 <li><a href="#Alpine">type Alpine</a>
@@ -16634,7 +15126,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">import "github.com/colonel-byte/cargoship/types/os/linux/enterpriselinux"
 </code></pre>
 <p>Package enterpriselinux is implementing the interface github.com/colonel-byte/cargoship/types/os.Configurer for Enterprise Linux hosts</p>
-<h2 id="index-52"><a class="header" href="#index-52">Index</a></h2>
+<h2 id="index-43"><a class="header" href="#index-43">Index</a></h2>
 <ul>
 <li><a href="#AlmaLinux">type AlmaLinux</a>
 <ul>
@@ -17684,7 +16176,8 @@ mage release:tofuProvider 0.1.0           # build it and push it to the default 
 </li>
 <li>
 <p><code>ExampleLine &lt;distro&gt; &lt;vMAJOR.MINOR&gt;</code> - Renders an example for <em>every</em> non-RC release on one minor line of that distro, rather than only the pinned one, so <code>rke2 v1.36</code> backfills <code>v1.36.0+rke2r1</code> through the newest <code>v1.36</code> release into <code>example/rke2-multi-cni-cilium/v1_36/</code>, <code>example/rke2-cilium-vsphere/v1_36/</code>, and <code>example/rke2-multi-cni-canal/v1_36/</code>. A flavor that names minor lines is only rendered for the lines it names, so asking for a line a multi-architecture flavor does not cover renders the other flavors alone. The leading <code>v</code> is optional. Once written, <code>Examples</code> keeps those files current, since it re-renders every example directory on disk. Touches the network, through the same release-asset cache <code>Examples</code> uses.</p>
-<p><code>ExampleLine upstream &lt;vMAJOR.MINOR&gt;</code> is a separate path (see <code>magefiles/pkg/gen/examples/upstream.go</code> and its <code>upstream_kubeadm.go</code>, <code>upstream_deb.go</code>, <code>upstream_rpm.go</code>, and <code>upstream_repo.go</code> siblings), since kubeadm does not fit <code>exampleDistroSpec</code>. It backfills every stable patch on the line by picking, per package, the closest version published on <code>pkgs.k8s.io</code> at or before that patch - pkgs.k8s.io keeps every patch’s packages on a minor line, not just the newest, so <code>v1.37.0</code> and <code>v1.37.1</code> render distinct <code>kubelet</code>/<code>kubectl</code>/<code>kubeadm</code>/<code>cri-tools</code>/<code>kubernetes-cni</code> versions. The etcd, coreDNS, and pause versions kubeadm pins come from that same tag’s own <code>cmd/kubeadm/app/constants/constants.go</code>, fetched live from <code>raw.githubusercontent.com</code>, not from the single per-minor cached copy <code>thirdparty-src/upstream/&lt;minor&gt;/</code> holds - that copy only ever reflects whichever tag is currently pinned. <code>containerd.io</code>, pulled from <code>download.docker.com</code>, is the one package still resolved to whatever is newest at render time, since its release cadence is independent of the Kubernetes tag.</p>
+<p><code>ExampleLine upstream &lt;vMAJOR.MINOR&gt;</code> is a separate path (see <code>magefiles/pkg/gen/examples/upstream.go</code> and its <code>upstream_cni.go</code>, <code>upstream_kubeadm.go</code>, <code>upstream_deb.go</code>, <code>upstream_rpm.go</code>, and <code>upstream_repo.go</code> siblings), since kubeadm does not fit <code>exampleDistroSpec</code>. It renders each line into all three CNI flavors - <code>example/upstream-cilium</code>, <code>example/upstream-canal</code>, <code>example/upstream-flannel</code>. It backfills every stable patch on the line by picking, per package, the closest version published on <code>pkgs.k8s.io</code> at or before that patch - pkgs.k8s.io keeps every patch’s packages on a minor line, not just the newest, so <code>v1.37.0</code> and <code>v1.37.1</code> render distinct <code>kubelet</code>/<code>kubectl</code>/<code>kubeadm</code>/<code>cri-tools</code>/<code>kubernetes-cni</code> versions. The etcd, coreDNS, and pause versions kubeadm pins come from that same tag’s own <code>cmd/kubeadm/app/constants/constants.go</code>, fetched live from <code>raw.githubusercontent.com</code>, not from the single per-minor cached copy <code>thirdparty-src/upstream/&lt;minor&gt;/</code> holds - that copy only ever reflects whichever tag is currently pinned. <code>containerd.io</code>, pulled from <code>download.docker.com</code>, is the one package still resolved to whatever is newest at render time, since its release cadence is independent of the Kubernetes tag.</p>
+<p>Upstream ships no CNI, so each flavor’s package carries one and declares it in <code>spec.config.manifests</code>, which cargoship kubectl-applies from the leader after <code>kubeadm init</code> (<a href="#apply-2">apply</a>). flannel and canal are pinned manifest URLs, hashed into <code>example/shasums.json</code> like any other file. Cilium publishes only a Helm chart, so its manifest is rendered with <code>helm template</code> into <code>example/upstream-cilium/cni/cilium-&lt;chart&gt;.yaml</code> and shared by every version of the flavor, referenced as <code>../../cni/…</code> the way k3s examples share <code>example/k3s/core/</code>. That render is skipped while the file exists, so <strong><code>helm</code> is needed only to bump the pinned chart version</strong>, not to keep the examples current - <code>refresh-examples.yaml</code> never needs it. Each flavor’s images are read out of the manifest it applies rather than listed by hand, and a render that produced a private key is refused outright, since committing one would hand every cluster built from the example the same CA.</p>
 </li>
 <li>
 <p><code>EngineConfig</code> - Statically parses raw engine source under <code>thirdparty-src/</code> (see <a href="#third-party-engine-source-thirdparty-src">thirdparty-src</a>) to generate typed <code>config.yaml</code> structs per distro/version in <code>pkg/engineconfig/gen/</code>, plus each version’s packaged-component vocabulary (the valid <code>disable:</code>, <code>cni:</code>, and <code>ingress-controller:</code> values) in a <code>zz_addons.go</code> alongside them.</p>
@@ -17725,7 +16218,7 @@ mage generate:examples
 <li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), and <code>schema/</code> (JSON schema reflection and docs).</li>
 <li><strong><code>pkg/testrunner/</code>:</strong> Test runner implementations for e2e suites and fuzz corpus replay.</li>
 <li><strong><code>pkg/util/</code>:</strong> Shared helpers for aligned table formatting, git commit resolution, and clean build tasks.</li>
-<li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code>, <code>k3s-distro.yaml.tmpl</code>, and <code>upstream-distro.yaml.tmpl</code>, plus the per-distro values templates a flavor ships beside its <code>distro.yaml</code> (<code>rke2/values.yaml.tmpl</code>, <code>rke2/values.schema.json.tmpl</code>, and the <code>k3s/</code> equivalents).</li>
+<li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code>, <code>k3s-distro.yaml.tmpl</code>, and <code>upstream-distro.yaml.tmpl</code> (rendered once per CNI flavor), plus the per-distro values templates a flavor ships beside its <code>distro.yaml</code> (<code>rke2/values.yaml.tmpl</code>, <code>rke2/values.schema.json.tmpl</code>, and the <code>k3s/</code> equivalents).</li>
 </ul>
 <hr>
 <h2 id="managed-outputs"><a class="header" href="#managed-outputs">Managed Outputs</a></h2>
@@ -18666,6 +17159,20 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <h2 id="what-this-does-not-do-1"><a class="header" href="#what-this-does-not-do-1">What this does not do</a></h2>
 <p>A stage-only run does not tell you that rke2 installs. It covers connection, OS detection, fact gathering, host validation, the prepare phases, SELinux, fapolicyd, <code>/etc/hosts</code>, the firewall, all four upload phases, the engine config render, and the lock and disconnect phases at the end – which is most of the phase list and the part a change to <code>pkg/phase</code> is most likely to break. It says nothing about whether the cluster comes up, and the full walk remains the only thing that does.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-examples-stop-at-n-2"><a class="header" href="#why-the-examples-stop-at-n-2">Why the examples stop at N-2</a></h1>
+<p>Every example under <code>example/</code> is rendered for a set of Kubernetes minor lines, and that set now has a floor: <code>exampleMinorFloor</code> in <a href="../magefiles/pkg/gen/examples/tags.go"><code>magefiles/pkg/gen/examples/tags.go</code></a>, currently <code>v1_35</code>. The newest line and the two before it are rendered; anything older is not, for rke2, k3s, and upstream alike.</p>
+<p>Before this, the floor was wherever <code>thirdparty-src/pins.json</code> happened to still pin, plus whatever was already committed – <code>exampleTags</code> adds every version directory it finds on disk to the set it renders, so a line stayed alive by having been rendered once. That is how <code>v1_32</code> was still being re-rendered on every refresh, long after anybody would install it.</p>
+<h2 id="why-a-floor-at-all-rather-than-letting-the-pins-decide"><a class="header" href="#why-a-floor-at-all-rather-than-letting-the-pins-decide">Why a floor at all, rather than letting the pins decide</a></h2>
+<p>An example is not just a version string. It is a set of components that have to work together: the distro build, the kubeadm-published OS packages, containerd, and – for the upstream examples – a CNI the package applies itself.</p>
+<p>The CNI is what forces the question. A CNI release supports a handful of Kubernetes minors and says which ones: cilium e2e tests exactly four and states outright that “older Kubernetes versions not listed here do not have Cilium support” (<code>Documentation/network/kubernetes/requirements.rst</code>, in the cilium tree). Cilium 1.20 covers 1.33 through 1.36. So an <code>upstream-cilium</code> example rendered for 1.32 would carry a cilium that cilium does not claim works there – a package that builds, publishes, and installs, and then does not route pod traffic.</p>
+<p>Pinning a CNI per minor line would answer that differently, and it was considered. It means a version map per CNI, a rendered cilium manifest per chart version, and a judgement call per line about which CNI release to trust – all to keep alive lines that Kubernetes itself no longer supports. N-2 matches what upstream Kubernetes supports, which is the same window the CNIs are tested against, so one floor covers both and there is no map to maintain.</p>
+<h2 id="why-moving-it-is-two-hand-edits"><a class="header" href="#why-moving-it-is-two-hand-edits">Why moving it is two hand edits</a></h2>
+<p>The floor is a constant, and tags below it are dropped rather than rendered. What is already committed below the floor is not deleted by a render.</p>
+<p>A generator that deleted a whole example tree because a pin moved would be doing something a reader of <code>mage generate:examples</code> has no reason to expect, and the thing it deleted is the one copy of a definition somebody may be installing from. Retired rke2 builds are pruned automatically (<a href="../magefiles/pkg/gen/examples/examples.go"><code>writeExample</code></a>) and that is a different case: an <code>rke2rN</code> whose RPMs Rancher has already removed cannot be installed from at all, so keeping it only invites someone to try. A 1.34 example still installs fine. It is just outside what this repository carries.</p>
+<p>So raising the floor is: edit the constant, and <code>git rm</code> the lines that fall below it. Anything missed shows up as a tree that stops changing, not as a tree that silently keeps claiming to be current.</p>
+<h2 id="what-this-cost"><a class="header" href="#what-this-cost">What this cost</a></h2>
+<p>Three minor lines per flavor, deleted: <code>example/*/v1_32</code>, <code>v1_33</code>, <code>v1_34</code>, along with their <code>thirdparty-src/&lt;distro&gt;/</code> source copies and their generated <code>pkg/engineconfig/gen/&lt;distro&gt;/</code> packages. That is a breaking change for anyone pointing at one of those paths, and it is recoverable from git history rather than regenerable – the upstream artifacts those examples name are still published, so a checkout of the commit before this one renders them again.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-a-file-override-refuses-a-file-with-no-shasum"><a class="header" href="#why-a-file-override-refuses-a-file-with-no-shasum">Why a file override refuses a file with no shasum</a></h1>
 <p><code>--file-override</code> redirects the file downloads a distro definition declares to an internal mirror or to a directory of pre-staged assets. If the file it applies to declares no <code>shasum</code>, <code>create</code> fails and names the file instead of downloading it. The restriction looks like an arbitrary inconvenience from the flag’s side, because nothing about a URL rewrite requires a checksum to work, and it will keep looking that way until someone reads why it is there.</p>
 <h2 id="the-override-is-the-only-thing-that-makes-the-checksum-load-bearing"><a class="header" href="#the-override-is-the-only-thing-that-makes-the-checksum-load-bearing">The override is the only thing that makes the checksum load-bearing</a></h2>
@@ -19068,6 +17575,38 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>One consequence is worth naming: the probe cannot tell an absent plugin from a host that answers nothing at all, so an unreachable rpm host skips the unhold and surfaces its failure on the install that follows instead. That is the same trade <code>holdRPMPackages</code> already makes, and the phase still fails; only the message moves.</p>
 <h2 id="what-would-justify-revisiting-1"><a class="header" href="#what-would-justify-revisiting-1">What would justify revisiting</a></h2>
 <p>Staging the versionlock plugin as part of the package, so a RHEL-family host can be given the plugin before the pin instead of excused from it. That turns an unpinnable host back into a fatal error, which is the stronger behavior, and it is the only change that should reverse this.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-the-upstream-examples-carry-a-cni-and-how-each-one-gets-its-manifest"><a class="header" href="#why-the-upstream-examples-carry-a-cni-and-how-each-one-gets-its-manifest">Why the upstream examples carry a CNI, and how each one gets its manifest</a></h1>
+<p>Upstream (kubeadm) installs no CNI. A cluster built from an upstream example without one forms, passes every check cargoship makes, and leaves every pod at <code>ContainerCreating</code> forever. <code>spec.config.manifests</code> exists for exactly this: cargoship kubectl-applies what a package names there from the leader once it has bootstrapped (<a href="../pkg/phase/64_apply_manifests.go"><code>pkg/phase/64_apply_manifests.go</code></a>), and only the upstream distro implements <code>ManifestPaths</code>, because rke2 and k3s ship their CNI with the release and configure it through a <code>HelmChartConfig</code> instead.</p>
+<p>So the question is not whether an upstream example declares a CNI. It is which one, and where the manifest comes from – and the three CNIs answer that differently enough that each gets its own flavor directory rather than one example with a knob.</p>
+<h2 id="one-flavor-per-cni"><a class="header" href="#one-flavor-per-cni">One flavor per CNI</a></h2>
+<p><code>example/upstream-cilium</code>, <code>example/upstream-canal</code>, <code>example/upstream-flannel</code>. The CNI decides more than the image list:</p>
+<ul>
+<li>the manifest that gets applied,</li>
+<li>the pod CIDR kubeadm has to be told about, since flannel and canal hardcode <code>10.244.0.0/16</code> in the manifest they publish and cilium reads the cluster’s,</li>
+<li>whether kube-proxy stays.</li>
+</ul>
+<p>A single example with a values-driven CNI could not express the second: the pod CIDR goes into <code>kubeadm init</code>’s <code>ClusterConfiguration</code>, which is read once at bootstrap, so it has to be in the definition rather than chosen later. The rke2 examples already split per CNI for the same reason.</p>
+<h2 id="flannel-and-canal-a-pinned-url"><a class="header" href="#flannel-and-canal-a-pinned-url">flannel and canal: a pinned URL</a></h2>
+<p>Both publish a manifest per release. The flavor pins the URL with its version in it, cargoship verifies the download against the digest in <code>example/shasums.json</code>, and the generator reads the same file to pull out the images.</p>
+<p>The URL names a version rather than using <code>releases/latest/download</code>. An alias serves different bytes from one stable URL, and <code>example/shasums.json</code> keys entries by file name – so <code>kube-flannel.yml</code> would flip digests on every upstream release, which is precisely the “same name, different content” case the cache treats as a cache miss worth re-hashing.</p>
+<h2 id="cilium-rendered-because-there-is-nothing-to-download"><a class="header" href="#cilium-rendered-because-there-is-nothing-to-download">Cilium: rendered, because there is nothing to download</a></h2>
+<p>Cilium stopped publishing an applyable manifest around v1.10; <code>install/kubernetes/quick-install.yaml</code> 404s. What exists is the Helm chart. Cargoship has no Helm dependency and the apply phase takes <code>kubectl apply -f</code> paths, so the manifest is produced at generate time with <code>helm template</code> and committed.</p>
+<p><strong>Rendered once per chart version, not once per example.</strong> It lands in <code>example/upstream-cilium/cni/cilium-&lt;chart&gt;.yaml</code> and every version directory refers to it as <code>../../cni/…</code>, the way k3s examples share <code>example/k3s/core/</code>. Nineteen committed copies of a 65 KB manifest would otherwise say the same thing nineteen times.</p>
+<p><strong>The render is skipped while the file exists.</strong> This is what keeps <code>helm</code> out of the loop that keeps the examples current: only a chart pin bump produces a path that is not already in the repository, so <code>mage generate:examples</code> on a committed tree never shells out to helm, and <code>refresh-examples.yaml</code> – which runs weekly and never touches the pin – needs nothing but the Go toolchain. The cost of a new pinned tool falls on whoever moves the pin, locally.</p>
+<h3 id="hubbletlsautomethodcronjob-is-not-optional"><a class="header" href="#hubbletlsautomethodcronjob-is-not-optional"><code>hubble.tls.auto.method=cronJob</code> is not optional</a></h3>
+<p>The chart’s default (<code>helm</code>) generates Hubble’s CA keypair <em>while templating</em> and writes it into a Secret in the output – it labels that object <code>cilium.io/helm-template-non-idempotent</code> itself. Two consequences, both disqualifying:</p>
+<ul>
+<li>the render stops being reproducible, so every regeneration produces a diff,</li>
+<li>the private key would be committed, handing every cluster installed from the example the same Hubble CA.</li>
+</ul>
+<p><code>cronJob</code> has cilium’s own certgen job mint the certificates in the cluster instead. The manifest then carries no key and renders byte-identically every time; the certgen image it adds is picked up by the image scrape like any other.</p>
+<p><code>refuseEmbeddedKey</code> fails the render if a key shows up anyway. A chart’s defaults can change under a version bump, and this failure is silent by nature – a committed key looks like any other base64 blob in a diff of a file marked <code>linguist-generated</code>.</p>
+<h2 id="images-come-out-of-the-manifest"><a class="header" href="#images-come-out-of-the-manifest">Images come out of the manifest</a></h2>
+<p>Each flavor’s <code>imageConfig.images</code> is the kubeadm-pinned control plane list plus whatever <code>image:</code> lines the manifest it applies carries. A second list maintained by hand would agree with the manifest until the CNI added a sidecar, and the failure shows up only on an air-gapped host at apply time – the one place it is most expensive to find.</p>
+<h2 id="what-was-not-done"><a class="header" href="#what-was-not-done">What was not done</a></h2>
+<p><strong>Kube-proxy-free cilium.</strong> <code>upstream-cilium</code> runs cilium alongside kube-proxy, unlike <code>example/rke2-multi-cni-cilium</code> which replaces it. Replacing it needs <code>InitConfiguration.skipPhases: [addon/kube-proxy]</code>, which <a href="../types/distrocfg/upstream_kubeadm.go"><code>types/distrocfg/upstream_kubeadm.go</code></a> does not render, plus a <code>k8sServiceHost</code> that only runtime cluster state knows. That is a feature in the kubeadm config path, not an examples change.</p>
+<p><strong>Helm chart support in the apply phase.</strong> It would let the package ship the chart instead of a rendered manifest, and would be the more faithful way to install cilium. It is also a new surface in <code>api/</code> and <code>pkg/phase/</code> for a problem <code>helm template</code> solves at generate time.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-oncreate-actions-go-through-zarfs-package-converter"><a class="header" href="#why-oncreate-actions-go-through-zarfs-package-converter">Why onCreate actions go through zarf’s package converter</a></h1>
 <p><code>runCreateActions</code> in <a href="#assemble"><code>pkg/packager/assemble/actions.go</code></a> hands each action to zarf, and since zarf v0.87.0 that means converting it first. The conversion is one function, <code>toAPIActionSet</code>, and it does something that looks wasteful: it wraps a single action set in a throwaway <code>ZarfPackage</code> carrying one unnamed component, runs <code>convert.PackageFromV1alpha1</code> over the whole thing, and reads the converted action set back out of <code>Components[0]</code>. This document records why that is the shape, and the behavior change it brought with it, because both look like accidents from the code alone.</p>
