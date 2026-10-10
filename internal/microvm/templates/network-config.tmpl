@@ -1,0 +1,15 @@
+version: 2
+ethernets:
+  # Matched on MAC rather than by name. qemu presents these as enp0s3 and enp0s4 on q35, but
+  # that is a function of how many PCI devices precede them, so naming them here would break
+  # the moment a device is added to the command line.
+  mgmt:
+    match:
+      macaddress: "{{ .MgmtMAC }}"
+    dhcp4: true
+  lan:
+    match:
+      macaddress: "{{ .LANMAC }}"
+    dhcp4: false
+    addresses:
+      - {{ .PrivateAddress }}/{{ .PrefixLen }}
