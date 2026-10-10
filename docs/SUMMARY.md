@@ -222,6 +222,7 @@
 - [choice-tofu-provider-layout](agent/choice-tofu-provider-layout.md)
 - [choice-tofu-secrets](agent/choice-tofu-secrets.md)
 - [choice-unpinnable-hosts](agent/choice-unpinnable-hosts.md)
+- [choice-upstream-cni-manifests](agent/choice-upstream-cni-manifests.md)
 - [choice-v1alpha1-action-conversion](agent/choice-v1alpha1-action-conversion.md)
 - [choice-vault-library](agent/choice-vault-library.md)
 - [choice-zarf-ansible-module](agent/choice-zarf-ansible-module.md)

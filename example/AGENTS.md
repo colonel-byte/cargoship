@@ -9,7 +9,8 @@ Almost everything under `example/` is generated. Regenerate it with mage; do not
 | `example/<distro>-<flavor>/<minor>/<version>/distro.yaml`                       | `Generate.Examples` / `Generate.ExampleLine`, from `magefiles/templates/<distro>-distro.yaml.tmpl` |
 | `example/<distro>-<flavor>/<minor>/<version>/values.yaml`, `values.schema.json` | the same targets, from `magefiles/templates/<distro>/*.tmpl`                                       |
 | `example/shasums.json`                                                          | the same targets - a cache of the digests of the files the examples install                        |
-| `example/upstream/<minor>/<version>/distro.yaml`                                | `Generate.Examples`, from `magefiles/templates/upstream-distro.yaml.tmpl`                          |
+| `example/upstream-<cni>/<minor>/<version>/distro.yaml`                          | `Generate.Examples`, from `magefiles/templates/upstream-distro.yaml.tmpl`, once per CNI flavor     |
+| `example/upstream-cilium/cni/cilium-<chart>.yaml`                               | the same target, rendered with `helm template` and shared by every version of that flavor          |
 
 To change a generated example, edit its template in `magefiles/templates/` and re-run `mage generate:examples`, which re-renders every example directory already on disk. An edit made directly to a rendered file is lost on the next run.
 
@@ -33,13 +34,27 @@ Examples are rendered for the newest minor line and the two before it, and no fu
 
 Backfilling a line below the floor fails rather than rendering nothing, and raising the floor is two edits: the constant, and a `git rm` of the lines that fall below it. A render never deletes a line itself. See [`docs/agent/choice-example-release-floor.md`](../docs/agent/choice-example-release-floor.md) for why the window is N-2 and why removal is by hand.
 
-A flavor that names minor lines is rendered only for the lines it names, so asking for a line it does not cover renders the other flavors alone. That covers the multi-architecture flavors - `example/rke2-multi-cni-canal`, `example/rke2-multi-cni-cilium`, `example/k3s-multi` - which are gated to the lines in `exampleMultiMinors` in [`magefiles/examples.go`](../magefiles/examples.go). Add a new line there before rendering it, or those flavors stay empty for it:
+A flavor that names minor lines is rendered only for the lines it names, so asking for a line it does not cover renders the other flavors alone. That covers the multi-architecture flavors - `example/rke2-multi-cni-canal`, `example/rke2-multi-cni-cilium`, `example/k3s-multi` - which are gated to the lines in `exampleMultiMinors` in [`magefiles/pkg/gen/examples/distros.go`](../magefiles/pkg/gen/examples/distros.go). Add a new line there before rendering it, or those flavors stay empty for it:
 
 ```go
 exampleMultiMinors = []string{"v1_35", "v1_36"}
 ```
 
 The list is shared by both distros, so adding a line covers the rke2 and the k3s multi-architecture flavors together. Each line added costs the shasum cache another set of arm64 artifacts, which is why the list holds the current lines rather than every line the distros render.
+
+## The upstream CNI flavors
+
+Upstream ships no CNI, and a cluster without one comes up with every pod stuck at `ContainerCreating`. So each upstream example carries one: `example/upstream-cilium`, `example/upstream-canal` and `example/upstream-flannel`, declared in `upstreamCNIFlavors` in [`magefiles/pkg/gen/examples/upstream_cni.go`](../magefiles/pkg/gen/examples/upstream_cni.go). The manifest goes to the controllers as a `files` entry and is named in `spec.config.manifests`, which cargoship kubectl-applies from the leader once `kubeadm init` has formed the cluster.
+
+Three things about a flavor follow from the CNI rather than from the release, and are pinned beside it:
+
+- **The manifest.** flannel and canal publish one, so the flavor pins its URL and cargoship verifies the download against `example/shasums.json`. Cilium publishes only a Helm chart, so its manifest is rendered with `helm template` into `example/upstream-cilium/cni/cilium-<chart>.yaml` and shared by every version of the flavor, referenced as `../../cni/…`.
+- **The pod CIDR.** flannel and canal hardcode `10.244.0.0/16` in the manifest they publish, so the flavor writes the same value to `spec.config.engine.config.networking.podSubnet`. Disagreeing is not an error either side reports: the cluster forms and pod traffic silently does not route.
+- **The images.** Read out of the manifest the flavor applies, not listed by hand, so a CNI that adds a sidecar does not leave a package missing an image on an air-gapped host.
+
+`helm` is needed only to move the pinned chart version: the render is skipped while the file exists, so `mage generate:examples` on a committed tree never calls it, and neither does `refresh-examples.yaml`. A chart that generates a keypair while templating is refused rather than committed - cilium's default `hubble.tls.auto.method` does exactly that, which is why the render sets it to `cronJob` and lets cilium's own certgen job mint the certificates in the cluster.
+
+The CNI is also what sets the release floor above: a CNI release supports a handful of Kubernetes minors and says which.
 
 ## Order of operations
 
