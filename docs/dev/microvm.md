@@ -115,7 +115,11 @@ A node is multi-homed, and the engine picks its own node address from whichever 
 
 This is worth knowing before it is mistaken for a fleet defect. Cargoship puts a host's `privateAddress` into the engine's `tls-san` and into the firewall's node ipset, but it does not render a `node-ip`, and the inventory has no per-host engine argument to set one with. On a single-homed fleet, which is what cargoship is normally pointed at, the engine's choice and the private address are the same thing and the gap is invisible. Here they are not.
 
-An rke2 cluster still comes up `Ready` with it, so this does not stop the phases the fleet exists to test. Treat anything that depends on distinct node addresses - pod-to-pod traffic across nodes, anything reading a node's `InternalIP` - as out of scope until the engine config carries a node address.
+This is not cosmetic, and it is worth understanding before trusting a cluster this fleet produced. The kubelet registers on the address the node reports, so every kubelet in the fleet is advertised at `10.0.2.15`, and the API server cannot reach any of them: `kubectl logs` and `kubectl exec` return `502 Bad Gateway` from the apiserver's proxy, and anything else that needs the control plane to call a kubelet fails the same way. A CNI installed through a Helm job -- which the cilium examples are -- can fail outright on that, leaving every node `NotReady` with `NetworkPluginNotReady`.
+
+So the fleet is sound for what it was built for, which is everything cargoship does over SSH: the prepare phases, the firewall, the uploads, the engine install, and the join. It is not sound as a place to run workloads, and a cluster of it reaching `Ready` is luck rather than a property you can rely on. Pod-to-pod traffic across nodes, anything reading a node's `InternalIP`, and anything driven through the API server to a kubelet are all out of scope until the engine config carries a node address.
+
+Note what that costs in the suite: `Test_ZZ1_ClusterHealthy` is the only step that asserts the cluster actually works, and it is skipped here because it needs an API route from the management node. A green run against this fleet therefore says the phases did their work, not that the cluster is healthy. Check that from inside a node when it matters.
 
 ## The shipped k3s packages do not come up on this fleet
 
