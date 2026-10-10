@@ -32,6 +32,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Uninstalling Engine
     - Remove the rpm, apt, or binary files from all the hosts
     - Dry run: reported, not run
+1. Remove the SELinux policy cargoship applied
+    - Removes the policy modules and file contexts recorded in /var/lib/cargoship/selinux/cargoship-state.json and returns the booleans to the values the host held before cargoship changed them
+    - Dry run: reported, not run
 1. Reload service manager
     - Runs `systemctl daemon-reload` or equivalent on all hosts.
     - Dry run: reported, not run
