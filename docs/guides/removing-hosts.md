@@ -10,7 +10,7 @@ An apply catches this instead of walking past it. Right after it gathers facts, 
 
 ```
 the cluster holds nodes the config does not: add the host back to the config,
-run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to
+run `cargoship reset` against it, or pass --allow-unmanaged-nodes to
 apply anyway: worker3 (worker)
 ```
 
@@ -30,7 +30,7 @@ So an apply reports the gap and leaves the cluster alone. The layer that will ev
 
 ## Removing the machine by hand
 
-Removing a node is two steps, and they have to happen in that order. `install reset` uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running -- and `UninstallEngine` acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.
+Removing a node is two steps, and they have to happen in that order. `reset` uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running -- and `UninstallEngine` acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.
 
 1. From a controller that is staying, drain and delete the node:
 
@@ -44,7 +44,7 @@ Removing a node is two steps, and they have to happen in that order. `install re
 3. Run reset against it. With the node already gone from the cluster, the deletion phases have nothing to do and the uninstall is all that remains:
 
    ```console
-   $ cargoship install reset ./package.tar.zst --config ./removal-config.yaml --confirm
+   $ cargoship reset ./package.tar.zst --config ./removal-config.yaml --confirm
    ```
 
 4. Delete the host block from your real config.

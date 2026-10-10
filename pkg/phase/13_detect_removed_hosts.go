@@ -32,7 +32,7 @@ import (
 // ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for.
 // Apply removes nothing, so continuing would report success over a machine that is still running
 // the engine and still joined.
-var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
+var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
 
 // listNodes asks for every node as JSON, so the result unmarshals straight into the typed list the
 // comparison below works on. It runs through the leader over SSH, like every other cluster command

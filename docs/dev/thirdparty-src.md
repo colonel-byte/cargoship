@@ -4,7 +4,15 @@ This document explains what lives under `thirdparty-src/` and why it's handled d
 
 ## What it is
 
-`thirdparty-src/<distro>/<version>/` holds raw, unmodified source files pulled from an upstream engine repo (k3s and RKE2) at an exact tag - e.g. `thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}`, pulled from k3s-io/k3s at tag `v1.35.3+k3s1`. `version` is truncated to the minor version (`v1_35`, not the full `v1.35.3-k3s1` patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. RKE2 additionally pulls `zz_root.go` and `zz_k3sopts.go` - see "RKE2's flag composition" below. Both distros also pull the file that declares their packaged components (`zz_stage.go` for k3s, `zz_types.go` for RKE2) - see "Packaged components (`--disable`)" below. The `zz_` prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under `pkg/engineconfig/gen`.
+`thirdparty-src/<distro>/<version>/` holds raw, unmodified source files pulled from an upstream repo at an exact tag - e.g. `thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}`, pulled from k3s-io/k3s at tag `v1.35.3+k3s1`. `version` is truncated to the minor version (`v1_35`, not the full `v1.35.3-k3s1` patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. The `zz_` prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under `pkg/engineconfig/gen`.
+
+Three repos are pulled, one per `<distro>` directory, listed in `thirdparty-src/pins.json`:
+
+*   **`k3s`** - k3s-io/k3s. Pulls `zz_server.go` and `zz_agent.go` for the flag set, plus `zz_stage.go`, which declares the packaged components - see "Packaged components (`--disable`)" below.
+*   **`rke2`** - rancher/rke2. The same two, plus `zz_root.go` and `zz_k3sopts.go` for its flag composition - see "RKE2's flag composition" below - and `zz_types.go` for its packaged components.
+*   **`upstream`** - kubernetes/kubernetes. Not an engine: it supplies the kubeadm API surface the `upstream` distro's engine config is validated against, as `zz_constants.go` and `zz_types.go`. See `pkg/engineconfig/gen/upstream/`.
+
+Everything below is about the two engine pulls unless it says otherwise.
 
 These files exist so `pkg/engineconfig/extract` can statically parse them with `go/ast` to recover the `urfave/cli` flag declarations k3s/RKE2 ships for a given version. That, in turn, lets `mage generate:engineConfig` (see `magefiles/pkg/gen/engineconfig/engineconfig.go`) generate a typed Go struct describing the valid `config.yaml` keys for that version - see `docs/agent/design-config-codegen.md` for the full design rationale.
 
@@ -18,20 +26,21 @@ Because these files reference packages (`github.com/urfave/cli/v2`, `github.com/
 
 `thirdparty-src/go.mod` declares a separate, empty module so the Go toolchain treats `thirdparty-src/` as outside the main module boundary. `go build ./...`/`go vet` from the repo root no longer descend into it. IDEs still open a second module context for it, which can surface unresolved-import diagnostics on the files themselves; the workspace's `.vscode/settings.json` sets `gopls.directoryFilters` to `-thirdparty-src` to stop gopls from loading that module at all.
 
-The module boundary is not honoured by every tool. CodeQL's Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above - mis-resolving some of them (`github.com/k3s-io/k3s` to `v1.21.9`, whose `go.mod` declares its path as `github.com/rancher/k3s`), running `go mod tidy -e`, and downloading modules this repository deliberately does not depend on. CodeQL's `paths-ignore` cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. `.github/workflows/codeql.yaml` therefore uses `build-mode: manual` and builds `./src/... .` rather than `./...`, which keeps the toolchain inside the main module. Anything else added to CI that walks for `go.mod` files needs the same treatment.
+The module boundary is not honoured by every tool. CodeQL's Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above - mis-resolving some of them (`github.com/k3s-io/k3s` to `v1.21.9`, whose `go.mod` declares its path as `github.com/rancher/k3s`), running `go mod tidy -e`, and downloading modules this repository deliberately does not depend on. CodeQL's `paths-ignore` cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. `.github/workflows/codeql.yaml` therefore uses `build-mode: manual` and spells the package list out - `./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/... .` - rather than `./...`, which keeps the toolchain inside the main module. Anything else added to CI that walks for `go.mod` files needs the same treatment.
 
 ## Layout
 
 ```
 thirdparty-src/
-  <distro>/                  # k3s or rke2
+  <distro>/                  # k3s, rke2, or upstream (kubernetes/kubernetes)
     <version>/                # e.g. v1_35 (minor version only, see above)
       zz_server.go             # verbatim upstream source
       zz_agent.go
       zz_root.go               # rke2 only -- commonFlag, shared by server/agent
       zz_k3sopts.go            # rke2 only -- K3SFlagOption/copyFlag/dropFlag/hideFlag
       zz_stage.go              # k3s only  -- DisableItems, the packaged components
-      zz_types.go              # rke2 only -- DisableItems/CNIItems/IngressItems
+      zz_types.go              # rke2 -- DisableItems/CNIItems/IngressItems; upstream -- kubeadm v1beta4 types
+      zz_constants.go          # upstream only -- kubeadm constants
       SOURCE.txt               # repo, tag, resolved commit, and pulled file list
   pins.json                    # the pinned tags and file lists, see below
   go.mod                       # module boundary marker, see above

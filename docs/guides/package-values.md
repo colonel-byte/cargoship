@@ -59,7 +59,7 @@ The flag carries the ones that change between runs:
 cargoship apply ./package.tar.zst --config inventory.yaml --values ./encryption-off.yaml
 ```
 
-`--values` may be given more than once, with a later file winning over an earlier one, and it is accepted by `cargoship apply`, `cargoship prepare`, and `cargoship engine-config-sync`. There is no `-f` shorthand: `apply` already binds `-f` to `--update-fapolicyd`.
+`--values` may be given more than once, with a later file winning over an earlier one, and it is accepted by `cargoship apply`, `cargoship prepare`, and `cargoship engine-config-sync`. There is no `-f` shorthand: `apply` already binds `-f` to `--fapolicyd`.
 
 Merging is per key, not per document. An override that sets `cilium.encryption.enabled` leaves every other key under `cilium` as the package defined it.
 

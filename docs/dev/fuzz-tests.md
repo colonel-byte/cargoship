@@ -6,15 +6,42 @@ It also has to stay out of `src/test/`. OpenSSF Scorecard's file walker discards
 
 ## Layout
 
+One file per concern: 49 targets across 24 target files. The shared scaffolding:
+
 ```
-fuzz/main_test.go                    package documentation
+fuzz/main_test.go                    package documentation and TestMain
 fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
-fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
-fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
-fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
-fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
-fuzz/ansible_inventory_fuzz_test.go  Ansible inventory targets: the projected request, one host variable, the role mapping
 fuzz/testdata/fuzz/<Target>/         committed crashers, one directory per target
+fuzz/AGENTS.md                       the naming rule: no target name may be a prefix of another
+```
+
+The targets, grouped by what they guard:
+
+```
+vault_value_fuzz_test.go             EncryptValue/DecryptValue/FormatOf round trips and salting
+vault_path_fuzz_test.go              EncryptAtPath/DecryptAtPath/RekeyAtPath and path canonicalisation
+vault_document_fuzz_test.go          the splice against varying document shapes, arbitrary documents, arbitrary paths
+vault_config_fuzz_test.go            EncryptConfig/DecryptConfig over a whole document
+vault_meta_fuzz_test.go              the recipients recorded in a document's vault metadata
+keymaterial_fuzz_test.go             AgeRecipientsIn, ResolveKeyring, RekeyTarget
+parse_recipients_fuzz_test.go        age recipient lines and recipient lists
+cfg_fuzz_test.go                     cfg.Parse and cfg.ParseMultiDoc over arbitrary document bytes
+clustercfg_parse_fuzz_test.go        the cluster inventory parser
+schema_decode_fuzz_test.go           schema decoding
+url_and_config_fuzz_test.go          ExtractBasePathFromURL and ReadByteStrict over a distro config
+dns_fuzz_test.go                     ParseServiceURL and IsLocalhost
+layout_path_fuzz_test.go             the path sanitisers: IsContainedPath and isCleanPath
+parse_manifest_fuzz_test.go          OCI manifest parsing
+parse_checksum_fuzz_test.go          checksum lines and Retry-After headers
+parse_registry_overrides_fuzz_test.go  the --registry-override key=value list
+file_overrides_fuzz_test.go          file override parsing and resolution
+identify_source_fuzz_test.go         package source identification
+helmvalues_parse_fuzz_test.go        values file shape and schema external-ref rejection
+helmvalues_path_fuzz_test.go         value path round trips, mapping application, merge immutability
+helmvalues_template_fuzz_test.go     template rendering, including that it denies host state
+nft_split_families_fuzz_test.go      nftables family splitting
+ansible_inventory_fuzz_test.go       the projected request, one host variable, the role mapping
+ansiblemod_fuzz_test.go              module argument reading and module naming
 ```
 
 ## The Ansible inventory targets
@@ -35,7 +62,7 @@ cargoship writes two ciphertext formats, Ansible Vault and age, and one keyring 
 
 ## Running
 
-A plain `go test` runs the **seed corpus only** -- the `f.Add` values in each target, plus anything committed under `testdata/fuzz/<Target>/`. That is about half a second and is what `mage test:fuzz` and `go test ./...` do. No CI job runs this package today -- `e2e.yaml` runs the non-cluster group and `e2e-cluster.yaml` the cluster group, and neither glob reaches it:
+A plain `go test` runs the **seed corpus only** -- the `f.Add` values in each target, plus anything committed under `testdata/fuzz/<Target>/`. That is about half a second and is what `mage test:fuzz` and `go test ./...` do. `.github/workflows/unit-tests.yaml` runs it on every pull request, as a second step beside `test:unit`, because it needs nothing that step did not already need:
 
 ```console
 $ mage test:fuzz
@@ -83,7 +110,9 @@ There are two corpora, and only one of them is in the repository.
 
 Inputs the fuzzer generates live in the build cache, under `$(go env GOCACHE)/fuzz/`. They are shared across runs on the same machine, are not portable, and are not meant to be committed; `go clean -fuzzcache` discards them, which is worth doing when a target has been rewritten and its cached corpus is exercising a shape that no longer exists.
 
-Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:
+Failing inputs are the committed corpus. When a target fails, `go test` writes the input to `fuzz/testdata/fuzz/<Target>/<hash>` and prints the path. **Commit that file.** From then on it is replayed by a plain `go test`, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. There are 24 committed crashers across 9 targets, the bulk of them under `FuzzEncryptAtPathArbitraryDocument` (12) and `FuzzDecryptAtPathRoundTrip` (3).
+
+Every one of them is fixed -- `go test ./fuzz/` is green. A red run here means a new defect, not a known one. The five that came out of writing the original targets are worth reading as a sample of the shape of defect this package finds:
 
 ```
 FuzzDecryptAtPathRoundTrip/89831cc049267b2c              string("\n")  a credential of one line break, written as an empty block scalar, read back as ""
@@ -93,9 +122,9 @@ FuzzEncryptAtPathArbitraryDocument/d370f7a72740b34b      a flow mapping holding 
 FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host with an empty name, which became an address, a hostname and a hostvars key
 ```
 
-The Ansible one is fixed. A group entry of `""` produced a host whose address, hostname and `hostvars` key were all the empty string, and the schema accepted all three because each asks for a string; nothing downstream could tell that host from one an operator meant to install. `deriveRoles` now refuses an empty host name and an empty group name in the mapping.
+Two are worth the detail. The Ansible one: a group entry of `""` produced a host whose address, hostname and `hostvars` key were all the empty string, and the schema accepted all three because each asks for a string; nothing downstream could tell that host from one an operator meant to install. `deriveRoles` now refuses an empty host name and an empty group name in the mapping.
 
-The last of those is open. `EncryptAtPath` writes a literal block scalar into a flow mapping such as `{0, pass: 00}`, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. `inFlowCollection` in `internal/clustercfg/vaultpath.go` is meant to catch exactly this and misses when a bare entry -- a key with an implicit null value -- precedes the target key. Until it is fixed a plain `go test` of this package is red, which is the intended state: the corpus entry is the defect report.
+The flow-mapping one: `EncryptAtPath` wrote a literal block scalar into a flow mapping such as `{0, pass: 00}`, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. `inFlowCollection` in `internal/clustercfg/vaultpath.go` is what catches this, and it missed when a bare entry -- a key with an implicit null value -- preceded the target key. That is fixed; the corpus entry is what keeps it fixed.
 
 Those same failures are also written up as ordinary table cases next to the code they broke -- see `TestEncryptAtPathReadsBackWhatDecryptWrote` and `TestCanonicalYAMLPath` in `internal/clustercfg/vaultpath_test.go`. Keep doing both: the corpus file is what stops the target regressing, and the named case with a comment is what explains the defect to the next reader.
 
@@ -147,6 +176,3 @@ Fuzzing pays where a wrong answer still parses, so the targets worth writing nex
 
 *   `distrocfg.marshalRegistriesYAML` and `quoteRegistryKeys` (`types/distrocfg/distro_common.go`) choose a quoting style for keys the engine reparses -- the same shape as the bugs above, over registry names and `rewrite` regex patterns.
 *   `split.SplitFile` and `split.ReassembleFile` are a round trip over content bytes and a chunk size, and `ReassembleFile` trusts the `part000` metadata it unmarshals from disk.
-*   `cfg.Parse`, `cfg.ParseMultiDoc` and `utils.ReadByteStrict` take document bytes straight into a third-party parser, which is exactly where the panics found so far have come from.
-*   `isCleanPathRegex` (`cmd/common.go`) is a path sanitiser, so the property is that an accepted path, joined to a base and cleaned, stays under that base.
-*   `dns.ParseServiceURL` against `dns.IsServiceURL` is a predicate and its implementation, the differential shape.
