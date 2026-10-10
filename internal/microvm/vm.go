@@ -244,12 +244,14 @@ func load(spec Spec) (Fleet, error) {
 		return Fleet{}, fmt.Errorf("reading %s: %w", spec.dir(), err)
 	}
 
-	var controllers, workers int
+	var controllers, workers, infra int
 	for _, e := range entries {
 		switch {
 		case !e.IsDir():
 		case strings.HasPrefix(e.Name(), controllerPrefix):
 			controllers++
+		case strings.HasPrefix(e.Name(), infraPrefix):
+			infra++
 		case strings.HasPrefix(e.Name(), workerPrefix):
 			workers++
 		}
@@ -260,6 +262,7 @@ func load(spec Spec) (Fleet, error) {
 
 	spec.Controllers = controllers
 	spec.Workers = workers
+	spec.Infra = infra
 	nodes, err := spec.Nodes()
 	if err != nil {
 		return Fleet{}, err

@@ -15,6 +15,8 @@
 package microvm
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -217,6 +219,83 @@ func TestParseCloudInitStatus(t *testing.T) {
 			t.Parallel()
 
 			require.Equal(t, tt.want, parseCloudInitStatus(tt.out))
+		})
+	}
+}
+
+// TestLoadCountsEachGroup covers the reconstruction every command but Up depends on: nothing
+// per-node is stored, so Down, List and SSH rebuild the fleet from the directory names alone.
+// Miscounting a group there gives every node after it the wrong role, port and address.
+func TestLoadCountsEachGroup(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		dirs    []string
+		want    []string
+		wantErr string
+	}{
+		{
+			name: "controllers and workers",
+			dirs: []string{"kc0", "kw0", "kw1"},
+			want: []string{"kc0", "kw0", "kw1"},
+		},
+		{
+			name: "infra is not counted as a worker",
+			dirs: []string{"kc0", "kw0", "ki0", "ki1"},
+			want: []string{"kc0", "kw0", "ki0", "ki1"},
+		},
+		{
+			name: "infra only",
+			dirs: []string{"kc0", "ki0"},
+			want: []string{"kc0", "ki0"},
+		},
+		{
+			name:    "no controller directory",
+			dirs:    []string{"kw0", "ki0"},
+			wantErr: "no controller directory",
+		},
+		{
+			name:    "nothing there at all",
+			dirs:    nil,
+			wantErr: "no fleet",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+			spec, err := Spec{
+				Fleet:       "dev",
+				Controllers: 1,
+				RunRoot:     root,
+			}.Normalize()
+			require.NoError(t, err)
+
+			for _, d := range tt.dirs {
+				require.NoError(t, os.MkdirAll(filepath.Join(spec.dir(), d), 0o755))
+			}
+			// A stray file must not be counted as a node.
+			if tt.dirs != nil {
+				require.NoError(t, os.WriteFile(filepath.Join(spec.dir(), "inventory.yaml"), []byte("{}"), 0o600))
+			}
+
+			fleet, err := load(spec)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+
+			var got []string
+			for _, n := range fleet.Nodes {
+				got = append(got, n.Name)
+			}
+			require.Equal(t, tt.want, got)
+			require.True(t, filepath.IsAbs(fleet.KeyPath),
+				"the key path is written into the inventory, which cargoship reads from elsewhere")
 		})
 	}
 }

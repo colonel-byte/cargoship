@@ -77,10 +77,15 @@ func hostFromNode(n Node, keyPath string) *apicluster.ZarfHost {
 		PrivateInterface: lanInterface,
 		Role:             n.Role,
 		// The profile doubles as the node-role.kubernetes.io/<profile> label the LabelNodes
-		// phase writes, so a profile matching the role is what makes that phase observable.
-		// It names no entry in the cluster config's profile map, which leaves per-profile
-		// concurrency on its default.
-		Profile: n.Role,
+		// phase writes, so giving every host one is what makes that phase observable. For
+		// controllers and plain workers it matches the role; an infra node's does not, which
+		// is the point of having them -- a profile that is not the role's name is the only
+		// way that label and the per-profile concurrency are exercised as anything other
+		// than a restatement of the role.
+		//
+		// None of these name an entry in the cluster config's profile map, so per-profile
+		// concurrency stays on its default until a config adds one.
+		Profile: n.Profile,
 		ClientWithConfig: rig.ClientWithConfig{
 			ConnectionConfig: rig.CompositeConfig{
 				SSH: &ssh.Config{

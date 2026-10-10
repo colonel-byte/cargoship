@@ -40,6 +40,7 @@ func TestSpecNormalizeDefaultsAndRejections(t *testing.T) {
 				Fleet:       "dev",
 				Controllers: 1,
 				Workers:     0,
+				Infra:       0,
 				MemoryMiB:   4096,
 				CPUs:        2,
 				DiskSize:    "20G",
@@ -52,6 +53,7 @@ func TestSpecNormalizeDefaultsAndRejections(t *testing.T) {
 				Fleet:       "probe",
 				Controllers: 3,
 				Workers:     2,
+				Infra:       1,
 				MemoryMiB:   2048,
 				CPUs:        4,
 				DiskSize:    "40G",
@@ -61,6 +63,7 @@ func TestSpecNormalizeDefaultsAndRejections(t *testing.T) {
 				Fleet:       "probe",
 				Controllers: 3,
 				Workers:     2,
+				Infra:       1,
 				MemoryMiB:   2048,
 				CPUs:        4,
 				DiskSize:    "40G",
@@ -89,6 +92,23 @@ func TestSpecNormalizeDefaultsAndRejections(t *testing.T) {
 				Workers:     maxNodes,
 			},
 			wantErr: "exceeds the 32 node limit",
+		},
+		{
+			name: "infra nodes count toward the cap",
+			spec: Spec{
+				Controllers: 1,
+				Workers:     16,
+				Infra:       16,
+			},
+			wantErr: "exceeds the 32 node limit",
+		},
+		{
+			name: "negative infra",
+			spec: Spec{
+				Controllers: 1,
+				Infra:       -1,
+			},
+			wantErr: "cannot have -1 infra nodes",
 		},
 		{
 			name: "unknown distro",
@@ -155,6 +175,7 @@ func TestSpecNodesDerivationIsUnique(t *testing.T) {
 		Fleet:       "dev",
 		Controllers: 3,
 		Workers:     5,
+		Infra:       3,
 	}.Nodes()
 	require.NoError(t, err)
 
@@ -255,4 +276,82 @@ func TestLeaderForwards(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSpecNodesInfraGroup covers what an infra node is. The engine has no infra role, so these
+// join as workers and are distinguished by their profile -- which is what phase 81 turns into
+// a node-role label, and the only way that phase is tested against a profile that is not
+// simply a restatement of the role.
+func TestSpecNodesInfraGroup(t *testing.T) {
+	t.Parallel()
+
+	nodes, err := Spec{
+		Fleet:       "dev",
+		Controllers: 1,
+		Workers:     2,
+		Infra:       3,
+	}.Nodes()
+	require.NoError(t, err)
+
+	var gotNames []string
+	for _, n := range nodes {
+		gotNames = append(gotNames, n.Name)
+	}
+	require.Equal(t, []string{"kc0", "kw0", "kw1", "ki0", "ki1", "ki2"}, gotNames,
+		"infra comes last so that adding it does not renumber the workers ahead of it")
+
+	for _, n := range nodes {
+		switch {
+		case strings.HasPrefix(n.Name, infraPrefix):
+			require.Equal(t, apicluster.RoleWorker, n.Role, "the engine has no infra role")
+			require.Equal(t, infraProfile, n.Profile)
+		case strings.HasPrefix(n.Name, controllerPrefix):
+			require.Equal(t, apicluster.RoleController, n.Role)
+			require.Equal(t, apicluster.RoleController, n.Profile)
+		default:
+			require.Equal(t, apicluster.RoleWorker, n.Role)
+			require.Equal(t, apicluster.RoleWorker, n.Profile)
+		}
+	}
+}
+
+// TestPrefixesPartitionTheNames is what lets every match on these prefixes ignore order: no
+// prefix is a prefix of another, so exactly one of the three claims any given name.
+func TestPrefixesPartitionTheNames(t *testing.T) {
+	t.Parallel()
+
+	prefixes := []string{controllerPrefix, workerPrefix, infraPrefix}
+	for i, a := range prefixes {
+		for j, b := range prefixes {
+			if i == j {
+				continue
+			}
+			require.Falsef(t, strings.HasPrefix(a, b),
+				"%q starts with %q, so a match on these would depend on test order", a, b)
+		}
+	}
+}
+
+// TestSpecNodesWithoutInfraIsUnchanged covers the numbering promise: a fleet asked for no
+// infra nodes is addressed exactly as it was before the group existed, so an inventory written
+// by an older bring-up still describes the same hosts.
+func TestSpecNodesWithoutInfraIsUnchanged(t *testing.T) {
+	t.Parallel()
+
+	plain, err := Spec{
+		Fleet:       "dev",
+		Controllers: 1,
+		Workers:     2,
+	}.Nodes()
+	require.NoError(t, err)
+
+	withInfra, err := Spec{
+		Fleet:       "dev",
+		Controllers: 1,
+		Workers:     2,
+		Infra:       2,
+	}.Nodes()
+	require.NoError(t, err)
+
+	require.Equal(t, plain, withInfra[:len(plain)])
 }
