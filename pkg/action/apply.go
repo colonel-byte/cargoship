@@ -113,6 +113,7 @@ func NewApply(opts ApplyOptions) *Apply {
 			&phase.PrepareHosts{},
 			&phase.PrepareSelinux{},
 			&phase.PrepareFapolicy{},
+			&phase.PrepareSelinuxPolicy{},
 			&phase.ModifyHosts{
 				Enabled: opts.ModifyHosts,
 			},

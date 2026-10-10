@@ -206,6 +206,12 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*PrepareSelinux\) Run\(ctx context.Context\) error](<#PrepareSelinux.Run>)
   - [func \(p \*PrepareSelinux\) ShouldRun\(\) bool](<#PrepareSelinux.ShouldRun>)
   - [func \(p \*PrepareSelinux\) Title\(\) string](<#PrepareSelinux.Title>)
+- [type PrepareSelinuxPolicy](<#PrepareSelinuxPolicy>)
+  - [func \(p \*PrepareSelinuxPolicy\) Explanation\(\) string](<#PrepareSelinuxPolicy.Explanation>)
+  - [func \(p \*PrepareSelinuxPolicy\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#PrepareSelinuxPolicy.Prepare>)
+  - [func \(p \*PrepareSelinuxPolicy\) Run\(ctx context.Context\) error](<#PrepareSelinuxPolicy.Run>)
+  - [func \(p \*PrepareSelinuxPolicy\) ShouldRun\(\) bool](<#PrepareSelinuxPolicy.ShouldRun>)
+  - [func \(p \*PrepareSelinuxPolicy\) Title\(\) string](<#PrepareSelinuxPolicy.Title>)
 - [type RPMUploadFiles](<#RPMUploadFiles>)
   - [func \(p \*RPMUploadFiles\) Explanation\(\) string](<#RPMUploadFiles.Explanation>)
   - [func \(p \*RPMUploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#RPMUploadFiles.Prepare>)
@@ -270,6 +276,25 @@ const (
     FAPolicydRuleFile = "/etc/fapolicyd/rules.d/31-cargoship.rules"
     // FAPOLICYD name of the service for fapolicyd
     FAPOLICYD = "fapolicyd"
+)
+```
+
+<a name="SELinuxPolicyDir"></a>
+
+```go
+const (
+    // SELinuxPolicyDir is the directory on the host holding cargoship's CIL policy modules
+    SELinuxPolicyDir = "/var/lib/cargoship/selinux"
+    // SELinuxStateFile records the settings cargoship changed, so a reset can restore them
+    SELinuxStateFile = SELinuxPolicyDir + "/cargoship-state.json"
+    // SEModule name of the binary that installs a policy module
+    SEModule = "semodule"
+    // DefaultSELinuxModulePriority is the semodule priority a module installs at when it sets
+    // none. It sits above the distribution policy's 100 so a package module overrides rather
+    // than conflicts with the shipped policy.
+    DefaultSELinuxModulePriority = 400
+    // DefaultSELinuxFileType is the semanage fcontext file type used when a mapping sets none
+    DefaultSELinuxFileType = "all"
 )
 ```
 
@@ -2301,6 +2326,63 @@ ShouldRun is true when there is a host with selinux on the hosts
 
 ```go
 func (p *PrepareSelinux) Title() string
+```
+
+Title for the phase
+
+<a name="PrepareSelinuxPolicy"></a>
+## type [PrepareSelinuxPolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L73-L76>)
+
+PrepareSelinuxPolicy installs the distro\-supplied SELinux policy on the hosts.
+
+```go
+type PrepareSelinuxPolicy struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+```
+
+<a name="PrepareSelinuxPolicy.Explanation"></a>
+### func \(\*PrepareSelinuxPolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L93>)
+
+```go
+func (p *PrepareSelinuxPolicy) Explanation() string
+```
+
+Explanation about the current phase, used for documentation generation
+
+<a name="PrepareSelinuxPolicy.Prepare"></a>
+### func \(\*PrepareSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L79>)
+
+```go
+func (p *PrepareSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+```
+
+Prepare the phase
+
+<a name="PrepareSelinuxPolicy.Run"></a>
+### func \(\*PrepareSelinuxPolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L98>)
+
+```go
+func (p *PrepareSelinuxPolicy) Run(ctx context.Context) error
+```
+
+Run the phase
+
+<a name="PrepareSelinuxPolicy.ShouldRun"></a>
+### func \(\*PrepareSelinuxPolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L111>)
+
+```go
+func (p *PrepareSelinuxPolicy) ShouldRun() bool
+```
+
+ShouldRun is true when a host can take a policy and the distro package supplies one
+
+<a name="PrepareSelinuxPolicy.Title"></a>
+### func \(\*PrepareSelinuxPolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/24_prepare_selinux_policy.go#L88>)
+
+```go
+func (p *PrepareSelinuxPolicy) Title() string
 ```
 
 Title for the phase
