@@ -63,6 +63,8 @@ $ go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$/^re-signing_requires
 
 *   **`CARGOSHIP_E2E_TMPDIR`** - parent directory for the temp dirs the harness creates, one per `e2e.Cargoship` call, plus the shared minimal package. Unset means the system temp directory. Point it at `build/tmp` to keep all test scratch inside the repo, which makes it easy to see what a run left behind: `CARGOSHIP_E2E_TMPDIR=$PWD/build/tmp TMPDIR=$PWD/build/tmp go test ...`.
 *   **`TMPDIR`** - respected by the binary itself for anything it does not put under its own staging directory. Worth setting alongside the above for the same reason.
+*   **`CARGOSHIP_E2E_BACKEND`** - what provisions the cluster suite's hosts: `bootloose` (the default) for privileged containers, or `microvm` for local Rocky 10 virtual machines. The VM backend is the only way the SELinux, fapolicyd and firewalld phases run as the paths they are rather than as gates that correctly do nothing, and it needs KVM. It is additional coverage rather than a replacement, since it runs one distribution; see [microvm](microvm.md).
+
 *   **`CARGOSHIP_E2E_KEEP_REGISTRY_LOG`** - set to any non-empty value to keep the in-memory registry's request log for passing tests as well as failing ones. See "Artifacts and logs" below.
 *   **`CARGOSHIP_CONFIG`** - the config file the binary loads. `TestCargoshipCreateExample` sets it (to `test/e2e/cargoship-config.yaml`), and the Ansible module suite's "reports a broken config file as a module failure" case sets it to a deliberately malformed file to check that a broken config surfaces as a module-level failure rather than a crash; every other test passes flags explicitly so that what is being tested is visible in the test.
 

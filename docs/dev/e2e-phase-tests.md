@@ -279,6 +279,14 @@ $ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
 $ docker exec -it <container> sh
 ```
 
+**Run against virtual machines instead of containers.** `CARGOSHIP_E2E_BACKEND=microvm`, or `mage test:endToEndClusterVM`, provisions the hosts as local Rocky 10 virtual machines rather than bootloose containers. Everything downstream of the inventory is identical; what changes is that the hosts have a real kernel, so the phases that correctly do nothing against a container -- SELinux, fapolicyd, the firewalld backend -- run as the paths they are:
+
+```sh
+$ CARGOSHIP_E2E_BACKEND=microvm go test -mod=vendor -count=1 -v -timeout=60m ./test/e2e/cluster/...
+```
+
+It needs KVM, and a bring-up costs a minute or two against a container's seconds. It is also one distribution, so it covers none of the family routing the container fleet's Ubuntu, Fedora and Alpine mix exists for -- run both, not one instead of the other. See [microvm](microvm.md) for the fleet itself and [choice-microvm-backend](../agent/choice-microvm-backend.md) for the reasoning.
+
 **Walk the suite against rke2 instead of k3s.** `CARGOSHIP_E2E_DISTRO=rke2` switches which distro every step installs, and which package `cluster_lifecycle_test.go` builds. The default is `k3s`. A phase that branches on the engine needs a run each way:
 
 ```console
