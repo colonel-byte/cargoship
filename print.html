@@ -38,7 +38,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9503bab2.js";
+            window.path_to_searchindex_js = "searchindex-706e0556.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-a9faf70c.js"></script>
@@ -18836,11 +18836,11 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <tbody>
 <tr><td><code>GO-2026-6225</code></td><td><code>docker-credential-acr-env</code></td><td>Genuinely linked, via <code>cmd</code> -&gt; zarf signing -&gt; cosign CLI options. Fixed in: N/A</td></tr>
 <tr><td><code>GO-2026-5932</code></td><td><code>golang.org/x/crypto/openpgp</code></td><td>Not in the build: <code>go mod why</code> reports the main module does not need the package. Fixed in: N/A</td></tr>
-<tr><td><code>CVE-2025-8556</code></td><td><code>cloudflare/circl</code></td><td>Already fixed upstream. The advisory carries only a commit range and no version range, and v1.6.5 is 151 commits past the fix, so the match is a defect in the advisory rather than in the dependency</td></tr>
+<tr><td><code>CVE-2026-1229</code></td><td><code>cloudflare/circl</code></td><td>Already fixed upstream. <code>GO-2026-4550</code>, the same advisory in the Go database, records the fix in v1.6.3 and the dependency is at v1.6.5; the CVE record carries only a commit range, so the match is a defect in the advisory rather than in the dependency</td></tr>
 </tbody>
 </table>
 </div>
-<p>None of the three has a fixed version to move to, so the ceiling is 7. Expect it to move between 7 and 8 without anything here changing: the circl entry is only matched when the OSV snapshot a given Scorecard run downloaded happens to carry it, and it appeared and disappeared between two scans an hour apart while this was being written. A score that oscillates by one for that reason is not a signal, and chasing it with an <code>[[IgnoredVulns]]</code> entry for a Go advisory would be the wrong trade – the honest fix is to get the version range filed against the advisory.</p>
+<p>None of the three has a fixed version to move to, so the ceiling is 7. Expect it to move between 7 and 8 without anything here changing: the circl entry is only matched when the OSV snapshot a given Scorecard run downloaded happens to carry it, and it appeared and disappeared between two scans an hour apart while this was being written. The row has already been rewritten once for that reason: it named <code>CVE-2025-8556</code> – a different circl advisory, against FourQ rather than secp384r1 – which stopped matching and was replaced by <code>CVE-2026-1229</code>. Both are commit-range-only records against a module whose version range says it is fixed, so expect the identifier in that row to keep changing while the row itself stays true. A score that oscillates by one for that reason is not a signal, and chasing it with an <code>[[IgnoredVulns]]</code> entry for a Go advisory would be the wrong trade – the honest fix is to get the version range filed against the advisory.</p>
 <p>More broadly, none of this makes anything safer. <code>govulncheck -mode=source ./...</code> reported zero before the overrides existed and reports zero after; what changed is that a check which was describing x/telemetry’s frontend is now describing cargoship. That is worth the four files and the mage target, and it is worth being clear that it is a measurement fix and not a security fix. The maintenance cost is real and lands on whoever next adds a dependency that carries a lockfile – <code>Dev.VerifyVendor</code> exists so that person gets a clear failure rather than a mystery.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time"><a class="header" href="#why-the-cluster-e2e-suite-steps-through-the-apply-phases-one-at-a-time">Why the cluster e2e suite steps through the apply phases one at a time</a></h1>
