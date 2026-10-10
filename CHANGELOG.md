@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.32.0](https://github.com/colonel-byte/cargoship/compare/v0.31.0...v0.32.0) (2026-10-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **example:** release floor for kubernetes engines ([#681](https://github.com/colonel-byte/cargoship/issues/681))
+* **tofu:** read a fleet's facts through the provider ([#616](https://github.com/colonel-byte/cargoship/issues/616))
+
+### Features
+
+* **cmd:** add a verify command for package signatures ([#691](https://github.com/colonel-byte/cargoship/issues/691)) ([648d920](https://github.com/colonel-byte/cargoship/commit/648d9207992eddd73c504f158d9a159fa4bbf27e))
+* **examples:** bake a CNI into the upstream examples ([#682](https://github.com/colonel-byte/cargoship/issues/682)) ([b5e22cc](https://github.com/colonel-byte/cargoship/commit/b5e22cceb5dc16418d13477e99736b187f465a0f))
+* **examples:** render upstream-cilium, upstream-canal, upstream-flannel ([#683](https://github.com/colonel-byte/cargoship/issues/683)) ([790de49](https://github.com/colonel-byte/cargoship/commit/790de49aa8c519fc9ba383d47d76fcc70680ba6f))
+* **tofu:** read a fleet's facts through the provider ([#616](https://github.com/colonel-byte/cargoship/issues/616)) ([4209a45](https://github.com/colonel-byte/cargoship/commit/4209a456df2ef10a921119547b6114c3c8ca8aec))
+
+
+### Bug Fixes
+
+* **deps:** bump x/net to v0.61.0 and the go directive to 1.27.2 ([#687](https://github.com/colonel-byte/cargoship/issues/687)) ([9001e9b](https://github.com/colonel-byte/cargoship/commit/9001e9ba7507416846a4d86a3ccb60b95515de17))
+
+
+### Documentation
+
+* **agents:** record issue tracking, stacked PR, and README upkeep rules ([#675](https://github.com/colonel-byte/cargoship/issues/675)) ([8ffec03](https://github.com/colonel-byte/cargoship/commit/8ffec0343e27b3261743f4323acbe4f72fce4185))
+* correct drift in README, docs/, and the agent rules files ([#692](https://github.com/colonel-byte/cargoship/issues/692)) ([33b821f](https://github.com/colonel-byte/cargoship/commit/33b821f5649c866297b5d482399f826eef8b254a))
+* **examples:** document the upstream CNI flavors ([#684](https://github.com/colonel-byte/cargoship/issues/684)) ([1da789c](https://github.com/colonel-byte/cargoship/commit/1da789cdea067bb28c0c9eea859abee1fcf3710b))
+
+
+### Miscellaneous
+
+* **example:** release floor for kubernetes engines ([#681](https://github.com/colonel-byte/cargoship/issues/681)) ([cdcd038](https://github.com/colonel-byte/cargoship/commit/cdcd038f14229b98624b3f217a24134bbf43ddfa))
+
+
+### CI/CD
+
+* **repo:** add issue forms for build, test, bug, feature, docs, and stack reports ([#706](https://github.com/colonel-byte/cargoship/issues/706)) ([815fec2](https://github.com/colonel-byte/cargoship/commit/815fec269e30e437b867a3a118da0e05e4e959c8))
+
+
+### Build
+
+* **deps:** bump github.com/go-openapi/analysis from 1.0.0 to 1.0.1 ([#648](https://github.com/colonel-byte/cargoship/issues/648)) ([3f5b368](https://github.com/colonel-byte/cargoship/commit/3f5b368faf80c7307d247cb53c966a095f9aed94))
+* **deps:** bump github.com/go-openapi/strfmt from 0.27.2 to 0.27.3 ([#651](https://github.com/colonel-byte/cargoship/issues/651)) ([0caf1ce](https://github.com/colonel-byte/cargoship/commit/0caf1ce69de485fcfa54a0297ab83c26354d5048))
+* **deps:** bump github.com/Microsoft/go-winio from 0.6.3-0.20251027160822-ad3df93bed29 to 0.6.3 ([#656](https://github.com/colonel-byte/cargoship/issues/656)) ([25c5250](https://github.com/colonel-byte/cargoship/commit/25c52509614a26ded78d0747521a3ff7c65ce85c))
+* **deps:** bump github.com/minio/minlz from 1.2.0 to 1.2.2 ([#657](https://github.com/colonel-byte/cargoship/issues/657)) ([1c4604c](https://github.com/colonel-byte/cargoship/commit/1c4604c040e7e485f056767d7cc66eb6c5e1616a))
+* **deps:** bump github.com/oklog/run from 1.1.0 to 1.2.0 ([#658](https://github.com/colonel-byte/cargoship/issues/658)) ([a055faf](https://github.com/colonel-byte/cargoship/commit/a055faf6a392ffcb63ce7c5c4ca856419bdbd295))
+* **deps:** bump github.com/phuslu/lru from 1.0.18 to 1.0.24 ([#652](https://github.com/colonel-byte/cargoship/issues/652)) ([7e43c50](https://github.com/colonel-byte/cargoship/commit/7e43c508bef153dfaaaaabe44a3d9648ce788dac))
+* **deps:** bump github.com/spiffe/go-spiffe/v2 from 2.8.2 to 2.9.0 ([#659](https://github.com/colonel-byte/cargoship/issues/659)) ([d52ce3a](https://github.com/colonel-byte/cargoship/commit/d52ce3aee199f2948af6633ca8361d71226ba0e9))
+* **deps:** bump go.opentelemetry.io/.../otlpmetricgrpc from 1.46.0 to 1.47.0 ([#649](https://github.com/colonel-byte/cargoship/issues/649)) ([f70a166](https://github.com/colonel-byte/cargoship/commit/f70a166ce42dd14073e58dc710215e7ad1099f98))
+* **deps:** bump go.opentelemetry.io/.../otlptracegrpc from 1.46.0 to 1.47.0 ([#660](https://github.com/colonel-byte/cargoship/issues/660)) ([662ab8b](https://github.com/colonel-byte/cargoship/commit/662ab8bf7f5c0fed3eda6c0b7c357749844f5697))
+* **deps:** bump j178/prek-action from 3.0.0 to 3.0.1 in the core group ([#653](https://github.com/colonel-byte/cargoship/issues/653)) ([b60781b](https://github.com/colonel-byte/cargoship/commit/b60781b64c0da668559b9091d9527f4195e86698))
+* **deps:** bump library/debian from `a99cfc5` to `a29215f` in /containers/deb ([#655](https://github.com/colonel-byte/cargoship/issues/655)) ([b43f33d](https://github.com/colonel-byte/cargoship/commit/b43f33d652f43b259aefed14c0337365a2c5674c))
+* **deps:** bump sigs.k8s.io/kustomize/api from 0.21.1 to 0.21.2 ([#650](https://github.com/colonel-byte/cargoship/issues/650)) ([81e67a4](https://github.com/colonel-byte/cargoship/commit/81e67a426d137060705c2541a8da6e0297163a71))
+
 ## [0.31.0](https://github.com/colonel-byte/cargoship/compare/v0.30.0...v0.31.0) (2026-10-06)
 
 
