@@ -22,6 +22,7 @@ package action
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/colonel-byte/cargoship/pkg/phase"
@@ -43,6 +44,14 @@ type ResetOptions struct {
 	// WorkerConcurrent number of workers that will be installed or upgraded at a time, as a fixed
 	// count ("5") or a percentage of the batch ("25%")
 	WorkerConcurrent string
+	// TargetHosts names the hosts to delete and uninstall, by hostname or by the address the
+	// configuration connects through. Empty means every host in the configuration, which is what
+	// a reset has always done.
+	//
+	// The hosts not named still take part: leader selection scans the whole configuration, so a
+	// controller that is staying is what the node deletions are driven through. That separation is
+	// the whole point -- see #339.
+	TargetHosts []string
 }
 
 // Reset state logic
@@ -52,12 +61,24 @@ type Reset struct {
 }
 
 // NewReset an apply action object
-func NewReset(opts ResetOptions) *Reset {
+func NewReset(opts ResetOptions) (*Reset, error) {
 	disBuilder, err := registry.GetDistroModuleBuilder(opts.Manager.DistroID)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("no distro module for %q: %w", opts.Manager.DistroID, err)
 	}
-	d := disBuilder().(distrocfg.Distro) //nolint:errcheck
+	d, ok := disBuilder().(distrocfg.Distro)
+	if !ok {
+		return nil, fmt.Errorf("the distro module for %q does not implement the distro interface", opts.Manager.DistroID)
+	}
+
+	// A target that names no host would otherwise filter every phase down to nothing and report a
+	// reset that removed nothing. Checked here rather than in the phases so it fails before a
+	// single connection is opened.
+	if opts.Manager != nil && opts.Manager.Config != nil {
+		if err := phase.CheckTargetHosts(opts.Manager.Config.Spec.Hosts, opts.TargetHosts); err != nil {
+			return nil, err
+		}
+	}
 
 	lockPhase := &phase.Lock{}
 	reset := &Reset{
@@ -76,29 +97,34 @@ func NewReset(opts ResetOptions) *Reset {
 
 			&phase.DeleteWorkers{
 				DeleteCommon: phase.DeleteCommon{
-					Distro: d,
+					Distro:      d,
+					TargetHosts: opts.TargetHosts,
 				},
 				NoDrain:          opts.NoDrain,
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 			&phase.DeleteControllers{
 				DeleteCommon: phase.DeleteCommon{
-					Distro: d,
+					Distro:      d,
+					TargetHosts: opts.TargetHosts,
 				},
 				NoDrain: opts.NoDrain,
 			},
 			&phase.UninstallEngine{
 				Distro:           d,
+				TargetHosts:      opts.TargetHosts,
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 
-			&phase.DaemonReload{},
+			&phase.DaemonReload{
+				TargetHosts: opts.TargetHosts,
+			},
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
 		},
 	}
 
-	return reset
+	return reset, nil
 }
 
 // Run the actions

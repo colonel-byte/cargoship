@@ -87,6 +87,8 @@ const (
 	CmdInstallFlagResetDistro = "What type of distro that will be reset. Valid options are: 'rke2', 'k3s'."
 	// CmdInstallFlagKubeConfigDistro kube-config flag config
 	CmdInstallFlagKubeConfigDistro = "What type of distro we will get the admin config from. Valid options are: 'rke2', 'k3s'."
+	// CmdInstallFlagResetTargetHosts names specific hosts to reset
+	CmdInstallFlagResetTargetHosts = "Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration."
 	// CmdInstallFlagConfirm install flag confirm
 	CmdInstallFlagConfirm = "Proceed with the run. Without it, a command that would change a host reports what it needs and stops."
 	// CmdInstallFlagDryRun install flag dry run
