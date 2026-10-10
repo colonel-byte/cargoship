@@ -35,6 +35,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Prepare hosts - Enterprise Linux support - Fapolicyd
     - Writes the distro-supplied FAPolicy rules to /etc/fapolicyd/rules.d/31-cargoship.rules
     - Dry run: reported, not run
+1. Prepare hosts - Enterprise Linux support - SELinux policy
+    - Installs the policy modules, booleans and file contexts from spec.config.os.selinux on hosts running SELinux in enforcing mode, using semodule, setsebool and semanage fcontext
+    - Dry run: reported, not run
 1. Updating hosts file for clusters nodes
     - If enabled, then this will modify the `/etc/hosts` file on the remote nodes with the fully qualified domain name for each node in the cluster
     - Dry run: reported, not run

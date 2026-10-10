@@ -54,7 +54,7 @@ func NewApply(opts ApplyOptions) *Apply
 NewApply an apply action object
 
 <a name="Apply.Run"></a>
-### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L191>)
+### func \(Apply\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/apply.go#L192>)
 
 ```go
 func (a Apply) Run(ctx context.Context) error
@@ -224,7 +224,7 @@ func NewPrepare(opts PrepareOptions) *Prepare
 NewPrepare an prepare action object
 
 <a name="Prepare.Run"></a>
-### func \(Prepare\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L75>)
+### func \(Prepare\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/prepare.go#L76>)
 
 ```go
 func (a Prepare) Run(ctx context.Context) error
