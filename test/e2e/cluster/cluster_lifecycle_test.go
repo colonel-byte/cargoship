@@ -106,6 +106,7 @@ func (s *ApplyPhaseSuite) Test_01_Prepare() {
 // the phases the suite just walked produced a working cluster and not only the right files.
 func (s *ApplyPhaseSuite) Test_ZZ1_ClusterHealthy() {
 	s.requireEngine()
+	s.requireClusterAPI()
 	t := s.T()
 	cs, err := e2e.KubeClient(t)
 	s.Require().NoError(err)
@@ -121,13 +122,19 @@ func (s *ApplyPhaseSuite) Test_ZZ2_ApplyIsIdempotent() {
 	manager, cleanup := s.newManager(e2e.ClusterConfigPath)
 	defer cleanup()
 
+	// LabelNodes follows whether this machine can reach the cluster's API, rather than being
+	// on unconditionally. It is the only option here that talks to Kubernetes from the
+	// management node instead of to a host over SSH, so on a fleet whose API is not routable
+	// from here -- the VM fleet, by construction -- leaving it on would fail this step for a
+	// reason that has nothing to do with whether an apply is idempotent, which is what it is
+	// here to find out. Test_81 covers the labelling itself, and skips for the same reason.
 	err := action.NewApply(action.ApplyOptions{
 		Manager:          manager,
 		ModifyHosts:      true,
 		ModifyFirewall:   true,
 		WorkerConcurrent: applyWorkerConcurrent,
 		UpdateKubeConfig: true,
-		LabelNodes:       true,
+		LabelNodes:       reachesClusterAPI(manager.Config.Spec.Config.LoadBalancer),
 	}).Run(s.ctx)
 	s.Require().NoError(err)
 }

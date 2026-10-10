@@ -30,13 +30,25 @@ import (
 // Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) kubeConfig() {
 	s.T().Helper()
+	s.requireClusterAPI()
 
 	clusterID := s.harness.manager.Config.Metadata.Name
 
+	// Write and Path are both set, and both are load-bearing. The phase builds the config
+	// either way; Write is what makes it merge the result into a file, and the CLI is the
+	// only other caller that sets it -- a provider holding the value reads Config instead,
+	// and nobody's ~/.kube/config is touched as a side effect. Without it this test asserted
+	// the existence of a file the phase had been told not to write.
+	//
+	// Path narrows the merge to the one file rather than trusting KUBECONFIG, which TestMain
+	// sets but which ExplicitPath takes precedence over anyway -- so naming it here is what
+	// makes the read below and the write above the same file by construction.
 	p := &phase.KubeConfig{
 		Distro:    s.harness.distro,
 		ClusterID: clusterID,
 		Enabled:   s.harness.opts.UpdateKubeConfig,
+		Write:     true,
+		Path:      kubeconfigPath,
 	}
 	s.runPhase(p)
 	s.Require().Equal(s.harness.opts.UpdateKubeConfig, ran(p), "phase did not follow its enabled flag")

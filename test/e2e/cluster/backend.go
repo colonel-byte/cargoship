@@ -17,7 +17,9 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
+	"time"
 
 	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/internal/microvm"
@@ -181,4 +183,38 @@ func carriesFamily(f fleetSpec, family string) bool {
 		}
 	}
 	return false
+}
+
+// apiDialTimeout bounds the reachability probe below. It is a TCP connect to a host that is
+// either a few milliseconds away or not reachable at all, so this only has to be long enough
+// not to misreport a loaded machine.
+const apiDialTimeout = 5 * time.Second
+
+// reachesClusterAPI reports whether this machine can open a connection to the cluster's API
+// server at the address the inventory names.
+//
+// Most of the suite drives the hosts over SSH, which is all any backend guarantees. Three
+// steps instead talk to Kubernetes from here -- the kubeconfig the install writes, the node
+// labelling that reads it, and the health check that counts Ready nodes -- and those need a
+// route to the load balancer address, which is a property of the environment rather than of
+// cargoship.
+//
+// The VM fleet does not have one by construction: its load balancer is the leader's address on
+// a multicast segment private to the qemu processes, because that is the address the other
+// nodes join through, and once the firewall phase has run the only port reachable from here is
+// ssh. The container fleet does have one, the docker-bridge address.
+//
+// So it is probed rather than declared per backend. A probe says the same thing for every
+// backend, needs no flag, and cannot drift from what is actually true of the machine the suite
+// is running on.
+func reachesClusterAPI(loadBalancer string) bool {
+	if loadBalancer == "" {
+		return false
+	}
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(loadBalancer, "6443"), apiDialTimeout)
+	if err != nil {
+		return false
+	}
+	conn.Close() //nolint:errcheck // the probe is the dial; a close error says nothing about reachability
+	return true
 }

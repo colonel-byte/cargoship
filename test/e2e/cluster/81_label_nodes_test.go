@@ -34,6 +34,7 @@ const nodeRoleLabel = "node-role.kubernetes.io/"
 // Both walks assert the same thing here, so the body is shared: see phaseWalk.
 func (s *phaseWalk) labelNodes() {
 	s.T().Helper()
+	s.requireClusterAPI()
 
 	p := &phase.LabelNodes{Enabled: s.harness.opts.UpdateKubeConfig && s.harness.opts.LabelNodes}
 	s.runPhase(p)

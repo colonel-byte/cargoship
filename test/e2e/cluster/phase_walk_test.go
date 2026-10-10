@@ -104,6 +104,23 @@ func (s *phaseWalk) runPhase(p phase.Phase) {
 // CI and in any stage-only run, so these comparisons are only reached by a full walk -- and a
 // full walk needs node-to-node networking, which the container backend does not get on a host
 // whose firewall drops it. See docs/agent/choice-microvm-backend.md.
+// requireClusterAPI skips the step when this machine cannot reach the cluster's API server.
+//
+// Three steps talk to Kubernetes from the management node rather than to a host over SSH, and
+// whether that works is a property of where the hosts are. Skipping is right rather than
+// failing: the phase under test did its work over SSH like every other, and a failure here
+// would report an unroutable network as a defect in it. The reason is logged so a run that
+// covered less does not read as a run that covered everything.
+func (s *phaseWalk) requireClusterAPI() {
+	s.T().Helper()
+
+	lb := s.harness.manager.Config.Spec.Config.LoadBalancer
+	if reachesClusterAPI(lb) {
+		return
+	}
+	s.T().Skipf("this machine cannot reach the cluster API at %s:6443, so the steps that talk to Kubernetes from here cannot run; see docs/dev/microvm.md", lb)
+}
+
 func (s *phaseWalk) requireSameVersion(want, got string, msgAndArgs ...any) {
 	s.T().Helper()
 
