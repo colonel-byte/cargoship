@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,12 +190,12 @@
 <h2 id="absence-is-the-wrong-trigger-for-a-destructive-operation"><a class="header" href="#absence-is-the-wrong-trigger-for-a-destructive-operation">Absence is the wrong trigger for a destructive operation</a></h2>
 <p>Adding a host that is already there is idempotent. Removing a host that should have stayed is not. A typo in a hostname, a bad merge, a templating bug that drops a list entry – under reconcile each of those becomes a drained and destroyed node, and under refuse each becomes a stopped apply with a message. The blast radius of a false positive is not symmetric, so the default should not be either.</p>
 <h2 id="the-old-state-is-not-a-substitute-for-a-connection"><a class="header" href="#the-old-state-is-not-a-substitute-for-a-connection">The old state is not a substitute for a connection</a></h2>
-<p>The tempting way to supply the missing connection details is to take them from the provider’s prior state and generate a small config to run <code>install reset</code> against. It should not be built.</p>
+<p>The tempting way to supply the missing connection details is to take them from the provider’s prior state and generate a small config to run <code>reset</code> against. It should not be built.</p>
 <p>A state file records what was true after the last successful apply, and reset is destructive. Between then and now the machine may have been rebuilt, re-addressed, or returned to a DHCP pool, and none of that produces a diff the provider would see, because the resource is being removed and there is nothing left to refresh against. The address is the least stable identifier a host has and the one reset would connect through, so the target becomes whatever machine currently answers there. Other kinds of state drift surface as a plan diff somebody reads; this one surfaces as a wiped machine.</p>
 <p>The generated config would also splice two points in time. The host comes from the old state, but the paths an uninstall removes come from the distro module: <code>CleanupPaths()</code> returns the data and config directories as the <em>current</em> configuration defines them. Upgrade the cluster or move the data directory and reset cleans today’s paths on a machine running yesterday’s engine, leaving the real files behind and removing whatever sits at the new ones.</p>
 <p>Making removals depend on state would also settle the separate question of keeping SSH key material out of tofu state (#309) the wrong way, by making it unsolvable.</p>
 <h2 id="the-phases-cannot-express-a-subset-anyway"><a class="header" href="#the-phases-cannot-express-a-subset-anyway">The phases cannot express a subset anyway</a></h2>
-<p>Independent of where the contents come from, there is no config that makes <code>install reset</code> remove one host from a live cluster. <code>DeleteCommon.Prepare</code> finds its leader by scanning <code>Spec.Hosts</code> for a host already running the controller service, so a config holding only the removed host has no leader: both delete phases report <code>ShouldRun() == false</code> and the node is never deleted, while <code>UninstallEngine</code> runs anyway. Adding a live controller so a leader can be found is worse, because <code>UninstallEngine.Prepare</code> sets <code>p.hosts = p.manager.Config.Spec.Hosts</code> with no filter and uninstalls the engine from it too.</p>
+<p>Independent of where the contents come from, there is no config that makes <code>reset</code> remove one host from a live cluster. <code>DeleteCommon.Prepare</code> finds its leader by scanning <code>Spec.Hosts</code> for a host already running the controller service, so a config holding only the removed host has no leader: both delete phases report <code>ShouldRun() == false</code> and the node is never deleted, while <code>UninstallEngine</code> runs anyway. Adding a live controller so a leader can be found is worse, because <code>UninstallEngine.Prepare</code> sets <code>p.hosts = p.manager.Config.Spec.Hosts</code> with no filter and uninstalls the engine from it too.</p>
 <p>Neither is a bug in reset. The unfiltered list is exactly right when the instruction is “tear down this whole cluster”. The gap is that no action separates the hosts it targets from the hosts that supply cluster access, which is tracked as #339.</p>
 <h2 id="what-the-check-actually-does"><a class="header" href="#what-the-check-actually-does">What the check actually does</a></h2>
 <p><code>DetectRemovedHosts</code> runs after fact gathering and before anything is changed, lists the nodes joined to the cluster, and stops the apply when the cluster holds a node no host accounts for, naming each one with its role.</p>

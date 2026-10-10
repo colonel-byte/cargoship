@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,20 +188,24 @@
 <h2 id="the-two-shared-helpers"><a class="header" href="#the-two-shared-helpers">The two shared helpers</a></h2>
 <p>Every <code>EndToEnd*</code> target funnels through one of two functions in <code>magefiles/pkg/testrunner/testrunner.go</code>:</p>
 <ul>
-<li><strong><code>RunE2E</code></strong> – builds the binary for the host’s OS/arch first (<code>go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./cmd/cargoship</code>, the same flags <code>mage build:binary</code> uses), then calls <code>RunE2ENoBuild</code>.</li>
+<li><strong><code>RunE2E</code></strong> – builds the binary for the host’s OS/arch first, with the same flags and environment <code>mage build:binary</code> uses (<code>magefiles/pkg/build/build.go</code>): <code>GOOS</code>, <code>GOARCH</code> and <code>CGO_ENABLED=0</code> in the environment, and <code>go build -trimpath -gcflags=all="-l" -ldflags "-s -w -X ...CLIVersion -X ...CLICommit" -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./cmd/cargoship</code>. There is no <code>-a</code>; see <a href="build-flags.html">build-flags</a> for why it was removed. Then it calls <code>RunE2ENoBuild</code>.</li>
 <li><strong><code>RunE2ENoBuild</code></strong> – creates <code>build/tmp</code>, then runs <code>go test -timeout=&lt;T&gt; -count=1 -v &lt;pkg&gt;</code> with <code>CARGOSHIP_E2E_TMPDIR</code> and <code>TMPDIR</code> both pointed at that directory.</li>
 </ul>
 <p>The manual commands below spell both steps out for each target, so <code>-mod=vendor</code> is included explicitly even though the mage helper relies on the repo’s <code>go env GOFLAGS</code> to add it.</p>
 <h2 id="testendtoend"><a class="header" href="#testendtoend"><code>Test.EndToEnd</code></a></h2>
 <pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
-$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
+$ CGO_ENABLED=0 go build -trimpath -gcflags=all="-l" \
+    -ldflags "-s -w -X github.com/colonel-byte/cargoship/config.CLIVersion=unset-development-only -X github.com/colonel-byte/cargoship/config.CLICommit=$(git rev-parse --short HEAD)" \
+    -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/...
 </code></pre>
 <p>Runs both e2e groups, including the example packages that pull real engine artifacts and images. Needs Docker.</p>
 <h2 id="testendtoendnoncluster"><a class="header" href="#testendtoendnoncluster"><code>Test.EndToEndNonCluster</code></a></h2>
-<pre><code class="language-console">$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
+<pre><code class="language-console">$ CGO_ENABLED=0 go build -trimpath -gcflags=all="-l" \
+    -ldflags "-s -w -X github.com/colonel-byte/cargoship/config.CLIVersion=unset-development-only -X github.com/colonel-byte/cargoship/config.CLICommit=$(git rev-parse --short HEAD)" \
+    -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=30m -count=1 -v -short github.com/colonel-byte/cargoship/test/e2e/noncluster/...
@@ -222,6 +226,36 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_ST
     go test -mod=vendor -timeout=30m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 </code></pre>
 <p>This is the one CI actually runs, on every pull request.</p>
+<h2 id="testendtoendclusterdryrun"><a class="header" href="#testendtoendclusterdryrun"><code>Test.EndToEndClusterDryRun</code></a></h2>
+<p><code>EndToEndClusterStage</code>’s setup with <code>-run</code> narrowing the suite to the dry-run walk:</p>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_STAGE_ONLY=1 \
+    go test -mod=vendor -timeout=30m -count=1 -v -run 'TestClusterPhases/dryrun' github.com/colonel-byte/cargoship/test/e2e/cluster/...
+</code></pre>
+<p>Starts no engine, so it is the fastest way to exercise <code>--dry-run</code> against real hosts.</p>
+<h2 id="testendtoendclusterupgrade"><a class="header" href="#testendtoendclusterupgrade"><code>Test.EndToEndClusterUpgrade</code></a></h2>
+<p><code>EndToEndCluster</code> with the upgrade walk turned on and a three-hour budget, because it installs a second complete set of engine images on every node:</p>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UPGRADE=1 \
+    go test -mod=vendor -timeout=3h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
+</code></pre>
+<p>No CI job runs this; it is the only way to cover the upgrade phases.</p>
+<h2 id="testendtoendzarf"><a class="header" href="#testendtoendzarf"><code>Test.EndToEndZarf</code></a></h2>
+<p>Deletes any leftover k3d clusters, builds the two zarf module wrapper binaries (<code>ZarfModules</code> in <code>magefiles/pkg/build/zarfmodules.go</code> - no version is stamped in, since a module file reports what zarf did), then runs the zarf module suite on a 90-minute budget:</p>
+<pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
+$ CGO_ENABLED=0 go build -trimpath -o build/zarf_init ./cmd/zarf/init
+$ CGO_ENABLED=0 go build -trimpath -o build/zarf_package_deploy ./cmd/zarf/deploy
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/zarf/...
+</code></pre>
+<p>Needs <code>k3d</code>, a <code>zarf</code> on PATH, <code>ansible-playbook</code>, Docker, and the network on the first run to pull the packages. Every test skips with a reason when one is missing.</p>
+<h2 id="testcleanzarfclusters"><a class="header" href="#testcleanzarfclusters"><code>Test.CleanZarfClusters</code></a></h2>
+<pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
+</code></pre>
+<p>The cleanup <code>EndToEndZarf</code> runs before it starts, exposed on its own. The cluster names are <code>K3dClusters</code> in <code>magefiles/pkg/testrunner/testrunner.go</code>. A cluster that is not there is not an error.</p>
 <h2 id="testcleancluster"><a class="header" href="#testcleancluster"><code>Test.CleanCluster</code></a></h2>
 <pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
 </code></pre>

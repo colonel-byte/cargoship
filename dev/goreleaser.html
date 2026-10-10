@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,20 +193,20 @@
 <li><strong>Archives</strong> - <code>tar.gz</code> per OS/arch, named after <code>uname</code> conventions (<code>cargoship_Linux_x86_64.tar.gz</code>).</li>
 <li><strong>Packages</strong> - <code>apk</code>, <code>deb</code>, and <code>rpm</code>, from the <code>nfpms</code> section. Packages can be signed when the corresponding signing keys are configured.</li>
 <li><strong>Container images</strong> - four multi-platform manifests covering <code>linux/amd64</code> and <code>linux/arm64</code>: <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;</code> (Chainguard static, bare binary), <code>ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt;</code> (AlmaLinux, installs the RPM), <code>ghcr.io/colonel-byte/cargoship-deb:&lt;tag&gt;</code> (Debian slim, installs the DEB), and <code>ghcr.io/colonel-byte/cargoship-ansible:&lt;tag&gt;</code> (AlmaLinux, installs the RPM and Ansible dependencies).</li>
-<li><strong>Ansible collection</strong> - <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.</li>
+<li><strong>Ansible collections</strong> - two tarballs, <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and <code>colonel_byte-zarf-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and <code>ansible/colonel_byte/zarf</code> and attached to the release, each with its own cosign bundle. Neither is published to Galaxy: the management node that runs the playbooks is inside the airlock and installs them from the tarballs.</li>
 <li><strong>SBOMs</strong> - one per archive, via Syft.</li>
 <li><strong>Signatures</strong> - cosign <code>sigstore.json</code> bundles over the checksums file and every archive, plus registry signatures over every container image. Package signatures are configured separately through nfpm.</li>
 </ul>
-<h2 id="the-ansible-collection"><a class="header" href="#the-ansible-collection">The Ansible Collection</a></h2>
-<p>The collection is not built by a <code>builds</code> entry, because nothing about it is compiled. <code>hack/ansible-build-collection.sh</code> runs as a <code>before</code> hook, calls <code>ansible-galaxy collection build</code>, writes the tarball to <code>bin/ansible</code>, and signs it when <code>COSIGN_PRIVATE_KEY</code> is set. The <code>release.extra_files</code> globs then attach the tarball and the bundle.</p>
-<p>The script is given the release version and fails when <code>galaxy.yml</code> disagrees with it. release-please keeps that version in step through the <code>extra-files</code> entry in <code>release-please-config.json</code>, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot’s version is not in <code>galaxy.yml</code> and never will be.</p>
+<h2 id="the-ansible-collections"><a class="header" href="#the-ansible-collections">The Ansible Collections</a></h2>
+<p>Neither collection is built by a <code>builds</code> entry, because nothing about a collection is compiled. <code>hack/ansible-build-collection.sh</code> runs as a <code>before</code> hook - once per collection, so twice, taking the collection directory as its third argument - calls <code>ansible-galaxy collection build</code>, writes the tarball to <code>bin/ansible</code>, and signs it when <code>COSIGN_PRIVATE_KEY</code> is set. Four <code>release.extra_files</code> globs then attach both tarballs and both bundles.</p>
+<p>The script is given the release version and fails when that collection’s <code>galaxy.yml</code> disagrees with it. release-please keeps both versions in step through the <code>extra-files</code> entries in <code>release-please-config.json</code>, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot’s version is not in <code>galaxy.yml</code> and never will be.</p>
 <p>The tarball is signed by the script rather than by the <code>signs</code> section, and is absent from <code>checksums.txt</code>, because both of those cover artifacts the pipeline itself produced. Verify it with its bundle:</p>
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
   --bundle colonel_byte-cargoship-&lt;version&gt;.tar.gz.sigstore.json \
   colonel_byte-cargoship-&lt;version&gt;.tar.gz
 </code></pre>
 <h2 id="build-matrix"><a class="header" href="#build-matrix">Build Matrix</a></h2>
-<p>The <code>builds</code> section compiles <code>linux</code> and <code>darwin</code> against <code>amd64</code>, <code>arm64</code>, and <code>riscv64</code>. Three settings there matter more than they look:</p>
+<p>The <code>builds</code> section has three entries. <code>cargoship</code> (<code>./cmd/cargoship</code>) compiles <code>linux</code>, <code>darwin</code> and <code>windows</code> against <code>amd64</code>, <code>arm64</code> and <code>riscv64</code>. <code>zarf_init</code> (<code>./cmd/zarf/init</code>) and <code>zarf_package_deploy</code> (<code>./cmd/zarf/deploy</code>) are the <code>colonel_byte.zarf</code> collection’s module files, built for <code>linux</code> only on the same three architectures; the packages install them to <code>/usr/bin</code> and the collection calls them. Three settings there matter more than they look:</p>
 <ul>
 <li><strong><code>CGO_ENABLED=0</code></strong> - produces a statically linked binary. This is what lets the default image sit on <code>cgr.dev/chainguard/static</code>, which ships no libc, no shell, and no package manager; a dynamically linked binary fails there with a confusing <code>no such file or directory</code> on exec.</li>
 <li><strong><code>ldflags -X</code></strong> - stamps <code>config.CLIVersion</code> and <code>config.CLICommit</code>, which is what <code>cargoship version</code> prints.</li>
@@ -250,7 +250,7 @@
 </ul>
 <p>The images carry no <code>LABEL</code> instructions of their own. Every <code>org.opencontainers.image.*</code> label, <code>base.name</code> and <code>base.digest</code> included, is set by <code>.goreleaser.yaml</code> from the <code>{{ .BaseImage }}</code> and <code>{{ .BaseImageDigest }}</code> templates goreleaser resolves at build time. That is why there is nothing here to drift and no check for it: a hand-written label could disagree with the <code>FROM</code> it describes, and a templated one cannot.</p>
 <p>One base needs more care than the others. <strong><code>cgr.dev/chainguard/static</code> publishes <code>:latest</code> and nothing else</strong> on Chainguard’s free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date - it eventually stops resolving, and the build fails with <code>manifest unknown</code>. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.</p>
-<p><code>.github/dependabot.yaml</code> tracks both directories under its <code>docker</code> ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.</p>
+<p><code>.github/dependabot.yaml</code> tracks all four Dockerfile directories - <code>/containers/ansible</code>, <code>/containers/base</code>, <code>/containers/deb</code>, <code>/containers/ubi</code> - under its <code>docker</code> ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.</p>
 <h3 id="linting"><a class="header" href="#linting">Linting</a></h3>
 <p>Dockerfiles are linted by <a href="https://github.com/hadolint/hadolint">hadolint</a> in two places:</p>
 <ul>
@@ -416,7 +416,7 @@ sha256sum /tmp/from-image
 </code></pre>
 <p>Three gotchas:</p>
 <ul>
-<li><strong>Set <code>TMPDIR</code> to a path on a real disk.</strong> The default <code>/run/user/&lt;uid&gt;/tmp</code> is a small tmpfs, and the Go build cache for a full six-target matrix will overrun it. The failure is a flood of <code>no space left on device</code> from the compiler.</li>
+<li><strong>Set <code>TMPDIR</code> to a path on a real disk.</strong> The default <code>/run/user/&lt;uid&gt;/tmp</code> is a small tmpfs, and the Go build cache for the full matrix - nine <code>cargoship</code> targets plus three apiece for the two zarf module files - will overrun it. The failure is a flood of <code>no space left on device</code> from the compiler.</li>
 <li><strong>Do not add <code>--skip=publish</code></strong> if you want images. Under <code>dockers_v2</code> that skips image builds entirely.</li>
 <li><strong><code>--skip=sign</code> also disables package signing</strong>, not just cosign. GoReleaser’s nfpm pipe zeroes all three <code>Signature</code> structs when that skip is set (<code>internal/pipe/nfpm/nfpm.go</code>), so a run that skips signing produces unsigned packages no matter what <code>GPG_KEY_PATH</code> and <code>APK_RSA_KEY_PATH</code> say. To exercise package signing locally, drop <code>sign</code> from the skip list and supply cosign keys too.</li>
 </ul>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -224,7 +224,7 @@ spec:
 <p>The flag carries the ones that change between runs:</p>
 <pre><code class="language-sh">cargoship apply ./package.tar.zst --config inventory.yaml --values ./encryption-off.yaml
 </code></pre>
-<p><code>--values</code> may be given more than once, with a later file winning over an earlier one, and it is accepted by <code>cargoship apply</code>, <code>cargoship prepare</code>, and <code>cargoship engine-config-sync</code>. There is no <code>-f</code> shorthand: <code>apply</code> already binds <code>-f</code> to <code>--update-fapolicyd</code>.</p>
+<p><code>--values</code> may be given more than once, with a later file winning over an earlier one, and it is accepted by <code>cargoship apply</code>, <code>cargoship prepare</code>, and <code>cargoship engine-config-sync</code>. There is no <code>-f</code> shorthand: <code>apply</code> already binds <code>-f</code> to <code>--fapolicyd</code>.</p>
 <p>Merging is per key, not per document. An override that sets <code>cilium.encryption.enabled</code> leaves every other key under <code>cilium</code> as the package defined it.</p>
 <p>The merged values are checked against the package’s schema again at install time, so an inventory that sets a key the package does not accept fails before anything is written to a host.</p>
 <p>That check happens when the package is installed, which is late to learn that a key is misspelled. <code>cargoship schema inventory --package &lt;package&gt;</code> composes the package’s values schema into the inventory schema, so an editor completes and checks <code>spec.config.values</code> while the inventory is being written:</p>

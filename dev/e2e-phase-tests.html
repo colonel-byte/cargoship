@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -262,7 +262,7 @@ if !ran(p) {
 <p>This tests the routing, which is the part most likely to break, and it keeps working when the cluster gains a host that does trip the gate. <code>21_prepare_selinux_test.go</code> and <code>22_prepare_fapolicyd_test.go</code> are the worked examples.</p>
 <p><code>ran(p)</code> is only meaningful <em>after</em> <code>s.runPhase</code>, because the manager calls <code>Prepare</code> first and most gates are computed there.</p>
 <h2 id="phases-that-route-on-the-os-family"><a class="header" href="#phases-that-route-on-the-os-family">Phases that route on the OS family</a></h2>
-<p>The cluster runs multiple OS families on purpose. In the default full-walk inventory (<code>k3sOS</code>), all five machines join the cluster – one controller and four workers, split between Ubuntu (<code>kc0</code>, <code>kw0</code>, <code>kw1</code>) and Fedora (<code>kwf0</code>, <code>kwf1</code>). The stage-only inventory (<code>stageOS</code>) adds a third family, running an Alpine machine (<code>kwa0</code>) that receives uploads but never joins the cluster – see the section on the upload-only host below. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.</p>
+<p>The cluster runs multiple OS families on purpose. In the default full-walk inventory (<code>k3sOS</code>), all five machines join the cluster – one controller and four workers, split between Ubuntu (<code>kc0</code>, <code>kw0</code>, <code>kw1</code>) and Fedora (<code>kwf0</code>, <code>kwf1</code>). The stage-only inventory (<code>stageOS</code>) is not that set plus a machine: it is a different five, one per family per role – an Ubuntu controller (<code>kc0</code>), a Fedora controller (<code>kcf0</code>), an Ubuntu worker (<code>kw0</code>), a Fedora worker (<code>kwf0</code>), and an Alpine machine (<code>kwa0</code>) that receives uploads but never joins the cluster, covered in the section on the upload-only host below. So a Fedora controller only exists in the stage-only walk, and <code>k3sOS</code> has no Alpine host at all. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.</p>
 <p>Derive the host set from the same filters the phase uses, so the test cannot disagree with it:</p>
 <pre><code class="language-go">enterprise := s.harness.hosts().Filter(utils.FilterEnterpriseLinux)
 debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
@@ -339,7 +339,7 @@ s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version
 <p><code>VersionLess</code> reads no manager state, so a zero-valued phase is enough, and using it means the test cannot disagree with the routing it is asserting.</p>
 <h3 id="running-it"><a class="header" href="#running-it">Running it</a></h3>
 <p>The upgrade walk is off unless <code>CARGOSHIP_E2E_UPGRADE</code> is set. It installs a second complete set of engine images onto every node, which roughly doubles the disk the run needs and adds tens of minutes.</p>
-<pre><code class="language-console">$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./src/test/e2e/cluster/...
+<pre><code class="language-console">$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./test/e2e/cluster/...
 </code></pre>
 <p>Without it, <code>TestClusterPhases/upgrade</code> skips with a message naming the variable, and the reset walk runs against the installed cluster as before.</p>
 <h2 id="prerequisites-and-running-it"><a class="header" href="#prerequisites-and-running-it">Prerequisites and running it</a></h2>
@@ -359,11 +359,11 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in betwe
 <h3 id="in-ci"><a class="header" href="#in-ci">In CI</a></h3>
 <p><code>.github/workflows/e2e-cluster.yaml</code> runs the staging half of this suite – <code>CARGOSHIP_E2E_STAGE_ONLY=1</code>, stopping at the boundary <code>Test_60_ConfigureEngine</code> draws – on its own trigger, separate from <code>e2e.yaml</code>. It runs on every pull request, the same as <code>e2e.yaml</code>, and on demand from the Actions tab. No label is needed.</p>
 <p>The engine-bootstrap half, including the join and upgrade walks, does not run in CI at all. It was not reliable enough on a free hosted runner to be a required check, even on the single-controller k3s topology that replaced the original three-controller rke2 one – see <a href="../agent/choice-e2e-stage-split.html">choice-e2e-stage-split</a>. Trusting a change to the engine-bootstrap phases, the join walk, or the upgrade walk means running <code>mage test:endToEndCluster</code> or <code>mage test:endToEndClusterUpgrade</code> locally; CI cannot cover that for you.</p>
-<p>The upgrade walk is a second opt-in on top of that: the <code>upgrade</code> input when dispatching by hand, or the <code>e2e-cluster-upgrade</code> label on a pull request. Either one implies the install and join walks, sets <code>CARGOSHIP_E2E_UPGRADE</code> for the job and raises its budget from 120 to 210 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.</p>
+<p>The upgrade walk has no CI path either. <code>.github/workflows/e2e-cluster.yaml</code> declares an <code>upgrade</code> boolean input for <code>workflow_dispatch</code>, but nothing in the file reads it: the single <code>e2e-cluster-stage</code> job hardcodes <code>CARGOSHIP_E2E_STAGE_ONLY: "1"</code> and runs on a 30-minute budget, so setting the input changes nothing. Run the upgrade walk locally with <code>mage test:endToEndClusterUpgrade</code> when a change touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.</p>
 <p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare, apply, reset and kube-config steps call the matching <code>action.New*</code> entry points. That is what makes the two workflows independent, which is the point of the split.</p>
 <p>The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes stuck mid-upload, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.</p>
 <h2 id="iterating-while-writing-a-new-phase-test"><a class="header" href="#iterating-while-writing-a-new-phase-test">Iterating while writing a new phase test</a></h2>
-<p>A new phase test needs the suite up to that point, not the whole run. Three environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.</p>
+<p>A new phase test needs the suite up to that point, not the whole run. Four environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.</p>
 <p><strong>Run only the walk your phase is in.</strong> <code>TestClusterPhases</code> runs <code>apply</code>, <code>join</code>, <code>upgrade</code> and <code>reset</code> as separate subtests of one parent, so <code>-run</code> at that path segment excludes the ones you are not touching:</p>
 <pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
 </code></pre>
@@ -378,6 +378,10 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in betwe
 $ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
 $ docker exec -it &lt;container&gt; sh
 </code></pre>
+<p><strong>Walk the suite against rke2 instead of k3s.</strong> <code>CARGOSHIP_E2E_DISTRO=rke2</code> switches which distro every step installs, and which package <code>cluster_lifecycle_test.go</code> builds. The default is <code>k3s</code>. A phase that branches on the engine needs a run each way:</p>
+<pre><code class="language-console">$ CARGOSHIP_E2E_DISTRO=rke2 go test -mod=vendor -count=1 -v -timeout=90m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+</code></pre>
+<p>See <code>distroEnvVar</code> and <code>distroID</code> in <code>test/e2e/cluster/05_manager_test.go</code>.</p>
 <p>Each <code>go test</code> invocation provisions fresh containers – there is no “resume the cluster from last time” path, so a kept cluster from a failed run is for reading, not for the next run to build on. Clean it up before running again:</p>
 <pre><code class="language-console">$ mage test:cleanCluster
 </code></pre>

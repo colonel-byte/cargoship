@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,7 +190,7 @@
 <li><strong>e2e-noncluster</strong> (needs build-e2e) - downloads that binary and runs the non-cluster e2e test groups (misc and package commands), which need no Docker/bootloose infrastructure. Uses <code>-short</code> to additionally skip example packages, which would otherwise pull ~1.5GB of engine artifacts and images.</li>
 <li><strong>binary-size</strong> (needs build-e2e) - compares the PR’s binary size against the latest release’s binary and posts the diff as a sticky PR comment. Pull requests only; there is no pull request to comment on in a merge group.</li>
 </ol>
-<p>The cluster-dependent e2e group is deliberately not run here - it needs Docker, provisions ten containers, and installs RKE2 on nine of them, so it lives in its own workflow, <code>e2e-cluster.yaml</code>, on its own trigger.</p>
+<p>The cluster-dependent e2e group is deliberately not run here - it needs Docker and provisions five containers, so it lives in its own workflow, <code>e2e-cluster.yaml</code>, on its own trigger. That workflow runs only the staging half, which starts no engine; the full walk installs single-controller k3s across its five machines and runs locally, not in CI.</p>
 <p><code>build-e2e</code> and <code>e2e-noncluster</code> are required status checks, which is why the <code>merge_group</code> trigger is here and why neither trigger carries a path filter. A path-filtered required check reports nothing at all on a change that only touches the ignored paths, so the check stays pending and the pull request can never be queued. The workflow used to skip <code>CODEOWNERS</code>-only changes; it now builds those too, which costs one build in the rare case and removes the stall.</p>
 
                     </main>

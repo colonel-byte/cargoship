@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,12 +185,15 @@
                         <h1 id="running-the-end-to-end-tests"><a class="header" href="#running-the-end-to-end-tests">Running the End-to-End Tests</a></h1>
 <p>The <code>noncluster</code> e2e suite drives the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. It does not import the command packages, so what it proves is that the shipped binary behaves, not that the internals compile. Everything below is about that suite and is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it. The <code>cluster</code> suite is the other way round – it calls the cargoship packages directly and needs no binary at all; see <a href="e2e-phase-tests.html">e2e-phase-tests</a>.</p>
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
-<pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
+<pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, the vault and age suites, ssh, create,
+                       publish, pull, sign, verify, schema, validate, the Ansible module, and the zarf info modules
 test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
 test/e2e/zarf/         the colonel_byte.zarf collection: two k3d clusters, a real zarf, the uds-bundle's packages walked by the modules
 test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
-test/registry.go       in-process OCI registry used by the publish/pull/sign tests
+test/registry.go       in-process OCI registry used by the publish/pull/sign/verify tests
+test/kube.go           kubernetes helpers for the suites that read a cluster back
+test/e2e/AGENTS.md     the fixture rule: test documents live in testdata/, not in Go string constants
 </code></pre>
 <p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary. The <code>cluster</code> package needs Docker and takes tens of minutes, and needs no binary; everything below is about <code>noncluster</code>, and <a href="e2e-phase-tests.html">e2e-phase-tests</a> covers the cluster suite and how to extend it when a phase is added.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>

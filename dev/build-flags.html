@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -219,11 +219,6 @@
 <li><strong>Why:</strong> without it, absolute build-machine paths get embedded in the binary (used for panic traces and debug info paths), which leaks local environment details and hurts build reproducibility. It also shaves a small amount of size (a few hundred KB) since fewer/shorter path strings end up in the binary.</li>
 <li><strong>Where set:</strong> directly in the <code>go build</code> command string in <code>magefiles/pkg/build/build.go</code>.</li>
 </ul>
-<h3 id="-a"><a class="header" href="#-a"><code>-a</code></a></h3>
-<p>Forces rebuilding of all packages, including the standard library, rather than reusing cached <code>.a</code> files.</p>
-<ul>
-<li><strong>Why:</strong> ensures the build flags below (especially <code>-gcflags</code>) are actually applied everywhere, since Go’s build cache is keyed on flags but a stale cache can otherwise mask flag changes during iteration. Not a size optimization on its own - mainly a correctness/reproducibility guard for a release build.</li>
-</ul>
 <h3 id="-ldflags-see-ldflags-in-pkgutilsbuildutilsgo"><a class="header" href="#-ldflags-see-ldflags-in-pkgutilsbuildutilsgo"><code>-ldflags</code> (see <code>LDFlags</code> in <code>pkg/utils/build/utils.go</code>)</a></h3>
 <ul>
 <li>
@@ -244,13 +239,8 @@
 <p>Applied to <code>all</code> packages (including the standard library and vendored dependencies), not just this module’s own code.</p>
 <ul>
 <li>
-<p><strong><code>-l</code></strong> - disables inlining. Counterintuitively, this <em>reduces</em> binary size in this repo: inlining duplicates the inlined function’s code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn’t CPU-bound in a hot loop. Measured: <code>-l -B -C</code> together produced a binary ~13% smaller than the same build with default <code>gcflags</code>.</p>
-</li>
-<li>
-<p><strong><code>-B</code></strong> - disables bounds checking. Trades a small amount of runtime safety (out-of-bounds slice/array access becomes undefined behavior instead of a panic) for reduced code size and slightly faster execution, on the assumption that this codebase’s indexing is already correct and covered by tests.</p>
-</li>
-<li>
-<p><strong><code>-C</code></strong> - disables the compiler’s automatic detection of <code>unsafe.Pointer</code> misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.</p>
+<p><strong><code>-l</code></strong> - disables inlining. Counterintuitively, this <em>reduces</em> binary size in this repo: inlining duplicates the inlined function’s code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn’t CPU-bound in a hot loop. Measured: <code>-l</code> alone produced a binary ~13% smaller than the same build with default <code>gcflags</code> (97.95MB against ~113MB).</p>
+<p><code>-l</code> is the only <code>gcflags</code> entry this build sets. <code>-B</code> and <code>-C</code> were set in an earlier revision and are gone - see <a href="#flags-that-were-removed">Flags that were removed</a> for why.</p>
 <p>Note that <code>all=</code> means changing this flag invalidates the build cache for the entire dependency tree, so the first build after touching it is slow. That is a per-flag-change cost, not a per-build one.</p>
 </li>
 </ul>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -221,7 +221,8 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>Configuring rke2 to use the <code>native</code> snapshotter instead was the alternative. It was rejected because it changes what is under test: the suite would then be proving that rke2 installs correctly in a configuration no real deployment uses, and the overlayfs snapshotter is the one that ships.</p>
 <p>This fix is unverified. It addresses the exact error in the logs and it is the standard remedy, but confirming it costs a full CI run, and the split is what makes shipping it unconfirmed reasonable – if it does not work, the stage job still covers the phases that do not depend on it.</p>
 <h2 id="two-ci-jobs-rather-than-one-matrix"><a class="header" href="#two-ci-jobs-rather-than-one-matrix">Two CI jobs rather than one matrix</a></h2>
-<p><code>e2e-cluster-stage</code> and <code>e2e-cluster</code> are separate jobs with duplicated steps. A matrix over a <code>mode</code> dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagree on into an expression over the matrix value. They disagree on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differ by a factor of two because that difference is the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.</p>
+<p>While both jobs existed, <code>e2e-cluster-stage</code> and <code>e2e-cluster</code> were separate jobs with duplicated steps. A matrix over a <code>mode</code> dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagreed on into an expression over the matrix value. They disagreed on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differed by a factor of two because that difference was the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.</p>
+<p>Only <code>e2e-cluster-stage</code> is left, for the reason the next section gives, so the question is moot unless the full-install job ever comes back.</p>
 <p>Both jobs sat behind the same <code>e2e-cluster</code> label at first. The point of the stage job was that it is cheap enough to run unconditionally, and the intent was to drop its <code>if:</code> once a few runs showed what it actually cost and how steady it was. That data came in, and it went the way this section expected: the stage job is cheap and steady. It now runs on every pull request, ungated.</p>
 <h2 id="the-engine-bootstrap-job-left-ci-entirely"><a class="header" href="#the-engine-bootstrap-job-left-ci-entirely">The engine-bootstrap job left CI entirely</a></h2>
 <p>The full-install job (<code>e2e-cluster</code>, walking the engine half through bootstrap) did not get the same answer. Even after switching its inventory from the three-controller rke2 topology to the single-controller k3s one to remove the etcd quorum timeouts, the job was still not reliable enough on a free hosted runner to be worth keeping as a CI check – the free tier is not the environment to run a real cluster bootstrap in, independent of which distro is installed.</p>

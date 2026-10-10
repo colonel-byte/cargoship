@@ -38,10 +38,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-4b945a24.js"></script>
+        <script src="toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,7 +185,7 @@
 <p><a href="https://github.com/colonel-byte/cargoship/releases"><img src="https://img.shields.io/github/v/release/colonel-byte/cargoship" alt="Latest Release"></a>
 <a href="https://go.dev/"><img src="https://img.shields.io/github/go-mod/go-version/colonel-byte/cargoship?filename=go.mod" alt="Go version"></a>
 <a href="https://github.com/colonel-byte/cargoship/actions/workflows/release.yaml"><img src="https://img.shields.io/github/actions/workflow/status/colonel-byte/cargoship/release.yaml" alt="Build Status"></a>
-<a href="https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship"><img src="https://api.securityscorecards.dev/projects/github.com/colonel-byte/cargoship/badge" alt="OpenSSF Scorecard"></a></p>
+<a href="https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship"><img src="https://api.scorecard.dev/projects/github.com/colonel-byte/cargoship/badge" alt="OpenSSF Scorecard"></a></p>
 <p>Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages. It is designed to simplify two core workflows:</p>
 <ol>
 <li><strong>Package Creation:</strong> Building a self-contained, offline Kubernetes distro package containing everything needed for installation in disconnected or highly-regulated environments.</li>
@@ -195,14 +195,14 @@
 <hr>
 <h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
 <h3 id="pre-built-binaries"><a class="header" href="#pre-built-binaries">Pre-built binaries</a></h3>
-<p>Every release publishes archives for Linux, macOS, and Windows across <code>amd64</code>, <code>arm64</code>, <code>arm</code>, <code>386</code>, and <code>riscv64</code>. The archive names follow <code>uname</code>, so the one for a 64-bit Linux host is <code>cargoship_Linux_x86_64.tar.gz</code>:</p>
+<p>Every release publishes archives for Linux, macOS, and Windows across <code>amd64</code>, <code>arm64</code>, and <code>riscv64</code>. The name carries the OS and the architecture, with <code>amd64</code> spelled the way <code>uname -m</code> does, so the one for a 64-bit Linux host is <code>cargoship_Linux_x86_64.tar.gz</code> and the arm64 one is <code>cargoship_Linux_arm64.tar.gz</code>:</p>
 <pre><code class="language-bash">VERSION=$(curl -fsSL https://api.github.com/repos/colonel-byte/cargoship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
 curl -fsSLO "https://github.com/colonel-byte/cargoship/releases/download/${VERSION}/cargoship_Linux_x86_64.tar.gz"
 tar -xzf cargoship_Linux_x86_64.tar.gz cargoship
 install -m 0755 cargoship /usr/local/bin/cargoship
 </code></pre>
 <h3 id="linux-packages"><a class="header" href="#linux-packages">Linux packages</a></h3>
-<p>Releases also carry <code>.rpm</code>, <code>.deb</code>, and <code>.apk</code> packages, which install the binary along with the <code>colonel_byte.cargoship</code> Ansible collection onto ansible-core’s default collection path:</p>
+<p>Releases also carry <code>.rpm</code>, <code>.deb</code>, and <code>.apk</code> packages. Each installs the binary, shell completions for bash, fish and zsh, both Ansible collections - <code>colonel_byte.cargoship</code> and <code>colonel_byte.zarf</code> - onto ansible-core’s default collection path, and the two zarf module files the second collection calls (<code>/usr/bin/zarf_init</code> and <code>/usr/bin/zarf_package_deploy</code>):</p>
 <pre><code class="language-bash">sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
 </code></pre>
 <h3 id="container-images"><a class="header" href="#container-images">Container images</a></h3>
@@ -215,15 +215,20 @@ install -m 0755 cargoship /usr/local/bin/cargoship
 </thead>
 <tbody>
 <tr><td><code>ghcr.io/colonel-byte/cargoship</code></td><td>The binary on a minimal base</td></tr>
-<tr><td><code>ghcr.io/colonel-byte/cargoship-ubi</code></td><td>The binary on Red Hat UBI</td></tr>
-<tr><td><code>ghcr.io/colonel-byte/cargoship-deb</code></td><td>The binary installed from the <code>.deb</code></td></tr>
-<tr><td><code>ghcr.io/colonel-byte/cargoship-ansible</code></td><td>The binary plus the Ansible collection and ansible-core</td></tr>
+<tr><td><code>ghcr.io/colonel-byte/cargoship-ubi</code></td><td>The binary installed from the <code>.rpm</code>, on AlmaLinux 10</td></tr>
+<tr><td><code>ghcr.io/colonel-byte/cargoship-deb</code></td><td>The binary installed from the <code>.deb</code>, on Debian slim</td></tr>
+<tr><td><code>ghcr.io/colonel-byte/cargoship-ansible</code></td><td>The <code>.rpm</code> plus ansible-core, on AlmaLinux 10</td></tr>
 </tbody>
 </table>
 </div>
+<p>The <code>-ubi</code> name is historical: that image was based on Red Hat UBI and is now built on AlmaLinux 10, but the published image name has not changed.</p>
 <h3 id="from-source"><a class="header" href="#from-source">From source</a></h3>
-<p>Building needs Go 1.27 or newer. The repository vendors its dependencies, so a clone builds without network access:</p>
+<p>Building needs Go 1.27 or newer.</p>
 <pre><code class="language-bash">go install github.com/colonel-byte/cargoship@latest
+</code></pre>
+<p>That reaches the network for the module. To build without it, clone the repository instead: the <code>vendor/</code> tree is committed, so a clone builds with no network access at all, which is how a management node inside an airlock is staged.</p>
+<pre><code class="language-bash">git clone https://github.com/colonel-byte/cargoship.git &amp;&amp; cd cargoship
+mage build:binary    # or: go run ./magefiles/core build:binary
 </code></pre>
 <h3 id="verifying-a-download"><a class="header" href="#verifying-a-download">Verifying a download</a></h3>
 <p>Release archives and container images are signed with <a href="https://docs.sigstore.dev/cosign/">Cosign</a>, using the key published at <a href="https://github.com/colonel-byte/cargoship/blob/main/cosign.pub"><code>cosign.pub</code></a>. Each archive ships a <code>.sigstore.json</code> bundle beside it, and every release carries a <code>checksums.txt</code>:</p>
@@ -251,18 +256,21 @@ cosign verify --key cosign.pub ghcr.io/colonel-byte/cargoship:latest
 </ul>
 <p>The package compilation process loads a local distro definition, gathers all specified assets, and produces a single, verifiable archive.</p>
 <h3 id="2-phase-based-orchestration"><a class="header" href="#2-phase-based-orchestration">2. Phase-Based Orchestration</a></h3>
-<p>Cluster operations are modeled as ordered sequences of reusable, structured “phases.” This makes high-level actions (<code>apply</code>, <code>prepare</code>, <code>reset</code>, <code>kube-config</code>) predictable, easier to debug, and simple to extend.</p>
-<p>For example, the <strong><code>apply</code></strong> workflow comprises the following phases:</p>
+<p>Cluster operations are modeled as ordered sequences of reusable, structured “phases.” This makes high-level actions (<code>apply</code>, <code>prepare</code>, <code>reset</code>, <code>kube-config</code>, <code>engine-config-sync</code>) predictable, easier to debug, and simple to extend.</p>
+<p>For example, the <strong><code>apply</code></strong> workflow runs these phases, in this order:</p>
 <ol>
 <li><strong>Connect:</strong> Establish secure SSH connections to all target hosts.</li>
-<li><strong>OS Detection &amp; Fact Gathering:</strong> Identify host operating systems and system resources.</li>
-<li><strong>Validation:</strong> Verify that host nodes meet the pre-requisites.</li>
-<li><strong>Prepare:</strong> Install OS packages, load kernel modules, and configure system firewalls or policies.</li>
-<li><strong>Upload:</strong> Securely transfer required package binaries, configuration templates, and OCI images to the nodes.</li>
-<li><strong>Bootstrap / Upgrade:</strong> Initialize primary control-plane nodes and join worker nodes.</li>
-<li><strong>Kubeconfig Retrieval:</strong> Fetch the generated admin credentials.</li>
-<li><strong>Cleanup &amp; Disconnect:</strong> Release locks, clean up temporary artifacts, and close SSH sessions.</li>
+<li><strong>OS Detection &amp; Fact Gathering:</strong> Identify host operating systems, network facts, and the engine version already installed.</li>
+<li><strong>Validation:</strong> Verify that host nodes meet the prerequisites, and stop if the cluster holds a node the config does not.</li>
+<li><strong>Lock:</strong> Take an exclusive host lock, held for the rest of the run, so a second cargoship cannot change the same hosts.</li>
+<li><strong>Prepare:</strong> Install OS packages, configure sysctl and environment, SELinux and <code>fapolicyd</code> rules, <code>/etc/hosts</code>, and the node firewall.</li>
+<li><strong>Upload:</strong> Securely transfer package binaries, RPMs or DEBs, configuration templates, and OCI images to the nodes, then import the images.</li>
+<li><strong>Bootstrap / Upgrade:</strong> Render the engine config, initialize control-plane nodes, apply bundled manifests, join workers, and upgrade any node already running an older version.</li>
+<li><strong>Engine Config Sync:</strong> Reconcile registry, audit, and pod-security config on any node whose config drifted.</li>
+<li><strong>Kubeconfig Retrieval and Labelling:</strong> Fetch the generated admin credentials and label nodes with their profile group.</li>
+<li><strong>Cleanup &amp; Disconnect:</strong> Release the lock, clean up temporary artifacts, and close SSH sessions.</li>
 </ol>
+<p>The generated reference in <a href="phases"><code>docs/phases/</code></a> is the authoritative list, including what each phase does under <code>--dry-run</code>.</p>
 <hr>
 <h2 id="usage-examples"><a class="header" href="#usage-examples">Usage Examples</a></h2>
 <p>Here are the standard workflows for compiling and deploying offline Kubernetes packages with Cargoship.</p>
@@ -295,13 +303,61 @@ cargoship create ./distro-defs -o ./build/
 <p>Translate an Ansible inventory you already maintain into a cargoship cluster inventory, taking each host’s role from its Ansible groups:</p>
 <pre><code class="language-bash">cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
 </code></pre>
+<h3 id="7-publish-pull-sign-and-verify-a-package"><a class="header" href="#7-publish-pull-sign-and-verify-a-package">7. Publish, Pull, Sign, and Verify a Package</a></h3>
+<p>A package can live in an OCI registry rather than on a disk, and every command that takes a package takes an <code>oci://</code> reference wherever it takes a path:</p>
+<pre><code class="language-bash"># Push a built package to a registry
+cargoship publish ./build/cargoship-distro-amd64.tar.zst oci://ghcr.io/my-org
+
+# Pull one back down to a local directory
+cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 -o ./build/
+
+# Sign a package with a private key
+cargoship sign ./build/cargoship-distro-amd64.tar.zst --signing-key ./private-key.pem
+
+# Verify the signature before anything installs from it
+cargoship verify ./build/cargoship-distro-amd64.tar.zst --key ./cosign.pub
+</code></pre>
+<p><code>sign</code> also takes <code>--keyless</code> for the Sigstore keyless flow, and <code>verify</code> takes the matching keyless flags (<code>--certificate-identity</code>, <code>--certificate-oidc-issuer</code>, and their regex variants). The commands that load a package - <code>apply</code>, <code>prepare</code>, <code>engine-config-sync</code>, <code>publish</code>, <code>pull</code>, <code>validate</code>, <code>schema</code> - verify as part of loading, gated on <code>--verify=never|if-possible|always</code>. <code>verify</code> does nothing but check the signature, which is what makes it the one to run before a playbook on a management node with no network.</p>
+<h3 id="8-encrypt-credentials-in-a-config-file"><a class="header" href="#8-encrypt-credentials-in-a-config-file">8. Encrypt Credentials in a Config File</a></h3>
+<p>Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The <code>vault</code> command group covers both:</p>
+<pre><code class="language-bash"># Encrypt one value for a registry's user/pass/token field
+cargoship vault encrypt my-registry-password --vault-password-file ./vault-pass.txt
+
+# Encrypt or decrypt every registry credential in a config file, in place
+cargoship vault encrypt-file ./cargoship-config.yaml --vault-password-file ./vault-pass.txt
+cargoship vault decrypt-file ./cargoship-config.yaml --vault-password-file ./vault-pass.txt
+
+# Encrypt the values already sitting at given YAML paths, naming each one
+cargoship vault encrypt-path ./cargoship-config.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Generate an age key pair, and re-wrap an existing file under a new key
+cargoship vault keygen
+cargoship vault rekey ./cargoship-config.yaml --new-vault-password-file ./new-pass.txt
+</code></pre>
+<p><code>encrypt-path</code> only encrypts; cargoship decrypts a registry’s <code>auth.user</code>, <code>auth.pass</code>, <code>auth.token</code> and <code>tls.ca</code> at apply time, and warns when asked to encrypt a path outside that set. <code>decrypt</code>, <code>decrypt-path</code>, <code>decrypt-file</code> and <code>encrypt-file</code> complete the set; <code>cargoship vault --help</code> lists all eight.</p>
+<h3 id="9-validate-a-file-or-write-its-schema"><a class="header" href="#9-validate-a-file-or-write-its-schema">9. Validate a File, or Write Its Schema</a></h3>
+<pre><code class="language-bash"># Check an inventory, package definition, or config file against its schema
+cargoship validate ./cargoship-config.yaml
+
+# Write the JSON Schema for one of cargoship's own file formats: inventory, package, or config
+cargoship schema inventory -o ./inventory.schema.json
+
+# Checksum a file, or one file inside an archive
+cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
+</code></pre>
+<hr>
+<h2 id="opentofu-and-terraform"><a class="header" href="#opentofu-and-terraform">OpenTofu and Terraform</a></h2>
+<p>The same phases run from an OpenTofu or Terraform provider, built from this repository as <code>terraform-provider-cargoship</code>. It drives <code>prepare</code> and <code>apply</code> against the hosts in its configuration and converges a cluster the way the CLI does, so a cluster can be managed from the same plan as the machines it runs on.</p>
+<p>It is a separate binary with its own release workflow, and the CLI does not depend on it. See <a href="#running-the-opentofu-provider">Developing the OpenTofu Provider</a> for how to build it, run it against a local mirror, and what its resource schema accepts.</p>
 <hr>
 <h2 id="ansible-integration"><a class="header" href="#ansible-integration">Ansible Integration</a></h2>
-<p>Cargoship also ships as an Ansible collection, <code>colonel_byte.cargoship</code>, so the workflows above run as ordinary playbook tasks: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_reset</code>, <code>cargoship_kube_config</code>, and <code>cargoship_engine_config_sync</code>, plus a <code>cluster</code> role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.</p>
+<p>Cargoship ships two Ansible collections.</p>
+<p><code>colonel_byte.cargoship</code> runs the workflows above as ordinary playbook tasks: <code>cargoship_apply</code>, <code>cargoship_prepare</code>, <code>cargoship_reset</code>, <code>cargoship_kube_config</code>, and <code>cargoship_engine_config_sync</code>, plus a <code>cluster</code> role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.</p>
+<p><code>colonel_byte.zarf</code> drives <a href="https://github.com/zarf-dev/zarf">zarf</a> from the same management node, for the layer above the cluster: <code>zarf_init</code>, <code>zarf_package_deploy</code>, <code>zarf_package_info</code>, <code>zarf_package_inspect</code> and <code>zarf_state_info</code>, with <code>packages</code>, <code>package_inspect</code> and <code>state</code> roles over them. See <a href="#driving-zarf-from-ansible">Deploying Zarf Packages with Ansible</a>.</p>
 <ul>
 <li><a href="#running-cargoship-as-an-ansible-module">Running Cargoship as an Ansible Module</a> - the modules, their parameters, check mode, and what <code>changed</code> means.</li>
 <li><a href="#generating-an-inventory-from-ansible">Generating an Inventory from Ansible</a> - the group and host-variable translation, usable with or without the modules.</li>
-<li><a href="#running-the-collection-from-the-container">The Ansible Container Image</a> - <code>ghcr.io/colonel-byte/cargoship-ansible</code>, which carries the binary and the collection together.</li>
+<li><a href="#running-the-collection-from-the-container">The Ansible Container Image</a> - <code>ghcr.io/colonel-byte/cargoship-ansible</code>, which carries the binary and the collections together.</li>
 </ul>
 <hr>
 <h2 id="configuration-and-schemas"><a class="header" href="#configuration-and-schemas">Configuration and Schemas</a></h2>
@@ -311,7 +367,7 @@ cargoship create ./distro-defs -o ./build/
 <li><strong>Distro Package Definitions:</strong> Map out the required binaries, OCI images, and layout settings.</li>
 <li><strong>Distro Runtime Configs:</strong> Configure the underlying distribution engine.</li>
 </ul>
-<p>The corresponding JSON schemas are automatically generated from Go structs into <code>schema/</code>. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion.</p>
+<p>The corresponding JSON schemas are automatically generated from Go structs into <code>schema/</code>, and <code>cargoship schema</code> writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; <code>cargoship validate</code> checks a file against the right one without an editor.</p>
 <p>An inventory authoring guide is available in <a href="#inventory-configuration-guide">Setting up an inventory</a>.</p>
 <hr>
 <h2 id="development-and-build-workflows"><a class="header" href="#development-and-build-workflows">Development and Build Workflows</a></h2>
@@ -1423,7 +1479,7 @@ spec:
 <p>The flag carries the ones that change between runs:</p>
 <pre><code class="language-sh">cargoship apply ./package.tar.zst --config inventory.yaml --values ./encryption-off.yaml
 </code></pre>
-<p><code>--values</code> may be given more than once, with a later file winning over an earlier one, and it is accepted by <code>cargoship apply</code>, <code>cargoship prepare</code>, and <code>cargoship engine-config-sync</code>. There is no <code>-f</code> shorthand: <code>apply</code> already binds <code>-f</code> to <code>--update-fapolicyd</code>.</p>
+<p><code>--values</code> may be given more than once, with a later file winning over an earlier one, and it is accepted by <code>cargoship apply</code>, <code>cargoship prepare</code>, and <code>cargoship engine-config-sync</code>. There is no <code>-f</code> shorthand: <code>apply</code> already binds <code>-f</code> to <code>--fapolicyd</code>.</p>
 <p>Merging is per key, not per document. An override that sets <code>cilium.encryption.enabled</code> leaves every other key under <code>cilium</code> as the package defined it.</p>
 <p>The merged values are checked against the package’s schema again at install time, so an inventory that sets a key the package does not accept fails before anything is written to a host.</p>
 <p>That check happens when the package is installed, which is late to learn that a key is misspelled. <code>cargoship schema inventory --package &lt;package&gt;</code> composes the package’s values schema into the inventory schema, so an editor completes and checks <code>spec.config.values</code> while the inventory is being written:</p>
@@ -1764,7 +1820,7 @@ $ANSIBLE_VAULT;1.1;AES256
 <p>Nothing, and that is deliberate. Every phase after the fact-gathering ones reads <code>.spec.hosts</code> and acts on what it finds there, so a host you delete from the config becomes invisible to all of them. The machine keeps running the engine and stays joined to the cluster while the apply that was supposed to remove it reports success.</p>
 <p>An apply catches this instead of walking past it. Right after it gathers facts, and before it changes anything, it lists the nodes joined to the cluster and compares them to the hosts in the config. If the cluster holds a node no host accounts for, the apply stops:</p>
 <pre><code>the cluster holds nodes the config does not: add the host back to the config,
-run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to
+run `cargoship reset` against it, or pass --allow-unmanaged-nodes to
 apply anyway: worker3 (worker)
 </code></pre>
 <p>Each node is named with its role, because a leftover controller is the more dangerous case. The check is read-only, so <code>--dry-run</code> runs it too, which is where you want to find out about a removal you did not intend.</p>
@@ -1775,7 +1831,7 @@ apply anyway: worker3 (worker)
 <p>Doing only the first half would be worse than doing nothing, because it looks like the removal worked. The machine keeps its certificates and keeps trying to rejoin, and if it was a controller it stays an etcd member: the cluster looks smaller while quorum is still counted against a member nobody can reach.</p>
 <p>So an apply reports the gap and leaves the cluster alone. The layer that will eventually close it is the OpenTofu provider, which still holds the removed host’s connection details in its state file when it plans the destroy, and can hand them to a targeted teardown.</p>
 <h2 id="removing-the-machine-by-hand"><a class="header" href="#removing-the-machine-by-hand">Removing the machine by hand</a></h2>
-<p>Removing a node is two steps, and they have to happen in that order. <code>install reset</code> uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running – and <code>UninstallEngine</code> acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.</p>
+<p>Removing a node is two steps, and they have to happen in that order. <code>reset</code> uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running – and <code>UninstallEngine</code> acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.</p>
 <ol>
 <li>
 <p>From a controller that is staying, drain and delete the node:</p>
@@ -1788,7 +1844,7 @@ $ kubectl delete node worker3
 </li>
 <li>
 <p>Run reset against it. With the node already gone from the cluster, the deletion phases have nothing to do and the uninstall is all that remains:</p>
-<pre><code class="language-console">$ cargoship install reset ./package.tar.zst --config ./removal-config.yaml --confirm
+<pre><code class="language-console">$ cargoship reset ./package.tar.zst --config ./removal-config.yaml --confirm
 </code></pre>
 </li>
 <li>
@@ -2470,6 +2526,7 @@ go build -o build/zarf_package_deploy ./cmd/zarf/deploy
 <li><a href="#sign">cargoship sign</a>	 - Signs an existing Cargoship distro package</li>
 <li><a href="#validate">cargoship validate</a>	 - Checks a cluster inventory, package definition, or config file against its schema</li>
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
+<li><a href="#verify">cargoship verify</a>	 - Verifies the signature on a Cargoship distro package</li>
 <li><a href="#version">cargoship version</a>	 - Shows the version of the running binary</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -3582,15 +3639,60 @@ $ cargoship vault rekey ./cluster.yaml --age-identity-file ./key.txt --age-recip
 <li><a href="#vault">cargoship vault</a>	 - Encrypts and decrypts cluster configuration values with Ansible Vault or age</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="verify"><a href="#verify" class="header">verify</a></h1>
+<!-- Page generated by Cargoship; DO NOT EDIT -->
+<h2 id="cargoship-verify"><a class="header" href="#cargoship-verify">cargoship verify</a></h2>
+<p>Verifies the signature on a Cargoship distro package</p>
+<h3 id="synopsis-22"><a class="header" href="#synopsis-22">Synopsis</a></h3>
+<p>Verifies the signature on an existing Cargoship distro package. The package can be a local tarball or pulled from an OCI registry. Pass –key to verify against a public key, or the keyless flags to verify a signer identity against a Fulcio root and a transparency log. An unsigned package is reported as a failure. The other commands that load packages verify as part of loading, gated on their –verify flag – this command verifies and nothing else, so it can be run before a play that has no network for the keyless flow.</p>
+<pre><code>cargoship verify PACKAGE_SOURCE [flags]
+</code></pre>
+<h3 id="examples-21"><a class="header" href="#examples-21">Examples</a></h3>
+<pre><code># Verify a signed package against a public key
+$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --key ./cosign.pub
+
+# Verify a package in an OCI registry
+$ cargoship verify oci://ghcr.io/my-org/my-package:1.0.0 --key ./cosign.pub
+
+# Verify a keyless signature against a signer identity and its OIDC issuer
+$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-identity signer@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# Match the signer identity by pattern instead
+$ cargoship verify cargoship-rancher-rke2-amd64-1.0.0.tar.zst --certificate-identity-regexp '.*@example\.com' --certificate-oidc-issuer https://token.actions.githubusercontent.com
+</code></pre>
+<h3 id="options-24"><a class="header" href="#options-24">Options</a></h3>
+<pre><code>      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+  -h, --help                                    help for verify
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+      --insecure-skip-tls-verify                Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string                              Path to public key file for validating signed packages
+      --plain-http                              Allow OCI registry connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+</code></pre>
+<h3 id="options-inherited-from-parent-commands-23"><a class="header" href="#options-inherited-from-parent-commands-23">Options inherited from parent commands</a></h3>
+<pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
+  -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
+      --no-color            Disable terminal color codes in logging and stdout prints.
+</code></pre>
+<h3 id="see-also-24"><a class="header" href="#see-also-24">SEE ALSO</a></h3>
+<ul>
+<li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="version"><a href="#version" class="header">version</a></h1>
 <!-- Page generated by Cargoship; DO NOT EDIT -->
 <h2 id="cargoship-version"><a class="header" href="#cargoship-version">cargoship version</a></h2>
 <p>Shows the version of the running binary</p>
-<h3 id="synopsis-22"><a class="header" href="#synopsis-22">Synopsis</a></h3>
+<h3 id="synopsis-23"><a class="header" href="#synopsis-23">Synopsis</a></h3>
 <p>Displays the version of the release that the current binary was built from.</p>
 <pre><code>cargoship version [flags]
 </code></pre>
-<h3 id="examples-21"><a class="header" href="#examples-21">Examples</a></h3>
+<h3 id="examples-22"><a class="header" href="#examples-22">Examples</a></h3>
 <pre><code># Print the version of the running binary
 $ cargoship version
 
@@ -3600,17 +3702,17 @@ $ cargoship version --output yaml
 # Print it as JSON, for piping into jq
 $ cargoship version -o json
 </code></pre>
-<h3 id="options-24"><a class="header" href="#options-24">Options</a></h3>
+<h3 id="options-25"><a class="header" href="#options-25">Options</a></h3>
 <pre><code>  -h, --help                  help for version
   -o, --output outputFormat   Output format. Valid options are: yaml, json.
 </code></pre>
-<h3 id="options-inherited-from-parent-commands-23"><a class="header" href="#options-inherited-from-parent-commands-23">Options inherited from parent commands</a></h3>
+<h3 id="options-inherited-from-parent-commands-24"><a class="header" href="#options-inherited-from-parent-commands-24">Options inherited from parent commands</a></h3>
 <pre><code>      --log-file            Always write a full-verbosity debug log to a file, regardless of --log-level.
   -L, --log-format string   Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string    Log level when running cargoship. Valid options are: warn, info, debug, trace (default "info")
       --no-color            Disable terminal color codes in logging and stdout prints.
 </code></pre>
-<h3 id="see-also-24"><a class="header" href="#see-also-24">SEE ALSO</a></h3>
+<h3 id="see-also-25"><a class="header" href="#see-also-25">SEE ALSO</a></h3>
 <ul>
 <li><a href="#cargoship-3">cargoship</a>	 - CLI for cargoship installs</li>
 </ul>
@@ -11917,7 +12019,7 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <pre><code class="language-go">var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
 </code></pre>
 <p><a name="ErrUnmanagedNodes"></a>ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for. Apply removes nothing, so continuing would report success over a machine that is still running the engine and still joined.</p>
-<pre><code class="language-go">var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
+<pre><code class="language-go">var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
 </code></pre>
 <p><a name="ErrWillNotDowngrade"></a>ErrWillNotDowngrade is returned when a host already runs a version newer than the one the package carries. An engine does not support moving backwards, so the run stops here rather than uninstalling a newer version part way through.</p>
 <pre><code class="language-go">var ErrWillNotDowngrade = errors.New("will not downgrade the cluster: raise the package version, or pass --allow-downgrade to continue anyway")
@@ -15328,11 +15430,6 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <li><strong>Why:</strong> without it, absolute build-machine paths get embedded in the binary (used for panic traces and debug info paths), which leaks local environment details and hurts build reproducibility. It also shaves a small amount of size (a few hundred KB) since fewer/shorter path strings end up in the binary.</li>
 <li><strong>Where set:</strong> directly in the <code>go build</code> command string in <code>magefiles/pkg/build/build.go</code>.</li>
 </ul>
-<h3 id="-a"><a class="header" href="#-a"><code>-a</code></a></h3>
-<p>Forces rebuilding of all packages, including the standard library, rather than reusing cached <code>.a</code> files.</p>
-<ul>
-<li><strong>Why:</strong> ensures the build flags below (especially <code>-gcflags</code>) are actually applied everywhere, since Go’s build cache is keyed on flags but a stale cache can otherwise mask flag changes during iteration. Not a size optimization on its own - mainly a correctness/reproducibility guard for a release build.</li>
-</ul>
 <h3 id="-ldflags-see-ldflags-in-pkgutilsbuildutilsgo"><a class="header" href="#-ldflags-see-ldflags-in-pkgutilsbuildutilsgo"><code>-ldflags</code> (see <code>LDFlags</code> in <code>pkg/utils/build/utils.go</code>)</a></h3>
 <ul>
 <li>
@@ -15353,13 +15450,8 @@ var DisableItems = []string{"rke2-coredns", ...}    // rke2, pkg/cli/types.go
 <p>Applied to <code>all</code> packages (including the standard library and vendored dependencies), not just this module’s own code.</p>
 <ul>
 <li>
-<p><strong><code>-l</code></strong> - disables inlining. Counterintuitively, this <em>reduces</em> binary size in this repo: inlining duplicates the inlined function’s code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn’t CPU-bound in a hot loop. Measured: <code>-l -B -C</code> together produced a binary ~13% smaller than the same build with default <code>gcflags</code>.</p>
-</li>
-<li>
-<p><strong><code>-B</code></strong> - disables bounds checking. Trades a small amount of runtime safety (out-of-bounds slice/array access becomes undefined behavior instead of a panic) for reduced code size and slightly faster execution, on the assumption that this codebase’s indexing is already correct and covered by tests.</p>
-</li>
-<li>
-<p><strong><code>-C</code></strong> - disables the compiler’s automatic detection of <code>unsafe.Pointer</code> misuse in some cases (checkptr-adjacent checks). Reduces generated code size at the cost of one category of runtime safety net.</p>
+<p><strong><code>-l</code></strong> - disables inlining. Counterintuitively, this <em>reduces</em> binary size in this repo: inlining duplicates the inlined function’s code at every call site, and with a dependency tree this large, the code-size cost of inlining outweighs the runtime speed benefit for a CLI tool that isn’t CPU-bound in a hot loop. Measured: <code>-l</code> alone produced a binary ~13% smaller than the same build with default <code>gcflags</code> (97.95MB against ~113MB).</p>
+<p><code>-l</code> is the only <code>gcflags</code> entry this build sets. <code>-B</code> and <code>-C</code> were set in an earlier revision and are gone - see <a href="#flags-that-were-removed">Flags that were removed</a> for why.</p>
 <p>Note that <code>all=</code> means changing this flag invalidates the build cache for the entire dependency tree, so the first build after touching it is slow. That is a per-flag-change cost, not a per-build one.</p>
 </li>
 </ul>
@@ -15456,7 +15548,7 @@ if !ran(p) {
 <p>This tests the routing, which is the part most likely to break, and it keeps working when the cluster gains a host that does trip the gate. <code>21_prepare_selinux_test.go</code> and <code>22_prepare_fapolicyd_test.go</code> are the worked examples.</p>
 <p><code>ran(p)</code> is only meaningful <em>after</em> <code>s.runPhase</code>, because the manager calls <code>Prepare</code> first and most gates are computed there.</p>
 <h2 id="phases-that-route-on-the-os-family"><a class="header" href="#phases-that-route-on-the-os-family">Phases that route on the OS family</a></h2>
-<p>The cluster runs multiple OS families on purpose. In the default full-walk inventory (<code>k3sOS</code>), all five machines join the cluster – one controller and four workers, split between Ubuntu (<code>kc0</code>, <code>kw0</code>, <code>kw1</code>) and Fedora (<code>kwf0</code>, <code>kwf1</code>). The stage-only inventory (<code>stageOS</code>) adds a third family, running an Alpine machine (<code>kwa0</code>) that receives uploads but never joins the cluster – see the section on the upload-only host below. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.</p>
+<p>The cluster runs multiple OS families on purpose. In the default full-walk inventory (<code>k3sOS</code>), all five machines join the cluster – one controller and four workers, split between Ubuntu (<code>kc0</code>, <code>kw0</code>, <code>kw1</code>) and Fedora (<code>kwf0</code>, <code>kwf1</code>). The stage-only inventory (<code>stageOS</code>) is not that set plus a machine: it is a different five, one per family per role – an Ubuntu controller (<code>kc0</code>), a Fedora controller (<code>kcf0</code>), an Ubuntu worker (<code>kw0</code>), a Fedora worker (<code>kwf0</code>), and an Alpine machine (<code>kwa0</code>) that receives uploads but never joins the cluster, covered in the section on the upload-only host below. So a Fedora controller only exists in the stage-only walk, and <code>k3sOS</code> has no Alpine host at all. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.</p>
 <p>Derive the host set from the same filters the phase uses, so the test cannot disagree with it:</p>
 <pre><code class="language-go">enterprise := s.harness.hosts().Filter(utils.FilterEnterpriseLinux)
 debian := s.harness.hosts().Filter(utils.FilterDebianLinux)
@@ -15533,7 +15625,7 @@ s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version
 <p><code>VersionLess</code> reads no manager state, so a zero-valued phase is enough, and using it means the test cannot disagree with the routing it is asserting.</p>
 <h3 id="running-it"><a class="header" href="#running-it">Running it</a></h3>
 <p>The upgrade walk is off unless <code>CARGOSHIP_E2E_UPGRADE</code> is set. It installs a second complete set of engine images onto every node, which roughly doubles the disk the run needs and adds tens of minutes.</p>
-<pre><code class="language-console">$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./src/test/e2e/cluster/...
+<pre><code class="language-console">$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./test/e2e/cluster/...
 </code></pre>
 <p>Without it, <code>TestClusterPhases/upgrade</code> skips with a message naming the variable, and the reset walk runs against the installed cluster as before.</p>
 <h2 id="prerequisites-and-running-it"><a class="header" href="#prerequisites-and-running-it">Prerequisites and running it</a></h2>
@@ -15553,11 +15645,11 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in betwe
 <h3 id="in-ci"><a class="header" href="#in-ci">In CI</a></h3>
 <p><code>.github/workflows/e2e-cluster.yaml</code> runs the staging half of this suite – <code>CARGOSHIP_E2E_STAGE_ONLY=1</code>, stopping at the boundary <code>Test_60_ConfigureEngine</code> draws – on its own trigger, separate from <code>e2e.yaml</code>. It runs on every pull request, the same as <code>e2e.yaml</code>, and on demand from the Actions tab. No label is needed.</p>
 <p>The engine-bootstrap half, including the join and upgrade walks, does not run in CI at all. It was not reliable enough on a free hosted runner to be a required check, even on the single-controller k3s topology that replaced the original three-controller rke2 one – see <a href="#why-the-cluster-e2e-suite-splits-into-a-staging-half-and-an-engine-half">choice-e2e-stage-split</a>. Trusting a change to the engine-bootstrap phases, the join walk, or the upgrade walk means running <code>mage test:endToEndCluster</code> or <code>mage test:endToEndClusterUpgrade</code> locally; CI cannot cover that for you.</p>
-<p>The upgrade walk is a second opt-in on top of that: the <code>upgrade</code> input when dispatching by hand, or the <code>e2e-cluster-upgrade</code> label on a pull request. Either one implies the install and join walks, sets <code>CARGOSHIP_E2E_UPGRADE</code> for the job and raises its budget from 120 to 210 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.</p>
+<p>The upgrade walk has no CI path either. <code>.github/workflows/e2e-cluster.yaml</code> declares an <code>upgrade</code> boolean input for <code>workflow_dispatch</code>, but nothing in the file reads it: the single <code>e2e-cluster-stage</code> job hardcodes <code>CARGOSHIP_E2E_STAGE_ONLY: "1"</code> and runs on a 30-minute budget, so setting the input changes nothing. Run the upgrade walk locally with <code>mage test:endToEndClusterUpgrade</code> when a change touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.</p>
 <p>The workflow has no build step and takes no artifact from <code>e2e.yaml</code>. Nothing in the suite runs a binary: <code>Test_00_CreatePackage</code> calls <code>distro.Create</code>, and the prepare, apply, reset and kube-config steps call the matching <code>action.New*</code> entry points. That is what makes the two workflows independent, which is the point of the split.</p>
 <p>The job frees disk before it starts, because five containerd image stores do not fit in what a hosted runner leaves free. If it fails with nodes stuck mid-upload, check the diagnostics step for a full disk or an OOM kill before reading the phase failure as a real one, and a larger runner is the fix.</p>
 <h2 id="iterating-while-writing-a-new-phase-test"><a class="header" href="#iterating-while-writing-a-new-phase-test">Iterating while writing a new phase test</a></h2>
-<p>A new phase test needs the suite up to that point, not the whole run. Three environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.</p>
+<p>A new phase test needs the suite up to that point, not the whole run. Four environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.</p>
 <p><strong>Run only the walk your phase is in.</strong> <code>TestClusterPhases</code> runs <code>apply</code>, <code>join</code>, <code>upgrade</code> and <code>reset</code> as separate subtests of one parent, so <code>-run</code> at that path segment excludes the ones you are not touching:</p>
 <pre><code class="language-console">$ go test -mod=vendor -count=1 -v -timeout=30m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
 </code></pre>
@@ -15572,6 +15664,10 @@ $ mage test:endToEndClusterUpgrade    # the same, with the upgrade walk in betwe
 $ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
 $ docker exec -it &lt;container&gt; sh
 </code></pre>
+<p><strong>Walk the suite against rke2 instead of k3s.</strong> <code>CARGOSHIP_E2E_DISTRO=rke2</code> switches which distro every step installs, and which package <code>cluster_lifecycle_test.go</code> builds. The default is <code>k3s</code>. A phase that branches on the engine needs a run each way:</p>
+<pre><code class="language-console">$ CARGOSHIP_E2E_DISTRO=rke2 go test -mod=vendor -count=1 -v -timeout=90m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+</code></pre>
+<p>See <code>distroEnvVar</code> and <code>distroID</code> in <code>test/e2e/cluster/05_manager_test.go</code>.</p>
 <p>Each <code>go test</code> invocation provisions fresh containers – there is no “resume the cluster from last time” path, so a kept cluster from a failed run is for reading, not for the next run to build on. Clean it up before running again:</p>
 <pre><code class="language-console">$ mage test:cleanCluster
 </code></pre>
@@ -15587,12 +15683,15 @@ $ docker exec -it &lt;container&gt; sh
 <h1 id="running-the-end-to-end-tests"><a class="header" href="#running-the-end-to-end-tests">Running the End-to-End Tests</a></h1>
 <p>The <code>noncluster</code> e2e suite drives the <strong>built <code>cargoship</code> binary</strong> as a subprocess, the same way a user would. It does not import the command packages, so what it proves is that the shipped binary behaves, not that the internals compile. Everything below is about that suite and is a plain <code>go test</code> invocation, which is what you want when a test fails and you need to poke at it. The <code>cluster</code> suite is the other way round – it calls the cargoship packages directly and needs no binary at all; see <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a>.</p>
 <h2 id="layout-1"><a class="header" href="#layout-1">Layout</a></h2>
-<pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
+<pre><code>test/e2e/noncluster/   misc + package command groups: version, sha256sum, the vault and age suites, ssh, create,
+                       publish, pull, sign, verify, schema, validate, the Ansible module, and the zarf info modules
 test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
 test/e2e/zarf/         the colonel_byte.zarf collection: two k3d clusters, a real zarf, the uds-bundle's packages walked by the modules
 test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
-test/registry.go       in-process OCI registry used by the publish/pull/sign tests
+test/registry.go       in-process OCI registry used by the publish/pull/sign/verify tests
+test/kube.go           kubernetes helpers for the suites that read a cluster back
+test/e2e/AGENTS.md     the fixture rule: test documents live in testdata/, not in Go string constants
 </code></pre>
 <p>The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The <code>noncluster</code> package starts no containers and makes no network calls: it needs nothing but the binary. The <code>cluster</code> package needs Docker and takes tens of minutes, and needs no binary; everything below is about <code>noncluster</code>, and <a href="#adding-an-e2e-test-for-a-new-apply-phase">e2e-phase-tests</a> covers the cluster suite and how to extend it when a phase is added.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
@@ -15655,14 +15754,37 @@ $ go test -mod=vendor -count=1 -v -run 'TestCargoshipSign/re-signing_requires_ov
 <p>The <code>fuzz</code> package holds Go’s native fuzz targets. It is not an e2e suite and does not sit with them: it does not drive the built binary and starts no containers, and the targets call the cargoship packages in process, so they run at tens of thousands of executions per second and reach the encoding decisions – scalar style, quoting, indentation, byte offsets – where a wrong answer produces a file that still parses and fails much later. Nothing here needs <code>build/</code>, a cluster, or the network.</p>
 <p>It also has to stay out of <code>src/test/</code>. OpenSSF Scorecard’s file walker discards every path beginning <code>src/test/</code> before any check reads it – <code>isTestdataFile</code> in <a href="https://github.com/ossf/scorecard/blob/main/checks/fileparser/listing.go"><code>checks/fileparser/listing.go</code></a>, which carries the Maven <code>src/test/java</code> convention – so for as long as these targets lived at <code>src/test/e2e/fuzz</code> the Fuzzing check scored 0 and reported the project as not fuzzed. Moving the package back under <code>src/test/</code> would silently take it to 0 again. The e2e suites themselves moved out of <code>src/test/</code> to <code>test/</code> for unrelated reasons, which loses that same exclusion for their tree – worth knowing if a future Scorecard run starts flagging something in <code>test/</code> that it did not before.</p>
 <h2 id="layout-2"><a class="header" href="#layout-2">Layout</a></h2>
-<pre><code>fuzz/main_test.go                    package documentation
+<p>One file per concern: 49 targets across 24 target files. The shared scaffolding:</p>
+<pre><code>fuzz/main_test.go                    package documentation and TestMain
 fuzz/keyring_test.go                 the shared keyrings, one per format, built once in TestMain
-fuzz/vault_value_fuzz_test.go        value-level targets: EncryptValue/DecryptValue/FormatOf
-fuzz/vault_path_fuzz_test.go         path-level targets: EncryptAtPath/DecryptAtPath/RekeyAtPath against a fixed document
-fuzz/vault_document_fuzz_test.go     document-level targets: the splice against varying document shapes, arbitrary documents, and arbitrary paths
-fuzz/keymaterial_fuzz_test.go        key-material targets: AgeRecipientsIn, ResolveKeyring, RekeyTarget
-fuzz/ansible_inventory_fuzz_test.go  Ansible inventory targets: the projected request, one host variable, the role mapping
 fuzz/testdata/fuzz/&lt;Target&gt;/         committed crashers, one directory per target
+fuzz/AGENTS.md                       the naming rule: no target name may be a prefix of another
+</code></pre>
+<p>The targets, grouped by what they guard:</p>
+<pre><code>vault_value_fuzz_test.go             EncryptValue/DecryptValue/FormatOf round trips and salting
+vault_path_fuzz_test.go              EncryptAtPath/DecryptAtPath/RekeyAtPath and path canonicalisation
+vault_document_fuzz_test.go          the splice against varying document shapes, arbitrary documents, arbitrary paths
+vault_config_fuzz_test.go            EncryptConfig/DecryptConfig over a whole document
+vault_meta_fuzz_test.go              the recipients recorded in a document's vault metadata
+keymaterial_fuzz_test.go             AgeRecipientsIn, ResolveKeyring, RekeyTarget
+parse_recipients_fuzz_test.go        age recipient lines and recipient lists
+cfg_fuzz_test.go                     cfg.Parse and cfg.ParseMultiDoc over arbitrary document bytes
+clustercfg_parse_fuzz_test.go        the cluster inventory parser
+schema_decode_fuzz_test.go           schema decoding
+url_and_config_fuzz_test.go          ExtractBasePathFromURL and ReadByteStrict over a distro config
+dns_fuzz_test.go                     ParseServiceURL and IsLocalhost
+layout_path_fuzz_test.go             the path sanitisers: IsContainedPath and isCleanPath
+parse_manifest_fuzz_test.go          OCI manifest parsing
+parse_checksum_fuzz_test.go          checksum lines and Retry-After headers
+parse_registry_overrides_fuzz_test.go  the --registry-override key=value list
+file_overrides_fuzz_test.go          file override parsing and resolution
+identify_source_fuzz_test.go         package source identification
+helmvalues_parse_fuzz_test.go        values file shape and schema external-ref rejection
+helmvalues_path_fuzz_test.go         value path round trips, mapping application, merge immutability
+helmvalues_template_fuzz_test.go     template rendering, including that it denies host state
+nft_split_families_fuzz_test.go      nftables family splitting
+ansible_inventory_fuzz_test.go       the projected request, one host variable, the role mapping
+ansiblemod_fuzz_test.go              module argument reading and module naming
 </code></pre>
 <h2 id="the-ansible-inventory-targets"><a class="header" href="#the-ansible-inventory-targets">The Ansible inventory targets</a></h2>
 <p><code>ansible_inventory_fuzz_test.go</code> fuzzes <code>internal/ansibleinv</code>, which is the translation an Ansible module runs on input it did not write. The vault targets guard what a wrong answer does to a file; these guard what a wrong answer does to a cluster, so their properties are about topology rather than encoding:</p>
@@ -15676,7 +15798,7 @@ fuzz/testdata/fuzz/&lt;Target&gt;/         committed crashers, one directory per
 <p>cargoship writes two ciphertext formats, Ansible Vault and age, and one keyring can carry both. Every target that encrypts therefore runs its body once per format rather than picking one: <code>encryptKeyrings()</code> returns the two encrypting keyrings and <code>rekeyPairs()</code> returns the four rekey directions (vault to vault, vault to age, age to age, age to vault). Both are in <code>keyring_test.go</code>, and both are built once in <code>TestMain</code> so that key generation is not paid per execution.</p>
 <p><code>TestMain</code> also unsets <code>CARGOSHIP_AGE_IDENTITY_FILE</code>, <code>CARGOSHIP_AGE_RECIPIENTS</code>, <code>CARGOSHIP_VAULT_PASSWORD</code> and <code>ANSIBLE_VAULT_PASSWORD</code> before it builds anything. A developer who has those set in their shell would otherwise be fuzzing against different key material than CI, which is the kind of difference that makes a reported crasher unreproducible.</p>
 <h2 id="running-1"><a class="header" href="#running-1">Running</a></h2>
-<p>A plain <code>go test</code> runs the <strong>seed corpus only</strong> – the <code>f.Add</code> values in each target, plus anything committed under <code>testdata/fuzz/&lt;Target&gt;/</code>. That is about half a second and is what <code>mage test:fuzz</code> and <code>go test ./...</code> do. No CI job runs this package today – <code>e2e.yaml</code> runs the non-cluster group and <code>e2e-cluster.yaml</code> the cluster group, and neither glob reaches it:</p>
+<p>A plain <code>go test</code> runs the <strong>seed corpus only</strong> – the <code>f.Add</code> values in each target, plus anything committed under <code>testdata/fuzz/&lt;Target&gt;/</code>. That is about half a second and is what <code>mage test:fuzz</code> and <code>go test ./...</code> do. <code>.github/workflows/unit-tests.yaml</code> runs it on every pull request, as a second step beside <code>test:unit</code>, because it needs nothing that step did not already need:</p>
 <pre><code class="language-console">$ mage test:fuzz
 $ go test -mod=vendor -count=1 ./fuzz/     # the same thing, spelled out
 </code></pre>
@@ -15709,15 +15831,16 @@ FuzzRekeyAtPathPreservesValue                  1,498      four rekey directions 
 <h2 id="the-corpus"><a class="header" href="#the-corpus">The corpus</a></h2>
 <p>There are two corpora, and only one of them is in the repository.</p>
 <p>Inputs the fuzzer generates live in the build cache, under <code>$(go env GOCACHE)/fuzz/</code>. They are shared across runs on the same machine, are not portable, and are not meant to be committed; <code>go clean -fuzzcache</code> discards them, which is worth doing when a target has been rewritten and its cached corpus is exercising a shape that no longer exists.</p>
-<p>Failing inputs are the committed corpus. When a target fails, <code>go test</code> writes the input to <code>fuzz/testdata/fuzz/&lt;Target&gt;/&lt;hash&gt;</code> and prints the path. <strong>Commit that file.</strong> From then on it is replayed by a plain <code>go test</code>, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. The four currently committed are the defects found when these targets were written:</p>
+<p>Failing inputs are the committed corpus. When a target fails, <code>go test</code> writes the input to <code>fuzz/testdata/fuzz/&lt;Target&gt;/&lt;hash&gt;</code> and prints the path. <strong>Commit that file.</strong> From then on it is replayed by a plain <code>go test</code>, which is how a crash found by a long fuzz run becomes a permanent regression test that costs milliseconds. There are 24 committed crashers across 9 targets, the bulk of them under <code>FuzzEncryptAtPathArbitraryDocument</code> (12) and <code>FuzzDecryptAtPathRoundTrip</code> (3).</p>
+<p>Every one of them is fixed – <code>go test ./fuzz/</code> is green. A red run here means a new defect, not a known one. The five that came out of writing the original targets are worth reading as a sample of the shape of defect this package finds:</p>
 <pre><code>FuzzDecryptAtPathRoundTrip/89831cc049267b2c              string("\n")  a credential of one line break, written as an empty block scalar, read back as ""
 FuzzPathIsDecryptable/477bd66902831e69                   string("0[0") an unclosed index, which panicked inside go-yaml instead of erroring
 FuzzPathIsDecryptable/ebc8a2cafef15425                   string("'$'") a path whose canonical spelling, "$.$", the parser then rejects
 FuzzEncryptAtPathArbitraryDocument/d370f7a72740b34b      a flow mapping holding a bare entry, into which the splice wrote a block scalar
 FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host with an empty name, which became an address, a hostname and a hostvars key
 </code></pre>
-<p>The Ansible one is fixed. A group entry of <code>""</code> produced a host whose address, hostname and <code>hostvars</code> key were all the empty string, and the schema accepted all three because each asks for a string; nothing downstream could tell that host from one an operator meant to install. <code>deriveRoles</code> now refuses an empty host name and an empty group name in the mapping.</p>
-<p>The last of those is open. <code>EncryptAtPath</code> writes a literal block scalar into a flow mapping such as <code>{0, pass: 00}</code>, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. <code>inFlowCollection</code> in <code>internal/clustercfg/vaultpath.go</code> is meant to catch exactly this and misses when a bare entry – a key with an implicit null value – precedes the target key. Until it is fixed a plain <code>go test</code> of this package is red, which is the intended state: the corpus entry is the defect report.</p>
+<p>Two are worth the detail. The Ansible one: a group entry of <code>""</code> produced a host whose address, hostname and <code>hostvars</code> key were all the empty string, and the schema accepted all three because each asks for a string; nothing downstream could tell that host from one an operator meant to install. <code>deriveRoles</code> now refuses an empty host name and an empty group name in the mapping.</p>
+<p>The flow-mapping one: <code>EncryptAtPath</code> wrote a literal block scalar into a flow mapping such as <code>{0, pass: 00}</code>, producing a document that no longer parses, with the credential already encrypted into it and the plaintext gone. <code>inFlowCollection</code> in <code>internal/clustercfg/vaultpath.go</code> is what catches this, and it missed when a bare entry – a key with an implicit null value – preceded the target key. That is fixed; the corpus entry is what keeps it fixed.</p>
 <p>Those same failures are also written up as ordinary table cases next to the code they broke – see <code>TestEncryptAtPathReadsBackWhatDecryptWrote</code> and <code>TestCanonicalYAMLPath</code> in <code>internal/clustercfg/vaultpath_test.go</code>. Keep doing both: the corpus file is what stops the target regressing, and the named case with a comment is what explains the defect to the next reader.</p>
 <h2 id="writing-a-target"><a class="header" href="#writing-a-target">Writing a target</a></h2>
 <p>A target is a function taking <code>*testing.F</code>, seeded with <code>f.Add</code> and run with <code>f.Fuzz</code>. The fuzzed arguments may only be <code>[]byte</code>, <code>string</code>, the integer and float types, <code>bool</code>, and <code>rune</code> – no structs, no slices of anything else. Build the structure you need inside the body from those pieces.</p>
@@ -15759,9 +15882,6 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <ul>
 <li><code>distrocfg.marshalRegistriesYAML</code> and <code>quoteRegistryKeys</code> (<code>types/distrocfg/distro_common.go</code>) choose a quoting style for keys the engine reparses – the same shape as the bugs above, over registry names and <code>rewrite</code> regex patterns.</li>
 <li><code>split.SplitFile</code> and <code>split.ReassembleFile</code> are a round trip over content bytes and a chunk size, and <code>ReassembleFile</code> trusts the <code>part000</code> metadata it unmarshals from disk.</li>
-<li><code>cfg.Parse</code>, <code>cfg.ParseMultiDoc</code> and <code>utils.ReadByteStrict</code> take document bytes straight into a third-party parser, which is exactly where the panics found so far have come from.</li>
-<li><code>isCleanPathRegex</code> (<code>cmd/common.go</code>) is a path sanitiser, so the property is that an accepted path, joined to a base and cleaned, stays under that base.</li>
-<li><code>dns.ParseServiceURL</code> against <code>dns.IsServiceURL</code> is a predicate and its implementation, the differential shape.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="goreleaser-release-pipeline"><a class="header" href="#goreleaser-release-pipeline">GoReleaser Release Pipeline</a></h1>
@@ -15775,20 +15895,20 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 <li><strong>Archives</strong> - <code>tar.gz</code> per OS/arch, named after <code>uname</code> conventions (<code>cargoship_Linux_x86_64.tar.gz</code>).</li>
 <li><strong>Packages</strong> - <code>apk</code>, <code>deb</code>, and <code>rpm</code>, from the <code>nfpms</code> section. Packages can be signed when the corresponding signing keys are configured.</li>
 <li><strong>Container images</strong> - four multi-platform manifests covering <code>linux/amd64</code> and <code>linux/arm64</code>: <code>ghcr.io/colonel-byte/cargoship:&lt;tag&gt;</code> (Chainguard static, bare binary), <code>ghcr.io/colonel-byte/cargoship-ubi:&lt;tag&gt;</code> (AlmaLinux, installs the RPM), <code>ghcr.io/colonel-byte/cargoship-deb:&lt;tag&gt;</code> (Debian slim, installs the DEB), and <code>ghcr.io/colonel-byte/cargoship-ansible:&lt;tag&gt;</code> (AlmaLinux, installs the RPM and Ansible dependencies).</li>
-<li><strong>Ansible collection</strong> - <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.</li>
+<li><strong>Ansible collections</strong> - two tarballs, <code>colonel_byte-cargoship-&lt;version&gt;.tar.gz</code> and <code>colonel_byte-zarf-&lt;version&gt;.tar.gz</code>, built from <code>ansible/colonel_byte/cargoship</code> and <code>ansible/colonel_byte/zarf</code> and attached to the release, each with its own cosign bundle. Neither is published to Galaxy: the management node that runs the playbooks is inside the airlock and installs them from the tarballs.</li>
 <li><strong>SBOMs</strong> - one per archive, via Syft.</li>
 <li><strong>Signatures</strong> - cosign <code>sigstore.json</code> bundles over the checksums file and every archive, plus registry signatures over every container image. Package signatures are configured separately through nfpm.</li>
 </ul>
-<h2 id="the-ansible-collection"><a class="header" href="#the-ansible-collection">The Ansible Collection</a></h2>
-<p>The collection is not built by a <code>builds</code> entry, because nothing about it is compiled. <code>hack/ansible-build-collection.sh</code> runs as a <code>before</code> hook, calls <code>ansible-galaxy collection build</code>, writes the tarball to <code>bin/ansible</code>, and signs it when <code>COSIGN_PRIVATE_KEY</code> is set. The <code>release.extra_files</code> globs then attach the tarball and the bundle.</p>
-<p>The script is given the release version and fails when <code>galaxy.yml</code> disagrees with it. release-please keeps that version in step through the <code>extra-files</code> entry in <code>release-please-config.json</code>, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot’s version is not in <code>galaxy.yml</code> and never will be.</p>
+<h2 id="the-ansible-collections"><a class="header" href="#the-ansible-collections">The Ansible Collections</a></h2>
+<p>Neither collection is built by a <code>builds</code> entry, because nothing about a collection is compiled. <code>hack/ansible-build-collection.sh</code> runs as a <code>before</code> hook - once per collection, so twice, taking the collection directory as its third argument - calls <code>ansible-galaxy collection build</code>, writes the tarball to <code>bin/ansible</code>, and signs it when <code>COSIGN_PRIVATE_KEY</code> is set. Four <code>release.extra_files</code> globs then attach both tarballs and both bundles.</p>
+<p>The script is given the release version and fails when that collection’s <code>galaxy.yml</code> disagrees with it. release-please keeps both versions in step through the <code>extra-files</code> entries in <code>release-please-config.json</code>, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot’s version is not in <code>galaxy.yml</code> and never will be.</p>
 <p>The tarball is signed by the script rather than by the <code>signs</code> section, and is absent from <code>checksums.txt</code>, because both of those cover artifacts the pipeline itself produced. Verify it with its bundle:</p>
 <pre><code class="language-sh">cosign verify-blob --key cosign.pub \
   --bundle colonel_byte-cargoship-&lt;version&gt;.tar.gz.sigstore.json \
   colonel_byte-cargoship-&lt;version&gt;.tar.gz
 </code></pre>
 <h2 id="build-matrix"><a class="header" href="#build-matrix">Build Matrix</a></h2>
-<p>The <code>builds</code> section compiles <code>linux</code> and <code>darwin</code> against <code>amd64</code>, <code>arm64</code>, and <code>riscv64</code>. Three settings there matter more than they look:</p>
+<p>The <code>builds</code> section has three entries. <code>cargoship</code> (<code>./cmd/cargoship</code>) compiles <code>linux</code>, <code>darwin</code> and <code>windows</code> against <code>amd64</code>, <code>arm64</code> and <code>riscv64</code>. <code>zarf_init</code> (<code>./cmd/zarf/init</code>) and <code>zarf_package_deploy</code> (<code>./cmd/zarf/deploy</code>) are the <code>colonel_byte.zarf</code> collection’s module files, built for <code>linux</code> only on the same three architectures; the packages install them to <code>/usr/bin</code> and the collection calls them. Three settings there matter more than they look:</p>
 <ul>
 <li><strong><code>CGO_ENABLED=0</code></strong> - produces a statically linked binary. This is what lets the default image sit on <code>cgr.dev/chainguard/static</code>, which ships no libc, no shell, and no package manager; a dynamically linked binary fails there with a confusing <code>no such file or directory</code> on exec.</li>
 <li><strong><code>ldflags -X</code></strong> - stamps <code>config.CLIVersion</code> and <code>config.CLICommit</code>, which is what <code>cargoship version</code> prints.</li>
@@ -15832,7 +15952,7 @@ FuzzAnsibleRequest/1aea00cb191b2f7c                      a group listing a host 
 </ul>
 <p>The images carry no <code>LABEL</code> instructions of their own. Every <code>org.opencontainers.image.*</code> label, <code>base.name</code> and <code>base.digest</code> included, is set by <code>.goreleaser.yaml</code> from the <code>{{ .BaseImage }}</code> and <code>{{ .BaseImageDigest }}</code> templates goreleaser resolves at build time. That is why there is nothing here to drift and no check for it: a hand-written label could disagree with the <code>FROM</code> it describes, and a templated one cannot.</p>
 <p>One base needs more care than the others. <strong><code>cgr.dev/chainguard/static</code> publishes <code>:latest</code> and nothing else</strong> on Chainguard’s free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date - it eventually stops resolving, and the build fails with <code>manifest unknown</code>. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.</p>
-<p><code>.github/dependabot.yaml</code> tracks both directories under its <code>docker</code> ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.</p>
+<p><code>.github/dependabot.yaml</code> tracks all four Dockerfile directories - <code>/containers/ansible</code>, <code>/containers/base</code>, <code>/containers/deb</code>, <code>/containers/ubi</code> - under its <code>docker</code> ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.</p>
 <h3 id="linting"><a class="header" href="#linting">Linting</a></h3>
 <p>Dockerfiles are linted by <a href="https://github.com/hadolint/hadolint">hadolint</a> in two places:</p>
 <ul>
@@ -15998,7 +16118,7 @@ sha256sum /tmp/from-image
 </code></pre>
 <p>Three gotchas:</p>
 <ul>
-<li><strong>Set <code>TMPDIR</code> to a path on a real disk.</strong> The default <code>/run/user/&lt;uid&gt;/tmp</code> is a small tmpfs, and the Go build cache for a full six-target matrix will overrun it. The failure is a flood of <code>no space left on device</code> from the compiler.</li>
+<li><strong>Set <code>TMPDIR</code> to a path on a real disk.</strong> The default <code>/run/user/&lt;uid&gt;/tmp</code> is a small tmpfs, and the Go build cache for the full matrix - nine <code>cargoship</code> targets plus three apiece for the two zarf module files - will overrun it. The failure is a flood of <code>no space left on device</code> from the compiler.</li>
 <li><strong>Do not add <code>--skip=publish</code></strong> if you want images. Under <code>dockers_v2</code> that skips image builds entirely.</li>
 <li><strong><code>--skip=sign</code> also disables package signing</strong>, not just cosign. GoReleaser’s nfpm pipe zeroes all three <code>Signature</code> structs when that skip is set (<code>internal/pipe/nfpm/nfpm.go</code>), so a run that skips signing produces unsigned packages no matter what <code>GPG_KEY_PATH</code> and <code>APK_RSA_KEY_PATH</code> say. To exercise package signing locally, drop <code>sign</code> from the skip list and supply cosign keys too.</li>
 </ul>
@@ -16010,20 +16130,24 @@ sha256sum /tmp/from-image
 <h2 id="the-two-shared-helpers"><a class="header" href="#the-two-shared-helpers">The two shared helpers</a></h2>
 <p>Every <code>EndToEnd*</code> target funnels through one of two functions in <code>magefiles/pkg/testrunner/testrunner.go</code>:</p>
 <ul>
-<li><strong><code>RunE2E</code></strong> – builds the binary for the host’s OS/arch first (<code>go build -a -trimpath -gcflags=... -ldflags=... -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./cmd/cargoship</code>, the same flags <code>mage build:binary</code> uses), then calls <code>RunE2ENoBuild</code>.</li>
+<li><strong><code>RunE2E</code></strong> – builds the binary for the host’s OS/arch first, with the same flags and environment <code>mage build:binary</code> uses (<code>magefiles/pkg/build/build.go</code>): <code>GOOS</code>, <code>GOARCH</code> and <code>CGO_ENABLED=0</code> in the environment, and <code>go build -trimpath -gcflags=all="-l" -ldflags "-s -w -X ...CLIVersion -X ...CLICommit" -o build/cargoship_&lt;goos&gt;_&lt;goarch&gt; ./cmd/cargoship</code>. There is no <code>-a</code>; see <a href="#build-flags-and-environment">build-flags</a> for why it was removed. Then it calls <code>RunE2ENoBuild</code>.</li>
 <li><strong><code>RunE2ENoBuild</code></strong> – creates <code>build/tmp</code>, then runs <code>go test -timeout=&lt;T&gt; -count=1 -v &lt;pkg&gt;</code> with <code>CARGOSHIP_E2E_TMPDIR</code> and <code>TMPDIR</code> both pointed at that directory.</li>
 </ul>
 <p>The manual commands below spell both steps out for each target, so <code>-mod=vendor</code> is included explicitly even though the mage helper relies on the repo’s <code>go env GOFLAGS</code> to add it.</p>
 <h2 id="testendtoend"><a class="header" href="#testendtoend"><code>Test.EndToEnd</code></a></h2>
 <pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
-$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
+$ CGO_ENABLED=0 go build -trimpath -gcflags=all="-l" \
+    -ldflags "-s -w -X github.com/colonel-byte/cargoship/config.CLIVersion=unset-development-only -X github.com/colonel-byte/cargoship/config.CLICommit=$(git rev-parse --short HEAD)" \
+    -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=1h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/...
 </code></pre>
 <p>Runs both e2e groups, including the example packages that pull real engine artifacts and images. Needs Docker.</p>
 <h2 id="testendtoendnoncluster"><a class="header" href="#testendtoendnoncluster"><code>Test.EndToEndNonCluster</code></a></h2>
-<pre><code class="language-console">$ go build -a -trimpath -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
+<pre><code class="language-console">$ CGO_ENABLED=0 go build -trimpath -gcflags=all="-l" \
+    -ldflags "-s -w -X github.com/colonel-byte/cargoship/config.CLIVersion=unset-development-only -X github.com/colonel-byte/cargoship/config.CLICommit=$(git rev-parse --short HEAD)" \
+    -o "build/cargoship_$(go env GOOS)_$(go env GOARCH)" ./cmd/cargoship
 $ mkdir -p build/tmp
 $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
     go test -mod=vendor -timeout=30m -count=1 -v -short github.com/colonel-byte/cargoship/test/e2e/noncluster/...
@@ -16044,6 +16168,36 @@ $ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_ST
     go test -mod=vendor -timeout=30m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
 </code></pre>
 <p>This is the one CI actually runs, on every pull request.</p>
+<h2 id="testendtoendclusterdryrun"><a class="header" href="#testendtoendclusterdryrun"><code>Test.EndToEndClusterDryRun</code></a></h2>
+<p><code>EndToEndClusterStage</code>’s setup with <code>-run</code> narrowing the suite to the dry-run walk:</p>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_STAGE_ONLY=1 \
+    go test -mod=vendor -timeout=30m -count=1 -v -run 'TestClusterPhases/dryrun' github.com/colonel-byte/cargoship/test/e2e/cluster/...
+</code></pre>
+<p>Starts no engine, so it is the fastest way to exercise <code>--dry-run</code> against real hosts.</p>
+<h2 id="testendtoendclusterupgrade"><a class="header" href="#testendtoendclusterupgrade"><code>Test.EndToEndClusterUpgrade</code></a></h2>
+<p><code>EndToEndCluster</code> with the upgrade walk turned on and a three-hour budget, because it installs a second complete set of engine images on every node:</p>
+<pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" CARGOSHIP_E2E_UPGRADE=1 \
+    go test -mod=vendor -timeout=3h -count=1 -v github.com/colonel-byte/cargoship/test/e2e/cluster/...
+</code></pre>
+<p>No CI job runs this; it is the only way to cover the upgrade phases.</p>
+<h2 id="testendtoendzarf"><a class="header" href="#testendtoendzarf"><code>Test.EndToEndZarf</code></a></h2>
+<p>Deletes any leftover k3d clusters, builds the two zarf module wrapper binaries (<code>ZarfModules</code> in <code>magefiles/pkg/build/zarfmodules.go</code> - no version is stamped in, since a module file reports what zarf did), then runs the zarf module suite on a 90-minute budget:</p>
+<pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
+$ CGO_ENABLED=0 go build -trimpath -o build/zarf_init ./cmd/zarf/init
+$ CGO_ENABLED=0 go build -trimpath -o build/zarf_package_deploy ./cmd/zarf/deploy
+$ mkdir -p build/tmp
+$ CARGOSHIP_E2E_TMPDIR="$PWD/build/tmp" TMPDIR="$PWD/build/tmp" \
+    go test -mod=vendor -timeout=90m -count=1 -v github.com/colonel-byte/cargoship/test/e2e/zarf/...
+</code></pre>
+<p>Needs <code>k3d</code>, a <code>zarf</code> on PATH, <code>ansible-playbook</code>, Docker, and the network on the first run to pull the packages. Every test skips with a reason when one is missing.</p>
+<h2 id="testcleanzarfclusters"><a class="header" href="#testcleanzarfclusters"><code>Test.CleanZarfClusters</code></a></h2>
+<pre><code class="language-console">$ for c in zarf zarf-local-storage; do k3d cluster delete "$c" 2&gt;/dev/null; done
+</code></pre>
+<p>The cleanup <code>EndToEndZarf</code> runs before it starts, exposed on its own. The cluster names are <code>K3dClusters</code> in <code>magefiles/pkg/testrunner/testrunner.go</code>. A cluster that is not there is not an error.</p>
 <h2 id="testcleancluster"><a class="header" href="#testcleancluster"><code>Test.CleanCluster</code></a></h2>
 <pre><code class="language-console">$ ids=$(docker ps -aq --filter "label=io.k0sproject.bootloose.owner=bootloose"); [ -n "$ids" ] &amp;&amp; docker rm -fv $ids
 </code></pre>
@@ -16109,7 +16263,7 @@ mage dev:dnfPins                # query AlmaLinux repodata and bump dnf/microdnf
 <li><code>EndToEnd</code> - Runs the whole e2e suite: both the cluster and non-cluster groups, including the example packages that pull ~1.5GB of engine artifacts and images. Needs Docker.</li>
 <li><code>EndToEndNonCluster</code> - Runs the group that needs no cluster: the misc and package command groups. <code>-short</code> additionally skips the example packages, so this finishes in seconds. Mirrors the <code>e2e-noncluster</code> CI job.</li>
 <li><code>EndToEndCluster</code> - Runs only the group that needs a bootloose cluster: the install command group. Needs Docker. It builds nothing; that suite calls the cargoship packages directly rather than driving a binary.</li>
-<li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node, and provisions five machines rather than ten.</li>
+<li><code>EndToEndClusterStage</code> - Runs the same suite as <code>EndToEndCluster</code>, but stops at the boundary phase/60 draws: it stages the files and renders the engine config without starting the engine on any node. It provisions a different five machines rather than fewer: <code>stageOS</code> is one per OS family per role, including a Fedora controller and the upload-only Alpine host, where the full walk’s <code>k3sOS</code> is a single Ubuntu controller and four workers.</li>
 <li><code>EndToEndClusterDryRun</code> - Runs only the dry-run walk of the cluster suite: a whole apply, prepare and reset with <code>--dry-run</code> against the staging cluster, asserting the hosts are left as they were found and that the read-only phases still gathered their facts. Starts no engine, so it is the fastest way to exercise the flag against real hosts.</li>
 <li><code>EndToEndZarf</code> - Runs the zarf Ansible module suite: two k3d clusters – one with a storage provider, one without – and the <a href="https://github.com/colonel-byte/uds-bundles/blob/main/upstream/init-local-path/uds-bundle.yaml"><code>init-local-path</code> uds-bundle</a>’s four packages walked across each by <code>colonel_byte.zarf</code>. It builds both module wrapper binaries first. Needs <code>k3d</code>, a <code>zarf</code> on PATH, <code>ansible-playbook</code>, Docker, and the network to pull the packages the first time; every test skips with a reason when one is missing. See <a href="#driving-zarf-from-ansible">zarf-ansible-module</a>.</li>
 <li><code>CleanZarfClusters</code> - Removes the k3d clusters <code>EndToEndZarf</code> creates. That target does this before it runs; use this one for a run that was killed partway through.</li>
@@ -16166,7 +16320,7 @@ mage release:tofuProvider 0.1.0           # build it and push it to the default 
 <p>Distros and their flavors are declared together in <code>exampleDistros</code> in <code>magefiles/pkg/gen/examples/distros.go</code>. Flavors differ by more than their image list: cilium replaces kube-proxy (<code>disable-kube-proxy: true</code>) and is configured through an <code>rke2-cilium</code> HelmChartConfig manifest, while canal and flannel run alongside kube-proxy and carry no manifest of their own. Adding a CNI means adding a flavor entry there, and a <code>{{ if }}</code> in that distro’s template for anything specific to it.</p>
 <p>A flavor also names values templates, which are rendered next to <code>distro.yaml</code> under the same name minus <code>.tmpl</code>. They are grouped per distro rather than per flavor – <code>magefiles/templates/rke2/</code> and <code>magefiles/templates/k3s/</code> – because a package carries a single schema, so everything its flavors expose has to be described in one document. The templates are rendered against the same <code>exampleVersion</code> the definition is, so a <code>{{ if eq .CNI "cilium" }}</code> in them covers what only the cilium flavors expose. Those values are what let one example stand in for several: which bundled charts the engine installs, and for cilium encryption, L2 announcements, and the Hubble UI, are chosen at install time through the cluster’s <code>spec.config.values</code> rather than baked into a separate flavor at render time.</p>
 <p>The rendered schema suggests <code>addons.disabled</code> values from <code>exampleVersion.Addons</code>, which is that distro/minor’s packaged-component vocabulary as <code>EngineConfig</code> extracted it – so a v1.37 example offers <code>rke2-gateway-api-crd</code> and a v1.34 one does not. They are <code>examples</code> rather than an <code>enum</code>: the vocabulary comes from the engine’s <code>--disable</code> help text, which does not name every chart the build bundles, so restricting to it would reject charts the engine would have honored. A version whose source has never been pulled has no vocabulary, and rendering its values files fails rather than writing a values file an editor can offer nothing for. Pull that minor line (<code>Generate.PullEngineSource</code>) and re-run <code>EngineConfig</code> first.</p>
-<p>A flavor also decides which architectures its examples target and which releases it covers. <code>arches</code> lists the architectures, defaulting to amd64 alone; <code>minors</code> limits the flavor to named minor lines, defaulting to every line the distro renders; and <code>name</code> is what follows the distro in <code>metadata.name</code> when the CNI is not the point. The multi-architecture flavors use all three: they target amd64 and arm64, cover only <code>v1_36</code>, and are named <code>multi</code>, because they exist to show what a package covering several architectures looks like rather than to cover every release. Everything a distro publishes once per architecture – RKE2’s versioned RPMs and release tarball, the k3s binary and its digest – hangs off <code>Arches</code> on the rendered version rather than off the version itself, so the templates range over architectures whether there is one or several, and a single-architecture example renders exactly as it did before, without an <code>arch</code> selector on anything.</p>
+<p>A flavor also decides which architectures its examples target and which releases it covers. <code>arches</code> lists the architectures, defaulting to amd64 alone; <code>minors</code> limits the flavor to named minor lines, defaulting to every line the distro renders; and <code>name</code> is what follows the distro in <code>metadata.name</code> when the CNI is not the point. The multi-architecture flavors use all three: they target amd64 and arm64, cover the minor lines named in <code>exampleMultiMinors</code> (currently <code>v1_32</code> through <code>v1_37</code>, in <code>magefiles/pkg/gen/examples/distros.go</code>), and are named <code>multi</code>, because they exist to show what a package covering several architectures looks like. Everything a distro publishes once per architecture – RKE2’s versioned RPMs and release tarball, the k3s binary and its digest – hangs off <code>Arches</code> on the rendered version rather than off the version itself, so the templates range over architectures whether there is one or several, and a single-architecture example renders exactly as it did before, without an <code>arch</code> selector on anything.</p>
 <p>What differs between the distros themselves sits in three hooks on the distro entry, so the rendering itself stays single-copy: <code>derive</code> builds the URLs only that distro has, <code>probe</code> names the URL whose absence retires a build, and <code>fetch</code> pulls anything else only the release can answer. RKE2 installs versioned <code>rke2-common</code>/<code>server</code>/<code>agent</code> RPMs from <code>rpm.rancher.io</code> and splits its images across a core manifest plus one per CNI. k3s installs a single binary straight from its GitHub release, ships flannel inside that binary - so <code>k3s-images.txt</code> is the whole list and there is nothing per-CNI to fetch - and publishes <code>sha256sum-&lt;arch&gt;.txt</code>, which is where each binary’s <code>shasum</code> comes from rather than downloading 70 MB per version and architecture to hash it. Both distros install their distro’s selinux policy RPM.</p>
 <p>k3s examples share one copy of the unit files and killall script, kept in <code>example/k3s/core/</code> and referenced as <code>../../../k3s/core/…</code>; relative <code>source</code> paths resolve against the directory holding <code>distro.yaml</code>.</p>
 <p>Each RPM entry also carries a <code>shasum</code>, so cargoship can verify the file it downloads. Hashing an RPM means downloading it, and <code>rke2-common</code> alone is around 29 MB, so the digests are cached in <code>example/shasums.json</code>. It is a committed map keyed by file name, each entry holding the <code>urls</code> it has been fetched from and its <code>sha256</code>, so the file reads as an inventory of what the examples install. Only files missing from it are fetched, which makes a re-render free and a new release cost just its own four RPMs. An entry whose URL is not one already recorded against that digest is re-hashed rather than trusted, so moving a file cannot hand back a stale digest. Delete an entry to force it to be re-hashed.</p>
@@ -16209,13 +16363,13 @@ mage generate:examples
 <ul>
 <li><strong><code>core/core.go</code>:</strong> Configures the bootstrap process and imports distro-specific modules to register Go side-effects before task execution. Lives in its own subpackage (rather than directly in <code>magefiles/</code>) so it does not collide with the <code>func main()</code> that the <code>mage</code> CLI generates on the fly - see <a href="#running-mage-directly-without-the-cli">Running Mage Directly</a> below.</li>
 <li><strong><code>build.go</code>:</strong> Entrypoint for the <code>Build</code> namespace (<code>Build.Binary</code>, <code>Build.All</code>, <code>Build.Examples</code>), delegating to <code>magefiles/pkg/build</code>.</li>
-<li><strong><code>dev.go</code>:</strong> Entrypoint for the <code>Dev</code> namespace (<code>Dev.Clean</code>, <code>Dev.Tidy</code>, <code>Dev.Digest</code>, <code>Dev.DnfPins</code>, <code>Dev.WriteOSVOverrides</code>, <code>Dev.VerifyVendor</code>).</li>
+<li><strong><code>dev.go</code>:</strong> Entrypoint for the <code>Dev</code> namespace (<code>Dev.Clean</code>, <code>Dev.Tidy</code>, <code>Dev.Vendor</code>, <code>Dev.Digest</code>, <code>Dev.DnfPins</code>, <code>Dev.WriteOSVOverrides</code>, <code>Dev.VerifyVendor</code>).</li>
 <li><strong><code>generate.go</code>:</strong> Entrypoint for the <code>Generate</code> namespace (<code>Generate.Document</code>, <code>Generate.Schema</code>, <code>Generate.Completion</code>, <code>Generate.EngineConfig</code>, <code>Generate.Examples</code>, etc.), delegating to <code>magefiles/pkg/gen/...</code>.</li>
 <li><strong><code>release.go</code>:</strong> Entrypoint for the <code>Release</code> namespace (<code>Release.TofuProvider</code>, <code>Release.TofuProviderLayout</code>, <code>Release.TofuProviderDev</code>), delegating to <code>magefiles/pkg/release</code>.</li>
-<li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterDryRun</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.CleanCluster</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
+<li><strong><code>test.go</code>:</strong> Entrypoint for the <code>Test</code> namespace (<code>Test.Unit</code>, <code>Test.EndToEnd</code>, <code>Test.EndToEndNonCluster</code>, <code>Test.EndToEndCluster</code>, <code>Test.EndToEndClusterStage</code>, <code>Test.EndToEndClusterDryRun</code>, <code>Test.EndToEndClusterUpgrade</code>, <code>Test.EndToEndZarf</code>, <code>Test.CleanCluster</code>, <code>Test.CleanZarfClusters</code>, <code>Test.Fuzz</code>), delegating to <code>magefiles/pkg/testrunner</code>.</li>
 <li><strong><code>pkg/build/</code>:</strong> Binary compilation logic, flag assembly, and example package builds.</li>
 <li><strong><code>pkg/devtools/</code>:</strong> Developer tooling packages, including <code>dnfpins</code> (AlmaLinux repomd XML parser and pin updater) and <code>osv</code> (OpenSSF Scorecard vendor overrides).</li>
-<li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), and <code>schema/</code> (JSON schema reflection and docs).</li>
+<li><strong><code>pkg/gen/</code>:</strong> Generator implementations: <code>completion/</code> (shell completion scripts), <code>docs/</code> (Cobra command docs and mdBook pages), <code>engineconfig/</code> (k3s/RKE2 source pins and struct codegen), <code>examples/</code> (Rancher and upstream distro examples), <code>schema/</code> (JSON schema reflection and docs), and <code>zarfflags/</code> (the zarf flag fixtures under <code>internal/zarfmod/testdata</code>).</li>
 <li><strong><code>pkg/testrunner/</code>:</strong> Test runner implementations for e2e suites and fuzz corpus replay.</li>
 <li><strong><code>pkg/util/</code>:</strong> Shared helpers for aligned table formatting, git commit resolution, and clean build tasks.</li>
 <li><strong><code>templates/</code>:</strong> Text templates the generation targets render: <code>rke2-distro.yaml.tmpl</code>, <code>k3s-distro.yaml.tmpl</code>, and <code>upstream-distro.yaml.tmpl</code> (rendered once per CNI flavor), plus the per-distro values templates a flavor ships beside its <code>distro.yaml</code> (<code>rke2/values.yaml.tmpl</code>, <code>rke2/values.schema.json.tmpl</code>, and the <code>k3s/</code> equivalents).</li>
@@ -16419,24 +16573,32 @@ autoload -U compinit &amp;&amp; compinit
 <h1 id="third-party-engine-source-thirdparty-src"><a class="header" href="#third-party-engine-source-thirdparty-src">Third-Party Engine Source (<code>thirdparty-src/</code>)</a></h1>
 <p>This document explains what lives under <code>thirdparty-src/</code> and why it’s handled differently from the rest of the repository.</p>
 <h2 id="what-it-is"><a class="header" href="#what-it-is">What it is</a></h2>
-<p><code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> holds raw, unmodified source files pulled from an upstream engine repo (k3s and RKE2) at an exact tag - e.g. <code>thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}</code>, pulled from k3s-io/k3s at tag <code>v1.35.3+k3s1</code>. <code>version</code> is truncated to the minor version (<code>v1_35</code>, not the full <code>v1.35.3-k3s1</code> patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. RKE2 additionally pulls <code>zz_root.go</code> and <code>zz_k3sopts.go</code> - see “RKE2’s flag composition” below. Both distros also pull the file that declares their packaged components (<code>zz_stage.go</code> for k3s, <code>zz_types.go</code> for RKE2) - see “Packaged components (<code>--disable</code>)” below. The <code>zz_</code> prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under <code>pkg/engineconfig/gen</code>.</p>
+<p><code>thirdparty-src/&lt;distro&gt;/&lt;version&gt;/</code> holds raw, unmodified source files pulled from an upstream repo at an exact tag - e.g. <code>thirdparty-src/k3s/v1_35/{zz_server.go,zz_agent.go}</code>, pulled from k3s-io/k3s at tag <code>v1.35.3+k3s1</code>. <code>version</code> is truncated to the minor version (<code>v1_35</code>, not the full <code>v1.35.3-k3s1</code> patch tag): patch releases are assumed not to change the flag set, so one pull/generate covers every patch in that minor line. The <code>zz_</code> prefix marks these as pulled/tool-managed rather than hand-authored, the same convention used for the generated structs under <code>pkg/engineconfig/gen</code>.</p>
+<p>Three repos are pulled, one per <code>&lt;distro&gt;</code> directory, listed in <code>thirdparty-src/pins.json</code>:</p>
+<ul>
+<li><strong><code>k3s</code></strong> - k3s-io/k3s. Pulls <code>zz_server.go</code> and <code>zz_agent.go</code> for the flag set, plus <code>zz_stage.go</code>, which declares the packaged components - see “Packaged components (<code>--disable</code>)” below.</li>
+<li><strong><code>rke2</code></strong> - rancher/rke2. The same two, plus <code>zz_root.go</code> and <code>zz_k3sopts.go</code> for its flag composition - see “RKE2’s flag composition” below - and <code>zz_types.go</code> for its packaged components.</li>
+<li><strong><code>upstream</code></strong> - kubernetes/kubernetes. Not an engine: it supplies the kubeadm API surface the <code>upstream</code> distro’s engine config is validated against, as <code>zz_constants.go</code> and <code>zz_types.go</code>. See <code>pkg/engineconfig/gen/upstream/</code>.</li>
+</ul>
+<p>Everything below is about the two engine pulls unless it says otherwise.</p>
 <p>These files exist so <code>pkg/engineconfig/extract</code> can statically parse them with <code>go/ast</code> to recover the <code>urfave/cli</code> flag declarations k3s/RKE2 ships for a given version. That, in turn, lets <code>mage generate:engineConfig</code> (see <code>magefiles/pkg/gen/engineconfig/engineconfig.go</code>) generate a typed Go struct describing the valid <code>config.yaml</code> keys for that version - see <code>docs/agent/design-config-codegen.md</code> for the full design rationale.</p>
 <h2 id="why-source-files-instead-of-a-module-dependency"><a class="header" href="#why-source-files-instead-of-a-module-dependency">Why source files instead of a module dependency</a></h2>
 <p>k3s and RKE2 are not safe to <code>go get</code>/import as library dependencies: their <code>go.mod</code> files carry <code>replace</code> directives that would leak into (and corrupt) this module’s own dependency graph (see golang/go#30354). Statically parsing their source text with <code>go/parser</code> sidesteps that entirely - the files are never compiled, never imported, and never linked into any Cargoship binary. They exist purely as text for the extractor to read.</p>
 <h2 id="why-thirdparty-src-has-its-own-gomod"><a class="header" href="#why-thirdparty-src-has-its-own-gomod">Why <code>thirdparty-src/</code> has its own <code>go.mod</code></a></h2>
 <p>Because these files reference packages (<code>github.com/urfave/cli/v2</code>, <code>github.com/k3s-io/k3s/pkg/version</code>, …) that this repository does not vendor, letting the main module’s tooling discover them causes real breakage: <code>go build ./...</code>, <code>go vet</code>, and IDE tooling (gopls) all try to resolve those imports and fail.</p>
 <p><code>thirdparty-src/go.mod</code> declares a separate, empty module so the Go toolchain treats <code>thirdparty-src/</code> as outside the main module boundary. <code>go build ./...</code>/<code>go vet</code> from the repo root no longer descend into it. IDEs still open a second module context for it, which can surface unresolved-import diagnostics on the files themselves; the workspace’s <code>.vscode/settings.json</code> sets <code>gopls.directoryFilters</code> to <code>-thirdparty-src</code> to stop gopls from loading that module at all.</p>
-<p>The module boundary is not honoured by every tool. CodeQL’s Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above - mis-resolving some of them (<code>github.com/k3s-io/k3s</code> to <code>v1.21.9</code>, whose <code>go.mod</code> declares its path as <code>github.com/rancher/k3s</code>), running <code>go mod tidy -e</code>, and downloading modules this repository deliberately does not depend on. CodeQL’s <code>paths-ignore</code> cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. <code>.github/workflows/codeql.yaml</code> therefore uses <code>build-mode: manual</code> and builds <code>./src/... .</code> rather than <code>./...</code>, which keeps the toolchain inside the main module. Anything else added to CI that walks for <code>go.mod</code> files needs the same treatment.</p>
+<p>The module boundary is not honoured by every tool. CodeQL’s Go autobuilder walks the whole checkout looking for module roots rather than building the main module, finds this one, and tries to resolve the imports above - mis-resolving some of them (<code>github.com/k3s-io/k3s</code> to <code>v1.21.9</code>, whose <code>go.mod</code> declares its path as <code>github.com/rancher/k3s</code>), running <code>go mod tidy -e</code>, and downloading modules this repository deliberately does not depend on. CodeQL’s <code>paths-ignore</code> cannot exclude the directory, because that filter does not apply to languages analyzed by building them, and Go is one. <code>.github/workflows/codeql.yaml</code> therefore uses <code>build-mode: manual</code> and spells the package list out - <code>./api/... ./cmd/... ./config/... ./fuzz/... ./internal/... ./pkg/... ./types/... .</code> - rather than <code>./...</code>, which keeps the toolchain inside the main module. Anything else added to CI that walks for <code>go.mod</code> files needs the same treatment.</p>
 <h2 id="layout-3"><a class="header" href="#layout-3">Layout</a></h2>
 <pre><code>thirdparty-src/
-  &lt;distro&gt;/                  # k3s or rke2
+  &lt;distro&gt;/                  # k3s, rke2, or upstream (kubernetes/kubernetes)
     &lt;version&gt;/                # e.g. v1_35 (minor version only, see above)
       zz_server.go             # verbatim upstream source
       zz_agent.go
       zz_root.go               # rke2 only -- commonFlag, shared by server/agent
       zz_k3sopts.go            # rke2 only -- K3SFlagOption/copyFlag/dropFlag/hideFlag
       zz_stage.go              # k3s only  -- DisableItems, the packaged components
-      zz_types.go              # rke2 only -- DisableItems/CNIItems/IngressItems
+      zz_types.go              # rke2 -- DisableItems/CNIItems/IngressItems; upstream -- kubeadm v1beta4 types
+      zz_constants.go          # upstream only -- kubeadm constants
       SOURCE.txt               # repo, tag, resolved commit, and pulled file list
   pins.json                    # the pinned tags and file lists, see below
   go.mod                       # module boundary marker, see above
@@ -16618,12 +16780,6 @@ go test ./cmd/cargoship/                # holds that the CLI does not reach the 
 <h2 id="publishing-1"><a class="header" href="#publishing-1">Publishing</a></h2>
 <p><code>mage release:tofuProvider &lt;version&gt;</code> builds every published platform and pushes an OCI image index to <code>ghcr.io</code> as an OpenTofu provider mirror; <code>mage release:tofuProviderLayout &lt;version&gt;</code> stops before the push and leaves the artifact under <code>build/</code> to inspect. See <a href="#mage-tasks-and-automation">mage</a> and <a href="#release-tofu-provideryaml">release-tofu-provider</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="check-ansible-requirementsyaml"><a class="header" href="#check-ansible-requirementsyaml">check-ansible-requirements.yaml</a></h1>
-<p><strong>Triggers:</strong> pull requests, merge groups.</p>
-<p>Checks that every pinned Ansible collection version supports the <code>ansible-core</code> range declared in the collection’s <code>meta/runtime.yml</code>. It does this by asking galaxy.ansible.com what each pinned version’s <code>requires_ansible</code> field says, via <code>mage test:ansibleRequirements</code>.</p>
-<p>This is the one check workflow that reaches the network, since no dependency bot can validate this constraint on its own. It does not check whether pins are the newest available — an upstream release from this morning should not fail an unrelated PR. Run <code>mage generate:ansibleRequirements</code> locally to move pins forward.</p>
-<p>See <code>docs/agent/choice-ansible-collection-pins.md</code> for the reasoning.</p>
-<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="check-go-modyaml"><a class="header" href="#check-go-modyaml">check-go-mod.yaml</a></h1>
 <p><strong>Triggers:</strong> pull requests, merge groups.</p>
 <p>Two checks that keep the module graph and its vendored security metadata honest:</p>
@@ -16682,7 +16838,7 @@ go test ./cmd/cargoship/                # holds that the CLI does not reach the 
 <li><strong>e2e-noncluster</strong> (needs build-e2e) - downloads that binary and runs the non-cluster e2e test groups (misc and package commands), which need no Docker/bootloose infrastructure. Uses <code>-short</code> to additionally skip example packages, which would otherwise pull ~1.5GB of engine artifacts and images.</li>
 <li><strong>binary-size</strong> (needs build-e2e) - compares the PR’s binary size against the latest release’s binary and posts the diff as a sticky PR comment. Pull requests only; there is no pull request to comment on in a merge group.</li>
 </ol>
-<p>The cluster-dependent e2e group is deliberately not run here - it needs Docker, provisions ten containers, and installs RKE2 on nine of them, so it lives in its own workflow, <code>e2e-cluster.yaml</code>, on its own trigger.</p>
+<p>The cluster-dependent e2e group is deliberately not run here - it needs Docker and provisions five containers, so it lives in its own workflow, <code>e2e-cluster.yaml</code>, on its own trigger. That workflow runs only the staging half, which starts no engine; the full walk installs single-controller k3s across its five machines and runs locally, not in CI.</p>
 <p><code>build-e2e</code> and <code>e2e-noncluster</code> are required status checks, which is why the <code>merge_group</code> trigger is here and why neither trigger carries a path filter. A path-filtered required check reports nothing at all on a change that only touches the ignored paths, so the check stays pending and the pull request can never be queued. The workflow used to skip <code>CODEOWNERS</code>-only changes; it now builds those too, which costs one build in the rare case and removes the stall.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="fix-vendor-osvyaml"><a class="header" href="#fix-vendor-osvyaml">fix-vendor-osv.yaml</a></h1>
@@ -16770,6 +16926,14 @@ go test ./cmd/cargoship/                # holds that the CLI does not reach the 
 <p>These Dockerfiles are written for GoReleaser’s <code>dockers_v2</code> pipe, not a plain <code>docker build</code> - several <code>COPY</code> nfpm-produced <code>.rpm</code>/<code>.deb</code> packages and extra files that only GoReleaser stages. That pipe has no per-image build flag, so a snapshot build always builds all four images together; there’s no cheaper way to build “just the one that changed.”</p>
 <p><code>labeled</code> is included in <code>types</code> because Dependabot’s <code>docker</code> label is applied <em>after</em> the PR opens - without it, the <code>if</code> condition would be evaluated (and fail) on the <code>opened</code> event before the label exists, and nothing would re-trigger once it’s added.</p>
 <p><code>--snapshot</code> skips publish/validate/announce entirely - nothing is pushed anywhere.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="unit-testsyaml"><a class="header" href="#unit-testsyaml">unit-tests.yaml</a></h1>
+<p><strong>Triggers:</strong> pull requests, merge groups.</p>
+<p>Runs the fast test suites on a single <code>ubuntu-latest</code> runner, in one <code>unit</code> job with two steps.</p>
+<p>The first step is <code>go run ./magefiles/core test:unit</code>, which is everything except the two e2e groups - those have runners of their own in <code>e2e.yaml</code> and <code>e2e-cluster.yaml</code>, drive <code>./test/...</code>, and need Docker and the better part of an hour. See <code>Test.Unit</code> in <code>magefiles/test.go</code> for the package list that leaves.</p>
+<p>The second step replays the fuzz seed corpus with <code>test:fuzz</code>. It takes about a second and needs nothing the first step did not already need, so it rides along here rather than paying for a runner of its own. This is the only job that runs the <code>fuzz/</code> package - see <a href="#running-the-fuzz-tests"><code>../dev/fuzz-tests.md</code></a>.</p>
+<p>Both steps run fully offline (<code>GOFLAGS=-mod=vendor</code>, <code>GOPROXY=off</code>, <code>GOSUMDB=off</code>, <code>GOTOOLCHAIN=local</code>), so accidental network access fails fast rather than passing on a runner and failing on an air-gapped management node. Both invoke the mage target through <code>go run ./magefiles/core</code> rather than a <code>mage</code> binary, which builds from <code>vendor/</code> and needs nothing installed on the runner.</p>
+<p>Concurrency is grouped per ref with <code>cancel-in-progress</code>, so a new push supersedes an in-flight run. Default permissions are <code>contents: read</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="ai-usage-in-cargoships-development"><a class="header" href="#ai-usage-in-cargoships-development">AI usage in cargoship’s development</a></h1>
 <p>This document discloses how AI coding agents are used to build cargoship. It is not a CycloneDX ML-BOM or SPDX AI profile - those describe AI/ML models and datasets shipped <em>inside</em> a product, and cargoship has none: it’s an Ansible/Kubernetes deployment CLI with no inference or model-serving code of its own. What follows instead is a disclosure of the tools used to <em>write</em> cargoship, in the same spirit as the supply-chain artifacts described in <a href="#security-policy">the security policy</a> - an SBOM discloses what’s in a release; this discloses how the release was produced.</p>
@@ -17151,7 +17315,8 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>Configuring rke2 to use the <code>native</code> snapshotter instead was the alternative. It was rejected because it changes what is under test: the suite would then be proving that rke2 installs correctly in a configuration no real deployment uses, and the overlayfs snapshotter is the one that ships.</p>
 <p>This fix is unverified. It addresses the exact error in the logs and it is the standard remedy, but confirming it costs a full CI run, and the split is what makes shipping it unconfirmed reasonable – if it does not work, the stage job still covers the phases that do not depend on it.</p>
 <h2 id="two-ci-jobs-rather-than-one-matrix"><a class="header" href="#two-ci-jobs-rather-than-one-matrix">Two CI jobs rather than one matrix</a></h2>
-<p><code>e2e-cluster-stage</code> and <code>e2e-cluster</code> are separate jobs with duplicated steps. A matrix over a <code>mode</code> dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagree on into an expression over the matrix value. They disagree on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differ by a factor of two because that difference is the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.</p>
+<p>While both jobs existed, <code>e2e-cluster-stage</code> and <code>e2e-cluster</code> were separate jobs with duplicated steps. A matrix over a <code>mode</code> dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagreed on into an expression over the matrix value. They disagreed on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differed by a factor of two because that difference was the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.</p>
+<p>Only <code>e2e-cluster-stage</code> is left, for the reason the next section gives, so the question is moot unless the full-install job ever comes back.</p>
 <p>Both jobs sat behind the same <code>e2e-cluster</code> label at first. The point of the stage job was that it is cheap enough to run unconditionally, and the intent was to drop its <code>if:</code> once a few runs showed what it actually cost and how steady it was. That data came in, and it went the way this section expected: the stage job is cheap and steady. It now runs on every pull request, ungated.</p>
 <h2 id="the-engine-bootstrap-job-left-ci-entirely"><a class="header" href="#the-engine-bootstrap-job-left-ci-entirely">The engine-bootstrap job left CI entirely</a></h2>
 <p>The full-install job (<code>e2e-cluster</code>, walking the engine half through bootstrap) did not get the same answer. Even after switching its inventory from the three-controller rke2 topology to the single-controller k3s one to remove the etcd quorum timeouts, the job was still not reliable enough on a free hosted runner to be worth keeping as a CI check – the free tier is not the environment to run a real cluster bootstrap in, independent of which distro is installed.</p>
@@ -17188,7 +17353,7 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p>If some future case genuinely needs an unverifiable overridden download, it needs an explicit opt-out flag with a name that says what it gives up, and a line in the build log every time it fires. It does not need this check quietly deleted.</p>
 <h2 id="what-the-record-is-for"><a class="header" href="#what-the-record-is-for">What the record is for</a></h2>
 <p>Because the checksum is mandatory, <code>.build.fileSources</code> can record it next to the mirror each file came from, and every entry is then a complete claim: these bytes, from this place, matching this digest. That is only worth writing down because the refusal above guarantees the digest exists. Drop the refusal and the provenance record degrades into a list of URLs nobody can check.</p>
-<h2 id="see-also-25"><a class="header" href="#see-also-25">See also</a></h2>
+<h2 id="see-also-26"><a class="header" href="#see-also-26">See also</a></h2>
 <ul>
 <li><code>pkg/fileoverride</code> – the matcher, and why it parses URLs instead of comparing string prefixes.</li>
 <li><a href="#file-override-guide"><code>docs/guides/file-override.md</code></a> – the user-facing guide.</li>
@@ -17419,8 +17584,9 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <p><strong>The machine is provisioned on first use, not in <code>TestMain</code>.</strong> A run that never reaches the join walk starts one fewer container. The new cluster object replaces <code>testCluster</code>, because bootloose finds a cluster’s machines by walking the config it was built from rather than by asking Docker: the object built from the five-machine config would leave the sixth container behind on shutdown.</p>
 <h2 id="walking-the-upgrade-and-where-it-starts"><a class="header" href="#walking-the-upgrade-and-where-it-starts">Walking the upgrade, and where it starts</a></h2>
 <p>On a fresh install <code>phase/66_upgrade_controller.go</code> and <code>phase/67_upgrade_worker.go</code> claim no hosts, and the config-sync phases find no drift. The apply walk asserts exactly that – correctly, it is the routing that matters – but it means the code inside those phases was never executed by any test. Draining a node, stopping the service, running the install hook, waiting for Ready and uncordoning is the most destructive sequence in the phase list and the only one with no coverage at all.</p>
-<p><code>UpgradePhaseSuite</code> closes that. It builds a second package from <code>example/rke2-cilium/v1_35/v1.35.0-rke2r3</code> and walks the phases against the cluster the walks before it left running.</p>
-<p><strong>The target is the next patch of the same minor version.</strong> <code>v1.35.0-rke2r1</code> and <code>v1.35.0-rke2r3</code> differ in the engine tarball, three RPM URLs and the container image tags, and in nothing else. The next minor, <code>v1.35.1-rke2r1</code>, also moves Cilium from 1.18.4 to 1.19.0, which adds a CNI upgrade and a second set of image pulls to a walk that is testing neither. The upgrade phases route on <code>VersionLess</code>, which compares the prerelease identifier, so <code>r1 &lt; r3</code> is a real upgrade as far as every phase under test is concerned.</p>
+<p><code>UpgradePhaseSuite</code> closes that. It builds a second package from <code>exampleUpgradeDefinitions</code> – <code>example/rke2-multi-cni-cilium/v1_37/v1.37.0-rke2r1</code> for rke2, <code>example/k3s-flannel/v1_37/v1.37.0-k3s1</code> for k3s – and walks the phases against the cluster the walks before it left running. Both maps are keyed by <code>distroID()</code>, so <code>CARGOSHIP_E2E_DISTRO</code> picks the install target and the upgrade target together.</p>
+<p><strong>The target is the next minor line.</strong> The install walk takes <code>v1.36.4</code>, which is already the newest patch in its own minor, so there is no next patch to upgrade to and the smallest real upgrade the examples offer is <code>v1.37.0</code>. That makes the walk a minor-line upgrade: it moves the engine tarball, the RPM URLs and the image tags, and it can move the bundled CNI as well, so a failure here has more places to come from than a patch bump would. The upgrade phases route on <code>VersionLess</code>, so what matters to every phase under test is only that the packaged version compares greater than the installed one.</p>
+<p>This was a patch-revision upgrade within <code>v1_35</code> when the suite was written, chosen so the walk moved nothing but the engine. It is a minor-line upgrade now because the examples moved on; if the version floor rises again and a newer patch appears inside the installed minor, prefer it.</p>
 <p><strong>It starts at <code>GatherFactsDistro</code>, not at <code>Connect</code>.</strong> Connect, DetectOS, GatherFacts and ValidateHosts do the same work against the same hosts they did during the install, and the apply walk already asserts each of them one phase at a time. Repeating that costs runtime and adds no assertion that could fail differently, so they run as a single <code>Test_01_Reconnect</code> step whose only job is to hand the rest of the walk a connected inventory. From <code>Test_12_GatherFactsDistro</code> on, every phase gets its own method, because from there on every phase behaves differently than it did on the install.</p>
 <p><strong>The lock phases are left out.</strong> They are asserted in the apply walk, and taking the lock again for a third walk against the same hosts would be testing the lock file, not the upgrade.</p>
 <p><strong>The assertions that differ are the point.</strong> <code>Test_12</code> is where the divergence starts: the hosts now report the installed version, and the test asserts it is <code>VersionLess</code> than the packaged one <em>by calling the same comparison the phases’ own <code>Prepare</code> calls</em>, so the test cannot disagree with the routing it is asserting. <code>Test_61</code> and <code>Test_62</code> must claim nothing, which is the inverse of the apply walk’s assertion and the check that an initialize phase never re-bootstraps a live node. <code>Test_66</code> and <code>Test_67</code> are the only place the upgrade phases are asserted to have run, and they check all three outcomes of the sequence: the service came back up, <code>RunningVersion</code> is now the packaged version, and the node is not left cordoned. That last one is worth having on its own – a node left <code>Unschedulable</code> looks healthy from the host side, service running and version correct, and only shows up later as a cluster that will not schedule.</p>
@@ -17460,12 +17626,12 @@ p.workers = p.workers.Filter(utils.FilterEngineAlreadyPopulated).Filter(utils.Fi
 <h2 id="absence-is-the-wrong-trigger-for-a-destructive-operation"><a class="header" href="#absence-is-the-wrong-trigger-for-a-destructive-operation">Absence is the wrong trigger for a destructive operation</a></h2>
 <p>Adding a host that is already there is idempotent. Removing a host that should have stayed is not. A typo in a hostname, a bad merge, a templating bug that drops a list entry – under reconcile each of those becomes a drained and destroyed node, and under refuse each becomes a stopped apply with a message. The blast radius of a false positive is not symmetric, so the default should not be either.</p>
 <h2 id="the-old-state-is-not-a-substitute-for-a-connection"><a class="header" href="#the-old-state-is-not-a-substitute-for-a-connection">The old state is not a substitute for a connection</a></h2>
-<p>The tempting way to supply the missing connection details is to take them from the provider’s prior state and generate a small config to run <code>install reset</code> against. It should not be built.</p>
+<p>The tempting way to supply the missing connection details is to take them from the provider’s prior state and generate a small config to run <code>reset</code> against. It should not be built.</p>
 <p>A state file records what was true after the last successful apply, and reset is destructive. Between then and now the machine may have been rebuilt, re-addressed, or returned to a DHCP pool, and none of that produces a diff the provider would see, because the resource is being removed and there is nothing left to refresh against. The address is the least stable identifier a host has and the one reset would connect through, so the target becomes whatever machine currently answers there. Other kinds of state drift surface as a plan diff somebody reads; this one surfaces as a wiped machine.</p>
 <p>The generated config would also splice two points in time. The host comes from the old state, but the paths an uninstall removes come from the distro module: <code>CleanupPaths()</code> returns the data and config directories as the <em>current</em> configuration defines them. Upgrade the cluster or move the data directory and reset cleans today’s paths on a machine running yesterday’s engine, leaving the real files behind and removing whatever sits at the new ones.</p>
 <p>Making removals depend on state would also settle the separate question of keeping SSH key material out of tofu state (#309) the wrong way, by making it unsolvable.</p>
 <h2 id="the-phases-cannot-express-a-subset-anyway"><a class="header" href="#the-phases-cannot-express-a-subset-anyway">The phases cannot express a subset anyway</a></h2>
-<p>Independent of where the contents come from, there is no config that makes <code>install reset</code> remove one host from a live cluster. <code>DeleteCommon.Prepare</code> finds its leader by scanning <code>Spec.Hosts</code> for a host already running the controller service, so a config holding only the removed host has no leader: both delete phases report <code>ShouldRun() == false</code> and the node is never deleted, while <code>UninstallEngine</code> runs anyway. Adding a live controller so a leader can be found is worse, because <code>UninstallEngine.Prepare</code> sets <code>p.hosts = p.manager.Config.Spec.Hosts</code> with no filter and uninstalls the engine from it too.</p>
+<p>Independent of where the contents come from, there is no config that makes <code>reset</code> remove one host from a live cluster. <code>DeleteCommon.Prepare</code> finds its leader by scanning <code>Spec.Hosts</code> for a host already running the controller service, so a config holding only the removed host has no leader: both delete phases report <code>ShouldRun() == false</code> and the node is never deleted, while <code>UninstallEngine</code> runs anyway. Adding a live controller so a leader can be found is worse, because <code>UninstallEngine.Prepare</code> sets <code>p.hosts = p.manager.Config.Spec.Hosts</code> with no filter and uninstalls the engine from it too.</p>
 <p>Neither is a bug in reset. The unfiltered list is exactly right when the instruction is “tear down this whole cluster”. The gap is that no action separates the hosts it targets from the hosts that supply cluster access, which is tracked as #339.</p>
 <h2 id="what-the-check-actually-does"><a class="header" href="#what-the-check-actually-does">What the check actually does</a></h2>
 <p><code>DetectRemovedHosts</code> runs after fact gathering and before anything is changed, lists the nodes joined to the cluster, and stops the apply when the cluster holds a node no host accounts for, naming each one with its role.</p>
@@ -18054,6 +18220,7 @@ pre-commit run --all-files
 <p>This is a punch list, not a decision record like the <code>choice-*.md</code> files beside it. It exists because a coverage review of the repo flagged <code>pkg/action</code> (<code>apply.go</code>, <code>prepare.go</code>, <code>reset.go</code>, <code>kube-config.go</code>, <code>engine_config_sync.go</code>) at 0% under <code>go test -short</code>, and the obvious response – write unit tests for the whole package – turned out to be the wrong scope once <code>test/e2e/cluster/cluster_lifecycle_test.go</code> was checked. Read that file’s comments before touching this list; they already say more about the intended coverage boundary than this document repeats.</p>
 <h2 id="what-is-already-covered-and-why-more-of-the-same-is-not-the-ask"><a class="header" href="#what-is-already-covered-and-why-more-of-the-same-is-not-the-ask">What is already covered, and why more of the same is not the ask</a></h2>
 <p><code>cluster_lifecycle_test.go</code> calls <code>action.NewPrepare</code>, <code>action.NewApply</code>, <code>action.NewReset</code>, and <code>action.NewKubeConfig</code> directly – not through the CLI – against a real bootloose cluster, and asserts the cluster actually comes up healthy afterward. That is strictly stronger evidence for “does this action wire the right phases together” than a unit test asserting a phase list by name, because it also proves the phases it wires do the right thing together on real hosts. The comment on <code>Test_ZZ2_ApplyIsIdempotent</code> says this outright: <em>“the phase tests build each phase themselves… this is the only step that exercises action.NewApply’s own wiring.”</em> Duplicating that with a mocked-out <code>phase.Manager</code> would not close a correctness gap; it would just re-assert something already proven, at a lower bar of evidence.</p>
+<p><strong>Partly done since this was written.</strong> <code>pkg/action/apply_test.go</code> now exists. <code>newTestApply</code> builds an apply action the way a command does and <code>TestApplyChecksRunBeforeTheLock</code>, <code>TestApplyRefusesADowngradeBeforeTheLock</code> and <code>TestApplyPassesAllowDowngrade</code> assert over the assembled phase list without running a phase or touching a host. That settles steps 3 and 5 below – the seam the list calls the real blocker turned out to exist, so no <code>choice-*.md</code> is owed and no interface had to be introduced. <code>apply.go</code> is no longer at 0% under <code>-short</code>; <code>prepare.go</code>, <code>reset.go</code>, <code>kube-config.go</code> and <code>engine_config_sync.go</code> still are, and the option combinations enumerated below are still unvaried. Follow <code>apply_test.go</code>’s pattern for the rest.</p>
 <p>The <code>0%</code> figure from <code>go test -short</code> is consequently misleading on its own. It does not mean <code>pkg/action</code> is untested – it means <code>pkg/action</code> has no coverage under the <em>fast</em> suite, because its only exercise lives in <code>mage test:endToEndCluster</code>, which needs Docker and is skipped under <code>-short</code>. <code>go test -short</code> measures the wrong thing here; a package can legitimately have all its correctness coverage in the cluster suite and still show 0% in the fast run. Don’t let a future coverage pass flag this package again without checking <code>test/e2e/cluster</code> first, the way this document had to.</p>
 <h2 id="the-actual-gap-one-option-combination-per-action-not-the-whole-package"><a class="header" href="#the-actual-gap-one-option-combination-per-action-not-the-whole-package">The actual gap: one option combination per action, not the whole package</a></h2>
 <p>Every action in the lifecycle test runs with a single, fixed set of options:</p>
@@ -18061,16 +18228,14 @@ pre-commit run --all-files
 <li><code>Test_01_Prepare</code> — <code>ModifyHosts</code>, <code>ModifyFirewall</code>, <code>ModifyModules</code> all <code>true</code>. The <code>false</code> path for each is never run.</li>
 <li><code>Test_ZZ2_ApplyIsIdempotent</code> — <code>ModifyHosts</code>, <code>ModifyFirewall</code>, <code>UpdateKubeConfig</code>, <code>LabelNodes</code> all <code>true</code>. <code>DisableDowngradeCheck</code> is never set to <code>true</code>, so the downgrade-check phase is never <em>omitted</em> by a test, only ever included.</li>
 <li><code>Test_1_Reset</code> — <code>NoWait: true, NoDrain: true</code> always. The wait-for-drain and actual-drain branches never run in this suite.</li>
-<li><code>engine_config_sync.go</code>’s action has no call site in <code>cluster_lifecycle_test.go</code> at all. Whether it is exercised elsewhere in <code>test/e2e/cluster</code> was not confirmed when this document was written – <strong>check that first</strong>, with something like <code>grep -rn "engine_config_sync\|EngineConfigSync" test/e2e/cluster/</code>, before assuming it needs anything.</li>
+<li><code>engine_config_sync.go</code>’s action has no call site anywhere in <code>test/e2e/cluster</code>. That grep has now been run, and the answer is a split one: the <em>phases</em> are covered – <code>71_engine_config_sync_controller_test.go</code> and <code>72_engine_config_sync_worker_test.go</code> assert <code>EngineConfigSyncController</code> and <code>EngineConfigSyncWorker</code> across the apply, join and upgrade walks – but <code>action.NewEngineConfigSync</code>, which wires them together, is called only from <code>cmd/install_engine_config_sync.go</code>. So its wiring has no coverage of any kind, fast or slow, and it is the first thing on this list.</li>
 </ul>
 <p>So the gap is narrow and specific: the conditional wiring inside each action – “if this flag is set, add this phase; if not, don’t” – is proven for exactly one combination per action, and the untested combinations fail silently. A regression in, say, the <code>DisableDowngradeCheck</code> branch of <code>apply.go</code> would not be caught by the cluster suite as it is currently written, because that suite never sets the flag the other way.</p>
 <h2 id="what-to-actually-do-about-it"><a class="header" href="#what-to-actually-do-about-it">What to actually do about it</a></h2>
 <ol>
-<li>Confirm the <code>engine_config_sync</code> gap first (or close it) with the grep above. If it turns out to be exercised elsewhere, cross it off; if not, it’s the first thing on this list, since it currently has no coverage of any kind, fast or slow.</li>
+<li>Close the <code>engine_config_sync</code> gap. The grep above has been run and the gap is real: the phases are covered, <code>action.NewEngineConfigSync</code>’s own wiring is not.</li>
 <li>Read <code>pkg/action/apply.go</code>, <code>prepare.go</code>, <code>reset.go</code> end to end and enumerate every option field that changes which phases get added, not just the ones named above from a first pass.</li>
-<li>Check whether <code>phase.Manager</code> (or whatever it hands <code>NewApply</code>/<code>NewPrepare</code>/<code>NewReset</code> a reference to) exposes enough introspection to assert on the assembled phase list without running the phases – look at <code>pkg/phase/05_manager.go</code> and <code>05_manager_test.go</code> first, since if the manager pattern used there for testing wiring already exists, reuse it rather than inventing a second way to fake a <code>phase.Manager</code>.</li>
-<li>If that seam exists, write narrow, table-driven unit tests per action: one table entry per option flag, asserting the phase list differs only in the way that flag controls, for every flag identified in step 2 – not the whole option struct at once, and not by asserting the actions produce a working cluster, which is what the e2e suite is for.</li>
-<li>If no such seam exists, that’s the real blocker, and it’s worth raising as its own question before writing anything: introducing one (an interface <code>phase.Manager</code> implements, or an exported accessor for its phase list) is a larger design decision than “add a test file,” and might belong in a <code>choice-*.md</code> of its own once made, rather than being decided implicitly by whichever test happens to need it first.</li>
+<li>Write narrow, table-driven unit tests per action, following <code>newTestApply</code> in <code>pkg/action/apply_test.go</code>: one table entry per option flag, asserting the phase list differs only in the way that flag controls, for every flag identified in step 2 – not the whole option struct at once, and not by asserting the actions produce a working cluster, which is what the e2e suite is for.</li>
 </ol>
 <p>Do not expand this into a general push for <code>pkg/action</code> coverage. The scope is the option-gated branches the cluster suite doesn’t already vary, nothing more.</p>
 <div style="break-before: page; page-break-before: always;"></div>

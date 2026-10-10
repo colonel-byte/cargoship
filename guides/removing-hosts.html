@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5a1cd3bd.js";
+            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-4b945a24.js"></script>
+        <script src="../toc-572cecdd.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,7 +188,7 @@
 <p>Nothing, and that is deliberate. Every phase after the fact-gathering ones reads <code>.spec.hosts</code> and acts on what it finds there, so a host you delete from the config becomes invisible to all of them. The machine keeps running the engine and stays joined to the cluster while the apply that was supposed to remove it reports success.</p>
 <p>An apply catches this instead of walking past it. Right after it gathers facts, and before it changes anything, it lists the nodes joined to the cluster and compares them to the hosts in the config. If the cluster holds a node no host accounts for, the apply stops:</p>
 <pre><code>the cluster holds nodes the config does not: add the host back to the config,
-run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to
+run `cargoship reset` against it, or pass --allow-unmanaged-nodes to
 apply anyway: worker3 (worker)
 </code></pre>
 <p>Each node is named with its role, because a leftover controller is the more dangerous case. The check is read-only, so <code>--dry-run</code> runs it too, which is where you want to find out about a removal you did not intend.</p>
@@ -199,7 +199,7 @@ apply anyway: worker3 (worker)
 <p>Doing only the first half would be worse than doing nothing, because it looks like the removal worked. The machine keeps its certificates and keeps trying to rejoin, and if it was a controller it stays an etcd member: the cluster looks smaller while quorum is still counted against a member nobody can reach.</p>
 <p>So an apply reports the gap and leaves the cluster alone. The layer that will eventually close it is the OpenTofu provider, which still holds the removed host’s connection details in its state file when it plans the destroy, and can hand them to a targeted teardown.</p>
 <h2 id="removing-the-machine-by-hand"><a class="header" href="#removing-the-machine-by-hand">Removing the machine by hand</a></h2>
-<p>Removing a node is two steps, and they have to happen in that order. <code>install reset</code> uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running – and <code>UninstallEngine</code> acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.</p>
+<p>Removing a node is two steps, and they have to happen in that order. <code>reset</code> uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running – and <code>UninstallEngine</code> acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.</p>
 <ol>
 <li>
 <p>From a controller that is staying, drain and delete the node:</p>
@@ -212,7 +212,7 @@ $ kubectl delete node worker3
 </li>
 <li>
 <p>Run reset against it. With the node already gone from the cluster, the deletion phases have nothing to do and the uninstall is all that remains:</p>
-<pre><code class="language-console">$ cargoship install reset ./package.tar.zst --config ./removal-config.yaml --confirm
+<pre><code class="language-console">$ cargoship reset ./package.tar.zst --config ./removal-config.yaml --confirm
 </code></pre>
 </li>
 <li>
