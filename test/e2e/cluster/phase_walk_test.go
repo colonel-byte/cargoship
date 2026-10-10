@@ -16,7 +16,10 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	apicluster "github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/pkg/phase"
@@ -85,6 +88,62 @@ func (s *phaseWalk) runPhase(p phase.Phase) {
 // will still place pods on. It is what the upgrade phases have to leave behind: they drain and
 // cordon a node before replacing the engine on it, and a node left cordoned is the failure
 // that a running service and a correct version both look fine next to.
+// requireSameVersion asserts that a host runs the engine version want names.
+//
+// The two strings are not spelled the same way and are not meant to be. A package declares
+// "1.36.4-k3s1", and the engine's own `--version`, which distrocfg.RunningVersion shells out
+// to, reports "v1.36.4+k3s1" -- the same version in Rancher's notation rather than the
+// package's. Comparing them as strings fails on a correct install.
+//
+// So this normalises and compares exactly the way the phases do (see
+// GenericPhase.VersionGreater): `+` to `-`, then semver. A test that compared differently
+// could disagree with the routing it is asserting, which is the same argument
+// Test_12_GatherFactsDistro makes for calling VersionLess instead of comparing strings.
+//
+// Nothing asserted this before the microvm backend existed. The engine phases are skipped in
+// CI and in any stage-only run, so these comparisons are only reached by a full walk -- and a
+// full walk needs node-to-node networking, which the container backend does not get on a host
+// whose firewall drops it. See docs/agent/choice-microvm-backend.md.
+// requireClusterAPI skips the step when this machine cannot reach the cluster's API server.
+//
+// Three steps talk to Kubernetes from the management node rather than to a host over SSH, and
+// whether that works is a property of where the hosts are. Skipping is right rather than
+// failing: the phase under test did its work over SSH like every other, and a failure here
+// would report an unroutable network as a defect in it. The reason is logged so a run that
+// covered less does not read as a run that covered everything.
+func (s *phaseWalk) requireClusterAPI() {
+	s.T().Helper()
+
+	lb := s.harness.manager.Config.Spec.Config.LoadBalancer
+	if reachesClusterAPI(lb) {
+		return
+	}
+	s.T().Skipf("this machine cannot reach the cluster API at %s:6443, so the steps that talk to Kubernetes from here cannot run; see docs/dev/microvm.md", lb)
+}
+
+func (s *phaseWalk) requireSameVersion(want, got string, msgAndArgs ...any) {
+	s.T().Helper()
+
+	same, err := sameVersion(want, got)
+	s.Require().NoError(err)
+	s.Require().Truef(same,
+		"%s (want %s, got %s)", fmt.Sprintf(fmt.Sprint(msgAndArgs[0]), msgAndArgs[1:]...), want, got)
+}
+
+// sameVersion reports whether two engine version strings name the same version, normalising
+// the way the phases do before comparing.
+func sameVersion(want, got string) (bool, error) {
+	wantVer, err := semver.NewVersion(strings.ReplaceAll(want, "+", "-"))
+	if err != nil {
+		return false, fmt.Errorf("parsing the expected version %q: %w", want, err)
+	}
+	gotVer, err := semver.NewVersion(strings.ReplaceAll(got, "+", "-"))
+	if err != nil {
+		return false, fmt.Errorf("parsing the reported version %q: %w", got, err)
+	}
+	return wantVer.Equal(gotVer), nil
+}
+
 func (s *phaseWalk) requireSchedulable(hosts apicluster.ZarfHosts) {
 	s.T().Helper()
 

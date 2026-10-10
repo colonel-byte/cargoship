@@ -117,6 +117,14 @@ This is worth knowing before it is mistaken for a fleet defect. Cargoship puts a
 
 An rke2 cluster still comes up `Ready` with it, so this does not stop the phases the fleet exists to test. Treat anything that depends on distinct node addresses - pod-to-pod traffic across nodes, anything reading a node's `InternalIP` - as out of scope until the engine config carries a node address.
 
+## The shipped k3s packages do not come up on this fleet
+
+`mage test:endToEndClusterVM` runs rke2, not the suite's usual k3s default, and `mage dev:vmUp` against a k3s package will get a control plane but no workers.
+
+The cause is in the example definitions rather than in the fleet. Every `example/k3s-*` package sets `selinux: true` and ships `k3s-selinux-*.rpm` under `selector.package: binary`. The BIN upload phase moves staged files into place and runs no package manager, so that RPM lands in `/var/lib/rancher/k3s/rpm/` and its `%post` -- the part that loads the policy module -- never runs. The node then has SELinux enforcing, an engine told to use it, and no policy for it. The `rke2` examples select `package: rpm` for the equivalent file, which is why `rke2-selinux` is installed and `semodule -l` lists it.
+
+This is invisible anywhere else: an Ubuntu node has no SELinux for the missing policy to matter to, and a container's phase 21 gate is false so `selinux: true` is a no-op. Surfacing it is the fleet working as intended, and fixing the definitions is a separate change.
+
 ## Limits
 
 The fleet runs one distribution. That is enough to exercise the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and it is not a substitute for the bootloose cluster's mix of Ubuntu, Fedora and Alpine nodes - apply routes on OS family in several places, and a single-family fleet never takes the branches that do not match. Run both.

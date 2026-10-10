@@ -22,16 +22,30 @@ import (
 // firewallDump maps a backend to the command that prints the rules it is enforcing, so the
 // test can check what the node ended up with rather than what the phase said it wrote.
 var firewallDump = map[string]string{ //nolint:gochecknoglobals
-	firewall.FirewalldService: "firewall-cmd --list-all --zone=trusted",
-	firewall.UFWService:       "ufw status verbose",
-	firewall.NftablesService:  "nft list ruleset",
+	// The firewalld dump has to include the ipsets, not only the zone. firewalld's zone
+	// listing names a source as `ipset:k8s-nodes` and nothing more, so the peer addresses --
+	// which is what this test is looking for -- are one level down, inside the set. Asserting
+	// on the zone alone was passing only because no container ever ran firewalld, so the
+	// assertion never executed; the first host that did run it failed here.
+	//
+	// The sets are enumerated rather than named, so that the test does not carry a copy of a
+	// name owned by pkg/firewall and drift from it.
+	firewall.FirewalldService: "firewall-cmd --list-all --zone=trusted; " +
+		"for s in $(firewall-cmd --get-ipsets); do firewall-cmd --info-ipset=\"$s\"; done",
+	firewall.UFWService:      "ufw status verbose",
+	firewall.NftablesService: "nft list ruleset",
 }
 
 // configureFirewall covers phase/26_configure_firewall.go. The phase trusts every
 // other node in the cluster on whichever firewall the node runs, so the assertion is that
-// each node's own firewall now names every peer's private address. A node running no
-// firewall is not a failure -- the phase is meant to skip it -- so the test asserts the gate
-// matches what the hosts run and stops there when none do.
+// each node's own firewall now names every peer's private address -- directly, or through a
+// set the firewall resolves, which is why firewallDump is a dump and not a single query. A
+// node running no firewall is not a failure -- the phase is meant to skip it -- so the test
+// asserts the gate matches what the hosts run and stops there when none do.
+//
+// Against containers the gate is what gets tested, because nothing in a container runs a
+// firewall. Only the microvm backend reaches the assertions below; see
+// docs/agent/choice-microvm-backend.md.
 //
 // Both walks that run this phase assert the same thing, so the body is shared: see phaseWalk.
 func (s *phaseWalk) configureFirewall() {

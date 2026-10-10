@@ -15,6 +15,7 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -159,9 +160,17 @@ var k3sOS = fleetSpec{ //nolint:gochecknoglobals
 	},
 }
 
-// clusterConfig is the inventory this run provisions: the smaller staging inventory when asked
-// for that, and the full k3s inventory otherwise.
+// clusterConfig is the fleet this run provisions: the smaller staging inventory when asked for
+// that, and the full k3s inventory otherwise.
+//
+// The microvm backend has one fleet rather than two. Its reason for having a staging split
+// does not apply: that split exists because a hosted runner could not reliably bring an engine
+// up inside nested containers, and a virtual machine has none of that trouble. A stage-only
+// run against VMs still stops before the engine phases, it just does so on the same nodes.
 func clusterConfig() fleetSpec {
+	if name, err := backend(); err == nil && name == backendMicroVM {
+		return vmOS
+	}
 	if stageOnly() {
 		return stageOS
 	}
@@ -300,10 +309,11 @@ func TestMain(m *testing.M) {
 		log.Print(err)
 	}
 
-	// Deleting the machines takes a failed run's evidence with them; see keepClusterEnvVar.
-	// The exit code is untouched either way, so a kept cluster is still a failed run.
-	if testCluster != nil && (code == 0 || !keepCluster()) {
-		if err := shutdown(testCluster); err != nil {
+	// Removing the hosts takes a failed run's evidence with them; see keepClusterEnvVar. The
+	// exit code is untouched either way, so a kept cluster is still a failed run.
+	if code == 0 || !keepCluster() {
+		if err := teardown(); err != nil {
+			log.Print(err)
 			os.Exit(1)
 		}
 	}
@@ -316,20 +326,17 @@ func requireCluster(t *testing.T) {
 	t.Helper()
 
 	clusterOnce.Do(func() {
-		testCluster, testClusterErr = setup(clusterConfig())
-		if testClusterErr != nil {
-			return
-		}
 		var inv apicluster.ZarfCluster
-		if inv, testClusterErr = bootlooseInventory(testCluster, clusterConfig()); testClusterErr != nil {
+		if inv, testClusterErr = provision(context.Background(), clusterConfig()); testClusterErr != nil {
 			return
 		}
 		if testClusterErr = writeInventories(inv); testClusterErr != nil {
 			return
 		}
 
-		// bootloose regenerates each container's SSH host key on every Create(), so ignore
-		// host key checking for the cargoship subprocesses this test binary spawns.
+		// Both backends regenerate each host's SSH host key every time they create it, so a
+		// known-hosts entry is wrong by construction. Ignore host key checking for the
+		// cargoship subprocesses this test binary spawns.
 		testClusterErr = os.Setenv("SSH_KNOWN_HOSTS", "")
 	})
 	require.NoError(t, testClusterErr)
@@ -348,14 +355,7 @@ func requireJoinMachine(t *testing.T) {
 	requireCluster(t)
 
 	joinOnce.Do(func() {
-		spec := clusterConfig().withJoinMachine()
-		cluster, err := setup(spec)
-		if err != nil {
-			joinErr = err
-			return
-		}
-		testCluster = cluster
-		inv, err := bootlooseInventory(cluster, spec)
+		inv, err := provision(context.Background(), clusterConfig().withJoinMachine())
 		if err != nil {
 			joinErr = err
 			return
