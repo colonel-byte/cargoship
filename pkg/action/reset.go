@@ -92,6 +92,8 @@ func NewReset(opts ResetOptions) *Reset {
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 
+			&phase.RemoveSelinuxPolicy{},
+
 			&phase.DaemonReload{},
 			lockPhase.UnlockPhase(),
 			&phase.Disconnect{},
