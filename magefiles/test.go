@@ -69,6 +69,20 @@ func (Test) EndToEndClusterVM() error {
 	if err := os.Setenv("CARGOSHIP_E2E_BACKEND", "microvm"); err != nil {
 		return err
 	}
+	// rke2 rather than the suite's usual k3s default, because the shipped k3s examples do not
+	// bring up a cluster on an Enterprise Linux host: they declare `selinux: true` and ship
+	// k3s-selinux with `selector.package: binary`, so the RPM is staged into
+	// /var/lib/rancher/k3s/rpm and never installed -- the BIN upload phase moves files into
+	// place and runs no package manager. The policy module is therefore absent on a host that
+	// has SELinux, and the agent does not start. The rke2 examples select `package: rpm` for
+	// the same file, which is why that walk works.
+	//
+	// An explicit CARGOSHIP_E2E_DISTRO still wins, so this is reproducible on demand.
+	if os.Getenv("CARGOSHIP_E2E_DISTRO") == "" {
+		if err := os.Setenv("CARGOSHIP_E2E_DISTRO", "rke2"); err != nil {
+			return err
+		}
+	}
 	return testrunner.RunE2ENoBuild("1h", "github.com/colonel-byte/cargoship/test/e2e/cluster/...")
 }
 
