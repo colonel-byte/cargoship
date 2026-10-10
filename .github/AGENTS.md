@@ -8,6 +8,20 @@ Every file under [`workflows/`](workflows/) has a matching high-level explanatio
 - Removed workflow: delete the doc and regenerate.
 - Changed triggers, jobs, or behavior: update the doc's content to match; the doc is a summary, not a mirror, so only what a reader needs to understand what the workflow does and why has to stay current.
 
+## Keeping the issue forms current
+
+[`ISSUE_TEMPLATE/`](ISSUE_TEMPLATE/) holds YAML issue forms rather than Markdown templates, because the dropdowns, required fields, and `render: shell` blocks they rely on only exist in the forms schema. A Markdown template would be free text with a preamble, which is what the tracker had before.
+
+Three things in those forms go stale silently, and GitHub fails none of them in CI:
+
+- The `Which CI job` dropdown in [`ISSUE_TEMPLATE/01-failing-build.yml`](ISSUE_TEMPLATE/01-failing-build.yml) lists the `name:` a workflow displays in the checks list, not its filename - `workflows/e2e.yaml` shows as `Basic build`. Adding, renaming, or removing a workflow means updating that list in the same pull request.
+- The phase dropdown in [`ISSUE_TEMPLATE/03-bug.yml`](ISSUE_TEMPLATE/03-bug.yml) tracks `docs/phases/`, and the suite dropdown in [`ISSUE_TEMPLATE/02-flaky-e2e.yml`](ISSUE_TEMPLATE/02-flaky-e2e.yml) tracks the packages under `test/e2e/`. A new phase or suite belongs in both the code and the form.
+- Every label a form names in `labels:` has to exist on the repository. GitHub drops an unknown label from the created issue without reporting anything, so the issue arrives unlabelled and nothing says why. Check with `gh label list --repo colonel-byte/cargoship`.
+
+A malformed form is reported as a banner on <https://github.com/colonel-byte/cargoship/issues/new/choose> and nowhere else. Open that page on the branch after changing a form; parsing as YAML is not enough to know it renders.
+
+Security reports are a `contact_links` entry in [`ISSUE_TEMPLATE/config.yml`](ISSUE_TEMPLATE/config.yml) pointing at the draft advisory form, not an issue form. [`SECURITY.md`](SECURITY.md) says not to open a public issue for a vulnerability; do not add a template that invites one.
+
 ## Checking a workflow against OpenSSF Scorecard
 
 This repository publishes an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship), and [`workflows/scorecard.yaml`](workflows/scorecard.yaml) recomputes it on every push to `main`. A workflow change can move that score without anything failing in CI, so run the checks that read workflows before opening the pull request, and name the ones you ran in the description.

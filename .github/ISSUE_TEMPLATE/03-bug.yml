@@ -1,0 +1,93 @@
+name: Bug report
+description: Cargoship does something other than what it should.
+title: "fix: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Do not report a vulnerability here. Open a draft advisory instead - the link is on the issue chooser.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The commands you ran, in order. Include the distro config or the relevant part of it when a package build or a phase is involved.
+      placeholder: |
+        1. cargoship create ./distro.yaml
+        2. cargoship prepare --inventory ./inventory.yaml
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Kubernetes engine
+      options:
+        - K3s
+        - RKE2
+        - Upstream kubeadm
+        - Not engine-specific
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Which phase or command group
+      options:
+        - prepare
+        - apply
+        - kube-config
+        - engine-config-sync
+        - reset
+        - Not a phase - package command (create, publish, pull, sign)
+        - Not a phase - misc command (version, validate, schema, sha256sum, vault)
+        - Not a phase - inventory or keyring
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: How were you driving cargoship
+      description: The same phases run from the CLI, the Ansible collection, and the OpenTofu provider, and a bug is often in only one of them.
+      options:
+        - The cargoship CLI
+        - The colonel_byte.cargoship Ansible collection
+        - The OpenTofu provider
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: The shortest decisive part of the output. Redact hostnames, tokens, and kubeconfig contents.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Output of `cargoship version`
+      placeholder: v0.0.0 (commit 1da789cd)
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Host OS of the management node, host OS of the target hosts, and whether the management node is air-gapped.
+      placeholder: |
+        Management node: Fedora 44, x86_64, air-gapped
+        Target hosts: Ubuntu 24.04, arm64
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: A workaround you found, the last version that worked, or an upstream issue you think is behind it.
