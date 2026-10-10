@@ -8,14 +8,14 @@ Nothing here installs a service, adds a system unit, or changes a firewall, SELi
 
 Five executables and one device:
 
-| Needed | Fedora package | Debian/Ubuntu package |
-| ---------------------- | ----------------------- | ------------------- |
-| `qemu-system-x86_64`   | `qemu-system-x86-core`  | `qemu-system-x86`   |
-| `qemu-img`             | `qemu-img`              | `qemu-utils`        |
-| `mkfs.vfat`            | `dosfstools`            | `dosfstools`        |
-| `mcopy`                | `mtools`                | `mtools`            |
-| `ssh`, `ssh-keygen`    | `openssh`               | `openssh-client`    |
-| `/dev/kvm`             | the kernel              | the kernel          |
+| Needed                 | Fedora package          | Debian/Ubuntu package |
+| ---------------------- | ----------------------- | --------------------- |
+| `qemu-system-x86_64`   | `qemu-system-x86-core`  | `qemu-system-x86`     |
+| `qemu-img`             | `qemu-img`              | `qemu-utils`          |
+| `mkfs.vfat`            | `dosfstools`            | `dosfstools`          |
+| `mcopy`                | `mtools`                | `mtools`              |
+| `ssh`, `ssh-keygen`    | `openssh`               | `openssh-client`      |
+| `/dev/kvm`             | the kernel              | the kernel            |
 
 ```sh
 sudo dnf install qemu-system-x86-core qemu-img dosfstools mtools openssh
@@ -102,11 +102,11 @@ Note that the *guests* run SELinux enforcing, and that is the point of the fleet
 
 ## When it does not work
 
-| Symptom | Cause |
-| ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `/dev/kvm is not available`                             | The device is missing or not readable by you. See the KVM section above |
-| `missing qemu-system-x86_64, mkfs.vfat` and similar     | Install the packages in the table above; the message names everything it could not find |
-| `Could not access KVM kernel module` from qemu          | `/dev/kvm` exists but your user cannot open it -- check the mode and the `kvm` group |
+| Symptom                                                 | Cause                                                                                                                                                          |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dev/kvm is not available`                             | The device is missing or not readable by you. See the KVM section above                                                                                        |
+| `missing qemu-system-x86_64, mkfs.vfat` and similar     | Install the packages in the table above; the message names everything it could not find                                                                        |
+| `Could not access KVM kernel module` from qemu          | `/dev/kvm` exists but your user cannot open it -- check the mode and the `kvm` group                                                                           |
 | A node never answers ssh, minutes in                    | Usually emulation rather than KVM. The failure prints the tail of the node's serial console, and the full log is at `build/microvm/<fleet>/<node>/console.log` |
-| `a 3 node fleet at 4096MiB each needs ...`              | The memory guard. Lower `-worker`, or pass fewer nodes |
-| `cached image ... has digest ..., want ...`             | An interrupted or corrupted download. Remove the named file and run `mage dev:vmImage` |
+| `a 3 node fleet at 4096MiB each needs ...`              | The memory guard. Lower `-worker`, or pass fewer nodes                                                                                                         |
+| `cached image ... has digest ..., want ...`             | An interrupted or corrupted download. Remove the named file and run `mage dev:vmImage`                                                                         |
