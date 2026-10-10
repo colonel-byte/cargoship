@@ -240,6 +240,19 @@ spec:
         allow perm=any all : dir=/run/k3s/
         allow perm=any all : dir=/var/lib/kubelet/
         allow perm=any all : dir=/var/lib/rancher/
+      selinux:
+        # Applied only to hosts reporting SELinux enforcing; every other host is left alone.
+        #
+        # There are deliberately no fileContexts here. The staged rke2-selinux RPM already ships a
+        # policy module that labels /var/lib/rancher, /var/lib/kubelet and /opt/cni, so a mapping
+        # for those paths would add a local override on top of the policy that owns them - and a
+        # local override wins, which means a package would quietly be deciding the labels RKE2
+        # itself maintains. Add a mapping here for a path the RPM does not cover, such as a
+        # storage mount, rather than for one it does.
+        booleans:
+          # A boolean is the part the RPM cannot do: a policy module can declare one but not set
+          # it persistently. This one lets the kubelet's containers manage their own cgroups.
+          container_manage_cgroup: true
       files:
         - source: https://rpm.rancher.io/rke2/latest/1.36/centos/9/x86_64/rke2-common-1.36.2~rke2r1-0.el9.x86_64.rpm
           target: /var/lib/rancher/rke2/rpm/rke2-common-1.36.2~rke2r1-0.el9.x86_64.rpm
