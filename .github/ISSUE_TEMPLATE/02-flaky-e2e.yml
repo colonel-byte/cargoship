@@ -1,0 +1,82 @@
+name: Flaky or failing e2e test
+description: An end-to-end test that fails intermittently, or fails only in one environment.
+title: "test: "
+labels:
+  - bug
+  - test-flake
+body:
+  - type: dropdown
+    id: suite
+    attributes:
+      label: Which suite
+      description: The e2e suites are separate Go packages so a group can be selected by package path.
+      options:
+        - test/e2e/noncluster - misc and package commands
+        - test/e2e/cluster - the install group, needs Docker and bootloose
+        - test/e2e/zarf - the zarf collection, needs k3d and ansible-playbook
+    validations:
+      required: true
+  - type: input
+    id: test
+    attributes:
+      label: Test or subtest name
+      description: Subtests are named as sentences, and `go test` replaces spaces with underscores in a `-run` pattern.
+      placeholder: TestCargoshipSign/re-signing_requires_overwrite
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command or mage target
+      description: Anchor both elements of a `-run` pattern if several suite names share a prefix.
+      placeholder: go test -mod=vendor -count=1 -v -run '^TestCargoshipSign$' ./test/e2e/noncluster/...
+    validations:
+      required: true
+  - type: input
+    id: rate
+    attributes:
+      label: How often does it fail
+      description: Failures out of total runs, so the next person knows how long to loop it for.
+      placeholder: 2 of 20
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it fail
+      options:
+        - Locally only
+        - In CI only
+        - Both
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Failure output
+      description: The assertion that failed and enough surrounding lines to place it. Attach the `e2e-cluster-stage-diagnostics` artifact when the failure came from the E2E cluster workflow.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Output of `cargoship version`
+      description: The `noncluster` suite drives the built binary, so which binary was under test matters. Give the commit instead if the binary predates the change.
+      placeholder: 1da789cd
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Host OS and architecture, plus the Docker, bootloose, k3d, zarf, or ansible-playbook versions the suite needs.
+      placeholder: |
+        Host OS: Fedora 44, x86_64
+        docker version: 28.1.1
+        bootloose version: 0.8.0
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: A theory about the race, a test that has to run before it to trigger the failure, or a rebuild you forgot - the binary is not rebuilt by `go test`.

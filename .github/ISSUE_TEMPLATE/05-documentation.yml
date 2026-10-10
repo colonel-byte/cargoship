@@ -1,0 +1,46 @@
+name: Documentation issue
+description: A page in the book that is wrong, missing, or unclear.
+title: "docs: "
+labels:
+  - documentation
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Which page
+      description: The URL in the book, or the path to the Markdown source.
+      placeholder: docs/dev/e2e-tests.md
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong with it
+      options:
+        - Factually wrong - it describes behaviour cargoship does not have
+        - Out of date - it described the old behaviour correctly
+        - Missing - there is no page for this
+        - Unclear - correct, but I could not act on it
+        - A command or snippet in it does not work as written
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: What it says and what it should say
+      description: Quote the sentence or snippet. If a command fails, paste what you ran and what it printed.
+    validations:
+      required: true
+  - type: checkboxes
+    id: generated
+    attributes:
+      label: Generated pages
+      description: Several subpaths under `docs/` are written by `mage generate:document` and must not be hand-edited - `docs/commands/`, `docs/phases/`, `docs/golang/`, `docs/schema/`, `docs/ansible/`, `docs/index.md`, `docs/security.md`, and `docs/SUMMARY.md`. A fix there belongs in the generator or in the Go doc comment it reads, not in the page. Check `git check-attr linguist-generated -- <path>` when unsure.
+      options:
+        - label: I checked whether this page is generated
+          required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: The page you expected to find it on, or a search term that should have led you there and did not.

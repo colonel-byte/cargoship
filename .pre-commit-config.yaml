@@ -46,6 +46,7 @@ repos:
           )$
         exclude_types:
           - yaml
+          - markdown
         args:
           - -c
           - colonel-byte
