@@ -5,12 +5,15 @@ The `noncluster` e2e suite drives the **built `cargoship` binary** as a subproce
 ## Layout
 
 ```
-test/e2e/noncluster/   misc + package command groups: version, sha256sum, vault-encrypt, create, publish, pull, sign
+test/e2e/noncluster/   misc + package command groups: version, sha256sum, the vault and age suites, ssh, create,
+                       publish, pull, sign, verify, schema, validate, the Ansible module, and the zarf info modules
 test/e2e/cluster/      the install group: a bootloose cluster walked one phase at a time -- install, join, optionally upgrade, then reset
 test/e2e/zarf/         the colonel_byte.zarf collection: two k3d clusters, a real zarf, the uds-bundle's packages walked by the modules
 test/common.go         the CargoE2ETest harness (e2e.Cargoship) shared by the suites
 test/bootstrap.go      TestMain's chdir-to-repo-root, with (Bootstrap) and without (BootstrapInProcess) the binary lookup
-test/registry.go       in-process OCI registry used by the publish/pull/sign tests
+test/registry.go       in-process OCI registry used by the publish/pull/sign/verify tests
+test/kube.go           kubernetes helpers for the suites that read a cluster back
+test/e2e/AGENTS.md     the fixture rule: test documents live in testdata/, not in Go string constants
 ```
 
 The suites are separate Go packages so that a group can be selected by package path rather than by test-name filters. The `noncluster` package starts no containers and makes no network calls: it needs nothing but the binary. The `cluster` package needs Docker and takes tens of minutes, and needs no binary; everything below is about `noncluster`, and [e2e-phase-tests](e2e-phase-tests.md) covers the cluster suite and how to extend it when a phase is added.

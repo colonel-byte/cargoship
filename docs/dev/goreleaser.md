@@ -15,15 +15,15 @@ A single `goreleaser release` run produces:
 *   **Archives** - `tar.gz` per OS/arch, named after `uname` conventions (`cargoship_Linux_x86_64.tar.gz`).
 *   **Packages** - `apk`, `deb`, and `rpm`, from the `nfpms` section. Packages can be signed when the corresponding signing keys are configured.
 *   **Container images** - four multi-platform manifests covering `linux/amd64` and `linux/arm64`: `ghcr.io/colonel-byte/cargoship:<tag>` (Chainguard static, bare binary), `ghcr.io/colonel-byte/cargoship-ubi:<tag>` (AlmaLinux, installs the RPM), `ghcr.io/colonel-byte/cargoship-deb:<tag>` (Debian slim, installs the DEB), and `ghcr.io/colonel-byte/cargoship-ansible:<tag>` (AlmaLinux, installs the RPM and Ansible dependencies).
-*   **Ansible collection** - `colonel_byte-cargoship-<version>.tar.gz`, built from `ansible/colonel_byte/cargoship` and attached to the release, plus its own cosign bundle. It is not published to Galaxy: the management node that runs the playbooks is inside the airlock and installs it from the tarball.
+*   **Ansible collections** - two tarballs, `colonel_byte-cargoship-<version>.tar.gz` and `colonel_byte-zarf-<version>.tar.gz`, built from `ansible/colonel_byte/cargoship` and `ansible/colonel_byte/zarf` and attached to the release, each with its own cosign bundle. Neither is published to Galaxy: the management node that runs the playbooks is inside the airlock and installs them from the tarballs.
 *   **SBOMs** - one per archive, via Syft.
 *   **Signatures** - cosign `sigstore.json` bundles over the checksums file and every archive, plus registry signatures over every container image. Package signatures are configured separately through nfpm.
 
-## The Ansible Collection
+## The Ansible Collections
 
-The collection is not built by a `builds` entry, because nothing about it is compiled. `hack/ansible-build-collection.sh` runs as a `before` hook, calls `ansible-galaxy collection build`, writes the tarball to `bin/ansible`, and signs it when `COSIGN_PRIVATE_KEY` is set. The `release.extra_files` globs then attach the tarball and the bundle.
+Neither collection is built by a `builds` entry, because nothing about a collection is compiled. `hack/ansible-build-collection.sh` runs as a `before` hook - once per collection, so twice, taking the collection directory as its third argument - calls `ansible-galaxy collection build`, writes the tarball to `bin/ansible`, and signs it when `COSIGN_PRIVATE_KEY` is set. Four `release.extra_files` globs then attach both tarballs and both bundles.
 
-The script is given the release version and fails when `galaxy.yml` disagrees with it. release-please keeps that version in step through the `extra-files` entry in `release-please-config.json`, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot's version is not in `galaxy.yml` and never will be.
+The script is given the release version and fails when that collection's `galaxy.yml` disagrees with it. release-please keeps both versions in step through the `extra-files` entries in `release-please-config.json`, so a disagreement means the release PR did not update what it should have, and publishing a collection whose version is not the one being released is worse than a failed release. A snapshot passes no version, because a snapshot's version is not in `galaxy.yml` and never will be.
 
 The tarball is signed by the script rather than by the `signs` section, and is absent from `checksums.txt`, because both of those cover artifacts the pipeline itself produced. Verify it with its bundle:
 
@@ -35,7 +35,7 @@ cosign verify-blob --key cosign.pub \
 
 ## Build Matrix
 
-The `builds` section compiles `linux` and `darwin` against `amd64`, `arm64`, and `riscv64`. Three settings there matter more than they look:
+The `builds` section has three entries. `cargoship` (`./cmd/cargoship`) compiles `linux`, `darwin` and `windows` against `amd64`, `arm64` and `riscv64`. `zarf_init` (`./cmd/zarf/init`) and `zarf_package_deploy` (`./cmd/zarf/deploy`) are the `colonel_byte.zarf` collection's module files, built for `linux` only on the same three architectures; the packages install them to `/usr/bin` and the collection calls them. Three settings there matter more than they look:
 
 *   **`CGO_ENABLED=0`** - produces a statically linked binary. This is what lets the default image sit on `cgr.dev/chainguard/static`, which ships no libc, no shell, and no package manager; a dynamically linked binary fails there with a confusing `no such file or directory` on exec.
 *   **`ldflags -X`** - stamps `config.CLIVersion` and `config.CLICommit`, which is what `cargoship version` prints.
@@ -105,7 +105,7 @@ The images carry no `LABEL` instructions of their own. Every `org.opencontainers
 
 One base needs more care than the others. **`cgr.dev/chainguard/static` publishes `:latest` and nothing else** on Chainguard's free tier, and old digests are garbage-collected as the tag moves. A stale pin there does not merely go out of date - it eventually stops resolving, and the build fails with `manifest unknown`. That is the failure to expect if this image breaks without the Dockerfile changing; refresh the digest with the command above.
 
-`.github/dependabot.yaml` tracks both directories under its `docker` ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.
+`.github/dependabot.yaml` tracks all four Dockerfile directories - `/containers/ansible`, `/containers/base`, `/containers/deb`, `/containers/ubi` - under its `docker` ecosystem, on the same daily schedule as the other ecosystems, which is what keeps that pin inside the retention window.
 
 ### Linting
 
@@ -334,7 +334,7 @@ TMPDIR=/home/$USER/.cache/goreleaser-tmp \
 
 Three gotchas:
 
-*   **Set `TMPDIR` to a path on a real disk.** The default `/run/user/<uid>/tmp` is a small tmpfs, and the Go build cache for a full six-target matrix will overrun it. The failure is a flood of `no space left on device` from the compiler.
+*   **Set `TMPDIR` to a path on a real disk.** The default `/run/user/<uid>/tmp` is a small tmpfs, and the Go build cache for the full matrix - nine `cargoship` targets plus three apiece for the two zarf module files - will overrun it. The failure is a flood of `no space left on device` from the compiler.
 *   **Do not add `--skip=publish`** if you want images. Under `dockers_v2` that skips image builds entirely.
 *   **`--skip=sign` also disables package signing**, not just cosign. GoReleaser's nfpm pipe zeroes all three `Signature` structs when that skip is set (`internal/pipe/nfpm/nfpm.go`), so a run that skips signing produces unsigned packages no matter what `GPG_KEY_PATH` and `APK_RSA_KEY_PATH` say. To exercise package signing locally, drop `sign` from the skip list and supply cosign keys too.
 

@@ -176,7 +176,6 @@
 
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
-- [check-ansible-requirements](workflows/check-ansible-requirements.md)
 - [check-go-mod](workflows/check-go-mod.md)
 - [check-pins](workflows/check-pins.md)
 - [codeql](workflows/codeql.md)
@@ -196,6 +195,7 @@
 - [scan-lint](workflows/scan-lint.md)
 - [scorecard](workflows/scorecard.md)
 - [test-build-containers](workflows/test-build-containers.md)
+- [unit-tests](workflows/unit-tests.md)
 
 
 -----------

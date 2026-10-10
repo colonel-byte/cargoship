@@ -2,7 +2,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/colonel-byte/cargoship)](https://github.com/colonel-byte/cargoship/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/colonel-byte/cargoship?filename=go.mod)](https://go.dev/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/colonel-byte/cargoship/release.yaml)](https://github.com/colonel-byte/cargoship/actions/workflows/release.yaml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/colonel-byte/cargoship/badge)](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/colonel-byte/cargoship/badge)](https://securityscorecards.dev/viewer/?uri=github.com/colonel-byte/cargoship)
 
 Cargoship is a Go-based CLI for building, distributing, and applying offline Kubernetes distro packages. It is designed to simplify two core workflows:
 
@@ -17,7 +17,7 @@ Cargoship bridges the gap between offline distro packaging tools and remote clus
 
 ### Pre-built binaries
 
-Every release publishes archives for Linux, macOS, and Windows across `amd64`, `arm64`, `arm`, `386`, and `riscv64`. The archive names follow `uname`, so the one for a 64-bit Linux host is `cargoship_Linux_x86_64.tar.gz`:
+Every release publishes archives for Linux, macOS, and Windows across `amd64`, `arm64`, and `riscv64`. The name carries the OS and the architecture, with `amd64` spelled the way `uname -m` does, so the one for a 64-bit Linux host is `cargoship_Linux_x86_64.tar.gz` and the arm64 one is `cargoship_Linux_arm64.tar.gz`:
 
 ```bash
 VERSION=$(curl -fsSL https://api.github.com/repos/colonel-byte/cargoship/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
@@ -28,7 +28,7 @@ install -m 0755 cargoship /usr/local/bin/cargoship
 
 ### Linux packages
 
-Releases also carry `.rpm`, `.deb`, and `.apk` packages, which install the binary along with the `colonel_byte.cargoship` Ansible collection onto ansible-core's default collection path:
+Releases also carry `.rpm`, `.deb`, and `.apk` packages. Each installs the binary, shell completions for bash, fish and zsh, both Ansible collections - `colonel_byte.cargoship` and `colonel_byte.zarf` - onto ansible-core's default collection path, and the two zarf module files the second collection calls (`/usr/bin/zarf_init` and `/usr/bin/zarf_package_deploy`):
 
 ```bash
 sudo dnf install ./cargoship_*_linux_amd64.rpm    # or: sudo apt install ./cargoship_*_linux_amd64.deb
@@ -43,16 +43,25 @@ podman run --rm ghcr.io/colonel-byte/cargoship:latest version
 | Image                                      | Contents                                               |
 | ------------------------------------------ | ------------------------------------------------------ |
 | `ghcr.io/colonel-byte/cargoship`           | The binary on a minimal base                           |
-| `ghcr.io/colonel-byte/cargoship-ubi`       | The binary on Red Hat UBI                              |
-| `ghcr.io/colonel-byte/cargoship-deb`       | The binary installed from the `.deb`                   |
-| `ghcr.io/colonel-byte/cargoship-ansible`   | The binary plus the Ansible collection and ansible-core |
+| `ghcr.io/colonel-byte/cargoship-ubi`       | The binary installed from the `.rpm`, on AlmaLinux 10  |
+| `ghcr.io/colonel-byte/cargoship-deb`       | The binary installed from the `.deb`, on Debian slim   |
+| `ghcr.io/colonel-byte/cargoship-ansible`   | The `.rpm` plus ansible-core, on AlmaLinux 10          |
+
+The `-ubi` name is historical: that image was based on Red Hat UBI and is now built on AlmaLinux 10, but the published image name has not changed.
 
 ### From source
 
-Building needs Go 1.27 or newer. The repository vendors its dependencies, so a clone builds without network access:
+Building needs Go 1.27 or newer.
 
 ```bash
 go install github.com/colonel-byte/cargoship@latest
+```
+
+That reaches the network for the module. To build without it, clone the repository instead: the `vendor/` tree is committed, so a clone builds with no network access at all, which is how a management node inside an airlock is staged.
+
+```bash
+git clone https://github.com/colonel-byte/cargoship.git && cd cargoship
+mage build:binary    # or: go run ./magefiles/core build:binary
 ```
 
 ### Verifying a download
@@ -93,18 +102,22 @@ The package compilation process loads a local distro definition, gathers all spe
 
 ### 2. Phase-Based Orchestration
 
-Cluster operations are modeled as ordered sequences of reusable, structured "phases." This makes high-level actions (`apply`, `prepare`, `reset`, `kube-config`) predictable, easier to debug, and simple to extend.
+Cluster operations are modeled as ordered sequences of reusable, structured "phases." This makes high-level actions (`apply`, `prepare`, `reset`, `kube-config`, `engine-config-sync`) predictable, easier to debug, and simple to extend.
 
-For example, the **`apply`** workflow comprises the following phases:
+For example, the **`apply`** workflow runs these phases, in this order:
 
 1.  **Connect:** Establish secure SSH connections to all target hosts.
-2.  **OS Detection & Fact Gathering:** Identify host operating systems and system resources.
-3.  **Validation:** Verify that host nodes meet the pre-requisites.
-4.  **Prepare:** Install OS packages, load kernel modules, and configure system firewalls or policies.
-5.  **Upload:** Securely transfer required package binaries, configuration templates, and OCI images to the nodes.
-6.  **Bootstrap / Upgrade:** Initialize primary control-plane nodes and join worker nodes.
-7.  **Kubeconfig Retrieval:** Fetch the generated admin credentials.
-8.  **Cleanup & Disconnect:** Release locks, clean up temporary artifacts, and close SSH sessions.
+2.  **OS Detection & Fact Gathering:** Identify host operating systems, network facts, and the engine version already installed.
+3.  **Validation:** Verify that host nodes meet the prerequisites, and stop if the cluster holds a node the config does not.
+4.  **Lock:** Take an exclusive host lock, held for the rest of the run, so a second cargoship cannot change the same hosts.
+5.  **Prepare:** Install OS packages, configure sysctl and environment, SELinux and `fapolicyd` rules, `/etc/hosts`, and the node firewall.
+6.  **Upload:** Securely transfer package binaries, RPMs or DEBs, configuration templates, and OCI images to the nodes, then import the images.
+7.  **Bootstrap / Upgrade:** Render the engine config, initialize control-plane nodes, apply bundled manifests, join workers, and upgrade any node already running an older version.
+8.  **Engine Config Sync:** Reconcile registry, audit, and pod-security config on any node whose config drifted.
+9.  **Kubeconfig Retrieval and Labelling:** Fetch the generated admin credentials and label nodes with their profile group.
+10. **Cleanup & Disconnect:** Release the lock, clean up temporary artifacts, and close SSH sessions.
+
+The generated reference in [`docs/phases/`](./docs/phases/) is the authoritative list, including what each phase does under `--dry-run`.
 
 ---
 
@@ -166,15 +179,82 @@ Translate an Ansible inventory you already maintain into a cargoship cluster inv
 cargoship inventory from-ansible ./resolved.json -o ./inventory.yaml
 ```
 
+### 7. Publish, Pull, Sign, and Verify a Package
+
+A package can live in an OCI registry rather than on a disk, and every command that takes a package takes an `oci://` reference wherever it takes a path:
+
+```bash
+# Push a built package to a registry
+cargoship publish ./build/cargoship-distro-amd64.tar.zst oci://ghcr.io/my-org
+
+# Pull one back down to a local directory
+cargoship pull oci://ghcr.io/my-org/my-package:1.0.0 -o ./build/
+
+# Sign a package with a private key
+cargoship sign ./build/cargoship-distro-amd64.tar.zst --signing-key ./private-key.pem
+
+# Verify the signature before anything installs from it
+cargoship verify ./build/cargoship-distro-amd64.tar.zst --key ./cosign.pub
+```
+
+`sign` also takes `--keyless` for the Sigstore keyless flow, and `verify` takes the matching keyless flags (`--certificate-identity`, `--certificate-oidc-issuer`, and their regex variants). The commands that load a package - `apply`, `prepare`, `engine-config-sync`, `publish`, `pull`, `validate`, `schema` - verify as part of loading, gated on `--verify=never|if-possible|always`. `verify` does nothing but check the signature, which is what makes it the one to run before a playbook on a management node with no network.
+
+### 8. Encrypt Credentials in a Config File
+
+Registry credentials in a cluster inventory are encrypted at rest, with Ansible Vault or with age. The `vault` command group covers both:
+
+```bash
+# Encrypt one value for a registry's user/pass/token field
+cargoship vault encrypt my-registry-password --vault-password-file ./vault-pass.txt
+
+# Encrypt or decrypt every registry credential in a config file, in place
+cargoship vault encrypt-file ./cargoship-config.yaml --vault-password-file ./vault-pass.txt
+cargoship vault decrypt-file ./cargoship-config.yaml --vault-password-file ./vault-pass.txt
+
+# Encrypt the values already sitting at given YAML paths, naming each one
+cargoship vault encrypt-path ./cargoship-config.yaml '.spec.config.registries[0].auth.pass' --vault-password-file ./vault-pass.txt
+
+# Generate an age key pair, and re-wrap an existing file under a new key
+cargoship vault keygen
+cargoship vault rekey ./cargoship-config.yaml --new-vault-password-file ./new-pass.txt
+```
+
+`encrypt-path` only encrypts; cargoship decrypts a registry's `auth.user`, `auth.pass`, `auth.token` and `tls.ca` at apply time, and warns when asked to encrypt a path outside that set. `decrypt`, `decrypt-path`, `decrypt-file` and `encrypt-file` complete the set; `cargoship vault --help` lists all eight.
+
+### 9. Validate a File, or Write Its Schema
+
+```bash
+# Check an inventory, package definition, or config file against its schema
+cargoship validate ./cargoship-config.yaml
+
+# Write the JSON Schema for one of cargoship's own file formats: inventory, package, or config
+cargoship schema inventory -o ./inventory.schema.json
+
+# Checksum a file, or one file inside an archive
+cargoship sha256sum ./build/cargoship-distro-amd64.tar.zst
+```
+
+---
+
+## OpenTofu and Terraform
+
+The same phases run from an OpenTofu or Terraform provider, built from this repository as `terraform-provider-cargoship`. It drives `prepare` and `apply` against the hosts in its configuration and converges a cluster the way the CLI does, so a cluster can be managed from the same plan as the machines it runs on.
+
+It is a separate binary with its own release workflow, and the CLI does not depend on it. See [Developing the OpenTofu Provider](./docs/dev/tofu-provider.md) for how to build it, run it against a local mirror, and what its resource schema accepts.
+
 ---
 
 ## Ansible Integration
 
-Cargoship also ships as an Ansible collection, `colonel_byte.cargoship`, so the workflows above run as ordinary playbook tasks: `cargoship_apply`, `cargoship_prepare`, `cargoship_reset`, `cargoship_kube_config`, and `cargoship_engine_config_sync`, plus a `cluster` role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.
+Cargoship ships two Ansible collections.
+
+`colonel_byte.cargoship` runs the workflows above as ordinary playbook tasks: `cargoship_apply`, `cargoship_prepare`, `cargoship_reset`, `cargoship_kube_config`, and `cargoship_engine_config_sync`, plus a `cluster` role that wraps them. Ansible supplies the inventory and runs one task for the whole fleet; cargoship still opens every SSH connection itself, from the management node the package was staged onto.
+
+`colonel_byte.zarf` drives [zarf](https://github.com/zarf-dev/zarf) from the same management node, for the layer above the cluster: `zarf_init`, `zarf_package_deploy`, `zarf_package_info`, `zarf_package_inspect` and `zarf_state_info`, with `packages`, `package_inspect` and `state` roles over them. See [Deploying Zarf Packages with Ansible](./docs/guides/zarf-ansible-module.md).
 
 *   [Running Cargoship as an Ansible Module](./docs/guides/ansible-module.md) - the modules, their parameters, check mode, and what `changed` means.
 *   [Generating an Inventory from Ansible](./docs/guides/ansible-inv.md) - the group and host-variable translation, usable with or without the modules.
-*   [The Ansible Container Image](./docs/guides/ansible-container.md) - `ghcr.io/colonel-byte/cargoship-ansible`, which carries the binary and the collection together.
+*   [The Ansible Container Image](./docs/guides/ansible-container.md) - `ghcr.io/colonel-byte/cargoship-ansible`, which carries the binary and the collections together.
 
 ---
 
@@ -186,7 +266,7 @@ Cargoship relies on strongly-typed YAML definitions to govern its operations:
 *   **Distro Package Definitions:** Map out the required binaries, OCI images, and layout settings.
 *   **Distro Runtime Configs:** Configure the underlying distribution engine.
 
-The corresponding JSON schemas are automatically generated from Go structs into `schema/`. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion.
+The corresponding JSON schemas are automatically generated from Go structs into `schema/`, and `cargoship schema` writes any of them on demand. When authoring configurations in modern editors, refer to these schemas for real-time validation and autocompletion; `cargoship validate` checks a file against the right one without an editor.
 
 An inventory authoring guide is available in [Setting up an inventory](./docs/guides/setup-inv.md).
 

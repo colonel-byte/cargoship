@@ -319,7 +319,7 @@ var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
 <a name="ErrUnmanagedNodes"></a>ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for. Apply removes nothing, so continuing would report success over a machine that is still running the engine and still joined.
 
 ```go
-var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
+var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
 ```
 
 <a name="ErrWillNotDowngrade"></a>ErrWillNotDowngrade is returned when a host already runs a version newer than the one the package carries. An engine does not support moving backwards, so the run stops here rather than uninstalling a newer version part way through.

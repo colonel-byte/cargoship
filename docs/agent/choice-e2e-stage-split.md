@@ -71,7 +71,9 @@ This fix is unverified. It addresses the exact error in the logs and it is the s
 
 ## Two CI jobs rather than one matrix
 
-`e2e-cluster-stage` and `e2e-cluster` are separate jobs with duplicated steps. A matrix over a `mode` dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagree on into an expression over the matrix value. They disagree on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differ by a factor of two because that difference is the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.
+While both jobs existed, `e2e-cluster-stage` and `e2e-cluster` were separate jobs with duplicated steps. A matrix over a `mode` dimension was the alternative and would have removed the duplication, at the price of turning every field the two jobs disagreed on into an expression over the matrix value. They disagreed on the job timeout, the test timeout, the environment block and the disk-space rationale, and the timeouts differed by a factor of two because that difference was the entire point of having two jobs. Six duplicated boilerplate steps read better than four conditionals.
+
+Only `e2e-cluster-stage` is left, for the reason the next section gives, so the question is moot unless the full-install job ever comes back.
 
 Both jobs sat behind the same `e2e-cluster` label at first. The point of the stage job was that it is cheap enough to run unconditionally, and the intent was to drop its `if:` once a few runs showed what it actually cost and how steady it was. That data came in, and it went the way this section expected: the stage job is cheap and steady. It now runs on every pull request, ungated.
 

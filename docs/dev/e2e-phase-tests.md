@@ -101,7 +101,7 @@ This tests the routing, which is the part most likely to break, and it keeps wor
 
 ## Phases that route on the OS family
 
-The cluster runs multiple OS families on purpose. In the default full-walk inventory (`k3sOS`), all five machines join the cluster -- one controller and four workers, split between Ubuntu (`kc0`, `kw0`, `kw1`) and Fedora (`kwf0`, `kwf1`). The stage-only inventory (`stageOS`) adds a third family, running an Alpine machine (`kwa0`) that receives uploads but never joins the cluster -- see the section on the upload-only host below. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.
+The cluster runs multiple OS families on purpose. In the default full-walk inventory (`k3sOS`), all five machines join the cluster -- one controller and four workers, split between Ubuntu (`kc0`, `kw0`, `kw1`) and Fedora (`kwf0`, `kwf1`). The stage-only inventory (`stageOS`) is not that set plus a machine: it is a different five, one per family per role -- an Ubuntu controller (`kc0`), a Fedora controller (`kcf0`), an Ubuntu worker (`kw0`), a Fedora worker (`kwf0`), and an Alpine machine (`kwa0`) that receives uploads but never joins the cluster, covered in the section on the upload-only host below. So a Fedora controller only exists in the stage-only walk, and `k3sOS` has no Alpine host at all. A phase that treats Enterprise Linux differently from Debian must be tested on both sides, not just on the side it claims.
 
 Derive the host set from the same filters the phase uses, so the test cannot disagree with it:
 
@@ -207,7 +207,7 @@ s.Require().True(compare.VersionLess(host, s.harness.manager.Distro.Spec.Version
 The upgrade walk is off unless `CARGOSHIP_E2E_UPGRADE` is set. It installs a second complete set of engine images onto every node, which roughly doubles the disk the run needs and adds tens of minutes.
 
 ```console
-$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./src/test/e2e/cluster/...
+$ CARGOSHIP_E2E_UPGRADE=1 go test -mod=vendor -count=1 -v -timeout=195m ./test/e2e/cluster/...
 ```
 
 Without it, `TestClusterPhases/upgrade` skips with a message naming the variable, and the reset walk runs against the installed cluster as before.
@@ -244,7 +244,7 @@ $ mage test:endToEndClusterStage
 
 The engine-bootstrap half, including the join and upgrade walks, does not run in CI at all. It was not reliable enough on a free hosted runner to be a required check, even on the single-controller k3s topology that replaced the original three-controller rke2 one -- see [choice-e2e-stage-split](../agent/choice-e2e-stage-split.md). Trusting a change to the engine-bootstrap phases, the join walk, or the upgrade walk means running `mage test:endToEndCluster` or `mage test:endToEndClusterUpgrade` locally; CI cannot cover that for you.
 
-The upgrade walk is a second opt-in on top of that: the `upgrade` input when dispatching by hand, or the `e2e-cluster-upgrade` label on a pull request. Either one implies the install and join walks, sets `CARGOSHIP_E2E_UPGRADE` for the job and raises its budget from 120 to 210 minutes. Use it on a pull request that touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.
+The upgrade walk has no CI path either. `.github/workflows/e2e-cluster.yaml` declares an `upgrade` boolean input for `workflow_dispatch`, but nothing in the file reads it: the single `e2e-cluster-stage` job hardcodes `CARGOSHIP_E2E_STAGE_ONLY: "1"` and runs on a 30-minute budget, so setting the input changes nothing. Run the upgrade walk locally with `mage test:endToEndClusterUpgrade` when a change touches the upgrade phases, the version comparison, or anything the install walk can only assert has stayed out of the way.
 
 The workflow has no build step and takes no artifact from `e2e.yaml`. Nothing in the suite runs a binary: `Test_00_CreatePackage` calls `distro.Create`, and the prepare, apply, reset and kube-config steps call the matching `action.New*` entry points. That is what makes the two workflows independent, which is the point of the split.
 
@@ -252,7 +252,7 @@ The job frees disk before it starts, because five containerd image stores do not
 
 ## Iterating while writing a new phase test
 
-A new phase test needs the suite up to that point, not the whole run. Three environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.
+A new phase test needs the suite up to that point, not the whole run. Four environment variables, combined, cut a write-run-fix loop down to what your phase actually needs.
 
 **Run only the walk your phase is in.** `TestClusterPhases` runs `apply`, `join`, `upgrade` and `reset` as separate subtests of one parent, so `-run` at that path segment excludes the ones you are not touching:
 
@@ -278,6 +278,14 @@ $ CARGOSHIP_E2E_STAGE_ONLY=1 CARGOSHIP_E2E_KEEP_CLUSTER=1 \
 $ docker ps --filter "label=io.k0sproject.bootloose.owner=bootloose"
 $ docker exec -it <container> sh
 ```
+
+**Walk the suite against rke2 instead of k3s.** `CARGOSHIP_E2E_DISTRO=rke2` switches which distro every step installs, and which package `cluster_lifecycle_test.go` builds. The default is `k3s`. A phase that branches on the engine needs a run each way:
+
+```console
+$ CARGOSHIP_E2E_DISTRO=rke2 go test -mod=vendor -count=1 -v -timeout=90m -run 'TestClusterPhases/apply' ./test/e2e/cluster/...
+```
+
+See `distroEnvVar` and `distroID` in `test/e2e/cluster/05_manager_test.go`.
 
 Each `go test` invocation provisions fresh containers -- there is no "resume the cluster from last time" path, so a kept cluster from a failed run is for reading, not for the next run to build on. Clean it up before running again:
 

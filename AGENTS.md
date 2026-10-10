@@ -151,4 +151,4 @@ OpenSSF Scorecard's `isTestdataFile` logic excludes anything under a `src/test/`
 
 ### `docs/agent/choice-*.md` are constraints, not history
 
-When a decision looks reversible from the code alone - vendoring `vendor/` despite the size, keeping a Scorecard check capped instead of forcing it to 10, pinning Ansible collections by hand instead of Renovate - check `docs/agent/` first. These are usually the record of a tradeoff already made on purpose, not an oversight waiting to be cleaned up.
+When a decision looks reversible from the code alone - four generated `osv-scanner.toml` files inside `vendor/`, a firewall backend picked by the node's OS rather than by what is running on it, an in-memory OCI registry in the test suite - check `docs/agent/` first. These are usually the record of a tradeoff already made on purpose, not an oversight waiting to be cleaned up.
