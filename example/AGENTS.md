@@ -20,13 +20,18 @@ Every path in that table is also marked `linguist-generated` in [`.gitattributes
 `Generate.ExampleLine` backfills a whole minor line: it lists every non-RC tag of that distro on that line and renders each one, into every flavor directory of that distro that covers the line. The leading `v` is optional.
 
 ```sh
-mage generate:exampleLine k3s v1.34
 mage generate:exampleLine k3s v1.35
 mage generate:exampleLine k3s v1.36
 mage generate:exampleLine rke2 v1.37
 ```
 
 Once a line is on disk, `mage generate:examples` keeps it current - it renders every pinned tag plus every example directory that already exists.
+
+## The release floor
+
+Examples are rendered for the newest minor line and the two before it, and no further back. The floor is `exampleMinorFloor` in [`magefiles/pkg/gen/examples/tags.go`](../magefiles/pkg/gen/examples/tags.go), it is shared by every distro, and it applies to pinned tags and to directories already on disk alike - so a line that has aged out stops being re-rendered even though its examples are still committed.
+
+Backfilling a line below the floor fails rather than rendering nothing, and raising the floor is two edits: the constant, and a `git rm` of the lines that fall below it. A render never deletes a line itself. See [`docs/agent/choice-example-release-floor.md`](../docs/agent/choice-example-release-floor.md) for why the window is N-2 and why removal is by hand.
 
 A flavor that names minor lines is rendered only for the lines it names, so asking for a line it does not cover renders the other flavors alone. That covers the multi-architecture flavors - `example/rke2-multi-cni-canal`, `example/rke2-multi-cni-cilium`, `example/k3s-multi` - which are gated to the lines in `exampleMultiMinors` in [`magefiles/examples.go`](../magefiles/examples.go). Add a new line there before rendering it, or those flavors stay empty for it:
 
