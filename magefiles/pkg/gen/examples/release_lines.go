@@ -262,8 +262,13 @@ func fetchImageList(repoURL, tagURL, asset string) ([]string, error) {
 // A release's assets do not change under a tag, so the second render of a version is free;
 // CARGOSHIP_EXAMPLES_NO_CACHE covers the case where one did change.
 func fetchReleaseLines(repoURL, tagURL, asset string) ([]string, error) {
-	url := fmt.Sprintf("%s/releases/download/%s/%s", strings.TrimSuffix(repoURL, "/"), tagURL, asset)
+	return fetchLines(fmt.Sprintf("%s/releases/download/%s/%s", strings.TrimSuffix(repoURL, "/"), tagURL, asset))
+}
 
+// fetchLines is fetchReleaseLines against a URL that is not a release asset -- a pinned CNI
+// manifest, which is published on its own schedule rather than with a distro release but is
+// just as immutable under its version. Same cache, same guarantee.
+func fetchLines(url string) ([]string, error) {
 	cache := releaseLines()
 	if lines, ok := cache.lookup(url); ok {
 		return lines, nil

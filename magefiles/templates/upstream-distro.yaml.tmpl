@@ -16,7 +16,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
 kind: ZarfDistro
 metadata:
-  name: upstream
+  name: upstream-{{ .CNI.Name }}
   version: {{ .Version }}
   architectures:
     - amd64
@@ -25,6 +25,30 @@ spec:
   version: {{ .Version }}
   type: upstream
   config:
+    # Upstream ships no CNI of its own, and a cluster without one comes up with every pod stuck
+    # at ContainerCreating. So the package carries one: the manifest below goes to the
+    # controllers, and spec.config.manifests is what tells cargoship to kubectl apply it from
+    # the leader once kubeadm has formed the cluster. The images it runs are in
+    # imageConfig.images further down, read out of this same manifest when it was rendered.
+    files:
+      - source: {{ .CNI.Source }}
+        target: {{ .CNI.Target }}
+{{- with .CNI.SHA256 }}
+        shasum: {{ . }}
+{{- end }}
+        selector:
+          profile: controller
+    manifests:
+      - {{ .CNI.Target }}
+{{- with .CNI.PodSubnet }}
+    engine:
+      config:
+        networking:
+          # {{ $.CNI.Name }}'s manifest hardcodes this pod CIDR, so kubeadm is told the same one.
+          # Disagreeing here is not an error either side reports: the cluster forms and pod
+          # traffic silently does not route.
+          podSubnet: {{ . }}
+{{- end }}
     os:
       files:
         # Every file this package installs is architecture specific, so each one is listed once per
@@ -65,3 +89,9 @@ spec:
         - registry.k8s.io/coredns/coredns:{{ .CoreDNSVersion }}
         - registry.k8s.io/pause:{{ .PauseVersion }}
         - registry.k8s.io/etcd:{{ .EtcdVersion }}
+        # Everything above is what kubeadm pins for this release. Everything below is what the
+        # CNI manifest this package applies names, read out of the manifest itself, so the two
+        # cannot drift apart when the CNI adds a sidecar.
+{{- range .CNI.Images }}
+        - {{ . }}
+{{- end }}
