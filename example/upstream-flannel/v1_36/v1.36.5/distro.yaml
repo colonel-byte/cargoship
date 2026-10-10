@@ -1,0 +1,238 @@
+# Copyright 2026 colonel-byte
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/colonel-byte/cargoship/refs/heads/main/schema/zarf-v1alpha1-distro-package-schema.json
+kind: ZarfDistro
+metadata:
+  name: upstream-flannel
+  version: 1.36.5
+  architectures:
+    - amd64
+    - arm64
+spec:
+  version: 1.36.5
+  type: upstream
+  config:
+    # Upstream ships no CNI of its own, and a cluster without one comes up with every pod stuck
+    # at ContainerCreating. So the package carries one: the manifest below goes to the
+    # controllers, and spec.config.manifests is what tells cargoship to kubectl apply it from
+    # the leader once kubeadm has formed the cluster. The images it runs are in
+    # imageConfig.images further down, read out of this same manifest when it was rendered.
+    files:
+      - source: https://github.com/flannel-io/flannel/releases/download/v0.28.10/kube-flannel.yml
+        target: /etc/kubernetes/manifests-cni/kube-flannel.yml
+        shasum: 393bdbce53eb50c8eb97dd513b218518b7d6e7985dc7b889be956e112a711084
+        selector:
+          profile: controller
+    manifests:
+      - /etc/kubernetes/manifests-cni/kube-flannel.yml
+    engine:
+      config:
+        networking:
+          # flannel's manifest hardcodes this pod CIDR, so kubeadm is told the same one.
+          # Disagreeing here is not an error either side reports: the cluster forms and pod
+          # traffic silently does not route.
+          podSubnet: 10.244.0.0/16
+    os:
+      files:
+        # Every file this package installs is architecture specific, so each one is listed once per
+        # architecture with a selector saying which hosts it belongs to. A host receives only the
+        # entries its own architecture selects, and cargoship refuses a selector naming an
+        # architecture the package does not declare above. Each entry carries the sha256 its
+        # publisher lists for that file, so cargoship verifies what it downloads.
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/cri-tools_1.36.0-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/cri-tools_1.36.0-1.1_amd64.deb
+          shasum: 8cff9279de7767239e11bf9c21016579a4246e04e7da0c500c7a3f8491db986a
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubernetes-cni_1.9.1-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubernetes-cni_1.9.1-1.1_amd64.deb
+          shasum: 4cd72d8cef4499d3dc410874287b40e8b4241e0772938c5820cbee37986c1d93
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubeadm_1.36.5-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubeadm_1.36.5-1.1_amd64.deb
+          shasum: bbb6899335ca6890be4c007e10c66303f68281d342f2e7345db9c03cd5175da9
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubelet_1.36.5-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubelet_1.36.5-1.1_amd64.deb
+          shasum: dd46254567ee60672c0737a4b5392fae7f3419a876ab6885c48178501ac2fd64
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/amd64/kubectl_1.36.5-1.1_amd64.deb
+          target: /var/lib/kubernetes/deb/kubectl_1.36.5-1.1_amd64.deb
+          shasum: e633cdbcb535b0fdf8bd9aa643cfd0ad080889fddb6794d2af0bbaaf110e7956
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/amd64/containerd.io_2.4.1-2~debian.13~trixie_amd64.deb
+          target: /var/lib/kubernetes/deb/containerd.io_2.4.1-2~debian.13~trixie_amd64.deb
+          shasum: ebcffac9d869e111054abf235042afd5d908a9e1a009f9c99776428dd80f2620
+          selector:
+            package: apt
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/cri-tools_1.36.0-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/cri-tools_1.36.0-1.1_arm64.deb
+          shasum: ab8ff8eace53b18fb7316d17f3fa29a01f6fd92b885d3014db415ab7b84619cc
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubernetes-cni_1.9.1-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubernetes-cni_1.9.1-1.1_arm64.deb
+          shasum: fbe479bf9b303fc88bd7c61769687235efa36f684e8ec5e97d45d08669dd1d4d
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubeadm_1.36.5-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubeadm_1.36.5-1.1_arm64.deb
+          shasum: d08b7af27b50d539d91d9c5af69f73feff0e59455fe74d478e0a009cc2bdf260
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_1.36.5-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubelet_1.36.5-1.1_arm64.deb
+          shasum: 946ae8079938f6be46ec48ff317005d03c87de09a5b557627f348a11c080e0ef
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubectl_1.36.5-1.1_arm64.deb
+          target: /var/lib/kubernetes/deb/kubectl_1.36.5-1.1_arm64.deb
+          shasum: 65cdaa8817b252ef493768ba8976b292eccddcfd3d5e9b6d24bbb67ec58027fb
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://download.docker.com/linux/debian/dists/trixie/pool/stable/arm64/containerd.io_2.4.1-2~debian.13~trixie_arm64.deb
+          target: /var/lib/kubernetes/deb/containerd.io_2.4.1-2~debian.13~trixie_arm64.deb
+          shasum: 03af94dfe2b8f291a9a50e37276c14e87ad418fd1625544ad52040989c39350b
+          selector:
+            package: apt
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/cri-tools-1.36.0-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/cri-tools-1.36.0-150500.1.1.x86_64.rpm
+          shasum: e622a370e92664907b660c7bd7af73831d3d8132be5616be8ec11581a7443970
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubernetes-cni-1.9.1-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubernetes-cni-1.9.1-150500.1.1.x86_64.rpm
+          shasum: a228e611f547cf3554873c383078a7ff9abf289e5b7ae315cd38c3811804e2f7
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubeadm-1.36.5-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubeadm-1.36.5-150500.1.1.x86_64.rpm
+          shasum: 0f857b25db48cb01e5c69dc1d02a1fc02c125a0d04a5cd58440a4e9adb631f5a
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubelet-1.36.5-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubelet-1.36.5-150500.1.1.x86_64.rpm
+          shasum: 15b55de802c19f1c5b89c065086ad8feec3430fd58da836300f51688ecbbb63b
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/x86_64/kubectl-1.36.5-150500.1.1.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/kubectl-1.36.5-150500.1.1.x86_64.rpm
+          shasum: 9e406829bad036e45e08f6c49176f479c06d239cf64a96befa56f8b1b55a37fc
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://download.docker.com/linux/rhel/9/x86_64/stable/Packages/containerd.io-2.4.1-2.el9.x86_64.rpm
+          target: /var/lib/kubernetes/rpm/containerd.io-2.4.1-2.el9.x86_64.rpm
+          shasum: 725168d015f5bf4b7faa78405786888527ce4368996bc7e83bee2c933f08aa70
+          selector:
+            package: rpm
+            arch:
+              - amd64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/cri-tools-1.36.0-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/cri-tools-1.36.0-150500.1.1.aarch64.rpm
+          shasum: 98b0f3cfcde85047a22bb03ed1e330a71354a6a725e45b2086fd8a01dca8fce3
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubernetes-cni-1.9.1-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubernetes-cni-1.9.1-150500.1.1.aarch64.rpm
+          shasum: 602a7f8a7b7552f934bc72eca0bef2dad8cd0ce82c263bca62db733d04dc3bfb
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubeadm-1.36.5-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubeadm-1.36.5-150500.1.1.aarch64.rpm
+          shasum: 537eff640eeffff0ee125095d881ad6a6adb6ac991880745b7127d952e1cd773
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubelet-1.36.5-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubelet-1.36.5-150500.1.1.aarch64.rpm
+          shasum: 3da680cc2f3f814e8b1bf8dcd2fe703699990834675afb0f2aae0ce63617f065
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://pkgs.k8s.io/core:/stable:/v1.36/rpm/aarch64/kubectl-1.36.5-150500.1.1.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/kubectl-1.36.5-150500.1.1.aarch64.rpm
+          shasum: 0e012478f14585eb07b824e54a8c055ed1598520319833562ac08c606c8a0722
+          selector:
+            package: rpm
+            arch:
+              - arm64
+        - source: https://download.docker.com/linux/rhel/9/aarch64/stable/Packages/containerd.io-2.4.1-2.el9.aarch64.rpm
+          target: /var/lib/kubernetes/rpm/containerd.io-2.4.1-2.el9.aarch64.rpm
+          shasum: fb4f4c35d974d26ccce98eee9bd62a43ab95b6e62559bec493842ad9149c2137
+          selector:
+            package: rpm
+            arch:
+              - arm64
+    imageConfig:
+      compression: none
+      path: /etc/kubernetes/images
+      images:
+        - registry.k8s.io/kube-apiserver:v1.36.5
+        - registry.k8s.io/kube-controller-manager:v1.36.5
+        - registry.k8s.io/kube-scheduler:v1.36.5
+        - registry.k8s.io/kube-proxy:v1.36.5
+        - registry.k8s.io/coredns/coredns:v1.14.2
+        - registry.k8s.io/pause:3.10.2
+        - registry.k8s.io/etcd:3.6.8-0
+        # Everything above is what kubeadm pins for this release. Everything below is what the
+        # CNI manifest this package applies names, read out of the manifest itself, so the two
+        # cannot drift apart when the CNI adds a sidecar.
+        - ghcr.io/flannel-io/flannel:v0.28.10
+        - ghcr.io/flannel-io/flannel-cni-plugin:v1.9.1-flannel3
