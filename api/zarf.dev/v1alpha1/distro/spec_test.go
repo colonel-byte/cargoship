@@ -160,3 +160,54 @@ func TestDistroArches(t *testing.T) {
 		})
 	}
 }
+
+// TestZarfDistroSELinuxIsZero pins the gate the SELinux phase runs off. Any one of the three
+// lists being populated has to make the phase run, and an untouched field has to keep it off.
+func TestZarfDistroSELinuxIsZero(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		selinux ZarfDistroSELinux
+		want    bool
+	}{
+		{
+			name:    "nothing configured",
+			selinux: ZarfDistroSELinux{},
+			want:    true,
+		},
+		{
+			name: "a module",
+			selinux: ZarfDistroSELinux{
+				Modules: []ZarfDistroSELinuxModule{
+					{
+						Name: "cargoship-engine",
+						CIL:  "(allow kernel_t self (capability (sys_admin)))",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "a boolean",
+			selinux: ZarfDistroSELinux{
+				Booleans: map[string]bool{"container_manage_cgroup": true},
+			},
+			want: false,
+		},
+		{
+			name: "a file context",
+			selinux: ZarfDistroSELinux{
+				FileContexts: []ZarfDistroSELinuxFileContext{
+					{
+						Path: "/var/lib/rancher(/.*)?",
+						Type: "container_var_lib_t",
+					},
+				},
+			},
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, tt.selinux.IsZero())
+		})
+	}
+}

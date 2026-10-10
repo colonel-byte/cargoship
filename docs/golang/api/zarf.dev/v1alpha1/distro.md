@@ -26,6 +26,10 @@ Package distro defines the API types for a distro package.
   - [func \(m ZarfDistroMetadata\) Arches\(\) api.Arches](<#ZarfDistroMetadata.Arches>)
 - [type ZarfDistroOS](<#ZarfDistroOS>)
   - [func \(ZarfDistroOS\) JSONSchemaExtend\(s \*jsonschema.Schema\)](<#ZarfDistroOS.JSONSchemaExtend>)
+- [type ZarfDistroSELinux](<#ZarfDistroSELinux>)
+  - [func \(s ZarfDistroSELinux\) IsZero\(\) bool](<#ZarfDistroSELinux.IsZero>)
+- [type ZarfDistroSELinuxFileContext](<#ZarfDistroSELinuxFileContext>)
+- [type ZarfDistroSELinuxModule](<#ZarfDistroSELinuxModule>)
 - [type ZarfDistroSpec](<#ZarfDistroSpec>)
 - [type ZarfDistroValueMapping](<#ZarfDistroValueMapping>)
 - [type ZarfDistroValues](<#ZarfDistroValues>)
@@ -93,7 +97,7 @@ type ZarfDistro struct {
 ```
 
 <a name="ZarfDistro.Arches"></a>
-### func \(ZarfDistro\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L315>)
+### func \(ZarfDistro\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L353>)
 
 ```go
 func (distro ZarfDistro) Arches() api.Arches
@@ -102,7 +106,7 @@ func (distro ZarfDistro) Arches() api.Arches
 Arches returns the CPU architectures the package covers. A built package records them under build, so that is preferred; a definition that has not been built yet only carries what the metadata targets.
 
 <a name="ZarfDistro.IsSBOMAble"></a>
-### func \(ZarfDistro\) [IsSBOMAble](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L323>)
+### func \(ZarfDistro\) [IsSBOMAble](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L361>)
 
 ```go
 func (distro ZarfDistro) IsSBOMAble() bool
@@ -163,7 +167,7 @@ type ZarfDistroBuildData struct {
 ```
 
 <a name="ZarfDistroBuildData.Arches"></a>
-### func \(ZarfDistroBuildData\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L302>)
+### func \(ZarfDistroBuildData\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L340>)
 
 ```go
 func (b ZarfDistroBuildData) Arches() api.Arches
@@ -265,7 +269,7 @@ type ZarfDistroMetadata struct {
 ```
 
 <a name="ZarfDistroMetadata.Arches"></a>
-### func \(ZarfDistroMetadata\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L290>)
+### func \(ZarfDistroMetadata\) [Arches](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L328>)
 
 ```go
 func (m ZarfDistroMetadata) Arches() api.Arches
@@ -274,7 +278,7 @@ func (m ZarfDistroMetadata) Arches() api.Arches
 Arches returns the CPU architectures the package targets. It prefers Architectures and falls back to the single Architecture field, so callers never have to know which one the package set.
 
 <a name="ZarfDistroOS"></a>
-## type [ZarfDistroOS](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L260-L271>)
+## type [ZarfDistroOS](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L260-L273>)
 
 ZarfDistroOS holds settings applied to a host.
 
@@ -284,6 +288,8 @@ type ZarfDistroOS struct {
     Sysctl map[string]string `json:"sysctl,omitempty"`
     // FAPolicyd holds the fapolicyd config file contents cargoship writes to a host.
     FAPolicyd string `json:"fapolicyd,omitempty"`
+    // SELinux holds the custom SELinux policy cargoship applies to a host.
+    SELinux ZarfDistroSELinux `json:"selinux,omitempty"`
     // Files lists files cargoship uploads to a host.
     Files v1alpha1.ZarfFiles `json:"files,omitempty"`
     // Kernel lists the kernel modules cargoship enables on the host.
@@ -294,13 +300,70 @@ type ZarfDistroOS struct {
 ```
 
 <a name="ZarfDistroOS.JSONSchemaExtend"></a>
-### func \(ZarfDistroOS\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L275>)
+### func \(ZarfDistroOS\) [JSONSchemaExtend](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L277>)
 
 ```go
 func (ZarfDistroOS) JSONSchemaExtend(s *jsonschema.Schema)
 ```
 
 JSONSchemaExtend widens sysctl values to accept numbers alongside strings, so unquoted numeric values in YAML validate.
+
+<a name="ZarfDistroSELinux"></a>
+## type [ZarfDistroSELinux](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L292-L299>)
+
+ZarfDistroSELinux holds the custom SELinux policy cargoship applies to hosts running SELinux in enforcing mode. Every field is optional, and a host that is not enforcing is left alone.
+
+```go
+type ZarfDistroSELinux struct {
+    // Modules lists the CIL policy modules cargoship installs on a host.
+    Modules []ZarfDistroSELinuxModule `json:"modules,omitempty"`
+    // Booleans maps SELinux boolean names to the values cargoship sets persistently on a host.
+    Booleans map[string]bool `json:"booleans,omitempty"`
+    // FileContexts lists the file context mappings cargoship adds on a host.
+    FileContexts []ZarfDistroSELinuxFileContext `json:"fileContexts,omitempty"`
+}
+```
+
+<a name="ZarfDistroSELinux.IsZero"></a>
+### func \(ZarfDistroSELinux\) [IsZero](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L302>)
+
+```go
+func (s ZarfDistroSELinux) IsZero() bool
+```
+
+IsZero reports whether no SELinux policy is configured, so a phase can gate on it.
+
+<a name="ZarfDistroSELinuxFileContext"></a>
+## type [ZarfDistroSELinuxFileContext](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L317-L324>)
+
+ZarfDistroSELinuxFileContext holds a single file context mapping cargoship adds with semanage.
+
+```go
+type ZarfDistroSELinuxFileContext struct {
+    // Path holds the path regular expression the mapping applies to.
+    Path string `json:"path" jsonschema:"example=/var/lib/rancher(/.*)?"`
+    // Type names the SELinux type the matching paths are labeled with.
+    Type string `json:"type" jsonschema:"example=container_var_lib_t"`
+    // FileType restricts the mapping to one kind of filesystem object.
+    FileType string `json:"fileType,omitempty" jsonschema:"default=all,enum=all,enum=file,enum=dir,enum=symlink,enum=pipe,enum=socket,enum=block,enum=char"`
+}
+```
+
+<a name="ZarfDistroSELinuxModule"></a>
+## type [ZarfDistroSELinuxModule](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L307-L314>)
+
+ZarfDistroSELinuxModule holds a single CIL policy module cargoship installs with semodule.
+
+```go
+type ZarfDistroSELinuxModule struct {
+    // Name identifies the module to semodule, and names the file cargoship writes to the host.
+    Name string `json:"name" jsonschema:"pattern=^[a-zA-Z0-9][a-zA-Z0-9_-]*$"`
+    // Priority holds the semodule priority the module installs at.
+    Priority int `json:"priority,omitempty" jsonschema:"default=400"`
+    // CIL holds the Common Intermediate Language policy source semodule installs.
+    CIL string `json:"cil"`
+}
+```
 
 <a name="ZarfDistroSpec"></a>
 ## type [ZarfDistroSpec](<https://github.com/colonel-byte/cargoship/blob/main/api/zarf.dev/v1alpha1/distro/spec.go#L132-L143>)
