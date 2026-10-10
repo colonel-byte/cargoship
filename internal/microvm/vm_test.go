@@ -162,3 +162,61 @@ func TestQemuArgsLeaderForwardsEnginePorts(t *testing.T) {
 	require.NotContains(t, strings.Join(workerArgv, " "), "-:6443",
 		"only the leader forwards the api port")
 }
+
+// TestParseCloudInitStatus covers the gate that decides a node is usable. Treating "running"
+// as done is the bug this replaced: sshd answers about six seconds in, and the packages that
+// open the fapolicyd and firewall gates are installed well after that, so a fleet handed back
+// early looks healthy with both of those phases silently skipping.
+func TestParseCloudInitStatus(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		out  string
+		want string
+	}{
+		{
+			name: "finished",
+			out:  "status: done\nboot_status_code: enabled-by-generator\n",
+			want: "done",
+		},
+		{
+			name: "still working",
+			out:  "status: running\nextended_status: running\ndetail: DataSourceNoCloud [seed=/dev/vdb]\n",
+			want: "running",
+		},
+		{
+			name: "failed",
+			out:  "status: error\nerrors:\n  - something went wrong\n",
+			want: "error",
+		},
+		{
+			name: "never started",
+			out:  "status: disabled\n",
+			want: "disabled",
+		},
+		{
+			name: "no status line reads as still working",
+			out:  "boot_status_code: enabled-by-generator\n",
+			want: "running",
+		},
+		{
+			name: "nothing at all reads as still working",
+			out:  "",
+			want: "running",
+		},
+		{
+			name: "indented, as the long form prints it",
+			out:  "  status: done  \n",
+			want: "done",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tt.want, parseCloudInitStatus(tt.out))
+		})
+	}
+}
