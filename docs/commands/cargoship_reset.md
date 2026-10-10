@@ -43,6 +43,7 @@ $ cargoship reset --config ./cargoship-config.yaml --distro rke2 --confirm --wor
   -D, --distro string             What type of distro that will be reset. Valid options are: 'rke2', 'k3s'.
       --dry-run                   Report what would be done without changing any host. Connects to every host and runs the preflight checks for real, then lists the phases it did not run. Does not need --confirm.
   -h, --help                      help for reset
+      --target-hosts strings      Specific hosts to delete and uninstall, matched by hostname or connection address. Repeatable. Defaults to every host in the cluster configuration.
   -w, --work-concurrency string   Maximum number of workers that will be installed or updated in parallel, as a fixed count or a percentage (e.g. "25%"), set to 0 for unlimited. (default "0")
 ```
 

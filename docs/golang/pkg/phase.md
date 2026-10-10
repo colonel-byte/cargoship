@@ -12,6 +12,7 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
+- [func CheckTargetHosts\(hosts cluster.ZarfHosts, targets \[\]string\) error](<#CheckTargetHosts>)
 - [func DryRunNote\(p Phase\) string](<#DryRunNote>)
 - [func Titles\(results \[\]PhaseResult\) \[\]string](<#Titles>)
 - [type APTUploadFiles](<#APTUploadFiles>)
@@ -304,6 +305,17 @@ const (
 
 ## Variables
 
+<a name="ErrControllersNotOneAtATime"></a>ErrControllersNotOneAtATime is returned when a run that keeps the cluster removes more than one running controller.
+
+Each removal is a raft reconfiguration that needs a majority of the membership it starts from, and cargoship takes the engine down on a controller before deleting its node so the member cannot vote or re\-register behind the run. Two removals in one run therefore pass through a state the second one cannot commit from: three members, one already stopped, is a majority of two out of three; the next stop leaves one of two, and the removal hangs with the cluster unavailable rather than failing cleanly.
+
+Removing them in separate runs is safe because the cluster is whole again at the start of each.
+
+```go
+var ErrControllersNotOneAtATime = errors.New("more than one running controller is being removed in a single run: " +
+    "remove them one run at a time, so each removal starts from a cluster that still has every member")
+```
+
 <a name="ErrNoControllers"></a>ErrNoControllers an error for when no controllers are running
 
 ```go
@@ -314,6 +326,15 @@ var ErrNoControllers = errors.New("no controllers are running")
 
 ```go
 var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
+```
+
+<a name="ErrNoSurvivingController"></a>ErrNoSurvivingController is returned when every running controller is being removed, but some host is not. Tearing a subset down works by driving kubectl through a controller that stays, so a run with no controller left to drive is a whole\-cluster teardown wearing a subset's clothes: it would drain and delete nodes through a machine it is about to uninstall, and whether that finished would depend on the order the hosts happened to be in.
+
+Removing every host is still allowed. That is a reset, and reset is what it is for.
+
+```go
+var ErrNoSurvivingController = errors.New("every running controller is being removed, but not every host is: " +
+    "target the whole cluster to tear it down, or leave a controller out of the target list to remove a subset through it")
 ```
 
 <a name="ErrUnmanagedNodes"></a>ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for. Apply removes nothing, so continuing would report success over a machine that is still running the engine and still joined.
@@ -354,6 +375,17 @@ var (
 ```go
 var NoWait bool
 ```
+
+<a name="CheckTargetHosts"></a>
+## func [CheckTargetHosts](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L191>)
+
+```go
+func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error
+```
+
+CheckTargetHosts reports a target that names no host in the configuration.
+
+A target nobody matches is the quiet failure this whole feature could have: the filter returns an empty set, every phase reports nothing to do, and the run succeeds having removed nothing. A typo in a hostname is the ordinary way to get there.
 
 <a name="DryRunNote"></a>
 ## func [DryRunNote](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L174>)
@@ -685,18 +717,19 @@ func (p *Connect) Title() string
 Title for the phase
 
 <a name="DaemonReload"></a>
-## type [DaemonReload](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L32-L34>)
+## type [DaemonReload](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L32-L35>)
 
 DaemonReload phase runs \`systemctl daemon\-reload\` or equivalent on all hosts.
 
 ```go
 type DaemonReload struct {
     GenericPhase
+    TargetHosts []string
 }
 ```
 
 <a name="DaemonReload.Explanation"></a>
-### func \(\*DaemonReload\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L42>)
+### func \(\*DaemonReload\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L43>)
 
 ```go
 func (p *DaemonReload) Explanation() string
@@ -705,7 +738,7 @@ func (p *DaemonReload) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="DaemonReload.Run"></a>
-### func \(\*DaemonReload\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L52>)
+### func \(\*DaemonReload\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L53>)
 
 ```go
 func (p *DaemonReload) Run(ctx context.Context) error
@@ -714,7 +747,7 @@ func (p *DaemonReload) Run(ctx context.Context) error
 Run the phase
 
 <a name="DaemonReload.ShouldRun"></a>
-### func \(\*DaemonReload\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L47>)
+### func \(\*DaemonReload\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L48>)
 
 ```go
 func (p *DaemonReload) ShouldRun() bool
@@ -723,7 +756,7 @@ func (p *DaemonReload) ShouldRun() bool
 ShouldRun is true when there are controllers that needs to be reset
 
 <a name="DaemonReload.Title"></a>
-### func \(\*DaemonReload\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L37>)
+### func \(\*DaemonReload\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L38>)
 
 ```go
 func (p *DaemonReload) Title() string
@@ -732,20 +765,21 @@ func (p *DaemonReload) Title() string
 Title for the phase
 
 <a name="DeleteCommon"></a>
-## type [DeleteCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L34-L38>)
+## type [DeleteCommon](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L39-L48>)
 
 DeleteCommon phase state
 
 ```go
 type DeleteCommon struct {
     GenericPhase
-    Distro distrocfg.Distro
+    Distro      distrocfg.Distro
+    TargetHosts []string
     // contains filtered or unexported fields
 }
 ```
 
 <a name="DeleteCommon.Prepare"></a>
-### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L41>)
+### func \(\*DeleteCommon\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L75>)
 
 ```go
 func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
@@ -785,7 +819,7 @@ func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 Prepare the phase
 
 <a name="DeleteControllers.Run"></a>
-### func \(\*DeleteControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L84>)
+### func \(\*DeleteControllers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L85>)
 
 ```go
 func (p *DeleteControllers) Run(ctx context.Context) error
@@ -844,7 +878,7 @@ func (p *DeleteWorkers) Prepare(ctx context.Context, c *cluster.ZarfCluster, d *
 Prepare the phase
 
 <a name="DeleteWorkers.Run"></a>
-### func \(\*DeleteWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L84>)
+### func \(\*DeleteWorkers\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L85>)
 
 ```go
 func (p *DeleteWorkers) Run(ctx context.Context) error
@@ -2451,7 +2485,7 @@ func (r RunResult) Undeclared() []string
 Undeclared names the phases that did not say whether they changed anything, in the order the run reached them. A caller reporting Changed is expected to report these alongside it.
 
 <a name="UninstallEngine"></a>
-## type [UninstallEngine](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L44-L49>)
+## type [UninstallEngine](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L45-L51>)
 
 UninstallEngine state
 
@@ -2460,12 +2494,13 @@ type UninstallEngine struct {
     GenericPhase
     Distro           distrocfg.Distro
     WorkerConcurrent string
+    TargetHosts      []string
     // contains filtered or unexported fields
 }
 ```
 
 <a name="UninstallEngine.Explanation"></a>
-### func \(\*UninstallEngine\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L57>)
+### func \(\*UninstallEngine\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L59>)
 
 ```go
 func (p *UninstallEngine) Explanation() string
@@ -2474,7 +2509,7 @@ func (p *UninstallEngine) Explanation() string
 Explanation about the current phase, used for documentation generation
 
 <a name="UninstallEngine.Prepare"></a>
-### func \(\*UninstallEngine\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L62>)
+### func \(\*UninstallEngine\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L64>)
 
 ```go
 func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
@@ -2483,7 +2518,7 @@ func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _
 Prepare the phase
 
 <a name="UninstallEngine.Run"></a>
-### func \(\*UninstallEngine\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L69>)
+### func \(\*UninstallEngine\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L71>)
 
 ```go
 func (p *UninstallEngine) Run(ctx context.Context) error
@@ -2492,7 +2527,7 @@ func (p *UninstallEngine) Run(ctx context.Context) error
 Run the phase
 
 <a name="UninstallEngine.Title"></a>
-### func \(\*UninstallEngine\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L52>)
+### func \(\*UninstallEngine\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L54>)
 
 ```go
 func (p *UninstallEngine) Title() string

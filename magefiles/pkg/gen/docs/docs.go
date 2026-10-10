@@ -84,7 +84,11 @@ func GenerateDocument() error {
 	if err := doc.GenMarkdownTreeCustom(rootCmd, "./docs/commands", prependTitle, linkHandler); err != nil {
 		return err
 	}
-	for _, pd := range phaseDocs() {
+	docs, err := phaseDocs()
+	if err != nil {
+		return err
+	}
+	for _, pd := range docs {
 		if err := writePhaseDoc(pd); err != nil {
 			return err
 		}

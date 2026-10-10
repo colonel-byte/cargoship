@@ -181,13 +181,14 @@ func (s *DryRunSuite) Test_4_ResetDryRunWithNoRunningController() {
 	s.Require().NoError(err)
 	manager.DryRun = true
 
-	err = action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
 		NoWait:           true,
 		NoDrain:          true,
-	}).Run(s.ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(s.ctx))
 
 	s.reconnect(manager)
 	defer disconnectAll(manager.Config.Spec.Hosts)

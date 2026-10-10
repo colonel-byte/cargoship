@@ -233,13 +233,14 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 	manager.DryRun = true
 
 	ctx, sink := phase.WithResultSink(s.ctx)
-	err := action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
 		NoWait:           true,
 		NoDrain:          true,
-	}).Run(ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(ctx))
 
 	// The delete and uninstall phases declare no dry-run path, so a dry run has to have reported
 	// them. Finding none reported on a cluster that is up would mean the run decided there was
@@ -267,13 +268,14 @@ func (s *ResetSuite) Test_0_ResetDryRunLeavesTheClusterUp() {
 func (s *ResetSuite) Test_1_Reset() {
 	manager := s.newBareManager(e2e.ClusterConfigPath)
 
-	err := action.NewReset(action.ResetOptions{
+	reset, err := action.NewReset(action.ResetOptions{
 		Manager:          manager,
 		WorkerConcurrent: applyWorkerConcurrent,
 		NoWait:           true,
 		NoDrain:          true,
-	}).Run(s.ctx)
+	})
 	s.Require().NoError(err)
+	s.Require().NoError(reset.Run(s.ctx))
 }
 
 // Test_2_PostReset confirms kube-config can no longer find a running controller once the
