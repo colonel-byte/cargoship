@@ -141,14 +141,14 @@ func (s *JoinPhaseSuite) Test_05_Manager() {
 	s.Require().Len(s.harness.uploadOnly(), uploadOnlyCount)
 
 	s.joined = s.harness.hosts().Find(func(h *apicluster.ZarfHost) bool {
-		return h.Hostname == joinHostname
+		return h.Hostname == clusterConfig().joinHostname()
 	})
-	s.Require().NotNilf(s.joined, "the inventory does not name %s, the machine this walk joins", joinHostname)
+	s.Require().NotNilf(s.joined, "the inventory does not name %s, the machine this walk joins", clusterConfig().joinHostname())
 }
 
 // isJoined reports whether host is the machine this walk added.
 func (s *JoinPhaseSuite) isJoined(host *apicluster.ZarfHost) bool {
-	return host.Hostname == joinHostname
+	return host.Hostname == clusterConfig().joinHostname()
 }
 
 // Test_ZZ1_ClusterHealthy waits for the joined node to report Ready alongside the nodes the
