@@ -17,10 +17,12 @@ package phase
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/types/distrocfg"
+	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -153,4 +155,53 @@ func TestUninstallNodeCleansWhatCargoshipManages(t *testing.T) {
 
 	require.NoError(t, p.uninstallNode(context.Background(), h))
 	require.Positive(t, asked, "the uninstall never asked the distro what it manages")
+}
+
+// dirFS models the one distinction that mattered: a path that is a directory exists, and
+// `test -f` says it does not. Anything else panics through the nil embedded interface.
+type dirFS struct {
+	remotefs.FS
+
+	dirs  map[string]bool
+	files map[string]bool
+}
+
+func (d *dirFS) FileExist(path string) bool { return d.files[path] }
+
+func (d *dirFS) Stat(path string) (fs.FileInfo, error) {
+	if d.dirs[path] || d.files[path] {
+		return nil, nil //nolint:nilnil // only the error is read; see pathExists
+	}
+	return nil, errors.New("no such file or directory")
+}
+
+// TestPathExistsFindsDirectories is the whole of a defect that made an uninstall quietly skip
+// every path it was meant to remove.
+//
+// ZarfHost.FileExist is `test -f`, so it is false for a directory, and every path an uninstall
+// removes is one: the engine's data directory, its config directory, /etc/cargoship, the
+// package staging directory. Guarding their removal on it meant nothing was attempted, so
+// nothing failed and nothing was logged -- a reset reported success having left 2.3G in
+// /var/lib/rancher/rke2 and a config.yaml naming the old cluster.
+func TestPathExistsFindsDirectories(t *testing.T) {
+	t.Parallel()
+
+	const (
+		dataDir = "/var/lib/rancher/rke2"
+		config  = "/etc/rancher/rke2/config.yaml"
+	)
+
+	h := &cluster.ZarfHost{Hostname: "worker1"}
+	h.SetFS(&dirFS{
+		dirs:  map[string]bool{dataDir: true},
+		files: map[string]bool{config: true},
+	})
+
+	require.True(t, pathExists(h, dataDir), "a directory is a path an uninstall has to remove")
+	require.False(t, h.FileExist(dataDir),
+		"FileExist is test -f, which is why it cannot be the guard on removing a directory")
+
+	require.True(t, pathExists(h, config), "and a file is still a path that exists")
+	require.False(t, pathExists(h, "/var/lib/rancher/absent"))
+	require.False(t, pathExists(h, ""), "an empty path is nothing to remove")
 }
