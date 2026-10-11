@@ -32,7 +32,18 @@ import (
 
 const (
 	deleteNode = `delete node %s`
-	getNode    = `get node %s --no-headers 2>/dev/null`
+
+	// listNodeIdentities prints one line per node: its name, then the addresses it reports as
+	// one comma-separated field. That is what a host is matched against, because the name
+	// alone is not enough -- see resolveNodeNames.
+	//
+	// custom-columns rather than jsonpath. The command is built as a shell string and run
+	// through an SSH session, and a jsonpath template carrying the double quotes and backslash
+	// of {"\n"} does not survive that: the shell strips the quotes and kubectl rejects what is
+	// left, which showed up as every host failing to match any node. This form has nothing in
+	// it a shell will touch.
+	listNodeIdentities = `get nodes --no-headers ` +
+		`-o custom-columns=:.metadata.name,:.status.addresses[*].address 2>/dev/null`
 )
 
 // DeleteCommon phase state
@@ -41,6 +52,8 @@ type DeleteCommon struct {
 	Distro      distrocfg.Distro
 	TargetHosts []string
 	leader      *cluster.ZarfHost
+	// nodeNames maps a host to the name its node carries in the cluster. See resolveNodeNames.
+	nodeNames map[string]string
 	// keepEngineForDelete is set when the engine has to stay up on a controller while its node is
 	// deleted, which is the case only when the removal leaves a single controller behind. See
 	// stopEngineBeforeDelete.
@@ -138,6 +151,104 @@ func (p *DeleteCommon) stopEngineBeforeDelete(ctx context.Context, h *cluster.Za
 	return nil
 }
 
+// resolveNodeNames maps each host to the name its node carries in the cluster, for the hosts
+// that have one.
+//
+// A host cannot be matched to its node by one guessed name. The node's name comes from the
+// engine config's `node-name`, which cargoship writes from the inventory's hostname, while
+// `h.Configurer.Hostname(h)` is what the machine reports -- and on any host with a search
+// domain those differ: the machine says `kw1.cargoship.test` and the node is `kw1`. Probing the
+// reported name returned "not found" for a node that was there, the host was dropped from the
+// phase, and the engine was uninstalled by a later phase that does no such probe. The node
+// stayed in the cluster with nothing left to remove it.
+//
+// So the nodes are listed once and matched on any identifier the host and the node share,
+// which is the same notion of "this node is this host" that DetectRemovedHosts already uses on
+// the apply side. One kubectl call for the whole phase rather than one per host.
+//
+// A host with no matching node is absent from the result, which is how the phases tell apart
+// "this host is in the cluster" from "this host is not", without a second probe.
+func (p *DeleteCommon) resolveNodeNames(ctx context.Context, hosts cluster.ZarfHosts) map[string]string {
+	if p.leader == nil || len(hosts) == 0 {
+		return nil
+	}
+
+	out, err := p.leader.Sudo().ExecOutput(
+		p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), listNodeIdentities))
+	if err != nil {
+		logger.From(ctx).Warn("could not list the cluster's nodes, so no host can be matched to one", "error", err)
+		return nil
+	}
+	return matchNodesToHosts(out, hosts)
+}
+
+// matchNodesToHosts pairs the lines listNodeIdentities printed with the hosts they belong to.
+//
+// Split out from resolveNodeNames so the matching is testable without a cluster: the parsing
+// and the identifier comparison are where this goes wrong, not the kubectl call.
+func matchNodesToHosts(listed string, hosts cluster.ZarfHosts) map[string]string {
+	byHost := make(map[string]string, len(hosts))
+
+	for line := range strings.SplitSeq(listed, "\n") {
+		// Whitespace separates the name from the address column; commas separate the addresses
+		// within it. Splitting on both leaves one identity per element whichever column it
+		// came from, and the node's own name is the first.
+		fields := strings.FieldsFunc(line, func(r rune) bool {
+			return r == ',' || r == ' ' || r == '\t'
+		})
+		if len(fields) == 0 {
+			continue
+		}
+		node := fields[0]
+
+		identities := make(map[string]struct{}, len(fields))
+		for _, f := range fields {
+			identities[strings.ToLower(f)] = struct{}{}
+		}
+
+		for _, h := range hosts {
+			if _, taken := byHost[h.String()]; taken {
+				continue
+			}
+			if hostMatchesIdentities(h, identities) {
+				byHost[h.String()] = node
+			}
+		}
+	}
+	return byHost
+}
+
+// hostMatchesIdentities reports whether any name or address the host is known by appears among
+// the identities a node reported. The set is the same one DetectRemovedHosts builds.
+func hostMatchesIdentities(h *cluster.ZarfHost, identities map[string]struct{}) bool {
+	for _, id := range []string{h.Metadata.Hostname, h.Hostname, h.PrivateAddress, h.Address()} {
+		if id == "" {
+			continue
+		}
+		if _, ok := identities[strings.ToLower(id)]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// stopAgentBeforeDelete is the worker's half of the same ordering, and it is needed for the same
+// reason: k3s and RKE2 drop a node when its Node object is deleted, but a kubelet that is still
+// running re-registers it within seconds, so a deletion raced against a live agent leaves the
+// node in the cluster. The engine is then uninstalled and the object is stranded NotReady with
+// nothing left to remove it.
+//
+// No membership arithmetic here. keepEngineForDelete exists because a controller removal that
+// leaves one controller needs the departing member up to commit its own removal; a worker is
+// not an etcd member and its engine can always come down first.
+func (p *DeleteCommon) stopAgentBeforeDelete(ctx context.Context, h *cluster.ZarfHost) error {
+	logger.From(ctx).Info("stopping the engine before deleting the node", "host", h)
+	if err := p.Distro.StopWorkerService(h); err != nil {
+		return fmt.Errorf("stop the engine on %s before deleting its node: %w", h, err)
+	}
+	return nil
+}
+
 // matchesTargetHost reports whether h is one of the hosts named in targets.
 //
 // A host is matched by any name an operator could have written: the hostname in the configuration,
@@ -229,14 +340,24 @@ func filterTargetHosts(hosts cluster.ZarfHosts, targets []string) cluster.ZarfHo
 func (p *DeleteCommon) drainNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("draining", "node", h)
 	return p.manager.RetryTimeout(ctx, func(_ context.Context) error {
-		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, h.Configurer.Hostname(h)))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), drainNode, p.nodeNameFor(h)))
 	})
+}
+
+// nodeNameFor is the name h's node carries in the cluster, falling back to the name the
+// machine reports when the nodes could not be listed at all. The fallback keeps the old
+// behaviour for a cluster that cannot be read rather than silently acting on an empty name.
+func (p *DeleteCommon) nodeNameFor(h *cluster.ZarfHost) string {
+	if name, ok := p.nodeNames[h.String()]; ok {
+		return name
+	}
+	return h.Configurer.Hostname(h)
 }
 
 func (p *DeleteCommon) deleteNode(ctx context.Context, h *cluster.ZarfHost) error {
 	logger.From(ctx).Info("deleting", "node", h)
 	err := retry.Timeout(ctx, 10*time.Second, func(_ context.Context) error {
-		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), deleteNode, h.Configurer.Hostname(h)))
+		return p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), deleteNode, p.nodeNameFor(h)))
 	})
 	if err != nil {
 		logger.From(ctx).Warn("got an error well deleting the", "node", h.Configurer.Hostname(h))

@@ -16,6 +16,8 @@ package phase
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -321,4 +323,148 @@ func TestDeleteCommonKeepsTheEngineUpWhenOneControllerIsLeft(t *testing.T) {
 	require.Equal(t, "controller2", p.leader.Hostname)
 	require.True(t, p.keepEngineForDelete)
 	require.NoError(t, p.stopEngineBeforeDelete(context.Background(), hosts[0]))
+}
+
+// TestMatchNodesToHostsMatchesOnAnyIdentifier is the fix for a host whose machine name is not
+// its node name.
+//
+// The node's name comes from the engine config's `node-name`, written from the inventory's
+// hostname, while the machine reports whatever its OS says -- an FQDN on any host with a search
+// domain. Probing the reported name asked for `kw1.cargoship.test` when the node was `kw1`,
+// which returned not-found for a node that was there: the host was dropped from the phase and
+// the engine was uninstalled by a later phase that does no such probe, leaving the node in the
+// cluster with nothing left to remove it.
+func TestMatchNodesToHostsMatchesOnAnyIdentifier(t *testing.T) {
+	t.Parallel()
+
+	listed := "kc0   10.0.2.15,kc0\nkw0   10.0.2.15,kw0\nkw1   10.0.2.15,kw1\n"
+
+	tests := []struct {
+		name string
+		host *cluster.ZarfHost
+		want string
+	}{
+		{
+			name: "the inventory hostname is the node name",
+			host: &cluster.ZarfHost{
+				Hostname: "kw1",
+			},
+			want: "kw1",
+		},
+		{
+			name: "the machine reports an fqdn and the inventory holds the short name",
+			host: &cluster.ZarfHost{
+				Hostname: "kw1",
+				Metadata: cluster.ZarfHostMetadata{
+					Hostname: "kw1.cargoship.test",
+				},
+			},
+			want: "kw1",
+		},
+		{
+			name: "matched through the private address when no name lines up",
+			host: &cluster.ZarfHost{
+				Hostname:       "worker-1.internal",
+				PrivateAddress: "kw0",
+			},
+			want: "kw0",
+		},
+		{
+			name: "a host that is not in the cluster matches nothing",
+			host: &cluster.ZarfHost{
+				Hostname: "kw9",
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := matchNodesToHosts(listed, cluster.ZarfHosts{tt.host})
+			require.Equal(t, tt.want, got[tt.host.String()],
+				"an absent entry is how the phases tell a host that is in the cluster from one that is not")
+		})
+	}
+}
+
+// TestMatchNodesToHostsClaimsEachNodeOnce covers a fleet whose hosts share an address, which is
+// the ordinary case on a multi-homed node: every kubelet there registers the same address, so
+// matching on addresses alone would give several hosts the same node.
+func TestMatchNodesToHostsClaimsEachNodeOnce(t *testing.T) {
+	t.Parallel()
+
+	// Each host carries a connection address, because that is what ZarfHost.String() reports
+	// and String() is the key the resolved names are held under. Hosts built without one all
+	// stringify alike and would collide in the map rather than in the matching.
+	listed := "kc0   10.0.2.15,kc0\nkw0   10.0.2.15,kw0\nkw1   10.0.2.15,kw1\n"
+	var hosts cluster.ZarfHosts
+	for i, name := range []string{"kc0", "kw0", "kw1"} {
+		hosts = append(hosts, &cluster.ZarfHost{
+			Hostname: name,
+			ClientWithConfig: rig.ClientWithConfig{
+				ConnectionConfig: rig.CompositeConfig{
+					SSH: &ssh.Config{Address: fmt.Sprintf("10.0.0.%d", 20+i)},
+				},
+			},
+		})
+	}
+
+	got := matchNodesToHosts(listed, hosts)
+	require.Len(t, got, 3)
+
+	claimed := map[string]string{}
+	for host, node := range got {
+		require.NotContains(t, claimed, node, "two hosts were given the same node")
+		claimed[node] = host
+	}
+}
+
+// TestDeleteWorkersStopsTheAgentBeforeDeletingTheNode pins the ordering a worker removal needs.
+// k3s and RKE2 drop a node when its Node object is deleted, but a kubelet still running
+// re-registers it within seconds, so deleting before the engine is down leaves the node behind.
+// The assertion is on the order of the phase's own steps, since what went wrong was not any one
+// of them failing.
+func TestDeleteWorkersStopsTheAgentBeforeDeletingTheNode(t *testing.T) {
+	t.Parallel()
+
+	src, err := os.ReadFile("86_delete_worker.go")
+	require.NoError(t, err)
+
+	run := string(src)
+	run = run[strings.Index(run, "func (p *DeleteWorkers) Run("):]
+
+	stop := strings.Index(run, "p.stopAgentBeforeDelete")
+	del := strings.Index(run, "p.deleteNode")
+
+	require.Positive(t, stop, "the worker removal has to stop the engine before deleting the node")
+	require.Positive(t, del)
+	require.Less(t, stop, del,
+		"the engine must come down before the node is deleted, or the kubelet re-registers it")
+}
+
+// TestStopAgentBeforeDeleteIgnoresControllerQuorum covers why this is not the controller helper.
+// keepEngineForDelete exists because a controller removal that leaves one controller needs the
+// departing member up to commit its own removal. A worker is not an etcd member, so its engine
+// comes down whatever that flag says.
+func TestStopAgentBeforeDeleteIgnoresControllerQuorum(t *testing.T) {
+	t.Parallel()
+
+	builder, err := registry.GetDistroModuleBuilder("rke2")
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	worker := &cluster.ZarfHost{
+		Hostname: "worker1",
+		Role:     cluster.RoleWorker,
+	}
+	worker.SetServices(fakeRunningServices{})
+
+	p := &DeleteCommon{
+		Distro:              dis,
+		keepEngineForDelete: true,
+	}
+	require.NoError(t, p.stopAgentBeforeDelete(context.Background(), worker))
 }
