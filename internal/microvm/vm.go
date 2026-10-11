@@ -30,10 +30,17 @@ import (
 // install that can run a virtual machine at all; none of them needs root.
 var requiredTools = []string{"qemu-system-x86_64", "qemu-img", "mkfs.vfat", "mcopy", "ssh"} //nolint:gochecknoglobals
 
-// sshTimeout bounds the wait for a node's sshd. A node reaches sshd in well under a minute --
-// six seconds is typical, since cloud-init's work here is small -- so this is long enough to
-// absorb a cold page cache and short enough to fail while the console log still explains why.
-const sshTimeout = 3 * time.Minute
+// readyTimeout bounds the wait for a node to become usable.
+//
+// Usable means cloud-init has finished, which is a later and much more useful moment than
+// sshd answering: sshd is up in about six seconds, and the packages that open the fapolicyd
+// and firewall gates are installed and started after that. A fleet handed back at the earlier
+// moment looks fine and silently has both of those phases skipping, which is the failure this
+// package exists to stop. Installing two packages over slirp is what the budget is for.
+const readyTimeout = 5 * time.Minute
+
+// pollInterval is how often a node is asked whether it is there yet.
+const pollInterval = 2 * time.Second
 
 // Up brings a fleet up and returns it, with every node answering SSH and the inventory
 // written. It refuses a fleet that is already up rather than adopting it, so that a bring-up
@@ -78,7 +85,14 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 		return Fleet{}, fmt.Errorf("creating %s: %w", fleet.Dir, err)
 	}
 
-	fleet.KeyPath = filepath.Join(fleet.Dir, "key")
+	// The key path is absolute because it is written into the inventory, and cargoship is
+	// run from wherever the developer happens to be rather than from the repository root.
+	// A relative path there produces an authentication failure that reads as a wrong key.
+	keyPath, err := filepath.Abs(filepath.Join(fleet.Dir, "key"))
+	if err != nil {
+		return Fleet{}, fmt.Errorf("resolving the fleet key path: %w", err)
+	}
+	fleet.KeyPath = keyPath
 	publicKey, err := writeKeyPair(fleet.KeyPath)
 	if err != nil {
 		return Fleet{}, err
@@ -94,8 +108,10 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 		}
 	}
 
+	// Nodes boot in parallel and are waited on in sequence, so the total wait is roughly the
+	// slowest node rather than the sum.
 	for _, node := range fleet.Nodes {
-		if err := waitForSSH(ctx, fleet, node); err != nil {
+		if err := waitForReady(ctx, fleet, node); err != nil {
 			return Fleet{}, err
 		}
 	}
@@ -248,10 +264,14 @@ func load(spec Spec) (Fleet, error) {
 	if err != nil {
 		return Fleet{}, err
 	}
+	keyPath, err := filepath.Abs(filepath.Join(spec.dir(), "key"))
+	if err != nil {
+		return Fleet{}, fmt.Errorf("resolving the fleet key path: %w", err)
+	}
 	return Fleet{
 		Name:    spec.Fleet,
 		Dir:     spec.dir(),
-		KeyPath: filepath.Join(spec.dir(), "key"),
+		KeyPath: keyPath,
 		Nodes:   nodes,
 		Distro:  spec.Distro,
 	}, nil
@@ -345,40 +365,91 @@ func qemuArgs(spec Spec, n Node, dir string) []string {
 	}
 }
 
-// waitForSSH blocks until a node answers SSH, or reports the tail of its console log.
-func waitForSSH(ctx context.Context, f Fleet, n Node) error {
-	ctx, cancel := context.WithTimeout(ctx, sshTimeout)
+// waitForReady blocks until a node is usable: sshd answering, and then cloud-init reporting
+// that it has finished. Both are bounded by one deadline.
+func waitForReady(ctx context.Context, f Fleet, n Node) error {
+	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
 
+	if err := waitForSSH(ctx, f, n); err != nil {
+		return err
+	}
+	return waitForCloudInit(ctx, f, n)
+}
+
+// waitForSSH blocks until a node answers SSH.
+func waitForSSH(ctx context.Context, f Fleet, n Node) error {
 	for {
-		cmd, err := sshProbe(ctx, f, n)
-		if err != nil {
-			return err
-		}
-		if cmd.Run() == nil {
+		if sshExec(ctx, f, n, "true").Run() == nil {
 			return nil
 		}
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("%s did not answer ssh within %s; the tail of %s:\n%s",
-				n.Name, sshTimeout, filepath.Join(f.nodeDir(n), "console.log"), consoleTail(f.nodeDir(n)))
-		case <-time.After(time.Second):
+		if err := sleep(ctx); err != nil {
+			return fmt.Errorf("%s did not answer ssh in time; the tail of %s:\n%s",
+				n.Name, filepath.Join(f.nodeDir(n), "console.log"), consoleTail(f.nodeDir(n)))
 		}
 	}
 }
 
-// sshProbe is one connection attempt against a node, used only for its exit status.
-func sshProbe(ctx context.Context, f Fleet, n Node) (*exec.Cmd, error) {
+// waitForCloudInit blocks until cloud-init has finished on a node.
+//
+// `cloud-init status --wait` would do this in one call, but it blocks for as long as it takes
+// with no deadline of its own and prints dots meanwhile, so a hung node would hang the
+// bring-up. Polling the status keeps the timeout here and lets an error be reported with
+// cloud-init's own explanation attached.
+func waitForCloudInit(ctx context.Context, f Fleet, n Node) error {
+	for {
+		out, err := sshExec(ctx, f, n, "cloud-init status").Output()
+		status := parseCloudInitStatus(string(out))
+		switch {
+		case err == nil && status == "done":
+			return nil
+		case status == "disabled":
+			// Nothing will finish, because nothing started. The node is as ready as it is
+			// going to get, and the seed was ignored -- which the caller will discover as a
+			// node with no packages on it rather than as a hang.
+			fmt.Fprintf(os.Stderr, "microvm: cloud-init is disabled on %s, so its seed was ignored\n", n.Name)
+			return nil
+		case status == "error":
+			detail, _ := sshExec(ctx, f, n, "cloud-init status --long").Output() //nolint:errcheck // reported as context, not acted on
+			return fmt.Errorf("cloud-init failed on %s:\n%s", n.Name, strings.TrimSpace(string(detail)))
+		}
+		if err := sleep(ctx); err != nil {
+			detail, _ := sshExec(ctx, f, n, "cloud-init status --long").Output() //nolint:errcheck // reported as context, not acted on
+			return fmt.Errorf("cloud-init did not finish on %s in time; it reported:\n%s", n.Name, strings.TrimSpace(string(detail)))
+		}
+	}
+}
+
+// parseCloudInitStatus pulls the status out of `cloud-init status` output, which is a block of
+// `key: value` lines. An unparseable or empty answer reads as "running", since that is what a
+// node still coming up gives.
+func parseCloudInitStatus(out string) string {
+	for line := range strings.SplitSeq(out, "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "status:"); ok {
+			return strings.TrimSpace(rest)
+		}
+	}
+	return "running"
+}
+
+// sleep waits one poll interval, reporting whether the deadline passed first.
+func sleep(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(pollInterval):
+		return nil
+	}
+}
+
+// sshExec is one command on a node.
+func sshExec(ctx context.Context, f Fleet, n Node, command ...string) *exec.Cmd {
 	args := append(sshOptions(f.KeyPath),
 		"-o", "ConnectTimeout=2",
 		"-p", strconv.Itoa(n.SSHPort),
 		"root@127.0.0.1",
-		"true",
 	)
-	cmd := exec.CommandContext(ctx, "ssh", args...)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd, nil
+	return exec.CommandContext(ctx, "ssh", append(args, command...)...)
 }
 
 // consoleTail is the last few lines of a node's serial console, which is where the reason a
