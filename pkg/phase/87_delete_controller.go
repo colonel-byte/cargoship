@@ -68,7 +68,8 @@ func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 		return nil
 	}
 
-	p.hosts = p.manager.Config.Spec.Hosts.Filter(func(h *cluster.ZarfHost) bool {
+	candidates := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
+	p.hosts = candidates.Filter(func(h *cluster.ZarfHost) bool {
 		err := p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)))
 		if err != nil {
 			return false
@@ -93,6 +94,15 @@ func (p *DeleteControllers) Run(ctx context.Context) error {
 		if err != nil {
 			logger.From(ctx).Warn("failed to drain node(s), continuing with removing nodes from cluster", "error", err)
 		}
+	}
+	if err := p.batchedParallelWithMessage(
+		ctx,
+		"stopping engines",
+		p.hosts,
+		1,
+		p.stopEngineBeforeDelete,
+	); err != nil {
+		return err
 	}
 	return p.batchedParallelWithMessage(
 		ctx,

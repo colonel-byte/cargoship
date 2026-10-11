@@ -16,6 +16,7 @@ package phase
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
@@ -23,6 +24,8 @@ import (
 	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	hostos "github.com/colonel-byte/cargoship/types/os"
+	rig "github.com/k0sproject/rig/v2"
+	"github.com/k0sproject/rig/v2/protocol/ssh"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,4 +90,235 @@ func TestDeletePhasesPrepareWithNoLeader(t *testing.T) {
 			require.False(t, tc.phase.ShouldRun(), "with no leader there is nothing to delete")
 		})
 	}
+}
+
+type fakeRunningServices struct{}
+
+func (fakeRunningServices) ServiceIsRunning(_ context.Context, _ string) bool { return true }
+func (fakeRunningServices) StartService(_ context.Context, _ string) error    { return nil }
+func (fakeRunningServices) StopService(_ context.Context, _ string) error     { return nil }
+func (fakeRunningServices) RestartService(_ context.Context, _ string) error  { return nil }
+func (fakeRunningServices) EnableService(_ context.Context, _ string) error   { return nil }
+
+func TestDeleteCommonPrefersNonTargetedLeader(t *testing.T) {
+	builder, err := registry.GetDistroModuleBuilder("rke2")
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	h1 := &cluster.ZarfHost{
+		Hostname: "controller1",
+		Role:     cluster.RoleController,
+	}
+	h1.SetServices(fakeRunningServices{})
+	h2 := &cluster.ZarfHost{
+		Hostname: "controller2",
+		Role:     cluster.RoleController,
+	}
+	h2.SetServices(fakeRunningServices{})
+
+	m := &Manager{
+		Config: &cluster.ZarfCluster{
+			Spec: cluster.ZarfClusterSpec{
+				Hosts: cluster.ZarfHosts{h1, h2},
+			},
+		},
+	}
+
+	// targeting controller1 should select controller2 as leader
+	dc := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"controller1"},
+	}
+	dc.SetManager(m)
+
+	require.NoError(t, dc.Prepare(context.Background(), m.Config, nil))
+	require.NotNil(t, dc.leader)
+	require.Equal(t, "controller2", dc.leader.Hostname)
+}
+
+// TestMatchesTargetHostUsesTheConfiguredAddress covers the matching an operator's target list is
+// held against. ZarfHost.Address reads the live rig client and is empty until the host has been
+// dialled, so matching on it would depend on how far through a run the phase is -- and the hosts a
+// target list names are exactly the ones a run may not have reached.
+func TestMatchesTargetHostUsesTheConfiguredAddress(t *testing.T) {
+	host := &cluster.ZarfHost{
+		Hostname: "worker3",
+		ClientWithConfig: rig.ClientWithConfig{
+			ConnectionConfig: rig.CompositeConfig{
+				SSH: &ssh.Config{Address: "10.0.0.23"},
+			},
+		},
+	}
+	host.Metadata.Hostname = "distro-worker3"
+
+	for _, target := range []string{"worker3", "distro-worker3", "10.0.0.23", "WORKER3"} {
+		if !matchesTargetHost(host, []string{target}) {
+			t.Errorf("the host was not matched by %q, which is a name an operator could write", target)
+		}
+	}
+	for _, target := range []string{"worker30", "10.0.0.230", ""} {
+		if matchesTargetHost(host, []string{target}) {
+			t.Errorf("the host was matched by %q", target)
+		}
+	}
+}
+
+// TestCheckTargetHostsNamesWhatItDoesNotKnow pins the message, because the message is the feature:
+// a target nobody matches would otherwise filter every phase to nothing and report a reset that
+// removed nothing.
+func TestCheckTargetHostsNamesWhatItDoesNotKnow(t *testing.T) {
+	hosts := cluster.ZarfHosts{
+		{Hostname: "control1"},
+		{Hostname: "worker1"},
+	}
+
+	if err := CheckTargetHosts(hosts, nil); err != nil {
+		t.Errorf("an empty target list was refused: %v", err)
+	}
+	if err := CheckTargetHosts(hosts, []string{"worker1"}); err != nil {
+		t.Errorf("a target that names a host was refused: %v", err)
+	}
+
+	err := CheckTargetHosts(hosts, []string{"worker1", "worker9"})
+	if err == nil {
+		t.Fatal("a target naming no host was accepted")
+	}
+	if !strings.Contains(err.Error(), "worker9") || !strings.Contains(err.Error(), "control1") {
+		t.Errorf("the error names neither the target nor the hosts it knows: %v", err)
+	}
+}
+
+// TestDeleteCommonRefusesWithNoSurvivingController is the case that would otherwise drain and
+// delete nodes through a controller the same run is about to uninstall: every running controller
+// targeted, but some host kept. Whether that finished would depend on the order the hosts happened
+// to be in, which is not a thing to leave to chance on a live cluster.
+func TestDeleteCommonRefusesWithNoSurvivingController(t *testing.T) {
+	builder, err := registry.GetDistroModuleBuilder("rke2")
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	controller := &cluster.ZarfHost{
+		Hostname: "controller1",
+		Role:     cluster.RoleController,
+	}
+	controller.SetServices(fakeRunningServices{})
+	worker := &cluster.ZarfHost{
+		Hostname: "worker1",
+		Role:     cluster.RoleWorker,
+	}
+	worker.SetServices(fakeRunningServices{})
+
+	m := &Manager{
+		Config: &cluster.ZarfCluster{
+			Spec: cluster.ZarfClusterSpec{
+				Hosts: cluster.ZarfHosts{controller, worker},
+			},
+		},
+	}
+
+	// The only controller is targeted and the worker is kept: there is nothing left to drive the
+	// node deletions through.
+	subset := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"controller1"},
+	}
+	subset.SetManager(m)
+	require.ErrorIs(t, subset.Prepare(context.Background(), m.Config, nil), ErrNoSurvivingController)
+
+	// Targeting every host is a whole-cluster reset, which is exactly what reset is for, so the
+	// same controller is allowed to lead its own teardown.
+	whole := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"controller1", "worker1"},
+	}
+	whole.SetManager(m)
+	require.NoError(t, whole.Prepare(context.Background(), m.Config, nil))
+	require.NotNil(t, whole.leader)
+	require.Equal(t, "controller1", whole.leader.Hostname)
+
+	// And no target list at all is the reset that has always existed.
+	all := &DeleteCommon{Distro: dis}
+	all.SetManager(m)
+	require.NoError(t, all.Prepare(context.Background(), m.Config, nil))
+	require.NotNil(t, all.leader)
+}
+
+func TestDeleteCommonRemovesControllersOneRunAtATime(t *testing.T) {
+	builder, err := registry.GetDistroModuleBuilder("rke2")
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	hosts := cluster.ZarfHosts{}
+	for _, name := range []string{"controller1", "controller2", "controller3"} {
+		h := &cluster.ZarfHost{
+			Hostname: name,
+			Role:     cluster.RoleController,
+		}
+		h.SetServices(fakeRunningServices{})
+		hosts = append(hosts, h)
+	}
+	m := &Manager{
+		Config: &cluster.ZarfCluster{
+			Spec: cluster.ZarfClusterSpec{
+				Hosts: hosts,
+			},
+		},
+	}
+
+	// Two of three in one run passes through a membership the second removal cannot commit from.
+	two := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"controller2", "controller3"},
+	}
+	two.SetManager(m)
+	require.ErrorIs(t, two.Prepare(context.Background(), m.Config, nil), ErrControllersNotOneAtATime)
+
+	// One of three leaves two, so the engine comes down before the node is deleted.
+	one := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"controller1"},
+	}
+	one.SetManager(m)
+	require.NoError(t, one.Prepare(context.Background(), m.Config, nil))
+	require.Equal(t, "controller2", one.leader.Hostname)
+	require.False(t, one.keepEngineForDelete)
+}
+
+func TestDeleteCommonKeepsTheEngineUpWhenOneControllerIsLeft(t *testing.T) {
+	builder, err := registry.GetDistroModuleBuilder("rke2")
+	require.NoError(t, err)
+	dis, ok := builder().(distrocfg.Distro)
+	require.True(t, ok)
+
+	hosts := cluster.ZarfHosts{}
+	for _, name := range []string{"controller1", "controller2"} {
+		h := &cluster.ZarfHost{
+			Hostname: name,
+			Role:     cluster.RoleController,
+		}
+		h.SetServices(fakeRunningServices{})
+		hosts = append(hosts, h)
+	}
+	m := &Manager{
+		Config: &cluster.ZarfCluster{
+			Spec: cluster.ZarfClusterSpec{
+				Hosts: hosts,
+			},
+		},
+	}
+
+	// The member being removed has to still be up to form the majority of two that commits its
+	// own removal, so this is the one case where the engine stays running past the deletion.
+	p := &DeleteCommon{
+		Distro:      dis,
+		TargetHosts: []string{"controller1"},
+	}
+	p.SetManager(m)
+	require.NoError(t, p.Prepare(context.Background(), m.Config, nil))
+	require.Equal(t, "controller2", p.leader.Hostname)
+	require.True(t, p.keepEngineForDelete)
+	require.NoError(t, p.stopEngineBeforeDelete(context.Background(), hosts[0]))
 }

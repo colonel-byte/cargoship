@@ -31,6 +31,7 @@ import (
 // DaemonReload phase runs `systemctl daemon-reload` or equivalent on all hosts.
 type DaemonReload struct {
 	GenericPhase
+	TargetHosts []string
 }
 
 // Title for the phase
@@ -45,12 +46,13 @@ func (p *DaemonReload) Explanation() string {
 
 // ShouldRun is true when there are controllers that needs to be reset
 func (p *DaemonReload) ShouldRun() bool {
-	return len(p.manager.Config.Spec.Hosts) > 0
+	return len(filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)) > 0
 }
 
 // Run the phase
 func (p *DaemonReload) Run(ctx context.Context) error {
-	return p.parallelDo(ctx, p.manager.Config.Spec.Hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
+	hosts := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
+	return p.parallelDo(ctx, hosts, func(ctx context.Context, h *cluster.ZarfHost) error {
 		logger.From(ctx).Info("reloading service manager", "host", h)
 		if err := daemonReload(ctx, h); err != nil {
 			logger.From(ctx).Warn("failed to reload service manager", "host", h, "error", err)

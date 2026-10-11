@@ -65,6 +65,8 @@ const (
 const (
 	// InstallConfig flag
 	InstallConfig = "config"
+	// InstallTargetHosts flag
+	InstallTargetHosts = "target-hosts"
 	// InstallConfirm flag
 	InstallConfirm = "confirm"
 	// InstallDistro flag. Named directly by the commands that load no package -- reset and

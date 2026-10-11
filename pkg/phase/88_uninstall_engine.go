@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
@@ -45,6 +46,7 @@ type UninstallEngine struct {
 	GenericPhase
 	Distro           distrocfg.Distro
 	WorkerConcurrent string
+	TargetHosts      []string
 	hosts            cluster.ZarfHosts
 }
 
@@ -60,7 +62,7 @@ func (p *UninstallEngine) Explanation() string {
 
 // Prepare the phase
 func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error {
-	p.hosts = p.manager.Config.Spec.Hosts
+	p.hosts = filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
 	logger.From(ctx).Debug("number of systems that need to be reset", "hosts", len(p.hosts))
 	return nil
 }
@@ -106,36 +108,44 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 
 	packages := []string{}
 
-	for _, pkg := range pkgsType {
-		folder := filepath.Join(p.Distro.PackageStagingDir(), pkg)
-		if h.FileExist(folder) {
-			err := fs.WalkDir(h.Sudo().FS(), folder, func(_ string, d fs.DirEntry, _ error) error {
-				if !d.IsDir() && rpmPre.MatchString(d.Name()) {
-					cmd := fmt.Sprintf(`rpm -qp %s/%s --queryformat "%%{NAME}"`, folder, d.Name())
-					output, err := h.Sudo().ExecOutput(cmd)
-					if err != nil {
-						logger.From(ctx).Warn("walking", "error", err, "output", output)
+	if p.Distro != nil && p.Distro.PackageStagingDir() != "" {
+		for _, pkg := range pkgsType {
+			folder := filepath.Join(p.Distro.PackageStagingDir(), pkg)
+			if h.FileExist(folder) {
+				err := fs.WalkDir(h.Sudo().FS(), folder, func(_ string, d fs.DirEntry, _ error) error {
+					if !d.IsDir() && rpmPre.MatchString(d.Name()) {
+						cmd := fmt.Sprintf(`rpm -qp %s/%s --queryformat "%%{NAME}"`, folder, d.Name())
+						output, err := h.Sudo().ExecOutput(cmd)
+						if err != nil {
+							logger.From(ctx).Warn("walking", "error", err, "output", output)
+						}
+						packages = append(packages, output)
 					}
-					packages = append(packages, output)
-				}
-				if !d.IsDir() && debPre.MatchString(d.Name()) {
-					cmd := fmt.Sprintf(`dpkg-deb --show --showformat="${Package}" %s/%s`, folder, d.Name())
-					output, err := h.Sudo().ExecOutput(cmd)
-					if err != nil {
-						logger.From(ctx).Warn("walking", "error", err, "output", output)
+					if !d.IsDir() && debPre.MatchString(d.Name()) {
+						cmd := fmt.Sprintf(`dpkg-deb --show --showformat="${Package}" %s/%s`, folder, d.Name())
+						output, err := h.Sudo().ExecOutput(cmd)
+						if err != nil {
+							logger.From(ctx).Warn("walking", "error", err, "output", output)
+						}
+						packages = append(packages, output)
 					}
-					packages = append(packages, output)
+					return nil
+				})
+				if err != nil {
+					logger.From(ctx).Warn("huh", "error", err)
 				}
-				return nil
-			})
-			if err != nil {
-				logger.From(ctx).Warn("huh", "error", err)
 			}
 		}
 	}
 
 	slices.Sort(packages)
 	pkg := slices.Compact(packages)
+
+	// If no packages were discovered from the staging folder (e.g. staging dir already cleaned up
+	// or missing), query the system's package database for known engine packages matching the distro.
+	if len(pkg) == 0 {
+		pkg = p.detectInstalledEnginePackages(ctx, h)
+	}
 
 	if len(pkg) > 0 {
 		if err := h.Configurer.UninstallPackage(h, pkg...); err != nil {
@@ -151,7 +161,106 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 			logger.From(ctx).Warn("failed to remove engine path", "path", path, "error", err)
 		}
 	}
+	p.cleanManagedDirs(ctx, h)
 	p.cleanUploadManifest(ctx, h)
 
 	return nil
+}
+
+// cleanManagedDirs cleans up managed directories and files tracked by the distro,
+// including /etc/cargoship and any managed directories.
+func (p *UninstallEngine) cleanManagedDirs(ctx context.Context, h *cluster.ZarfHost) {
+	if p.Distro == nil {
+		return
+	}
+
+	// Remove stale or all managed files in managed directories
+	if err := distrocfg.RemoveStaleFiles(h, p.Distro.ManagedDirs(), nil); err != nil {
+		logger.From(ctx).Warn("failed to remove managed files", "host", h, "error", err)
+	}
+
+	// Remove directories wholly owned by cargoship (non-globbed ManagedDirs)
+	for _, md := range p.Distro.ManagedDirs() {
+		if md.Glob != "" || md.Path == "" {
+			continue
+		}
+		if h.FileExist(md.Path) {
+			if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", md.Path)); err != nil {
+				logger.From(ctx).Warn("failed to remove managed dir", "host", h, "path", md.Path, "error", err)
+			}
+		}
+	}
+
+	// Always ensure /etc/cargoship state dir is cleaned if present
+	if h.FileExist(distrocfg.StateDir) {
+		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", distrocfg.StateDir)); err != nil {
+			logger.From(ctx).Warn("failed to remove state dir", "host", h, "path", distrocfg.StateDir, "error", err)
+		}
+	}
+}
+
+// detectInstalledEnginePackages probes the host package manager for engine packages matching
+// the distro when the staging directory holds no package files.
+func (p *UninstallEngine) detectInstalledEnginePackages(ctx context.Context, h *cluster.ZarfHost) []string {
+	var candidates []string
+	binary := ""
+	if p.Distro != nil {
+		binary = p.Distro.BinaryName()
+	}
+
+	switch binary {
+	case distrocfg.DistroRKE2:
+		candidates = []string{
+			"rke2-server",
+			"rke2-agent",
+			"rke2-common",
+			"rke2-selinux",
+		}
+	case distrocfg.DistroK3S:
+		candidates = []string{
+			"k3s-server",
+			"k3s-agent",
+			"k3s-selinux",
+		}
+	case "kubectl", "kubeadm", distrocfg.DistroUpstream:
+		candidates = []string{
+			"kubelet",
+			"kubeadm",
+			"kubectl",
+			"kubernetes-cni",
+			"cri-tools",
+		}
+	default:
+		return nil
+	}
+
+	var found []string
+	for _, candidate := range candidates {
+		// Test RPM query
+		if out, err := h.Sudo().ExecOutput(fmt.Sprintf(`rpm -q --queryformat "%%{NAME}\n" %s`, candidate)); err == nil {
+			for _, line := range strings.Split(out, "\n") {
+				line = strings.TrimSpace(line)
+				if line != "" && !strings.Contains(line, "is not installed") {
+					found = append(found, line)
+				}
+			}
+			continue
+		}
+		// Test DPKG query
+		if out, err := h.Sudo().ExecOutput(fmt.Sprintf(`dpkg-query -W -f='${Package}\n' %s`, candidate)); err == nil {
+			for _, line := range strings.Split(out, "\n") {
+				line = strings.TrimSpace(line)
+				if line != "" && !strings.Contains(line, "no packages found") {
+					found = append(found, line)
+				}
+			}
+		}
+	}
+
+	slices.Sort(found)
+	found = slices.Compact(found)
+	if len(found) > 0 {
+		logger.From(ctx).Info("discovered installed engine packages from package manager", "host", h, "packages", found)
+	}
+	return found
 }

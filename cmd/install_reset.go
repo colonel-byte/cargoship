@@ -34,8 +34,9 @@ import (
 
 type installResetOptions struct {
 	InstallCommon
-	workerCon string
-	distro    string
+	workerCon   string
+	distro      string
+	targetHosts []string
 }
 
 func newInstallResetCommand() *cobra.Command {
@@ -59,6 +60,7 @@ func newInstallResetCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.confirm, InstallConfirm, false, lang.CmdInstallFlagConfirm)
 	cmd.Flags().BoolVar(&o.dryRun, InstallDryRun, false, lang.CmdInstallFlagDryRun)
 	cmd.Flags().StringVarP(&o.workerCon, InstallWorkConcurrency, "w", resolvedConfig.DistroOpts.WorkerConcurrency, lang.CmdInstallFlagWorkerConcurrency)
+	cmd.Flags().StringSliceVar(&o.targetHosts, InstallTargetHosts, nil, lang.CmdInstallFlagResetTargetHosts)
 
 	val, err := cmd.Flags().GetString(RootLoggingLevel)
 	if err != nil {
@@ -104,9 +106,14 @@ func (o *installResetOptions) run(ctx context.Context, _ []string) error {
 			DryRun: o.dryRun,
 		},
 		WorkerConcurrent: o.workerCon,
+		TargetHosts:      o.targetHosts,
 		NoWait:           true,
 		NoDrain:          true,
 	}
 
-	return action.NewReset(resetOpts).Run(ctx)
+	reset, err := action.NewReset(resetOpts)
+	if err != nil {
+		return err
+	}
+	return reset.Run(ctx)
 }

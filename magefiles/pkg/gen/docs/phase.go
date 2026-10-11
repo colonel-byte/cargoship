@@ -50,7 +50,19 @@ type phaseDoc struct {
 
 // phaseDocs lists every action whose phases get a docs/phases/<name>.md page. Add a new
 // action's phases here to get it picked up by `Document()` -- no new function needed.
-func phaseDocs() []phaseDoc {
+//
+// NewReset reports an error for a target host list that matches nothing, and the manager below
+// names no targets, so an error here is the generator being wrong rather than an input being
+// wrong: it comes back and `Document()` fails with it, instead of rendering a page from an
+// empty phase list.
+func phaseDocs() ([]phaseDoc, error) {
+	reset, err := action.NewReset(action.ResetOptions{
+		Manager: genDocsManagerNoConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("building the reset action for its phase reference: %w", err)
+	}
+
 	return []phaseDoc{
 		{
 			name: "apply",
@@ -60,10 +72,8 @@ func phaseDocs() []phaseDoc {
 			dryRun: true,
 		},
 		{
-			name: "reset",
-			phases: action.NewReset(action.ResetOptions{
-				Manager: genDocsManagerNoConfig,
-			}).Phases,
+			name:   "reset",
+			phases: reset.Phases,
 			dryRun: true,
 		},
 		{
@@ -84,7 +94,7 @@ func phaseDocs() []phaseDoc {
 			}).Phases,
 			dryRun: true,
 		},
-	}
+	}, nil
 }
 
 // printExcludedNote marks the sections that docs/css/print.css hides from
