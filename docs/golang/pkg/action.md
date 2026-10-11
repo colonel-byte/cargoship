@@ -276,7 +276,7 @@ func NewReset(opts ResetOptions) (*Reset, error)
 NewReset an apply action object
 
 <a name="Reset.Run"></a>
-### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L139>)
+### func \(Reset\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/action/reset.go#L140>)
 
 ```go
 func (r Reset) Run(ctx context.Context) error

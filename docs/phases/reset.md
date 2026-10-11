@@ -35,6 +35,9 @@ A dry run takes no cluster lock, so it does not block a real run, and it can rep
 1. Repoint the controllers that were kept
     - When a removal takes a controller out, rewrites `server:` on the controllers that stayed so they name one that is still there, which is what lets them rejoin after a restart
     - Dry run: reported, not run
+1. Remove the SELinux policy cargoship applied
+    - Removes the policy modules and file contexts recorded in /var/lib/cargoship/selinux/cargoship-state.json and returns the booleans to the values the host held before cargoship changed them
+    - Dry run: reported, not run
 1. Reload service manager
     - Runs `systemctl daemon-reload` or equivalent on all hosts.
     - Dry run: reported, not run

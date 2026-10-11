@@ -224,6 +224,12 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*ReconfigureSurvivors\) Run\(ctx context.Context\) error](<#ReconfigureSurvivors.Run>)
   - [func \(p \*ReconfigureSurvivors\) ShouldRun\(\) bool](<#ReconfigureSurvivors.ShouldRun>)
   - [func \(p \*ReconfigureSurvivors\) Title\(\) string](<#ReconfigureSurvivors.Title>)
+- [type RemoveSelinuxPolicy](<#RemoveSelinuxPolicy>)
+  - [func \(p \*RemoveSelinuxPolicy\) Explanation\(\) string](<#RemoveSelinuxPolicy.Explanation>)
+  - [func \(p \*RemoveSelinuxPolicy\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#RemoveSelinuxPolicy.Prepare>)
+  - [func \(p \*RemoveSelinuxPolicy\) Run\(ctx context.Context\) error](<#RemoveSelinuxPolicy.Run>)
+  - [func \(p \*RemoveSelinuxPolicy\) ShouldRun\(\) bool](<#RemoveSelinuxPolicy.ShouldRun>)
+  - [func \(p \*RemoveSelinuxPolicy\) Title\(\) string](<#RemoveSelinuxPolicy.Title>)
 - [type ResultSink](<#ResultSink>)
   - [func WithResultSink\(ctx context.Context\) \(context.Context, \*ResultSink\)](<#WithResultSink>)
   - [func \(s \*ResultSink\) Observed\(\) bool](<#ResultSink.Observed>)
@@ -2537,6 +2543,63 @@ Removing every controller is a whole\-cluster teardown, where there is nothing t
 
 ```go
 func (p *ReconfigureSurvivors) Title() string
+```
+
+Title for the phase
+
+<a name="RemoveSelinuxPolicy"></a>
+## type [RemoveSelinuxPolicy](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L31-L34>)
+
+RemoveSelinuxPolicy takes the SELinux policy cargoship applied back off the hosts.
+
+```go
+type RemoveSelinuxPolicy struct {
+    GenericPhase
+    // contains filtered or unexported fields
+}
+```
+
+<a name="RemoveSelinuxPolicy.Explanation"></a>
+### func \(\*RemoveSelinuxPolicy\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L53>)
+
+```go
+func (p *RemoveSelinuxPolicy) Explanation() string
+```
+
+Explanation about the current phase, used for documentation generation
+
+<a name="RemoveSelinuxPolicy.Prepare"></a>
+### func \(\*RemoveSelinuxPolicy\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L37>)
+
+```go
+func (p *RemoveSelinuxPolicy) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+```
+
+Prepare the phase
+
+<a name="RemoveSelinuxPolicy.Run"></a>
+### func \(\*RemoveSelinuxPolicy\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L58>)
+
+```go
+func (p *RemoveSelinuxPolicy) Run(ctx context.Context) error
+```
+
+Run the phase
+
+<a name="RemoveSelinuxPolicy.ShouldRun"></a>
+### func \(\*RemoveSelinuxPolicy\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L68>)
+
+```go
+func (p *RemoveSelinuxPolicy) ShouldRun() bool
+```
+
+ShouldRun is true when a host carries a policy cargoship recorded
+
+<a name="RemoveSelinuxPolicy.Title"></a>
+### func \(\*RemoveSelinuxPolicy\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_remove_selinux_policy.go#L48>)
+
+```go
+func (p *RemoveSelinuxPolicy) Title() string
 ```
 
 Title for the phase
