@@ -22,7 +22,7 @@ The private segment is also why `Inventory` sets `PrivateAddress` and `PrivateIn
 
 [`magefiles/AGENTS.md`](../../magefiles/AGENTS.md) puts implementation logic under `magefiles/pkg/`, and this package is deliberately not there. It has two consumers -- the `Dev` mage targets and the e2e cluster suite -- and a test suite importing out of `magefiles/` would invert the dependency. `internal/` is what the root [`CLAUDE.md`](../../CLAUDE.md) names for packages private to the module, and the mage targets stay thin wrappers over it, which is what that rule is protecting.
 
-Fleet state lives under `build/microvm/` rather than `TMPDIR`. An overlay reaches a quarter of a gigabyte after one boot and one dnf transaction, and `TMPDIR` is routinely a tmpfs here -- the repository's own `.envrc` points it at one. `build/` is already the scratch directory: gitignored, on real storage, and cleaned by `dev:clean`.
+Fleet state lives under `build/microvm/` rather than `TMPDIR`. An overlay reaches a quarter of a gigabyte after one boot and one dnf transaction, and `TMPDIR` is routinely a tmpfs here -- the repository's own `.envrc` points it at one. `build/` is already the scratch directory, gitignored and on real storage. Note that `dev:clean` does not touch it -- that target removes built binaries, and removing a live fleet's directory out from under it would orphan the qemu processes holding its overlays. `dev:vmDown` is what takes a fleet away.
 
 ## Rocky only, and why that does not retire the bootloose cluster
 
