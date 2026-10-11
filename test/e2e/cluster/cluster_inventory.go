@@ -71,9 +71,9 @@ func renderClusterInventory(c *blcluster.Cluster, keyPath string) (apicluster.Za
 	var controllers, workers []*blcluster.Machine
 	for _, m := range machines {
 		switch {
-		case strings.HasPrefix(m.Hostname(), "kc"):
+		case strings.HasPrefix(m.Hostname(), controllerPrefix):
 			controllers = append(controllers, m)
-		case strings.HasPrefix(m.Hostname(), "kw"):
+		case strings.HasPrefix(m.Hostname(), workerPrefix):
 			workers = append(workers, m)
 		}
 	}
