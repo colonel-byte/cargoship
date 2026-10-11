@@ -89,6 +89,11 @@ func TestRenderSeedFilesUserData(t *testing.T) {
 			why:  "phase 22 gates on the service running, and the image has none",
 		},
 		{
+			name: "the dnf versionlock plugin is installed",
+			want: "- python3-dnf-plugin-versionlock",
+			why:  "without it phase 51 warns and takes the unpinned path, leaving the pinned one untested",
+		},
+		{
 			name: "both services are started",
 			want: "[systemctl, enable, --now, firewalld]",
 			why:  "installing without starting leaves both gates shut",
