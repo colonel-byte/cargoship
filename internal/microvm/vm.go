@@ -113,16 +113,20 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 		}
 	}
 
+	// Written before the wait, not after it. Every field in it comes from the spec rather
+	// than from the running nodes, so there is nothing to learn by waiting -- and a bring-up
+	// that times out leaves the fleet up on purpose, which is only useful if there is an
+	// inventory to point cargoship at while looking at it.
+	if err := writeInventory(fleet); err != nil {
+		return Fleet{}, err
+	}
+
 	// Nodes boot in parallel and are waited on in sequence, so the total wait is roughly the
 	// slowest node rather than the sum.
 	for _, node := range fleet.Nodes {
 		if err := waitForReady(ctx, fleet, node); err != nil {
 			return Fleet{}, err
 		}
-	}
-
-	if err := writeInventory(fleet); err != nil {
-		return Fleet{}, err
 	}
 	return fleet, nil
 }
