@@ -287,6 +287,8 @@ $ CARGOSHIP_E2E_BACKEND=microvm go test -mod=vendor -count=1 -v -timeout=60m ./t
 
 It needs KVM, and a bring-up costs a minute or two against a container's seconds. It is also one distribution, so it covers none of the family routing the container fleet's Ubuntu, Fedora and Alpine mix exists for -- run both, not one instead of the other. See [microvm](microvm.md) for the fleet itself and [choice-microvm-backend](../agent/choice-microvm-backend.md) for the reasoning.
 
+**Run against a fleet the suite did not create.** `CARGOSHIP_E2E_BACKEND=inventory` with `CARGOSHIP_E2E_INVENTORY` pointing at a `ZarfCluster` document runs every phase against hosts that already exist, wherever they are. The assertions that are about a fleet this suite chose -- the declared OS per host, the OS mix, the per-family upload guards, the join walk -- stand down and say so; everything else asserts as usual. See [e2e-external-inventory](e2e-external-inventory.md), including the warning that it changes those hosts and does not change them back.
+
 **Walk the suite against rke2 instead of k3s.** `CARGOSHIP_E2E_DISTRO=rke2` switches which distro every step installs, and which package `cluster_lifecycle_test.go` builds. The default is `k3s`. A phase that branches on the engine needs a run each way:
 
 ```console

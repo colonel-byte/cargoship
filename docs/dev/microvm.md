@@ -107,6 +107,8 @@ export KUBECONFIG=/etc/rancher/rke2/rke2.yaml   # or /etc/rancher/k3s/k3s.yaml
 /var/lib/rancher/rke2/bin/kubectl get nodes -o wide
 ```
 
+Note what that costs in the suite: `Test_ZZ1_ClusterHealthy` is the only step that asserts the cluster actually works, and it is skipped here because it needs an API route from the management node. A green run against this fleet therefore says the phases did their work, not that the cluster is healthy. Check that from inside a node when it matters.
+
 Giving the management node a routable path onto the private segment would mean a tap device or a bridge, which needs root and puts the fleet back under the host's firewall -- the two things [choice-microvm-backend](../agent/choice-microvm-backend.md) picked a multicast socket to avoid.
 
 ## The engine's node IP
