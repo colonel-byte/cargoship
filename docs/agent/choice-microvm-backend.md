@@ -18,6 +18,18 @@ A tap device or a bridge would be the conventional answer and both need root. Th
 
 The private segment is also why `Inventory` sets `PrivateAddress` and `PrivateInterface` explicitly, where the bootloose equivalent leaves both to fact gathering. A node's default route is on the management interface, so discovery would give every host the same slirp address -- `10.0.2.15`, reachable from no peer -- and the firewall and `/etc/hosts` phases would faithfully distribute it.
 
+## Infra nodes are workers with a profile of their own
+
+A fleet is counted in three groups -- control, worker, infra -- and the third is not a third role. The engine has two, so an infra node joins as a worker and is distinguished only by its `Profile`, which `pkg/phase/81_label_nodes.go` turns into a `node-role.kubernetes.io/infra` label and which a cluster config can hang a per-profile `Concurrency` off.
+
+They exist because every other host in a generated inventory has a profile that restates its role, which makes both of those mechanisms untestable: a label derived from `controller` on a controller proves nothing about a label derived from a name the role does not supply, and a per-profile concurrency is indistinguishable from the phase default when every profile holds the same hosts as its role. One group whose profile is not its role's name is enough to tell those apart.
+
+They are named `ki*`, a prefix of its own rather than an extension of the worker prefix the way the container fleet's `kwf*` and `kwa*` are. The three prefixes then partition the names, so nothing matching on them depends on test order or on matching longest -- which the container suite's prefixes do, since `kwa` is also `kw`.
+
+The consequence is that a mapping keyed only on `kc` and `kw` claims an infra node as neither. Nothing in `internal/microvm` is such a mapping: `Inventory` reads a node's role and profile off the node, not off its name. The container suite's `renderClusterInventory` *is* one, so wiring infra nodes into that fleet means teaching it this prefix rather than relying on the name to carry the role.
+
+The group is created last, after the plain workers, so that asking for infra nodes does not renumber the hosts ahead of them -- a fleet brought up with none is addressed exactly as it was before the group existed.
+
 ## `internal/`, not `magefiles/pkg/`
 
 [`magefiles/AGENTS.md`](../../magefiles/AGENTS.md) puts implementation logic under `magefiles/pkg/`, and this package is deliberately not there. It has two consumers -- the `Dev` mage targets and the e2e cluster suite -- and a test suite importing out of `magefiles/` would invert the dependency. `internal/` is what the root [`CLAUDE.md`](../../CLAUDE.md) names for packages private to the module, and the mage targets stay thin wrappers over it, which is what that rule is protecting.

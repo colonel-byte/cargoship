@@ -31,6 +31,7 @@ func fleetFixture(t *testing.T) Fleet {
 		Fleet:       "dev",
 		Controllers: 2,
 		Workers:     2,
+		Infra:       2,
 		Distro:      "rke2",
 	}.Normalize()
 	require.NoError(t, err)
@@ -61,7 +62,7 @@ func TestInventoryHosts(t *testing.T) {
 		node := f.Nodes[i]
 		require.Equal(t, node.Name, host.Hostname)
 		require.Equal(t, node.Role, host.Role)
-		require.Equal(t, node.Role, host.Profile,
+		require.Equal(t, node.Profile, host.Profile,
 			"the profile is what the LabelNodes phase writes as a node role label")
 
 		require.NotNil(t, host.ConnectionConfig.SSH)
@@ -124,4 +125,31 @@ func TestInventoryRoundTripsThroughLoad(t *testing.T) {
 		require.NotNil(t, host.ConnectionConfig.SSH, "the ssh block did not survive the round trip")
 		require.Equal(t, f.Nodes[i].SSHPort, host.ConnectionConfig.SSH.Port)
 	}
+}
+
+// TestInventoryGivesInfraNodesTheirOwnProfile is why the infra group exists. Everything else
+// in this inventory has a profile that restates its role, so the node-role labelling and the
+// per-profile concurrency are only exercised against a profile that differs.
+func TestInventoryGivesInfraNodesTheirOwnProfile(t *testing.T) {
+	t.Parallel()
+
+	inv := Inventory(fleetFixture(t))
+
+	var infra, other int
+	for _, host := range inv.Spec.Hosts {
+		if host.Profile == infraProfile {
+			infra++
+			require.Equal(t, apicluster.RoleWorker, host.Role,
+				"an infra node joins as a worker; the engine has no third role")
+			continue
+		}
+		other++
+		require.Equal(t, host.Role, host.Profile)
+	}
+
+	require.Equal(t, 2, infra, "the fixture has two infra nodes")
+	require.Positive(t, other)
+
+	require.NotEqual(t, infraProfile, inv.Spec.Hosts[0].Profile,
+		"the leader is a controller, and the load balancer points at it")
 }

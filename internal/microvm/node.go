@@ -31,6 +31,22 @@ const (
 	controllerPrefix = "kc"
 	workerPrefix     = "kw"
 
+	// infraPrefix names the infra nodes. It is a prefix of its own rather than an extension
+	// of workerPrefix, so the three groups partition the names and nothing matching on them
+	// depends on test order or on matching longest.
+	//
+	// The consequence is that a mapping keyed only on kc and kw claims an infra node as
+	// neither. Nothing here is such a mapping -- Inventory reads a node's Role and Profile
+	// off the node rather than off its name -- but the container suite's
+	// renderClusterInventory is, so wiring infra nodes into that fleet means teaching it this
+	// prefix rather than relying on the name to carry the role.
+	infraPrefix = "ki"
+
+	// infraProfile is the profile infra nodes select, which pkg/phase/81_label_nodes.go turns
+	// into a node-role.kubernetes.io/infra label and which a cluster config can hang a
+	// per-profile concurrency off.
+	infraProfile = "infra"
+
 	// privateDomain is the search domain nodes get, which is what makes a host's
 	// LongHostname differ from its Hostname the way a real fleet's does.
 	privateDomain = "cargoship.test"
@@ -57,6 +73,10 @@ type Spec struct {
 	// Controllers and Workers are how many of each role to create.
 	Controllers int
 	Workers     int
+	// Infra is how many infra nodes to create: workers carrying a profile of their own, so
+	// that the node-role labelling and the per-profile concurrency are exercised against a
+	// profile that is not simply the role's name.
+	Infra int
 	// MemoryMiB and CPUs are per node.
 	MemoryMiB int
 	CPUs      int
@@ -75,8 +95,12 @@ type Spec struct {
 type Node struct {
 	// Name is the hostname, and the directory name under the fleet's run directory.
 	Name string
-	// Role is apicluster.RoleController or apicluster.RoleWorker.
+	// Role is apicluster.RoleController or apicluster.RoleWorker. Infra nodes are workers:
+	// the engine has no third role.
 	Role string
+	// Profile is the profile the node selects. It matches Role for controllers and plain
+	// workers, and is infraProfile for infra nodes.
+	Profile string
 	// Index is the node's 1-based position in the fleet, across both roles.
 	Index int
 	// SSHPort is the loopback port on the host forwarded to this node's sshd.
@@ -122,7 +146,10 @@ func (s Spec) Normalize() (Spec, error) {
 	if s.Workers < 0 {
 		return Spec{}, fmt.Errorf("a fleet cannot have %d workers", s.Workers)
 	}
-	if total := s.Controllers + s.Workers; total > maxNodes {
+	if s.Infra < 0 {
+		return Spec{}, fmt.Errorf("a fleet cannot have %d infra nodes", s.Infra)
+	}
+	if total := s.Controllers + s.Workers + s.Infra; total > maxNodes {
 		return Spec{}, fmt.Errorf("a fleet of %d nodes exceeds the %d node limit", total, maxNodes)
 	}
 	if s.Distro != "k3s" && s.Distro != "rke2" {
@@ -131,8 +158,45 @@ func (s Spec) Normalize() (Spec, error) {
 	return s, nil
 }
 
-// Nodes derives the fleet's nodes from the spec. Controllers come first so that index 1 is
-// always the leader, which is what the inventory's load balancer points at.
+// group is one set of like nodes: a name prefix, the role they join as, the profile they
+// select, and how many there are.
+type group struct {
+	prefix  string
+	role    string
+	profile string
+	count   int
+}
+
+// groups is the fleet's node sets, in the order they are created.
+//
+// Controllers come first so that index 1 is always the leader, which is what the inventory's
+// load balancer points at. Infra comes last so that adding infra nodes to a fleet does not
+// renumber the plain workers ahead of them, and so a fleet brought up without any is
+// numbered exactly as it was before infra existed.
+func (s Spec) groups() []group {
+	return []group{
+		{
+			prefix:  controllerPrefix,
+			role:    apicluster.RoleController,
+			profile: apicluster.RoleController,
+			count:   s.Controllers,
+		},
+		{
+			prefix:  workerPrefix,
+			role:    apicluster.RoleWorker,
+			profile: apicluster.RoleWorker,
+			count:   s.Workers,
+		},
+		{
+			prefix:  infraPrefix,
+			role:    apicluster.RoleWorker,
+			profile: infraProfile,
+			count:   s.Infra,
+		},
+	}
+}
+
+// Nodes derives the fleet's nodes from the spec.
 func (s Spec) Nodes() ([]Node, error) {
 	spec, err := s.Normalize()
 	if err != nil {
@@ -140,28 +204,27 @@ func (s Spec) Nodes() ([]Node, error) {
 	}
 	id := fleetID(spec.Fleet)
 
-	nodes := make([]Node, 0, spec.Controllers+spec.Workers)
+	nodes := make([]Node, 0, spec.Controllers+spec.Workers+spec.Infra)
 	index := 0
-	add := func(prefix, role string, n int) {
-		for i := 0; i < n; i++ {
+	for _, g := range spec.groups() {
+		for i := 0; i < g.count; i++ {
 			index++
 			node := Node{
-				Name:           fmt.Sprintf("%s%d", prefix, i),
-				Role:           role,
+				Name:           fmt.Sprintf("%s%d", g.prefix, i),
+				Role:           g.role,
+				Profile:        g.profile,
 				Index:          index,
 				SSHPort:        sshPortFor(id, index),
 				PrivateAddress: privateAddressFor(id, index),
 				MgmtMAC:        fmt.Sprintf("52:54:00:%02x:00:%02x", id, index),
 				LANMAC:         fmt.Sprintf("52:54:00:%02x:01:%02x", id, index),
 			}
-			if role == apicluster.RoleController && i == 0 {
+			if g.role == apicluster.RoleController && i == 0 {
 				node.HostFwd = leaderForwards(id, spec.Distro)
 			}
 			nodes = append(nodes, node)
 		}
 	}
-	add(controllerPrefix, apicluster.RoleController, spec.Controllers)
-	add(workerPrefix, apicluster.RoleWorker, spec.Workers)
 	return nodes, nil
 }
 
