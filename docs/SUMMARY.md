@@ -159,6 +159,7 @@
 <!-- Excluded from the print page (print.html) by docs/css/print.css. -->
 
 - [build-flags](dev/build-flags.md)
+- [e2e-external-inventory](dev/e2e-external-inventory.md)
 - [e2e-phase-tests](dev/e2e-phase-tests.md)
 - [e2e-tests](dev/e2e-tests.md)
 - [fuzz-tests](dev/fuzz-tests.md)

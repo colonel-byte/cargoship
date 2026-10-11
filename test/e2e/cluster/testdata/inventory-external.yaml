@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=../../../../schema/zarf-v1alpha1-cluster-schema.json
+# An inventory of the shape an operator supplies to CARGOSHIP_E2E_BACKEND=inventory: hosts that
+# already exist somewhere the suite did not create them. The hostnames deliberately look like a
+# cloud provider's rather than the kc0/kw0 the container and VM fleets use, because the external
+# backend must not depend on the suite's own naming to work out a host's role.
+#
+# Nothing here is contacted. The tests only read this file to check how a fleet is derived from
+# a document; the addresses are in the RFC 5737 documentation range.
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfCluster
+metadata:
+  name: external-fleet
+spec:
+  config:
+    loadbalancer: 192.0.2.10
+  hosts:
+    - ssh:
+        address: 192.0.2.10
+        user: ubuntu
+        port: 22
+        keyPath: /dev/null
+      hostname: ip-192-0-2-10
+      privateAddress: 192.0.2.10
+      role: controller
+      profile: controller
+    - ssh:
+        address: 192.0.2.11
+        user: ubuntu
+        port: 22
+        keyPath: /dev/null
+      hostname: ip-192-0-2-11
+      privateAddress: 192.0.2.11
+      role: worker
+      profile: worker
+    - ssh:
+        address: 192.0.2.12
+        user: ubuntu
+        port: 22
+        keyPath: /dev/null
+      hostname: ip-192-0-2-12
+      privateAddress: 192.0.2.12
+      role: worker
+      profile: infra
