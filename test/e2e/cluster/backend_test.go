@@ -15,6 +15,7 @@
 package cluster
 
 import (
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -189,4 +190,32 @@ func TestCarriesFamily(t *testing.T) {
 			require.Equal(t, tt.want, carriesFamily(tt.spec, tt.family))
 		})
 	}
+}
+
+// TestReachesClusterAPIOnAnAddressNothingListensOn covers the negative side of the probe, which
+// is the side that decides whether a step runs. The documentation-range address is reserved and
+// routed nowhere, so this cannot pass by accident on a machine that happens to run a cluster.
+func TestReachesClusterAPIOnAnAddressNothingListensOn(t *testing.T) {
+	t.Parallel()
+
+	require.False(t, reachesClusterAPI(""),
+		"an inventory with no load balancer names nothing to reach")
+	require.False(t, reachesClusterAPI("192.0.2.1"),
+		"a reserved documentation address is routed nowhere")
+}
+
+// TestReachesClusterAPIFindsAListener is the positive side, against a listener this test owns
+// rather than a cluster, so it asserts the probe and nothing about the environment.
+func TestReachesClusterAPIFindsAListener(t *testing.T) {
+	t.Parallel()
+
+	// The probe always dials 6443, so the listener has to be on that port. Skip rather than
+	// fail when it is already taken: a developer with a local cluster is not a broken test.
+	ln, err := net.Listen("tcp", "127.0.0.1:6443")
+	if err != nil {
+		t.Skipf("cannot bind 127.0.0.1:6443 to test the probe: %v", err)
+	}
+	defer func() { _ = ln.Close() }()
+
+	require.True(t, reachesClusterAPI("127.0.0.1"))
 }

@@ -155,6 +155,7 @@ func (s *JoinPhaseSuite) isJoined(host *apicluster.ZarfHost) bool {
 // install bootstrapped. Test_62 already waited for the node it started, so this is the check
 // that the cluster is one node larger rather than one node different.
 func (s *JoinPhaseSuite) Test_ZZ1_ClusterHealthy() {
+	s.requireClusterAPI()
 	t := s.T()
 	cs, err := e2e.KubeClient(t)
 	s.Require().NoError(err)
