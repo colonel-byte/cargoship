@@ -355,3 +355,101 @@ func TestSpecNodesWithoutInfraIsUnchanged(t *testing.T) {
 
 	require.Equal(t, plain, withInfra[:len(plain)])
 }
+
+// TestSpecNodesMixedFleet covers the opt-in second guest. A Rocky-only fleet is what every
+// caller gets without asking; Ubuntu nodes are how the branches a single-distribution fleet
+// cannot reach -- the APT upload phase, the ufw backend, and the SELinux and fapolicyd gates
+// correctly doing nothing -- get exercised against a real kernel.
+func TestSpecNodesMixedFleet(t *testing.T) {
+	t.Parallel()
+
+	nodes, err := Spec{
+		Fleet:             "dev",
+		Controllers:       1,
+		Workers:           1,
+		UbuntuControllers: 1,
+		UbuntuWorkers:     2,
+		Infra:             1,
+	}.Nodes()
+	require.NoError(t, err)
+
+	var gotNames []string
+	for _, n := range nodes {
+		gotNames = append(gotNames, n.Name)
+	}
+	require.Equal(t, []string{"kc0", "uc0", "kw0", "uw0", "uw1", "ki0"}, gotNames,
+		"controllers first, Rocky before Ubuntu so the leader can run either engine, infra last")
+
+	byName := map[string]Node{}
+	for _, n := range nodes {
+		byName[n.Name] = n
+	}
+	require.Equal(t, "rocky", byName["kc0"].Image)
+	require.Equal(t, "rocky", byName["ki0"].Image)
+	require.Equal(t, "ubuntu", byName["uc0"].Image)
+	require.Equal(t, "ubuntu", byName["uw1"].Image)
+	require.Equal(t, "ubuntu", byName["uw1"].OSID,
+		"phase 09 resolves a Configurer from the os-release ID, which is what the family routing reads")
+
+	require.NotEmpty(t, byName["kc0"].HostFwd, "the leader is the first Rocky controller")
+	require.Empty(t, byName["uc0"].HostFwd, "an Ubuntu controller is not the leader when a Rocky one exists")
+}
+
+// TestSpecNodesDefaultsToRockyOnly is the opt-in half of that: a spec that asks for no Ubuntu
+// nodes is numbered and imaged exactly as it was before the second guest existed.
+func TestSpecNodesDefaultsToRockyOnly(t *testing.T) {
+	t.Parallel()
+
+	nodes, err := Spec{
+		Fleet:       "dev",
+		Controllers: 1,
+		Workers:     2,
+	}.Nodes()
+	require.NoError(t, err)
+
+	require.Len(t, nodes, 3)
+	for _, n := range nodes {
+		require.Equal(t, "rocky", n.Image, "%s should run the default guest", n.Name)
+		require.Equal(t, "rocky", n.OSID)
+	}
+}
+
+// TestSpecNormalizeAcceptsAnUbuntuOnlyControlPlane covers a fleet with no Rocky controller at
+// all, which is legitimate for k3s -- it installs from a binary and runs on either guest.
+func TestSpecNormalizeAcceptsAnUbuntuOnlyControlPlane(t *testing.T) {
+	t.Parallel()
+
+	nodes, err := Spec{
+		Fleet:             "dev",
+		Controllers:       0,
+		UbuntuControllers: 1,
+		UbuntuWorkers:     1,
+	}.Nodes()
+	require.NoError(t, err)
+
+	require.Equal(t, "uc0", nodes[0].Name)
+	require.NotEmpty(t, nodes[0].HostFwd, "the only controller is the leader")
+
+	_, err = Spec{Fleet: "dev"}.Nodes()
+	require.ErrorContains(t, err, "at least one controller",
+		"a fleet with neither kind of controller is still refused")
+}
+
+// TestEveryImageIsPinnedAndVerifiable pins the shape of the image registry rather than the
+// values: a guest with no digest cannot be verified, and one whose id does not match its key
+// cannot be asked for by name.
+func TestEveryImageIsPinnedAndVerifiable(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, []string{"rocky", "ubuntu"}, ImageIDs())
+	require.Contains(t, images, DefaultImageID)
+
+	for id, img := range images {
+		require.Equal(t, id, img.id, "the registry key and the image id have to agree")
+		require.Len(t, img.sha256, 64, "%s has no sha256 digest", id)
+		require.Contains(t, img.url, img.file, "%s's url does not name its file", id)
+		require.NotEmpty(t, img.osID, "%s names no os-release ID", id)
+		require.NotContains(t, img.url, "latest",
+			"%s is pinned to a moving alias rather than a dated build", id)
+	}
+}

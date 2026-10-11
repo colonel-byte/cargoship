@@ -133,9 +133,16 @@ func (Dev) DnfPins(ctx context.Context) error {
 	return nil
 }
 
-// VMImage fetches and verifies the base image the VM fleet runs, without starting anything.
-func (Dev) VMImage(ctx context.Context) error {
-	return microvmrun.Image(ctx)
+// VMImage fetches and verifies a base image the VM fleet runs, without starting anything.
+//
+// `-image=all` fetches every guest the fleet knows. They are several hundred megabytes each,
+// so the default is the one a fleet uses unless asked otherwise.
+func (Dev) VMImage(
+	ctx context.Context,
+	// guest to fetch: rocky, ubuntu, or all (default rocky)
+	image *string,
+) error {
+	return microvmrun.Image(ctx, stringOr(image, "rocky"))
 }
 
 // VMUp brings up a local Enterprise Linux VM fleet and writes a ZarfCluster inventory pointing
@@ -144,6 +151,11 @@ func (Dev) VMImage(ctx context.Context) error {
 //
 // Infra nodes join as workers; what makes them infra is a profile of their own, which the
 // LabelNodes phase turns into a node-role.kubernetes.io/infra label.
+//
+// The fleet is Rocky unless asked otherwise. The two Ubuntu counts are how the branches a
+// single-distribution fleet cannot reach get exercised - the APT upload phase, the ufw
+// backend, and the SELinux and fapolicyd gates correctly doing nothing. Note that rke2 cannot
+// run on an Ubuntu node at all, so a mixed fleet wants `-distro=k3s` or an upstream package.
 func (Dev) VMUp(
 	ctx context.Context,
 	// control-plane nodes (default 1)
@@ -152,14 +164,20 @@ func (Dev) VMUp(
 	worker *int,
 	// infra nodes, which join as workers under an infra profile (default 0)
 	infra *int,
+	// Ubuntu control-plane nodes, instead of Rocky (default 0)
+	ubuntuControl *int,
+	// Ubuntu worker nodes, instead of Rocky (default 0)
+	ubuntuWorker *int,
 	// engine the fleet is prepared for, k3s or rke2 (default k3s)
 	distro *string,
 ) error {
 	return microvmrun.Up(ctx, microvmrun.Options{
-		Controllers: intOr(control, 1),
-		Workers:     intOr(worker, 2),
-		Infra:       intOr(infra, 0),
-		Distro:      stringOr(distro, "k3s"),
+		Controllers:       intOr(control, 1),
+		Workers:           intOr(worker, 2),
+		Infra:             intOr(infra, 0),
+		UbuntuControllers: intOr(ubuntuControl, 0),
+		UbuntuWorkers:     intOr(ubuntuWorker, 0),
+		Distro:            stringOr(distro, "k3s"),
 	})
 }
 

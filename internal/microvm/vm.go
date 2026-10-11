@@ -79,9 +79,18 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 		return Fleet{}, fmt.Errorf("fleet %s is already up (%s); tear it down first with `mage dev:vmDown`", fleet.Name, strings.Join(running, ", "))
 	}
 
-	base, err := Fetch(ctx)
-	if err != nil {
-		return Fleet{}, err
+	// One fetch per distinct image, not per node: a mixed fleet wants both base images and a
+	// Rocky-only one must not pay for Ubuntu's.
+	bases := map[string]string{}
+	for _, g := range spec.groups() {
+		if g.count == 0 || bases[g.img.id] != "" {
+			continue
+		}
+		path, err := Fetch(ctx, g.img)
+		if err != nil {
+			return Fleet{}, err
+		}
+		bases[g.img.id] = path
 	}
 	if err := os.RemoveAll(fleet.Dir); err != nil {
 		return Fleet{}, fmt.Errorf("clearing %s: %w", fleet.Dir, err)
@@ -104,7 +113,7 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 	}
 
 	for _, node := range fleet.Nodes {
-		if err := start(ctx, spec, fleet, node, base, publicKey); err != nil {
+		if err := start(ctx, spec, fleet, node, bases[node.Image], publicKey); err != nil {
 			// A half-started fleet is not something to leave for the developer to clean up,
 			// and it is not something a later Up would adopt either, since Up refuses a live
 			// fleet. Tear it down and report the original failure.
@@ -253,24 +262,30 @@ func load(spec Spec) (Fleet, error) {
 		return Fleet{}, fmt.Errorf("reading %s: %w", spec.dir(), err)
 	}
 
-	var controllers, workers, infra int
+	var controllers, ubuntuControllers, workers, ubuntuWorkers, infra int
 	for _, e := range entries {
 		switch {
 		case !e.IsDir():
 		case strings.HasPrefix(e.Name(), controllerPrefix):
 			controllers++
+		case strings.HasPrefix(e.Name(), ubuntuControllerPrefix):
+			ubuntuControllers++
+		case strings.HasPrefix(e.Name(), ubuntuWorkerPrefix):
+			ubuntuWorkers++
 		case strings.HasPrefix(e.Name(), infraPrefix):
 			infra++
 		case strings.HasPrefix(e.Name(), workerPrefix):
 			workers++
 		}
 	}
-	if controllers == 0 {
+	if controllers+ubuntuControllers == 0 {
 		return Fleet{}, fmt.Errorf("fleet %s under %s has no controller directory", spec.Fleet, spec.runRoot())
 	}
 
 	spec.Controllers = controllers
+	spec.UbuntuControllers = ubuntuControllers
 	spec.Workers = workers
+	spec.UbuntuWorkers = ubuntuWorkers
 	spec.Infra = infra
 	nodes, err := spec.Nodes()
 	if err != nil {

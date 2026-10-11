@@ -29,14 +29,6 @@ import (
 // needed back off that -- the role counts, the join walk's extra machine. That works for
 // exactly one backend. Everything the walks actually care about is here instead, and a backend
 // is a function from this to whatever it needs: bootlooseConfig is the one for containers.
-const (
-	// controllerPrefix and workerPrefix are the hostname prefixes the inventory maps to roles.
-	// uploadOnlyPrefix begins with workerPrefix, so anything testing these has to test it
-	// first; see its own comment in cluster_inventory.go.
-	controllerPrefix = "kc"
-	workerPrefix     = "kw"
-)
-
 type fleetSpec struct {
 	// name is the cluster name, which bootloose labels its containers with.
 	name string

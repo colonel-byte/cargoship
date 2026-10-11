@@ -39,6 +39,9 @@ type Options struct {
 	Controllers int
 	Workers     int
 	Infra       int
+	// UbuntuControllers and UbuntuWorkers run Ubuntu instead of Rocky. Both opt in.
+	UbuntuControllers int
+	UbuntuWorkers     int
 	// Distro is the engine the fleet is prepared for, k3s or rke2.
 	Distro string
 }
@@ -48,10 +51,12 @@ func Up(ctx context.Context, opts Options) error {
 	fmt.Printf("Bringing up %s for %s\n", describe(opts), opts.Distro)
 
 	fleet, err := microvm.Up(ctx, microvm.Spec{
-		Controllers: opts.Controllers,
-		Workers:     opts.Workers,
-		Infra:       opts.Infra,
-		Distro:      opts.Distro,
+		Controllers:       opts.Controllers,
+		Workers:           opts.Workers,
+		Infra:             opts.Infra,
+		UbuntuControllers: opts.UbuntuControllers,
+		UbuntuWorkers:     opts.UbuntuWorkers,
+		Distro:            opts.Distro,
 	})
 	if err != nil {
 		return err
@@ -76,6 +81,12 @@ func describe(opts Options) string {
 	}
 	if opts.Infra > 0 {
 		parts = append(parts, fmt.Sprintf("%d infra", opts.Infra))
+	}
+	if opts.UbuntuControllers > 0 {
+		parts = append(parts, fmt.Sprintf("%d Ubuntu control-plane", opts.UbuntuControllers))
+	}
+	if opts.UbuntuWorkers > 0 {
+		parts = append(parts, fmt.Sprintf("%d Ubuntu worker", opts.UbuntuWorkers))
 	}
 	return strings.Join(parts, ", ") + " node(s)"
 }
@@ -107,13 +118,25 @@ func SSH(ctx context.Context, fleet, node string, command ...string) error {
 	return cmd.Run()
 }
 
-// Image fetches and verifies the base image without starting anything.
-func Image(ctx context.Context) error {
-	path, err := microvm.Fetch(ctx)
+// Image fetches and verifies base images without starting anything.
+//
+// It fetches only what was asked for, because the images are several hundred megabytes each
+// and a Rocky-only fleet has no use for Ubuntu's.
+func Image(ctx context.Context, which string) error {
+	ids := []string{which}
+	if which == "all" {
+		ids = microvm.ImageIDs()
+	}
+
+	paths, err := microvm.FetchImages(ctx, ids...)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Base image ready at " + path)
+	for _, id := range microvm.ImageIDs() {
+		if p, ok := paths[id]; ok {
+			fmt.Printf("%-8s ready at %s\n", id, p)
+		}
+	}
 	return nil
 }
 
@@ -134,14 +157,14 @@ func printStatus(fleet, runRoot string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NODE\tROLE\tPROFILE\tSTATE\tSSH\tPRIVATE ADDRESS")
+	fmt.Fprintln(w, "NODE\tROLE\tPROFILE\tIMAGE\tSTATE\tSSH\tPRIVATE ADDRESS")
 	for _, s := range status {
 		state := "stopped"
 		if s.Running {
 			state = "running (pid " + strconv.Itoa(s.PID) + ")"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t127.0.0.1:%d\t%s\n",
-			s.Name, s.Role, s.Profile, state, s.SSHPort, s.PrivateAddress)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t127.0.0.1:%d\t%s\n",
+			s.Name, s.Role, s.Profile, s.Image, state, s.SSHPort, s.PrivateAddress)
 	}
 	return w.Flush()
 }

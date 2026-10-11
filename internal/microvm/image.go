@@ -37,31 +37,144 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
 
-// The base image is pinned by dated name and digest rather than through the
-// GenericCloud-Base.latest alias the mirror also publishes. A fleet whose guest userland
-// changes under it turns an unrelated phase failure into an afternoon, and the alias moves
-// without warning; a release that ships a broken image -- Rocky has shipped a GenericCloud
-// build with no cloud-init in it at all -- is then something this package steps over by not
-// moving, rather than something every developer hits at once.
-const (
-	// imageName is the file as published, and as cached.
-	imageName = "Rocky-10-GenericCloud-Base-10.2-20260525.0.x86_64.qcow2"
+// image is one guest the fleet can run: where to fetch it, how to recognise it, and the
+// cloud-init work it needs before cargoship's phases have anything to route on.
+//
+// Each is pinned by dated name and digest rather than through a "latest" alias the mirrors
+// also publish. A fleet whose guest userland changes under it turns an unrelated phase
+// failure into an afternoon, and the aliases move without warning; a release that ships a
+// broken build -- Rocky has shipped a GenericCloud image with no cloud-init in it at all --
+// is then something this package steps over by not moving, rather than something every
+// developer hits at once.
+type image struct {
+	// id names the image on the command line and in a node's directory.
+	id string
+	// file is the name as published, and as cached.
+	file string
+	// url is where file is fetched from.
+	url string
+	// sha256 is the digest published alongside it.
+	sha256 string
+	// osID is the os-release ID the guest reports, which is what phase 09 resolves a
+	// Configurer from and what the family-routed phases branch on.
+	osID string
+	// packages are installed by cloud-init, and services started, so that the phases which
+	// gate on a running service have something to find. They differ per distribution because
+	// what cargoship routes to differs: firewalld and fapolicyd on Enterprise Linux, ufw on
+	// Debian, and nothing in common.
+	packages []string
+	// runcmd is run after the packages are installed.
+	runcmd []string
+	// selinux is whether the guest enforces SELinux, which the image verification checks and
+	// which decides whether phase 21 has anything to do.
+	selinux bool
+}
 
-	// imageURL is the mirror path imageName is fetched from.
-	imageURL = "https://dl.rockylinux.org/pub/rocky/10/images/x86_64/" + imageName
+// rockyImage is the default guest: Enterprise Linux with SELinux enforcing, which is the
+// combination the fleet was built for.
+var rockyImage = image{ //nolint:gochecknoglobals
+	id:     "rocky",
+	file:   "Rocky-10-GenericCloud-Base-10.2-20260525.0.x86_64.qcow2",
+	url:    "https://dl.rockylinux.org/pub/rocky/10/images/x86_64/Rocky-10-GenericCloud-Base-10.2-20260525.0.x86_64.qcow2",
+	sha256: "9fc9e9ff16888bb68ac39b0392e25c9c92684d50c85f1cce6ab549363bbc4b48",
+	osID:   "rocky",
+	// python3-dnf-plugin-versionlock is the plugin pkg/phase/51_package_pin.go pins engine
+	// packages with. A minimal Enterprise Linux install does not carry it -- see
+	// docs/agent/choice-unpinnable-hosts.md -- so without it a run reports "this host has no
+	// dnf versionlock plugin", takes the unpinned path, and the pinned path stays untested.
+	packages: []string{"firewalld", "fapolicyd", "python3-dnf-plugin-versionlock"},
+	runcmd: []string{
+		"[systemctl, enable, --now, firewalld]",
+		"[systemctl, enable, --now, fapolicyd]",
+	},
+	selinux: true,
+}
 
-	// imageSHA256 is the digest published alongside imageName in its .CHECKSUM file.
-	imageSHA256 = "9fc9e9ff16888bb68ac39b0392e25c9c92684d50c85f1cce6ab549363bbc4b48"
-)
+// ubuntuImage is the opt-in second guest, and it is here for the branches a single-distribution
+// fleet cannot reach: the APT upload phase, the ufw firewall backend, the Debian Configurer,
+// and the SELinux and fapolicyd gates correctly doing nothing.
+//
+// ufw is enabled here, which cargoship deliberately never does itself -- bringing up a
+// default-deny firewall over the SSH connection a phase is running on can cut it, so
+// pkg/firewall/ufw.go applies only to a host whose ufw is already active. A stock cloud image
+// ships it inactive, so without this the ufw path is not reachable at all. See
+// docs/agent/choice-preferred-firewall.md.
+//
+// There is no fapolicyd: it is not packaged for Ubuntu, which is the correct state for a
+// Debian-family host and is what makes phase 22 skip there.
+var ubuntuImage = image{ //nolint:gochecknoglobals
+	id:       "ubuntu",
+	file:     "ubuntu-26.04-server-cloudimg-amd64.img",
+	url:      "https://cloud-images.ubuntu.com/releases/26.04/release-20260927/ubuntu-26.04-server-cloudimg-amd64.img",
+	sha256:   "8800651811af9a85465ad1d552add729947bb16488dddb4a9b5305a3d97332b2",
+	osID:     "ubuntu",
+	packages: []string{"ufw"},
+	runcmd: []string{
+		// SSH is allowed *before* ufw comes up, and the order is the whole of it: Ubuntu's
+		// ufw defaults to denying incoming traffic and a stock cloud image carries no rules,
+		// so enabling it first locks the node out at port 22 and the bring-up can only time
+		// out waiting for a host that will never answer again.
+		//
+		// Nothing else is opened here. The cluster's own ports are phase 26's business, which
+		// is the path this guest exists to exercise.
+		`[ufw, allow, "22/tcp"]`,
+		`[ufw, --force, enable]`,
+	},
+	selinux: false,
+}
+
+// images are the guests a fleet can be built from, by id.
+var images = map[string]image{ //nolint:gochecknoglobals
+	rockyImage.id:  rockyImage,
+	ubuntuImage.id: ubuntuImage,
+}
 
 // fetchTimeout bounds the download. The image is roughly 520MiB, so this is generous for a
 // working connection and short enough that a mirror which has stopped sending bytes fails
 // while the developer is still watching.
 const fetchTimeout = 15 * time.Minute
+
+// ImageIDs are the guests a fleet can be built from, sorted so the listing is stable.
+func ImageIDs() []string {
+	ids := make([]string, 0, len(images))
+	for id := range images {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+// DefaultImageID is the guest a fleet runs when nothing asks for another.
+const DefaultImageID = "rocky"
+
+// FetchImages downloads and verifies the named guests, returning where each was cached.
+//
+// The ids are the exported half of the image registry: callers outside this package name a
+// guest by string rather than holding the definition, so the pins stay in one file.
+func FetchImages(ctx context.Context, ids ...string) (map[string]string, error) {
+	if len(ids) == 0 {
+		ids = []string{DefaultImageID}
+	}
+
+	out := make(map[string]string, len(ids))
+	for _, id := range ids {
+		img, ok := images[id]
+		if !ok {
+			return nil, fmt.Errorf("no image %q; the fleet knows %s", id, strings.Join(ImageIDs(), ", "))
+		}
+		path, err := Fetch(ctx, img)
+		if err != nil {
+			return nil, err
+		}
+		out[id] = path
+	}
+	return out, nil
+}
 
 // Fetch returns the path to the cached base image, downloading it first if it is not already
 // there. The download is written to a sibling .part file and renamed only once the digest
@@ -70,7 +183,7 @@ const fetchTimeout = 15 * time.Minute
 //
 // The cache lives outside the repository, under XDG_CACHE_HOME, because it is the one artifact
 // here worth keeping across a clean checkout.
-func Fetch(ctx context.Context) (string, error) {
+func Fetch(ctx context.Context, img image) (string, error) {
 	dir, err := cacheDir()
 	if err != nil {
 		return "", err
@@ -79,23 +192,23 @@ func Fetch(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("creating image cache %s: %w", dir, err)
 	}
 
-	path := filepath.Join(dir, imageName)
+	path := filepath.Join(dir, img.file)
 	switch digest, err := fileSHA256(path); {
-	case err == nil && digest == imageSHA256:
+	case err == nil && digest == img.sha256:
 		return path, nil
 	case err == nil:
 		// A cached file with the wrong digest is a truncated or corrupted download, not a
 		// different pin: the name carries the version. Say what was found rather than
 		// silently replacing it, since the fix costs 520MiB of somebody's bandwidth.
-		return "", fmt.Errorf("cached image %s has digest %s, want %s: remove it and run again", path, digest, imageSHA256)
+		return "", fmt.Errorf("cached image %s has digest %s, want %s: remove it and run again", path, digest, img.sha256)
 	case !errors.Is(err, os.ErrNotExist):
 		return "", err
 	}
 
-	if err := download(ctx, path); err != nil {
+	if err := download(ctx, img, path); err != nil {
 		return "", err
 	}
-	if err := verifyImageUsable(ctx, path); err != nil {
+	if err := verifyImageUsable(ctx, img, path); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -114,23 +227,23 @@ func cacheDir() (string, error) {
 	return filepath.Join(base, "cargoship", "microvm"), nil
 }
 
-// download writes imageURL to path through a .part file, verifying the digest before the
+// download writes the image to path through a .part file, verifying the digest before the
 // rename so that path either does not exist or holds the pinned image.
-func download(ctx context.Context, path string) error {
+func download(ctx context.Context, img image, path string) error {
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, img.url, nil)
 	if err != nil {
-		return fmt.Errorf("building request for %s: %w", imageURL, err)
+		return fmt.Errorf("building request for %s: %w", img.url, err)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("fetching %s: %w", imageURL, err)
+		return fmt.Errorf("fetching %s: %w", img.url, err)
 	}
 	defer resp.Body.Close() //nolint:errcheck // read-only body, nothing to do with a close error
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("fetching %s: %s", imageURL, resp.Status)
+		return fmt.Errorf("fetching %s: %s", img.url, resp.Status)
 	}
 
 	part := path + ".part"
@@ -143,16 +256,16 @@ func download(ctx context.Context, path string) error {
 	closeErr := f.Close()
 	if copyErr != nil {
 		os.Remove(part) //nolint:errcheck // the original error is the one worth reporting
-		return fmt.Errorf("downloading %s: %w", imageURL, copyErr)
+		return fmt.Errorf("downloading %s: %w", img.url, copyErr)
 	}
 	if closeErr != nil {
 		os.Remove(part) //nolint:errcheck // the original error is the one worth reporting
 		return fmt.Errorf("closing %s: %w", part, closeErr)
 	}
 
-	if digest := hex.EncodeToString(sum.Sum(nil)); digest != imageSHA256 {
+	if digest := hex.EncodeToString(sum.Sum(nil)); digest != img.sha256 {
 		os.Remove(part) //nolint:errcheck // the original error is the one worth reporting
-		return fmt.Errorf("downloaded %s has digest %s, want %s", imageURL, digest, imageSHA256)
+		return fmt.Errorf("downloaded %s has digest %s, want %s", img.url, digest, img.sha256)
 	}
 	if err := os.Rename(part, path); err != nil {
 		return fmt.Errorf("renaming %s to %s: %w", part, path, err)
@@ -186,7 +299,7 @@ func fileSHA256(path string) (string, error) {
 //
 // This runs once per download rather than on every Up: it is a property of the image, and
 // guestfish takes several seconds to start its appliance.
-func verifyImageUsable(ctx context.Context, path string) error {
+func verifyImageUsable(ctx context.Context, img image, path string) error {
 	if _, err := exec.LookPath("guestfish"); err != nil {
 		// guestfish ships in guestfs-tools, which is not needed to run a fleet. Skipping the
 		// check is better than refusing to fetch, so long as it says so.
@@ -197,16 +310,19 @@ func verifyImageUsable(ctx context.Context, path string) error {
 	// Both answers are narrowed to one line each -- is-file prints "true" or "false", and the
 	// grep holds only the SELINUX= assignment -- so neither can be matched by stray text from
 	// the other.
-	out, err := exec.CommandContext(ctx, "guestfish", "--ro", "-a", path, "-i",
-		"is-file", "/usr/bin/cloud-init", ":", "grep", "^SELINUX=", "/etc/selinux/config").CombinedOutput()
+	args := []string{"--ro", "-a", path, "-i", "is-file", "/usr/bin/cloud-init"}
+	if img.selinux {
+		args = append(args, ":", "grep", "^SELINUX=", "/etc/selinux/config")
+	}
+	out, err := exec.CommandContext(ctx, "guestfish", args...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("inspecting %s with guestfish: %w: %s", path, err, out)
 	}
 	if !hasLine(string(out), "true") {
 		return fmt.Errorf("%s has no /usr/bin/cloud-init, so a seed would be ignored: rebuild it with `virt-customize -a %s --install cloud-init`", path, path)
 	}
-	if !hasLine(string(out), "SELINUX=enforcing") {
-		return fmt.Errorf("%s does not set SELINUX=enforcing, which is the whole point of this fleet", path)
+	if img.selinux && !hasLine(string(out), "SELINUX=enforcing") {
+		return fmt.Errorf("%s does not set SELINUX=enforcing, which is why this fleet runs it", path)
 	}
 	return nil
 }
