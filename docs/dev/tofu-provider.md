@@ -139,7 +139,7 @@ Both the `chown` and the mode matter: `docker cp` leaves the file owned by which
 
 Then point a host block at `127.0.0.1` port `2223` with `key_path = "/tmp/facts-key"`, and `SSH_KNOWN_HOSTS=""` so the container's regenerated host key is not checked against a known-hosts file. Remove it with `docker rm -f facts-host` when finished.
 
-For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs -- see [e2e-tests](e2e-tests.md) -- and the addresses, user and key path in it are what a host block needs.
+For a fleet rather than one host, the cluster e2e suite writes a full inventory while it runs -- see [e2e-tests](e2e-tests.md) -- and the addresses, user and key path in it are what a host block needs. `mage dev:vmUp -control=1 -worker=0` writes the same thing for a single virtual machine, which is the easier route when the host needs a real kernel rather than only an sshd; see [microvm](microvm.md).
 
 ## `connect_timeout`, and why it exists
 
