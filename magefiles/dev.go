@@ -20,8 +20,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/dnfpins"
+	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/microvmrun"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/osv"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/util"
 	"github.com/magefile/mage/mg"
@@ -130,6 +132,41 @@ func (Dev) DnfPins(ctx context.Context) error {
 	fmt.Printf("Updated %s\n", dnfpins.GoreleaserConfigPath)
 
 	return nil
+}
+
+// VMImage fetches and verifies the base image the VM fleet runs, without starting anything.
+func (Dev) VMImage(ctx context.Context) error {
+	return microvmrun.Image(ctx)
+}
+
+// VMUp brings up a local Enterprise Linux VM fleet and writes a ZarfCluster inventory pointing
+// at it, so that the phases a container cannot exercise - SELinux, fapolicyd, firewalld, the
+// *-selinux RPM scriptlets - can be run against a real kernel. See docs/dev/microvm.md.
+//
+// Takes the controller and worker counts: `mage dev:vmUp 1 2`. The engine defaults to k3s and
+// is overridden with CARGOSHIP_VM_DISTRO, which decides only which of the leader's ports are
+// forwarded to the host.
+func (Dev) VMUp(ctx context.Context, controllers int, workers int) error {
+	distro := os.Getenv("CARGOSHIP_VM_DISTRO")
+	if distro == "" {
+		distro = "k3s"
+	}
+	return microvmrun.Up(ctx, controllers, workers, distro)
+}
+
+// VMDown tears the VM fleet down and removes its state, leaving the cached base image.
+func (Dev) VMDown() error {
+	return microvmrun.Down()
+}
+
+// VMList prints the VM fleet's nodes and whether each is running.
+func (Dev) VMList() error {
+	return microvmrun.List()
+}
+
+// VMShell opens a shell on one node of the VM fleet: `mage dev:vmShell kc0`.
+func (Dev) VMShell(ctx context.Context, node string) error {
+	return microvmrun.SSH(ctx, node)
 }
 
 // WriteOSVOverrides writes every override into vendor/.
