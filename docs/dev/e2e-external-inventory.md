@@ -59,25 +59,25 @@ What the suite requires of it:
 
 ## Environment
 
-| Variable | What it does |
-| ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| `CARGOSHIP_E2E_BACKEND`       | `inventory` to select this backend |
-| `CARGOSHIP_E2E_INVENTORY`     | Path to the `ZarfCluster` document |
-| `CARGOSHIP_E2E_JOIN_HOST`     | Hostname the join walk should join. Unset skips that walk; see below |
-| `CARGOSHIP_E2E_DISTRO`        | `k3s` (default) or `rke2`, which engine to install |
+| Variable                      | What it does                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| `CARGOSHIP_E2E_BACKEND`       | `inventory` to select this backend                                                    |
+| `CARGOSHIP_E2E_INVENTORY`     | Path to the `ZarfCluster` document                                                    |
+| `CARGOSHIP_E2E_JOIN_HOST`     | Hostname the join walk should join. Unset skips that walk; see below                  |
+| `CARGOSHIP_E2E_DISTRO`        | `k3s` (default) or `rke2`, which engine to install                                    |
 | `SSH_KNOWN_HOSTS`             | Set to `""` when your hosts' keys are not in a known-hosts file the test binary reads |
 
 ## What runs, and what stands down
 
 Every phase runs. Some assertions do not, because they are assertions about a fleet this suite chose:
 
-| Assertion | Against your fleet |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Each host runs the OS its image declared     | Stands down. Your hosts' operating systems are not knowable until phase 09 has asked them, so the test asserts only that detection produced an answer, and logs the mix it found |
-| The fleet runs every OS family               | Stands down, for the same reason |
-| An Enterprise Linux host exists for the RPM phase, a Debian host for the APT phase | Stands down. Those guards protect a fleet that was meant to cover a branch and lost the host for it, which cannot be said about hosts the suite did not choose |
-| The join walk                                | Skipped unless `CARGOSHIP_E2E_JOIN_HOST` names a host for it, because the suite cannot create one. See "Adding a host" below |
-| Everything else -- the prepare phases, SELinux, fapolicyd, the firewall, all four upload phases, the engine config, the engine install, the upgrade and reset walks | Runs, and asserts |
+| Assertion                                                                                                                                                           | Against your fleet                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Each host runs the OS its image declared                                                                                                                            | Stands down. Your hosts' operating systems are not knowable until phase 09 has asked them, so the test asserts only that detection produced an answer, and logs the mix it found |
+| The fleet runs every OS family                                                                                                                                      | Stands down, for the same reason                                                                                                                                                 |
+| An Enterprise Linux host exists for the RPM phase, a Debian host for the APT phase                                                                                  | Stands down. Those guards protect a fleet that was meant to cover a branch and lost the host for it, which cannot be said about hosts the suite did not choose                   |
+| The join walk                                                                                                                                                       | Skipped unless `CARGOSHIP_E2E_JOIN_HOST` names a host for it, because the suite cannot create one. See "Adding a host" below                                                     |
+| Everything else -- the prepare phases, SELinux, fapolicyd, the firewall, all four upload phases, the engine config, the engine install, the upgrade and reset walks | Runs, and asserts                                                                                                                                                                |
 
 The run logs which of these it stood down, so a green result does not quietly read as broader coverage than it was.
 
