@@ -184,6 +184,16 @@ The `hosts` key orders the run: controllers are acted on first, and the controll
 
 Bring the fleet up, generate the block from the inventory, and `tofu apply`. A removal is the other half: set a host's `state = "absent"` and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work [e2e-external-inventory](e2e-external-inventory.md) drives through the CLI. [tofu-provider](tofu-provider.md) covers building and running the provider itself.
 
+## The shipped k3s packages, and what is still unproven
+
+Two separate things used to stop a k3s cluster coming up, and only one of them is fixed.
+
+**Fixed: the join URL named the wrong port.** `ConfigureEngine` wrote `server: https://<host>:9345` for both engines. 9345 is rke2's -- it runs its supervisor separately -- while k3s multiplexes its supervisor onto 6443 and listens on nothing at 9345. `K3S` embeds the shared Rancher configuration without overriding that, so every k3s cluster was handed a join URL its own engine was not serving, and nothing could join. The port now comes from the distro.
+
+**Not fixed, and not retested since: the SELinux policy is staged and never installed.** Every `example/k3s-*` package sets `selinux: true` and ships `k3s-selinux-*.rpm` under `selector.package: binary`. The BIN upload phase moves staged files into place and runs no package manager, so that RPM lands in `/var/lib/rancher/k3s/rpm/` and the `%post` that loads the policy module never runs -- leaving a node with SELinux enforcing, an engine told to use it, and no policy for it. The `rke2` examples select `package: rpm` for the equivalent file, which is why `semodule -l` lists `rke2` there.
+
+So a k3s walk on this fleet is worth trying and is not yet known to pass. `mage test:endToEndClusterVM` still defaults to rke2 for that reason; `CARGOSHIP_E2E_DISTRO=k3s` is how to find out, and the node's journal is where the answer will be.
+
 ## Limits
 
 The fleet runs one distribution. That is enough to exercise the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and it is not a substitute for the bootloose cluster's mix of Ubuntu, Fedora and Alpine nodes - apply routes on OS family in several places, and a single-family fleet never takes the branches that do not match. Run both.

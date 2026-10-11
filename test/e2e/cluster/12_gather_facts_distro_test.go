@@ -51,7 +51,7 @@ func (s *UpgradePhaseSuite) Test_12_GatherFactsDistro() {
 	packaged := s.harness.manager.Distro.Spec.Version
 
 	for _, host := range s.harness.engineHosts() {
-		s.Require().Equalf(installedVersion(), host.Metadata.DistroVersion,
+		s.requireSameVersion(installedVersion(), host.Metadata.DistroVersion,
 			"%s: not running the version the install walk put there", host)
 		s.Require().Truef(compare.VersionLess(host, packaged),
 			"%s: runs %s, which the upgrade phases do not consider older than the packaged %s",
@@ -80,7 +80,7 @@ func (s *JoinPhaseSuite) Test_12_GatherFactsDistro() {
 				"%s: the machine being joined reports an engine version before anything installed one", host)
 			continue
 		}
-		s.Require().Equalf(installedVersion(), host.Metadata.DistroVersion,
+		s.requireSameVersion(installedVersion(), host.Metadata.DistroVersion,
 			"%s: not running the version the install walk put there", host)
 	}
 

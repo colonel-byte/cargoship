@@ -193,3 +193,71 @@ func TestOsIDsCoversOnlyWhatTheFleetProvisions(t *testing.T) {
 		"fedora": {},
 	}, k3sOS.osIDs(), "the k3s fleet has no alpine host, so nothing may require one")
 }
+
+// TestSameVersionSpansBothNotations is the comparison every engine-version assertion in this
+// suite goes through. A package declares "1.36.4-k3s1" and the engine's own --version reports
+// "v1.36.4+k3s1"; those name one version, and comparing them as strings fails a correct
+// install. This is what that failure looked like before the microvm backend made the engine
+// phases reachable.
+func TestSameVersionSpansBothNotations(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		want    string
+		got     string
+		same    bool
+		wantErr string
+	}{
+		{
+			name: "k3s package notation against the engine's own",
+			want: "1.36.4-k3s1",
+			got:  "v1.36.4+k3s1",
+			same: true,
+		},
+		{
+			name: "rke2 package notation against the engine's own",
+			want: "1.36.4-rke2r1",
+			got:  "v1.36.4+rke2r1",
+			same: true,
+		},
+		{
+			name: "identical strings",
+			want: "1.36.4-k3s1",
+			got:  "1.36.4-k3s1",
+			same: true,
+		},
+		{
+			name: "a different patch is not the same version",
+			want: "1.36.4-k3s1",
+			got:  "v1.36.5+k3s1",
+			same: false,
+		},
+		{
+			name: "a different build of the same patch is not the same version",
+			want: "1.36.4-k3s1",
+			got:  "v1.36.4+k3s2",
+			same: false,
+		},
+		{
+			name:    "the phase reported no version at all",
+			want:    "1.36.4-k3s1",
+			got:     "unknown",
+			wantErr: "parsing the reported version",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			same, err := sameVersion(tt.want, tt.got)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.same, same)
+		})
+	}
+}
