@@ -35,6 +35,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/cluster"
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
+	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
 	hostos "github.com/colonel-byte/cargoship/types/os"
 	"github.com/k0sproject/dig"
 	"github.com/k0sproject/rig/v2/remotefs"
@@ -1630,4 +1631,91 @@ func TestDesiredFilesHelmChartConfigsWithoutDisable(t *testing.T) {
 	got, err := d.DesiredFiles(context.Background(), &cluster.ZarfHost{Role: cluster.RoleController}, cluster.ZarfRuntimeMeta{}, dis)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
+}
+
+// TestSetNodeIP covers the address a node registers under, and the etcd peer URL that follows
+// from it.
+//
+// Without this the engine chose its own node address from whichever interface held the default
+// route. On a fleet where that is a management interface, every controller advertised the same
+// etcd peer URL and a second one could never join -- `MemberAdd request timed out`, repeated
+// until the apply gave up. A single-controller cluster hides it entirely.
+func TestSetNodeIP(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		cfg  dig.Mapping
+		host *cluster.ZarfHost
+		want any
+		why  string
+	}{
+		{
+			name: "written from the host's private address",
+			cfg:  dig.Mapping{},
+			host: &cluster.ZarfHost{
+				PrivateAddress: "10.73.0.11",
+			},
+			want: []string{"10.73.0.11"},
+			why:  "a list, because that is what the generated schema says the key holds",
+		},
+		{
+			name: "a host with no private address is left to the engine's own choice",
+			cfg:  dig.Mapping{},
+			host: &cluster.ZarfHost{},
+			want: nil,
+			why:  "writing an empty value would be worse than writing nothing",
+		},
+		{
+			name: "a value already in the configuration wins",
+			cfg: dig.Mapping{
+				"node-ip": []string{"192.0.2.50"},
+			},
+			host: &cluster.ZarfHost{
+				PrivateAddress: "10.73.0.11",
+			},
+			want: []string{"192.0.2.50"},
+			why:  "an operator setting this in a package has said something specific about a host",
+		},
+		{
+			name: "an explicit scalar is respected too",
+			cfg: dig.Mapping{
+				"node-ip": "192.0.2.50",
+			},
+			host: &cluster.ZarfHost{
+				PrivateAddress: "10.73.0.11",
+			},
+			want: "192.0.2.50",
+			why:  "the engines accept a bare string, so a package may well hold one",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			setNodeIP(tt.cfg, tt.host)
+			require.Equal(t, tt.want, tt.cfg["node-ip"], tt.why)
+		})
+	}
+}
+
+// TestSetNodeIPKeyIsAcceptedByEveryVersion is the check that keeps this from being written and
+// then silently thrown away. validateEngineConfig deletes keys it does not recognise rather
+// than warning about them, so a key missing from one distro or version would vanish there and
+// nowhere else.
+func TestSetNodeIPKeyIsAcceptedByEveryVersion(t *testing.T) {
+	t.Parallel()
+
+	for _, distroID := range []string{"k3s", "rke2"} {
+		for _, version := range []string{"1.31.0", "1.35.0", "1.36.0", "1.37.0"} {
+			entry, ok := gen.Lookup(distroID, version)
+			require.Truef(t, ok, "no generated schema for %s %s", distroID, version)
+
+			require.Containsf(t, gen.Keys(entry.Server), keyNodeIP,
+				"%s %s server config does not accept %s", distroID, version, keyNodeIP)
+			require.Containsf(t, gen.Keys(entry.Agent), keyNodeIP,
+				"%s %s agent config does not accept %s", distroID, version, keyNodeIP)
+		}
+	}
 }

@@ -620,7 +620,7 @@ type RancherCommon struct {
 ```
 
 <a name="RancherCommon.CleanupPaths"></a>
-### func \(\*RancherCommon\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L677>)
+### func \(\*RancherCommon\) [CleanupPaths](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L681>)
 
 ```go
 func (d *RancherCommon) CleanupPaths() []string
@@ -629,7 +629,7 @@ func (d *RancherCommon) CleanupPaths() []string
 CleanupPaths returns the paths an uninstall removes from a host: the engine data directory and the config directory, both of which rke2 and k3s own outright.
 
 <a name="RancherCommon.ConfigureEngine"></a>
-### func \(\*RancherCommon\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L185>)
+### func \(\*RancherCommon\) [ConfigureEngine](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L188>)
 
 ```go
 func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) error
@@ -638,7 +638,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 ConfigureEngine does distro specific configuration on a host
 
 <a name="RancherCommon.DesiredFiles"></a>
-### func \(\*RancherCommon\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L355>)
+### func \(\*RancherCommon\) [DesiredFiles](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L359>)
 
 ```go
 func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, run cluster.ZarfRuntimeMeta, dis distro.ZarfDistro) (map[string]DesiredFile, error)
@@ -647,7 +647,7 @@ func (d *RancherCommon) DesiredFiles(_ context.Context, host *cluster.ZarfHost, 
 DesiredFiles returns the desired content of registries.yaml, audit.yaml, and pss.yaml for the given host/run/dis, keyed by their full destination path. Content is identical across hosts of the same run \(no host\-varying fields are involved\), unlike config.yaml.
 
 <a name="RancherCommon.DistroCmdf"></a>
-### func \(\*RancherCommon\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L688>)
+### func \(\*RancherCommon\) [DistroCmdf](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L725>)
 
 ```go
 func (d *RancherCommon) DistroCmdf(template string, args ...any) string
@@ -656,7 +656,7 @@ func (d *RancherCommon) DistroCmdf(template string, args ...any) string
 DistroCmdf returns a string that can be used to execute commands on the core engine binary
 
 <a name="RancherCommon.GetClusterCIDR"></a>
-### func \(\*RancherCommon\) [GetClusterCIDR](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L645>)
+### func \(\*RancherCommon\) [GetClusterCIDR](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L649>)
 
 ```go
 func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string
@@ -665,7 +665,7 @@ func (d *RancherCommon) GetClusterCIDR(dis distro.ZarfDistro) []string
 GetClusterCIDR returns a string array with the all the known cluster cidr blocks
 
 <a name="RancherCommon.JoinTokenPathAgent"></a>
-### func \(\*RancherCommon\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L683>)
+### func \(\*RancherCommon\) [JoinTokenPathAgent](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L687>)
 
 ```go
 func (d *RancherCommon) JoinTokenPathAgent() string
@@ -674,7 +674,7 @@ func (d *RancherCommon) JoinTokenPathAgent() string
 JoinTokenPathAgent returns the path of the token to join the cluster. Distro's like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.
 
 <a name="RancherCommon.ManagedDirs"></a>
-### func \(\*RancherCommon\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L667>)
+### func \(\*RancherCommon\) [ManagedDirs](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L671>)
 
 ```go
 func (d *RancherCommon) ManagedDirs() []ManagedDir
@@ -683,7 +683,7 @@ func (d *RancherCommon) ManagedDirs() []ManagedDir
 ManagedDirs returns the directories on a host cargoship prunes. For rke2 and k3s that is the directory holding CA certificates, the one holding state metadata \-\- every file in both was put there by cargoship, so a file with no entry left behind it can go \-\- and the engine's manifest directory, which cargoship shares with the engine and where it prunes only the HelmChartConfig files it writes itself.
 
 <a name="RancherCommon.RunningVersion"></a>
-### func \(\*RancherCommon\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L693>)
+### func \(\*RancherCommon\) [RunningVersion](<https://github.com/colonel-byte/cargoship/blob/main/types/distrocfg/rancher_common.go#L730>)
 
 ```go
 func (d *RancherCommon) RunningVersion(host *cluster.ZarfHost) (string, error)
