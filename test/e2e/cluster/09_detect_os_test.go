@@ -15,8 +15,6 @@
 package cluster
 
 import (
-	"strings"
-
 	"github.com/colonel-byte/cargoship/pkg/phase"
 )
 
@@ -27,26 +25,6 @@ import (
 //
 // The Ubuntu prefixes are prefixes of the others ("kw" of both "kwf" and "kwa"), so the
 // lookup has to be longest-match rather than first-match.
-var osIDByPrefix = map[string]string{ //nolint:gochecknoglobals
-	strings.TrimSuffix(bootKC, "%d"):  "ubuntu",
-	strings.TrimSuffix(bootKW, "%d"):  "ubuntu",
-	strings.TrimSuffix(bootKCF, "%d"): "fedora",
-	strings.TrimSuffix(bootKWF, "%d"): "fedora",
-	strings.TrimSuffix(bootKWA, "%d"): "alpine",
-}
-
-// expectedOSID returns the os-release ID the image behind a machine name reports, or an empty
-// string for a name no replica group produces.
-func expectedOSID(hostname string) string {
-	id := ""
-	longest := 0
-	for prefix, osID := range osIDByPrefix {
-		if strings.HasPrefix(hostname, prefix) && len(prefix) > longest {
-			id, longest = osID, len(prefix)
-		}
-	}
-	return id
-}
 
 // detectOS covers phase/09_detect_os.go. It resolves the per-host Configurer that
 // every phase after it calls through, so the assertion is that each host now has one and
@@ -75,27 +53,13 @@ func (s *phaseWalk) detectOS() {
 
 		release, err := host.OS()
 		s.Require().NoErrorf(err, "%s: failed to read the OS release", host)
-		s.Require().Equalf(expectedOSID(host.Hostname), release.ID,
+		s.Require().Equalf(clusterConfig().osIDFor(host.Hostname), release.ID,
 			"%s: detected a different OS than the image the machine was built from", host)
 		families[release.ID]++
 	}
 
-	s.Require().Lenf(families, len(uniqueOSIDs()),
+	s.Require().Lenf(families, len(clusterConfig().osIDs()),
 		"the cluster has to run every OS family for the family-routed phases to be tested, it runs %v", families)
-}
-
-// uniqueOSIDs returns the distinct os-release IDs this run's bootloose config actually
-// provisions. It reads clusterConfig rather than osIDByPrefix directly because not every
-// config uses every replica group -- k3sOS, for one, has no Alpine host -- and a family this
-// run never provisions must not count toward what detectOS requires the cluster to have.
-func uniqueOSIDs() map[string]struct{} {
-	ids := make(map[string]struct{}, len(osIDByPrefix))
-	for _, m := range clusterConfig().Machines {
-		if id, ok := osIDByPrefix[strings.TrimSuffix(m.Spec.Name, "%d")]; ok {
-			ids[id] = struct{}{}
-		}
-	}
-	return ids
 }
 
 func (s *ApplyPhaseSuite) Test_09_DetectOS() {
