@@ -662,6 +662,10 @@
           },
           "type": "array"
         },
+        "selinux": {
+          "$ref": "#/$defs/ZarfDistroSELinux",
+          "description": "holds the custom SELinux policy cargoship applies to a host."
+        },
         "sysctl": {
           "additionalProperties": {
             "oneOf": [
@@ -677,6 +681,108 @@
           "type": "object"
         }
       },
+      "type": "object"
+    },
+    "ZarfDistroSELinux": {
+      "additionalProperties": false,
+      "description": "holds the custom SELinux policy cargoship applies to hosts running SELinux in enforcing mode.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "booleans": {
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "description": "maps SELinux boolean names to the values cargoship sets persistently on a host.",
+          "type": "object"
+        },
+        "fileContexts": {
+          "description": "lists the file context mappings cargoship adds on a host.",
+          "items": {
+            "$ref": "#/$defs/ZarfDistroSELinuxFileContext"
+          },
+          "type": "array"
+        },
+        "modules": {
+          "description": "lists the CIL policy modules cargoship installs on a host.",
+          "items": {
+            "$ref": "#/$defs/ZarfDistroSELinuxModule"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfDistroSELinuxFileContext": {
+      "additionalProperties": false,
+      "description": "holds a single file context mapping cargoship adds with semanage.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "fileType": {
+          "default": "all",
+          "description": "restricts the mapping to one kind of filesystem object.",
+          "enum": [
+            "all",
+            "file",
+            "dir",
+            "symlink",
+            "pipe",
+            "socket",
+            "block",
+            "char"
+          ],
+          "type": "string"
+        },
+        "path": {
+          "description": "holds the path regular expression the mapping applies to.",
+          "examples": [
+            "/var/lib/rancher(/.*)?"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "description": "names the SELinux type the matching paths are labeled with.",
+          "examples": [
+            "container_var_lib_t"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "type"
+      ],
+      "type": "object"
+    },
+    "ZarfDistroSELinuxModule": {
+      "additionalProperties": false,
+      "description": "holds a single CIL policy module cargoship installs with semodule.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cil": {
+          "description": "holds the Common Intermediate Language policy source semodule installs.",
+          "type": "string"
+        },
+        "name": {
+          "description": "identifies the module to semodule, and names the file cargoship writes to the host.",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+          "type": "string"
+        },
+        "priority": {
+          "default": 400,
+          "description": "holds the semodule priority the module installs at.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "cil"
+      ],
       "type": "object"
     },
     "ZarfDistroSpec": {
