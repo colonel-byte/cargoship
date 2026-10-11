@@ -109,13 +109,80 @@ export KUBECONFIG=/etc/rancher/rke2/rke2.yaml   # or /etc/rancher/k3s/k3s.yaml
 
 Giving the management node a routable path onto the private segment would mean a tap device or a bridge, which needs root and puts the fleet back under the host's firewall -- the two things [choice-microvm-backend](../agent/choice-microvm-backend.md) picked a multicast socket to avoid.
 
-## The engine's node IP, and why it reads wrong here
+## The engine's node IP
 
-A node is multi-homed, and the engine picks its own node address from whichever interface holds the default route - which here is the management interface. So `kubectl get nodes -o wide` reports `INTERNAL-IP 10.0.2.15` for every node, the same slirp address on each.
+Each node reports its own address on the private segment, which is what makes a multi-controller cluster possible here at all. That was not always true, and the story is worth knowing because this fleet is what found it.
 
-This is worth knowing before it is mistaken for a fleet defect. Cargoship puts a host's `privateAddress` into the engine's `tls-san` and into the firewall's node ipset, but it does not render a `node-ip`, and the inventory has no per-host engine argument to set one with. On a single-homed fleet, which is what cargoship is normally pointed at, the engine's choice and the private address are the same thing and the gap is invisible. Here they are not.
+Cargoship used to render no `node-ip`, so the engine chose its own node address from whichever interface held the default route -- the management one. Every node then reported `10.0.2.15`, the same slirp address, and a three-controller cluster could not form: all three advertised the same etcd peer URL, so the second could never be added and the apply sat on `MemberAdd request timed out` until it gave up. A single controller hid it completely. The API server also could not reach a kubelet it believed was at an address shared with every other node, so `kubectl logs` and `kubectl exec` returned `502 Bad Gateway` and a Helm-installed CNI could fail outright, leaving every node `NotReady`.
 
-An rke2 cluster still comes up `Ready` with it, so this does not stop the phases the fleet exists to test. Treat anything that depends on distinct node addresses - pod-to-pod traffic across nodes, anything reading a node's `InternalIP` - as out of scope until the engine config carries a node address.
+`ConfigureEngine` now writes `node-ip` from the host's `privateAddress`, beside the `node-name` it already wrote, so the fleet behaves the way any multi-homed fleet should:
+
+```console
+$ kubectl get nodes -o wide
+NAME   STATUS   ROLES                INTERNAL-IP
+kc0    Ready    control-plane,etcd   10.73.156.11
+kw0    Ready    <none>               10.73.156.12
+kw1    Ready    <none>               10.73.156.13
+```
+
+## Driving the OpenTofu provider at a fleet
+
+The provider takes the same hosts, so a fleet is also how `cargoship_cluster` gets exercised against real machines rather than one container. `mage dev:vmUp` writes a `ZarfCluster` inventory, and every field a `hosts` entry needs is in it:
+
+| Inventory             | `hosts` entry        | For the fleet                                        |
+| --------------------- | -------------------- | ---------------------------------------------------- |
+| `ssh.address`         | `address`            | Always `127.0.0.1` -- the forwards bind loopback     |
+| `ssh.port`            | `port`               | The per-node forwarded SSH port                      |
+| `ssh.user`            | `user`               | `root`                                               |
+| `ssh.keyPath`         | `key_path`           | The fleet key, under `build/microvm/<fleet>/key`     |
+| `hostname`            | `hostname`           | `kc0`, `kw0`, ...                                    |
+| `privateAddress`      | `private_address`    | The node's address on the private segment            |
+| `privateInterface`    | `private_interface`  | `enp0s4`                                             |
+| `role` / `profile`    | `role` / `profile`   | Unchanged                                            |
+
+```hcl
+resource "cargoship_cluster" "fleet" {
+  name          = "microvm-dev"
+  load_balancer = "10.73.156.11"            # the leader's private address
+  package       = "./build/cargoship-distro-amd64.tar.zst"
+
+  hosts = {
+    kc0 = {
+      address           = "127.0.0.1"
+      port              = 26241
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kc0"
+      private_address   = "10.73.156.11"
+      private_interface = "enp0s4"
+      role              = "controller"
+      profile           = "controller"
+    }
+    kw0 = {
+      address           = "127.0.0.1"
+      port              = 26242
+      user              = "root"
+      key_path          = "/path/to/build/microvm/dev/key"
+      hostname          = "kw0"
+      private_address   = "10.73.156.12"
+      private_interface = "enp0s4"
+      role              = "worker"
+      profile           = "worker"
+    }
+  }
+}
+```
+
+Four things to get right, each of which is a property of the fleet rather than of the provider:
+
+*   **`key_path` must be absolute.** The inventory already holds an absolute path for this reason; OpenTofu runs from wherever you invoke it.
+*   **`load_balancer` is the leader's private address**, not a forwarded loopback port. It is the address the other nodes join through, and they reach each other on the private segment rather than through your machine.
+*   **Export `SSH_KNOWN_HOSTS=""`** before `tofu apply`. Host keys are regenerated on every bring-up, so a known-hosts entry is wrong by construction.
+*   **Leave `export_kubeconfig` and `label_nodes` off.** Both need the management node to reach the API server, which it cannot on a fleet whose load balancer is private -- see above. A provider run that sets either will fail there rather than in anything it is testing.
+
+The `hosts` key orders the run: controllers are acted on first, and the controller whose key sorts first becomes the leader. Keying the map by the fleet's own hostnames keeps that in step with how `mage dev:vmUp` numbers them.
+
+Bring the fleet up, generate the block from the inventory, and `tofu apply`. A removal is the other half: set a host's `state = "absent"` and the provider drains it, deletes it from the cluster and uninstalls the engine, which is the same work [e2e-external-inventory](e2e-external-inventory.md) drives through the CLI. [tofu-provider](tofu-provider.md) covers building and running the provider itself.
 
 ## Limits
 
