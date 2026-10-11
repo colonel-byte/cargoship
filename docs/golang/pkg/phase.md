@@ -212,6 +212,12 @@ Package phase is all the various phases used for bootstrapping a cluster. The ph
   - [func \(p \*RPMUploadFiles\) Prepare\(ctx context.Context, c \*cluster.ZarfCluster, d \*distro.ZarfDistro\) error](<#RPMUploadFiles.Prepare>)
   - [func \(p \*RPMUploadFiles\) Run\(ctx context.Context\) \(err error\)](<#RPMUploadFiles.Run>)
   - [func \(p \*RPMUploadFiles\) Title\(\) string](<#RPMUploadFiles.Title>)
+- [type ReconfigureSurvivors](<#ReconfigureSurvivors>)
+  - [func \(p \*ReconfigureSurvivors\) Explanation\(\) string](<#ReconfigureSurvivors.Explanation>)
+  - [func \(p \*ReconfigureSurvivors\) Prepare\(ctx context.Context, \_ \*cluster.ZarfCluster, \_ \*distro.ZarfDistro\) error](<#ReconfigureSurvivors.Prepare>)
+  - [func \(p \*ReconfigureSurvivors\) Run\(ctx context.Context\) error](<#ReconfigureSurvivors.Run>)
+  - [func \(p \*ReconfigureSurvivors\) ShouldRun\(\) bool](<#ReconfigureSurvivors.ShouldRun>)
+  - [func \(p \*ReconfigureSurvivors\) Title\(\) string](<#ReconfigureSurvivors.Title>)
 - [type ResultSink](<#ResultSink>)
   - [func WithResultSink\(ctx context.Context\) \(context.Context, \*ResultSink\)](<#WithResultSink>)
   - [func \(s \*ResultSink\) Observed\(\) bool](<#ResultSink.Observed>)
@@ -2382,6 +2388,73 @@ Run the phase
 
 ```go
 func (p *RPMUploadFiles) Title() string
+```
+
+Title for the phase
+
+<a name="ReconfigureSurvivors"></a>
+## type [ReconfigureSurvivors](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L63>)
+
+ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.
+
+A controller that is not the first one carries \`server:\` naming the first, written when it joined. That value is read at startup, so removing the first controller leaves a cluster that keeps working and cannot come back: every survivor names a machine that is gone, and the next restart or reboot of any of them fails to rejoin.
+
+cargoship apply already fixes this \-\- it re\-elects the first controller from the hosts that are left and rewrites \`server:\` on the rest \-\- and the documented procedure is to run one after a removal. The trouble with leaving it there is that a reset reports success having created that state, so the safety of the operation rests on the operator remembering a second command. This phase converges the survivors itself, and says so when it cannot.
+
+It edits the file in place rather than rendering a fresh one, because a reset loads no package and so has nothing to render from. Only \`server:\` is touched.
+
+```go
+type ReconfigureSurvivors struct {
+    GenericPhase
+    Distro      distrocfg.Distro
+    TargetHosts []string
+    // contains filtered or unexported fields
+}
+```
+
+<a name="ReconfigureSurvivors.Explanation"></a>
+### func \(\*ReconfigureSurvivors\) [Explanation](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L71>)
+
+```go
+func (p *ReconfigureSurvivors) Explanation() string
+```
+
+Explanation about the current phase, used for documentation generation
+
+<a name="ReconfigureSurvivors.Prepare"></a>
+### func \(\*ReconfigureSurvivors\) [Prepare](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L76>)
+
+```go
+func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+```
+
+Prepare the phase
+
+<a name="ReconfigureSurvivors.Run"></a>
+### func \(\*ReconfigureSurvivors\) [Run](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L109>)
+
+```go
+func (p *ReconfigureSurvivors) Run(ctx context.Context) error
+```
+
+Run the phase
+
+<a name="ReconfigureSurvivors.ShouldRun"></a>
+### func \(\*ReconfigureSurvivors\) [ShouldRun](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L104>)
+
+```go
+func (p *ReconfigureSurvivors) ShouldRun() bool
+```
+
+ShouldRun is true when the run removed a controller and kept at least one.
+
+Removing every controller is a whole\-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.
+
+<a name="ReconfigureSurvivors.Title"></a>
+### func \(\*ReconfigureSurvivors\) [Title](<https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L66>)
+
+```go
+func (p *ReconfigureSurvivors) Title() string
 ```
 
 Title for the phase

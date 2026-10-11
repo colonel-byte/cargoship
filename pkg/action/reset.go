@@ -116,6 +116,14 @@ func NewReset(opts ResetOptions) (*Reset, error) {
 				WorkerConcurrent: opts.WorkerConcurrent,
 			},
 
+			// After the removal, not before: it reads the configuration the survivors
+			// still carry, and what it writes is only correct once the run has decided
+			// which controllers are going.
+			&phase.ReconfigureSurvivors{
+				Distro:      d,
+				TargetHosts: opts.TargetHosts,
+			},
+
 			&phase.DaemonReload{
 				TargetHosts: opts.TargetHosts,
 			},

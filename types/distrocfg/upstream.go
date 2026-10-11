@@ -73,12 +73,14 @@ func init() {
 		func() any {
 			return &Upstream{
 				Common{
-					ID:                DistroUpstream,
-					BinaryDir:         "/usr/bin",
-					Binary:            "kubectl",
-					Config:            "/etc/kubernetes",
-					Data:              "/var/lib/kubelet",
-					PackageDir:        "/var/lib/kubernetes",
+					ID:         DistroUpstream,
+					BinaryDir:  "/usr/bin",
+					Binary:     "kubectl",
+					Config:     "/etc/kubernetes",
+					Data:       "/var/lib/kubelet",
+					PackageDir: "/var/lib/kubernetes",
+					// kubeadm has no separate supervisor; a node joins through the apiserver.
+					Supervisor:        6443,
 					ServiceController: "kubelet",
 					ServiceWorker:     "kubelet",
 				},

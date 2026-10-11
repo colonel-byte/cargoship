@@ -36,6 +36,7 @@ import (
 	"github.com/colonel-byte/cargoship/api/zarf.dev/v1alpha1/distro"
 	"github.com/colonel-byte/cargoship/config"
 	"github.com/colonel-byte/cargoship/pkg/engineconfig/gen"
+	"github.com/colonel-byte/cargoship/types/distrocfg/registry"
 	hostos "github.com/colonel-byte/cargoship/types/os"
 	"github.com/k0sproject/dig"
 	"github.com/k0sproject/rig/v2/remotefs"
@@ -494,6 +495,10 @@ func newTestRancher() *RancherCommon {
 			Config:    "/etc/rancher/k3s/config.yaml",
 			Data:      "/var/lib/rancher/k3s",
 			Token:     "/var/lib/rancher/k3s/server/token",
+			// This fixture is k3s-shaped everywhere else, so its supervisor port is k3s's.
+			// The assertions below used to expect 9345, which is rke2's -- they were pinning
+			// the defect this field exists to remove.
+			Supervisor: 6443,
 		},
 	}
 }
@@ -579,7 +584,7 @@ func TestConfigureEngineControllerFollowerExistingTokenFile(t *testing.T) {
 	}
 
 	got := parseWrittenYAML(t, cfg.files, d.Config)
-	if want := "https://leader.example.com:9345"; got.DigString(keyServer) != want {
+	if want := "https://leader.example.com:6443"; got.DigString(keyServer) != want {
 		t.Errorf("config.yaml server = %q, want %q", got.DigString(keyServer), want)
 	}
 }
@@ -608,7 +613,7 @@ func TestConfigureEngineWorkerStripsControllerArgs(t *testing.T) {
 	}
 
 	got := parseWrittenYAML(t, cfg.files, d.Config)
-	if want := "https://lb.example.com:9345"; got.DigString(keyServer) != want {
+	if want := "https://lb.example.com:6443"; got.DigString(keyServer) != want {
 		t.Errorf("config.yaml server = %q, want %q", got.DigString(keyServer), want)
 	}
 	if got.DigString(keyTokenFile) != d.JoinTokenPathAgent() {
@@ -1717,5 +1722,69 @@ func TestSetNodeIPKeyIsAcceptedByEveryVersion(t *testing.T) {
 			require.Containsf(t, gen.Keys(entry.Agent), keyNodeIP,
 				"%s %s agent config does not accept %s", distroID, version, keyNodeIP)
 		}
+	}
+}
+
+// TestSupervisorPortIsPerDistro is the port a joining node registers on, and it is not the same
+// for both engines: rke2 runs its supervisor separately on 9345, k3s multiplexes it onto 6443.
+//
+// It used to be the literal 9345 in RancherCommon.ConfigureEngine, which k3s embeds without
+// overriding, so every k3s cluster was handed a join URL on a port k3s does not listen on.
+func TestSupervisorPortIsPerDistro(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		distroID string
+		wantPort int
+		wantURL  string
+	}{
+		{
+			name:     "rke2 runs a separate supervisor",
+			distroID: "rke2",
+			wantPort: 9345,
+			wantURL:  "https://kc0.example.test:9345",
+		},
+		{
+			name:     "k3s multiplexes onto the apiserver port",
+			distroID: "k3s",
+			wantPort: 6443,
+			wantURL:  "https://kc0.example.test:6443",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			builder, err := registry.GetDistroModuleBuilder(tt.distroID)
+			require.NoError(t, err)
+			dis, ok := builder().(Distro)
+			require.True(t, ok)
+
+			require.Equal(t, tt.wantPort, dis.SupervisorPort())
+			require.Equal(t, tt.wantURL, dis.SupervisorURL("kc0.example.test"))
+		})
+	}
+}
+
+// TestEveryRegisteredDistroNamesASupervisorPort is the guard that stops a new distro module
+// from silently rendering `https://host:0` as its join URL. A missing port is a programming
+// error rather than a configuration one, and nothing else would notice until a node failed to
+// join.
+func TestEveryRegisteredDistroNamesASupervisorPort(t *testing.T) {
+	t.Parallel()
+
+	for _, distroID := range []string{"k3s", "rke2", "upstream"} {
+		builder, err := registry.GetDistroModuleBuilder(distroID)
+		if err != nil {
+			continue
+		}
+		dis, ok := builder().(Distro)
+		if !ok {
+			continue
+		}
+		require.Positivef(t, dis.SupervisorPort(), "%s names no supervisor port", distroID)
+		require.NotContainsf(t, dis.SupervisorURL("host"), ":0", "%s renders a port of zero", distroID)
 	}
 }

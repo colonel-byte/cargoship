@@ -65,6 +65,10 @@ type Distro interface {
 	CleanupPaths() []string
 	// ConfigPath returns the full path for the config directory used by the engine
 	ConfigPath() string
+	// SupervisorPort returns the port a joining node registers with the cluster on.
+	SupervisorPort() int
+	// SupervisorURL returns the URL a node joins the cluster through, for the host serving it.
+	SupervisorURL(name string) string
 	// ConfigureEngine does distro specific configuration on a host
 	ConfigureEngine(context.Context, *cluster.ZarfHost, cluster.ZarfRuntimeMeta, distro.ZarfDistro) error
 	// DataDirPath returns the full path for the data directory used by the engine

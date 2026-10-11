@@ -49,6 +49,7 @@ func init() {
 						Config:            "/etc/rancher/k3s/config.yaml",
 						Token:             "/etc/rancher/k3s/token",
 						Data:              "/var/lib/rancher/k3s",
+						Supervisor:        6443,
 						ServiceController: "k3s-server",
 						ServiceWorker:     "k3s-agent",
 					},

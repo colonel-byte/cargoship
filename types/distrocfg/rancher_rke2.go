@@ -49,6 +49,7 @@ func init() {
 						Config:            "/etc/rancher/rke2/config.yaml",
 						Token:             "/etc/rancher/rke2/token",
 						Data:              "/var/lib/rancher/rke2",
+						Supervisor:        9345,
 						ServiceController: "rke2-server",
 						ServiceWorker:     "rke2-agent",
 					},
