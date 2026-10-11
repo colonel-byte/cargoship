@@ -32,8 +32,10 @@ func (s *phaseWalk) rpmUploadFiles() {
 	s.T().Helper()
 
 	enterprise := s.harness.hosts().Filter(utils.FilterEnterpriseLinux)
-	s.Require().NotEmpty(enterprise,
-		"no Enterprise Linux host in the cluster, the RPM phase would be untested")
+	if carriesFamily(clusterConfig(), familyEnterpriseLinux) {
+		s.Require().NotEmpty(enterprise,
+			"no Enterprise Linux host in the cluster, the RPM phase would be untested")
+	}
 
 	isEnterprise := make(map[string]bool, len(enterprise))
 	for _, host := range enterprise {
