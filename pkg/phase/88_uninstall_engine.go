@@ -111,7 +111,7 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 	if p.Distro != nil && p.Distro.PackageStagingDir() != "" {
 		for _, pkg := range pkgsType {
 			folder := filepath.Join(p.Distro.PackageStagingDir(), pkg)
-			if h.FileExist(folder) {
+			if pathExists(h, folder) {
 				err := fs.WalkDir(h.Sudo().FS(), folder, func(_ string, d fs.DirEntry, _ error) error {
 					if !d.IsDir() && rpmPre.MatchString(d.Name()) {
 						cmd := fmt.Sprintf(`rpm -qp %s/%s --queryformat "%%{NAME}"`, folder, d.Name())
@@ -154,7 +154,7 @@ func (p *UninstallEngine) uninstallNode(ctx context.Context, h *cluster.ZarfHost
 	}
 
 	for _, path := range p.Distro.CleanupPaths() {
-		if !h.FileExist(path) {
+		if !pathExists(h, path) {
 			continue
 		}
 		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", path)); err != nil {
@@ -184,7 +184,7 @@ func (p *UninstallEngine) cleanManagedDirs(ctx context.Context, h *cluster.ZarfH
 		if md.Glob != "" || md.Path == "" {
 			continue
 		}
-		if h.FileExist(md.Path) {
+		if pathExists(h, md.Path) {
 			if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", md.Path)); err != nil {
 				logger.From(ctx).Warn("failed to remove managed dir", "host", h, "path", md.Path, "error", err)
 			}
@@ -192,7 +192,7 @@ func (p *UninstallEngine) cleanManagedDirs(ctx context.Context, h *cluster.ZarfH
 	}
 
 	// Always ensure /etc/cargoship state dir is cleaned if present
-	if h.FileExist(distrocfg.StateDir) {
+	if pathExists(h, distrocfg.StateDir) {
 		if err := h.Sudo().Exec(fmt.Sprintf("rm -rf %s", distrocfg.StateDir)); err != nil {
 			logger.From(ctx).Warn("failed to remove state dir", "host", h, "path", distrocfg.StateDir, "error", err)
 		}
@@ -263,4 +263,20 @@ func (p *UninstallEngine) detectInstalledEnginePackages(ctx context.Context, h *
 		logger.From(ctx).Info("discovered installed engine packages from package manager", "host", h, "packages", found)
 	}
 	return found
+}
+
+// pathExists reports whether anything is at path on the host, directory or file.
+//
+// Not ZarfHost.FileExist, which is `test -f` and therefore false for a directory. Every path an
+// uninstall removes is a directory -- the engine's data directory, its config directory,
+// /etc/cargoship -- so guarding their removal on FileExist skipped all of them, and skipped
+// them silently: nothing was attempted, so nothing failed and nothing was logged. A reset left
+// 2.3G in /var/lib/rancher/rke2 and a config.yaml naming the old cluster, while reporting
+// success and promising in its own help text to remove "the engine and the data it wrote".
+func pathExists(h *cluster.ZarfHost, path string) bool {
+	if path == "" {
+		return false
+	}
+	_, err := h.Stat(path)
+	return err == nil
 }
