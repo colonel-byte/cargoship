@@ -54,6 +54,33 @@ cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi
 cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
 ```
 
+## What a bring-up is doing while it waits
+
+`dev:vmUp` blocks until the fleet is usable, and on a six-node fleet that is minutes. It reports what it is waiting on so a long wait does not read as a hung shell:
+
+```console
+$ mage dev:vmUp -control=3 -worker=3
+Bringing up 3 control-plane, 3 worker node(s) for k3s
+waiting for 6 node(s) to finish cloud-init, up to 15m0s
+  ready: kc0   1m4s
+  waiting: kc1 cloud-init is still running (30s)
+  ready: kc1   1m12s
+```
+
+The wait is for cloud-init rather than for sshd, which answers about six seconds in. The packages that open the fapolicyd and firewall gates are installed after that, so a fleet handed back at the earlier moment looks healthy and has both of those phases silently skipping -- see "Bringing a fleet up" above.
+
+The 15 minute budget covers the whole fleet, not each node: they are all started before any is waited on, so the wall time is the slowest node rather than the sum.
+
+**Interrupting the wait does not stop the fleet.** Each node is a detached qemu process, so `Ctrl-C` leaves them running and the inventory in place -- which is deliberate, since a node that is slow to configure is usually one worth logging into. `dev:vmList` shows what is there and `dev:vmDown` removes it; a later `dev:vmUp` refuses rather than adopting a fleet that is already up.
+
+**Memory is the limit worth planning.** Each node takes 4096MiB and 2 vCPUs by default, so six nodes want 24GiB and a bring-up that would not fit in `MemAvailable` is refused rather than left to the OOM killer. `-memory` and `-cpus` are how to fit a bigger fleet into a smaller machine:
+
+```sh
+mage dev:vmUp -control=3 -worker=3 -memory=2048
+```
+
+2048MiB is ample for the host-preparation phases. An rke2 control-plane node wants the default: three of them at 2048 will come up and then struggle once etcd and the control plane are both running.
+
 ## A mixed fleet
 
 The fleet runs Rocky 10 unless you ask for something else. Two counts opt in to Ubuntu nodes alongside them:

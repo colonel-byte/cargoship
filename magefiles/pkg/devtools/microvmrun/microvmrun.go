@@ -44,6 +44,11 @@ type Options struct {
 	UbuntuWorkers     int
 	// Distro is the engine the fleet is prepared for, k3s or rke2.
 	Distro string
+	// MemoryMiB and CPUs are per node. Zero means the package default, which is what makes
+	// the refusal a big fleet hits actionable: the guard says to lower the per-node memory,
+	// and these are how.
+	MemoryMiB int
+	CPUs      int
 }
 
 // Up brings up a fleet and prints what to do with it.
@@ -57,6 +62,8 @@ func Up(ctx context.Context, opts Options) error {
 		UbuntuControllers: opts.UbuntuControllers,
 		UbuntuWorkers:     opts.UbuntuWorkers,
 		Distro:            opts.Distro,
+		MemoryMiB:         opts.MemoryMiB,
+		CPUs:              opts.CPUs,
 	})
 	if err != nil {
 		return err

@@ -170,6 +170,10 @@ func (Dev) VMUp(
 	ubuntuWorker *int,
 	// engine the fleet is prepared for, k3s or rke2 (default k3s)
 	distro *string,
+	// memory per node in MiB (default 4096)
+	memory *int,
+	// vCPUs per node (default 2)
+	cpus *int,
 ) error {
 	return microvmrun.Up(ctx, microvmrun.Options{
 		Controllers:       intOr(control, 1),
@@ -178,6 +182,8 @@ func (Dev) VMUp(
 		UbuntuControllers: intOr(ubuntuControl, 0),
 		UbuntuWorkers:     intOr(ubuntuWorker, 0),
 		Distro:            stringOr(distro, "k3s"),
+		MemoryMiB:         intOr(memory, 0),
+		CPUs:              intOr(cpus, 0),
 	})
 }
 
