@@ -69,9 +69,9 @@ func (p *DeleteControllers) Prepare(ctx context.Context, c *cluster.ZarfCluster,
 	}
 
 	candidates := filterTargetHosts(p.manager.Config.Spec.Hosts, p.TargetHosts)
+	p.nodeNames = p.resolveNodeNames(ctx, candidates)
 	p.hosts = candidates.Filter(func(h *cluster.ZarfHost) bool {
-		err := p.leader.Sudo().Exec(p.Distro.KubectlCmdf(p.leader, p.Distro.DataDirPath(), getNode, h.Configurer.Hostname(h)))
-		if err != nil {
+		if _, inCluster := p.nodeNames[h.String()]; !inCluster {
 			return false
 		}
 		return h.IsController() && h.Hostname != p.leader.Hostname
