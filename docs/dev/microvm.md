@@ -21,12 +21,14 @@ mage dev:vmUp -control=1 -worker=2 -infra=3 -distro=rke2
 
 Every flag has a default, so `mage dev:vmUp` on its own gives one control-plane node and two workers running k3s.
 
-| Flag        | Default | What it does                                                                                    |
-| ----------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `-control`  | `1`     | Control-plane nodes. The first is the leader, which is what the inventory's load balancer names |
-| `-worker`   | `2`     | Plain worker nodes                                                                              |
-| `-infra`    | `0`     | Infra nodes: workers carrying an `infra` profile of their own                                   |
-| `-distro`   | `k3s`   | The engine the fleet is prepared for, `k3s` or `rke2`                                           |
+| Flag             | Default | What it does                                                                                    |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `-control`       | `1`     | Control-plane nodes. The first is the leader, which is what the inventory's load balancer names |
+| `-worker`        | `2`     | Plain worker nodes                                                                              |
+| `-infra`         | `0`     | Infra nodes: workers carrying an `infra` profile of their own                                   |
+| `-ubuntuControl` | `0`     | Control-plane nodes running Ubuntu instead of Rocky                                             |
+| `-ubuntuWorker`  | `0`     | Worker nodes running Ubuntu instead of Rocky                                                    |
+| `-distro`        | `k3s`   | The engine the fleet is prepared for, `k3s` or `rke2`                                           |
 
 `-distro` changes nothing about the guests. It decides only which of the leader's ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.
 
@@ -50,6 +52,95 @@ Then drive cargoship at it the way you would any other inventory:
 ```sh
 cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
 cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
+```
+
+## What a bring-up is doing while it waits
+
+`dev:vmUp` blocks until the fleet is usable, and on a six-node fleet that is minutes. It reports what it is waiting on so a long wait does not read as a hung shell:
+
+```console
+$ mage dev:vmUp -control=3 -worker=3
+Bringing up 3 control-plane, 3 worker node(s) for k3s
+waiting for 6 node(s) to finish cloud-init, up to 15m0s
+  ready: kc0   1m4s
+  waiting: kc1 cloud-init is still running (30s)
+  ready: kc1   1m12s
+```
+
+The wait is for cloud-init rather than for sshd, which answers about six seconds in. The packages that open the fapolicyd and firewall gates are installed after that, so a fleet handed back at the earlier moment looks healthy and has both of those phases silently skipping -- see "Bringing a fleet up" above.
+
+The 15 minute budget covers the whole fleet, not each node: they are all started before any is waited on, so the wall time is the slowest node rather than the sum.
+
+**Interrupting the wait does not stop the fleet.** Each node is a detached qemu process, so `Ctrl-C` leaves them running and the inventory in place -- which is deliberate, since a node that is slow to configure is usually one worth logging into. `dev:vmList` shows what is there and `dev:vmDown` removes it; a later `dev:vmUp` refuses rather than adopting a fleet that is already up.
+
+**Memory is the limit worth planning.** Each node takes 4096MiB and 2 vCPUs by default, so six nodes want 24GiB and a bring-up that would not fit in `MemAvailable` is refused rather than left to the OOM killer. `-memory` and `-cpus` are how to fit a bigger fleet into a smaller machine:
+
+```sh
+mage dev:vmUp -control=3 -worker=3 -memory=2048
+```
+
+2048MiB is ample for the host-preparation phases. An rke2 control-plane node wants the default: three of them at 2048 will come up and then struggle once etcd and the control plane are both running.
+
+## A mixed fleet
+
+The fleet runs Rocky 10 unless you ask for something else. Two counts opt in to Ubuntu nodes alongside them:
+
+```sh
+mage dev:vmUp -control=1 -worker=1 -ubuntuWorker=2 -distro=k3s
+mage dev:vmUp -control=0 -ubuntuControl=1 -ubuntuWorker=1 -distro=k3s   # Ubuntu only
+```
+
+Rocky nodes are `kc*` / `kw*` / `ki*`; Ubuntu nodes are `uc*` / `uw*`. `dev:vmList` shows which guest each node runs.
+
+This is what a single-distribution fleet cannot cover, and it is the gap [choice-microvm-backend](../agent/choice-microvm-backend.md) records as the reason the container matrix is still the only thing that covers family routing. With Ubuntu nodes in the fleet, apply routes for real:
+
+| On a Rocky node                                                                 | On an Ubuntu node                                                                                 |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Phase 21 installs `container-selinux`, because `getenforce` reports `Enforcing` | Phase 21 does nothing, because there is no SELinux                                                |
+| Phase 22 writes fapolicyd rules and restarts the service                        | Phase 22 does nothing: fapolicyd is not packaged for Ubuntu                                       |
+| Phase 26 selects the firewalld backend                                          | Phase 26 selects ufw                                                                              |
+| Phase 57 installs the staged RPMs through `dnf`                                 | Phase 57 declines it; 59 installs the binary the package ships for hosts it carries no `.deb` for |
+
+Each of those *doing nothing* on the other guest is the assertion worth having: the phase tests compare what ran against what the hosts report, so a gate that routes wrongly shows up as a mismatch rather than as a silent skip.
+
+Two things to know before reaching for one:
+
+*   **An Ubuntu node is installed from a binary, not from packages, and it does join.** The `rke2` examples ship RPMs for the Enterprise Linux family and a tarball for everything else, so phase 57 claims the Rocky nodes and phase 59 claims the Ubuntu one. Verified on a mixed fleet: no `dpkg` entry for rke2, a 133MB `/usr/local/bin/rke2`, `rke2-agent` active, the node `Ready`. The glibc constraint that makes the container fleet's Alpine node upload-only is about musl, and Ubuntu is not musl.
+
+    What that means for coverage is narrower than it looks. Phase 58 runs and has nothing to install, because no `k3s` or `rke2` example carries a `.deb`; the `upstream-*` packages are the only ones that do, so they are what exercises the APT path with real packages. A `k3s` or `rke2` fleet exercises the *routing* -- which phase claims which host -- rather than the apt install itself.
+*   **ufw is enabled by cloud-init**, which cargoship deliberately never does: bringing up a default-deny firewall over the SSH connection a phase is running on can cut it, so `pkg/firewall/ufw.go` applies only to a host whose ufw is already active. A stock cloud image ships it inactive, so without that the ufw path is not reachable at all.
+
+## Updating a pinned image
+
+Both guests are pinned by dated build and digest in `internal/microvm/image.go`, not by a `latest` alias. The aliases move without warning, and a release that ships a broken build -- Rocky has published a GenericCloud image with no cloud-init in it -- is then something this package steps over by not moving, rather than something every developer hits at once. `TestEveryImageIsPinnedAndVerifiable` fails on a URL containing `latest`, so the pin cannot quietly become a moving one.
+
+Bumping one is three edits and a download. For **Rocky**, the dated builds and their checksums are published side by side:
+
+```sh
+curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/ | grep -o 'Rocky-10-GenericCloud-Base-[0-9.]*-[0-9.]*\.x86_64\.qcow2' | sort -u | tail -3
+curl -s https://dl.rockylinux.org/pub/rocky/10/images/x86_64/<file>.CHECKSUM
+```
+
+For **Ubuntu**, the dated directory is what to pin -- `releases/26.04/release/` is a pointer that moves:
+
+```sh
+curl -s https://cloud-images.ubuntu.com/releases/26.04/ | grep -o 'release-[0-9]\{8\}' | sort -u | tail -3
+curl -s https://cloud-images.ubuntu.com/releases/26.04/release-<date>/SHA256SUMS | grep amd64.img
+```
+
+Then update `file`, `url` and `sha256` on that image, and run the download so the verification actually sees the new build:
+
+```sh
+mage dev:vmImage -image=rocky        # or ubuntu, or all
+```
+
+`Fetch` checks the digest and then asks `guestfish` two things the digest cannot: that cloud-init is in the image at all, and -- for a guest declared `selinux: true` -- that it sets `SELINUX=enforcing`. Both have been wrong in a published build, and both fail late and unrecognisably if nobody looks: without cloud-init the seed is ignored and every node simply times out waiting for SSH, and with SELinux disabled the fleet comes up fine and every phase it exists to test quietly skips.
+
+A cached image whose digest no longer matches the pin is reported rather than silently replaced, naming the file to remove -- re-downloading half a gigabyte is not something to do behind somebody's back. After a bump, bring a fleet up and check the guest is what you think it is:
+
+```sh
+mage dev:vmUp -control=1 -worker=0
+mage dev:vmShell kc0        # then: cat /etc/os-release; getenforce
 ```
 
 ## Looking around, and tearing down
@@ -198,4 +289,6 @@ So a k3s walk on this fleet is worth trying and is not yet known to pass. `mage 
 
 ## Limits
 
-The fleet runs one distribution. That is enough to exercise the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and it is not a substitute for the bootloose cluster's mix of Ubuntu, Fedora and Alpine nodes - apply routes on OS family in several places, and a single-family fleet never takes the branches that do not match. Run both.
+The fleet runs Rocky and, when asked, Ubuntu. That covers the Enterprise Linux branch against something that really has SELinux, fapolicyd and firewalld, and -- with `-ubuntuWorker` -- the Debian branch beside it, which is the pair apply routes between in most of the places it routes at all.
+
+It is still not the whole of what the bootloose cluster covers. That fleet also runs Fedora, which is a second Enterprise Linux opinion with a different dnf and a newer `selinux-policy`, and Alpine, which belongs to neither family and is the only host that exercises the BIN upload phase as the path it is rather than as a fallback. Adding a guest here is one pinned URL and digest in `internal/microvm/image.go` plus its cloud-init packages, so neither is hard -- they are simply not done. Run both suites.

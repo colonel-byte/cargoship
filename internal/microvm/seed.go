@@ -45,6 +45,8 @@ type seedView struct {
 	LANMAC         string
 	PrivateAddress string
 	PrefixLen      int
+	Packages       []string
+	RunCmd         []string
 }
 
 // renderSeedFiles renders the three NoCloud documents for a node.
@@ -54,6 +56,11 @@ type seedView struct {
 // interface matches, which address the private segment gets, which packages make the
 // fapolicyd and firewall gates open -- is in the text.
 func renderSeedFiles(n Node, publicKey string) (map[string][]byte, error) {
+	img, ok := images[n.Image]
+	if !ok {
+		return nil, fmt.Errorf("node %s names no known image %q", n.Name, n.Image)
+	}
+
 	view := seedView{
 		Name:           n.Name,
 		Domain:         privateDomain,
@@ -62,6 +69,8 @@ func renderSeedFiles(n Node, publicKey string) (map[string][]byte, error) {
 		LANMAC:         n.LANMAC,
 		PrivateAddress: n.PrivateAddress,
 		PrefixLen:      privatePrefixLen,
+		Packages:       img.packages,
+		RunCmd:         img.runcmd,
 	}
 
 	out := make(map[string][]byte, len(seedFiles))

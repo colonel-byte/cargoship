@@ -46,6 +46,17 @@ const (
 // from the engine configuration onwards excludes them; see phaseHarness.dropUploadOnlyHosts.
 const uploadOnlyPrefix = "kwa"
 
+// controllerPrefix and workerPrefix are the hostname prefixes the inventory maps to roles.
+// uploadOnlyPrefix begins with workerPrefix, so anything testing these has to test it first.
+//
+// They live here rather than beside the fleet definition because renderClusterInventory uses
+// them, and that is ordinary package code: a constant a non-test file reads cannot sit in a
+// _test.go file, which is what the fleet support does.
+const (
+	controllerPrefix = "kc"
+	workerPrefix     = "kw"
+)
+
 // isUploadOnly reports whether a host is in the inventory only to receive uploads.
 func isUploadOnly(h *apicluster.ZarfHost) bool {
 	return strings.HasPrefix(h.Hostname, uploadOnlyPrefix)

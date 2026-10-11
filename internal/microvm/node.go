@@ -15,6 +15,7 @@
 package microvm
 
 import (
+	"errors"
 	"fmt"
 	"hash/fnv"
 
@@ -41,6 +42,12 @@ const (
 	// renderClusterInventory is, so wiring infra nodes into that fleet means teaching it this
 	// prefix rather than relying on the name to carry the role.
 	infraPrefix = "ki"
+
+	// ubuntuControllerPrefix and ubuntuWorkerPrefix name the opt-in Ubuntu nodes. They are
+	// prefixes of their own rather than extensions of kc and kw, so the five groups partition
+	// the names and nothing matching on them depends on test order.
+	ubuntuControllerPrefix = "uc"
+	ubuntuWorkerPrefix     = "uw"
 
 	// infraProfile is the profile infra nodes select, which pkg/phase/81_label_nodes.go turns
 	// into a node-role.kubernetes.io/infra label and which a cluster config can hang a
@@ -73,6 +80,15 @@ type Spec struct {
 	// Controllers and Workers are how many of each role to create.
 	Controllers int
 	Workers     int
+	// UbuntuControllers and UbuntuWorkers are how many nodes run Ubuntu instead of Rocky.
+	//
+	// Opt in, both defaulting to zero: a Rocky-only fleet is what the package was built for,
+	// and it is what every existing caller gets without changing anything. Asking for Ubuntu
+	// nodes is how the family-routed branches a single-distribution fleet cannot reach -- the
+	// APT upload phase, the ufw backend, the Debian Configurer, and the SELinux and fapolicyd
+	// gates correctly doing nothing -- get exercised against a real kernel.
+	UbuntuControllers int
+	UbuntuWorkers     int
 	// Infra is how many infra nodes to create: workers carrying a profile of their own, so
 	// that the node-role labelling and the per-profile concurrency are exercised against a
 	// profile that is not simply the role's name.
@@ -115,6 +131,9 @@ type Node struct {
 	LANMAC  string
 	// HostFwd holds any additional loopback forwards, beyond SSH, for this node.
 	HostFwd []PortForward
+	// Image is the id of the guest this node runs, and OSID the os-release ID it reports.
+	Image string
+	OSID  string
 }
 
 // PortForward is one loopback-to-guest TCP forward on the management interface.
@@ -140,8 +159,14 @@ func (s Spec) Normalize() (Spec, error) {
 	if s.Distro == "" {
 		s.Distro = "k3s"
 	}
-	if s.Controllers < 1 {
-		return Spec{}, fmt.Errorf("a fleet needs at least one controller, got %d", s.Controllers)
+	if s.Controllers < 0 || s.UbuntuControllers < 0 {
+		return Spec{}, fmt.Errorf("a fleet cannot have %d Rocky and %d Ubuntu controllers", s.Controllers, s.UbuntuControllers)
+	}
+	if s.Controllers+s.UbuntuControllers < 1 {
+		return Spec{}, errors.New("a fleet needs at least one controller")
+	}
+	if s.UbuntuWorkers < 0 {
+		return Spec{}, fmt.Errorf("a fleet cannot have %d Ubuntu workers", s.UbuntuWorkers)
 	}
 	if s.Workers < 0 {
 		return Spec{}, fmt.Errorf("a fleet cannot have %d workers", s.Workers)
@@ -149,7 +174,7 @@ func (s Spec) Normalize() (Spec, error) {
 	if s.Infra < 0 {
 		return Spec{}, fmt.Errorf("a fleet cannot have %d infra nodes", s.Infra)
 	}
-	if total := s.Controllers + s.Workers + s.Infra; total > maxNodes {
+	if total := s.nodeCount(); total > maxNodes {
 		return Spec{}, fmt.Errorf("a fleet of %d nodes exceeds the %d node limit", total, maxNodes)
 	}
 	if s.Distro != "k3s" && s.Distro != "rke2" {
@@ -158,39 +183,67 @@ func (s Spec) Normalize() (Spec, error) {
 	return s, nil
 }
 
+// nodeCount is how many nodes the spec asks for, across every group.
+func (s Spec) nodeCount() int {
+	return s.Controllers + s.UbuntuControllers + s.Workers + s.UbuntuWorkers + s.Infra
+}
+
 // group is one set of like nodes: a name prefix, the role they join as, the profile they
-// select, and how many there are.
+// select, the image they run, and how many there are.
 type group struct {
 	prefix  string
 	role    string
 	profile string
+	img     image
 	count   int
 }
 
 // groups is the fleet's node sets, in the order they are created.
 //
 // Controllers come first so that index 1 is always the leader, which is what the inventory's
-// load balancer points at. Infra comes last so that adding infra nodes to a fleet does not
-// renumber the plain workers ahead of them, and so a fleet brought up without any is
-// numbered exactly as it was before infra existed.
+// load balancer points at -- and the Rocky controllers come before the Ubuntu ones, so a
+// mixed fleet's leader is the guest that can run either engine. rke2 ships RPMs and links
+// against glibc, so an Ubuntu node cannot run it at all; k3s installs from a binary and runs
+// on both.
+//
+// Infra comes last so that adding infra nodes does not renumber the workers ahead of them,
+// and a fleet asking for neither Ubuntu nodes nor infra is numbered exactly as it was before
+// either existed.
 func (s Spec) groups() []group {
 	return []group{
 		{
 			prefix:  controllerPrefix,
 			role:    apicluster.RoleController,
 			profile: apicluster.RoleController,
+			img:     rockyImage,
 			count:   s.Controllers,
+		},
+		{
+			prefix:  ubuntuControllerPrefix,
+			role:    apicluster.RoleController,
+			profile: apicluster.RoleController,
+			img:     ubuntuImage,
+			count:   s.UbuntuControllers,
 		},
 		{
 			prefix:  workerPrefix,
 			role:    apicluster.RoleWorker,
 			profile: apicluster.RoleWorker,
+			img:     rockyImage,
 			count:   s.Workers,
+		},
+		{
+			prefix:  ubuntuWorkerPrefix,
+			role:    apicluster.RoleWorker,
+			profile: apicluster.RoleWorker,
+			img:     ubuntuImage,
+			count:   s.UbuntuWorkers,
 		},
 		{
 			prefix:  infraPrefix,
 			role:    apicluster.RoleWorker,
 			profile: infraProfile,
+			img:     rockyImage,
 			count:   s.Infra,
 		},
 	}
@@ -204,8 +257,9 @@ func (s Spec) Nodes() ([]Node, error) {
 	}
 	id := fleetID(spec.Fleet)
 
-	nodes := make([]Node, 0, spec.Controllers+spec.Workers+spec.Infra)
+	nodes := make([]Node, 0, spec.nodeCount())
 	index := 0
+	leaderAssigned := false
 	for _, g := range spec.groups() {
 		for i := 0; i < g.count; i++ {
 			index++
@@ -219,9 +273,16 @@ func (s Spec) Nodes() ([]Node, error) {
 				MgmtMAC:        fmt.Sprintf("52:54:00:%02x:00:%02x", id, index),
 				LANMAC:         fmt.Sprintf("52:54:00:%02x:01:%02x", id, index),
 			}
-			if g.role == apicluster.RoleController && i == 0 {
+			// The first controller in the whole fleet, not the first of each controller
+			// group: with both a Rocky and an Ubuntu control plane there are two such
+			// groups, and giving each a leader's forwards would have them claim the same
+			// host port -- the second qemu then fails to bind and the fleet half starts.
+			if !leaderAssigned && g.role == apicluster.RoleController {
 				node.HostFwd = leaderForwards(id, spec.Distro)
+				leaderAssigned = true
 			}
+			node.Image = g.img.id
+			node.OSID = g.img.osID
 			nodes = append(nodes, node)
 		}
 	}

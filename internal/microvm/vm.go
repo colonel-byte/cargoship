@@ -30,7 +30,12 @@ import (
 // install that can run a virtual machine at all; none of them needs root.
 var requiredTools = []string{"qemu-system-x86_64", "qemu-img", "mkfs.vfat", "mcopy", "ssh"} //nolint:gochecknoglobals
 
-// readyTimeout bounds the wait for a node to become usable.
+// readyTimeout bounds the wait for the whole fleet to become usable.
+//
+// One budget for the fleet rather than one per node, because the nodes boot in parallel: they
+// are all started before any is waited on, so the wall time is the slowest node and not the
+// sum. A per-node timeout made a genuinely stuck six-node fleet take six times this long to
+// report, in silence, which is indistinguishable from a hung command.
 //
 // Usable means cloud-init has finished, which is a later and much more useful moment than
 // sshd answering: sshd is up in about six seconds, and the packages that open the fapolicyd
@@ -46,6 +51,19 @@ const readyTimeout = 15 * time.Minute
 
 // pollInterval is how often a node is asked whether it is there yet.
 const pollInterval = 2 * time.Second
+
+// progressEvery is how often a wait that has not finished says so. Long enough not to be
+// noise, short enough that the command never looks stuck: installing packages over slirp takes
+// minutes, and a silent minutes-long wait is the thing this exists to prevent.
+const progressEvery = 30 * time.Second
+
+// progressf reports what a bring-up is waiting on.
+//
+// Stderr, because stdout carries the status table and the inventory path a caller may want to
+// read, and this is commentary on the wait rather than part of the result.
+func progressf(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, format, args...)
+}
 
 // Up brings a fleet up and returns it, with every node answering SSH and the inventory
 // written. It refuses a fleet that is already up rather than adopting it, so that a bring-up
@@ -79,9 +97,18 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 		return Fleet{}, fmt.Errorf("fleet %s is already up (%s); tear it down first with `mage dev:vmDown`", fleet.Name, strings.Join(running, ", "))
 	}
 
-	base, err := Fetch(ctx)
-	if err != nil {
-		return Fleet{}, err
+	// One fetch per distinct image, not per node: a mixed fleet wants both base images and a
+	// Rocky-only one must not pay for Ubuntu's.
+	bases := map[string]string{}
+	for _, g := range spec.groups() {
+		if g.count == 0 || bases[g.img.id] != "" {
+			continue
+		}
+		path, err := Fetch(ctx, g.img)
+		if err != nil {
+			return Fleet{}, err
+		}
+		bases[g.img.id] = path
 	}
 	if err := os.RemoveAll(fleet.Dir); err != nil {
 		return Fleet{}, fmt.Errorf("clearing %s: %w", fleet.Dir, err)
@@ -104,7 +131,7 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 	}
 
 	for _, node := range fleet.Nodes {
-		if err := start(ctx, spec, fleet, node, base, publicKey); err != nil {
+		if err := start(ctx, spec, fleet, node, bases[node.Image], publicKey); err != nil {
 			// A half-started fleet is not something to leave for the developer to clean up,
 			// and it is not something a later Up would adopt either, since Up refuses a live
 			// fleet. Tear it down and report the original failure.
@@ -121,12 +148,18 @@ func Up(ctx context.Context, spec Spec) (Fleet, error) {
 		return Fleet{}, err
 	}
 
-	// Nodes boot in parallel and are waited on in sequence, so the total wait is roughly the
-	// slowest node rather than the sum.
+	// One deadline for the fleet, shared by every node: they are all running already, so the
+	// wait is for the slowest rather than for each in turn.
+	waitCtx, cancel := context.WithTimeout(ctx, readyTimeout)
+	defer cancel()
+
+	progressf("waiting for %d node(s) to finish cloud-init, up to %s\n", len(fleet.Nodes), readyTimeout)
 	for _, node := range fleet.Nodes {
-		if err := waitForReady(ctx, fleet, node); err != nil {
+		started := time.Now()
+		if err := waitForReady(waitCtx, fleet, node); err != nil {
 			return Fleet{}, err
 		}
+		progressf("  ready: %-5s %s\n", node.Name, time.Since(started).Round(time.Second))
 	}
 	return fleet, nil
 }
@@ -253,24 +286,30 @@ func load(spec Spec) (Fleet, error) {
 		return Fleet{}, fmt.Errorf("reading %s: %w", spec.dir(), err)
 	}
 
-	var controllers, workers, infra int
+	var controllers, ubuntuControllers, workers, ubuntuWorkers, infra int
 	for _, e := range entries {
 		switch {
 		case !e.IsDir():
 		case strings.HasPrefix(e.Name(), controllerPrefix):
 			controllers++
+		case strings.HasPrefix(e.Name(), ubuntuControllerPrefix):
+			ubuntuControllers++
+		case strings.HasPrefix(e.Name(), ubuntuWorkerPrefix):
+			ubuntuWorkers++
 		case strings.HasPrefix(e.Name(), infraPrefix):
 			infra++
 		case strings.HasPrefix(e.Name(), workerPrefix):
 			workers++
 		}
 	}
-	if controllers == 0 {
+	if controllers+ubuntuControllers == 0 {
 		return Fleet{}, fmt.Errorf("fleet %s under %s has no controller directory", spec.Fleet, spec.runRoot())
 	}
 
 	spec.Controllers = controllers
+	spec.UbuntuControllers = ubuntuControllers
 	spec.Workers = workers
+	spec.UbuntuWorkers = ubuntuWorkers
 	spec.Infra = infra
 	nodes, err := spec.Nodes()
 	if err != nil {
@@ -380,9 +419,6 @@ func qemuArgs(spec Spec, n Node, dir string) []string {
 // waitForReady blocks until a node is usable: sshd answering, and then cloud-init reporting
 // that it has finished. Both are bounded by one deadline.
 func waitForReady(ctx context.Context, f Fleet, n Node) error {
-	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
-	defer cancel()
-
 	if err := waitForSSH(ctx, f, n); err != nil {
 		return err
 	}
@@ -409,7 +445,14 @@ func waitForSSH(ctx context.Context, f Fleet, n Node) error {
 // bring-up. Polling the status keeps the timeout here and lets an error be reported with
 // cloud-init's own explanation attached.
 func waitForCloudInit(ctx context.Context, f Fleet, n Node) error {
+	started := time.Now()
+	nextReport := progressEvery
+
 	for {
+		if elapsed := time.Since(started); elapsed > nextReport {
+			progressf("  waiting: %-5s cloud-init is still running (%s)\n", n.Name, elapsed.Round(time.Second))
+			nextReport += progressEvery
+		}
 		out, err := sshExec(ctx, f, n, "cloud-init status").Output()
 		status := parseCloudInitStatus(string(out))
 		switch {
@@ -427,7 +470,7 @@ func waitForCloudInit(ctx context.Context, f Fleet, n Node) error {
 		}
 		if err := sleep(ctx); err != nil {
 			detail, _ := sshExec(ctx, f, n, "cloud-init status --long").Output() //nolint:errcheck // reported as context, not acted on
-			return fmt.Errorf("cloud-init did not finish on %s within %s. The fleet is still running so it can be read -- `mage dev:vmShell %s`, then `cloud-init status --long` and /var/log/cloud-init-output.log -- and `mage dev:vmDown` removes it. It last reported:\n%s",
+			return fmt.Errorf("cloud-init did not finish on %s within the fleet's %s budget. The fleet is still running so it can be read -- `mage dev:vmShell %s`, then `cloud-init status --long` and /var/log/cloud-init-output.log -- and `mage dev:vmDown` removes it. It last reported:\n%s",
 				n.Name, readyTimeout, n.Name, cloudInitDetail(detail))
 		}
 	}
