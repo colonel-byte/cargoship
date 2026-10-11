@@ -109,10 +109,25 @@ type Common struct {
 	PackageDir string
 	// ServiceController the controller service
 	ServiceController string
+	// Supervisor is the port a joining node registers with the cluster on. It is not always
+	// the apiserver port: rke2 runs its supervisor separately on 9345, while k3s multiplexes
+	// it onto 6443. Writing one distro's port into the other's config.yaml gives a join URL
+	// that nothing is listening on.
+	Supervisor int
 	// ServiceWorker the worker service
 	ServiceWorker string
 	// Token the token path
 	Token string
+}
+
+// SupervisorPort returns the port a joining node registers with the cluster on.
+func (r *Common) SupervisorPort() int {
+	return r.Supervisor
+}
+
+// SupervisorURL returns the URL a node joins the cluster through, for the host that serves it.
+func (r *Common) SupervisorURL(name string) string {
+	return fmt.Sprintf("https://%s:%d", name, r.Supervisor)
 }
 
 // BinaryPath returns the full path to the engine binary

@@ -216,7 +216,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 		}
 
 		if !host.Metadata.IsLeader {
-			nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.Leader.Configurer.LongHostname(run.Leader))
+			nodeConfig.DigMapping(config.EngineConfig)[keyServer] = d.SupervisorURL(run.Leader.Configurer.LongHostname(run.Leader))
 		}
 
 		if nodeConfig.DigString(config.EngineConfig, "profile") != "" {
@@ -234,7 +234,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 		for _, v := range controllerArgs {
 			delete(nodeConfig.DigMapping(config.EngineConfig), v)
 		}
-		nodeConfig.DigMapping(config.EngineConfig)[keyServer] = fmt.Sprintf("https://%s:9345", run.LoadBalancer)
+		nodeConfig.DigMapping(config.EngineConfig)[keyServer] = d.SupervisorURL(run.LoadBalancer)
 	}
 	if !host.FileExist(d.JoinTokenPathAgent()) {
 		if err := host.WriteFile(d.JoinTokenPathAgent(), run.AgentToken, "0600"); err != nil {
