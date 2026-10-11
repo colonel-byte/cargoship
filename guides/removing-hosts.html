@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
+            window.path_to_searchindex_js = "../searchindex-1f756e52.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-572cecdd.js"></script>
+        <script src="../toc-00ba28f5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,41 +188,51 @@
 <p>Nothing, and that is deliberate. Every phase after the fact-gathering ones reads <code>.spec.hosts</code> and acts on what it finds there, so a host you delete from the config becomes invisible to all of them. The machine keeps running the engine and stays joined to the cluster while the apply that was supposed to remove it reports success.</p>
 <p>An apply catches this instead of walking past it. Right after it gathers facts, and before it changes anything, it lists the nodes joined to the cluster and compares them to the hosts in the config. If the cluster holds a node no host accounts for, the apply stops:</p>
 <pre><code>the cluster holds nodes the config does not: add the host back to the config,
-run `cargoship reset` against it, or pass --allow-unmanaged-nodes to
+run `cargoship install reset` against it, or pass --allow-unmanaged-nodes to
 apply anyway: worker3 (worker)
 </code></pre>
 <p>Each node is named with its role, because a leftover controller is the more dangerous case. The check is read-only, so <code>--dry-run</code> runs it too, which is where you want to find out about a removal you did not intend.</p>
 <p>A node is matched to a host by any identifier they share: the node’s name or any address it reports, against the host’s hostname, private address, or connection address. That is deliberately generous, since a false positive would stop an apply on a working cluster – it means a node whose name you overrode with <code>node-name</code> in the engine config still matches its host through its address. If the cluster cannot be reached at all, the check warns and the apply continues, because failing to reach it is not evidence that a host was removed. The node list is read with <code>kubectl</code> on a controller over the existing SSH connection, so the check works on a cluster whose firewall admits nothing but SSH from outside.</p>
 <h2 id="why-apply-refuses-instead-of-reconciling"><a class="header" href="#why-apply-refuses-instead-of-reconciling">Why apply refuses instead of reconciling</a></h2>
 <p>Removing a node properly is two jobs, and an apply can only do one of them.</p>
-<p>Draining a node and deleting its <code>Node</code> object needs the node’s name, which the API server will happily give us. Uninstalling the engine – stopping the service, removing the packages, deleting the data directory and certificates – needs an SSH connection to the machine, and the address, user and key for that lived in the host block you just deleted. An apply has no memory of previous runs, so it has no way to reach a machine the config no longer describes.</p>
+<p>Draining a node and deleting its <code>Node</code> object needs the node’s name, which the API server will happily give us. Uninstalling the engine – stopping the service, removing the packages, deleting the data directory and certificates – needs an SSH connection to the machine, and the address, user and key for that lived in the <code>hosts</code> entry you just deleted. An apply has no memory of previous runs, so it has no way to reach a machine the config no longer describes.</p>
 <p>Doing only the first half would be worse than doing nothing, because it looks like the removal worked. The machine keeps its certificates and keeps trying to rejoin, and if it was a controller it stays an etcd member: the cluster looks smaller while quorum is still counted against a member nobody can reach.</p>
-<p>So an apply reports the gap and leaves the cluster alone. The layer that will eventually close it is the OpenTofu provider, which still holds the removed host’s connection details in its state file when it plans the destroy, and can hand them to a targeted teardown.</p>
-<h2 id="removing-the-machine-by-hand"><a class="header" href="#removing-the-machine-by-hand">Removing the machine by hand</a></h2>
-<p>Removing a node is two steps, and they have to happen in that order. <code>reset</code> uninstalls the engine, but it cannot delete the node from the cluster unless the config it is given also contains a controller that is still running – and <code>UninstallEngine</code> acts on every host in that config, so adding one would uninstall the engine from your working controller too. Delete the node first, then reset the machine.</p>
-<ol>
-<li>
-<p>From a controller that is staying, drain and delete the node:</p>
-<pre><code class="language-console">$ kubectl drain worker3 --ignore-daemonsets --delete-emptydir-data
-$ kubectl delete node worker3
+<p>So an apply reports the gap and leaves the cluster alone.</p>
+<h2 id="removing-the-machine-with-the-cli"><a class="header" href="#removing-the-machine-with-the-cli">Removing the machine with the CLI</a></h2>
+<p>With the CLI, use targeted reset with <code>--target-hosts</code>:</p>
+<pre><code class="language-console">$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts worker3 --confirm
 </code></pre>
-</li>
-<li>
-<p>Copy your config and cut <code>.spec.hosts</code> down to the host being removed, leaving the rest of the cluster settings as they are.</p>
-</li>
-<li>
-<p>Run reset against it. With the node already gone from the cluster, the deletion phases have nothing to do and the uninstall is all that remains:</p>
-<pre><code class="language-console">$ cargoship reset ./package.tar.zst --config ./removal-config.yaml --confirm
+<p>Cargoship automatically selects a surviving running controller as the leader to delete <code>worker3</code> from the cluster, then uninstalls the engine only on <code>worker3</code>, leaving your surviving controllers and workers untouched. After the targeted reset finishes, delete the host block from <code>cargoship-config.yaml</code>.</p>
+<p>Removing a controller is the same command with more rules attached, and a run that targets two of them is refused rather than left to etcd. See <a href="#removing-a-controller">Removing a controller</a>.</p>
+<h2 id="removing-a-controller"><a class="header" href="#removing-a-controller">Removing a controller</a></h2>
+<p>A worker leaves the cluster by being drained, deleted and uninstalled. A controller does that and also gives up an etcd member, so the order matters and the run is more constrained.</p>
+<p><strong>Cargoship stops the engine on the target before deleting its node.</strong> That is what makes the deletion stick: k3s and RKE2 remove the etcd member when the Node object is deleted, but only once the engine behind it has stopped, and an engine that is still running re-registers the node seconds later. The one exception is a removal that leaves a single controller, where the member being removed has to still be up to form the majority of two that commits its own removal – there the engine stays running through the deletion and is uninstalled immediately after.</p>
+<p><strong>One controller per run.</strong> A run that keeps the cluster and targets two running controllers is refused. Each removal is a raft reconfiguration that needs a majority of the membership it starts from; the second one in a run would start from three members with one already stopped, and taking the next one down leaves one of two, which hangs with the cluster unavailable rather than failing cleanly. Removing them in separate runs is safe, because the cluster is whole again at the start of each.</p>
+<h3 id="removing-the-first-controller"><a class="header" href="#removing-the-first-controller">Removing the first controller</a></h3>
+<p>There is nothing special about the first controller at runtime – it is the first in the host list, re-elected on every run, and it holds no state the others do not. Three things point at it by name, and only one of them needs attention:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th style="text-align: left">Points at</th><th style="text-align: left">Removing the first controller</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align: left">The kubeconfig Cargoship writes</td><td style="text-align: left">Unaffected. Its server is <code>https://&lt;load_balancer&gt;:6443</code>, never a node address, so admin access survives any single controller</td></tr>
+<tr><td style="text-align: left">Workers</td><td style="text-align: left">Unaffected. They join through <code>https://&lt;load_balancer&gt;:9345</code> for the same reason</td></tr>
+<tr><td style="text-align: left">The other controllers’ <code>config.yaml</code></td><td style="text-align: left"><code>server:</code> names the first controller, written when they joined. A running controller never reads it – it is the join address, used at startup – so the cluster keeps working, and the next restart is what would fail</td></tr>
+</tbody>
+</table>
+</div>
+<p>So the step that makes it safe is re-rendering <code>config.yaml</code> on the controllers that stayed, which <code>cargoship apply</code> does: it re-elects the first controller from the remaining hosts and writes the new <code>server:</code> to every one of them. The engines are not restarted for it, which is the point – the file is correct again before anything reads it.</p>
+<p>The targeted reset and the apply are two commands, and the apply is not optional:</p>
+<pre><code class="language-console">$ cargoship reset --config ./cargoship-config.yaml --distro rke2 --target-hosts controller1 --confirm
+$ cargoship apply ./package.tar.zst --config ./cargoship-config.yaml --confirm
 </code></pre>
-</li>
-<li>
-<p>Delete the host block from your real config.</p>
-</li>
-<li>
-<p>Run <code>cargoship apply</code> as usual. The check now finds nothing left over.</p>
-</li>
-</ol>
-<p>Remove controllers one at a time, and only while the remaining controllers still form a quorum. Removing two of three at once leaves etcd unable to elect a leader, and no amount of applying will fix that from the outside.</p>
+<p>Between them the surviving controllers hold a join address that no longer resolves to a machine. They keep serving, and a reboot in that window is what turns it into an outage.</p>
+<p>Two things Cargoship does not do for you:</p>
+<ul>
+<li><strong>The load balancer.</strong> <code>load_balancer</code> is a name you own – a VIP, a DNS record, an HAProxy backend list. If it still routes to the controller you removed, a share of every API call fails. Update it in whatever manages it.</li>
+<li><strong>A quorum check against live etcd.</strong> The refusals above count controllers from the configuration and from whether their engine answers, not from etcd’s own view of the membership. Removing a controller from a cluster that is already one member down is a removal from a membership that cannot commit it, and nothing here will say so. Confirm the cluster is healthy first.</li>
+</ul>
 <h2 id="when-the-extra-nodes-are-deliberate"><a class="header" href="#when-the-extra-nodes-are-deliberate">When the extra nodes are deliberate</a></h2>
 <p>A cluster can hold nodes Cargoship never joined, and refusing on those would block every apply on a working setup. Pass <code>--allow-unmanaged-nodes</code> to downgrade the refusal to a warning:</p>
 <pre><code class="language-console">$ cargoship apply ./package.tar.zst --config ./cargoship-config.yaml --allow-unmanaged-nodes --confirm

@@ -37,10 +37,10 @@
             const path_to_root = "../../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../../searchindex-8cb4d83c.js";
+            window.path_to_searchindex_js = "../../searchindex-1f756e52.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../toc-572cecdd.js"></script>
+        <script src="../../toc-00ba28f5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -191,6 +191,7 @@
 <ul>
 <li><a href="#constants">Constants</a></li>
 <li><a href="#variables">Variables</a></li>
+<li><a href="#CheckTargetHosts">func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error</a></li>
 <li><a href="#DryRunNote">func DryRunNote(p Phase) string</a></li>
 <li><a href="#Titles">func Titles(results []PhaseResult) []string</a></li>
 <li><a href="#APTUploadFiles">type APTUploadFiles</a>
@@ -495,6 +496,15 @@
 <li><a href="#RPMUploadFiles.Title">func (p *RPMUploadFiles) Title() string</a></li>
 </ul>
 </li>
+<li><a href="#ReconfigureSurvivors">type ReconfigureSurvivors</a>
+<ul>
+<li><a href="#ReconfigureSurvivors.Explanation">func (p *ReconfigureSurvivors) Explanation() string</a></li>
+<li><a href="#ReconfigureSurvivors.Prepare">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error</a></li>
+<li><a href="#ReconfigureSurvivors.Run">func (p *ReconfigureSurvivors) Run(ctx context.Context) error</a></li>
+<li><a href="#ReconfigureSurvivors.ShouldRun">func (p *ReconfigureSurvivors) ShouldRun() bool</a></li>
+<li><a href="#ReconfigureSurvivors.Title">func (p *ReconfigureSurvivors) Title() string</a></li>
+</ul>
+</li>
 <li><a href="#ResultSink">type ResultSink</a>
 <ul>
 <li><a href="#WithResultSink">func WithResultSink(ctx context.Context) (context.Context, *ResultSink)</a></li>
@@ -603,11 +613,22 @@
 )
 </code></pre>
 <h2 id="variables"><a class="header" href="#variables">Variables</a></h2>
+<p><a name="ErrControllersNotOneAtATime"></a>ErrControllersNotOneAtATime is returned when a run that keeps the cluster removes more than one running controller.</p>
+<p>Each removal is a raft reconfiguration that needs a majority of the membership it starts from, and cargoship takes the engine down on a controller before deleting its node so the member cannot vote or re-register behind the run. Two removals in one run therefore pass through a state the second one cannot commit from: three members, one already stopped, is a majority of two out of three; the next stop leaves one of two, and the removal hangs with the cluster unavailable rather than failing cleanly.</p>
+<p>Removing them in separate runs is safe because the cluster is whole again at the start of each.</p>
+<pre><code class="language-go">var ErrControllersNotOneAtATime = errors.New("more than one running controller is being removed in a single run: " +
+    "remove them one run at a time, so each removal starts from a cluster that still has every member")
+</code></pre>
 <p><a name="ErrNoControllers"></a>ErrNoControllers an error for when no controllers are running</p>
 <pre><code class="language-go">var ErrNoControllers = errors.New("no controllers are running")
 </code></pre>
 <p><a name="ErrNoKubeConfig"></a>ErrNoKubeConfig is returned when the config is asked for before the phase has run</p>
 <pre><code class="language-go">var ErrNoKubeConfig = errors.New("kubeconfig has not been built")
+</code></pre>
+<p><a name="ErrNoSurvivingController"></a>ErrNoSurvivingController is returned when every running controller is being removed, but some host is not. Tearing a subset down works by driving kubectl through a controller that stays, so a run with no controller left to drive is a whole-cluster teardown wearing a subset’s clothes: it would drain and delete nodes through a machine it is about to uninstall, and whether that finished would depend on the order the hosts happened to be in.</p>
+<p>Removing every host is still allowed. That is a reset, and reset is what it is for.</p>
+<pre><code class="language-go">var ErrNoSurvivingController = errors.New("every running controller is being removed, but not every host is: " +
+    "target the whole cluster to tear it down, or leave a controller out of the target list to remove a subset through it")
 </code></pre>
 <p><a name="ErrUnmanagedNodes"></a>ErrUnmanagedNodes is returned when the cluster holds a node no host in the config accounts for. Apply removes nothing, so continuing would report success over a machine that is still running the engine and still joined.</p>
 <pre><code class="language-go">var ErrUnmanagedNodes = errors.New("the cluster holds nodes the config does not: add the host back to the config, run `cargoship reset` against it, or pass --allow-unmanaged-nodes to apply anyway")
@@ -630,6 +651,12 @@
 <p><a name="NoWait"></a>NoWait is used by various phases to decide if node ready state should be waited for or not</p>
 <pre><code class="language-go">var NoWait bool
 </code></pre>
+<p><a name="CheckTargetHosts"></a></p>
+<h2 id="func-checktargethosts"><a class="header" href="#func-checktargethosts">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L302">CheckTargetHosts</a></a></h2>
+<pre><code class="language-go">func CheckTargetHosts(hosts cluster.ZarfHosts, targets []string) error
+</code></pre>
+<p>CheckTargetHosts reports a target that names no host in the configuration.</p>
+<p>A target nobody matches is the quiet failure this whole feature could have: the filter returns an empty set, every phase reports nothing to do, and the run succeeds having removed nothing. A typo in a hostname is the ordinary way to get there.</p>
 <p><a name="DryRunNote"></a></p>
 <h2 id="func-dryrunnote"><a class="header" href="#func-dryrunnote">func <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L174">DryRunNote</a></a></h2>
 <pre><code class="language-go">func DryRunNote(p Phase) string
@@ -824,43 +851,45 @@
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="DaemonReload"></a></p>
-<h2 id="type-daemonreload"><a class="header" href="#type-daemonreload">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L32-L34">DaemonReload</a></a></h2>
+<h2 id="type-daemonreload"><a class="header" href="#type-daemonreload">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L32-L35">DaemonReload</a></a></h2>
 <p>DaemonReload phase runs `systemctl daemon-reload` or equivalent on all hosts.</p>
 <pre><code class="language-go">type DaemonReload struct {
     GenericPhase
+    TargetHosts []string
 }
 </code></pre>
 <p><a name="DaemonReload.Explanation"></a></p>
-<h3 id="func-daemonreload-explanation"><a class="header" href="#func-daemonreload-explanation">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L42">Explanation</a></a></h3>
+<h3 id="func-daemonreload-explanation"><a class="header" href="#func-daemonreload-explanation">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L43">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *DaemonReload) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="DaemonReload.Run"></a></p>
-<h3 id="func-daemonreload-run"><a class="header" href="#func-daemonreload-run">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L52">Run</a></a></h3>
+<h3 id="func-daemonreload-run"><a class="header" href="#func-daemonreload-run">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L53">Run</a></a></h3>
 <pre><code class="language-go">func (p *DaemonReload) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="DaemonReload.ShouldRun"></a></p>
-<h3 id="func-daemonreload-shouldrun"><a class="header" href="#func-daemonreload-shouldrun">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L47">ShouldRun</a></a></h3>
+<h3 id="func-daemonreload-shouldrun"><a class="header" href="#func-daemonreload-shouldrun">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L48">ShouldRun</a></a></h3>
 <pre><code class="language-go">func (p *DaemonReload) ShouldRun() bool
 </code></pre>
 <p>ShouldRun is true when there are controllers that needs to be reset</p>
 <p><a name="DaemonReload.Title"></a></p>
-<h3 id="func-daemonreload-title"><a class="header" href="#func-daemonreload-title">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L37">Title</a></a></h3>
+<h3 id="func-daemonreload-title"><a class="header" href="#func-daemonreload-title">func (*DaemonReload) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/95_daemon_reload.go#L38">Title</a></a></h3>
 <pre><code class="language-go">func (p *DaemonReload) Title() string
 </code></pre>
 <p>Title for the phase</p>
 <p><a name="DeleteCommon"></a></p>
-<h2 id="type-deletecommon"><a class="header" href="#type-deletecommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L34-L38">DeleteCommon</a></a></h2>
+<h2 id="type-deletecommon"><a class="header" href="#type-deletecommon">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L50-L61">DeleteCommon</a></a></h2>
 <p>DeleteCommon phase state</p>
 <pre><code class="language-go">type DeleteCommon struct {
     GenericPhase
-    Distro distrocfg.Distro
+    Distro      distrocfg.Distro
+    TargetHosts []string
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="DeleteCommon.Prepare"></a></p>
-<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L41">Prepare</a></a></h3>
+<h3 id="func-deletecommon-prepare"><a class="header" href="#func-deletecommon-prepare">func (*DeleteCommon) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/85_delete_common.go#L88">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *DeleteCommon) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
@@ -884,7 +913,7 @@
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteControllers.Run"></a></p>
-<h3 id="func-deletecontrollers-run"><a class="header" href="#func-deletecontrollers-run">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L84">Run</a></a></h3>
+<h3 id="func-deletecontrollers-run"><a class="header" href="#func-deletecontrollers-run">func (*DeleteControllers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/87_delete_controller.go#L85">Run</a></a></h3>
 <pre><code class="language-go">func (p *DeleteControllers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -919,7 +948,7 @@
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="DeleteWorkers.Run"></a></p>
-<h3 id="func-deleteworkers-run"><a class="header" href="#func-deleteworkers-run">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L84">Run</a></a></h3>
+<h3 id="func-deleteworkers-run"><a class="header" href="#func-deleteworkers-run">func (*DeleteWorkers) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/86_delete_worker.go#L85">Run</a></a></h3>
 <pre><code class="language-go">func (p *DeleteWorkers) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
@@ -1822,6 +1851,45 @@
 <pre><code class="language-go">func (p *RPMUploadFiles) Title() string
 </code></pre>
 <p>Title for the phase</p>
+<p><a name="ReconfigureSurvivors"></a></p>
+<h2 id="type-reconfiguresurvivors"><a class="header" href="#type-reconfiguresurvivors">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L50-L63">ReconfigureSurvivors</a></a></h2>
+<p>ReconfigureSurvivors repoints the controllers a removal kept at a controller it did not remove.</p>
+<p>A controller that is not the first one carries `server:` naming the first, written when it joined. That value is read at startup, so removing the first controller leaves a cluster that keeps working and cannot come back: every survivor names a machine that is gone, and the next restart or reboot of any of them fails to rejoin.</p>
+<p>cargoship apply already fixes this -- it re-elects the first controller from the hosts that are left and rewrites `server:` on the rest -- and the documented procedure is to run one after a removal. The trouble with leaving it there is that a reset reports success having created that state, so the safety of the operation rests on the operator remembering a second command. This phase converges the survivors itself, and says so when it cannot.</p>
+<p>It edits the file in place rather than rendering a fresh one, because a reset loads no package and so has nothing to render from. Only `server:` is touched.</p>
+<pre><code class="language-go">type ReconfigureSurvivors struct {
+    GenericPhase
+    Distro      distrocfg.Distro
+    TargetHosts []string
+    // contains filtered or unexported fields
+}
+</code></pre>
+<p><a name="ReconfigureSurvivors.Explanation"></a></p>
+<h3 id="func-reconfiguresurvivors-explanation"><a class="header" href="#func-reconfiguresurvivors-explanation">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L71">Explanation</a></a></h3>
+<pre><code class="language-go">func (p *ReconfigureSurvivors) Explanation() string
+</code></pre>
+<p>Explanation about the current phase, used for documentation generation</p>
+<p><a name="ReconfigureSurvivors.Prepare"></a></p>
+<h3 id="func-reconfiguresurvivors-prepare"><a class="header" href="#func-reconfiguresurvivors-prepare">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L76">Prepare</a></a></h3>
+<pre><code class="language-go">func (p *ReconfigureSurvivors) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
+</code></pre>
+<p>Prepare the phase</p>
+<p><a name="ReconfigureSurvivors.Run"></a></p>
+<h3 id="func-reconfiguresurvivors-run"><a class="header" href="#func-reconfiguresurvivors-run">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L109">Run</a></a></h3>
+<pre><code class="language-go">func (p *ReconfigureSurvivors) Run(ctx context.Context) error
+</code></pre>
+<p>Run the phase</p>
+<p><a name="ReconfigureSurvivors.ShouldRun"></a></p>
+<h3 id="func-reconfiguresurvivors-shouldrun"><a class="header" href="#func-reconfiguresurvivors-shouldrun">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L104">ShouldRun</a></a></h3>
+<pre><code class="language-go">func (p *ReconfigureSurvivors) ShouldRun() bool
+</code></pre>
+<p>ShouldRun is true when the run removed a controller and kept at least one.</p>
+<p>Removing every controller is a whole-cluster teardown, where there is nothing to repoint. An empty target list means every host, which is that same case.</p>
+<p><a name="ReconfigureSurvivors.Title"></a></p>
+<h3 id="func-reconfiguresurvivors-title"><a class="header" href="#func-reconfiguresurvivors-title">func (*ReconfigureSurvivors) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/89_reconfigure_survivors.go#L66">Title</a></a></h3>
+<pre><code class="language-go">func (p *ReconfigureSurvivors) Title() string
+</code></pre>
+<p>Title for the phase</p>
 <p><a name="ResultSink"></a></p>
 <h2 id="type-resultsink"><a class="header" href="#type-resultsink">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/05_manager.go#L301-L305">ResultSink</a></a></h2>
 <p>ResultSink collects the RunResult of every Manager.Run that happens on a context.</p>
@@ -1884,32 +1952,33 @@
 </code></pre>
 <p>Undeclared names the phases that did not say whether they changed anything, in the order the run reached them. A caller reporting Changed is expected to report these alongside it.</p>
 <p><a name="UninstallEngine"></a></p>
-<h2 id="type-uninstallengine"><a class="header" href="#type-uninstallengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L44-L49">UninstallEngine</a></a></h2>
+<h2 id="type-uninstallengine"><a class="header" href="#type-uninstallengine">type <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L45-L51">UninstallEngine</a></a></h2>
 <p>UninstallEngine state</p>
 <pre><code class="language-go">type UninstallEngine struct {
     GenericPhase
     Distro           distrocfg.Distro
     WorkerConcurrent string
+    TargetHosts      []string
     // contains filtered or unexported fields
 }
 </code></pre>
 <p><a name="UninstallEngine.Explanation"></a></p>
-<h3 id="func-uninstallengine-explanation"><a class="header" href="#func-uninstallengine-explanation">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L57">Explanation</a></a></h3>
+<h3 id="func-uninstallengine-explanation"><a class="header" href="#func-uninstallengine-explanation">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L59">Explanation</a></a></h3>
 <pre><code class="language-go">func (p *UninstallEngine) Explanation() string
 </code></pre>
 <p>Explanation about the current phase, used for documentation generation</p>
 <p><a name="UninstallEngine.Prepare"></a></p>
-<h3 id="func-uninstallengine-prepare"><a class="header" href="#func-uninstallengine-prepare">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L62">Prepare</a></a></h3>
+<h3 id="func-uninstallengine-prepare"><a class="header" href="#func-uninstallengine-prepare">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L64">Prepare</a></a></h3>
 <pre><code class="language-go">func (p *UninstallEngine) Prepare(ctx context.Context, _ *cluster.ZarfCluster, _ *distro.ZarfDistro) error
 </code></pre>
 <p>Prepare the phase</p>
 <p><a name="UninstallEngine.Run"></a></p>
-<h3 id="func-uninstallengine-run"><a class="header" href="#func-uninstallengine-run">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L69">Run</a></a></h3>
+<h3 id="func-uninstallengine-run"><a class="header" href="#func-uninstallengine-run">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L71">Run</a></a></h3>
 <pre><code class="language-go">func (p *UninstallEngine) Run(ctx context.Context) error
 </code></pre>
 <p>Run the phase</p>
 <p><a name="UninstallEngine.Title"></a></p>
-<h3 id="func-uninstallengine-title"><a class="header" href="#func-uninstallengine-title">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L52">Title</a></a></h3>
+<h3 id="func-uninstallengine-title"><a class="header" href="#func-uninstallengine-title">func (*UninstallEngine) <a href="https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/88_uninstall_engine.go#L54">Title</a></a></h3>
 <pre><code class="language-go">func (p *UninstallEngine) Title() string
 </code></pre>
 <p>Title for the phase</p>

@@ -37,10 +37,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8cb4d83c.js";
+            window.path_to_searchindex_js = "../searchindex-1f756e52.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-572cecdd.js"></script>
+        <script src="../toc-00ba28f5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -238,6 +238,12 @@
 <li>Uninstalling Engine
 <ul>
 <li>Remove the rpm, apt, or binary files from all the hosts</li>
+<li>Dry run: reported, not run</li>
+</ul>
+</li>
+<li>Repoint the controllers that were kept
+<ul>
+<li>When a removal takes a controller out, rewrites <code>server:</code> on the controllers that stayed so they name one that is still there, which is what lets them rejoin after a restart</li>
 <li>Dry run: reported, not run</li>
 </ul>
 </li>
