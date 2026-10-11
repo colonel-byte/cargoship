@@ -26,6 +26,7 @@ import (
 	"github.com/colonel-byte/cargoship/pkg/distro"
 	"github.com/colonel-byte/cargoship/pkg/phase"
 	"github.com/colonel-byte/cargoship/test"
+	"github.com/colonel-byte/cargoship/types/distrocfg"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -278,9 +279,40 @@ func (s *ResetSuite) Test_1_Reset() {
 	s.Require().NoError(reset.Run(s.ctx))
 }
 
-// Test_2_PostReset confirms kube-config can no longer find a running controller once the
+// Test_2_ResetRemovesWhatItManages asserts the hosts carry none of the engine's paths once the
+// reset has run.
+//
+// `cargoship reset --help` promises "the engine and the data it wrote", and until this existed
+// nothing checked the second half. The uninstall guarded every removal on ZarfHost.FileExist,
+// which is `test -f` and therefore false for a directory -- so the data directory, the config
+// directory and /etc/cargoship were all skipped, silently, because nothing was attempted and
+// nothing failed. A reset reported success having left 2.3G in /var/lib/rancher/rke2 and a
+// config.yaml naming the cluster that had just been torn down.
+//
+// The paths come from the distro rather than being written out here, so a distro that starts
+// managing another one is covered without this test being touched.
+func (s *ResetSuite) Test_2_ResetRemovesWhatItManages() {
+	dis, err := distroModule(distroID())
+	s.Require().NoError(err)
+
+	manager := s.newBareManager(e2e.ClusterConfigPath)
+	defer disconnectAll(manager.Config.Spec.Hosts)
+	s.Require().NoError(reconnectHosts(s.ctx, manager), "could not reach the hosts to assert on them")
+
+	paths := append(dis.CleanupPaths(), distrocfg.StateDir) //nolint:gocritic // a fresh slice is wanted here
+	s.Require().NotEmpty(paths, "the distro named no paths, so this would assert nothing")
+
+	for _, host := range manager.Config.Spec.Hosts {
+		for _, path := range paths {
+			_, err := host.Stat(path)
+			s.Require().Errorf(err, "%s: %s survived the reset", host, path)
+		}
+	}
+}
+
+// Test_3_PostReset confirms kube-config can no longer find a running controller once the
 // distro has been torn down, and that it leaves the kubeconfig it cannot refresh in place.
-func (s *ResetSuite) Test_2_PostReset() {
+func (s *ResetSuite) Test_3_PostReset() {
 	manager := s.newBareManager(e2e.ClusterConfigPath)
 	manager.Config.Spec.Hosts = apicluster.ZarfHosts{manager.Config.Spec.Hosts.Controllers().First()}
 
