@@ -8,15 +8,29 @@ Nothing it does touches the host. It needs no root, starts no daemon, and change
 
 ## What you need
 
-`qemu-system-x86_64`, `qemu-img`, `mkfs.vfat`, `mcopy`, `ssh`, and a readable `/dev/kvm`. On Fedora those come from `qemu-system-x86`, `qemu-img`, `dosfstools`, `mtools` and `openssh-clients`. `guestfish`, from `guestfs-tools`, is optional: it verifies a freshly downloaded image, and the fetch says so and carries on when it is absent.
+`qemu-system-x86_64`, `qemu-img`, `mkfs.vfat`, `mcopy`, `ssh`, and a readable `/dev/kvm`. `mage dev:vmUp` reports every missing tool at once rather than failing part way through a bring-up.
 
-`mage dev:vmUp` reports every missing tool at once rather than failing part way through a bring-up.
+[qemu-setup](qemu-setup.md) is the full walkthrough: which package provides each of those on Fedora and Debian, how `/dev/kvm` access works without joining a group, what to do when your development machine is itself a virtual machine, and how to tell a node is really accelerated rather than emulated.
 
 ## Bringing a fleet up
 
 ```sh
-mage dev:vmUp 1 2     # one controller, two workers
+mage dev:vmUp -control=1 -worker=2
+mage dev:vmUp -control=1 -worker=2 -infra=3 -distro=rke2
 ```
+
+Every flag has a default, so `mage dev:vmUp` on its own gives one control-plane node and two workers running k3s.
+
+| Flag | Default | What it does |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `-control`  | `1`     | Control-plane nodes. The first is the leader, which is what the inventory's load balancer names   |
+| `-worker`   | `2`     | Plain worker nodes                                                                                 |
+| `-infra`    | `0`     | Infra nodes: workers carrying an `infra` profile of their own                                       |
+| `-distro`   | `k3s`   | The engine the fleet is prepared for, `k3s` or `rke2`                                               |
+
+`-distro` changes nothing about the guests. It decides only which of the leader's ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.
+
+Infra nodes join as workers -- the engine has no third role -- and what makes them infra is their profile, which [`pkg/phase/81_label_nodes.go`](https://github.com/colonel-byte/cargoship/blob/main/pkg/phase/81_label_nodes.go) turns into a `node-role.kubernetes.io/infra` label and which a cluster config can hang a per-profile concurrency off. They are worth asking for because every other host in the generated inventory has a profile that just restates its role, which leaves both of those mechanisms indistinguishable from the role they came from. Ask for some and the engine phases batch them separately: `starting agent (profile: infra)`.
 
 The first run downloads a pinned Rocky 10 GenericCloud image, roughly 520MiB, into `$XDG_CACHE_HOME/cargoship/microvm` and verifies its digest. That cache is outside the repository and survives a clean checkout; later runs reuse it.
 
@@ -38,8 +52,6 @@ cargoship prepare --config build/microvm/dev/inventory.yaml ./example/rke2-multi
 cargoship apply   --config build/microvm/dev/inventory.yaml ./example/rke2-multi-cni-cilium/v1_36/v1.36.1-rke2r1
 ```
 
-`CARGOSHIP_VM_DISTRO=rke2 mage dev:vmUp 1 2` changes nothing about the guests. It decides only which of the leader's ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.
-
 ## Looking around, and tearing down
 
 ```sh
@@ -47,6 +59,13 @@ mage dev:vmList         # what is there and whether it is running
 mage dev:vmShell kc0    # a root shell on one node
 mage dev:vmDown         # every node stopped, every trace removed
 mage dev:vmImage        # fetch and verify the base image, start nothing
+```
+
+Each of those takes `-fleet` as well, and it matters once the e2e suite has been run against VMs: `CARGOSHIP_E2E_BACKEND=microvm` brings up a fleet named `e2e`, which the default `dev` fleet does not cover. A suite run killed before its own teardown leaves that fleet behind, and nothing else will remove it:
+
+```sh
+mage dev:vmList -fleet=e2e
+mage dev:vmDown -fleet=e2e
 ```
 
 `dev:vmUp` refuses a fleet that is already up rather than adopting it, so every bring-up starts from a fresh overlay. Tear the old one down first. That refusal is deliberate: a node still carrying the state of a previous apply is the one thing that makes a phase failure impossible to reason about.
@@ -70,6 +89,25 @@ A node that never answers is reported with the tail of its serial console, and t
 A node whose cloud-init failed is reported with cloud-init's own explanation, from `cloud-init status --long`. Run that on the node yourself for more, and read `/var/log/cloud-init.log`.
 
 Host keys are regenerated on every bring-up, so host key checking is off and known-hosts is `/dev/null` for every connection the fleet makes. Set `SSH_KNOWN_HOSTS=""` when running `cargoship` against the inventory, for the same reason.
+
+## What the management node can and cannot reach
+
+Your machine reaches a node on exactly one path: the forwarded SSH port. That is enough for every phase cargoship drives over SSH, which is all of the host preparation, the uploads, the engine install and the join -- and it is all this fleet sets out to cover.
+
+It is not enough for the phases that talk to the Kubernetes API from the management node. Two independent things stop them:
+
+*   The inventory's `loadbalancer` is the leader's address on the fleet's private segment, because that is the address the other nodes join through. Nothing outside the qemu processes can route to that segment, so a phase that dials the load balancer from here gets a timeout.
+*   Once `--firewall` has run, firewalld's `public` zone -- which holds both of a node's interfaces -- allows ssh and nothing else. Node-to-node traffic works because the trusted zone admits the private addresses by source, so the leader's forwarded API port reaches the guest and is then dropped. This is the firewall behaving correctly.
+
+In practice that means `cargoship apply --label-nodes` fails at `Labeling nodes with their profile group`, and a kubeconfig written for this fleet does not work from here. Drive `kubectl` from inside a node instead:
+
+```sh
+mage dev:vmShell kc0
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml   # or /etc/rancher/k3s/k3s.yaml
+/var/lib/rancher/rke2/bin/kubectl get nodes -o wide
+```
+
+Giving the management node a routable path onto the private segment would mean a tap device or a bridge, which needs root and puts the fleet back under the host's firewall -- the two things [choice-microvm-backend](../agent/choice-microvm-backend.md) picked a multicast socket to avoid.
 
 ## The engine's node IP, and why it reads wrong here
 

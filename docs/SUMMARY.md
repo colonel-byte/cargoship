@@ -166,6 +166,7 @@
 - [mage-test-manual](dev/mage-test-manual.md)
 - [mage](dev/mage.md)
 - [microvm](dev/microvm.md)
+- [qemu-setup](dev/qemu-setup.md)
 - [shell-completion](dev/shell-completion.md)
 - [thirdparty-src](dev/thirdparty-src.md)
 - [tofu-provider](dev/tofu-provider.md)

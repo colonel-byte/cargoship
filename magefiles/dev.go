@@ -20,7 +20,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/dnfpins"
 	"github.com/colonel-byte/cargoship/magefiles/pkg/devtools/microvmrun"
@@ -143,30 +142,56 @@ func (Dev) VMImage(ctx context.Context) error {
 // at it, so that the phases a container cannot exercise - SELinux, fapolicyd, firewalld, the
 // *-selinux RPM scriptlets - can be run against a real kernel. See docs/dev/microvm.md.
 //
-// Takes the controller and worker counts: `mage dev:vmUp 1 2`. The engine defaults to k3s and
-// is overridden with CARGOSHIP_VM_DISTRO, which decides only which of the leader's ports are
-// forwarded to the host.
-func (Dev) VMUp(ctx context.Context, controllers int, workers int) error {
-	distro := os.Getenv("CARGOSHIP_VM_DISTRO")
-	if distro == "" {
-		distro = "k3s"
-	}
-	return microvmrun.Up(ctx, controllers, workers, distro)
+// Infra nodes join as workers; what makes them infra is a profile of their own, which the
+// LabelNodes phase turns into a node-role.kubernetes.io/infra label.
+func (Dev) VMUp(
+	ctx context.Context,
+	// control-plane nodes (default 1)
+	control *int,
+	// worker nodes (default 2)
+	worker *int,
+	// infra nodes, which join as workers under an infra profile (default 0)
+	infra *int,
+	// engine the fleet is prepared for, k3s or rke2 (default k3s)
+	distro *string,
+) error {
+	return microvmrun.Up(ctx, microvmrun.Options{
+		Controllers: intOr(control, 1),
+		Workers:     intOr(worker, 2),
+		Infra:       intOr(infra, 0),
+		Distro:      stringOr(distro, "k3s"),
+	})
 }
 
-// VMDown tears the VM fleet down and removes its state, leaving the cached base image.
-func (Dev) VMDown() error {
-	return microvmrun.Down()
+// VMDown tears a VM fleet down and removes its state, leaving the cached base image.
+//
+// The fleet name matters when the e2e suite has been run: CARGOSHIP_E2E_BACKEND=microvm brings
+// up a fleet called "e2e", which dev:vmUp's "dev" fleet does not cover. A run killed before
+// its teardown leaves that one behind, and `-fleet=e2e` is how to remove it.
+func (Dev) VMDown(
+	// fleet to tear down (default dev)
+	fleet *string,
+) error {
+	return microvmrun.Down(stringOr(fleet, ""))
 }
 
-// VMList prints the VM fleet's nodes and whether each is running.
-func (Dev) VMList() error {
-	return microvmrun.List()
+// VMList prints a VM fleet's nodes and whether each is running.
+func (Dev) VMList(
+	// fleet to list (default dev)
+	fleet *string,
+) error {
+	return microvmrun.List(stringOr(fleet, ""))
 }
 
-// VMShell opens a shell on one node of the VM fleet: `mage dev:vmShell kc0`.
-func (Dev) VMShell(ctx context.Context, node string) error {
-	return microvmrun.SSH(ctx, node)
+// VMShell opens a shell on one node of a VM fleet: `mage dev:vmShell kc0`.
+func (Dev) VMShell(
+	ctx context.Context,
+	// node to connect to
+	node string,
+	// fleet the node belongs to (default dev)
+	fleet *string,
+) error {
+	return microvmrun.SSH(ctx, stringOr(fleet, ""), node)
 }
 
 // WriteOSVOverrides writes every override into vendor/.
@@ -177,4 +202,23 @@ func (Dev) WriteOSVOverrides() error {
 // VerifyVendor checks that vendor/ contains all required overrides and no uncovered manifests.
 func (Dev) VerifyVendor() error {
 	return osv.VerifyVendor()
+}
+
+// intOr is the value of an optional mage argument, or def when it was not given. Mage passes
+// an unset optional argument as a nil pointer.
+func intOr(v *int, def int) int {
+	if v == nil {
+		return def
+	}
+	return *v
+}
+
+// stringOr is the string equivalent. An argument given as -distro= with nothing after it
+// arrives as an empty string rather than nil, which is a typo and not a request for the
+// default, so it is left to microvm.Spec.Normalize to reject.
+func stringOr(v *string, def string) string {
+	if v == nil {
+		return def
+	}
+	return *v
 }
