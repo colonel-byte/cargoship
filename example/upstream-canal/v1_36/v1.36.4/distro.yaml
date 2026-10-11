@@ -46,6 +46,42 @@ spec:
           # traffic silently does not route.
           podSubnet: 10.244.0.0/16
     os:
+      selinux:
+        # The SELinux settings upstream Kubernetes documentation recommends for a kubeadm host.
+        # Cargoship applies them only to hosts that report SELinux enforcing and have semodule
+        # installed; every other host is left alone. Check the type names against the policy
+        # version your hosts run - they come from container-selinux, not from the base policy -
+        # and drop any mapping whose type that release does not define.
+        #
+        # The mappings are spelled out here because upstream Kubernetes ships no policy of its
+        # own. The k3s and RKE2 packages stage a k3s-selinux or rke2-selinux RPM that labels
+        # these directories already, so they configure the boolean and nothing else.
+        booleans:
+          # The kubelet's containers manage their own cgroups, which this boolean permits.
+          container_manage_cgroup: true
+        fileContexts:
+          # The kubelet's working tree, which holds pod volumes and plugin sockets.
+          - path: /var/lib/kubelet(/.*)?
+            type: container_var_lib_t
+          # The container runtime's state. containerd is the default; a CRI-O host wants
+          # /var/lib/containers instead.
+          - path: /var/lib/containerd(/.*)?
+            type: container_var_lib_t
+          # etcd's data directory, labelled for the static pod that writes it.
+          - path: /var/lib/etcd(/.*)?
+            type: container_var_lib_t
+          # The CNI plugin binaries the runtime executes.
+          - path: /opt/cni/bin(/.*)?
+            type: bin_t
+        # A package can also carry policy of its own as CIL, which cargoship installs with
+        # semodule at the priority given here. Nothing upstream ships one, so this stays an
+        # example rather than a default:
+        #
+        # modules:
+        #   - name: cargoship-kubelet
+        #     priority: 400
+        #     cil: |
+        #       (allow kubelet_t self (capability (sys_admin)))
       files:
         # Every file this package installs is architecture specific, so each one is listed once per
         # architecture with a selector saying which hosts it belongs to. A host receives only the
