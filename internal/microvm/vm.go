@@ -36,8 +36,13 @@ var requiredTools = []string{"qemu-system-x86_64", "qemu-img", "mkfs.vfat", "mco
 // sshd answering: sshd is up in about six seconds, and the packages that open the fapolicyd
 // and firewall gates are installed and started after that. A fleet handed back at the earlier
 // moment looks fine and silently has both of those phases skipping, which is the failure this
-// package exists to stop. Installing two packages over slirp is what the budget is for.
-const readyTimeout = 5 * time.Minute
+// package exists to stop.
+//
+// The budget is for the dnf transaction that installs them, and it is generous because what it
+// is really waiting on is a mirror. The same three packages have taken ninety seconds and have
+// taken over six minutes on consecutive days, with nothing different on this side, so a tight
+// bound here fails a bring-up that would have worked.
+const readyTimeout = 15 * time.Minute
 
 // pollInterval is how often a node is asked whether it is there yet.
 const pollInterval = 2 * time.Second
@@ -414,13 +419,24 @@ func waitForCloudInit(ctx context.Context, f Fleet, n Node) error {
 			return nil
 		case status == "error":
 			detail, _ := sshExec(ctx, f, n, "cloud-init status --long").Output() //nolint:errcheck // reported as context, not acted on
-			return fmt.Errorf("cloud-init failed on %s:\n%s", n.Name, strings.TrimSpace(string(detail)))
+			return fmt.Errorf("cloud-init failed on %s:\n%s", n.Name, cloudInitDetail(detail))
 		}
 		if err := sleep(ctx); err != nil {
 			detail, _ := sshExec(ctx, f, n, "cloud-init status --long").Output() //nolint:errcheck // reported as context, not acted on
-			return fmt.Errorf("cloud-init did not finish on %s in time; it reported:\n%s", n.Name, strings.TrimSpace(string(detail)))
+			return fmt.Errorf("cloud-init did not finish on %s within %s. The fleet is still running so it can be read -- `mage dev:vmShell %s`, then `cloud-init status --long` and /var/log/cloud-init-output.log -- and `mage dev:vmDown` removes it. It last reported:\n%s",
+				n.Name, readyTimeout, n.Name, cloudInitDetail(detail))
 		}
 	}
+}
+
+// cloudInitDetail is cloud-init's own account of itself, or a note that it gave none. An empty
+// detail means the ssh that asked for it failed too, which is worth saying rather than
+// printing a blank.
+func cloudInitDetail(out []byte) string {
+	if detail := strings.TrimSpace(string(out)); detail != "" {
+		return detail
+	}
+	return "(nothing; the node did not answer the status command either)"
 }
 
 // parseCloudInitStatus pulls the status out of `cloud-init status` output, which is a block of
