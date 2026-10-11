@@ -1,0 +1,30 @@
+#cloud-config
+# Rendered by internal/microvm. Consumed once, by cloud-init, from a NoCloud vfat seed.
+fqdn: {{ .Name }}.{{ .Domain }}
+preserve_hostname: false
+ssh_pwauth: false
+disable_root: false
+users:
+  - name: root
+    ssh_authorized_keys:
+      - {{ .PublicKey }}
+# firewalld and fapolicyd are not in the GenericCloud image. Installing them here is what
+# makes pkg/phase/22_prepare_fapolicyd.go and pkg/phase/26_configure_firewall.go gate open:
+# both detect by asking whether the service is running, so a node without them is a node
+# where those phases correctly do nothing, and the branch stays untested.
+#
+# SELinux is deliberately left at the image default. The fleet asserts that it is enforcing
+# rather than arranging for it to be.
+# python3-dnf-plugin-versionlock is the plugin pkg/phase/51_package_pin.go pins engine
+# packages with. A minimal Enterprise Linux install does not carry it -- see
+# docs/agent/choice-unpinnable-hosts.md -- so without it a run reports "this host has no dnf
+# versionlock plugin", takes the unpinned path, and the pinned path stays untested. Installing
+# it is what makes that branch reachable; a node that should exercise the warning instead is a
+# node to remove it from.
+packages:
+  - firewalld
+  - fapolicyd
+  - python3-dnf-plugin-versionlock
+runcmd:
+  - [systemctl, enable, --now, firewalld]
+  - [systemctl, enable, --now, fapolicyd]
