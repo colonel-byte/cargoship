@@ -137,6 +137,9 @@ const (
 	keyMirrors = "mirrors"
 	// keyNodeLabel is the config.yaml key holding the labels the node registers with.
 	keyNodeLabel = "node-label"
+	// keyNodeIP is the config.yaml key holding the address the node registers under, and the
+	// one its etcd member advertises to its peers.
+	keyNodeIP = "node-ip"
 	// keyNodeName is the config.yaml key holding the name the node registers under.
 	keyNodeName = "node-name"
 	// keyNodeTaint is the config.yaml key holding the taints the node registers with.
@@ -187,6 +190,7 @@ func (d *RancherCommon) ConfigureEngine(ctx context.Context, host *cluster.ZarfH
 
 	nodeConfig.DigMapping(config.EngineConfig)[keyNodeName] = host.Hostname
 	nodeConfig.DigMapping(config.EngineConfig)[keyDataDir] = d.Data
+	setNodeIP(nodeConfig.DigMapping(config.EngineConfig), host)
 
 	if len(host.Engine.NodeLabels) > 0 {
 		nodeConfig.DigMapping(config.EngineConfig)[keyNodeLabel] = NodeLabelsMapToList(host.Engine.NodeLabels)
@@ -682,6 +686,39 @@ func (d *RancherCommon) CleanupPaths() []string {
 // Distro's like RKE2 and K3S allow for agent tokens, so this allows for some level of access control if a node is allowed to be a controller or an agent.
 func (d *RancherCommon) JoinTokenPathAgent() string {
 	return filepath.Join(filepath.Dir(d.Token), "agent-token")
+}
+
+// setNodeIP writes the address the node registers under, from the host's private address.
+//
+// Without it the engine picks its own node address from whichever interface holds the default
+// route, which on a multi-homed host is usually not the one the cluster talks over. Everything
+// else cargoship renders already treats the private address as that interface -- it goes into
+// the engine's tls-san, into the firewall's node ipset and into /etc/hosts -- and the engine's
+// own node address was the one place it did not reach.
+//
+// The consequence was not only a wrong address in `kubectl get nodes -o wide`. A node's etcd
+// member advertises its peer URL from this address, so on a fleet where the default route is a
+// management interface every controller advertised the same one and a second could never be
+// added: `MemberAdd request timed out`, repeated until the apply gave up. A single-controller
+// cluster hides it, because single-member etcd needs no peer addressing.
+//
+// A value already in the configuration wins. node-name above is assigned unconditionally
+// because cargoship owns it -- it comes from the inventory's hostname -- but an operator
+// setting node-ip in a package has said something specific about a host's addressing, and a
+// one-node package is a reasonable place to do it.
+//
+// The value is a list because that is what the generated schema says the key holds, for both
+// the server and the agent config of every supported version. The engines accept a bare string
+// too; matching the schema keeps what cargoship writes consistent with what it validates a
+// package against.
+func setNodeIP(cfg dig.Mapping, host *cluster.ZarfHost) {
+	if host.PrivateAddress == "" {
+		return
+	}
+	if existing, ok := cfg[keyNodeIP]; ok && existing != nil {
+		return
+	}
+	cfg[keyNodeIP] = []string{host.PrivateAddress}
 }
 
 // DistroCmdf returns a string that can be used to execute commands on the core engine binary
