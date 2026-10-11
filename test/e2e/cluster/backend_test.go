@@ -215,7 +215,7 @@ func TestReachesClusterAPIFindsAListener(t *testing.T) {
 	if err != nil {
 		t.Skipf("cannot bind 127.0.0.1:6443 to test the probe: %v", err)
 	}
-	defer func() { _ = ln.Close() }()
+	defer func() { require.NoError(t, ln.Close()) }()
 
 	require.True(t, reachesClusterAPI("127.0.0.1"))
 }
