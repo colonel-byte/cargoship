@@ -21,12 +21,12 @@ mage dev:vmUp -control=1 -worker=2 -infra=3 -distro=rke2
 
 Every flag has a default, so `mage dev:vmUp` on its own gives one control-plane node and two workers running k3s.
 
-| Flag | Default | What it does |
-| ----------- | ------- | ------------------------------------------------------------------------------------------------- |
-| `-control`  | `1`     | Control-plane nodes. The first is the leader, which is what the inventory's load balancer names   |
-| `-worker`   | `2`     | Plain worker nodes                                                                                 |
-| `-infra`    | `0`     | Infra nodes: workers carrying an `infra` profile of their own                                       |
-| `-distro`   | `k3s`   | The engine the fleet is prepared for, `k3s` or `rke2`                                               |
+| Flag        | Default | What it does                                                                                    |
+| ----------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `-control`  | `1`     | Control-plane nodes. The first is the leader, which is what the inventory's load balancer names |
+| `-worker`   | `2`     | Plain worker nodes                                                                              |
+| `-infra`    | `0`     | Infra nodes: workers carrying an `infra` profile of their own                                   |
+| `-distro`   | `k3s`   | The engine the fleet is prepared for, `k3s` or `rke2`                                           |
 
 `-distro` changes nothing about the guests. It decides only which of the leader's ports are forwarded to your machine, since rke2 serves its join endpoint on 9345 and k3s multiplexes onto 6443.
 
